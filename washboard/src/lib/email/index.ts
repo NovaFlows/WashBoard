@@ -1,7 +1,5 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 type SendConfirmationParams = {
   to: string
   clientName: string
@@ -14,6 +12,7 @@ type SendConfirmationParams = {
 }
 
 export async function sendBookingConfirmation(params: SendConfirmationParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const date = new Date(params.scheduledAt)
   const formatted = date.toLocaleDateString('fr-FR', {
     weekday: 'long',
