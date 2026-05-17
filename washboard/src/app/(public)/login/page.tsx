@@ -48,8 +48,9 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Espace laveur</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">Connectez-vous pour accéder à votre tableau de bord</p>
+            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-24 h-24 object-contain mx-auto mb-3" />
+            <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">WashBoard</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">Espace laveur · Connectez-vous</p>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
