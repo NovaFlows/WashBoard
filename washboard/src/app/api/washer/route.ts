@@ -7,16 +7,22 @@ export async function PATCH(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { name, phone } = await request.json()
+  const { name, phone, logo_url, welcome_message } = await request.json()
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  const updates: Record<string, string | null> = {}
+  if (name !== undefined) updates.name = name?.trim() ?? null
+  if (phone !== undefined) updates.phone = phone?.trim() || null
+  if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null
+  if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
+
   const { error } = await admin
     .from('washers')
-    .update({ name: name?.trim(), phone: phone?.trim() })
+    .update(updates)
     .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
