@@ -14,7 +14,7 @@ export async function PATCH(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const updates: Record<string, string | null> = {}
+  const updates: Record<string, unknown> = {}
   if (name !== undefined) updates.name = name?.trim() ?? null
   if (phone !== undefined) updates.phone = phone?.trim() || null
   if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null

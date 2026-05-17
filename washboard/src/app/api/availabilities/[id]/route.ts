@@ -12,10 +12,12 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase.from('washers').select('id').eq('user_id', user.id).single()
+  const { data: washer } = await admin()
+    .from('washers').select('id').eq('user_id', user.id).single()
   if (!washer) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { error } = await admin().from('availabilities').delete().eq('id', id).eq('washer_id', washer.id)
+  const { error } = await admin()
+    .from('availabilities').delete().eq('id', id).eq('washer_id', washer.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

@@ -12,17 +12,25 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase.from('washers').select('id').eq('user_id', user.id).single()
+  const { data: washer } = await admin()
+    .from('washers').select('id').eq('user_id', user.id).single()
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const { name, price, duration_minutes, vehicle_types } = await request.json()
-  if (!name?.trim() || !price || !duration_minutes) {
+  if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
 
   const { data, error } = await admin()
     .from('services')
-    .insert({ id: randomUUID(), washer_id: washer.id, name: name.trim(), price: Number(price), duration_minutes: Number(duration_minutes), vehicle_types: vehicle_types ?? [] })
+    .insert({
+      id: randomUUID(),
+      washer_id: washer.id,
+      name: name.trim(),
+      price: Number(price),
+      duration_minutes: Number(duration_minutes),
+      vehicle_types: vehicle_types ?? [],
+    })
     .select()
     .single()
 
