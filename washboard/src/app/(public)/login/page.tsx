@@ -45,7 +45,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
 
           {/* Espace Laveur en haut */}
-          <p className="text-center text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">
+          <p className="text-center text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">
             Espace Laveur
           </p>
 
@@ -54,7 +54,7 @@ export default function LoginPage() {
             <img
               src="/LogoWashBoard.png"
               alt="WashBoard"
-              className="w-28 h-28 object-contain mx-auto mb-1"
+              className="w-40 h-40 object-contain mx-auto mb-1"
             />
             <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               WashBoard
