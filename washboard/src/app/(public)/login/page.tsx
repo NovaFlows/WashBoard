@@ -41,20 +41,20 @@ export default function LoginPage() {
         <ThemeToggle large />
       </div>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+      <main className="flex-1 flex items-center justify-center px-4 py-4">
         <div className="w-full max-w-sm">
 
           {/* Espace Laveur en haut */}
-          <p className="text-center text-xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+          <p className="text-center text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">
             Espace Laveur
           </p>
 
           {/* Logo + WashBoard au centre */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <img
               src="/LogoWashBoard.png"
               alt="WashBoard"
-              className="w-48 h-48 object-contain mx-auto mb-2"
+              className="w-28 h-28 object-contain mx-auto mb-1"
             />
             <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               WashBoard
