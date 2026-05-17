@@ -32,22 +32,25 @@ export default async function BookingPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="w-full px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {washer.logo_url ? (
               <img
                 src={washer.logo_url}
                 alt={washer.name}
-                className="w-8 h-8 rounded-lg object-cover"
+                className="w-12 h-12 rounded-xl object-cover"
               />
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400 select-none">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xl font-bold text-slate-500 dark:text-slate-400 select-none">
                 {washer.name.charAt(0).toUpperCase()}
               </div>
             )}
-            <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{washer.name}</span>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight">{washer.name}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-none">Réservation en ligne</p>
+            </div>
           </div>
-          <ThemeToggle />
+          <ThemeToggle large />
         </div>
       </header>
 
