@@ -34,9 +34,12 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="max-w-sm mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-8 h-8 object-contain" />
-            <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">WashBoard</span>
+          <div className="flex items-center gap-3">
+            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-12 h-12 object-contain" />
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight">WashBoard</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-none">Espace laveur</p>
+            </div>
           </div>
           <ThemeToggle />
         </div>
