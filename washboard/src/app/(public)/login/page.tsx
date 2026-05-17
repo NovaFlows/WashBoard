@@ -35,7 +35,7 @@ export default function LoginPage() {
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="max-w-sm mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo-washboard.png" alt="WashBoard" className="w-8 h-8 object-contain" />
+            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-8 h-8 object-contain" />
             <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">WashBoard</span>
           </div>
           <ThemeToggle />
