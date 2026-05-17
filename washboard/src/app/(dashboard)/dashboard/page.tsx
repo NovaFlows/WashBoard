@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BookingList from '@/components/dashboard/BookingList'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -16,9 +17,9 @@ export default async function DashboardPage() {
 
   if (!washer) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Profil laveur non trouvé. Contactez le support.</p>
-      </main>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <p className="text-slate-500 dark:text-slate-400">Profil laveur non trouvé. Contactez le support.</p>
+      </div>
     )
   }
 
@@ -28,21 +29,61 @@ export default async function DashboardPage() {
     .eq('washer_id', washer.id)
     .order('scheduled_at', { ascending: true })
 
+  const all = bookings ?? []
+  const pending = all.filter(b => b.status === 'pending').length
+  const confirmed = all.filter(b => b.status === 'confirmed').length
+  const done = all.filter(b => b.status === 'done').length
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto px-4 py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{washer.name}</h1>
-            <p className="text-sm text-gray-500">Tableau de bord</p>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20z"/>
+                <path d="M12 8v8M8 12h8"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none">{washer.name}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 leading-none mt-0.5">Tableau de bord</p>
+            </div>
           </div>
-          <form action="/api/auth/logout" method="POST">
-            <button className="text-sm text-gray-400 hover:text-gray-600">Déconnexion</button>
-          </form>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <form action="/api/auth/logout" method="POST">
+              <button className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">
+                Déconnexion
+              </button>
+            </form>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <StatCard label="En attente" value={pending} color="amber" />
+          <StatCard label="Confirmés" value={confirmed} color="emerald" />
+          <StatCard label="Terminés" value={done} color="slate" />
         </div>
 
-        <BookingList bookings={bookings ?? []} washerId={washer.id} />
-      </div>
-    </main>
+        <BookingList bookings={all} washerId={washer.id} />
+      </main>
+    </div>
+  )
+}
+
+function StatCard({ label, value, color }: { label: string; value: number; color: 'amber' | 'emerald' | 'slate' }) {
+  const colors = {
+    amber:   'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
+    emerald: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400',
+    slate:   'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400',
+  }
+  return (
+    <div className={`rounded-xl border p-3 text-center ${colors[color]}`}>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-xs font-medium mt-0.5 opacity-80">{label}</p>
+    </div>
   )
 }

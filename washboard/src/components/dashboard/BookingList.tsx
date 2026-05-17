@@ -19,11 +19,11 @@ type Props = {
   washerId: string
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'En attente', color: 'bg-yellow-100 text-yellow-700' },
-  confirmed: { label: 'Confirmé',   color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulé',     color: 'bg-red-100 text-red-700' },
-  done:      { label: 'Terminé',    color: 'bg-gray-100 text-gray-600' },
+const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
+  pending:   { label: 'En attente', dot: 'bg-amber-400',  badge: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' },
+  confirmed: { label: 'Confirmé',   dot: 'bg-emerald-400', badge: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' },
+  cancelled: { label: 'Annulé',    dot: 'bg-red-400',    badge: 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800' },
+  done:      { label: 'Terminé',   dot: 'bg-slate-400',  badge: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700' },
 }
 
 export default function BookingList({ bookings, washerId }: Props) {
@@ -48,9 +48,16 @@ export default function BookingList({ bookings, washerId }: Props) {
 
   if (list.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-400">
-        <p className="text-lg">Aucune réservation pour l'instant.</p>
-        <p className="text-sm mt-1">Partagez votre lien de réservation pour recevoir vos premiers clients.</p>
+      <div className="text-center py-20">
+        <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <p className="font-semibold text-slate-700 dark:text-slate-300">Aucune réservation</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
+          Partagez votre lien de réservation pour recevoir vos premiers clients.
+        </p>
       </div>
     )
   }
@@ -59,8 +66,13 @@ export default function BookingList({ bookings, washerId }: Props) {
     <div className="space-y-8">
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">À venir</h2>
-          <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">À venir</h2>
+            <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full">
+              {upcoming.length}
+            </span>
+          </div>
+          <div className="space-y-2.5">
             {upcoming.map(booking => (
               <BookingCard key={booking.id} booking={booking} loading={loading} onUpdate={updateStatus} />
             ))}
@@ -70,8 +82,8 @@ export default function BookingList({ bookings, washerId }: Props) {
 
       {past.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Historique</h2>
-          <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Historique</h2>
+          <div className="space-y-2.5">
             {past.map(booking => (
               <BookingCard key={booking.id} booking={booking} loading={loading} onUpdate={updateStatus} />
             ))}
@@ -88,60 +100,85 @@ function BookingCard({ booking, loading, onUpdate }: {
   onUpdate: (id: string, status: string) => void
 }) {
   const date = new Date(booking.scheduled_at)
-  const formatted = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  const statusInfo = STATUS_LABELS[booking.status] ?? STATUS_LABELS.pending
+  const dayLabel = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const timeLabel = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const statusInfo = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending
   const isLoading = loading === booking.id
+  const isPast = booking.status === 'done' || booking.status === 'cancelled'
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-gray-900">{booking.client_name}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-opacity ${isPast ? 'opacity-60' : ''}`}>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{booking.client_name}</span>
+              <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.badge}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+                {statusInfo.label}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300 mb-1">
+              <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span className="capitalize">{dayLabel} à {timeLabel}</span>
+            </div>
+
+            {booking.services && (
+              <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-1">
+                <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path d="M12 22V12M12 12L8 8M12 12l4-4"/>
+                  <circle cx="12" cy="5" r="3"/>
+                </svg>
+                <span>{booking.services.name} — <span className="font-semibold text-slate-700 dark:text-slate-300">{booking.services.price}€</span></span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-500 mb-1">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span className="truncate">{booking.address}</span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500 mt-1">
+              <span>{booking.client_phone}</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+              <span className="truncate">{booking.client_email}</span>
+            </div>
           </div>
-          <p className="text-sm text-blue-600 font-medium">{formatted} à {time}</p>
-          {booking.services && (
-            <p className="text-sm text-gray-500 mt-0.5">{booking.services.name} — {booking.services.price}€</p>
+
+          {booking.status === 'pending' && (
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                onClick={() => onUpdate(booking.id, 'confirmed')}
+                disabled={isLoading}
+                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg disabled:opacity-40 transition-colors"
+              >
+                Confirmer
+              </button>
+              <button
+                onClick={() => onUpdate(booking.id, 'cancelled')}
+                disabled={isLoading}
+                className="px-3 py-1.5 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-40 transition-colors border border-red-200 dark:border-red-800"
+              >
+                Annuler
+              </button>
+            </div>
           )}
-          <p className="text-sm text-gray-400 mt-0.5 truncate">{booking.address}</p>
-          <div className="flex gap-3 mt-1 text-xs text-gray-400">
-            <span>{booking.client_phone}</span>
-            <span>{booking.client_email}</span>
-          </div>
+
+          {booking.status === 'confirmed' && (
+            <button
+              onClick={() => onUpdate(booking.id, 'done')}
+              disabled={isLoading}
+              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors shrink-0 border border-slate-200 dark:border-slate-700"
+            >
+              Terminé
+            </button>
+          )}
         </div>
-
-        {booking.status === 'pending' && (
-          <div className="flex flex-col gap-2 shrink-0">
-            <button
-              onClick={() => onUpdate(booking.id, 'confirmed')}
-              disabled={isLoading}
-              className="px-3 py-1.5 bg-green-500 text-white text-xs font-medium rounded-lg hover:bg-green-600 disabled:opacity-40 transition-colors"
-            >
-              Confirmer
-            </button>
-            <button
-              onClick={() => onUpdate(booking.id, 'cancelled')}
-              disabled={isLoading}
-              className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 disabled:opacity-40 transition-colors"
-            >
-              Annuler
-            </button>
-          </div>
-        )}
-
-        {booking.status === 'confirmed' && (
-          <button
-            onClick={() => onUpdate(booking.id, 'done')}
-            disabled={isLoading}
-            className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 disabled:opacity-40 transition-colors shrink-0"
-          >
-            Marquer terminé
-          </button>
-        )}
       </div>
     </div>
   )

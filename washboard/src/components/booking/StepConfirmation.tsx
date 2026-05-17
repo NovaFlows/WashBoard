@@ -13,44 +13,43 @@ export default function StepConfirmation({ washerName, bookingId, form, services
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
 
   return (
-    <div className="text-center py-4">
-      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    <div className="text-center py-2">
+      <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
 
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Réservation confirmée</h2>
-      <p className="text-gray-500 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
 
-      <div className="bg-gray-50 rounded-xl p-4 text-left space-y-3 mb-6">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Prestataire</span>
-          <span className="font-medium text-gray-900">{washerName}</span>
-        </div>
-        {service && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Prestation</span>
-            <span className="font-medium text-gray-900">{service.name} — {service.price}€</span>
-          </div>
-        )}
+      <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-3 mb-5">
+        <Row label="Prestataire" value={washerName} />
+        {service && <Row label="Prestation" value={`${service.name} — ${service.price}€`} />}
         {date && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Date</span>
-            <span className="font-medium text-gray-900">
-              {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+          <Row
+            label="Date & heure"
+            value={`${date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+          />
         )}
-        {form.address && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Adresse</span>
-            <span className="font-medium text-gray-900 text-right max-w-[60%]">{form.address}</span>
-          </div>
-        )}
+        {form.address && <Row label="Adresse" value={form.address} right />}
       </div>
 
-      <p className="text-xs text-gray-400">Réf. {bookingId.slice(0, 8).toUpperCase()}</p>
+      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
+        <span className="text-xs text-slate-500 dark:text-slate-400">Référence</span>
+        <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+          {bookingId.slice(0, 8).toUpperCase()}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function Row({ label, value, right }: { label: string; value: string; right?: boolean }) {
+  return (
+    <div className="flex justify-between text-sm gap-3">
+      <span className="text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
+      <span className={`font-medium text-slate-900 dark:text-slate-100 ${right ? 'text-right' : ''}`}>{value}</span>
     </div>
   )
 }

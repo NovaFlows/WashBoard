@@ -15,6 +15,8 @@ type Props = {
 
 export type FormState = Partial<BookingFormData>
 
+const STEPS = ['Prestation', 'Créneau', 'Coordonnées']
+
 export default function BookingForm({ washer, services, availabilities }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
@@ -50,59 +52,79 @@ export default function BookingForm({ washer, services, availabilities }: Props)
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      {/* Indicateur d'étapes */}
-      <div className="flex items-center justify-between mb-8">
-        {[1, 2, 3].map(n => (
-          <div key={n} className="flex items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-              step > n ? 'bg-green-500 text-white' :
-              step === n ? 'bg-blue-600 text-white' :
-              'bg-gray-100 text-gray-400'
-            }`}>
-              {step > n ? '✓' : n}
-            </div>
-            {n < 3 && (
-              <div className={`h-px w-16 mx-2 transition-colors ${step > n ? 'bg-green-500' : 'bg-gray-200'}`} />
-            )}
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      {step < 4 && (
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            {STEPS.map((label, i) => {
+              const n = i + 1
+              const done = step > n
+              const active = step === n
+              return (
+                <div key={n} className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                      done ? 'bg-emerald-500 text-white' :
+                      active ? 'bg-blue-600 text-white' :
+                      'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                    }`}>
+                      {done ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7"/>
+                        </svg>
+                      ) : n}
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      active ? 'text-slate-900 dark:text-slate-100' :
+                      done ? 'text-emerald-600 dark:text-emerald-400' :
+                      'text-slate-400 dark:text-slate-500'
+                    }`}>{label}</span>
+                  </div>
+                  {n < 3 && (
+                    <div className={`h-px w-6 transition-colors ${done ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                  )}
+                </div>
+              )
+            })}
           </div>
-        ))}
+        </div>
+      )}
+
+      <div className="p-6">
+        {step === 1 && (
+          <StepService
+            services={services}
+            selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
+            onNext={(data) => { updateForm(data); setStep(2) }}
+          />
+        )}
+
+        {step === 2 && (
+          <StepSlot
+            availabilities={availabilities}
+            onNext={(data) => { updateForm(data); setStep(3) }}
+            onBack={() => setStep(1)}
+          />
+        )}
+
+        {step === 3 && (
+          <StepContact
+            loading={loading}
+            error={error}
+            onSubmit={submitBooking}
+            onBack={() => setStep(2)}
+          />
+        )}
+
+        {step === 4 && (
+          <StepConfirmation
+            washerName={washer.name}
+            bookingId={bookingId!}
+            form={form}
+            services={services}
+          />
+        )}
       </div>
-
-      {/* Étapes */}
-      {step === 1 && (
-        <StepService
-          services={services}
-          selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
-          onNext={(data) => { updateForm(data); setStep(2) }}
-        />
-      )}
-
-      {step === 2 && (
-        <StepSlot
-          availabilities={availabilities}
-          onNext={(data) => { updateForm(data); setStep(3) }}
-          onBack={() => setStep(1)}
-        />
-      )}
-
-      {step === 3 && (
-        <StepContact
-          loading={loading}
-          error={error}
-          onSubmit={submitBooking}
-          onBack={() => setStep(2)}
-        />
-      )}
-
-      {step === 4 && (
-        <StepConfirmation
-          washerName={washer.name}
-          bookingId={bookingId!}
-          form={form}
-          services={services}
-        />
-      )}
     </div>
   )
 }
