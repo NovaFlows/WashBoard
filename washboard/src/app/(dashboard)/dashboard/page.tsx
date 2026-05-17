@@ -45,13 +45,13 @@ export default async function DashboardPage() {
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-none">Espace laveur · {washer.name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex items-center gap-3 ml-auto">
             <form action="/api/auth/logout" method="POST">
-              <button className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">
+              <button className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-semibold border border-slate-200 dark:border-slate-700">
                 Déconnexion
               </button>
             </form>
+            <ThemeToggle large />
           </div>
         </div>
       </header>
