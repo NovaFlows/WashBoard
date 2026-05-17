@@ -39,15 +39,10 @@ export default async function DashboardPage() {
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20z"/>
-                <path d="M12 8v8M8 12h8"/>
-              </svg>
-            </div>
+            <img src="/logo-washboard.png" alt="WashBoard" className="w-8 h-8 object-contain" />
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none">{washer.name}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 leading-none mt-0.5">Tableau de bord</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none">WashBoard</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 leading-none mt-0.5">{washer.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

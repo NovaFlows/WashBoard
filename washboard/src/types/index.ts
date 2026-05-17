@@ -4,6 +4,7 @@ export type Washer = {
   name: string
   slug: string
   phone: string | null
+  logo_url: string | null
   zone_config: Record<string, unknown>
   created_at: string
 }

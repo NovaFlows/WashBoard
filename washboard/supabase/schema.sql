@@ -8,6 +8,7 @@ CREATE TABLE washers (
   name text NOT NULL,
   slug text UNIQUE NOT NULL,
   phone text,
+  logo_url text,
   zone_config jsonb DEFAULT '{}',
   stripe_customer_id text,
   created_at timestamptz DEFAULT now(),

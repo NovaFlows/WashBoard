@@ -33,14 +33,19 @@ export default async function BookingPage({ params }: Props) {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20z"/>
-                <path d="M12 8v8M8 12h8"/>
-              </svg>
-            </div>
-            <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">WashBoard</span>
+          <div className="flex items-center gap-3">
+            {washer.logo_url ? (
+              <img
+                src={washer.logo_url}
+                alt={washer.name}
+                className="w-8 h-8 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400 select-none">
+                {washer.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{washer.name}</span>
           </div>
           <ThemeToggle />
         </div>
