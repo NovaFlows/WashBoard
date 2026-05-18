@@ -7,6 +7,7 @@ type Props = {
   services: Service[]
   selected: { service_id?: string; vehicle_type?: string }
   onNext: (data: { service_id: string; vehicle_type: string }) => void
+  accent?: string
 }
 
 const VEHICLE_LABELS: Record<string, { label: string; icon: string }> = {
@@ -15,7 +16,11 @@ const VEHICLE_LABELS: Record<string, { label: string; icon: string }> = {
   SUV:      { label: 'SUV / 4x4', icon: '🚐' },
 }
 
-export default function StepService({ services, selected, onNext }: Props) {
+function hex(color: string, opacity: number) {
+  return color + Math.round(opacity * 255).toString(16).padStart(2, '0')
+}
+
+export default function StepService({ services, selected, onNext, accent = '#2563eb' }: Props) {
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   const [vehicleType, setVehicleType] = useState(selected.vehicle_type ?? '')
 
@@ -34,36 +39,36 @@ export default function StepService({ services, selected, onNext }: Props) {
             <button
               key={service.id}
               onClick={() => { setServiceId(service.id); setVehicleType('') }}
-              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                isSelected
-                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-500'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/50'
-              }`}
+              className="w-full text-left p-4 rounded-xl border-2 transition-all"
+              style={isSelected
+                ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
+                : undefined
+              }
             >
-              <div className="flex justify-between items-center">
+              <div className={`w-full flex justify-between items-center ${!isSelected ? 'border-slate-200 dark:border-slate-700' : ''}`}>
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-base transition-colors ${
-                    isSelected ? 'bg-blue-100 dark:bg-blue-900/60' : 'bg-slate-100 dark:bg-slate-700'
-                  }`}>
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base transition-colors bg-slate-100 dark:bg-slate-700"
+                    style={isSelected ? { backgroundColor: hex(accent, 0.15) } : undefined}
+                  >
                     🧽
                   </div>
                   <div>
-                    <p className={`font-semibold text-sm ${isSelected ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                    <p className="font-semibold text-sm text-slate-900 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
                       {service.name}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{service.duration_minutes} min</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-lg font-bold ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300" style={isSelected ? { color: accent } : undefined}>
                     {service.price}€
                   </span>
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                    isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300 dark:border-slate-600'
-                  }`}>
-                    {isSelected && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                    )}
+                  <div
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all border-slate-300 dark:border-slate-600"
+                    style={isSelected ? { borderColor: accent, backgroundColor: accent } : undefined}
+                  >
+                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
                 </div>
               </div>
@@ -83,11 +88,8 @@ export default function StepService({ services, selected, onNext }: Props) {
                 <button
                   key={type}
                   onClick={() => setVehicleType(type)}
-                  className={`py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1 ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-500 text-blue-700 dark:text-blue-400'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
+                  className="py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+                  style={isSelected ? { borderColor: accent, backgroundColor: hex(accent, 0.06), color: accent } : undefined}
                 >
                   <span className="text-xl">{info.icon}</span>
                   {info.label}
@@ -101,7 +103,8 @@ export default function StepService({ services, selected, onNext }: Props) {
       <button
         onClick={() => canContinue && onNext({ service_id: serviceId, vehicle_type: vehicleType })}
         disabled={!canContinue}
-        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
+        className="w-full py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
+        style={{ backgroundColor: accent }}
       >
         Continuer
       </button>

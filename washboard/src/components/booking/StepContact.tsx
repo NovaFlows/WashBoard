@@ -7,16 +7,17 @@ type Props = {
   error: string | null
   onSubmit: (data: { client_name: string; client_email: string; client_phone: string }) => void
   onBack: () => void
+  accent?: string
 }
 
-export default function StepContact({ loading, error, onSubmit, onBack }: Props) {
+export default function StepContact({ loading, error, onSubmit, onBack, accent = '#2563eb' }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
 
   const canSubmit = name.trim() && email.includes('@') && phone.trim().length >= 10
 
-  const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
+  const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
 
   return (
@@ -27,33 +28,15 @@ export default function StepContact({ loading, error, onSubmit, onBack }: Props)
       <div className="space-y-4 mb-6">
         <div>
           <label className={labelClass}>Prénom et nom</label>
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Jean Dupont"
-            className={inputClass}
-          />
+          <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jean Dupont" className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="jean@email.com"
-            className={inputClass}
-          />
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean@email.com" className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Téléphone</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="06 00 00 00 00"
-            className={inputClass}
-          />
+          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
         </div>
       </div>
 
@@ -77,7 +60,8 @@ export default function StepContact({ loading, error, onSubmit, onBack }: Props)
         <button
           onClick={() => canSubmit && onSubmit({ client_name: name, client_email: email, client_phone: phone })}
           disabled={!canSubmit || loading}
-          className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
+          className="flex-1 py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
+          style={{ backgroundColor: accent }}
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
