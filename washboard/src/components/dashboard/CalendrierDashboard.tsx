@@ -12,6 +12,8 @@ type Booking = {
   scheduled_at: string
   status: 'pending' | 'confirmed' | 'cancelled' | 'done'
   notes: string | null
+  is_smart_slot: boolean
+  smart_discount: number
   services: Service | null
 }
 
@@ -297,7 +299,7 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
                         onClick={() => openBooking(b)}
                         className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                       >
-                        {fmt(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
+                        {b.is_smart_slot && '★ '}{fmt(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
                       </button>
                     ))}
                     {overflow > 0 && (
@@ -379,7 +381,7 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
                           className={`absolute rounded-md px-1.5 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                           style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 2px)` }}
                         >
-                          <p className="text-[10px] font-bold leading-tight truncate">{fmt(d)}</p>
+                          <p className="text-[10px] font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{fmt(d)}</p>
                           <p className="text-[10px] leading-tight truncate opacity-80">{b.client_name.split(' ')[0]}</p>
                         </button>
                       )
@@ -448,7 +450,7 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
                       className={`absolute rounded-md px-2 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                       style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 3px)` }}
                     >
-                      <p className="text-xs font-bold leading-tight truncate">{fmt(d)} — {b.client_name}</p>
+                      <p className="text-xs font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{fmt(d)} — {b.client_name}</p>
                       {b.services && <p className="text-[10px] leading-tight truncate opacity-80">{b.services.name} · {b.services.duration_minutes} min</p>}
                     </button>
                   )
@@ -536,7 +538,16 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
               {selected.client_phone && <Row icon="phone">{selected.client_phone}</Row>}
               {selected.services && (
                 <Row icon="bolt">
-                  {selected.services.name} · {selected.services.duration_minutes} min · {selected.services.price}€
+                  {selected.services.name} · {selected.services.duration_minutes} min ·{' '}
+                  {selected.is_smart_slot && selected.smart_discount > 0 ? (
+                    <>
+                      <span className="line-through opacity-50">{selected.services.price}€</span>
+                      {' '}
+                      <span className="font-semibold">{(selected.services.price - selected.smart_discount).toFixed(2).replace(/\.00$/, '')}€</span>
+                      {' '}
+                      <span className="text-amber-500 font-bold">★ smart</span>
+                    </>
+                  ) : `${selected.services.price}€`}
                 </Row>
               )}
               <Row icon="calendar">

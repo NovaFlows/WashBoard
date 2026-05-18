@@ -35,7 +35,7 @@ export default function BookingForm({ washer, services, availabilities, existing
   async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'>) {
     setLoading(true)
     setError(null)
-    const payload = { ...form, ...contactData, washer_id: washer.id }
+    const payload = { ...form, ...contactData, washer_id: washer.id, is_smart_slot: form.is_smart_slot ?? false, smart_discount: form.smart_discount ?? 0 }
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -110,6 +110,8 @@ export default function BookingForm({ washer, services, availabilities, existing
             existingBookings={existingBookings}
             teamSize={washer.team_size ?? 1}
             serviceDuration={services.find(s => s.id === form.service_id)?.duration_minutes ?? 60}
+            servicePrice={services.find(s => s.id === form.service_id)?.price ?? 0}
+            washerId={washer.id}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
             accent={accent}

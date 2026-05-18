@@ -4,14 +4,16 @@ import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
 const BookingSchema = z.object({
-  washer_id: z.string().uuid(),
-  service_id: z.string().uuid(),
-  vehicle_type: z.string().min(1),
-  address: z.string().min(5),
-  scheduled_at: z.string().datetime(),
-  client_name: z.string().min(2),
-  client_email: z.string().email(),
-  client_phone: z.string().min(10),
+  washer_id:      z.string().uuid(),
+  service_id:     z.string().uuid(),
+  vehicle_type:   z.string().min(1),
+  address:        z.string().min(5),
+  scheduled_at:   z.string().datetime(),
+  client_name:    z.string().min(2),
+  client_email:   z.string().email(),
+  client_phone:   z.string().min(10),
+  is_smart_slot:  z.boolean().optional().default(false),
+  smart_discount: z.number().min(0).optional().default(0),
 })
 
 export async function POST(req: Request) {
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const { vehicle_type, ...bookingData } = parsed.data
+  const { vehicle_type, is_smart_slot, smart_discount, ...bookingData } = parsed.data
   const id = randomUUID()
 
   const supabase = await createClient()
@@ -38,7 +40,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabase
     .from('bookings')
-    .insert({ id, ...bookingData })
+    .insert({ id, ...bookingData, is_smart_slot: is_smart_slot ?? false, smart_discount: smart_discount ?? 0 })
 
   if (error) {
     console.error('Booking insert error:', error)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Availability } from '@/types'
 
 type ExistingBooking = { scheduled_at: string; services: { duration_minutes: number } | null }
@@ -10,7 +10,9 @@ type Props = {
   existingBookings: ExistingBooking[]
   teamSize: number
   serviceDuration: number
-  onNext: (data: { scheduled_at: string; address: string }) => void
+  servicePrice: number
+  washerId: string
+  onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number }) => void
   onBack: () => void
   accent?: string
 }
@@ -27,7 +29,7 @@ function countOverlaps(slotTime: string, date: Date, duration: number, bookings:
   }).length
 }
 
-const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+const DAY_NAMES   = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTH_NAMES = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc']
 
 function getNextDays(count: number): Date[] {
@@ -57,10 +59,42 @@ function generateSlots(start: string, end: string, durationMinutes: number): str
   return slots
 }
 
-export default function StepSlot({ availabilities, existingBookings, teamSize, serviceDuration, onNext, onBack, accent = '#2563eb' }: Props) {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [address, setAddress] = useState('')
+export default function StepSlot({
+  availabilities, existingBookings, teamSize, serviceDuration, servicePrice, washerId,
+  onNext, onBack, accent = '#2563eb',
+}: Props) {
+  const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
+  const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
+  const [address,           setAddress]           = useState('')
+  const [debouncedAddress,  setDebouncedAddress]  = useState('')
+  const [smartSlots,        setSmartSlots]        = useState<string[]>([])
+  const [smartDiscountType, setSmartDiscountType] = useState<'fixed' | 'percent'>('fixed')
+  const [smartDiscountValue,setSmartDiscountValue]= useState(0)
+  const [fetchingSmarts,    setFetchingSmarts]    = useState(false)
+
+  // Debounce address changes (800 ms) to avoid spamming the API
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedAddress(address), 800)
+    return () => clearTimeout(t)
+  }, [address])
+
+  useEffect(() => {
+    if (!selectedDate || debouncedAddress.trim().length <= 5) {
+      setSmartSlots([])
+      return
+    }
+    const dateStr = selectedDate.toISOString().split('T')[0]
+    setFetchingSmarts(true)
+    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${dateStr}`)
+      .then(r => r.json())
+      .then(data => {
+        setSmartSlots(data.smartSlots ?? [])
+        setSmartDiscountType(data.discountType ?? 'fixed')
+        setSmartDiscountValue(data.discountValue ?? 0)
+      })
+      .catch(() => setSmartSlots([]))
+      .finally(() => setFetchingSmarts(false))
+  }, [selectedDate, debouncedAddress, washerId])
 
   const days = getNextDays(14)
   const availableDaysOfWeek = availabilities.map(a => a.day_of_week)
@@ -72,6 +106,14 @@ export default function StepSlot({ availabilities, existingBookings, teamSize, s
         .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, existingBookings) < teamSize)
     : []
 
+  const smartSlotsInDay = slotsForDay.filter(s => smartSlots.includes(s))
+  const regularSlots    = slotsForDay.filter(s => !smartSlots.includes(s))
+
+  const smartPrice = smartDiscountType === 'percent'
+    ? Math.max(0, servicePrice * (1 - smartDiscountValue / 100))
+    : Math.max(0, servicePrice - smartDiscountValue)
+  const smartPriceStr = Number.isInteger(smartPrice) ? String(smartPrice) : smartPrice.toFixed(2)
+
   const canContinue = selectedDate && selectedTime && address.trim().length > 5
 
   function handleNext() {
@@ -79,7 +121,11 @@ export default function StepSlot({ availabilities, existingBookings, teamSize, s
     const [h, m] = selectedTime.split(':').map(Number)
     const dt = new Date(selectedDate)
     dt.setHours(h, m, 0, 0)
-    onNext({ scheduled_at: dt.toISOString(), address })
+    const isSmart = smartSlots.includes(selectedTime)
+    const discount = isSmart
+      ? (smartDiscountType === 'percent' ? servicePrice * smartDiscountValue / 100 : smartDiscountValue)
+      : 0
+    onNext({ scheduled_at: dt.toISOString(), address, is_smart_slot: isSmart, smart_discount: discount })
   }
 
   return (
@@ -104,15 +150,15 @@ export default function StepSlot({ availabilities, existingBookings, teamSize, s
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {days.map(day => {
             const isAvailable = availableDaysOfWeek.includes(day.getDay())
-            const isSelected = selectedDate?.toDateString() === day.toDateString()
+            const isSelected  = selectedDate?.toDateString() === day.toDateString()
             return (
               <button
                 key={day.toISOString()}
                 onClick={() => { if (isAvailable) { setSelectedDate(day); setSelectedTime(null) } }}
                 disabled={!isAvailable}
                 className={`flex-shrink-0 flex flex-col items-center py-2.5 px-3 rounded-xl border-2 text-xs transition-all min-w-[52px] ${
-                  isSelected ? 'text-white shadow-md' :
-                  isAvailable ? 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800' :
+                  isSelected   ? 'text-white shadow-md' :
+                  isAvailable  ? 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800' :
                   'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-900'
                 }`}
                 style={isSelected ? { backgroundColor: accent, borderColor: accent } : undefined}
@@ -130,7 +176,13 @@ export default function StepSlot({ availabilities, existingBookings, teamSize, s
 
       {selectedDate && (
         <div className="mb-6">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Heure</p>
+          <div className="flex items-center gap-2 mb-2.5">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Heure</p>
+            {fetchingSmarts && (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 animate-pulse">Recherche des créneaux optimisés...</span>
+            )}
+          </div>
+
           {slotsForDay.length === 0 ? (
             <div className="flex items-center gap-2 py-3 px-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
               <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,22 +191,69 @@ export default function StepSlot({ availabilities, existingBookings, teamSize, s
               <p className="text-sm text-slate-400 dark:text-slate-500">Aucun créneau disponible ce jour</p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {slotsForDay.map(slot => (
-                <button
-                  key={slot}
-                  onClick={() => setSelectedTime(slot)}
-                  className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
-                    selectedTime === slot
-                      ? 'text-white shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
-                  }`}
-                  style={selectedTime === slot ? { backgroundColor: accent, borderColor: accent } : undefined}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
+            <>
+              {/* Smart slots — shown first */}
+              {smartSlotsInDay.length > 0 && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">★ Créneaux optimisés pour votre tournée</span>
+                    {smartDiscountValue > 0 && (
+                      <span className="text-[10px] bg-amber-200 dark:bg-amber-800/60 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-bold">
+                        -{smartDiscountType === 'percent' ? `${smartDiscountValue}%` : `${smartDiscountValue}€`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {smartSlotsInDay.map(slot => {
+                      const isSelected = selectedTime === slot
+                      return (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedTime(slot)}
+                          className={`py-2 rounded-xl border-2 font-semibold transition-all flex flex-col items-center gap-0.5 ${
+                            isSelected
+                              ? 'border-amber-500 bg-amber-500 text-white shadow-sm'
+                              : 'border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 bg-white dark:bg-amber-950/30 hover:border-amber-400'
+                          }`}
+                        >
+                          <span className="text-sm">{slot}</span>
+                          {servicePrice > 0 && smartDiscountValue > 0 && (
+                            <span className={`text-[10px] font-bold ${isSelected ? 'opacity-90' : 'text-amber-600 dark:text-amber-400'}`}>
+                              {smartPriceStr}€
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular slots */}
+              {regularSlots.length > 0 && (
+                <div>
+                  {smartSlotsInDay.length > 0 && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Autres créneaux disponibles</p>
+                  )}
+                  <div className="grid grid-cols-4 gap-2">
+                    {regularSlots.map(slot => (
+                      <button
+                        key={slot}
+                        onClick={() => setSelectedTime(slot)}
+                        className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                          selectedTime === slot
+                            ? 'text-white shadow-sm'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
+                        }`}
+                        style={selectedTime === slot ? { backgroundColor: accent, borderColor: accent } : undefined}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

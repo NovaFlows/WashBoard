@@ -10,6 +10,10 @@ export type Washer = {
   zone_config: Record<string, unknown>
   google_refresh_token: string | null
   team_size: number
+  smart_slot_enabled: boolean
+  smart_slot_radius_minutes: number
+  smart_slot_discount_type: 'fixed' | 'percent'
+  smart_slot_discount_value: number
   created_at: string
 }
 
@@ -44,6 +48,8 @@ export type Booking = {
   status: 'pending' | 'confirmed' | 'cancelled' | 'done'
   notes: string | null
   google_calendar_event_id: string | null
+  is_smart_slot: boolean
+  smart_discount: number
   created_at: string
 }
 
@@ -55,4 +61,6 @@ export type BookingFormData = {
   client_name: string
   client_email: string
   client_phone: string
+  is_smart_slot?: boolean
+  smart_discount?: number
 }

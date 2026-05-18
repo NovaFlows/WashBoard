@@ -29,6 +29,33 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Créneaux intelligents
+  const [smartEnabled,       setSmartEnabled]       = useState(washer.smart_slot_enabled ?? false)
+  const [smartRadius,        setSmartRadius]        = useState(String(washer.smart_slot_radius_minutes ?? 15))
+  const [smartDiscountType,  setSmartDiscountType]  = useState<'fixed' | 'percent'>(washer.smart_slot_discount_type ?? 'fixed')
+  const [smartDiscountValue, setSmartDiscountValue] = useState(String(washer.smart_slot_discount_value ?? 5))
+  const [smartSaving,        setSmartSaving]        = useState(false)
+  const [smartMsg,           setSmartMsg]           = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function saveSmartSlot(e: React.FormEvent) {
+    e.preventDefault()
+    setSmartSaving(true)
+    setSmartMsg(null)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        smart_slot_enabled:          smartEnabled,
+        smart_slot_radius_minutes:   parseInt(smartRadius) || 15,
+        smart_slot_discount_type:    smartDiscountType,
+        smart_slot_discount_value:   parseFloat(smartDiscountValue) || 0,
+      }),
+    })
+    if (res.ok) { setSmartMsg({ ok: true, text: 'Paramètres sauvegardés' }); router.refresh() }
+    else setSmartMsg({ ok: false, text: 'Erreur lors de la sauvegarde' })
+    setSmartSaving(false)
+  }
+
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -197,6 +224,74 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           {msg.ok ? '✓ ' : '✕ '}{msg.text}
         </p>
       )}
+
+      {/* Créneaux intelligents */}
+      <form onSubmit={saveSmartSlot} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Créneaux intelligents</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Proposez une remise automatique quand un client réserve dans votre zone de tournée</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSmartEnabled(v => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${smartEnabled ? 'bg-amber-400' : 'bg-slate-200 dark:bg-slate-700'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${smartEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {smartEnabled && (
+          <div className="space-y-3 pt-1">
+            <div>
+              <label className={labelClass}>Rayon de proximité (minutes en voiture)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range" min={5} max={30} step={5}
+                  value={parseInt(smartRadius) || 15}
+                  onChange={e => setSmartRadius(e.target.value)}
+                  className="flex-1 accent-amber-400"
+                />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 w-16 text-right">{smartRadius} min</span>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Remise proposée</label>
+              <div className="flex items-center gap-2">
+                <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 text-sm shrink-0">
+                  {(['fixed', 'percent'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setSmartDiscountType(t)}
+                      className={`px-3 py-1.5 rounded-md font-medium transition-colors ${smartDiscountType === t ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}>
+                      {t === 'fixed' ? '€' : '%'}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number" min={0} max={smartDiscountType === 'percent' ? 100 : 9999} step={0.5}
+                  value={smartDiscountValue}
+                  onChange={e => setSmartDiscountValue(e.target.value)}
+                  onBlur={() => setSmartDiscountValue(v => String(parseFloat(v) || 0))}
+                  className={`${inputClass} w-28`}
+                />
+                <p className="text-xs text-slate-400">
+                  {smartDiscountType === 'fixed' ? `${smartDiscountValue}€ de remise` : `${smartDiscountValue}% de remise`} sur le créneau recommandé
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {smartMsg && (
+          <p className={`text-sm font-medium ${smartMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            {smartMsg.ok ? '✓ ' : '✕ '}{smartMsg.text}
+          </p>
+        )}
+        <button type="submit" disabled={smartSaving}
+          className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+          {smartSaving ? 'Sauvegarde...' : 'Sauvegarder'}
+        </button>
+      </form>
 
       {/* Google Agenda */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">

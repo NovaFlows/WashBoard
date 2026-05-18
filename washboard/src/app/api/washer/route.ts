@@ -6,7 +6,10 @@ export async function PATCH(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { name, phone, logo_url, welcome_message, brand_color, team_size } = await request.json()
+  const {
+    name, phone, logo_url, welcome_message, brand_color, team_size,
+    smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
+  } = await request.json()
 
   const updates: Record<string, unknown> = {}
   if (name !== undefined) updates.name = name?.trim() ?? null
@@ -15,6 +18,10 @@ export async function PATCH(request: NextRequest) {
   if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
   if (brand_color !== undefined) updates.brand_color = brand_color || null
   if (team_size !== undefined) updates.team_size = Math.max(1, Math.floor(Number(team_size)))
+  if (smart_slot_enabled !== undefined) updates.smart_slot_enabled = Boolean(smart_slot_enabled)
+  if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
+  if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type
+  if (smart_slot_discount_value !== undefined) updates.smart_slot_discount_value = Math.max(0, Number(smart_slot_discount_value))
 
   const { error } = await supabase
     .from('washers')
