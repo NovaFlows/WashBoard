@@ -11,6 +11,8 @@ type Booking = {
   address: string
   scheduled_at: string
   status: string
+  is_smart_slot: boolean
+  smart_discount: number
   services: Service | null
 }
 
@@ -132,7 +134,20 @@ function BookingCard({ booking, loading, onUpdate }: {
                   <path d="M12 22V12M12 12L8 8M12 12l4-4"/>
                   <circle cx="12" cy="5" r="3"/>
                 </svg>
-                <span>{booking.services.name} — <span className="font-semibold text-slate-700 dark:text-slate-300">{booking.services.price}€</span></span>
+                <span>
+                  {booking.services.name} —{' '}
+                  {booking.is_smart_slot && Number(booking.smart_discount) > 0 ? (
+                    <>
+                      <span className="line-through opacity-50">{booking.services.price}€</span>
+                      {' '}
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
+                        {(booking.services.price - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{booking.services.price}€</span>
+                  )}
+                </span>
               </div>
             )}
 
