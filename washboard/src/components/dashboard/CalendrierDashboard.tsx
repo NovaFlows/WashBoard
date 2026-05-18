@@ -539,11 +539,11 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
               {selected.services && (
                 <Row icon="bolt">
                   {selected.services.name} · {selected.services.duration_minutes} min ·{' '}
-                  {selected.is_smart_slot && selected.smart_discount > 0 ? (
+                  {selected.is_smart_slot && Number(selected.smart_discount) > 0 ? (
                     <>
                       <span className="line-through opacity-50">{selected.services.price}€</span>
                       {' '}
-                      <span className="font-semibold">{(selected.services.price - selected.smart_discount).toFixed(2).replace(/\.00$/, '')}€</span>
+                      <span className="font-semibold">{(selected.services.price - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
                       {' '}
                       <span className="text-amber-500 font-bold">★ smart</span>
                     </>

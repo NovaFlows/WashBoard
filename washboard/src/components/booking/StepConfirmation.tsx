@@ -29,8 +29,8 @@ export default function StepConfirmation({ washerName, bookingId, form, services
           <Row
             label="Prestation"
             value={
-              form.is_smart_slot && form.smart_discount && form.smart_discount > 0
-                ? `${service.name} — ${(service.price - form.smart_discount).toFixed(2).replace(/\.00$/, '')}€ ★`
+              form.is_smart_slot && Number(form.smart_discount) > 0
+                ? `${service.name} — ${(service.price - Number(form.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★`
                 : `${service.name} — ${service.price}€`
             }
           />
