@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Washer } from '@/types'
 
 type LogoStatus = 'idle' | 'removing' | 'uploading' | 'done' | 'error'
@@ -16,6 +17,7 @@ const PALETTE = [
 ]
 
 export default function IdentiteForm({ washer }: { washer: Washer }) {
+  const router = useRouter()
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
   const [logoStatus, setLogoStatus] = useState<LogoStatus>('idle')
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -73,10 +75,12 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ welcome_message: message }),
     })
-    setMsg(res.ok
-      ? { ok: true, text: 'Modifications enregistrées' }
-      : { ok: false, text: 'Erreur lors de la sauvegarde' }
-    )
+    if (res.ok) {
+      setMsg({ ok: true, text: 'Modifications enregistrées' })
+      router.refresh()
+    } else {
+      setMsg({ ok: false, text: 'Erreur lors de la sauvegarde' })
+    }
     setLoading(false)
   }
 
@@ -193,6 +197,33 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           {msg.ok ? '✓ ' : '✕ '}{msg.text}
         </p>
       )}
+
+      {/* Google Agenda */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Google Agenda</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {washer.google_refresh_token
+                ? 'Compte connecté — les RDV confirmés sont automatiquement ajoutés à votre agenda.'
+                : 'Connectez votre compte pour synchroniser les RDV confirmés dans Google Agenda.'}
+            </p>
+          </div>
+          <a
+            href="/api/auth/google-calendar"
+            className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              washer.google_refresh_token
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-7.5 13.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8.5c-1.93 0-3.5 1.57-3.5 3.5s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5-1.57-3.5-3.5-3.5z"/>
+            </svg>
+            {washer.google_refresh_token ? '✓ Connecté' : 'Connecter'}
+          </a>
+        </div>
+      </div>
 
       <button
         type="submit"

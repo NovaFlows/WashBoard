@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Washer } from '@/types'
 import Link from 'next/link'
@@ -42,8 +43,10 @@ export default function ParametresForm({ washer, email }: Props) {
 
 /* ── Onglet Général ── */
 function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
+  const router = useRouter()
   const [name, setName] = useState(washer.name)
   const [phone, setPhone] = useState(washer.phone ?? '')
+  const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -69,12 +72,14 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     const res = await fetch('/api/washer', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone }),
+      body: JSON.stringify({ name, phone, team_size: Math.max(1, parseInt(teamSize) || 1) }),
     })
-    setProfileMsg(res.ok
-      ? { ok: true, text: 'Profil mis à jour' }
-      : { ok: false, text: 'Erreur lors de la mise à jour' }
-    )
+    if (res.ok) {
+      setProfileMsg({ ok: true, text: 'Profil mis à jour' })
+      router.refresh()
+    } else {
+      setProfileMsg({ ok: false, text: 'Erreur lors de la mise à jour' })
+    }
     setProfileLoading(false)
   }
 
@@ -123,6 +128,26 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <div>
             <label className={labelClass}>Téléphone</label>
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Nombre de laveurs</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={teamSize}
+                onChange={e => setTeamSize(e.target.value)}
+                onBlur={() => {
+                  const v = parseInt(teamSize)
+                  setTeamSize(String(isNaN(v) || v < 1 ? 1 : v))
+                }}
+                className={`${inputClass} w-24`}
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {parseInt(teamSize) <= 1 ? 'Aucun chevauchement de RDV' : `Jusqu'à ${teamSize} RDV simultanés`}
+              </p>
+            </div>
           </div>
           <Feedback msg={profileMsg} />
           <SaveButton loading={profileLoading} />

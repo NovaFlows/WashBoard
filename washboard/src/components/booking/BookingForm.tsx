@@ -7,10 +7,13 @@ import StepSlot from './StepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './StepConfirmation'
 
+type ExistingBooking = { scheduled_at: string; services: { duration_minutes: number } | null }
+
 type Props = {
   washer: Washer
   services: Service[]
   availabilities: Availability[]
+  existingBookings: ExistingBooking[]
   accent?: string
 }
 
@@ -18,7 +21,7 @@ export type FormState = Partial<BookingFormData>
 
 const STEPS = ['Prestation', 'Créneau', 'Coordonnées']
 
-export default function BookingForm({ washer, services, availabilities, accent = '#2563eb' }: Props) {
+export default function BookingForm({ washer, services, availabilities, existingBookings, accent = '#2563eb' }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -104,6 +107,9 @@ export default function BookingForm({ washer, services, availabilities, accent =
         {step === 2 && (
           <StepSlot
             availabilities={availabilities}
+            existingBookings={existingBookings}
+            teamSize={washer.team_size ?? 1}
+            serviceDuration={services.find(s => s.id === form.service_id)?.duration_minutes ?? 60}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
             accent={accent}

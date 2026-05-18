@@ -3,11 +3,28 @@
 import { useState } from 'react'
 import type { Availability } from '@/types'
 
+type ExistingBooking = { scheduled_at: string; services: { duration_minutes: number } | null }
+
 type Props = {
   availabilities: Availability[]
+  existingBookings: ExistingBooking[]
+  teamSize: number
+  serviceDuration: number
   onNext: (data: { scheduled_at: string; address: string }) => void
   onBack: () => void
   accent?: string
+}
+
+function countOverlaps(slotTime: string, date: Date, duration: number, bookings: ExistingBooking[]): number {
+  const [h, m] = slotTime.split(':').map(Number)
+  const slotStart = new Date(date)
+  slotStart.setHours(h, m, 0, 0)
+  const slotEnd = new Date(slotStart.getTime() + duration * 60_000)
+  return bookings.filter(b => {
+    const bStart = new Date(b.scheduled_at)
+    const bEnd   = new Date(bStart.getTime() + (b.services?.duration_minutes ?? 60) * 60_000)
+    return bStart < slotEnd && bEnd > slotStart
+  }).length
 }
 
 const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -40,7 +57,7 @@ function generateSlots(start: string, end: string, durationMinutes: number): str
   return slots
 }
 
-export default function StepSlot({ availabilities, onNext, onBack, accent = '#2563eb' }: Props) {
+export default function StepSlot({ availabilities, existingBookings, teamSize, serviceDuration, onNext, onBack, accent = '#2563eb' }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [address, setAddress] = useState('')
@@ -51,7 +68,8 @@ export default function StepSlot({ availabilities, onNext, onBack, accent = '#25
   const slotsForDay = selectedDate
     ? availabilities
         .filter(a => a.day_of_week === selectedDate.getDay())
-        .flatMap(a => generateSlots(a.start_time, a.end_time, 60))
+        .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
+        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, existingBookings) < teamSize)
     : []
 
   const canContinue = selectedDate && selectedTime && address.trim().length > 5

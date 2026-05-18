@@ -49,6 +49,13 @@ export default async function BookingPage({ params }: Props) {
     .select('*')
     .eq('washer_id', washer.id)
 
+  const { data: existingBookings } = await supabase
+    .from('bookings')
+    .select('scheduled_at, services(duration_minutes)')
+    .eq('washer_id', washer.id)
+    .neq('status', 'cancelled')
+    .gte('scheduled_at', new Date().toISOString())
+
   return (
     <>
     {washer.logo_url && <link rel="icon" href={washer.logo_url} type="image/png" />}
@@ -86,6 +93,7 @@ export default async function BookingPage({ params }: Props) {
           washer={washer}
           services={services ?? []}
           availabilities={availabilities ?? []}
+          existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; services: { duration_minutes: number } | null }[]}
           accent={washer.brand_color ?? '#2563eb'}
         />
       </main>
