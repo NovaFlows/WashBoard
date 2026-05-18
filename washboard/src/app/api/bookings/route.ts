@@ -55,6 +55,8 @@ export async function POST(req: Request) {
       washerName: washer.name,
       serviceName: service.name,
       servicePrice: service.price,
+      isSmartSlot: is_smart_slot,
+      smartDiscount: smart_discount,
       address: bookingData.address,
       scheduledAt: bookingData.scheduled_at,
       bookingId: id,

@@ -6,6 +6,8 @@ type SendConfirmationParams = {
   washerName: string
   serviceName: string
   servicePrice: number
+  isSmartSlot?: boolean
+  smartDiscount?: number
   address: string
   scheduledAt: string
   bookingId: string
@@ -53,7 +55,12 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
           </tr>
           <tr>
             <td style="padding:6px 0;color:#6b7280;font-size:13px;">Prix</td>
-            <td style="padding:6px 0;color:#111827;font-size:13px;font-weight:600;">${params.servicePrice}€ (paiement sur place)</td>
+            <td style="padding:6px 0;color:#111827;font-size:13px;font-weight:600;">
+              ${params.isSmartSlot && params.smartDiscount && params.smartDiscount > 0
+                ? `<span style="text-decoration:line-through;color:#9ca3af;">${params.servicePrice}€</span> <strong style="color:#d97706;">${(params.servicePrice - params.smartDiscount).toFixed(2).replace(/\.00$/, '')}€ ★ créneau optimisé</strong>`
+                : `${params.servicePrice}€`
+              } (paiement sur place)
+            </td>
           </tr>
           <tr>
             <td style="padding:6px 0;color:#6b7280;font-size:13px;">Date</td>
