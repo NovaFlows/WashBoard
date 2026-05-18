@@ -8,6 +8,8 @@ export type Washer = {
   welcome_message: string | null
   brand_color: string | null
   zone_config: Record<string, unknown>
+  google_refresh_token: string | null
+  team_size: number
   created_at: string
 }
 
@@ -40,6 +42,8 @@ export type Booking = {
   lng: number | null
   scheduled_at: string
   status: 'pending' | 'confirmed' | 'cancelled' | 'done'
+  notes: string | null
+  google_calendar_event_id: string | null
   created_at: string
 }
 
