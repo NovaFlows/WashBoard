@@ -67,7 +67,8 @@ export default function StepSlot({
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
   const [address,           setAddress]           = useState('')
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
-  const [smartSlots,        setSmartSlots]        = useState<string[]>([])
+  type SmartWindow = { start: string; end: string }
+  const [smartWindows,      setSmartWindows]      = useState<SmartWindow[]>([])
   const [smartDiscountType, setSmartDiscountType] = useState<'fixed' | 'percent'>('fixed')
   const [smartDiscountValue,setSmartDiscountValue]= useState(0)
   const [fetchingSmarts,    setFetchingSmarts]    = useState(false)
@@ -80,19 +81,21 @@ export default function StepSlot({
 
   useEffect(() => {
     if (!selectedDate || debouncedAddress.trim().length <= 5) {
-      setSmartSlots([])
+      setSmartWindows([])
       return
     }
-    const dateStr = selectedDate.toISOString().split('T')[0]
+    // Utiliser la date locale (pas UTC) pour éviter le décalage horaire
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const dateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`
     setFetchingSmarts(true)
     fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${dateStr}`)
       .then(r => r.json())
       .then(data => {
-        setSmartSlots(data.smartSlots ?? [])
+        setSmartWindows(data.smartWindows ?? [])
         setSmartDiscountType(data.discountType ?? 'fixed')
         setSmartDiscountValue(data.discountValue ?? 0)
       })
-      .catch(() => setSmartSlots([]))
+      .catch(() => setSmartWindows([]))
       .finally(() => setFetchingSmarts(false))
   }, [selectedDate, debouncedAddress, washerId])
 
@@ -106,8 +109,17 @@ export default function StepSlot({
         .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, existingBookings) < teamSize)
     : []
 
-  const smartSlotsInDay = slotsForDay.filter(s => smartSlots.includes(s))
-  const regularSlots    = slotsForDay.filter(s => !smartSlots.includes(s))
+  // Vérifier si un créneau local tombe dans une fenêtre UTC — timezone-safe
+  function isSmartSlot(slotTime: string, date: Date): boolean {
+    const [h, m] = slotTime.split(':').map(Number)
+    const slotDate = new Date(date)
+    slotDate.setHours(h, m, 0, 0)
+    const ms = slotDate.getTime()
+    return smartWindows.some(w => ms >= new Date(w.start).getTime() && ms <= new Date(w.end).getTime())
+  }
+
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSmartSlot(s, selectedDate)) : []
+  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSmartSlot(s, selectedDate)) : slotsForDay
 
   const smartPrice = smartDiscountType === 'percent'
     ? Math.max(0, servicePrice * (1 - smartDiscountValue / 100))
@@ -121,7 +133,7 @@ export default function StepSlot({
     const [h, m] = selectedTime.split(':').map(Number)
     const dt = new Date(selectedDate)
     dt.setHours(h, m, 0, 0)
-    const isSmart = smartSlots.includes(selectedTime)
+    const isSmart = isSmartSlot(selectedTime, dt)
     const discount = isSmart
       ? (smartDiscountType === 'percent' ? servicePrice * smartDiscountValue / 100 : smartDiscountValue)
       : 0

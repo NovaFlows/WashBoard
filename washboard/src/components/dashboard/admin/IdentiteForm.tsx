@@ -37,8 +37,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [smartSaving,        setSmartSaving]        = useState(false)
   const [smartMsg,           setSmartMsg]           = useState<{ ok: boolean; text: string } | null>(null)
 
-  async function saveSmartSlot(e: React.FormEvent) {
-    e.preventDefault()
+  async function saveSmartSlot() {
     setSmartSaving(true)
     setSmartMsg(null)
     const res = await fetch('/api/washer', {
@@ -226,7 +225,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       )}
 
       {/* Créneaux intelligents */}
-      <form onSubmit={saveSmartSlot} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Créneaux intelligents</h2>
@@ -287,11 +286,11 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             {smartMsg.ok ? '✓ ' : '✕ '}{smartMsg.text}
           </p>
         )}
-        <button type="submit" disabled={smartSaving}
+        <button type="button" onClick={saveSmartSlot} disabled={smartSaving}
           className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
           {smartSaving ? 'Sauvegarde...' : 'Sauvegarder'}
         </button>
-      </form>
+      </div>
 
       {/* Google Agenda */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
