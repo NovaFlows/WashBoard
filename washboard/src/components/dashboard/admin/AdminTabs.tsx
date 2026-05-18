@@ -1,0 +1,51 @@
+'use client'
+
+import { useState } from 'react'
+import type { Washer, Service, Availability } from '@/types'
+import IdentiteForm from './IdentiteForm'
+import PrestationsManager from './PrestationsManager'
+import DisponibilitesManager from './DisponibilitesManager'
+
+type Tab = 'identite' | 'prestations' | 'disponibilites'
+
+const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'identite',        label: 'Identité',        icon: '🎨' },
+  { key: 'prestations',     label: 'Prestations',     icon: '🧽' },
+  { key: 'disponibilites',  label: 'Disponibilités',  icon: '📅' },
+]
+
+type Props = {
+  washer: Washer
+  services: Service[]
+  availabilities: Availability[]
+}
+
+export default function AdminTabs({ washer, services, availabilities }: Props) {
+  const [tab, setTab] = useState<Tab>('identite')
+
+  return (
+    <div>
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6 w-full">
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === t.key
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <span>{t.icon}</span>
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {tab === 'identite'       && <IdentiteForm washer={washer} />}
+      {tab === 'prestations'    && <PrestationsManager services={services} />}
+      {tab === 'disponibilites' && <DisponibilitesManager availabilities={availabilities} />}
+    </div>
+  )
+}

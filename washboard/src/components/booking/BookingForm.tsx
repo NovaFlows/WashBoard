@@ -11,13 +11,14 @@ type Props = {
   washer: Washer
   services: Service[]
   availabilities: Availability[]
+  accent?: string
 }
 
 export type FormState = Partial<BookingFormData>
 
 const STEPS = ['Prestation', 'Créneau', 'Coordonnées']
 
-export default function BookingForm({ washer, services, availabilities }: Props) {
+export default function BookingForm({ washer, services, availabilities, accent = '#2563eb' }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -31,9 +32,7 @@ export default function BookingForm({ washer, services, availabilities }: Props)
   async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'>) {
     setLoading(true)
     setError(null)
-
     const payload = { ...form, ...contactData, washer_id: washer.id }
-
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -63,11 +62,14 @@ export default function BookingForm({ washer, services, availabilities }: Props)
               return (
                 <div key={n} className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
-                      done ? 'bg-emerald-500 text-white' :
-                      active ? 'bg-blue-600 text-white' :
-                      'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                        done ? 'bg-emerald-500 text-white' :
+                        active ? 'text-white' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                      }`}
+                      style={active ? { backgroundColor: accent } : undefined}
+                    >
                       {done ? (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 13l4 4L19 7"/>
@@ -96,26 +98,26 @@ export default function BookingForm({ washer, services, availabilities }: Props)
             services={services}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => { updateForm(data); setStep(2) }}
+            accent={accent}
           />
         )}
-
         {step === 2 && (
           <StepSlot
             availabilities={availabilities}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
+            accent={accent}
           />
         )}
-
         {step === 3 && (
           <StepContact
             loading={loading}
             error={error}
             onSubmit={submitBooking}
             onBack={() => setStep(2)}
+            accent={accent}
           />
         )}
-
         {step === 4 && (
           <StepConfirmation
             washerName={washer.name}

@@ -5,6 +5,8 @@ export type Washer = {
   slug: string
   phone: string | null
   logo_url: string | null
+  welcome_message: string | null
+  brand_color: string | null
   zone_config: Record<string, unknown>
   created_at: string
 }

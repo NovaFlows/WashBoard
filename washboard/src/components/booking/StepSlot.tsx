@@ -7,6 +7,7 @@ type Props = {
   availabilities: Availability[]
   onNext: (data: { scheduled_at: string; address: string }) => void
   onBack: () => void
+  accent?: string
 }
 
 const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -39,7 +40,7 @@ function generateSlots(start: string, end: string, durationMinutes: number): str
   return slots
 }
 
-export default function StepSlot({ availabilities, onNext, onBack }: Props) {
+export default function StepSlot({ availabilities, onNext, onBack, accent = '#2563eb' }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [address, setAddress] = useState('')
@@ -69,15 +70,14 @@ export default function StepSlot({ availabilities, onNext, onBack }: Props) {
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Où et quand souhaitez-vous être lavé ?</p>
 
       <div className="mb-5">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-          Adresse du véhicule
-        </label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Adresse du véhicule</label>
         <input
           type="text"
           value={address}
           onChange={e => setAddress(e.target.value)}
           placeholder="12 rue de la Paix, 75001 Paris"
-          className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
+          className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
+          style={{ '--tw-ring-color': accent } as React.CSSProperties}
         />
       </div>
 
@@ -93,16 +93,15 @@ export default function StepSlot({ availabilities, onNext, onBack }: Props) {
                 onClick={() => { if (isAvailable) { setSelectedDate(day); setSelectedTime(null) } }}
                 disabled={!isAvailable}
                 className={`flex-shrink-0 flex flex-col items-center py-2.5 px-3 rounded-xl border-2 text-xs transition-all min-w-[52px] ${
-                  isSelected
-                    ? 'border-blue-600 dark:border-blue-500 bg-blue-600 dark:bg-blue-500 text-white shadow-md'
-                    : isAvailable
-                    ? 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
-                    : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-900'
+                  isSelected ? 'text-white shadow-md' :
+                  isAvailable ? 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800' :
+                  'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-900'
                 }`}
+                style={isSelected ? { backgroundColor: accent, borderColor: accent } : undefined}
               >
                 <span className="font-medium">{DAY_NAMES[day.getDay()]}</span>
                 <span className="text-base font-bold mt-0.5">{day.getDate()}</span>
-                <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                <span className={`text-[10px] mt-0.5 ${isSelected ? 'opacity-80' : 'text-slate-400 dark:text-slate-500'}`}>
                   {MONTH_NAMES[day.getMonth()]}
                 </span>
               </button>
@@ -129,9 +128,10 @@ export default function StepSlot({ availabilities, onNext, onBack }: Props) {
                   onClick={() => setSelectedTime(slot)}
                   className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
                     selectedTime === slot
-                      ? 'border-blue-600 dark:border-blue-500 bg-blue-600 dark:bg-blue-500 text-white shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-slate-800'
+                      ? 'text-white shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
                   }`}
+                  style={selectedTime === slot ? { backgroundColor: accent, borderColor: accent } : undefined}
                 >
                   {slot}
                 </button>
@@ -151,7 +151,8 @@ export default function StepSlot({ availabilities, onNext, onBack }: Props) {
         <button
           onClick={handleNext}
           disabled={!canContinue}
-          className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
+          className="flex-1 py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
+          style={{ backgroundColor: accent }}
         >
           Continuer
         </button>
