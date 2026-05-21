@@ -8,12 +8,14 @@ import StepContact from './StepContact'
 import StepConfirmation from './StepConfirmation'
 
 type ExistingBooking = { scheduled_at: string; services: { duration_minutes: number } | null }
+type Unavailability  = { id: string; start_date: string; end_date: string }
 
 type Props = {
   washer: Washer
   services: Service[]
   availabilities: Availability[]
   existingBookings: ExistingBooking[]
+  unavailabilities: Unavailability[]
   accent?: string
 }
 
@@ -21,7 +23,7 @@ export type FormState = Partial<BookingFormData>
 
 const STEPS = ['Prestation', 'Créneau', 'Coordonnées']
 
-export default function BookingForm({ washer, services, availabilities, existingBookings, accent = '#2563eb' }: Props) {
+export default function BookingForm({ washer, services, availabilities, existingBookings, unavailabilities, accent = '#2563eb' }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -108,9 +110,10 @@ export default function BookingForm({ washer, services, availabilities, existing
           <StepSlot
             availabilities={availabilities}
             existingBookings={existingBookings}
+            unavailabilities={unavailabilities}
             teamSize={washer.team_size ?? 1}
             serviceDuration={services.find(s => s.id === form.service_id)?.duration_minutes ?? 60}
-            servicePrice={services.find(s => s.id === form.service_id)?.price ?? 0}
+            servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
             washerId={washer.id}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
@@ -119,6 +122,7 @@ export default function BookingForm({ washer, services, availabilities, existing
         )}
         {step === 3 && (
           <StepContact
+            isProfessional={form.is_professional ?? false}
             loading={loading}
             error={error}
             onSubmit={submitBooking}

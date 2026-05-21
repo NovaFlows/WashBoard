@@ -2,7 +2,9 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Washer } from '@/types'
+import type { Washer, ZoneConfig } from '@/types'
+import { DEPARTMENTS } from '@/lib/france-departments'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 
 type LogoStatus = 'idle' | 'removing' | 'uploading' | 'done' | 'error'
 
@@ -28,6 +30,58 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Zone d'intervention
+  const zoneInit = washer.zone_config
+  const [zoneEnabled,        setZoneEnabled]        = useState(zoneInit?.enabled ?? false)
+  const [zoneType,           setZoneType]           = useState<'crow' | 'road' | 'departments'>(() => {
+    if (!zoneInit?.enabled) return 'crow'
+    return zoneInit.type
+  })
+  const [zoneCenterAddress,  setZoneCenterAddress]  = useState(() => {
+    if (!zoneInit?.enabled || zoneInit.type === 'departments') return ''
+    return zoneInit.center_address
+  })
+  const [zoneRadiusKm,       setZoneRadiusKm]       = useState(() => {
+    if (!zoneInit?.enabled || zoneInit.type === 'departments') return '20'
+    return String(zoneInit.radius_km)
+  })
+  const [zoneDepts,          setZoneDepts]          = useState<string[]>(() => {
+    if (!zoneInit?.enabled || zoneInit.type !== 'departments') return []
+    return zoneInit.departments
+  })
+  const [deptSearch,         setDeptSearch]         = useState('')
+  const [deptEditing,        setDeptEditing]        = useState(() =>
+    !(zoneInit?.enabled && zoneInit.type === 'departments' && zoneInit.departments.length > 0)
+  )
+  const [zoneSaving,         setZoneSaving]         = useState(false)
+  const [zoneMsg,            setZoneMsg]            = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function saveZone() {
+    setZoneSaving(true)
+    setZoneMsg(null)
+    let config: ZoneConfig
+    if (!zoneEnabled) {
+      config = { enabled: false }
+    } else if (zoneType === 'departments') {
+      config = { enabled: true, type: 'departments', departments: zoneDepts }
+    } else {
+      config = { enabled: true, type: zoneType, center_address: zoneCenterAddress.trim(), radius_km: parseInt(zoneRadiusKm) || 20 }
+    }
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zone_config: config }),
+    })
+    if (res.ok) {
+      setZoneMsg({ ok: true, text: 'Zone sauvegardée' })
+      if (zoneType === 'departments' && zoneDepts.length > 0) setDeptEditing(false)
+      router.refresh()
+    } else {
+      setZoneMsg({ ok: false, text: 'Erreur lors de la sauvegarde' })
+    }
+    setZoneSaving(false)
+  }
 
   // Créneaux intelligents
   const [smartEnabled,       setSmartEnabled]       = useState(washer.smart_slot_enabled ?? false)
@@ -223,6 +277,158 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           {msg.ok ? '✓ ' : '✕ '}{msg.text}
         </p>
       )}
+
+      {/* Zone d'intervention */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Zone d'intervention</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Bloquez les réservations hors de votre secteur</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setZoneEnabled(v => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${zoneEnabled ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${zoneEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {zoneEnabled && (
+          <div className="space-y-4 pt-1">
+            {/* Sélecteur de mode */}
+            <div>
+              <label className={labelClass}>Mode de délimitation</label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'crow',        label: 'Vol d\'oiseau', desc: 'Rayon en km, distance directe' },
+                  { value: 'road',        label: 'Distance routière', desc: 'Rayon en km par la route' },
+                  { value: 'departments', label: 'Départements', desc: 'Sélection de départements' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setZoneType(opt.value)}
+                    className={`flex-1 px-3 py-2 rounded-xl border-2 text-xs font-medium transition-all text-left ${
+                      zoneType === opt.value
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <span className="font-semibold block">{opt.label}</span>
+                    <span className="opacity-70 text-[10px]">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(zoneType === 'crow' || zoneType === 'road') && (
+              <>
+                <div>
+                  <label className={labelClass}>Adresse de base (votre garage / point de départ)</label>
+                  <AddressAutocomplete
+                    value={zoneCenterAddress}
+                    onChange={setZoneCenterAddress}
+                    placeholder="12 rue de la Paix, 75001 Paris"
+                    className={inputClass}
+                  />
+                  {zoneType === 'crow' && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Les coordonnées GPS sont calculées automatiquement à la sauvegarde.</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelClass}>Rayon d'intervention</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range" min={5} max={150} step={5}
+                      value={parseInt(zoneRadiusKm) || 20}
+                      onChange={e => setZoneRadiusKm(e.target.value)}
+                      className="flex-1 accent-blue-500"
+                    />
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 w-16 text-right">{zoneRadiusKm} km</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {zoneType === 'departments' && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={labelClass + ' mb-0'}>Départements couverts ({zoneDepts.length} sélectionné{zoneDepts.length > 1 ? 's' : ''})</label>
+                  {!deptEditing && (
+                    <button type="button" onClick={() => setDeptEditing(true)}
+                      className="text-xs text-blue-500 hover:text-blue-700 font-medium">
+                      Modifier
+                    </button>
+                  )}
+                </div>
+
+                {!deptEditing ? (
+                  /* Affichage des chips après sauvegarde */
+                  <div className="flex flex-wrap gap-1.5">
+                    {zoneDepts.length === 0 ? (
+                      <span className="text-xs text-slate-400">Aucun département sélectionné</span>
+                    ) : (
+                      zoneDepts.map(code => {
+                        const dept = DEPARTMENTS.find(d => d.code === code)
+                        return (
+                          <span key={code} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-lg border border-blue-200 dark:border-blue-800">
+                            <span className="font-bold">{code}</span>
+                            <span className="opacity-70">{dept?.name}</span>
+                          </span>
+                        )
+                      })
+                    )}
+                  </div>
+                ) : (
+                  /* Mode édition : recherche + checkboxes */
+                  <>
+                    <input
+                      type="text"
+                      value={deptSearch}
+                      onChange={e => setDeptSearch(e.target.value)}
+                      placeholder="Rechercher par nom ou numéro..."
+                      className={`${inputClass} mb-2`}
+                    />
+                    <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
+                      {DEPARTMENTS
+                        .filter(d => {
+                          const q = deptSearch.toLowerCase()
+                          return !q || d.code.toLowerCase().includes(q) || d.name.toLowerCase().includes(q)
+                        })
+                        .map(d => (
+                          <label key={d.code} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={zoneDepts.includes(d.code)}
+                              onChange={e => setZoneDepts(prev =>
+                                e.target.checked ? [...prev, d.code] : prev.filter(c => c !== d.code)
+                              )}
+                              className="accent-blue-500"
+                            />
+                            <span className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{d.code}</span>
+                            <span className="text-sm text-slate-800 dark:text-slate-200">{d.name}</span>
+                          </label>
+                        ))
+                      }
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {zoneMsg && (
+          <p className={`text-sm font-medium ${zoneMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            {zoneMsg.ok ? '✓ ' : '✕ '}{zoneMsg.text}
+          </p>
+        )}
+        <button type="button" onClick={saveZone} disabled={zoneSaving}
+          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+          {zoneSaving ? 'Sauvegarde...' : 'Sauvegarder la zone'}
+        </button>
+      </div>
 
       {/* Créneaux intelligents */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">

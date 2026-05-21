@@ -11,8 +11,15 @@ export default async function AdminPage() {
   const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
 
-  const { data: services } = await supabase.from('services').select('*').eq('washer_id', washer.id).order('created_at')
-  const { data: availabilities } = await supabase.from('availabilities').select('*').eq('washer_id', washer.id).order('day_of_week')
+  const [
+    { data: services },
+    { data: availabilities },
+    { data: unavailabilities },
+  ] = await Promise.all([
+    supabase.from('services').select('*').eq('washer_id', washer.id).order('created_at'),
+    supabase.from('availabilities').select('*').eq('washer_id', washer.id).order('day_of_week'),
+    supabase.from('unavailabilities').select('*').eq('washer_id', washer.id).order('start_date'),
+  ])
 
   return (
     <DashboardShell washerName={washer.name}>
@@ -22,7 +29,7 @@ export default async function AdminPage() {
           Configurez ce que vos clients voient sur votre page de réservation
         </p>
       </div>
-      <AdminTabs washer={washer} services={services ?? []} availabilities={availabilities ?? []} />
+      <AdminTabs washer={washer} services={services ?? []} availabilities={availabilities ?? []} unavailabilities={unavailabilities ?? []} />
     </DashboardShell>
   )
 }

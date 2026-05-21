@@ -49,12 +49,21 @@ export default async function BookingPage({ params }: Props) {
     .select('*')
     .eq('washer_id', washer.id)
 
-  const { data: existingBookings } = await supabase
-    .from('bookings')
-    .select('scheduled_at, services(duration_minutes)')
-    .eq('washer_id', washer.id)
-    .neq('status', 'cancelled')
-    .gte('scheduled_at', new Date().toISOString())
+  const [
+    { data: existingBookings },
+    { data: unavailabilities },
+  ] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select('scheduled_at, services(duration_minutes)')
+      .eq('washer_id', washer.id)
+      .neq('status', 'cancelled')
+      .gte('scheduled_at', new Date().toISOString()),
+    supabase
+      .from('unavailabilities')
+      .select('id, start_date, end_date')
+      .eq('washer_id', washer.id),
+  ])
 
   return (
     <>
@@ -94,6 +103,7 @@ export default async function BookingPage({ params }: Props) {
           services={services ?? []}
           availabilities={availabilities ?? []}
           existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; services: { duration_minutes: number } | null }[]}
+          unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string }[]}
           accent={washer.brand_color ?? '#2563eb'}
         />
       </main>

@@ -13,6 +13,8 @@ type Booking = {
   status: string
   is_smart_slot: boolean
   smart_discount: number
+  closed_late: boolean
+  booked_price: number | null
   services: Service | null
 }
 
@@ -22,25 +24,40 @@ type Props = {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
-  pending:   { label: 'En attente', dot: 'bg-amber-400',  badge: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' },
-  confirmed: { label: 'Confirmé',   dot: 'bg-emerald-400', badge: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' },
-  cancelled: { label: 'Annulé',    dot: 'bg-red-400',    badge: 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800' },
-  done:      { label: 'Terminé',   dot: 'bg-slate-400',  badge: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700' },
+  pending:     { label: 'En attente',    dot: 'bg-amber-400',  badge: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' },
+  confirmed:   { label: 'Confirmé',     dot: 'bg-emerald-400', badge: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' },
+  cancelled:   { label: 'Annulé',      dot: 'bg-red-400',    badge: 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800' },
+  done:        { label: 'Terminé',     dot: 'bg-slate-400',  badge: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700' },
+  closed_late: { label: 'Délai dépassé', dot: 'bg-orange-400', badge: 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800' },
 }
 
 export default function BookingList({ bookings, washerId }: Props) {
   const [list, setList] = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
 
-  async function updateStatus(bookingId: string, status: string) {
+  async function updateStatus(bookingId: string, status: string, closedLate?: boolean) {
     setLoading(bookingId)
-    const res = await fetch(`/api/bookings/${bookingId}`, {
+    const body: Record<string, unknown> = { status }
+    if (closedLate !== undefined) body.closed_late = closedLate
+    let res = await fetch(`/api/bookings/${bookingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     })
+    // Fallback: if closed_late column doesn't exist yet, retry without it
+    if (!res.ok && closedLate !== undefined) {
+      res = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+    }
     if (res.ok) {
-      setList(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b))
+      setList(prev => prev.map(b =>
+        b.id === bookingId
+          ? { ...b, status, ...(closedLate !== undefined ? { closed_late: closedLate } : {}) }
+          : b
+      ))
     }
     setLoading(null)
   }
@@ -99,14 +116,17 @@ export default function BookingList({ bookings, washerId }: Props) {
 function BookingCard({ booking, loading, onUpdate }: {
   booking: Booking
   loading: string | null
-  onUpdate: (id: string, status: string) => void
+  onUpdate: (id: string, status: string, closedLate?: boolean) => void
 }) {
   const date = new Date(booking.scheduled_at)
   const dayLabel = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const timeLabel = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  const statusInfo = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending
+  const statusKey = booking.closed_late ? 'closed_late' : booking.status
+  const statusInfo = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.pending
   const isLoading = loading === booking.id
   const isPast = booking.status === 'done' || booking.status === 'cancelled'
+  const isExpiredPending  = booking.status === 'pending'   && date < new Date()
+  const isExpiredConfirmed = booking.status === 'confirmed' && date < new Date()
 
   return (
     <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-opacity ${isPast ? 'opacity-60' : ''}`}>
@@ -136,17 +156,21 @@ function BookingCard({ booking, loading, onUpdate }: {
                 </svg>
                 <span>
                   {booking.services.name} —{' '}
-                  {booking.is_smart_slot && Number(booking.smart_discount) > 0 ? (
-                    <>
-                      <span className="line-through opacity-50">{booking.services.price}€</span>
-                      {' '}
-                      <span className="font-semibold text-amber-600 dark:text-amber-400">
-                        {(booking.services.price - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★
-                      </span>
-                    </>
-                  ) : (
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">{booking.services.price}€</span>
-                  )}
+                  {(() => {
+                    const basePrice = booking.booked_price ?? booking.services!.price
+                    if (booking.is_smart_slot && Number(booking.smart_discount) > 0) {
+                      return (
+                        <>
+                          <span className="line-through opacity-50">{basePrice}€</span>
+                          {' '}
+                          <span className="font-semibold text-amber-600 dark:text-amber-400">
+                            {(basePrice - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★
+                          </span>
+                        </>
+                      )
+                    }
+                    return <span className="font-semibold text-slate-700 dark:text-slate-300">{basePrice}€</span>
+                  })()}
                 </span>
               </div>
             )}
@@ -167,13 +191,19 @@ function BookingCard({ booking, loading, onUpdate }: {
 
           {booking.status === 'pending' && (
             <div className="flex flex-col gap-2 shrink-0">
-              <button
-                onClick={() => onUpdate(booking.id, 'confirmed')}
-                disabled={isLoading}
-                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg disabled:opacity-40 transition-colors"
-              >
-                Confirmer
-              </button>
+              {isExpiredPending ? (
+                <span className="px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-xs font-semibold rounded-lg border border-orange-200 dark:border-orange-800 text-center">
+                  Créneau passé
+                </span>
+              ) : (
+                <button
+                  onClick={() => onUpdate(booking.id, 'confirmed')}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg disabled:opacity-40 transition-colors"
+                >
+                  Confirmer
+                </button>
+              )}
               <button
                 onClick={() => onUpdate(booking.id, 'cancelled')}
                 disabled={isLoading}
@@ -185,13 +215,31 @@ function BookingCard({ booking, loading, onUpdate }: {
           )}
 
           {booking.status === 'confirmed' && (
-            <button
-              onClick={() => onUpdate(booking.id, 'done')}
-              disabled={isLoading}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors shrink-0 border border-slate-200 dark:border-slate-700"
-            >
-              Terminé
-            </button>
+            isExpiredConfirmed ? (
+              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg border border-red-300 dark:border-red-800">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  </svg>
+                  Délai dépassé
+                </span>
+                <button
+                  onClick={() => onUpdate(booking.id, 'done', true)}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors border border-slate-200 dark:border-slate-700"
+                >
+                  Clôturer
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onUpdate(booking.id, 'done')}
+                disabled={isLoading}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors shrink-0 border border-slate-200 dark:border-slate-700"
+              >
+                Terminé
+              </button>
+            )
           )}
         </div>
       </div>

@@ -3,40 +3,163 @@
 import { useState } from 'react'
 
 type Props = {
+  isProfessional: boolean
   loading: boolean
   error: string | null
-  onSubmit: (data: { client_name: string; client_email: string; client_phone: string }) => void
+  onSubmit: (data: {
+    client_name: string
+    client_email: string
+    client_phone: string
+    company_name?: string
+    siret?: string
+    billing_address?: string
+  }) => void
   onBack: () => void
   accent?: string
 }
 
-export default function StepContact({ loading, error, onSubmit, onBack, accent = '#2563eb' }: Props) {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb' }: Props) {
+  const [name,           setName]           = useState('')
+  const [email,          setEmail]          = useState('')
+  const [phone,          setPhone]          = useState('')
+  const [phoneTouched,   setPhoneTouched]   = useState(false)
+  const [companyName,    setCompanyName]    = useState('')
+  const [siret,          setSiret]          = useState('')
+  const [siretTouched,   setSiretTouched]   = useState(false)
+  const [billingAddress, setBillingAddress] = useState('')
 
-  const canSubmit = name.trim() && email.includes('@') && phone.trim().length >= 10
+  const phoneDigits = phone.replace(/\D/g, '')
+  const phoneValid  = phoneDigits.length === 10
+  const phoneError  = phoneTouched && !phoneValid
+
+  const siretDigits = siret.replace(/\D/g, '')
+  const siretValid  = siretDigits.length === 14
+  const siretError  = siretTouched && !siretValid
+
+  const proFieldsValid = !isProfessional || (companyName.trim().length >= 2 && siretValid)
+
+  const canSubmit = name.trim() && email.includes('@') && phoneValid && proFieldsValid
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+
+  function handleSubmit() {
+    if (!canSubmit) return
+    onSubmit({
+      client_name:  name,
+      client_email: email,
+      client_phone: phone,
+      ...(isProfessional && {
+        company_name:    companyName.trim(),
+        siret:           siretDigits,
+        billing_address: billingAddress.trim() || undefined,
+      }),
+    })
+  }
 
   return (
     <div>
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Vos coordonnées</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Pour vous confirmer le rendez-vous</p>
 
+      {/* Infos professionnelles */}
+      {isProfessional && (
+        <div className="mb-5 space-y-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Informations société</p>
+
+          <div>
+            <label className={labelClass}>Raison sociale <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={e => setCompanyName(e.target.value)}
+              placeholder="ACME SAS"
+              className={inputClass}
+              style={{ '--tw-ring-color': accent } as React.CSSProperties}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Numéro SIRET <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={siret}
+              onChange={e => setSiret(e.target.value)}
+              onBlur={() => setSiretTouched(true)}
+              placeholder="123 456 789 01234"
+              maxLength={17}
+              className={`${inputClass} ${siretError ? 'border-red-400 dark:border-red-500 focus:ring-red-400' : ''}`}
+              style={!siretError ? { '--tw-ring-color': accent } as React.CSSProperties : undefined}
+            />
+            {siretError ? (
+              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                </svg>
+                {siretDigits.length < 14 ? `Numéro trop court (${siretDigits.length}/14 chiffres)` : 'Numéro trop long — 14 chiffres attendus'}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">14 chiffres sans espaces</p>
+            )}
+          </div>
+
+          <div>
+            <label className={labelClass}>Adresse de facturation <span className="text-slate-400 font-normal">(optionnel)</span></label>
+            <input
+              type="text"
+              value={billingAddress}
+              onChange={e => setBillingAddress(e.target.value)}
+              placeholder="Identique à l'adresse d'intervention si vide"
+              className={inputClass}
+              style={{ '--tw-ring-color': accent } as React.CSSProperties}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Infos contact */}
       <div className="space-y-4 mb-6">
         <div>
-          <label className={labelClass}>Prénom et nom</label>
-          <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jean Dupont" className={inputClass} />
+          <label className={labelClass}>{isProfessional ? 'Nom du contact' : 'Prénom et nom'}</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder={isProfessional ? 'Marie Dupont' : 'Jean Dupont'}
+            className={inputClass}
+            style={{ '--tw-ring-color': accent } as React.CSSProperties}
+          />
         </div>
         <div>
           <label className={labelClass}>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean@email.com" className={inputClass} />
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="jean@email.com"
+            className={inputClass}
+            style={{ '--tw-ring-color': accent } as React.CSSProperties}
+          />
         </div>
         <div>
           <label className={labelClass}>Téléphone</label>
-          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
+          <input
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            onBlur={() => setPhoneTouched(true)}
+            placeholder="06 00 00 00 00"
+            className={`${inputClass} ${phoneError ? 'border-red-400 dark:border-red-500 focus:ring-red-400' : ''}`}
+            style={!phoneError ? { '--tw-ring-color': accent } as React.CSSProperties : undefined}
+          />
+          {phoneError && (
+            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+              </svg>
+              {phoneDigits.length < 10 ? `Numéro trop court (${phoneDigits.length}/10 chiffres)` : 'Numéro trop long — 10 chiffres attendus'}
+            </p>
+          )}
         </div>
       </div>
 
@@ -58,7 +181,7 @@ export default function StepContact({ loading, error, onSubmit, onBack, accent =
           Retour
         </button>
         <button
-          onClick={() => canSubmit && onSubmit({ client_name: name, client_email: email, client_phone: phone })}
+          onClick={handleSubmit}
           disabled={!canSubmit || loading}
           className="flex-1 py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
           style={{ backgroundColor: accent }}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import type { ZoneConfig } from '@/types'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -9,6 +10,7 @@ export async function PATCH(request: NextRequest) {
   const {
     name, phone, logo_url, welcome_message, brand_color, team_size,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
+    zone_config,
   } = await request.json()
 
   const updates: Record<string, unknown> = {}
@@ -22,6 +24,23 @@ export async function PATCH(request: NextRequest) {
   if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
   if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type
   if (smart_slot_discount_value !== undefined) updates.smart_slot_discount_value = Math.max(0, Number(smart_slot_discount_value))
+
+  if (zone_config !== undefined) {
+    let config = zone_config as ZoneConfig
+    // Pour le mode vol d'oiseau, géocoder l'adresse de base une seule fois à la sauvegarde
+    if (config?.enabled && config.type === 'crow' && config.center_address) {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      if (apiKey) {
+        try {
+          const url  = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(config.center_address)}&key=${apiKey}`
+          const data = await (await fetch(url)).json()
+          const loc  = data.results?.[0]?.geometry?.location
+          if (loc) config = { ...config, center_lat: loc.lat, center_lng: loc.lng }
+        } catch { /* geocoding facultatif */ }
+      }
+    }
+    updates.zone_config = config
+  }
 
   const { error } = await supabase
     .from('washers')

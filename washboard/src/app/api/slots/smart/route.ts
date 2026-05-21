@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+type DmResponse = {
+  status: string
+  rows: { elements: { status: string; duration: { value: number } }[] }[]
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const washerId = searchParams.get('washer_id')
   const address  = searchParams.get('address')
   const date     = searchParams.get('date') // YYYY-MM-DD local date
 
-  const empty = { smartWindows: [], discountType: 'fixed', discountValue: 0 }
+  const empty = { smartWindows: [], bookingConstraints: [], discountType: 'fixed', discountValue: 0 }
 
   if (!washerId || !address || !date) return NextResponse.json(empty)
 
@@ -26,12 +31,6 @@ export async function GET(request: NextRequest) {
     discountValue: washer.smart_slot_discount_value as number,
   }
 
-  // Élargir la fenêtre de ±1 jour en UTC pour couvrir n'importe quel décalage horaire
-  const dayStart = new Date(`${date}T00:00:00Z`)
-  dayStart.setUTCDate(dayStart.getUTCDate() - 1)
-  const dayEnd = new Date(`${date}T23:59:59Z`)
-  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1)
-
   const { data: bookings } = await supabase
     .from('bookings')
     .select('scheduled_at, address, services(duration_minutes)')
@@ -45,49 +44,63 @@ export async function GET(request: NextRequest) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   if (!apiKey) return NextResponse.json({ ...empty, ...config })
 
-  // Distance Matrix : bookings existants → adresse du nouveau client
-  const origins     = bookings.map(b => encodeURIComponent(b.address)).join('|')
-  const destination = encodeURIComponent(address)
-  const dmUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origins}&destinations=${destination}&mode=driving&key=${apiKey}`
+  const bookingAddrs = bookings.map(b => encodeURIComponent(b.address)).join('|')
+  const newAddr      = encodeURIComponent(address)
+  const base         = `https://maps.googleapis.com/maps/api/distancematrix/json?mode=driving&key=${apiKey}`
 
-  let dmData: { status: string; rows: { elements: { status: string; duration: { value: number } }[] }[] }
+  // 2 appels en parallèle : bookings→client ET client→bookings
+  let dmToNew: DmResponse, dmFromNew: DmResponse
   try {
-    const dmRes = await fetch(dmUrl)
-    dmData = await dmRes.json()
+    const [r1, r2] = await Promise.all([
+      fetch(`${base}&origins=${bookingAddrs}&destinations=${newAddr}`),
+      fetch(`${base}&origins=${newAddr}&destinations=${bookingAddrs}`),
+    ])
+    ;[dmToNew, dmFromNew] = await Promise.all([r1.json(), r2.json()])
   } catch {
     return NextResponse.json({ ...empty, ...config })
   }
 
-  if (dmData.status !== 'OK') return NextResponse.json({ ...empty, ...config })
+  if (dmToNew.status !== 'OK' || dmFromNew.status !== 'OK') {
+    return NextResponse.json({ ...empty, ...config })
+  }
 
-  const radiusSeconds = (washer.smart_slot_radius_minutes ?? 15) * 60
-  const nearbyBookings: typeof bookings = []
-  dmData.rows.forEach((row, i) => {
-    const el = row.elements[0]
-    if (el.status === 'OK' && el.duration.value <= radiusSeconds) {
-      nearbyBookings.push(bookings[i])
+  // Contraintes de trajet pour TOUS les RDV du jour (filtre les créneaux physiquement impossibles)
+  const bookingConstraints = bookings.map((b, i) => {
+    const svc      = b.services as unknown as { duration_minutes: number } | null
+    const duration = svc?.duration_minutes ?? 60
+    const bStart   = new Date(b.scheduled_at).getTime()
+    const bEnd     = bStart + duration * 60_000
+    const toNew    = dmToNew.rows[i]?.elements[0]
+    const fromNew  = dmFromNew.rows[0]?.elements[i]
+    return {
+      start:        new Date(bStart).toISOString(),
+      end:          new Date(bEnd).toISOString(),
+      travelToNew:  toNew?.status   === 'OK' ? toNew.duration.value   : 0, // secondes
+      travelFromNew: fromNew?.status === 'OK' ? fromNew.duration.value : 0, // secondes
     }
   })
 
-  if (!nearbyBookings.length) return NextResponse.json({ ...empty, ...config })
+  // Créneaux intelligents : RDV PROCHES uniquement (pour la remise)
+  const WINDOW_MIN    = 90
+  const radiusSeconds = (washer.smart_slot_radius_minutes ?? 15) * 60
+  const smartWindows: { start: string; end: string }[] = []
 
-  // Retourner des fenêtres ISO (UTC) — le browser les compare avec les heures locales
-  const WINDOW_MIN = 90
-  const windows: { start: string; end: string }[] = []
-
-  for (const booking of nearbyBookings) {
-    const bStart   = new Date(booking.scheduled_at)
-    const svc      = booking.services as unknown as { duration_minutes: number } | null
+  for (let i = 0; i < bookings.length; i++) {
+    const toNew = dmToNew.rows[i]?.elements[0]
+    if (toNew?.status !== 'OK' || toNew.duration.value > radiusSeconds) continue
+    const svc      = bookings[i].services as unknown as { duration_minutes: number } | null
     const duration = svc?.duration_minutes ?? 60
-    const bEnd     = new Date(bStart.getTime() + duration * 60_000)
-    windows.push({
-      start: new Date(bStart.getTime() - WINDOW_MIN * 60_000).toISOString(),
-      end:   new Date(bEnd.getTime()   + WINDOW_MIN * 60_000).toISOString(),
+    const bStart   = new Date(bookings[i].scheduled_at).getTime()
+    const bEnd     = bStart + duration * 60_000
+    smartWindows.push({
+      start: new Date(bStart - WINDOW_MIN * 60_000).toISOString(),
+      end:   new Date(bEnd   + WINDOW_MIN * 60_000).toISOString(),
     })
   }
 
   return NextResponse.json({
-    smartWindows:  windows,
+    smartWindows,
+    bookingConstraints,
     discountType:  config.discountType,
     discountValue: config.discountValue,
   })

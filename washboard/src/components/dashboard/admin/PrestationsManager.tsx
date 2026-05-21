@@ -4,13 +4,19 @@ import { useState } from 'react'
 import type { Service } from '@/types'
 
 const VEHICLE_OPTIONS = [
-  { value: 'citadine', label: 'Citadine' },
-  { value: 'berline',  label: 'Berline' },
-  { value: 'SUV',      label: 'SUV / 4x4' },
+  { value: 'citadine',    label: 'Citadine' },
+  { value: 'berline',     label: 'Berline' },
+  { value: 'SUV',         label: 'SUV / 4x4' },
+  { value: 'moto',        label: 'Moto' },
+  { value: 'scooter',     label: 'Scooter' },
+  { value: 'utilitaire',  label: 'Utilitaire / Van' },
+  { value: 'camping-car', label: 'Camping-car' },
+  { value: 'camion',      label: 'Camion' },
+  { value: 'velo',        label: 'Vélo / Trottinette' },
 ]
 
-type FormData = { name: string; price: string; duration_minutes: string; vehicle_types: string[] }
-const EMPTY: FormData = { name: '', price: '', duration_minutes: '', vehicle_types: [] }
+type FormData = { name: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number> }
+const EMPTY: FormData = { name: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {} }
 
 type ServiceFormProps = {
   form: FormData
@@ -94,6 +100,40 @@ function ServiceForm({ form, onChange, onSave, onCancel, loading, error }: Servi
         </div>
       </div>
 
+      {form.vehicle_types.length > 0 && (
+        <div>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Prix par type de véhicule
+            <span className="ml-1 text-slate-400 font-normal">(optionnel — laissez vide pour utiliser le prix de base)</span>
+          </label>
+          <div className="space-y-1.5">
+            {form.vehicle_types.map(v => {
+              const opt = VEHICLE_OPTIONS.find(o => o.value === v)
+              return (
+                <div key={v} className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600 dark:text-slate-400 w-32 shrink-0">{opt?.label ?? v}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.vehicle_price_overrides[v] ?? ''}
+                    onChange={e => {
+                      const val = e.target.value
+                      const overrides = { ...form.vehicle_price_overrides }
+                      if (val === '') delete overrides[v]
+                      else overrides[v] = Number(val)
+                      onChange({ ...form, vehicle_price_overrides: overrides })
+                    }}
+                    placeholder={form.price || 'Prix de base'}
+                    className={inputClass}
+                  />
+                  <span className="text-xs text-slate-400 shrink-0">€</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
@@ -140,6 +180,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       price: String(svc.price),
       duration_minutes: String(svc.duration_minutes),
       vehicle_types: [...svc.vehicle_types],
+      vehicle_price_overrides: { ...(svc.vehicle_price_overrides ?? {}) },
     })
     setEditId(svc.id)
   }
@@ -162,6 +203,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
         price: Number(form.price),
         duration_minutes: Number(form.duration_minutes),
         vehicle_types: form.vehicle_types,
+        vehicle_price_overrides: form.vehicle_price_overrides,
       }),
     })
     const json = await res.json()
@@ -187,6 +229,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
         price: Number(form.price),
         duration_minutes: Number(form.duration_minutes),
         vehicle_types: form.vehicle_types,
+        vehicle_price_overrides: form.vehicle_price_overrides,
       }),
     })
     const json = await res.json()
@@ -196,7 +239,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       return
     }
     setServices(s => s.map(svc => svc.id === editId
-      ? { ...svc, name: form.name, price: Number(form.price), duration_minutes: Number(form.duration_minutes), vehicle_types: form.vehicle_types }
+      ? { ...svc, name: form.name, price: Number(form.price), duration_minutes: Number(form.duration_minutes), vehicle_types: form.vehicle_types, vehicle_price_overrides: form.vehicle_price_overrides }
       : svc
     ))
     cancelForm()

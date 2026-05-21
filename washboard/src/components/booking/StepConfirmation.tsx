@@ -11,6 +11,7 @@ type Props = {
 export default function StepConfirmation({ washerName, bookingId, form, services }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
+  const displayPrice = form.booked_price ?? service?.price ?? 0
 
   return (
     <div className="text-center py-2">
@@ -30,8 +31,8 @@ export default function StepConfirmation({ washerName, bookingId, form, services
             label="Prestation"
             value={
               form.is_smart_slot && Number(form.smart_discount) > 0
-                ? `${service.name} — ${(service.price - Number(form.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★`
-                : `${service.name} — ${service.price}€`
+                ? `${service.name} — ${(displayPrice - Number(form.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★`
+                : `${service.name} — ${displayPrice}€`
             }
           />
         )}
@@ -44,12 +45,23 @@ export default function StepConfirmation({ washerName, bookingId, form, services
         {form.address && <Row label="Adresse" value={form.address} right />}
       </div>
 
-      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
+      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5">
         <span className="text-xs text-slate-500 dark:text-slate-400">Référence</span>
         <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
           {bookingId.slice(0, 8).toUpperCase()}
         </span>
       </div>
+
+      <a
+        href={`/api/bookings/${bookingId}/pdf`}
+        download={`confirmation-${bookingId.slice(0, 8).toUpperCase()}.pdf`}
+        className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+        </svg>
+        Télécharger la confirmation PDF
+      </a>
     </div>
   )
 }

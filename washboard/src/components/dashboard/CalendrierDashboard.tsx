@@ -86,7 +86,15 @@ function fmt(date: Date) {
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function CalendrierDashboard({ bookings: initial }: { bookings: Booking[] }) {
+type Unavailability = { id: string; start_date: string; end_date: string; label: string | null; team_members_off: number }
+
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number }
+
+export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize }: Props) {
   const today = new Date()
   const [view,        setView]        = useState<'month' | 'week' | 'day'>('month')
   const [current,     setCurrent]     = useState(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -98,6 +106,51 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
   const [updating,    setUpdating]    = useState(false)
   const [editNotes,   setEditNotes]   = useState('')
   const [notesSaving, setNotesSaving] = useState(false)
+
+  // Unavailabilities
+  const [unavails,    setUnavails]    = useState(initialUnavail)
+  const [addModal,    setAddModal]    = useState<{ start: string; end: string; label: string; team_members_off: number } | null>(null)
+  const [delModal,    setDelModal]    = useState<Unavailability | null>(null)
+  const [uSaving,     setUSaving]     = useState(false)
+
+  function getUnavail(date: Date): Unavailability | null {
+    const s = toDateStr(date)
+    return unavails.find(u => u.start_date <= s && s <= u.end_date) ?? null
+  }
+
+  function openAddModal(date: Date) {
+    const s = toDateStr(date)
+    setAddModal({ start: s, end: s, label: '', team_members_off: teamSize })
+  }
+
+  function isFullyUnavailable(u: Unavailability): boolean {
+    return (u.team_members_off ?? 1) >= teamSize
+  }
+
+  async function saveUnavail() {
+    if (!addModal) return
+    setUSaving(true)
+    const res = await fetch('/api/unavailabilities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_date: addModal.start, end_date: addModal.end, label: addModal.label, team_members_off: addModal.team_members_off }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      setUnavails(u => [...u, json.data].sort((a, b) => a.start_date.localeCompare(b.start_date)))
+      setAddModal(null)
+    }
+    setUSaving(false)
+  }
+
+  async function deleteUnavail() {
+    if (!delModal) return
+    setUSaving(true)
+    await fetch(`/api/unavailabilities/${delModal.id}`, { method: 'DELETE' })
+    setUnavails(u => u.filter(x => x.id !== delModal.id))
+    setDelModal(null)
+    setUSaving(false)
+  }
 
   const grid     = buildGrid(current.getFullYear(), current.getMonth())
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
@@ -121,6 +174,7 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
     : `${weekStart.getDate()} ${MONTHS[weekStart.getMonth()].slice(0, 3)}. – ${weekEnd.getDate()} ${MONTHS[weekEnd.getMonth()].slice(0, 3)}. ${weekEnd.getFullYear()}`
   const dayLabel  = dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const dayBkgsForView = byDate.get(dayKey(dayDate)) ?? []
+  const unavailDay = getUnavail(dayDate)
 
   function openBooking(b: Booking) {
     setSelected(b)
@@ -281,10 +335,13 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
               const dayBkgs  = byDate.get(dayKey(day)) ?? []
               const visible  = dayBkgs.slice(0, 2)
               const overflow = dayBkgs.length - 2
+              const unavail  = getUnavail(day)
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-[88px] p-1.5 border-b border-r border-slate-100 dark:border-slate-800/50 ${isPast ? 'bg-slate-50/40 dark:bg-slate-950/20' : ''}`}
+                  className={`min-h-[88px] p-1.5 border-b border-r border-slate-100 dark:border-slate-800/50 ${
+                    unavail ? 'bg-orange-50/60 dark:bg-orange-950/15' : isPast ? 'bg-slate-50/40 dark:bg-slate-950/20' : ''
+                  }`}
                   style={{ borderRight: (idx + 1) % 7 === 0 ? 'none' : undefined, borderBottom: idx >= 35 ? 'none' : undefined }}
                 >
                   <div className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 select-none ${
@@ -292,25 +349,51 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
                   }`}>
                     {day.getDate()}
                   </div>
-                  <div className="space-y-0.5">
-                    {visible.map(b => (
-                      <button
-                        key={b.id}
-                        onClick={() => openBooking(b)}
-                        className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
-                      >
-                        {b.is_smart_slot && '★ '}{fmt(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
-                      </button>
-                    ))}
-                    {overflow > 0 && (
-                      <button
-                        onClick={() => setDayList(dayBkgs)}
-                        className="w-full text-left px-1.5 py-0.5 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                      >
-                        +{overflow} autre{overflow > 1 ? 's' : ''}
-                      </button>
-                    )}
-                  </div>
+                  {unavail && isFullyUnavailable(unavail) ? (
+                    <button
+                      onClick={() => setDelModal(unavail)}
+                      className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+                    >
+                      {unavail.label ?? 'Indisponible'}
+                      {teamSize > 1 && <span className="ml-1 opacity-70">{unavail.team_members_off}/{teamSize}</span>}
+                    </button>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {unavail && (
+                        <button
+                          onClick={() => setDelModal(unavail)}
+                          className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-orange-100 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+                        >
+                          {unavail.label ?? 'Partiel'} {unavail.team_members_off}/{teamSize}
+                        </button>
+                      )}
+                      {visible.map(b => (
+                        <button
+                          key={b.id}
+                          onClick={() => openBooking(b)}
+                          className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
+                        >
+                          {b.is_smart_slot && '★ '}{fmt(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
+                        </button>
+                      ))}
+                      {overflow > 0 && (
+                        <button
+                          onClick={() => setDayList(dayBkgs)}
+                          className="w-full text-left px-1.5 py-0.5 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          +{overflow} autre{overflow > 1 ? 's' : ''}
+                        </button>
+                      )}
+                      {!unavail && (
+                        <button
+                          onClick={() => openAddModal(day)}
+                          className="w-full text-center py-0.5 text-[9px] text-slate-300 dark:text-slate-700 hover:text-orange-400 dark:hover:text-orange-500 transition-colors"
+                        >
+                          + bloquer
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -353,12 +436,34 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
               {weekDays.map((day, di) => {
                 const dayBkgs = byDate.get(dayKey(day)) ?? []
                 const isToday = isSameDay(day, today)
+                const unavail = getUnavail(day)
                 return (
                   <div
                     key={di}
                     className={`relative border-l border-slate-100 dark:border-slate-800 ${isToday ? 'bg-blue-50/40 dark:bg-blue-950/10' : ''}`}
                     style={{ height: (HOUR_END - HOUR_START) * HOUR_H }}
                   >
+                    {unavail && (
+                      isFullyUnavailable(unavail) ? (
+                        <button
+                          onClick={() => setDelModal(unavail)}
+                          className="absolute inset-0 z-10 bg-orange-50/70 dark:bg-orange-950/20 flex items-center justify-center hover:bg-orange-100/70 dark:hover:bg-orange-950/30 transition-colors"
+                        >
+                          <span className="text-[10px] font-semibold text-orange-500 dark:text-orange-400 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/40 rounded-full" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                            {unavail.label ?? 'Indisponible'}{teamSize > 1 ? ` ${unavail.team_members_off}/${teamSize}` : ''}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDelModal(unavail)}
+                          className="absolute top-0 left-0 right-0 z-10 bg-orange-100/90 dark:bg-orange-950/50 border-b border-orange-200 dark:border-orange-800 px-1 py-0.5 flex items-center justify-center gap-1 hover:bg-orange-200/90 dark:hover:bg-orange-950/70 transition-colors"
+                        >
+                          <span className="text-[9px] font-semibold text-orange-600 dark:text-orange-400 truncate">
+                            {unavail.label ?? 'Partiel'} {unavail.team_members_off}/{teamSize}
+                          </span>
+                        </button>
+                      )
+                    )}
                     {/* Lignes heures */}
                     {Array.from({ length: HOUR_END - HOUR_START }, (_, i) => (
                       <div key={i} className="absolute w-full border-b border-slate-100 dark:border-slate-800/50" style={{ top: i * HOUR_H }} />
@@ -431,6 +536,37 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
                 className={`relative ${isSameDay(dayDate, today) ? 'bg-blue-50/40 dark:bg-blue-950/10' : ''}`}
                 style={{ height: (HOUR_END - HOUR_START) * HOUR_H }}
               >
+                {unavailDay && (
+                  isFullyUnavailable(unavailDay) ? (
+                    <button
+                      onClick={() => setDelModal(unavailDay)}
+                      className="absolute inset-0 z-10 bg-orange-50/70 dark:bg-orange-950/20 flex items-center justify-center hover:bg-orange-100/70 dark:hover:bg-orange-950/30 transition-colors"
+                    >
+                      <div className="text-center px-4">
+                        <p className="text-base font-semibold text-orange-500 dark:text-orange-400">{unavailDay.label ?? 'Indisponible'}</p>
+                        {teamSize > 1 && (
+                          <p className="text-xs text-orange-500 dark:text-orange-400 mt-0.5 font-medium">Toute l&apos;équipe</p>
+                        )}
+                        <p className="text-xs text-orange-400 dark:text-orange-500 mt-1">Cliquer pour supprimer</p>
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setDelModal(unavailDay)}
+                      className="absolute top-0 left-0 right-0 z-10 bg-orange-100 dark:bg-orange-950/40 border-b border-orange-200 dark:border-orange-800 px-4 py-2 flex items-center justify-between hover:bg-orange-200/80 dark:hover:bg-orange-950/60 transition-colors"
+                    >
+                      <div className="text-left">
+                        <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                          {unavailDay.label ?? 'Indisponible'} — {unavailDay.team_members_off}/{teamSize} laveurs
+                        </p>
+                        <p className="text-[10px] text-orange-500 dark:text-orange-500">
+                          {teamSize - unavailDay.team_members_off} laveur{teamSize - unavailDay.team_members_off > 1 ? 's' : ''} disponible{teamSize - unavailDay.team_members_off > 1 ? 's' : ''} · capacité réduite
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-orange-400 shrink-0 ml-3">Supprimer</span>
+                    </button>
+                  )
+                )}
                 {Array.from({ length: HOUR_END - HOUR_START }, (_, i) => (
                   <div key={i} className="absolute w-full border-b border-slate-100 dark:border-slate-800/50" style={{ top: i * HOUR_H }} />
                 ))}
@@ -506,6 +642,158 @@ export default function CalendrierDashboard({ bookings: initial }: { bookings: B
                   <span className="text-xs opacity-80">{fmt(new Date(b.scheduled_at))}</span>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal ajouter indisponibilité */}
+      {addModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setAddModal(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 dark:border-slate-700 p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Bloquer une période</h3>
+              <button onClick={() => setAddModal(null)} className="text-slate-400 hover:text-slate-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Du</p>
+                  <input
+                    type="date"
+                    value={addModal.start}
+                    onChange={e => setAddModal(m => m ? { ...m, start: e.target.value } : m)}
+                    className="border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+                <div className="text-slate-400 mt-5">→</div>
+                <div>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Au</p>
+                  <input
+                    type="date"
+                    value={addModal.end}
+                    min={addModal.start}
+                    onChange={e => setAddModal(m => m ? { ...m, end: e.target.value } : m)}
+                    className="border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Motif (optionnel)</p>
+                <div className="flex gap-1.5 flex-wrap mb-2">
+                  {['Vacances', 'Formation', 'Congé maladie', 'Jour férié'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setAddModal(m => m ? { ...m, label: m.label === p ? '' : p } : m)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                        addModal.label === p
+                          ? 'border-orange-400 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400'
+                          : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={addModal.label}
+                  onChange={e => setAddModal(m => m ? { ...m, label: e.target.value } : m)}
+                  placeholder="Ou saisissez un motif libre..."
+                  className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+              {/* Nombre de laveurs concernés — visible seulement si équipe > 1 */}
+              {teamSize > 1 && (
+                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Laveurs indisponibles</p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAddModal(m => m ? { ...m, team_members_off: Math.max(1, m.team_members_off - 1) } : m)}
+                      disabled={addModal.team_members_off <= 1}
+                      className="w-8 h-8 rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors"
+                    >−</button>
+                    <div className="flex-1 text-center">
+                      <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100">{addModal.team_members_off}</span>
+                      <span className="text-sm text-slate-400 dark:text-slate-500"> / {teamSize}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAddModal(m => m ? { ...m, team_members_off: Math.min(teamSize, m.team_members_off + 1) } : m)}
+                      disabled={addModal.team_members_off >= teamSize}
+                      className="w-8 h-8 rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors"
+                    >+</button>
+                  </div>
+                  <p className={`text-xs mt-2 text-center font-medium ${addModal.team_members_off >= teamSize ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {addModal.team_members_off >= teamSize
+                      ? '⚠ Toute l\'équipe — les créneaux seront bloqués'
+                      : `${teamSize - addModal.team_members_off} laveur${teamSize - addModal.team_members_off > 1 ? 's' : ''} restant — capacité réduite`
+                    }
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setAddModal(null)} className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  Annuler
+                </button>
+                <button
+                  onClick={saveUnavail}
+                  disabled={uSaving}
+                  className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
+                >
+                  {uSaving ? 'Enregistrement...' : 'Bloquer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal supprimer indisponibilité */}
+      {delModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDelModal(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 dark:border-slate-700 p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Supprimer cette période ?</h3>
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3 mb-4">
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                {delModal.start_date === delModal.end_date
+                  ? new Date(delModal.start_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : `${new Date(delModal.start_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date(delModal.end_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                }
+              </p>
+              {delModal.label && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{delModal.label}</p>}
+              {teamSize > 1 && (
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">
+                  {isFullyUnavailable(delModal) ? '⚠ Toute l\'équipe' : `${delModal.team_members_off} / ${teamSize} laveurs`}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setDelModal(null)} className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={deleteUnavail}
+                disabled={uSaving}
+                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
+              >
+                {uSaving ? 'Suppression...' : 'Supprimer'}
+              </button>
             </div>
           </div>
         </div>

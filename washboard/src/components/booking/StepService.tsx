@@ -1,36 +1,140 @@
 'use client'
 
 import { useState } from 'react'
-import type { Service } from '@/types'
+import type { Service, VehicleItem } from '@/types'
 
 type Props = {
   services: Service[]
   selected: { service_id?: string; vehicle_type?: string }
-  onNext: (data: { service_id: string; vehicle_type: string }) => void
+  onNext: (data: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number; is_professional: boolean; vehicles_detail?: VehicleItem[] }) => void
   accent?: string
 }
 
 const VEHICLE_LABELS: Record<string, { label: string; icon: string }> = {
-  citadine: { label: 'Citadine', icon: '🚗' },
-  berline:  { label: 'Berline',  icon: '🚙' },
-  SUV:      { label: 'SUV / 4x4', icon: '🚐' },
+  citadine:      { label: 'Citadine',           icon: '🚗' },
+  berline:       { label: 'Berline',            icon: '🚙' },
+  SUV:           { label: 'SUV / 4x4',          icon: '🚐' },
+  moto:          { label: 'Moto',               icon: '🏍️' },
+  scooter:       { label: 'Scooter',            icon: '🛵' },
+  utilitaire:    { label: 'Utilitaire / Van',   icon: '🚚' },
+  'camping-car': { label: 'Camping-car',        icon: '🚌' },
+  camion:        { label: 'Camion',             icon: '🚛' },
+  velo:          { label: 'Vélo / Trottinette', icon: '🚲' },
 }
 
 function hex(color: string, opacity: number) {
   return color + Math.round(opacity * 255).toString(16).padStart(2, '0')
 }
 
+function vehiclePrice(service: Service, vehicleType: string): number {
+  return service.vehicle_price_overrides?.[vehicleType] ?? service.price
+}
+
+function minPrice(service: Service): number {
+  const prices = [service.price, ...Object.values(service.vehicle_price_overrides ?? {})]
+  return Math.min(...prices)
+}
+
+function hasOverrides(service: Service): boolean {
+  const overrides = Object.values(service.vehicle_price_overrides ?? {})
+  return overrides.length > 0 && overrides.some(p => p !== service.price)
+}
+
 export default function StepService({ services, selected, onNext, accent = '#2563eb' }: Props) {
-  const [serviceId, setServiceId] = useState(selected.service_id ?? '')
-  const [vehicleType, setVehicleType] = useState(selected.vehicle_type ?? '')
+  const [isPro,        setIsPro]        = useState(false)
+  const [serviceId,    setServiceId]    = useState(selected.service_id ?? '')
+  const [vehicleType,  setVehicleType]  = useState(selected.vehicle_type ?? '')
+  const [vehicleCount, setVehicleCount] = useState(1)
+  const [proVehicles,  setProVehicles]  = useState<Record<string, number>>({})
 
   const selectedService = services.find(s => s.id === serviceId)
-  const canContinue = serviceId && vehicleType
+
+  const unitPrice  = selectedService && vehicleType ? vehiclePrice(selectedService, vehicleType) : 0
+  const totalPrice = unitPrice * vehicleCount
+
+  const proTotal = selectedService
+    ? Object.entries(proVehicles).reduce((sum, [type, count]) => sum + vehiclePrice(selectedService, type) * count, 0)
+    : 0
+  const proCount       = Object.values(proVehicles).reduce((sum, c) => sum + c, 0)
+  const proHasVehicles = proCount > 0
+
+  const canContinue = serviceId && (isPro ? proHasVehicles : (vehicleType && vehicleCount >= 1))
+
+  function setProVehicleCount(type: string, count: number) {
+    setProVehicles(prev => {
+      if (count <= 0) {
+        const next = { ...prev }
+        delete next[type]
+        return next
+      }
+      return { ...prev, [type]: Math.min(99, count) }
+    })
+  }
+
+  function handleCountChange(val: string) {
+    const n = parseInt(val, 10)
+    if (!isNaN(n) && n >= 1 && n <= 99) setVehicleCount(n)
+  }
+
+  function handleNext() {
+    if (!canContinue || !selectedService) return
+    if (isPro) {
+      const vehicles_detail: VehicleItem[] = Object.entries(proVehicles)
+        .filter(([, c]) => c > 0)
+        .map(([type, count]) => ({ type, count, unit_price: vehiclePrice(selectedService, type) }))
+      onNext({
+        service_id:      serviceId,
+        vehicle_type:    vehicles_detail[0].type,
+        vehicle_count:   proCount,
+        booked_price:    proTotal,
+        is_professional: true,
+        vehicles_detail,
+      })
+    } else {
+      onNext({
+        service_id:      serviceId,
+        vehicle_type:    vehicleType,
+        vehicle_count:   vehicleCount,
+        booked_price:    totalPrice,
+        is_professional: false,
+      })
+    }
+  }
 
   return (
     <div>
+      {/* Toggle Particulier / Professionnel */}
+      <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-5">
+        <button
+          onClick={() => { setIsPro(false); setProVehicles({}) }}
+          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            !isPro
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <span>👤</span> Particulier
+        </button>
+        <button
+          onClick={() => { setIsPro(true); setVehicleType(''); setVehicleCount(1); setProVehicles({}) }}
+          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            isPro
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <span>🏢</span> Professionnel
+        </button>
+      </div>
+
+      {isPro && (
+        <div className="mb-5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-400">
+          Une facture avec vos informations société vous sera envoyée à la confirmation.
+        </div>
+      )}
+
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez votre prestation</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Sélectionnez le type de lavage souhaité</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
 
       <div className="space-y-2.5 mb-6">
         {services.map(service => {
@@ -38,17 +142,17 @@ export default function StepService({ services, selected, onNext, accent = '#256
           return (
             <button
               key={service.id}
-              onClick={() => { setServiceId(service.id); setVehicleType('') }}
+              onClick={() => { setServiceId(service.id); setVehicleType(''); setProVehicles({}) }}
               className="w-full text-left p-4 rounded-xl border-2 transition-all"
               style={isSelected
                 ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
-                : undefined
+                : { borderColor: 'transparent' }
               }
             >
-              <div className={`w-full flex justify-between items-center ${!isSelected ? 'border-slate-200 dark:border-slate-700' : ''}`}>
+              <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base transition-colors bg-slate-100 dark:bg-slate-700"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base bg-slate-100 dark:bg-slate-700 transition-colors"
                     style={isSelected ? { backgroundColor: hex(accent, 0.15) } : undefined}
                   >
                     🧽
@@ -61,9 +165,14 @@ export default function StepService({ services, selected, onNext, accent = '#256
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300" style={isSelected ? { color: accent } : undefined}>
-                    {service.price}€
-                  </span>
+                  <div className="text-right">
+                    {hasOverrides(service) && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 leading-none mb-0.5">à partir de</p>
+                    )}
+                    <span className="text-lg font-bold text-slate-700 dark:text-slate-300" style={isSelected ? { color: accent } : undefined}>
+                      {hasOverrides(service) ? minPrice(service) : service.price}€
+                    </span>
+                  </div>
                   <div
                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all border-slate-300 dark:border-slate-600"
                     style={isSelected ? { borderColor: accent, backgroundColor: accent } : undefined}
@@ -78,30 +187,136 @@ export default function StepService({ services, selected, onNext, accent = '#256
       </div>
 
       {selectedService && (
-        <div className="mb-6">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Type de véhicule</p>
-          <div className="grid grid-cols-3 gap-2">
-            {selectedService.vehicle_types.map(type => {
-              const info = VEHICLE_LABELS[type] ?? { label: type, icon: '🚘' }
-              const isSelected = vehicleType === type
-              return (
-                <button
-                  key={type}
-                  onClick={() => setVehicleType(type)}
-                  className="py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
-                  style={isSelected ? { borderColor: accent, backgroundColor: hex(accent, 0.06), color: accent } : undefined}
-                >
-                  <span className="text-xl">{info.icon}</span>
-                  {info.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <>
+          {isPro ? (
+            /* PRO mode: basket with per-type counters */
+            <div className="mb-6">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Sélectionnez vos véhicules</p>
+              <div className="space-y-2">
+                {selectedService.vehicle_types.map(type => {
+                  const info  = VEHICLE_LABELS[type] ?? { label: type, icon: '🚘' }
+                  const price = vehiclePrice(selectedService, type)
+                  const count = proVehicles[type] ?? 0
+                  return (
+                    <div
+                      key={type}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all"
+                      style={count > 0
+                        ? { borderColor: accent, backgroundColor: hex(accent, 0.04) }
+                        : { borderColor: '#e2e8f0' }
+                      }
+                    >
+                      <span className="text-xl w-7 text-center">{info.icon}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{info.label}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">{price}€/véhicule</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setProVehicleCount(type, count - 1)}
+                          disabled={count === 0}
+                          className="w-8 h-8 rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-30"
+                        >−</button>
+                        <span className="w-6 text-center text-sm font-semibold text-slate-900 dark:text-slate-100">{count}</span>
+                        <button
+                          onClick={() => setProVehicleCount(type, count + 1)}
+                          className="w-8 h-8 rounded-lg border-2 font-bold flex items-center justify-center transition-colors"
+                          style={count > 0
+                            ? { borderColor: accent, color: accent }
+                            : { borderColor: '#e2e8f0', color: '#64748b' }
+                          }
+                        >+</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {proHasVehicles && (
+                <div className="mt-3 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-1.5">
+                  {Object.entries(proVehicles).map(([type, count]) => {
+                    const info  = VEHICLE_LABELS[type] ?? { label: type, icon: '🚘' }
+                    const price = vehiclePrice(selectedService, type)
+                    return (
+                      <div key={type} className="flex justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">{info.icon} {info.label} × {count}</span>
+                        <span className="text-slate-700 dark:text-slate-300">{price * count}€</span>
+                      </div>
+                    )
+                  })}
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-0.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <span>Total ({proCount} véhicule{proCount > 1 ? 's' : ''})</span>
+                    <span>{proTotal}€</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Non-PRO mode: single vehicle type + optional quantity */
+            <>
+              <div className="mb-6">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Type de véhicule</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedService.vehicle_types.map(type => {
+                    const info  = VEHICLE_LABELS[type] ?? { label: type, icon: '🚘' }
+                    const isSel = vehicleType === type
+                    const price = vehiclePrice(selectedService, type)
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => setVehicleType(type)}
+                        className="py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+                        style={isSel ? { borderColor: accent, backgroundColor: hex(accent, 0.06), color: accent } : undefined}
+                      >
+                        <span className="text-xl">{info.icon}</span>
+                        <span>{info.label}</span>
+                        {hasOverrides(selectedService) && (
+                          <span className="font-semibold" style={isSel ? { color: accent } : undefined}>{price}€</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {vehicleType && (
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Quantité</p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setVehicleCount(c => Math.max(1, c - 1))}
+                      className="w-10 h-10 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-lg font-bold flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-30"
+                      disabled={vehicleCount <= 1}
+                    >−</button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={vehicleCount}
+                      onChange={e => handleCountChange(e.target.value)}
+                      className="w-16 text-center border border-slate-300 dark:border-slate-600 rounded-xl py-2 text-sm font-semibold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2"
+                      style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                    />
+                    <button
+                      onClick={() => setVehicleCount(c => Math.min(99, c + 1))}
+                      className="w-10 h-10 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-lg font-bold flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >+</button>
+                    {vehicleCount > 1 && (
+                      <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">{unitPrice}€ × {vehicleCount} = </span>
+                        <span className="font-bold text-slate-900 dark:text-slate-100">{totalPrice}€</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
 
       <button
-        onClick={() => canContinue && onNext({ service_id: serviceId, vehicle_type: vehicleType })}
+        onClick={handleNext}
         disabled={!canContinue}
         className="w-full py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
         style={{ backgroundColor: accent }}

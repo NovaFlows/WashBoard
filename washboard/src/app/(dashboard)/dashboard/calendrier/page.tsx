@@ -12,15 +12,25 @@ export default async function CalendrierPage() {
     .from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
 
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('*, services(name, price, duration_minutes)')
-    .eq('washer_id', washer.id)
-    .order('scheduled_at', { ascending: true })
+  const [
+    { data: bookings },
+    { data: unavailabilities },
+  ] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select('*, services(name, price, duration_minutes)')
+      .eq('washer_id', washer.id)
+      .order('scheduled_at', { ascending: true }),
+    supabase
+      .from('unavailabilities')
+      .select('*')
+      .eq('washer_id', washer.id)
+      .order('start_date'),
+  ])
 
   return (
     <DashboardShell washerName={washer.name}>
-      <CalendrierDashboard bookings={bookings ?? []} />
+      <CalendrierDashboard bookings={bookings ?? []} unavailabilities={unavailabilities ?? []} teamSize={washer.team_size ?? 1} />
     </DashboardShell>
   )
 }
