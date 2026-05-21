@@ -15,9 +15,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   if (!booking) return new Response('Not found', { status: 404 })
 
-  const buffer = await renderToBuffer(createElement(BookingPDF, { booking }))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buffer = await renderToBuffer(createElement(BookingPDF, { booking }) as any)
 
-  return new Response(buffer, {
+  return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="confirmation-${booking.id.slice(0, 8).toUpperCase()}.pdf"`,
