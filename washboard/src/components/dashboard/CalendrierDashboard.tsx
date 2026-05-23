@@ -201,7 +201,39 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       setManualErr('Le SIRET doit contenir exactement 14 chiffres'); return
     }
 
-    const scheduled_at = new Date(`${manualModal.date}T${manualModal.time}:00`).toISOString()
+    // ── Vérification de disponibilité ──────────────────────────────────────
+    const selectedStart = new Date(`${manualModal.date}T${manualModal.time}:00`)
+    const svcCheck      = services.find(s => s.id === manualModal.service_id)
+    const durationMs    = (svcCheck?.duration_minutes ?? 60) * 60_000
+    const selectedEnd   = new Date(selectedStart.getTime() + durationMs)
+    const dayStr        = manualModal.date
+
+    // Taille d'équipe effective en tenant compte des congés partiels
+    const dayUnavail    = unavails.find(u => u.start_date <= dayStr && dayStr <= u.end_date)
+    const effectiveTeam = Math.max(0, teamSize - (dayUnavail?.team_members_off ?? 0))
+
+    if (effectiveTeam === 0) {
+      setManualErr("Impossible — toute l'équipe est en congés ce jour-là")
+      return
+    }
+
+    // Compter les RDV non-annulés qui se chevauchent avec ce créneau
+    const overlapping = bookings.filter(b => {
+      if (b.status === 'cancelled') return false
+      const bStart = new Date(b.scheduled_at).getTime()
+      const bEnd   = bStart + (b.services?.duration_minutes ?? 60) * 60_000
+      return bStart < selectedEnd.getTime() && bEnd > selectedStart.getTime()
+    })
+
+    if (overlapping.length >= effectiveTeam) {
+      setManualErr(
+        `Créneau complet — ${overlapping.length}/${effectiveTeam} laveur${effectiveTeam > 1 ? 's' : ''} déjà occupé${effectiveTeam > 1 ? 's' : ''} à cet horaire`
+      )
+      return
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
+    const scheduled_at = selectedStart.toISOString()
     setManualSaving(true)
 
     const res = await fetch('/api/bookings', {
@@ -244,13 +276,11 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       smart_discount: 0,
       services:     svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
     }
-    // Mise à jour du statut si besoin
-    if (manualModal.status !== 'confirmed') {
-      await fetch(`/api/bookings/${json.data.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: manualModal.status }),
-      })
-    }
+    // Applique toujours le statut choisi (l'API crée en 'pending' par défaut)
+    await fetch(`/api/bookings/${json.data.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: manualModal.status }),
+    })
     setBookings(prev => [...prev, newBooking].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)))
     setManualModal(null)
     setManualSaving(false)
