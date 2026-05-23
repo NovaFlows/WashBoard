@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 type Service = { name: string; price: number; duration_minutes: number }
+type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number> }
 type Booking = {
   id: string
   client_name: string
@@ -88,13 +89,44 @@ function fmt(date: Date) {
 
 type Unavailability = { id: string; start_date: string; end_date: string; label: string | null; team_members_off: number }
 
+const VEHICLE_TYPES = [
+  { value: 'citadine',    label: 'Citadine' },
+  { value: 'berline',     label: 'Berline' },
+  { value: 'SUV',         label: 'SUV / 4x4' },
+  { value: 'utilitaire',  label: 'Utilitaire / Van' },
+  { value: 'camping-car', label: 'Camping-car' },
+  { value: 'camion',      label: 'Camion' },
+  { value: 'moto',        label: 'Moto' },
+  { value: 'scooter',     label: 'Scooter' },
+  { value: 'velo',        label: 'Vélo / Trottinette' },
+]
+
+type ManualBooking = {
+  service_id: string
+  vehicle_type: string
+  vehicle_count: number
+  booked_price: number
+  date: string
+  time: string
+  client_name: string
+  client_email: string
+  client_phone: string
+  address: string
+  is_professional: boolean
+  company_name: string
+  siret: string
+  billing_address: string
+  notes: string
+  status: 'pending' | 'confirmed'
+}
+
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number }
+type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; washerId: string }
 
-export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize }: Props) {
+export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, washerId }: Props) {
   const today = new Date()
   const [view,        setView]        = useState<'month' | 'week' | 'day'>('month')
   const [current,     setCurrent]     = useState(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -112,6 +144,117 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   const [addModal,    setAddModal]    = useState<{ start: string; end: string; label: string; team_members_off: number } | null>(null)
   const [delModal,    setDelModal]    = useState<Unavailability | null>(null)
   const [uSaving,     setUSaving]     = useState(false)
+
+  // ── Ajout manuel de réservation ─────────────────────────────────────────
+  const emptyManual = (): ManualBooking => {
+    const now = new Date()
+    now.setMinutes(0, 0, 0)
+    now.setHours(now.getHours() + 1)
+    return {
+      service_id: services[0]?.id ?? '',
+      vehicle_type: 'citadine',
+      vehicle_count: 1,
+      booked_price: services[0]?.price ?? 0,
+      date: toDateStr(now),
+      time: `${String(now.getHours()).padStart(2, '0')}:00`,
+      client_name: '', client_email: '', client_phone: '', address: '',
+      is_professional: false, company_name: '', siret: '', billing_address: '',
+      notes: '', status: 'confirmed',
+    }
+  }
+  const [manualModal, setManualModal] = useState<ManualBooking | null>(null)
+  const [manualSaving, setManualSaving] = useState(false)
+  const [manualErr,    setManualErr]    = useState<string | null>(null)
+
+  function openManualModal(date?: Date) {
+    const m = emptyManual()
+    if (date) m.date = toDateStr(date)
+    setManualModal(m)
+    setManualErr(null)
+  }
+
+  function updateManual<K extends keyof ManualBooking>(key: K, value: ManualBooking[K]) {
+    setManualModal(prev => {
+      if (!prev) return prev
+      const next = { ...prev, [key]: value }
+      // Recalcul prix automatique si service ou count change
+      if (key === 'service_id' || key === 'vehicle_count' || key === 'vehicle_type') {
+        const svc = services.find(s => s.id === next.service_id)
+        if (svc) {
+          const unitPrice = svc.vehicle_price_overrides?.[next.vehicle_type] ?? svc.price
+          next.booked_price = unitPrice * next.vehicle_count
+        }
+      }
+      return next
+    })
+  }
+
+  async function submitManualBooking() {
+    if (!manualModal) return
+    setManualErr(null)
+    if (!manualModal.client_name.trim()) { setManualErr('Nom du client requis'); return }
+    if (!manualModal.client_email.trim()) { setManualErr('Email du client requis'); return }
+    if (!manualModal.client_phone.trim()) { setManualErr('Téléphone du client requis'); return }
+    if (!manualModal.address.trim()) { setManualErr('Adresse requise'); return }
+    if (!manualModal.service_id) { setManualErr('Sélectionnez une prestation'); return }
+    if (manualModal.is_professional && manualModal.siret && !/^\d{14}$/.test(manualModal.siret)) {
+      setManualErr('Le SIRET doit contenir exactement 14 chiffres'); return
+    }
+
+    const scheduled_at = new Date(`${manualModal.date}T${manualModal.time}:00`).toISOString()
+    setManualSaving(true)
+
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        washer_id:       washerId,
+        service_id:      manualModal.service_id,
+        vehicle_type:    manualModal.vehicle_type,
+        vehicle_count:   manualModal.vehicle_count,
+        booked_price:    manualModal.booked_price,
+        address:         manualModal.address,
+        scheduled_at,
+        client_name:     manualModal.client_name,
+        client_email:    manualModal.client_email,
+        client_phone:    manualModal.client_phone,
+        is_professional: manualModal.is_professional,
+        company_name:    manualModal.company_name || undefined,
+        siret:           manualModal.siret || undefined,
+        billing_address: manualModal.billing_address || undefined,
+        is_smart_slot:   false,
+        smart_discount:  0,
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok) { setManualErr(json.error ?? 'Erreur lors de la création'); setManualSaving(false); return }
+
+    // Ajoute le RDV à l'état local
+    const svc = services.find(s => s.id === manualModal.service_id)
+    const newBooking: Booking = {
+      id:           json.data.id,
+      client_name:  manualModal.client_name,
+      client_email: manualModal.client_email,
+      client_phone: manualModal.client_phone,
+      address:      manualModal.address,
+      scheduled_at,
+      status:       manualModal.status,
+      notes:        manualModal.notes || null,
+      is_smart_slot: false,
+      smart_discount: 0,
+      services:     svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
+    }
+    // Mise à jour du statut si besoin
+    if (manualModal.status !== 'confirmed') {
+      await fetch(`/api/bookings/${json.data.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: manualModal.status }),
+      })
+    }
+    setBookings(prev => [...prev, newBooking].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)))
+    setManualModal(null)
+    setManualSaving(false)
+  }
 
   function getUnavail(date: Date): Unavailability | null {
     const s = toDateStr(date)
@@ -271,6 +414,15 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => openManualModal()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Ajouter un RDV
+          </button>
           {/* Toggle vue */}
           <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 text-sm">
             {([['month', 'Mois'], ['week', 'Semaine'], ['day', 'Jour']] as const).map(([v, label]) => (
@@ -794,6 +946,202 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               >
                 {uSaving ? 'Suppression...' : 'Supprimer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal ajout manuel de réservation */}
+      {manualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setManualModal(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Ajouter un rendez-vous</h3>
+              <button onClick={() => setManualModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Date & heure */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Date & heure</p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Date</label>
+                    <input type="date" value={manualModal.date} onChange={e => updateManual('date', e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="w-32">
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Heure</label>
+                    <input type="time" value={manualModal.time} onChange={e => updateManual('time', e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Prestation & véhicule */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Prestation</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Service</label>
+                    <select value={manualModal.service_id} onChange={e => updateManual('service_id', e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      {services.map(s => <option key={s.id} value={s.id}>{s.name} — {s.price}€</option>)}
+                    </select>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Type de véhicule</label>
+                      <select value={manualModal.vehicle_type} onChange={e => updateManual('vehicle_type', e.target.value)}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {VEHICLE_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="w-24">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Quantité</label>
+                      <input type="number" min={1} max={99} value={manualModal.vehicle_count}
+                        onChange={e => updateManual('vehicle_count', Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Prix total (€)</label>
+                    <input type="number" min={0} step={0.01} value={manualModal.booked_price}
+                      onChange={e => updateManual('booked_price', parseFloat(e.target.value) || 0)}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <p className="text-[11px] text-slate-400 mt-1">Calculé automatiquement — modifiable</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Client */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Client</p>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Nom complet *</label>
+                      <input type="text" placeholder="Jean Dupont" value={manualModal.client_name}
+                        onChange={e => updateManual('client_name', e.target.value)}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Email *</label>
+                      <input type="email" placeholder="jean@exemple.com" value={manualModal.client_email}
+                        onChange={e => updateManual('client_email', e.target.value)}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="w-40">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Téléphone *</label>
+                      <input type="tel" placeholder="06 00 00 00 00" value={manualModal.client_phone}
+                        onChange={e => updateManual('client_phone', e.target.value)}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Adresse d&apos;intervention *</label>
+                    <input type="text" placeholder="12 rue de la Paix, 75001 Paris" value={manualModal.address}
+                      onChange={e => updateManual('address', e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Client professionnel */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => updateManual('is_professional', !manualModal.is_professional)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    manualModal.is_professional
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                  </svg>
+                  Client professionnel
+                  {manualModal.is_professional && <span className="ml-1 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded-md">PRO</span>}
+                </button>
+                {manualModal.is_professional && (
+                  <div className="mt-3 space-y-3 pl-1">
+                    <div>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Nom de l&apos;entreprise</label>
+                      <input type="text" placeholder="Kooki Clean SAS" value={manualModal.company_name}
+                        onChange={e => updateManual('company_name', e.target.value)}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">SIRET (14 chiffres)</label>
+                        <input type="text" placeholder="12345678901234" value={manualModal.siret}
+                          onChange={e => updateManual('siret', e.target.value.replace(/\D/g, '').slice(0, 14))}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Adresse de facturation</label>
+                      <input type="text" placeholder="Identique à l'adresse d'intervention si vide" value={manualModal.billing_address}
+                        onChange={e => updateManual('billing_address', e.target.value)}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Statut & notes */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Statut & notes</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Statut initial</label>
+                    <div className="flex gap-2">
+                      {(['confirmed', 'pending'] as const).map(s => (
+                        <button key={s} type="button" onClick={() => updateManual('status', s)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                            manualModal.status === s
+                              ? s === 'confirmed'
+                                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                                : 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                          }`}>
+                          {s === 'confirmed' ? 'Confirmé' : 'En attente'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Notes internes</label>
+                    <textarea rows={2} placeholder="Code portail, instructions particulières..." value={manualModal.notes}
+                      onChange={e => updateManual('notes', e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+                  </div>
+                </div>
+              </div>
+
+              {manualErr && <p className="text-sm text-red-600 dark:text-red-400">{manualErr}</p>}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setManualModal(null)}
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  Annuler
+                </button>
+                <button onClick={submitManualBooking} disabled={manualSaving}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl disabled:opacity-40 transition-colors">
+                  {manualSaving ? 'Création...' : 'Créer le RDV'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
