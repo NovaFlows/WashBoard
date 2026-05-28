@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number> }
@@ -10,6 +11,8 @@ type Booking = {
   client_email: string
   client_phone: string
   address: string
+  lat: number | null
+  lng: number | null
   scheduled_at: string
   status: 'pending' | 'confirmed' | 'cancelled' | 'done'
   notes: string | null
@@ -112,12 +115,22 @@ type ManualBooking = {
   client_email: string
   client_phone: string
   address: string
+  lat: number | null
+  lng: number | null
   is_professional: boolean
   company_name: string
   siret: string
   billing_address: string
   notes: string
   status: 'pending' | 'confirmed'
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 function toDateStr(d: Date) {
@@ -157,20 +170,24 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       booked_price: services[0]?.price ?? 0,
       date: toDateStr(now),
       time: `${String(now.getHours()).padStart(2, '0')}:00`,
-      client_name: '', client_email: '', client_phone: '', address: '',
+      client_name: '', client_email: '', client_phone: '', address: '', lat: null, lng: null,
       is_professional: false, company_name: '', siret: '', billing_address: '',
       notes: '', status: 'confirmed',
     }
   }
-  const [manualModal, setManualModal] = useState<ManualBooking | null>(null)
-  const [manualSaving, setManualSaving] = useState(false)
-  const [manualErr,    setManualErr]    = useState<string | null>(null)
+  const [manualModal,       setManualModal]       = useState<ManualBooking | null>(null)
+  const [manualSaving,      setManualSaving]      = useState(false)
+  const [manualErr,         setManualErr]         = useState<string | null>(null)
+  const [feasibilityWarn,   setFeasibilityWarn]   = useState<string | null>(null)
+  const [overrideFeasibility, setOverrideFeasibility] = useState(false)
 
   function openManualModal(date?: Date) {
     const m = emptyManual()
     if (date) m.date = toDateStr(date)
     setManualModal(m)
     setManualErr(null)
+    setFeasibilityWarn(null)
+    setOverrideFeasibility(false)
   }
 
   function updateManual<K extends keyof ManualBooking>(key: K, value: ManualBooking[K]) {
@@ -189,7 +206,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     })
   }
 
-  async function submitManualBooking() {
+  async function submitManualBooking(forceOverride = false) {
     if (!manualModal) return
     setManualErr(null)
     if (!manualModal.client_name.trim()) { setManualErr('Nom du client requis'); return }
@@ -231,6 +248,59 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       )
       return
     }
+
+    // ── Vérification de faisabilité (avertissement non bloquant) ───────────
+    if (!overrideFeasibility && !forceOverride) {
+      const WINDOW_MS = 75 * 60_000 // RDV dans la fenêtre ±75 min
+      const sameDayActive = bookings.filter(b => b.status !== 'cancelled' && b.scheduled_at.startsWith(manualModal.date))
+      let warning: string | null = null
+
+      for (const b of sameDayActive) {
+        const bStart  = new Date(b.scheduled_at).getTime()
+        const bEnd    = bStart + (b.services?.duration_minutes ?? 60) * 60_000
+        const newStart = selectedStart.getTime()
+        const newEnd   = selectedEnd.getTime()
+
+        // RDV qui finit juste avant le nouveau
+        if (bEnd <= newStart && newStart - bEnd < WINDOW_MS) {
+          const gapMin = Math.round((newStart - bEnd) / 60_000)
+          if (manualModal.lat && b.lat && b.lng) {
+            const km      = haversineKm(b.lat, b.lng, manualModal.lat, manualModal.lng!)
+            const travelMin = Math.round(km / 60 * 60) // 60 km/h
+            if (travelMin > gapMin) {
+              warning = `RDV précédent se termine à ${new Date(bEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
+              break
+            }
+          } else if (gapMin < 15) {
+            warning = `RDV précédent se termine à ${new Date(bEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — seulement ${gapMin} min d'écart, vérifiez que le trajet est faisable.`
+            break
+          }
+        }
+
+        // RDV qui commence juste après le nouveau
+        if (bStart >= newEnd && bStart - newEnd < WINDOW_MS) {
+          const gapMin = Math.round((bStart - newEnd) / 60_000)
+          if (manualModal.lat && b.lat && b.lng) {
+            const km      = haversineKm(manualModal.lat, manualModal.lng!, b.lat, b.lng)
+            const travelMin = Math.round(km / 60 * 60)
+            if (travelMin > gapMin) {
+              warning = `RDV suivant débute à ${new Date(bStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
+              break
+            }
+          } else if (gapMin < 15) {
+            warning = `RDV suivant démarre à ${new Date(bStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — seulement ${gapMin} min d'écart, vérifiez que le trajet est faisable.`
+            break
+          }
+        }
+      }
+
+      if (warning) {
+        setFeasibilityWarn(warning)
+        setManualSaving(false)
+        return
+      }
+    }
+    setFeasibilityWarn(null)
     // ───────────────────────────────────────────────────────────────────────
 
     const scheduled_at = selectedStart.toISOString()
@@ -250,6 +320,8 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
         client_name:     manualModal.client_name,
         client_email:    manualModal.client_email,
         client_phone:    manualModal.client_phone,
+        lat:             manualModal.lat ?? undefined,
+        lng:             manualModal.lng ?? undefined,
         is_professional: manualModal.is_professional,
         company_name:    manualModal.company_name || undefined,
         siret:           manualModal.siret || undefined,
@@ -269,6 +341,8 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       client_email: manualModal.client_email,
       client_phone: manualModal.client_phone,
       address:      manualModal.address,
+      lat:          manualModal.lat,
+      lng:          manualModal.lng,
       scheduled_at,
       status:       manualModal.status,
       notes:        manualModal.notes || null,
@@ -521,7 +595,8 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-[88px] p-1.5 border-b border-r border-slate-100 dark:border-slate-800/50 ${
+                  onClick={() => { setDayDate(day); setView('day') }}
+                  className={`group min-h-[88px] p-1.5 border-b border-r border-slate-100 dark:border-slate-800/50 cursor-pointer transition-colors hover:bg-blue-100/70 dark:hover:bg-blue-900/25 ${
                     unavail ? 'bg-orange-50/60 dark:bg-orange-950/15' : isPast ? 'bg-slate-50/40 dark:bg-slate-950/20' : ''
                   }`}
                   style={{ borderRight: (idx + 1) % 7 === 0 ? 'none' : undefined, borderBottom: idx >= 35 ? 'none' : undefined }}
@@ -533,7 +608,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   </div>
                   {unavail && isFullyUnavailable(unavail) ? (
                     <button
-                      onClick={() => setDelModal(unavail)}
+                      onClick={e => { e.stopPropagation(); setDelModal(unavail) }}
                       className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
                     >
                       {unavail.label ?? 'Indisponible'}
@@ -543,7 +618,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     <div className="space-y-0.5">
                       {unavail && (
                         <button
-                          onClick={() => setDelModal(unavail)}
+                          onClick={e => { e.stopPropagation(); setDelModal(unavail) }}
                           className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-orange-100 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
                         >
                           {unavail.label ?? 'Partiel'} {unavail.team_members_off}/{teamSize}
@@ -552,7 +627,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       {visible.map(b => (
                         <button
                           key={b.id}
-                          onClick={() => openBooking(b)}
+                          onClick={e => { e.stopPropagation(); openBooking(b) }}
                           className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                         >
                           {b.is_smart_slot && '★ '}{fmt(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
@@ -560,7 +635,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       ))}
                       {overflow > 0 && (
                         <button
-                          onClick={() => setDayList(dayBkgs)}
+                          onClick={e => { e.stopPropagation(); setDayList(dayBkgs) }}
                           className="w-full text-left px-1.5 py-0.5 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                         >
                           +{overflow} autre{overflow > 1 ? 's' : ''}
@@ -568,8 +643,8 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       )}
                       {!unavail && (
                         <button
-                          onClick={() => openAddModal(day)}
-                          className="w-full text-center py-0.5 text-[9px] text-slate-300 dark:text-slate-700 hover:text-orange-400 dark:hover:text-orange-500 transition-colors"
+                          onClick={e => { e.stopPropagation(); openAddModal(day) }}
+                          className="w-full text-center py-0.5 text-[9px] text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100 hover:text-orange-400 dark:hover:text-orange-500 transition-all"
                         >
                           + bloquer
                         </button>
@@ -594,9 +669,12 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               return (
                 <div key={i} className="py-2.5 text-center border-l border-slate-100 dark:border-slate-800 first:border-l-0">
                   <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{DAYS[i]}</p>
-                  <p className={`text-sm font-bold mt-0.5 ${isToday ? 'w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto' : 'text-slate-700 dark:text-slate-300'}`}>
+                  <button
+                    onClick={() => { setDayDate(d); setView('day') }}
+                    className={`text-sm font-bold mt-0.5 transition-all hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 rounded-full ${isToday ? 'w-7 h-7 bg-blue-600 text-white flex items-center justify-center mx-auto' : 'w-7 h-7 flex items-center justify-center mx-auto text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400'}`}
+                  >
                     {d.getDate()}
-                  </p>
+                  </button>
                 </div>
               )
             })}
@@ -1079,9 +1157,13 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Adresse d&apos;intervention *</label>
-                    <input type="text" placeholder="12 rue de la Paix, 75001 Paris" value={manualModal.address}
-                      onChange={e => updateManual('address', e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <AddressAutocomplete
+                      value={manualModal.address}
+                      onChange={v => updateManual('address', v)}
+                      onSelectWithCoords={(label, lat, lng) => setManualModal(m => m ? { ...m, address: label, lat, lng } : m)}
+                      placeholder="12 rue de la Paix, 75001 Paris"
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
               </div>
@@ -1161,17 +1243,43 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
 
               {manualErr && <p className="text-sm text-red-600 dark:text-red-400">{manualErr}</p>}
 
+              {/* Avertissement faisabilité */}
+              {feasibilityWarn && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-xl p-4">
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">⚠ Problème de faisabilité détecté</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed mb-3">{feasibilityWarn}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 font-medium mb-3">Êtes-vous sûr de vouloir créer ce rendez-vous ?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setFeasibilityWarn(null); setOverrideFeasibility(false) }}
+                      className="flex-1 py-2 border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 text-xs font-semibold rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setOverrideFeasibility(true); submitManualBooking(true) }}
+                      disabled={manualSaving}
+                      className="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg disabled:opacity-40 transition-colors">
+                      {manualSaving ? 'Création...' : 'Confirmer quand même'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
-              <div className="flex gap-3 pt-1">
-                <button onClick={() => setManualModal(null)}
-                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                  Annuler
-                </button>
-                <button onClick={submitManualBooking} disabled={manualSaving}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl disabled:opacity-40 transition-colors">
-                  {manualSaving ? 'Création...' : 'Créer le RDV'}
-                </button>
-              </div>
+              {!feasibilityWarn && (
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setManualModal(null)}
+                    className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    Annuler
+                  </button>
+                  <button onClick={submitManualBooking} disabled={manualSaving}
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl disabled:opacity-40 transition-colors">
+                    {manualSaving ? 'Création...' : 'Créer le RDV'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
