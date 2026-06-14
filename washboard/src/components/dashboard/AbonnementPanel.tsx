@@ -45,7 +45,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
   )
   const virementHref = `mailto:novaflows.pro@gmail.com?subject=${virementSubject}&body=${virementBody}`
 
-  const paypalHref = `https://paypal.me/NovaFlows/${PRICE}EUR`
+  const paypalHref = `https://paypal.me/WashBoardSAAS/${PRICE}`
 
   return (
     <div className="space-y-6">
