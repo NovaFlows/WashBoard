@@ -159,7 +159,7 @@ export default function LandingPage() {
                   {[
                     { time: '09:00', name: 'Martin Dupont', service: 'Lavage extérieur', smart: false },
                     { time: '10:00', name: 'Sophie Bernard', service: 'Lavage complet', smart: true },
-                    { time: '11:30', name: 'Kooki Clean Pro', service: 'Pack entreprise × 4', smart: false },
+                    { time: '11:30', name: 'Garage Lefebvre', service: 'Pack entreprise × 4', smart: false },
                   ].map((rdv) => (
                     <div key={rdv.time} className="flex items-center gap-4 px-4 py-3 border-b border-slate-100 dark:border-slate-700/30 last:border-0">
                       <span className="text-sm font-bold text-slate-500 dark:text-slate-400 w-12 shrink-0">{rdv.time}</span>
