@@ -110,7 +110,7 @@ export default function LandingPage() {
           </motion.p>
           <motion.div variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20">
-              Commencer gratuitement — 14 jours
+              Commencer gratuitement — 1 mois
             </Link>
             <Link href="/login" className="w-full sm:w-auto px-8 py-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white text-base font-semibold rounded-xl transition-colors border border-slate-200 dark:border-slate-700">
               J&apos;ai déjà un compte
@@ -376,7 +376,7 @@ export default function LandingPage() {
               ))}
             </div>
             <Link href="/signup" className="block w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-base">
-              Commencer gratuitement — 14 jours
+              Commencer gratuitement — 1 mois
             </Link>
             <p className="text-xs text-slate-400 mt-3">Sans carte bancaire pour l&apos;essai</p>
           </div>
@@ -392,7 +392,7 @@ export default function LandingPage() {
           {[
             { q: 'Mes clients doivent-ils créer un compte ?', a: 'Non. Tes clients réservent directement sur ta page sans créer de compte ni télécharger d\'appli. Juste leur nom, email et téléphone.' },
             { q: 'Est-ce difficile à configurer ?', a: 'Non. En 10 minutes tu as ta page de réservation en ligne avec tes services, tes horaires et ta zone d\'intervention.' },
-            { q: 'Que se passe-t-il après les 14 jours d\'essai ?', a: 'Tu choisis si tu veux continuer à 49€/mois. Si non, ton compte est suspendu sans frais. Aucune carte bancaire n\'est demandée pendant l\'essai.' },
+            { q: 'Que se passe-t-il après le mois d\'essai ?', a: 'Tu choisis si tu veux continuer à 49€/mois. Si non, ton compte est suspendu sans frais. Aucune carte bancaire n\'est demandée pendant l\'essai.' },
             { q: 'Ça fonctionne si j\'ai une équipe ?', a: 'Oui. Tu configures la taille de ton équipe et gères les absences partielles. WashBoard adapte automatiquement la capacité de réservation.' },
             { q: 'Les clients peuvent-ils payer en ligne ?', a: 'Non, le paiement se fait sur place. WashBoard gère la réservation et la confirmation — le règlement reste entre toi et ton client.' },
           ].map((item) => (
@@ -417,7 +417,7 @@ export default function LandingPage() {
               Rejoins les laveurs auto mobiles qui ont optimisé leur tournée avec WashBoard.
             </p>
             <Link href="/signup" className="inline-block px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20">
-              Essayer gratuitement — 14 jours
+              Essayer gratuitement — 1 mois
             </Link>
             <p className="text-xs text-slate-400 mt-4">Sans engagement · Sans carte bancaire</p>
           </div>
