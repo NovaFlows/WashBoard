@@ -282,7 +282,7 @@ export default function LandingPage() {
             {
               icon: <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />,
               title: 'Accompagnement gratuit',
-              desc: 'On te guide pas à pas pour la mise en place. Et si tu as une question, notre service client répond rapidement — compris dans l\'abonnement, sans supplément.',
+              desc: 'On te guide pas à pas pour la mise en place. Une question ? Notre service client répond sur WhatsApp au 06 84 14 04 38 — compris dans l\'abonnement, sans supplément.',
             },
           ].map((feat) => (
             <FadeItem key={feat.title} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
@@ -371,7 +371,7 @@ export default function LandingPage() {
                 'Confirmation email automatique',
                 'Connexion Google Calendar',
                 'Accompagnement à la mise en place',
-                'Service client gratuit inclus',
+                'Support WhatsApp gratuit — 06 84 14 04 38',
               ].map((feat) => (
                 <div key={feat} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
                   <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

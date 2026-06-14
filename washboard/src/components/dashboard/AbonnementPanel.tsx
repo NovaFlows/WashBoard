@@ -147,9 +147,9 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Questions fréquentes</h2>
         {[
-          { q: 'Comment annuler mon abonnement ?', r: 'Envoyez-nous un email à novaflows.pro@gmail.com. Aucun engagement, résiliation immédiate.' },
+          { q: 'Comment annuler mon abonnement ?', r: 'Contactez-nous sur WhatsApp au 06 84 14 04 38. Aucun engagement, résiliation immédiate.' },
           { q: 'Mes données sont-elles conservées si j\'arrête ?', r: 'Oui, vos données (clients, RDV, historique) sont conservées 30 jours après résiliation.' },
-          { q: 'Puis-je changer de mode de paiement ?', r: 'Oui, contactez-nous par email à tout moment.' },
+          { q: 'Puis-je changer de mode de paiement ?', r: 'Oui, écrivez-nous sur WhatsApp au 06 84 14 04 38 à tout moment.' },
         ].map(({ q, r }) => (
           <div key={q} className="border-t border-slate-100 dark:border-slate-800 pt-4 first:border-0 first:pt-0">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{q}</p>
