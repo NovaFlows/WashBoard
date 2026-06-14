@@ -22,7 +22,7 @@ export default async function AdminPage() {
   ])
 
   return (
-    <DashboardShell washerName={washer.name}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status}>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Page client</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

@@ -19,7 +19,7 @@ export default async function CrmPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <DashboardShell washerName={washer.name}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status}>
       <CrmDashboard bookings={bookings ?? []} />
     </DashboardShell>
   )

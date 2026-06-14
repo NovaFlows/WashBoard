@@ -40,9 +40,18 @@ export async function POST(request: NextRequest) {
   const baseSlug = generateSlug(name.trim())
   const slug = `${baseSlug}-${randomUUID().slice(0, 4)}`
 
+  const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
   const { error: washerError } = await supabase
     .from('washers')
-    .insert({ id: randomUUID(), user_id: authData.user.id, name: name.trim(), slug })
+    .insert({
+      id: randomUUID(),
+      user_id: authData.user.id,
+      name: name.trim(),
+      slug,
+      trial_ends_at: trialEndsAt,
+      subscription_status: 'trial',
+    })
 
   if (washerError) {
     await supabase.auth.admin.deleteUser(authData.user.id)

@@ -89,7 +89,19 @@ export function Sidebar({ isOpen, onClose }: Props) {
         </nav>
 
         {/* Paramètres en bas */}
-        <div className="px-3 py-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="px-3 py-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
+          <Link
+            href="/dashboard/abonnement"
+            onClick={onClose}
+            className={navClass('/dashboard/abonnement')}
+          >
+            <span className={iconClass('/dashboard/abonnement')}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </span>
+            Abonnement
+          </Link>
           <Link
             href="/dashboard/parametres"
             onClick={onClose}

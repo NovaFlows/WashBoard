@@ -31,6 +31,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Blocage si abonnement expiré (sauf sur la page abonnement elle-même)
+  if (user && request.nextUrl.pathname.startsWith('/dashboard') && !request.nextUrl.pathname.startsWith('/dashboard/abonnement')) {
+    const { data: washer } = await supabase
+      .from('washers')
+      .select('subscription_status, trial_ends_at')
+      .eq('user_id', user.id)
+      .single()
+
+    if (washer) {
+      const isExpiredStatus = washer.subscription_status === 'expired'
+      const isTrialExpired = washer.subscription_status === 'trial' &&
+        washer.trial_ends_at &&
+        new Date(washer.trial_ends_at) < new Date()
+
+      if (isExpiredStatus || isTrialExpired) {
+        return NextResponse.redirect(new URL('/dashboard/abonnement', request.url))
+      }
+    }
+  }
+
   return supabaseResponse
 }
 
