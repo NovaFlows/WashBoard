@@ -43,7 +43,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
   const virementBody = encodeURIComponent(
     `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard (49€/mois) pour l'espace "${washerName}".\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
   )
-  const virementHref = `mailto:novaflows.pro@gmail.com?subject=${virementSubject}&body=${virementBody}`
+  const virementHref = `https://mail.google.com/mail/?view=cm&to=novaflows.pro@gmail.com&su=${virementSubject}&body=${virementBody}`
 
   const paypalHref = `https://paypal.me/WashBoardSAAS/${PRICE}`
 
