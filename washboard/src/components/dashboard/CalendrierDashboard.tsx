@@ -1274,7 +1274,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                     Annuler
                   </button>
-                  <button onClick={submitManualBooking} disabled={manualSaving}
+                  <button onClick={() => submitManualBooking()} disabled={manualSaving}
                     className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl disabled:opacity-40 transition-colors">
                     {manualSaving ? 'Création...' : 'Créer le RDV'}
                   </button>
