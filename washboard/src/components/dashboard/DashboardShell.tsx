@@ -86,9 +86,9 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
               </svg>
             </button>
 
-            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-12 h-12 object-contain" />
+            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-16 h-16 object-contain" />
             <div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight">WashBoard</p>
+              <p className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight">WashBoard</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-none">Espace laveur · {washerName}</p>
             </div>
           </div>
