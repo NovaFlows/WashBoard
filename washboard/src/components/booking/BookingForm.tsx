@@ -58,17 +58,17 @@ export default function BookingForm({ washer, services, availabilities, existing
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
       {step < 4 && (
-        <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
+        <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-start w-full">
             {STEPS.map((label, i) => {
               const n = i + 1
               const done = step > n
               const active = step === n
               return (
-                <div key={n} className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
+                <div key={n} className={`flex items-start ${n < STEPS.length ? 'flex-1' : ''}`}>
+                  <div className="flex flex-col items-center gap-1 shrink-0">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                         done ? 'bg-emerald-500 text-white' :
                         active ? 'text-white' :
                         'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
@@ -81,14 +81,14 @@ export default function BookingForm({ washer, services, availabilities, existing
                         </svg>
                       ) : n}
                     </div>
-                    <span className={`text-xs font-medium ${
+                    <span className={`text-[11px] font-medium text-center leading-tight ${
                       active ? 'text-slate-900 dark:text-slate-100' :
                       done ? 'text-emerald-600 dark:text-emerald-400' :
                       'text-slate-400 dark:text-slate-500'
                     }`}>{label}</span>
                   </div>
-                  {n < 3 && (
-                    <div className={`h-px w-6 transition-colors ${done ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                  {n < STEPS.length && (
+                    <div className={`flex-1 h-px mt-3.5 mx-1 transition-colors ${done ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
                   )}
                 </div>
               )

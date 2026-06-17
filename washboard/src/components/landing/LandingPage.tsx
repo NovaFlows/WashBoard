@@ -75,18 +75,19 @@ export default function LandingPage() {
 
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Image src="/LogoWashBoard.png" alt="WashBoard" width={48} height={48} className="rounded-lg" />
-            <span className="text-2xl font-extrabold tracking-tight">WashBoard</span>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Image src="/LogoWashBoard.png" alt="WashBoard" width={36} height={36} className="rounded-lg shrink-0 sm:w-12 sm:h-12" />
+            <span className="text-lg sm:text-2xl font-extrabold tracking-tight truncate">WashBoard</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ThemeToggle />
             <Link href="/login" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors hidden sm:block px-3 py-2">
               Connexion
             </Link>
-            <Link href="/signup" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors">
-              Essayer gratuitement
+            <Link href="/signup" className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap">
+              <span className="sm:hidden">Essayer</span>
+              <span className="hidden sm:inline">Essayer gratuitement</span>
             </Link>
           </div>
         </div>
