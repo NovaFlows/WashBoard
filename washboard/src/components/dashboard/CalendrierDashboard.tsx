@@ -20,6 +20,7 @@ type Booking = {
   smart_discount: number
   booked_price: number | null
   selected_addons: { id: string; label: string; price: number; category: string }[] | null
+  travel_fee: number | null
   services: Service | null
 }
 
@@ -352,6 +353,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       smart_discount: 0,
       booked_price:    null,
       selected_addons: null,
+      travel_fee:      null,
       services:        svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
     }
     // Applique toujours le statut choisi (l'API crée en 'pending' par défaut)
@@ -1342,16 +1344,22 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               <Row icon="pin">{selected.address}</Row>
             </div>
 
-            {/* Options supplémentaires */}
-            {selected.selected_addons && selected.selected_addons.length > 0 && (
+            {/* Options supplémentaires + frais de déplacement */}
+            {((selected.selected_addons && selected.selected_addons.length > 0) || (selected.travel_fee != null && selected.travel_fee > 0)) && (
               <div className="mb-4 space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Options</p>
-                {selected.selected_addons.map(a => (
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Détail du prix</p>
+                {selected.selected_addons?.map(a => (
                   <div key={a.id} className="flex items-center justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">{a.label}</span>
                     <span className="font-semibold text-slate-700 dark:text-slate-300">+{a.price}€</span>
                   </div>
                 ))}
+                {selected.travel_fee != null && selected.travel_fee > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">Frais de déplacement</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">+{selected.travel_fee}€</span>
+                  </div>
+                )}
               </div>
             )}
 

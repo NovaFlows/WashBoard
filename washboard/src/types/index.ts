@@ -21,6 +21,7 @@ export type Washer = {
   smart_slot_radius_minutes: number
   smart_slot_discount_type: 'fixed' | 'percent'
   smart_slot_discount_value: number
+  travel_fee: number
   created_at: string
 }
 
@@ -104,6 +105,7 @@ export type BookingFormData = {
   billing_address?: string
   vehicles_detail?: VehicleItem[]
   selected_addons?: ServiceAddon[]
+  travel_fee?: number
   address: string
   scheduled_at: string
   client_name: string

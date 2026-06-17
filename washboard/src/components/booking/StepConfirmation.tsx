@@ -41,6 +41,9 @@ export default function StepConfirmation({ washerName, bookingId, form, services
             <Row key={a.id} label={a.label} value={`+${a.price}€`} />
           ))
         )}
+        {form.travel_fee != null && form.travel_fee > 0 && (
+          <Row label="Frais de déplacement" value={`+${form.travel_fee}€`} />
+        )}
         {date && (
           <Row
             label="Date & heure"

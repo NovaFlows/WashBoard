@@ -47,6 +47,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [name, setName] = useState(washer.name)
   const [phone, setPhone] = useState(washer.phone ?? '')
   const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
+  const [travelFee, setTravelFee] = useState(String(washer.travel_fee ?? 0))
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -72,7 +73,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     const res = await fetch('/api/washer', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, team_size: Math.max(1, parseInt(teamSize) || 1) }),
+      body: JSON.stringify({ name, phone, team_size: Math.max(1, parseInt(teamSize) || 1), travel_fee: Math.max(0, parseFloat(travelFee) || 0) }),
     })
     if (res.ok) {
       setProfileMsg({ ok: true, text: 'Profil mis à jour' })
@@ -129,6 +130,30 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             <label className={labelClass}>Téléphone</label>
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
           </div>
+          <div>
+            <label className={labelClass}>Frais de déplacement (€)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={travelFee}
+                onChange={e => setTravelFee(e.target.value)}
+                onBlur={() => {
+                  const v = parseFloat(travelFee)
+                  setTravelFee(String(isNaN(v) || v < 0 ? 0 : v))
+                }}
+                placeholder="0"
+                className={`${inputClass} w-32`}
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {parseFloat(travelFee) > 0
+                  ? `Ajouté à chaque réservation`
+                  : 'Aucun frais de déplacement'}
+              </p>
+            </div>
+          </div>
+
           <div>
             <label className={labelClass}>Nombre de laveurs</label>
             <div className="flex items-center gap-3">

@@ -31,6 +31,7 @@ const BookingSchema = z.object({
     price:    z.number(),
     category: z.string(),
   })).optional(),
+  travel_fee: z.number().min(0).optional().default(0),
 })
 
 export async function POST(req: Request) {
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
   const {
     vehicle_type, vehicle_count, is_smart_slot, smart_discount,
     booked_price: bookedPriceInput, is_professional, company_name, siret, billing_address,
-    vehicles_detail, selected_addons,
+    vehicles_detail, selected_addons, travel_fee,
     ...bookingData
   } = parsed.data
   const id = randomUUID()
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
   const overrides    = (service?.vehicle_price_overrides ?? {}) as Record<string, number>
   const unit_price   = overrides[vehicle_type] ?? service?.price ?? 0
   const count        = vehicle_count ?? 1
-  const booked_price = bookedPriceInput ?? unit_price * count
+  const booked_price = bookedPriceInput ?? (unit_price * count + (travel_fee ?? 0))
 
   const { error } = await supabase
     .from('bookings')
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
       billing_address: billing_address ?? null,
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
+      travel_fee:       travel_fee ?? 0,
     })
 
   if (error) {

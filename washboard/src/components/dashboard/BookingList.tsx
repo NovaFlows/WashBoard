@@ -18,6 +18,7 @@ type Booking = {
   booked_price: number | null
   notes: string | null
   selected_addons: ServiceAddon[] | null
+  travel_fee: number | null
   services: Service | null
 }
 
@@ -301,16 +302,22 @@ function BookingCard({ booking, loading, onUpdate }: {
             <Row icon="pin">{booking.address}</Row>
           </div>
 
-          {/* Options supplémentaires */}
-          {booking.selected_addons && booking.selected_addons.length > 0 && (
+          {/* Options supplémentaires + frais de déplacement */}
+          {((booking.selected_addons && booking.selected_addons.length > 0) || (booking.travel_fee != null && booking.travel_fee > 0)) && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Options</p>
-              {booking.selected_addons.map(a => (
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Détail du prix</p>
+              {booking.selected_addons?.map(a => (
                 <div key={a.id} className="flex items-center justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">{a.label}</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-300">+{a.price}€</span>
                 </div>
               ))}
+              {booking.travel_fee != null && booking.travel_fee > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Frais de déplacement</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">+{booking.travel_fee}€</span>
+                </div>
+              )}
             </div>
           )}
 
