@@ -25,6 +25,12 @@ const BookingSchema = z.object({
     count:      z.number().int().min(1),
     unit_price: z.number().min(0),
   })).optional(),
+  selected_addons: z.array(z.object({
+    id:       z.string(),
+    label:    z.string(),
+    price:    z.number(),
+    category: z.string(),
+  })).optional(),
 })
 
 export async function POST(req: Request) {
@@ -41,7 +47,7 @@ export async function POST(req: Request) {
   const {
     vehicle_type, vehicle_count, is_smart_slot, smart_discount,
     booked_price: bookedPriceInput, is_professional, company_name, siret, billing_address,
-    vehicles_detail,
+    vehicles_detail, selected_addons,
     ...bookingData
   } = parsed.data
   const id = randomUUID()
@@ -72,7 +78,8 @@ export async function POST(req: Request) {
       company_name:    company_name ?? null,
       siret:           siret ?? null,
       billing_address: billing_address ?? null,
-      vehicles_detail: vehicles_detail ?? null,
+      vehicles_detail:  vehicles_detail ?? null,
+      selected_addons:  selected_addons ?? [],
     })
 
   if (error) {

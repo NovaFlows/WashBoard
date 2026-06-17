@@ -24,6 +24,13 @@ export type Washer = {
   created_at: string
 }
 
+export type ServiceAddon = {
+  id: string
+  label: string
+  price: number
+  category: string
+}
+
 export type Service = {
   id: string
   washer_id: string
@@ -32,6 +39,7 @@ export type Service = {
   duration_minutes: number
   vehicle_types: string[]
   vehicle_price_overrides: Record<string, number>
+  addons: ServiceAddon[]
 }
 
 export type Availability = {
@@ -95,6 +103,7 @@ export type BookingFormData = {
   siret?: string
   billing_address?: string
   vehicles_detail?: VehicleItem[]
+  selected_addons?: ServiceAddon[]
   address: string
   scheduled_at: string
   client_name: string

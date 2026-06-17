@@ -1,22 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import type { Service } from '@/types'
+import type { Service, ServiceAddon } from '@/types'
 
 const VEHICLE_OPTIONS = [
+  { value: 'citadine_2p', label: 'Citadine 2p' },
   { value: 'citadine',    label: 'Citadine' },
   { value: 'berline',     label: 'Berline' },
   { value: 'SUV',         label: 'SUV / 4x4' },
-  { value: 'moto',        label: 'Moto' },
-  { value: 'scooter',     label: 'Scooter' },
+  { value: 'monospace',   label: 'Monospace' },
+  { value: '7places',     label: '7 places' },
   { value: 'utilitaire',  label: 'Utilitaire / Van' },
-  { value: 'camping-car', label: 'Camping-car' },
-  { value: 'camion',      label: 'Camion' },
-  { value: 'velo',        label: 'Vélo / Trottinette' },
 ]
 
-type FormData = { name: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number> }
-const EMPTY: FormData = { name: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {} }
+type FormData = { name: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
+const EMPTY: FormData = { name: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
 
 type ServiceFormProps = {
   form: FormData
@@ -29,6 +27,23 @@ type ServiceFormProps = {
 
 function ServiceForm({ form, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '' })
+
+  function addAddon() {
+    if (!draft.label.trim() || !draft.price) return
+    const addon: ServiceAddon = {
+      id: crypto.randomUUID(),
+      label: draft.label.trim(),
+      category: draft.category.trim() || 'Options',
+      price: Number(draft.price),
+    }
+    onChange({ ...form, addons: [...form.addons, addon] })
+    setDraft(d => ({ ...d, label: '', price: '' }))
+  }
+
+  function removeAddon(id: string) {
+    onChange({ ...form, addons: form.addons.filter(a => a.id !== id) })
+  }
 
   function toggleVehicle(v: string) {
     onChange({
@@ -134,6 +149,73 @@ function ServiceForm({ form, onChange, onSave, onCancel, loading, error }: Servi
         </div>
       )}
 
+      {/* Options & suppléments */}
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
+          Options & suppléments
+          <span className="ml-1 text-slate-400 font-normal">(optionnel — proposé au client pendant la réservation)</span>
+        </label>
+
+        {form.addons.length > 0 && (
+          <div className="space-y-1.5 mb-3">
+            {form.addons.map(addon => (
+              <div key={addon.id} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-xs text-slate-400 shrink-0 w-32 truncate">{addon.category}</span>
+                <span className="flex-1 text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{addon.label}</span>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 shrink-0">+{addon.price}€</span>
+                <button
+                  type="button"
+                  onClick={() => removeAddon(addon.id)}
+                  className="text-red-400 hover:text-red-600 text-xs shrink-0 ml-1 transition-colors"
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <datalist id="addon-categories">
+          <option value="Suppléments intérieur" />
+          <option value="Suppléments extérieur" />
+          <option value="Traitements spéciaux" />
+        </datalist>
+
+        <div className="grid grid-cols-[1fr_1fr_5rem_auto] gap-2 items-end">
+          <input
+            list="addon-categories"
+            value={draft.category}
+            onChange={e => setDraft(d => ({ ...d, category: e.target.value }))}
+            placeholder="Catégorie"
+            className={inputClass}
+          />
+          <input
+            value={draft.label}
+            onChange={e => setDraft(d => ({ ...d, label: e.target.value }))}
+            placeholder="Ex : Poils d'animaux"
+            className={inputClass}
+            onKeyDown={e => e.key === 'Enter' && addAddon()}
+          />
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              value={draft.price}
+              onChange={e => setDraft(d => ({ ...d, price: e.target.value }))}
+              placeholder="15"
+              className={inputClass}
+              onKeyDown={e => e.key === 'Enter' && addAddon()}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={addAddon}
+            disabled={!draft.label.trim() || !draft.price}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-semibold rounded-xl disabled:opacity-40 transition-colors whitespace-nowrap"
+          >
+            + Ajouter
+          </button>
+        </div>
+      </div>
+
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
@@ -181,6 +263,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       duration_minutes: String(svc.duration_minutes),
       vehicle_types: [...svc.vehicle_types],
       vehicle_price_overrides: { ...(svc.vehicle_price_overrides ?? {}) },
+      addons: [...(svc.addons ?? [])],
     })
     setEditId(svc.id)
   }
@@ -204,6 +287,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
         duration_minutes: Number(form.duration_minutes),
         vehicle_types: form.vehicle_types,
         vehicle_price_overrides: form.vehicle_price_overrides,
+        addons: form.addons,
       }),
     })
     const json = await res.json()
@@ -230,6 +314,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
         duration_minutes: Number(form.duration_minutes),
         vehicle_types: form.vehicle_types,
         vehicle_price_overrides: form.vehicle_price_overrides,
+        addons: form.addons,
       }),
     })
     const json = await res.json()
@@ -239,7 +324,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       return
     }
     setServices(s => s.map(svc => svc.id === editId
-      ? { ...svc, name: form.name, price: Number(form.price), duration_minutes: Number(form.duration_minutes), vehicle_types: form.vehicle_types, vehicle_price_overrides: form.vehicle_price_overrides }
+      ? { ...svc, name: form.name, price: Number(form.price), duration_minutes: Number(form.duration_minutes), vehicle_types: form.vehicle_types, vehicle_price_overrides: form.vehicle_price_overrides, addons: form.addons }
       : svc
     ))
     cancelForm()

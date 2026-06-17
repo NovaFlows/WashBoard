@@ -10,16 +10,15 @@ type Props = {
   accent?: string
 }
 
-const VEHICLE_LABELS: Record<string, { label: string; icon: string }> = {
-  citadine:      { label: 'Citadine',           icon: '🚗' },
-  berline:       { label: 'Berline',            icon: '🚙' },
-  SUV:           { label: 'SUV / 4x4',          icon: '🚐' },
-  moto:          { label: 'Moto',               icon: '🏍️' },
-  scooter:       { label: 'Scooter',            icon: '🛵' },
-  utilitaire:    { label: 'Utilitaire / Van',   icon: '🚚' },
-  'camping-car': { label: 'Camping-car',        icon: '🚌' },
-  camion:        { label: 'Camion',             icon: '🚛' },
-  velo:          { label: 'Vélo / Trottinette', icon: '🚲' },
+const VEHICLE_LABELS: Record<string, { label: string; icon: string; img?: string }> = {
+  citadine_2p: { label: 'Citadine 2p',     icon: '', img: '/vehicles/citadine_2p.png' },
+  citadine:    { label: 'Citadine',         icon: '', img: '/vehicles/citadine.png' },
+  berline:     { label: 'Berline',          icon: '', img: '/vehicles/berline.png' },
+  SUV:         { label: 'SUV / 4x4',        icon: '', img: '/vehicles/suv.png' },
+  monospace:   { label: 'Monospace',        icon: '', img: '/vehicles/monospace.png' },
+  '7places':   { label: '7 places',         icon: '', img: '/vehicles/monospace.png' },
+  utilitaire:  { label: 'Van / Utilitaire', icon: '', img: '/vehicles/utilitaire.png' },
+  velo:        { label: 'Vélo',             icon: '', img: '/vehicles/bike.svg' },
 }
 
 function hex(color: string, opacity: number) {
@@ -206,7 +205,11 @@ export default function StepService({ services, selected, onNext, accent = '#256
                         : { borderColor: '#e2e8f0' }
                       }
                     >
-                      <span className="text-xl w-7 text-center">{info.icon}</span>
+                      {info.img ? (
+                        <img src={info.img} alt={info.label} className="w-12 h-12 object-contain shrink-0 opacity-80" />
+                      ) : (
+                        <span className="text-xl w-7 text-center shrink-0">{info.icon}</span>
+                      )}
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{info.label}</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500">{price}€/véhicule</p>
@@ -265,10 +268,14 @@ export default function StepService({ services, selected, onNext, accent = '#256
                       <button
                         key={type}
                         onClick={() => setVehicleType(type)}
-                        className="py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+                        className="py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1.5 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
                         style={isSel ? { borderColor: accent, backgroundColor: hex(accent, 0.06), color: accent } : undefined}
                       >
-                        <span className="text-xl">{info.icon}</span>
+                        {info.img ? (
+                          <img src={info.img} alt={info.label} className={`w-14 h-14 object-contain transition-opacity ${isSel ? 'opacity-100' : 'opacity-50'}`} />
+                        ) : (
+                          <span className="text-xl">{info.icon}</span>
+                        )}
                         <span>{info.label}</span>
                         {hasOverrides(selectedService) && (
                           <span className="font-semibold" style={isSel ? { color: accent } : undefined}>{price}€</span>

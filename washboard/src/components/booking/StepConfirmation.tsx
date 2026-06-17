@@ -36,6 +36,11 @@ export default function StepConfirmation({ washerName, bookingId, form, services
             }
           />
         )}
+        {form.selected_addons && form.selected_addons.length > 0 && (
+          form.selected_addons.map(a => (
+            <Row key={a.id} label={a.label} value={`+${a.price}€`} />
+          ))
+        )}
         {date && (
           <Row
             label="Date & heure"

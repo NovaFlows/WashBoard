@@ -14,6 +14,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.duration_minutes !== undefined) updates.duration_minutes = Number(body.duration_minutes)
   if (body.vehicle_types !== undefined) updates.vehicle_types = body.vehicle_types
   if (body.vehicle_price_overrides !== undefined) updates.vehicle_price_overrides = body.vehicle_price_overrides
+  if (body.addons !== undefined) updates.addons = body.addons
 
   const { error } = await supabase.from('services').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

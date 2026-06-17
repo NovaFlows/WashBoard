@@ -18,6 +18,8 @@ type Booking = {
   notes: string | null
   is_smart_slot: boolean
   smart_discount: number
+  booked_price: number | null
+  selected_addons: { id: string; label: string; price: number; category: string }[] | null
   services: Service | null
 }
 
@@ -348,7 +350,9 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       notes:        manualModal.notes || null,
       is_smart_slot: false,
       smart_discount: 0,
-      services:     svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
+      booked_price:    null,
+      selected_addons: null,
+      services:        svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
     }
     // Applique toujours le statut choisi (l'API crée en 'pending' par défaut)
     await fetch(`/api/bookings/${json.data.id}`, {
@@ -1322,13 +1326,13 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   {selected.services.name} · {selected.services.duration_minutes} min ·{' '}
                   {selected.is_smart_slot && Number(selected.smart_discount) > 0 ? (
                     <>
-                      <span className="line-through opacity-50">{selected.services.price}€</span>
+                      <span className="line-through opacity-50">{selected.booked_price ?? selected.services.price}€</span>
                       {' '}
-                      <span className="font-semibold">{(selected.services.price - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
+                      <span className="font-semibold">{((selected.booked_price ?? selected.services.price) - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
                       {' '}
                       <span className="text-amber-500 font-bold">★ smart</span>
                     </>
-                  ) : `${selected.services.price}€`}
+                  ) : `${selected.booked_price ?? selected.services.price}€`}
                 </Row>
               )}
               <Row icon="calendar">
@@ -1337,6 +1341,19 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               </Row>
               <Row icon="pin">{selected.address}</Row>
             </div>
+
+            {/* Options supplémentaires */}
+            {selected.selected_addons && selected.selected_addons.length > 0 && (
+              <div className="mb-4 space-y-1">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Options</p>
+                {selected.selected_addons.map(a => (
+                  <div key={a.id} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">{a.label}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">+{a.price}€</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Notes internes */}
             <div className="mb-4">

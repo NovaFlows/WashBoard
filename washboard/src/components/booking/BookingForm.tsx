@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Washer, Service, Availability, BookingFormData } from '@/types'
 import StepService from './StepService'
+import StepOptions from './StepOptions'
 import StepSlot from './StepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './StepConfirmation'
@@ -21,14 +22,32 @@ type Props = {
 
 export type FormState = Partial<BookingFormData>
 
-const STEPS = ['Prestation', 'Créneau', 'Coordonnées']
-
+// step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
 export default function BookingForm({ washer, services, availabilities, existingBookings, unavailabilities, accent = '#2563eb' }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const selectedService = services.find(s => s.id === form.service_id)
+  const hasAddons = (selectedService?.addons ?? []).length > 0
+
+  // Stepper : 4 étapes si options dispo, 3 sinon
+  const STEPS = hasAddons
+    ? ['Prestation', 'Options', 'Créneau', 'Coordonnées']
+    : ['Prestation', 'Créneau', 'Coordonnées']
+
+  // Mappe le step réel sur la position dans le stepper
+  function stepperPos(s: number): number {
+    if (hasAddons) return s
+    if (s === 1) return 1
+    if (s === 3) return 2
+    if (s === 4) return 3
+    return s
+  }
+
+  const sp = stepperPos(step)
 
   function updateForm(data: Partial<BookingFormData>) {
     setForm(prev => ({ ...prev, ...data }))
@@ -47,7 +66,7 @@ export default function BookingForm({ washer, services, availabilities, existing
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
       setBookingId(json.data.id)
-      setStep(4)
+      setStep(5)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Une erreur est survenue')
     } finally {
@@ -57,13 +76,13 @@ export default function BookingForm({ washer, services, availabilities, existing
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      {step < 4 && (
+      {step < 5 && (
         <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-start w-full">
             {STEPS.map((label, i) => {
               const n = i + 1
-              const done = step > n
-              const active = step === n
+              const done = sp > n
+              const active = sp === n
               return (
                 <div key={n} className={`flex items-start ${n < STEPS.length ? 'flex-1' : ''}`}>
                   <div className="flex flex-col items-center gap-1 shrink-0">
@@ -102,11 +121,25 @@ export default function BookingForm({ washer, services, availabilities, existing
           <StepService
             services={services}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
-            onNext={(data) => { updateForm(data); setStep(2) }}
+            onNext={(data) => {
+              updateForm(data)
+              const svc = services.find(s => s.id === data.service_id)
+              setStep((svc?.addons ?? []).length > 0 ? 2 : 3)
+            }}
             accent={accent}
           />
         )}
-        {step === 2 && (
+        {step === 2 && selectedService && (
+          <StepOptions
+            service={selectedService}
+            selectedAddons={form.selected_addons ?? []}
+            basePrice={form.booked_price ?? selectedService.price}
+            onNext={(data) => { updateForm(data); setStep(3) }}
+            onBack={() => setStep(1)}
+            accent={accent}
+          />
+        )}
+        {step === 3 && (
           <StepSlot
             availabilities={availabilities}
             existingBookings={existingBookings}
@@ -115,22 +148,22 @@ export default function BookingForm({ washer, services, availabilities, existing
             serviceDuration={services.find(s => s.id === form.service_id)?.duration_minutes ?? 60}
             servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
             washerId={washer.id}
-            onNext={(data) => { updateForm(data); setStep(3) }}
-            onBack={() => setStep(1)}
+            onNext={(data) => { updateForm(data); setStep(4) }}
+            onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}
           />
         )}
-        {step === 3 && (
+        {step === 4 && (
           <StepContact
             isProfessional={form.is_professional ?? false}
             loading={loading}
             error={error}
             onSubmit={submitBooking}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(3)}
             accent={accent}
           />
         )}
-        {step === 4 && (
+        {step === 5 && (
           <StepConfirmation
             washerName={washer.name}
             bookingId={bookingId!}
