@@ -45,24 +45,26 @@ function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string
     }
 
     return (
-      <div className={`relative text-sm font-semibold py-2.5 px-4 flex items-center justify-center gap-3 ${
+      <div className={`text-sm font-semibold py-2.5 px-3 flex items-center gap-2 ${
         isUrgent
           ? 'bg-orange-500 text-white'
           : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800'
       }`}>
-        <span>
-          {isUrgent ? '⚠ ' : ''}Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
-        </span>
-        <Link
-          href="/dashboard/abonnement"
-          className={`underline font-bold whitespace-nowrap ${isUrgent ? 'hover:text-orange-100' : 'hover:opacity-70'}`}
-        >
-          Voir l'abonnement →
-        </Link>
+        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
+          <span>
+            {isUrgent ? '⚠ ' : ''}Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
+          </span>
+          <Link
+            href="/dashboard/abonnement"
+            className={`underline font-bold whitespace-nowrap ${isUrgent ? 'hover:text-orange-100' : 'hover:opacity-70'}`}
+          >
+            Voir l&apos;abonnement →
+          </Link>
+        </div>
         <button
           onClick={() => setDismissed(true)}
           aria-label="Fermer"
-          className={`absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity ${isUrgent ? 'text-white' : ''}`}
+          className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
