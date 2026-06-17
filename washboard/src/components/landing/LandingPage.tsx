@@ -230,37 +230,37 @@ export default function LandingPage() {
 
         {/* Feature phare */}
         <FadeUp className="mb-6">
-          <div className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/40 dark:to-slate-900 border border-blue-200 dark:border-blue-800/40 rounded-2xl p-8 grid sm:grid-cols-2 gap-8 items-center">
+          <div className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/40 dark:to-slate-900 border border-blue-200 dark:border-blue-800/40 rounded-2xl p-5 sm:p-8 grid sm:grid-cols-2 gap-6 sm:gap-8 items-center">
             <div>
               <span className="inline-block text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-full mb-4 uppercase tracking-widest">
                 Fonctionnalité phare
               </span>
-              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3">Créneaux optimisés par zone</h3>
-              <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-3">Créneaux optimisés par zone</h3>
+              <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-4 text-sm sm:text-base">
                 Quand un client réserve dans un quartier où tu interviens déjà, WashBoard propose
                 automatiquement un créneau à tarif réduit aux clients proches.
                 Tu fais un lavage de plus sans faire un km de plus.
               </p>
               <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 +2 lavages/jour en moyenne
               </div>
             </div>
-            <div className="bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-700/50 p-4 space-y-2 shadow-sm">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Créneaux du jour — Bordeaux Sud</p>
+            <div className="bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-700/50 p-3 sm:p-4 space-y-2 shadow-sm overflow-hidden">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 truncate">Créneaux du jour — Bordeaux Sud</p>
               {[
                 { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
-                { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '-8€ · zone optimisée' },
-                { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart', note: '-5€ · zone optimisée' },
+                { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '★ -8€ zone opt.' },
+                { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart', note: '★ -5€ zone opt.' },
                 { time: '14:00', label: 'Lucie M. — Pack famille', type: 'normal' },
               ].map((item) => (
-                <div key={item.time} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${item.type === 'smart' ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40' : 'bg-slate-50 dark:bg-slate-800/60'}`}>
-                  <span className="text-xs font-bold text-slate-400 w-10 shrink-0">{item.time}</span>
-                  <span className="text-sm text-slate-700 dark:text-slate-200 flex-1 truncate">{item.label}</span>
+                <div key={item.time} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg min-w-0 ${item.type === 'smart' ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40' : 'bg-slate-50 dark:bg-slate-800/60'}`}>
+                  <span className="text-xs font-bold text-slate-400 shrink-0">{item.time}</span>
+                  <span className="text-xs text-slate-700 dark:text-slate-200 flex-1 truncate min-w-0">{item.label}</span>
                   {item.type === 'smart' && (
-                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 shrink-0">★ {item.note}</span>
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 shrink-0 whitespace-nowrap">{item.note}</span>
                   )}
                 </div>
               ))}
