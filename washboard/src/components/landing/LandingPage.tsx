@@ -71,7 +71,7 @@ function ThemeToggle() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 overflow-x-hidden">
 
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -94,7 +94,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-20 text-center">
         <motion.div initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12 } } }}>
           <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.5 } } }} className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-full text-xs font-medium text-blue-600 dark:text-blue-400 mb-8">
             <span className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full" />
@@ -183,7 +183,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pain points ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24">
         <FadeUp>
           <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-12">Tu te reconnais là-dedans ?</p>
         </FadeUp>
@@ -217,7 +217,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">
             Tout ce dont tu as besoin,{' '}
@@ -298,7 +298,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── ROI ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">
             L&apos;abonnement se rembourse avec{' '}
@@ -350,7 +350,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pricing ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">Un seul tarif. Tout inclus.</h2>
           <p className="text-slate-500 dark:text-slate-400 text-lg">Pas de frais cachés, pas de paliers compliqués.</p>
@@ -412,7 +412,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA final ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp>
           <div className="bg-gradient-to-br from-blue-50 to-slate-50 dark:from-blue-950/60 dark:to-slate-900 border border-blue-200 dark:border-blue-800/40 rounded-2xl p-10 sm:p-16 text-center">
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">
@@ -433,7 +433,7 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
             <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
