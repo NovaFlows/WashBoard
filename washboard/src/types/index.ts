@@ -21,7 +21,9 @@ export type Washer = {
   smart_slot_radius_minutes: number
   smart_slot_discount_type: 'fixed' | 'percent'
   smart_slot_discount_value: number
-  travel_fee: number
+  travel_fee_tiers: { max_minutes: number; fee: number }[]
+  base_address: string | null
+  travel_fee_mode: 'base' | 'previous'
   created_at: string
 }
 
@@ -106,6 +108,7 @@ export type BookingFormData = {
   vehicles_detail?: VehicleItem[]
   selected_addons?: ServiceAddon[]
   travel_fee?: number
+  travel_fee_tiers?: { max_minutes: number; fee: number }[]
   address: string
   scheduled_at: string
   client_name: string

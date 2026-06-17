@@ -24,9 +24,8 @@ export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
 export default function BookingForm({ washer, services, availabilities, existingBookings, unavailabilities, accent = '#2563eb' }: Props) {
-  const travelFee = washer.travel_fee ?? 0
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState<FormState>({ travel_fee: travelFee })
+  const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -57,15 +56,12 @@ export default function BookingForm({ washer, services, availabilities, existing
   async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'>) {
     setLoading(true)
     setError(null)
-    const servicePrice = form.booked_price ?? 0
     const payload = {
       ...form,
       ...contactData,
-      washer_id:     washer.id,
-      is_smart_slot: form.is_smart_slot ?? false,
+      washer_id:      washer.id,
+      is_smart_slot:  form.is_smart_slot ?? false,
       smart_discount: form.smart_discount ?? 0,
-      travel_fee:    travelFee,
-      booked_price:  servicePrice + travelFee,
     }
     try {
       const res = await fetch('/api/bookings', {
@@ -144,7 +140,6 @@ export default function BookingForm({ washer, services, availabilities, existing
             service={selectedService}
             selectedAddons={form.selected_addons ?? []}
             basePrice={form.booked_price ?? selectedService.price}
-            travelFee={travelFee}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
             accent={accent}
@@ -159,6 +154,8 @@ export default function BookingForm({ washer, services, availabilities, existing
             serviceDuration={services.find(s => s.id === form.service_id)?.duration_minutes ?? 60}
             servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
             washerId={washer.id}
+            hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
+            travelFeeMode={washer.travel_fee_mode ?? 'base'}
             onNext={(data) => { updateForm(data); setStep(4) }}
             onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}

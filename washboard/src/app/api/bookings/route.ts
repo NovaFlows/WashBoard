@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendBookingRequest } from '@/lib/email'
+import { computeTravelFee } from '@/lib/travelFee'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
@@ -61,11 +62,16 @@ export async function POST(req: Request) {
     supabase.from('services').select('name, price, vehicle_price_overrides').eq('id', bookingData.service_id).single(),
   ])
 
-  // Prix effectif : prix unitaire × quantité
+  // Calcul des frais de déplacement (mode base ou RDV précédent)
+  const computed_travel_fee = bookingData.address
+    ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at)
+    : (travel_fee ?? 0)
+
+  // Prix effectif : prix unitaire × quantité + frais de déplacement
   const overrides    = (service?.vehicle_price_overrides ?? {}) as Record<string, number>
   const unit_price   = overrides[vehicle_type] ?? service?.price ?? 0
   const count        = vehicle_count ?? 1
-  const booked_price = bookedPriceInput ?? (unit_price * count + (travel_fee ?? 0))
+  const booked_price = bookedPriceInput ?? (unit_price * count + computed_travel_fee)
 
   const { error } = await supabase
     .from('bookings')
@@ -81,7 +87,7 @@ export async function POST(req: Request) {
       billing_address: billing_address ?? null,
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
-      travel_fee:       travel_fee ?? 0,
+      travel_fee:       computed_travel_fee,
     })
 
   if (error) {

@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest) {
   const {
     name, phone, logo_url, welcome_message, brand_color, team_size,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
-    travel_fee,
+    travel_fee_tiers, base_address, travel_fee_mode,
     zone_config,
   } = await request.json()
 
@@ -25,7 +25,9 @@ export async function PATCH(request: NextRequest) {
   if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
   if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type
   if (smart_slot_discount_value !== undefined) updates.smart_slot_discount_value = Math.max(0, Number(smart_slot_discount_value))
-  if (travel_fee !== undefined) updates.travel_fee = Math.max(0, Number(travel_fee))
+  if (travel_fee_tiers !== undefined) updates.travel_fee_tiers = travel_fee_tiers
+  if (base_address !== undefined) updates.base_address = base_address?.trim() || null
+  if (travel_fee_mode !== undefined) updates.travel_fee_mode = travel_fee_mode
 
   if (zone_config !== undefined) {
     let config = zone_config as ZoneConfig

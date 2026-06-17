@@ -7,7 +7,6 @@ type Props = {
   service: Service
   selectedAddons: ServiceAddon[]
   basePrice: number
-  travelFee?: number
   onNext: (data: { selected_addons: ServiceAddon[]; booked_price: number }) => void
   onBack: () => void
   accent?: string
@@ -17,7 +16,7 @@ function hex(color: string, opacity: number) {
   return color + Math.round(opacity * 255).toString(16).padStart(2, '0')
 }
 
-export default function StepOptions({ service, selectedAddons, basePrice, travelFee = 0, onNext, onBack, accent = '#2563eb' }: Props) {
+export default function StepOptions({ service, selectedAddons, basePrice, onNext, onBack, accent = '#2563eb' }: Props) {
   const [selected, setSelected] = useState<ServiceAddon[]>(selectedAddons)
 
   const categories = [...new Set(service.addons.map(a => a.category))]
@@ -94,15 +93,9 @@ export default function StepOptions({ service, selectedAddons, basePrice, travel
             <span>+{a.price}€</span>
           </div>
         ))}
-        {travelFee > 0 && (
-          <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
-            <span>Frais de déplacement</span>
-            <span>+{travelFee}€</span>
-          </div>
-        )}
         <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
           <span>Total estimé</span>
-          <span>{total + travelFee}€</span>
+          <span>{total}€</span>
         </div>
       </div>
 

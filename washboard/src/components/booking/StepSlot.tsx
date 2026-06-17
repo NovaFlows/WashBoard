@@ -19,7 +19,9 @@ type Props = {
   serviceDuration: number
   servicePrice: number
   washerId: string
-  onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number }) => void
+  hasTravelFee?: boolean
+  travelFeeMode?: 'base' | 'previous'
+  onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   onBack: () => void
   accent?: string
 }
@@ -68,7 +70,7 @@ function generateSlots(start: string, end: string, durationMinutes: number): str
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
@@ -76,6 +78,8 @@ export default function StepSlot({
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
   const [zoneAllowed,       setZoneAllowed]       = useState(true)
   const [zoneMessage,       setZoneMessage]       = useState<string | null>(null)
+  const [travelFeeEstimate, setTravelFeeEstimate] = useState<number | null>(null)
+  const [fetchingTravelFee, setFetchingTravelFee] = useState(false)
   type SmartWindow = { start: string; end: string }
   type BookingConstraint = { start: string; end: string; travelToNew: number; travelFromNew: number }
   const [smartWindows,       setSmartWindows]       = useState<SmartWindow[]>([])
@@ -95,6 +99,7 @@ export default function StepSlot({
     if (debouncedAddress.trim().length <= 5) {
       setZoneAllowed(true)
       setZoneMessage(null)
+      setTravelFeeEstimate(null)
       return
     }
     fetch(`/api/zone/check?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}`)
@@ -109,6 +114,35 @@ export default function StepSlot({
       })
       .catch(() => { setZoneAllowed(true); setZoneMessage(null) })
   }, [debouncedAddress, washerId])
+
+  // Calcul des frais de déplacement estimés
+  // Mode 'base'     → dès que l'adresse est saisie
+  // Mode 'previous' → attend que date+heure soient sélectionnées pour trouver le bon RDV précédent
+  useEffect(() => {
+    const addressReady = debouncedAddress.trim().length > 5
+    const needsSlot    = travelFeeMode === 'previous'
+    const slotReady    = !!(selectedDate && selectedTime)
+
+    if (!hasTravelFee || !addressReady || (needsSlot && !slotReady)) {
+      setTravelFeeEstimate(null)
+      return
+    }
+
+    let scheduledAtParam = ''
+    if (selectedDate && selectedTime) {
+      const [h, m] = selectedTime.split(':').map(Number)
+      const dt = new Date(selectedDate)
+      dt.setHours(h, m, 0, 0)
+      scheduledAtParam = `&scheduled_at=${encodeURIComponent(dt.toISOString())}`
+    }
+
+    setFetchingTravelFee(true)
+    fetch(`/api/travel-fee?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}${scheduledAtParam}`)
+      .then(r => r.json())
+      .then((data: { fee: number }) => setTravelFeeEstimate(data.fee))
+      .catch(() => setTravelFeeEstimate(null))
+      .finally(() => setFetchingTravelFee(false))
+  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode])
 
   useEffect(() => {
     if (!selectedDate || debouncedAddress.trim().length <= 5) {
@@ -201,7 +235,13 @@ export default function StepSlot({
     const discount = isSmart
       ? (smartDiscountType === 'percent' ? servicePrice * smartDiscountValue / 100 : smartDiscountValue)
       : 0
-    onNext({ scheduled_at: dt.toISOString(), address, is_smart_slot: isSmart, smart_discount: discount })
+    onNext({
+      scheduled_at: dt.toISOString(),
+      address,
+      is_smart_slot: isSmart,
+      smart_discount: discount,
+      travel_fee: travelFeeEstimate ?? undefined,
+    })
   }
 
   return (
@@ -218,6 +258,23 @@ export default function StepSlot({
           className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
           style={{ '--tw-ring-color': accent } as React.CSSProperties}
         />
+        {hasTravelFee && address.trim().length > 5 && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            {travelFeeMode === 'previous' && !(selectedDate && selectedTime) ? (
+              <span>Les frais de déplacement seront calculés depuis votre RDV précédent une fois le créneau sélectionné.</span>
+            ) : fetchingTravelFee ? (
+              <span className="animate-pulse">Calcul des frais de déplacement...</span>
+            ) : travelFeeEstimate != null && travelFeeEstimate > 0 ? (
+              <span>Frais de déplacement estimés : <strong className="text-slate-700 dark:text-slate-200">{travelFeeEstimate}€</strong></span>
+            ) : travelFeeEstimate === 0 ? (
+              <span className="text-emerald-600 dark:text-emerald-400">Pas de frais de déplacement pour cette adresse</span>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {zoneMessage && (

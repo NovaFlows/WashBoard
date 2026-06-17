@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Washer } from '@/types'
 import Link from 'next/link'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 
 type Props = {
   washer: Washer
@@ -47,7 +48,10 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [name, setName] = useState(washer.name)
   const [phone, setPhone] = useState(washer.phone ?? '')
   const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
-  const [travelFee, setTravelFee] = useState(String(washer.travel_fee ?? 0))
+  const [baseAddress, setBaseAddress] = useState(washer.base_address ?? '')
+  const [tiers, setTiers] = useState<{ max_minutes: number; fee: number }[]>(washer.travel_fee_tiers ?? [])
+  const [tierDraft, setTierDraft] = useState({ max_minutes: '', fee: '' })
+  const [travelFeeMode, setTravelFeeMode] = useState<'base' | 'previous'>(washer.travel_fee_mode ?? 'base')
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -66,6 +70,18 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
 
+  function addTier() {
+    const mins = parseInt(tierDraft.max_minutes)
+    const fee  = parseFloat(tierDraft.fee)
+    if (isNaN(mins) || mins <= 0 || isNaN(fee) || fee < 0) return
+    setTiers(prev => [...prev.filter(t => t.max_minutes !== mins), { max_minutes: mins, fee }].sort((a, b) => a.max_minutes - b.max_minutes))
+    setTierDraft({ max_minutes: '', fee: '' })
+  }
+
+  function removeTier(mins: number) {
+    setTiers(prev => prev.filter(t => t.max_minutes !== mins))
+  }
+
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
     setProfileLoading(true)
@@ -73,7 +89,14 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     const res = await fetch('/api/washer', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, team_size: Math.max(1, parseInt(teamSize) || 1), travel_fee: Math.max(0, parseFloat(travelFee) || 0) }),
+      body: JSON.stringify({
+        name,
+        phone,
+        team_size: Math.max(1, parseInt(teamSize) || 1),
+        base_address: baseAddress.trim() || null,
+        travel_fee_tiers: tiers,
+        travel_fee_mode: travelFeeMode,
+      }),
     })
     if (res.ok) {
       setProfileMsg({ ok: true, text: 'Profil mis à jour' })
@@ -131,28 +154,106 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Frais de déplacement (€)</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={travelFee}
-                onChange={e => setTravelFee(e.target.value)}
-                onBlur={() => {
-                  const v = parseFloat(travelFee)
-                  setTravelFee(String(isNaN(v) || v < 0 ? 0 : v))
-                }}
-                placeholder="0"
-                className={`${inputClass} w-32`}
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {parseFloat(travelFee) > 0
-                  ? `Ajouté à chaque réservation`
-                  : 'Aucun frais de déplacement'}
-              </p>
-            </div>
+            <label className={labelClass}>Adresse de départ (pour le calcul de déplacement)</label>
+            <AddressAutocomplete
+              value={baseAddress}
+              onChange={setBaseAddress}
+              placeholder="12 rue de la Paix, 75001 Paris"
+              className={inputClass}
+            />
           </div>
+
+          <div>
+            <label className={labelClass}>Frais de déplacement par durée</label>
+            <div className="space-y-2 mb-3">
+              {tiers.length === 0 && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">Aucun frais de déplacement configuré.</p>
+              )}
+              {tiers.map(t => (
+                <div key={t.max_minutes} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 text-slate-700 dark:text-slate-300">
+                    Jusqu'à {t.max_minutes} min → <strong>{t.fee}€</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeTier(t.max_minutes)}
+                    className="text-red-400 hover:text-red-600 dark:hover:text-red-300 text-xs px-2 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 items-end">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Durée max (min)</p>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="30"
+                  value={tierDraft.max_minutes}
+                  onChange={e => setTierDraft(d => ({ ...d, max_minutes: e.target.value }))}
+                  className={`${inputClass} w-28`}
+                />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Frais (€)</p>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  placeholder="15"
+                  value={tierDraft.fee}
+                  onChange={e => setTierDraft(d => ({ ...d, fee: e.target.value }))}
+                  className={`${inputClass} w-24`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={addTier}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-colors"
+              >
+                + Ajouter
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+              Les frais sont calculés automatiquement selon la durée de trajet.
+            </p>
+          </div>
+
+          {tiers.length > 0 && (
+            <div>
+              <label className={labelClass}>Calculer le trajet depuis</label>
+              <div className="flex flex-col gap-2">
+                {([
+                  { value: 'base',     label: 'Mon siège (adresse de départ)',      desc: 'Toujours calculé depuis votre adresse fixe' },
+                  { value: 'previous', label: 'Le RDV précédent de la journée',     desc: 'Calcul depuis le dernier client — plus précis pour les tournées' },
+                ] as const).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      travelFeeMode === opt.value
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="travel_fee_mode"
+                      value={opt.value}
+                      checked={travelFeeMode === opt.value}
+                      onChange={() => setTravelFeeMode(opt.value)}
+                      className="mt-0.5 accent-blue-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{opt.label}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className={labelClass}>Nombre de laveurs</label>
