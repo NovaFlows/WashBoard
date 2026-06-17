@@ -36,6 +36,19 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col relative">
 
+      {/* Bouton retour landing */}
+      <div className="absolute top-4 left-4">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          Retour
+        </Link>
+      </div>
+
       {/* ThemeToggle en haut à droite */}
       <div className="absolute top-4 right-4">
         <ThemeToggle large />
@@ -51,11 +64,13 @@ export default function LoginPage() {
 
           {/* Logo + WashBoard au centre */}
           <div className="text-center mb-4">
-            <img
-              src="/LogoWashBoard.png"
-              alt="WashBoard"
-              className="w-40 h-40 object-contain mx-auto mb-1"
-            />
+            <Link href="/">
+              <img
+                src="/LogoWashBoard.png"
+                alt="WashBoard"
+                className="w-40 h-40 object-contain mx-auto mb-1 hover:opacity-80 transition-opacity cursor-pointer"
+              />
+            </Link>
             <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               WashBoard
             </h1>
