@@ -24,6 +24,8 @@ export type Washer = {
   travel_fee_tiers: { max_minutes: number; fee: number }[]
   base_address: string | null
   travel_fee_mode: 'base' | 'previous'
+  background_theme: string | null
+  website_url: string | null
   created_at: string
 }
 

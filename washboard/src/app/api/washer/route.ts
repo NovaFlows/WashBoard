@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest) {
   const {
     name, phone, logo_url, welcome_message, brand_color, team_size,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
-    travel_fee_tiers, base_address, travel_fee_mode,
+    travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
     zone_config,
   } = await request.json()
 
@@ -28,6 +28,9 @@ export async function PATCH(request: NextRequest) {
   if (travel_fee_tiers !== undefined) updates.travel_fee_tiers = travel_fee_tiers
   if (base_address !== undefined) updates.base_address = base_address?.trim() || null
   if (travel_fee_mode !== undefined) updates.travel_fee_mode = travel_fee_mode
+  if (background_theme !== undefined) updates.background_theme = background_theme || null
+  if (website_url !== undefined) updates.website_url = website_url?.trim() || null
+  if (google_place_id !== undefined) updates.google_place_id = google_place_id?.trim() || null
 
   if (zone_config !== undefined) {
     let config = zone_config as ZoneConfig

@@ -5,8 +5,52 @@ import { useRouter } from 'next/navigation'
 import type { Washer, ZoneConfig } from '@/types'
 import { DEPARTMENTS } from '@/lib/france-departments'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import { BG_THEME_PRESETS, isCustomTheme } from '@/lib/themes'
+
+import type { BgThemePreset } from '@/lib/themes'
 
 type LogoStatus = 'idle' | 'removing' | 'uploading' | 'done' | 'error'
+
+function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; selected: boolean; onPick: (id: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(theme.id)}
+      className={`relative rounded-xl overflow-hidden border-2 transition-all h-20 ${
+        selected
+          ? 'border-blue-500 ring-2 ring-blue-500/30'
+          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+      }`}
+    >
+      {/* Fond — photo ou dégradé */}
+      <div className="absolute inset-0" style={{ background: theme.gradient }} />
+      {theme.photo && (
+        <img
+          src={`${theme.photo}&w=300&q=60`}
+          alt={theme.name}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: 0.85 }}
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+      )}
+      {/* Overlay dégradé bas pour lisibilité du label */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+      {/* Label */}
+      <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5 text-left">
+        <p className="text-[10px] font-bold text-white leading-tight">{theme.name}</p>
+        <p className="text-[9px] text-white/55 leading-tight">{theme.subtitle}</p>
+      </div>
+      {/* Coche sélection */}
+      {selected && (
+        <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+      )}
+    </button>
+  )
+}
 
 const PALETTE = [
   '#1e3a8a', '#1d4ed8', '#2563eb', '#0ea5e9',
@@ -23,7 +67,13 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
   const [logoStatus, setLogoStatus] = useState<LogoStatus>('idle')
   const [logoError, setLogoError] = useState<string | null>(null)
+  const [bgTheme, setBgTheme] = useState<string | null>(washer.background_theme ?? null)
+  const [bgUploading, setBgUploading] = useState(false)
+  const [bgError, setBgError] = useState<string | null>(null)
+  const [bgSaving, setBgSaving] = useState(false)
+  const bgFileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState(washer.welcome_message ?? '')
+  const [websiteUrl, setWebsiteUrl] = useState(washer.website_url ?? '')
   const [color, setColor] = useState(washer.brand_color ?? '#2563eb')
   const [colorSaving, setColorSaving] = useState(false)
   const [colorSaved, setColorSaved] = useState(false)
@@ -109,6 +159,38 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
     setSmartSaving(false)
   }
 
+  async function pickBgTheme(themeId: string | null) {
+    setBgTheme(themeId)
+    setBgSaving(true)
+    await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ background_theme: themeId }),
+    })
+    setBgSaving(false)
+    router.refresh()
+  }
+
+  async function handleBgFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBgUploading(true)
+    setBgError(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res  = await fetch('/api/washer/background', { method: 'POST', body: form })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur upload')
+      setBgTheme(json.url)
+      router.refresh()
+    } catch (err) {
+      setBgError(err instanceof Error ? err.message : 'Erreur')
+    }
+    setBgUploading(false)
+    if (bgFileRef.current) bgFileRef.current.value = ''
+  }
+
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -150,10 +232,14 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
     e.preventDefault()
     setLoading(true)
     setMsg(null)
+
     const res = await fetch('/api/washer', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ welcome_message: message }),
+      body: JSON.stringify({
+        welcome_message: message,
+        website_url: websiteUrl.trim() || null,
+      }),
     })
     if (res.ok) {
       setMsg({ ok: true, text: 'Modifications enregistrées' })
@@ -237,6 +323,89 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Colore les boutons et éléments sélectionnés sur votre page client</p>
       </div>
 
+      {/* Thème de fond */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Fond de la page client</h2>
+          {bgSaving && <span className="text-xs text-slate-400">Sauvegarde...</span>}
+        </div>
+
+        {/* Original */}
+        <div className="mb-3">
+          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Original</p>
+          <button
+            type="button"
+            onClick={() => pickBgTheme(null)}
+            className={`relative rounded-xl overflow-hidden border-2 transition-all h-16 w-full sm:w-40 ${
+              !bgTheme
+                ? 'border-blue-500 ring-2 ring-blue-500/30'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+            }`}
+          >
+            <div className="w-full h-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center gap-2">
+              <span className="text-sm">☀️</span>
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Clair / Sombre</span>
+              <span className="text-sm">🌙</span>
+            </div>
+            {!bgTheme && (
+              <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* Dégradés */}
+        <div className="mb-3">
+          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Dégradés</p>
+          <div className="grid grid-cols-3 gap-2">
+            {BG_THEME_PRESETS.filter(t => !t.photo).map(theme => (
+              <ThemeButton key={theme.id} theme={theme} selected={bgTheme === theme.id} onPick={pickBgTheme} />
+            ))}
+          </div>
+        </div>
+
+        {/* Photos */}
+        <div className="mb-3">
+          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Photos</p>
+          <div className="grid grid-cols-3 gap-2">
+            {BG_THEME_PRESETS.filter(t => !!t.photo).map(theme => (
+              <ThemeButton key={theme.id} theme={theme} selected={bgTheme === theme.id} onPick={pickBgTheme} />
+            ))}
+          </div>
+        </div>
+
+        {/* Upload personnalisé */}
+        <div className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+          isCustomTheme(bgTheme)
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
+            : 'border-dashed border-slate-200 dark:border-slate-700'
+        }`}>
+          {isCustomTheme(bgTheme) && bgTheme && (
+            <img src={bgTheme} alt="Fond personnalisé" className="w-14 h-10 rounded-lg object-cover shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              {isCustomTheme(bgTheme) ? 'Photo personnalisée active' : 'Utiliser votre propre photo'}
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">JPG ou PNG · max 5 Mo</p>
+          </div>
+          <input ref={bgFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBgFile} />
+          <button
+            type="button"
+            onClick={() => bgFileRef.current?.click()}
+            disabled={bgUploading}
+            className="shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 transition-colors disabled:opacity-50"
+          >
+            {bgUploading ? 'Upload...' : 'Choisir'}
+          </button>
+        </div>
+        {bgError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">✕ {bgError}</p>}
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+          La photo sera assombrie automatiquement pour rester lisible.
+        </p>
+      </div>
+
       {/* Message d'accueil */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Message d'accueil</h2>
@@ -248,6 +417,23 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           rows={3}
           className={`${inputClass} resize-none`}
         />
+      </div>
+
+      {/* Site web + Avis Google */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Présence en ligne</h2>
+
+        <div>
+          <label className={labelClass}>Site web <span className="font-normal text-slate-400">(les avis présents sur votre site seront affichés sur la page client)</span></label>
+          <input
+            type="url"
+            value={websiteUrl}
+            onChange={e => setWebsiteUrl(e.target.value)}
+            placeholder="https://monsite.fr"
+            className={inputClass}
+          />
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Les avis clients visibles sur votre site seront récupérés automatiquement</p>
+        </div>
       </div>
 
       {/* Aperçu */}
@@ -530,7 +716,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         disabled={loading}
         className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
       >
-        {loading ? 'Enregistrement...' : 'Enregistrer le message'}
+        {loading ? 'Enregistrement...' : 'Enregistrer'}
       </button>
     </form>
   )
