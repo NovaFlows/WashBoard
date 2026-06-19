@@ -1,24 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybd6bGctygdI50kHxbiAGRoYcEnBumBuTHx2oiJIBbQOmdPCyjUIMI-Gte0chFKd9Pew/exec'
-
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const DAYS_FR = ['L','M','M','J','V','S','D']
-const TIME_SLOTS = [
+
+const ALL_SLOTS = [
+  { time: '08:00', group: 'Matin' },
   { time: '09:00', group: 'Matin' },
   { time: '10:00', group: 'Matin' },
   { time: '11:00', group: 'Matin' },
+  { time: '12:00', group: 'Matin' },
+  { time: '13:00', group: 'Après-midi' },
   { time: '14:00', group: 'Après-midi' },
   { time: '15:00', group: 'Après-midi' },
   { time: '16:00', group: 'Après-midi' },
   { time: '17:00', group: 'Après-midi' },
+  { time: '18:00', group: 'Soirée' },
+  { time: '19:00', group: 'Soirée' },
+  { time: '20:00', group: 'Soirée' },
+  { time: '21:00', group: 'Soirée' },
+  { time: '22:00', group: 'Soirée' },
 ]
 
-type BookedSlot = { date: string; time: string }
+const GROUPS = ['Matin', 'Après-midi', 'Soirée']
 
 function toDateStr(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -32,16 +39,16 @@ function formatDateFr(dateStr: string): string {
 }
 
 export default function BookingPage() {
-  const todayRef = new Date()
-  todayRef.setHours(0, 0, 0, 0)
+  const todayRef = new Date(); todayRef.setHours(0, 0, 0, 0)
 
   const [viewYear, setViewYear] = useState(todayRef.getFullYear())
   const [viewMonth, setViewMonth] = useState(todayRef.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([])
+  const [busySlots, setBusySlots] = useState<string[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [step, setStep] = useState(1)
-  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [firstname, setFirstname] = useState('')
   const [lastname, setLastname] = useState('')
@@ -49,16 +56,24 @@ export default function BookingPage() {
   const [message, setMessage] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    fetch(`${APPS_SCRIPT_URL}?action=get`)
-      .then(r => r.json())
-      .then(data => { if (data.bookings) setBookedSlots(data.bookings) })
-      .catch(() => {})
+  const fetchAvailability = useCallback(async (dateStr: string) => {
+    setLoadingSlots(true)
+    setBusySlots([])
+    try {
+      const res = await fetch(`/api/booking/availability?date=${dateStr}`)
+      const data = await res.json()
+      setBusySlots(data.busySlots ?? [])
+    } catch {
+      setBusySlots([])
+    } finally {
+      setLoadingSlots(false)
+    }
   }, [])
 
-  function isDateFull(dateStr: string) {
-    const booked = bookedSlots.filter(s => s.date === dateStr).map(s => s.time)
-    return TIME_SLOTS.every(slot => booked.includes(slot.time))
+  function onDateClick(dateStr: string) {
+    setSelectedDate(dateStr)
+    setSelectedTime(null)
+    fetchAvailability(dateStr)
   }
 
   function prevMonth() {
@@ -80,33 +95,32 @@ export default function BookingPage() {
     setErrors(errs)
     if (Object.keys(errs).length > 0) return
 
-    setLoading(true)
+    setSubmitting(true)
     setSubmitError('')
     try {
-      const url = `${APPS_SCRIPT_URL}?action=book`
-        + `&date=${encodeURIComponent(selectedDate!)}`
-        + `&time=${encodeURIComponent(selectedTime!)}`
-        + `&firstname=${encodeURIComponent(firstname)}`
-        + `&lastname=${encodeURIComponent(lastname)}`
-        + `&email=${encodeURIComponent(email)}`
-        + `&message=${encodeURIComponent(message)}`
-      const res = await fetch(url)
+      const res = await fetch('/api/booking/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dateStr: selectedDate, timeStr: selectedTime, firstname, lastname, email, message }),
+      })
       const data = await res.json()
       if (data.success) {
-        setBookedSlots(prev => [...prev, { date: selectedDate!, time: selectedTime! }])
         setStep(3)
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
-        setSubmitError(data.error || "Ce créneau vient d'être réservé. Veuillez en choisir un autre.")
-        setTimeout(() => { setStep(1); setSubmitError('') }, 2500)
+        setSubmitError(data.error || "Erreur lors de la réservation.")
+        if (res.status === 409) {
+          setTimeout(() => { setStep(1); setSubmitError(''); fetchAvailability(selectedDate!) }, 2500)
+        }
       }
     } catch {
       setSubmitError('Erreur de connexion. Veuillez réessayer.')
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
+  // Calendar grid
   const today = todayRef
   const firstDay = new Date(viewYear, viewMonth, 1)
   const lastDay = new Date(viewYear, viewMonth + 1, 0)
@@ -114,38 +128,24 @@ export default function BookingPage() {
   if (startOffset < 0) startOffset = 6
   const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth()
 
-  type CalDay = { day: number; dateStr: string; isWeekend: boolean; isPast: boolean; isFull: boolean }
+  type CalDay = { day: number; dateStr: string; isWeekend: boolean; isPast: boolean }
   const calDays: Array<CalDay | null> = []
   for (let i = 0; i < startOffset; i++) calDays.push(null)
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const date = new Date(viewYear, viewMonth, d)
     const dateStr = toDateStr(date)
     const dow = date.getDay()
-    calDays.push({
-      day: d, dateStr,
-      isWeekend: dow === 0 || dow === 6,
-      isPast: date < today,
-      isFull: isDateFull(dateStr),
-    })
+    calDays.push({ day: d, dateStr, isWeekend: dow === 0 || dow === 6, isPast: date < today })
   }
 
-  const groups: Record<string, string[]> = {}
-  TIME_SLOTS.forEach(slot => {
-    if (!groups[slot.group]) groups[slot.group] = []
-    groups[slot.group].push(slot.time)
-  })
-
-  const bookedTimesForDate = selectedDate
-    ? bookedSlots.filter(s => s.date === selectedDate).map(s => s.time)
-    : []
-
+  // Google Calendar link for confirmation
   let gcalUrl = ''
   if (selectedDate && selectedTime) {
     const [y, m, d] = selectedDate.split('-')
-    const [h, min] = selectedTime.split(':')
-    const start = `${y}${m}${d}T${h}${min}00`
+    const [h] = selectedTime.split(':')
+    const start = `${y}${m}${d}T${h}0000`
     const endH = String(parseInt(h) + 1).padStart(2, '0')
-    const end = `${y}${m}${d}T${endH}${min}00`
+    const end = `${y}${m}${d}T${endH}0000`
     gcalUrl = `https://calendar.google.com/calendar/r/eventedit?text=Appel+WashBoard&dates=${start}/${end}&details=Appel+d%C3%A9couverte+WashBoard`
   }
 
@@ -204,7 +204,7 @@ export default function BookingPage() {
 
         {/* Card */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden relative">
-          {loading && (
+          {submitting && (
             <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-2xl">
               <div className="w-8 h-8 border-2 border-slate-200 dark:border-slate-700 border-t-blue-600 rounded-full animate-spin" />
             </div>
@@ -248,19 +248,16 @@ export default function BookingPage() {
                       if (!day) return <div key={i} />
                       const isSelected = day.dateStr === selectedDate
                       const isToday = day.dateStr === toDateStr(today)
-                      const disabled = day.isWeekend || day.isPast || day.isFull
+                      const disabled = day.isWeekend || day.isPast
                       return (
                         <button
                           key={i}
-                          onClick={() => !disabled && (setSelectedDate(day.dateStr), setSelectedTime(null))}
+                          onClick={() => !disabled && onDateClick(day.dateStr)}
                           disabled={disabled}
                           className={`aspect-square flex items-center justify-center rounded-full text-sm font-medium transition-all relative
-                            ${isSelected
-                              ? 'bg-blue-600 text-white'
-                              : disabled
-                              ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400'
-                            }`}
+                            ${isSelected ? 'bg-blue-600 text-white' :
+                              disabled ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' :
+                              'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400'}`}
                         >
                           {day.day}
                           {isToday && !isSelected && (
@@ -283,35 +280,40 @@ export default function BookingPage() {
                       </svg>
                       Sélectionnez une date pour voir les créneaux disponibles
                     </div>
+                  ) : loadingSlots ? (
+                    <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400">
+                      <div className="w-6 h-6 border-2 border-slate-200 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin" />
+                      <span className="text-sm">Chargement…</span>
+                    </div>
                   ) : (
-                    <div className="space-y-5">
-                      {Object.entries(groups).map(([group, times]) => (
-                        <div key={group}>
-                          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{group}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {times.map(time => {
-                              const isBooked = bookedTimesForDate.includes(time)
-                              const isSelected = time === selectedTime
-                              return (
-                                <button
-                                  key={time}
-                                  onClick={() => !isBooked && setSelectedTime(time)}
-                                  disabled={isBooked}
-                                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all
-                                    ${isSelected
-                                      ? 'bg-blue-600 border-blue-600 text-white'
-                                      : isBooked
-                                      ? 'border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 line-through cursor-not-allowed'
-                                      : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400'
-                                    }`}
-                                >
-                                  {time}
-                                </button>
-                              )
-                            })}
+                    <div className="space-y-5 max-h-72 overflow-y-auto pr-1">
+                      {GROUPS.map(group => {
+                        const times = ALL_SLOTS.filter(s => s.group === group).map(s => s.time)
+                        return (
+                          <div key={group}>
+                            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{group}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {times.map(time => {
+                                const isBusy = busySlots.includes(time)
+                                const isSelected = time === selectedTime
+                                return (
+                                  <button
+                                    key={time}
+                                    onClick={() => !isBusy && setSelectedTime(time)}
+                                    disabled={isBusy}
+                                    className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-all
+                                      ${isSelected ? 'bg-blue-600 border-blue-600 text-white' :
+                                        isBusy ? 'border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 line-through cursor-not-allowed' :
+                                        'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400'}`}
+                                  >
+                                    {time}
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -375,77 +377,49 @@ export default function BookingPage() {
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Prénom</label>
                     <input
-                      value={firstname}
-                      onChange={e => setFirstname(e.target.value)}
-                      placeholder="Jean"
-                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all
-                        ${errors.firstname ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
+                      value={firstname} onChange={e => setFirstname(e.target.value)} placeholder="Jean"
+                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all ${errors.firstname ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
                     />
                     {errors.firstname && <p className="text-xs text-red-500 mt-1">{errors.firstname}</p>}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Nom</label>
                     <input
-                      value={lastname}
-                      onChange={e => setLastname(e.target.value)}
-                      placeholder="Dupont"
-                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all
-                        ${errors.lastname ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
+                      value={lastname} onChange={e => setLastname(e.target.value)} placeholder="Dupont"
+                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all ${errors.lastname ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
                     />
                     {errors.lastname && <p className="text-xs text-red-500 mt-1">{errors.lastname}</p>}
                   </div>
                 </div>
-
                 <div className="mb-4">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Email</label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="jean.dupont@exemple.com"
-                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all
-                      ${errors.email ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
+                    type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean.dupont@exemple.com"
+                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all ${errors.email ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
                   />
                   {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                 </div>
-
                 <div className="mb-6">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                     Message <span className="font-normal normal-case tracking-normal opacity-60">(optionnel)</span>
                   </label>
                   <textarea
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    rows={3}
+                    value={message} onChange={e => setMessage(e.target.value)} rows={3}
                     placeholder="Décrivez brièvement votre activité et ce que vous souhaitez savoir sur WashBoard…"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all resize-none"
                   />
                 </div>
-
                 <p className="text-xs text-slate-400 mb-6">
                   En confirmant, vous acceptez d&apos;être contacté à l&apos;horaire sélectionné. Un email de confirmation vous sera envoyé.
                 </p>
-
                 <div className="flex items-center gap-3 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-medium rounded-xl transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16">
-                      <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                  <button type="button" onClick={() => setStep(1)} className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-medium rounded-xl transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16"><path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     Retour
                   </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
-                  >
+                  <button type="submit" disabled={submitting} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors">
                     Confirmer le rendez-vous
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </div>
               </form>
@@ -462,49 +436,28 @@ export default function BookingPage() {
               </div>
               <h2 className="text-2xl font-extrabold mb-3">Rendez-vous confirmé !</h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 max-w-sm mx-auto">
-                Un email de confirmation vous a été envoyé. Nous vous appellerons à l&apos;horaire choisi.
+                Nous vous appellerons à l&apos;horaire choisi. À tout de suite !
               </p>
-
               <div className="inline-flex items-center gap-6 px-6 py-4 rounded-2xl border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/30 mb-8 flex-wrap justify-center">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
-                    <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.6"/>
-                    <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                  </svg>
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.6"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
                   {selectedDate ? formatDateFr(selectedDate) : ''}
                 </div>
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
-                    <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                  </svg>
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
                   {selectedTime}
                 </div>
               </div>
-
               <div className="flex items-center justify-center gap-3 flex-wrap">
                 {gcalUrl && (
-                  <a
-                    href={gcalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-medium rounded-xl transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                      <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.6"/>
-                      <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                    </svg>
+                  <a href={gcalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-medium rounded-xl transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.6"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
                     Ajouter à mon agenda
                   </a>
                 )}
-                <Link
-                  href="/"
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
+                <Link href="/" className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors">
                   Retour au site
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </Link>
               </div>
             </div>
