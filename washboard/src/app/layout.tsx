@@ -14,8 +14,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WashBoard",
-  description: "Réservez votre lavage auto à domicile",
+  title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
+  description: "WashBoard est le logiciel tout-en-un pour les laveurs auto mobiles. Réservation en ligne, gestion des clients, agenda et comptabilité. Essai gratuit 14 jours.",
+  keywords: ["lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "WashBoard"],
+  authors: [{ name: "WashBoard" }],
+  creator: "WashBoard",
+  metadataBase: new URL("https://washboard.fr"),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    url: "https://washboard.fr",
+    siteName: "WashBoard",
+    title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
+    description: "Réservation en ligne, gestion clients, agenda et comptabilité pour laveurs auto mobiles. Essai gratuit 14 jours.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
+    description: "Réservation en ligne, gestion clients, agenda et comptabilité pour laveurs auto mobiles.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 export default function RootLayout({
