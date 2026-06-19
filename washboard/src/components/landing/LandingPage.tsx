@@ -98,16 +98,16 @@ export default function LandingPage() {
         <motion.div initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12 } } }}>
           <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.5 } } }} className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-full text-xs font-medium text-blue-600 dark:text-blue-400 mb-8">
             <span className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full" />
-            Conçu exclusivement pour les laveurs auto mobiles
+            Logiciel de gestion pour laveurs auto mobiles & detailing
           </motion.div>
           <motion.h1 variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }} className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight mb-6 text-slate-900 dark:text-white">
-            Remplis tes créneaux vides.{' '}
-            <span className="text-blue-600 dark:text-blue-500">Gagne plus</span>{' '}
+            Le logiciel des laveurs auto mobiles qui veulent{' '}
+            <span className="text-blue-600 dark:text-blue-500">gagner plus</span>{' '}
             sur le même trajet.
           </motion.h1>
           <motion.p variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }} className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            WashBoard regroupe automatiquement tes réservations par zone et optimise ta journée —
-            pour que chaque kilomètre compte.
+            WashBoard est le logiciel tout-en-un pour les laveurs auto mobiles et prestataires de detailing à domicile.
+            Réservation en ligne, gestion des clients, agenda et comptabilité — tout au même endroit.
           </motion.p>
           <motion.div variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20">
@@ -433,12 +433,17 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 text-center">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">laveurs auto mobiles</strong> et aux professionnels du <strong className="font-medium text-slate-500">detailing à domicile</strong>. Page de réservation en ligne, gestion des rendez-vous, CRM clients et comptabilité — conçu pour les indépendants du lavage automobile en France.
+          </p>
+        </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
             <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
           </div>
-          <p className="text-xs text-slate-400">© 2026 WashBoard · Tous droits réservés</p>
+          <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel lavage auto mobile · Tous droits réservés</p>
           <div className="flex gap-4 text-xs text-slate-400">
             <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
             <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
