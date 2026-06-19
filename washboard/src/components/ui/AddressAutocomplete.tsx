@@ -11,7 +11,7 @@ type Props = {
   style?: React.CSSProperties
 }
 
-type Suggestion = { label: string; lat: number; lng: number }
+type Suggestion = { label: string; placeId: string }
 
 export default function AddressAutocomplete({ value, onChange, onSelectWithCoords, placeholder, className, style }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
@@ -35,19 +35,10 @@ export default function AddressAutocomplete({ value, onChange, onSelectWithCoord
     if (val.trim().length < 3) { setSuggestions([]); setOpen(false); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res  = await fetch(
-          `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(val.trim())}&limit=5&autocomplete=1`
-        )
+        const res  = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(val.trim())}`)
         const data = await res.json()
-        const items: Suggestion[] = (data.features ?? []).map(
-          (f: { properties: { label: string }; geometry: { coordinates: [number, number] } }) => ({
-            label: f.properties.label,
-            lat: f.geometry.coordinates[1],
-            lng: f.geometry.coordinates[0],
-          })
-        )
-        setSuggestions(items)
-        setOpen(items.length > 0)
+        setSuggestions(data.suggestions ?? [])
+        setOpen((data.suggestions ?? []).length > 0)
       } catch {
         setSuggestions([])
         setOpen(false)
@@ -55,11 +46,19 @@ export default function AddressAutocomplete({ value, onChange, onSelectWithCoord
     }, 300)
   }
 
-  function select(s: Suggestion) {
+  async function select(s: Suggestion) {
     onChange(s.label)
-    onSelectWithCoords?.(s.label, s.lat, s.lng)
     setSuggestions([])
     setOpen(false)
+    if (onSelectWithCoords) {
+      try {
+        const res  = await fetch(`/api/places/details?placeId=${s.placeId}`)
+        const data = await res.json()
+        if (data.lat && data.lng) onSelectWithCoords(s.label, data.lat, data.lng)
+      } catch {
+        // coordonnées indisponibles, le label est déjà mis à jour
+      }
+    }
   }
 
   return (
