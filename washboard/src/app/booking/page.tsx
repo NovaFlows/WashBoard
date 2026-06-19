@@ -135,7 +135,7 @@ export default function BookingPage() {
     const date = new Date(viewYear, viewMonth, d)
     const dateStr = toDateStr(date)
     const dow = date.getDay()
-    calDays.push({ day: d, dateStr, isWeekend: dow === 0 || dow === 6, isPast: date < today })
+    calDays.push({ day: d, dateStr, isWeekend: false, isPast: date < today })
   }
 
   // Google Calendar link for confirmation
