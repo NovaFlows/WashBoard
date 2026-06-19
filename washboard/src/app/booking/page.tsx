@@ -142,10 +142,12 @@ export default function BookingPage() {
   let gcalUrl = ''
   if (selectedDate && selectedTime) {
     const [y, m, d] = selectedDate.split('-')
-    const [h] = selectedTime.split(':')
-    const start = `${y}${m}${d}T${h}0000`
-    const endH = String(parseInt(h) + 1).padStart(2, '0')
-    const end = `${y}${m}${d}T${endH}0000`
+    const [h, min] = selectedTime.split(':')
+    const start = `${y}${m}${d}T${h}${min}00`
+    const totalMin = parseInt(h) * 60 + parseInt(min) + 30
+    const endH = String(Math.floor(totalMin / 60)).padStart(2, '0')
+    const endM = String(totalMin % 60).padStart(2, '0')
+    const end = `${y}${m}${d}T${endH}${endM}00`
     gcalUrl = `https://calendar.google.com/calendar/r/eventedit?text=Appel+WashBoard&dates=${start}/${end}&details=Appel+d%C3%A9couverte+WashBoard`
   }
 
@@ -176,7 +178,7 @@ export default function BookingPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">Planifier un appel</h1>
           <p className="text-slate-500 dark:text-slate-400 text-base max-w-md mx-auto leading-relaxed">
-            30 minutes pour découvrir WashBoard et voir comment il peut simplifier votre activité — sans engagement.
+            Un appel de 30 minutes pour découvrir WashBoard et voir comment il peut simplifier votre activité — sans engagement.
           </p>
         </div>
 

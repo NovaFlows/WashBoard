@@ -12,16 +12,24 @@ function getAuth() {
   })
 }
 
-function getParisOffsetMinutes(date: Date): number {
-  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }))
-  const parisDate = new Date(date.toLocaleString('en-US', { timeZone: TZ }))
-  return (parisDate.getTime() - utcDate.getTime()) / 60000
+// Get Paris UTC offset in hours for a date (1 for CET, 2 for CEST)
+// Uses noon UTC as a reference to avoid day-boundary edge cases
+function getParisOffsetHours(dateStr: string): number {
+  const ref = new Date(`${dateStr}T12:00:00Z`)
+  const parisHour = parseInt(
+    new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', hour12: false }).format(ref),
+    10
+  )
+  return parisHour - 12 // 14-12=2 (CEST) or 13-12=1 (CET)
 }
 
+// Convert a Paris local time to UTC by embedding the explicit offset in the ISO string.
+// This works correctly regardless of the server's local timezone.
 function parisToUtc(dateStr: string, timeStr: string): Date {
-  const naive = new Date(`${dateStr}T${timeStr}:00`)
-  const offsetMin = getParisOffsetMinutes(naive)
-  return new Date(naive.getTime() - offsetMin * 60000)
+  const offsetH = getParisOffsetHours(dateStr)
+  const sign = offsetH >= 0 ? '+' : '-'
+  const offsetStr = `${sign}${String(Math.abs(offsetH)).padStart(2, '0')}:00`
+  return new Date(`${dateStr}T${timeStr}:00${offsetStr}`)
 }
 
 // Returns list of HH:MM slots (8h-22h) that are busy on the given date
@@ -47,7 +55,7 @@ export async function getBusySlots(dateStr: string): Promise<string[]> {
   for (let h = 8; h <= 22; h++) {
     const slotTime = `${String(h).padStart(2, '0')}:00`
     const slotStart = parisToUtc(dateStr, slotTime)
-    const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000)
+    const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000)
 
     const overlaps = busy.some(period => {
       const s = new Date(period.start!)
@@ -74,16 +82,16 @@ export async function createCalendarEvent({
   const auth = getAuth()
   const calendar = google.calendar({ version: 'v3', auth })
 
-  const [h] = timeStr.split(':')
-  const endH = String(parseInt(h) + 1).padStart(2, '0')
-
   await calendar.events.insert({
     calendarId: CALENDAR_ID,
     requestBody: {
       summary: `📞 Appel WashBoard — ${firstname} ${lastname}`,
       description: `Email : ${email}${message ? `\nMessage : ${message}` : ''}`,
       start: { dateTime: `${dateStr}T${timeStr}:00`, timeZone: TZ },
-      end: { dateTime: `${dateStr}T${endH}:00:00`, timeZone: TZ },
+      end: { dateTime: `${dateStr}T${timeStr.replace(/(\d+):(\d+)/, (_, h, m) => {
+        const total = parseInt(h) * 60 + parseInt(m) + 30
+        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+      })}:00`, timeZone: TZ },
     },
   })
 }

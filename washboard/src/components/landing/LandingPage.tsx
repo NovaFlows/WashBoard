@@ -77,8 +77,8 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Image src="/LogoWashBoard.png" alt="WashBoard" width={36} height={36} className="rounded-lg shrink-0 sm:w-12 sm:h-12" />
-            <span className="text-lg sm:text-2xl font-extrabold tracking-tight truncate">WashBoard</span>
+            <Image src="/LogoWashBoard.png" alt="WashBoard" width={44} height={44} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg shrink-0 object-contain" />
+            <span className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">WashBoard</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ThemeToggle />
