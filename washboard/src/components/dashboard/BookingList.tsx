@@ -160,6 +160,8 @@ function BookingCard({ booking, loading, onUpdate }: {
   const isExpiredPending   = booking.status === 'pending'   && date < new Date()
   const isExpiredConfirmed = booking.status === 'confirmed' && date < new Date()
   const basePrice          = booking.booked_price ?? booking.services?.price ?? 0
+  const travelFee          = booking.travel_fee ?? 0
+  const servicePrice       = basePrice - travelFee
 
   const [open, setOpen]           = useState(false)
   const [notesText, setNotesText] = useState(booking.notes ?? '')
@@ -286,13 +288,13 @@ function BookingCard({ booking, loading, onUpdate }: {
                 {booking.services.name} · {booking.services.duration_minutes} min ·{' '}
                 {booking.is_smart_slot && Number(booking.smart_discount) > 0 ? (
                   <>
-                    <span className="line-through opacity-50">{basePrice}€</span>
+                    <span className="line-through opacity-50">{servicePrice}€</span>
                     {' '}
-                    <span className="font-semibold">{(basePrice - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
+                    <span className="font-semibold">{(servicePrice - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
                     {' '}
                     <span className="text-amber-500 font-bold">★ smart</span>
                   </>
-                ) : `${basePrice}€`}
+                ) : `${servicePrice}€`}
               </Row>
             )}
             <Row icon="calendar">
@@ -302,8 +304,8 @@ function BookingCard({ booking, loading, onUpdate }: {
             <Row icon="pin">{booking.address}</Row>
           </div>
 
-          {/* Options supplémentaires + frais de déplacement */}
-          {((booking.selected_addons && booking.selected_addons.length > 0) || (booking.travel_fee != null && booking.travel_fee > 0)) && (
+          {/* Options supplémentaires + frais de déplacement + total */}
+          {((booking.selected_addons && booking.selected_addons.length > 0) || travelFee > 0) && (
             <div className="space-y-1">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Détail du prix</p>
               {booking.selected_addons?.map(a => (
@@ -312,12 +314,20 @@ function BookingCard({ booking, loading, onUpdate }: {
                   <span className="font-semibold text-slate-700 dark:text-slate-300">+{a.price}€</span>
                 </div>
               ))}
-              {booking.travel_fee != null && booking.travel_fee > 0 && (
+              {travelFee > 0 && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Frais de déplacement</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">+{booking.travel_fee}€</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">+{travelFee}€</span>
                 </div>
               )}
+              <div className="flex items-center justify-between text-sm pt-1 border-t border-slate-100 dark:border-slate-700">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {booking.is_smart_slot && Number(booking.smart_discount) > 0
+                    ? `${(basePrice - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€`
+                    : `${basePrice}€`}
+                </span>
+              </div>
             </div>
           )}
 

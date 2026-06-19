@@ -44,6 +44,14 @@ export default function StepConfirmation({ washerName, bookingId, form, services
         {form.travel_fee != null && form.travel_fee > 0 && (
           <Row label="Frais de déplacement" value={`+${form.travel_fee}€`} />
         )}
+        {form.travel_fee != null && form.travel_fee > 0 && (
+          <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
+            <span className="font-bold text-slate-900 dark:text-slate-100">
+              {(displayPrice + form.travel_fee - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)).toFixed(2).replace(/\.00$/, '')}€
+            </span>
+          </div>
+        )}
         {date && (
           <Row
             label="Date & heure"

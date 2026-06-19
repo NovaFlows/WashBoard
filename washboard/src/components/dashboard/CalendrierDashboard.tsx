@@ -1328,13 +1328,13 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   {selected.services.name} · {selected.services.duration_minutes} min ·{' '}
                   {selected.is_smart_slot && Number(selected.smart_discount) > 0 ? (
                     <>
-                      <span className="line-through opacity-50">{selected.booked_price ?? selected.services.price}€</span>
+                      <span className="line-through opacity-50">{(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€</span>
                       {' '}
-                      <span className="font-semibold">{((selected.booked_price ?? selected.services.price) - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
+                      <span className="font-semibold">{((selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0) - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
                       {' '}
                       <span className="text-amber-500 font-bold">★ smart</span>
                     </>
-                  ) : `${selected.booked_price ?? selected.services.price}€`}
+                  ) : `${(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€`}
                 </Row>
               )}
               <Row icon="calendar">
@@ -1344,7 +1344,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               <Row icon="pin">{selected.address}</Row>
             </div>
 
-            {/* Options supplémentaires + frais de déplacement */}
+            {/* Options supplémentaires + frais de déplacement + total */}
             {((selected.selected_addons && selected.selected_addons.length > 0) || (selected.travel_fee != null && selected.travel_fee > 0)) && (
               <div className="mb-4 space-y-1">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Détail du prix</p>
@@ -1360,6 +1360,14 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     <span className="font-semibold text-slate-700 dark:text-slate-300">+{selected.travel_fee}€</span>
                   </div>
                 )}
+                <div className="flex items-center justify-between text-sm pt-1 border-t border-slate-200 dark:border-slate-700">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
+                    {selected.is_smart_slot && Number(selected.smart_discount) > 0
+                      ? `${((selected.booked_price ?? selected.services?.price ?? 0) - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€`
+                      : `${selected.booked_price ?? selected.services?.price ?? 0}€`}
+                  </span>
+                </div>
               </div>
             )}
 

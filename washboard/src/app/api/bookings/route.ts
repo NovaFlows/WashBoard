@@ -67,11 +67,12 @@ export async function POST(req: Request) {
     ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at)
     : (travel_fee ?? 0)
 
-  // Prix effectif : prix unitaire × quantité + frais de déplacement
+  // Prix effectif : base (service + options) + frais de déplacement
   const overrides    = (service?.vehicle_price_overrides ?? {}) as Record<string, number>
   const unit_price   = overrides[vehicle_type] ?? service?.price ?? 0
   const count        = vehicle_count ?? 1
-  const booked_price = bookedPriceInput ?? (unit_price * count + computed_travel_fee)
+  const base_price   = bookedPriceInput ?? (unit_price * count)
+  const booked_price = base_price + computed_travel_fee
 
   const { error } = await supabase
     .from('bookings')
