@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
   description: "WashBoard est le logiciel tout-en-un pour les laveurs auto mobiles. Réservation en ligne, gestion des clients, agenda et comptabilité. Essai gratuit 14 jours.",
-  keywords: ["lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "WashBoard"],
+  keywords: ["lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "washboard detailing", "logiciel detailing"],
   authors: [{ name: "WashBoard" }],
   creator: "WashBoard",
   metadataBase: new URL("https://washboard.fr"),
