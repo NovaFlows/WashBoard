@@ -411,6 +411,34 @@ export default function LandingPage() {
         </FadeGroup>
       </section>
 
+      {/* ── Booking call ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp>
+          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 sm:p-12 flex flex-col sm:flex-row items-center gap-8">
+            <div className="flex-1 text-center sm:text-left">
+              <div className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-full mb-4 uppercase tracking-widest">
+                Appel découverte gratuit
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 text-slate-900 dark:text-white">
+                Vous voulez voir WashBoard en action ?
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-lg">
+                30 minutes avec notre équipe pour analyser votre activité et voir exactement ce que WashBoard peut faire pour vous — sans engagement, sans jargon.
+              </p>
+            </div>
+            <div className="shrink-0 flex flex-col items-center gap-3">
+              <Link href="/booking" className="flex items-center gap-2 px-7 py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 whitespace-nowrap">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Réserver un appel
+              </Link>
+              <p className="text-xs text-slate-400">Sans inscription · Sans carte bancaire</p>
+            </div>
+          </div>
+        </FadeUp>
+      </section>
+
       {/* ── CTA final ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp>
