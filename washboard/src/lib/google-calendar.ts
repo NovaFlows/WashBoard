@@ -22,6 +22,23 @@ export async function exchangeCode(code: string): Promise<string | null> {
   return tokens.refresh_token ?? null
 }
 
+// Convertit un ISO UTC en string avec offset Paris explicite (ex: "2026-06-20T11:00:00+02:00")
+// Évite toute ambiguïté avec le champ timeZone de l'API Google Calendar
+function toParisOffsetIso(utcIso: string): string {
+  const date = new Date(utcIso)
+  const utcMs   = date.getTime()
+  const parisMs = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getTime()
+  const utcRef  = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
+  const offsetMin = (parisMs - utcRef) / 60000
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const offH = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, '0')
+  const offM = String(Math.abs(offsetMin) % 60).padStart(2, '0')
+  // Heure locale Paris
+  const local = new Date(utcMs + offsetMin * 60000)
+  const pad   = (n: number) => String(n).padStart(2, '0')
+  return `${local.getUTCFullYear()}-${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())}T${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}:${pad(local.getUTCSeconds())}${sign}${offH}:${offM}`
+}
+
 interface CalendarEvent {
   summary: string
   description?: string
@@ -38,11 +55,11 @@ export async function createCalendarEvent(refreshToken: string, event: CalendarE
     const res = await cal.events.insert({
       calendarId: 'primary',
       requestBody: {
-        summary: event.summary,
+        summary:     event.summary,
         description: event.description,
-        location: event.location,
-        start: { dateTime: event.startIso, timeZone: 'Europe/Paris' },
-        end:   { dateTime: event.endIso,   timeZone: 'Europe/Paris' },
+        location:    event.location,
+        start: { dateTime: toParisOffsetIso(event.startIso) },
+        end:   { dateTime: toParisOffsetIso(event.endIso) },
       },
     })
     return res.data.id ?? null

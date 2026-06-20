@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
     supabase.from('washers').select('name, phone, user_id, google_refresh_token').eq('id', bookingData.washer_id).single(),
-    supabase.from('services').select('name, price, vehicle_price_overrides').eq('id', bookingData.service_id).single(),
+    supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes').eq('id', bookingData.service_id).single(),
   ])
 
   // Récupérer l'email du laveur via le service role (auth.users)
@@ -92,8 +92,9 @@ export async function POST(req: Request) {
   // Créer l'événement Google Calendar si le laveur a connecté son compte
   let google_calendar_event_id: string | null = null
   if (washer?.google_refresh_token) {
-    const start = new Date(bookingData.scheduled_at)
-    const end   = new Date(start.getTime() + 60 * 60 * 1000) // 1h par défaut
+    const start        = new Date(bookingData.scheduled_at)
+    const durationMs   = (service?.duration_minutes ?? 60) * 60 * 1000
+    const end          = new Date(start.getTime() + durationMs)
     google_calendar_event_id = await createCalendarEvent(washer.google_refresh_token, {
       summary:     `🚗 ${bookingData.client_name} — ${service?.name ?? 'Réservation'}`,
       description: `Client : ${bookingData.client_name}\nTél : ${bookingData.client_phone}\nEmail : ${bookingData.client_email}\nMontant : ${booked_price}€`,
