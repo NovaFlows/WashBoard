@@ -26,7 +26,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const priceStr      = Number.isInteger(finalPrice) ? String(finalPrice) : finalPrice.toFixed(2)
 
   return resend.emails.send({
-    from: `${params.washerName} via WashBoard <onboarding@resend.dev>`,
+    from: `${params.washerName} via WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Demande reçue — en attente de confirmation (Réf. ${ref})`,
     html: `
@@ -131,7 +131,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   const vehicleLabel = params.vehicleType ? ` — ${params.vehicleType}` : ''
 
   return resend.emails.send({
-    from: `${params.washerName} via WashBoard <onboarding@resend.dev>`,
+    from: `${params.washerName} via WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Reçu de réservation #${ref} — ${params.washerName}`,
     html: `
