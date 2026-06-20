@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { sendBookingRequest } from '@/lib/email'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { computeTravelFee } from '@/lib/travelFee'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
@@ -58,9 +59,22 @@ export async function POST(req: Request) {
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides').eq('id', bookingData.service_id).single(),
   ])
+
+  // Récupérer l'email du laveur via le service role (auth.users)
+  let washerEmail: string | null = null
+  if (washer?.user_id) {
+    try {
+      const admin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      const { data: { user: washerUser } } = await admin.auth.admin.getUserById(washer.user_id)
+      washerEmail = washerUser?.email ?? null
+    } catch { /* pas bloquant */ }
+  }
 
   // Calcul des frais de déplacement (mode base ou RDV précédent)
   const computed_travel_fee = bookingData.address
@@ -96,8 +110,9 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Erreur lors de la réservation' }, { status: 500 })
   }
 
-  // Envoi email en arrière-plan — ne bloque pas la réponse
+  // Envoi emails en arrière-plan — ne bloque pas la réponse
   if (washer && service) {
+    // Email client : accusé de réception
     sendBookingRequest({
       to: bookingData.client_email,
       clientName: bookingData.client_name,
@@ -109,7 +124,23 @@ export async function POST(req: Request) {
       address: bookingData.address,
       scheduledAt: bookingData.scheduled_at,
       bookingId: id,
-    }).catch(err => console.error('Email send error:', err))
+    }).catch(err => console.error('[email/client]', err))
+
+    // Email laveur : notification nouvelle réservation
+    if (washerEmail) {
+      sendWasherNotification({
+        to: washerEmail,
+        washerName: washer.name,
+        clientName: bookingData.client_name,
+        clientEmail: bookingData.client_email,
+        clientPhone: bookingData.client_phone,
+        serviceName: service.name,
+        address: bookingData.address,
+        scheduledAt: bookingData.scheduled_at,
+        bookedPrice: booked_price,
+        bookingId: id,
+      }).catch(err => console.error('[email/washer]', err))
+    }
   }
 
   return Response.json({ data: { id } }, { status: 201 })

@@ -26,7 +26,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const priceStr      = Number.isInteger(finalPrice) ? String(finalPrice) : finalPrice.toFixed(2)
 
   return resend.emails.send({
-    from: `${params.washerName} via WashBoard <noreply@washboard.fr>`,
+    from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Demande reçue — en attente de confirmation (Réf. ${ref})`,
     html: `
@@ -131,7 +131,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   const vehicleLabel = params.vehicleType ? ` — ${params.vehicleType}` : ''
 
   return resend.emails.send({
-    from: `${params.washerName} via WashBoard <noreply@washboard.fr>`,
+    from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Reçu de réservation #${ref} — ${params.washerName}`,
     html: `
@@ -252,6 +252,91 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
       <p style="margin:0;font-size:11px;color:#94a3b8;">Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Réservation de lavage automobile à domicile</p>
     </div>
 
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email 3 : notification nouvelle réservation au laveur ─────────────────
+type SendWasherNotificationParams = {
+  to: string
+  washerName: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  serviceName: string
+  address: string
+  scheduledAt: string
+  bookedPrice: number
+  bookingId: string
+}
+
+export async function sendWasherNotification(params: SendWasherNotificationParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  const date          = new Date(params.scheduledAt)
+  const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const ref           = params.bookingId.slice(0, 8).toUpperCase()
+  const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
+  const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://washboard.fr'}/dashboard`
+
+  return resend.emails.send({
+    from: `WashBoard <noreply@washboard.fr>`,
+    to: params.to,
+    subject: `Nouvelle réservation — ${params.clientName} (Réf. ${ref})`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réservation 🎉</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Un client vient de faire une demande sur votre page WashBoard</p>
+    </div>
+    <div style="padding:28px 40px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${params.washerName}</strong>,</p>
+      <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;font-size:13px;">
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 16px;color:#64748b;">Client</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.clientName}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 16px;color:#64748b;">Email</td>
+          <td style="padding:10px 16px;font-weight:600;"><a href="mailto:${params.clientEmail}" style="color:#2563eb;">${params.clientEmail}</a></td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 16px;color:#64748b;">Téléphone</td>
+          <td style="padding:10px 16px;font-weight:600;"><a href="tel:${params.clientPhone}" style="color:#2563eb;">${params.clientPhone}</a></td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 16px;color:#64748b;">Prestation</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.serviceName}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 16px;color:#64748b;">Date</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${formattedDate} à ${time}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 16px;color:#64748b;">Adresse</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.address}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;color:#64748b;">Montant</td>
+          <td style="padding:10px 16px;font-weight:700;color:#0f172a;">${priceStr}€</td>
+        </tr>
+      </table>
+      <div style="margin-top:24px;text-align:center;">
+        <a href="${dashboardUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;">
+          Voir dans WashBoard
+        </a>
+      </div>
+    </div>
+    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Réf. <strong>${ref}</strong> · WashBoard</p>
+    </div>
   </div>
 </body>
 </html>`.trim(),
