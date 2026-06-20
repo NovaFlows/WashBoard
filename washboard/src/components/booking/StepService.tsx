@@ -180,11 +180,11 @@ export default function StepService({ services, selected, onNext, accent = '#256
                 {/* Prix + radio */}
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <div className="text-right">
-                    {hasOverrides(service) && (
+                    {hasOverrides(service) && !vehicleType && (
                       <p className="text-xs text-slate-400 leading-none mb-0.5">à partir de</p>
                     )}
                     <span className="text-lg font-bold text-slate-800 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
-                      {hasOverrides(service) ? minPrice(service) : service.price}€
+                      {vehicleType ? vehiclePrice(service, vehicleType) : hasOverrides(service) ? minPrice(service) : service.price}€
                     </span>
                   </div>
                   <div
