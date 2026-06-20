@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     .from('washers').select('id').eq('user_id', user.id).single()
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
-  const { name, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons } = await request.json()
+  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons } = await request.json()
   if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     .insert({
       washer_id: washer.id,
       name: name.trim(),
+      description: description?.trim() || null,
       price: Number(price),
       duration_minutes: Number(duration_minutes),
       vehicle_types: vehicle_types ?? [],

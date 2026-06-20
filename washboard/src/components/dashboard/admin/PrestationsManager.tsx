@@ -13,8 +13,8 @@ const VEHICLE_OPTIONS = [
   { value: 'utilitaire',  label: 'Utilitaire / Van' },
 ]
 
-type FormData = { name: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
-const EMPTY: FormData = { name: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
+type FormData = { name: string; description: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
+const EMPTY: FormData = { name: '', description: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
 
 type ServiceFormProps = {
   form: FormData
@@ -69,6 +69,19 @@ function ServiceForm({ form, onChange, onSave, onCancel, loading, error }: Servi
             className={inputClass}
             autoFocus
           />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Description <span className="text-slate-400 font-normal">(optionnel — visible par le client, 250 car. max)</span>
+          </label>
+          <textarea
+            value={form.description}
+            onChange={e => onChange({ ...form, description: e.target.value.slice(0, 250) })}
+            placeholder="Ex : Lavage complet intérieur et extérieur, aspiration, nettoyage des vitres..."
+            rows={3}
+            className={inputClass + ' resize-none'}
+          />
+          <p className="text-right text-xs text-slate-400 mt-0.5">{form.description.length}/250</p>
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Prix (€)</label>
@@ -259,6 +272,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
     setError(null)
     setForm({
       name: svc.name,
+      description: svc.description ?? '',
       price: String(svc.price),
       duration_minutes: String(svc.duration_minutes),
       vehicle_types: [...svc.vehicle_types],
@@ -283,6 +297,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: form.name,
+        description: form.description.trim() || null,
         price: Number(form.price),
         duration_minutes: Number(form.duration_minutes),
         vehicle_types: form.vehicle_types,
@@ -310,6 +325,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: form.name,
+        description: form.description.trim() || null,
         price: Number(form.price),
         duration_minutes: Number(form.duration_minutes),
         vehicle_types: form.vehicle_types,
@@ -324,7 +340,7 @@ export default function PrestationsManager({ services: initial }: { services: Se
       return
     }
     setServices(s => s.map(svc => svc.id === editId
-      ? { ...svc, name: form.name, price: Number(form.price), duration_minutes: Number(form.duration_minutes), vehicle_types: form.vehicle_types, vehicle_price_overrides: form.vehicle_price_overrides, addons: form.addons }
+      ? { ...svc, name: form.name, description: form.description.trim() || null, price: Number(form.price), duration_minutes: Number(form.duration_minutes), vehicle_types: form.vehicle_types, vehicle_price_overrides: form.vehicle_price_overrides, addons: form.addons }
       : svc
     ))
     cancelForm()

@@ -40,6 +40,7 @@ export type Service = {
   id: string
   washer_id: string
   name: string
+  description: string | null
   price: number
   duration_minutes: number
   vehicle_types: string[]

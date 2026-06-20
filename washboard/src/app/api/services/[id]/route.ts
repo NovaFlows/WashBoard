@@ -10,6 +10,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json()
   const updates: Record<string, unknown> = {}
   if (body.name !== undefined) updates.name = body.name.trim()
+  if (body.description !== undefined) updates.description = body.description?.trim() || null
   if (body.price !== undefined) updates.price = Number(body.price)
   if (body.duration_minutes !== undefined) updates.duration_minutes = Number(body.duration_minutes)
   if (body.vehicle_types !== undefined) updates.vehicle_types = body.vehicle_types
