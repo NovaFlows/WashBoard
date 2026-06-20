@@ -135,37 +135,21 @@ export default function StepService({ services, selected, onNext, accent = '#256
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez votre prestation</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
 
-      <div className="space-y-2.5 mb-6">
+      <div className="divide-y divide-slate-200 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden mb-6">
         {services.map(service => {
           const isSelected = serviceId === service.id
           return (
             <button
               key={service.id}
               onClick={() => { setServiceId(service.id); setVehicleType(''); setProVehicles({}) }}
-              className="w-full text-left p-4 rounded-xl border-2 transition-all"
+              className="w-full text-left px-4 py-4 transition-all"
               style={isSelected
-                ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
-                : { borderColor: 'transparent' }
+                ? { backgroundColor: hex(accent, 0.08) }
+                : { backgroundColor: 'transparent' }
               }
             >
               <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="14" cy="16" r="7" strokeWidth="1.4"
-                      stroke={isSelected ? accent : '#94a3b8'}
-                      fill={isSelected ? accent + '12' : 'transparent'}
-                    />
-                    <circle cx="8" cy="9" r="4" strokeWidth="1.2"
-                      stroke={isSelected ? accent : '#94a3b8'}
-                      fill={isSelected ? accent + '10' : 'transparent'}
-                      opacity="0.75"
-                    />
-                    <circle cx="20" cy="8" r="2.5" strokeWidth="1"
-                      stroke={isSelected ? accent : '#94a3b8'}
-                      fill={isSelected ? accent + '0e' : 'transparent'}
-                      opacity="0.5"
-                    />
-                  </svg>
                   <div>
                     <p className="font-semibold text-sm text-slate-900 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
                       {service.name}
@@ -183,8 +167,8 @@ export default function StepService({ services, selected, onNext, accent = '#256
                     </span>
                   </div>
                   <div
-                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all border-slate-300 dark:border-slate-600"
-                    style={isSelected ? { borderColor: accent, backgroundColor: accent } : undefined}
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all shrink-0"
+                    style={isSelected ? { borderColor: accent, backgroundColor: accent } : { borderColor: '#94a3b8' }}
                   >
                     {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
