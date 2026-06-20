@@ -175,7 +175,7 @@ export default function StepService({ services, selected, onNext, accent = '#256
                 </div>
               </div>
               {service.description && (
-                <p className="mt-2.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-left border-t border-slate-100 dark:border-slate-700 pt-2.5">
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-left">
                   {service.description}
                 </p>
               )}
