@@ -150,10 +150,22 @@ export default function StepService({ services, selected, onNext, accent = '#256
             >
               <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-2 h-2 rounded-full shrink-0 transition-colors bg-slate-300 dark:bg-slate-600"
-                    style={isSelected ? { backgroundColor: accent } : undefined}
-                  />
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="14" cy="16" r="7" strokeWidth="1.4"
+                      stroke={isSelected ? accent : '#94a3b8'}
+                      fill={isSelected ? accent + '12' : 'transparent'}
+                    />
+                    <circle cx="8" cy="9" r="4" strokeWidth="1.2"
+                      stroke={isSelected ? accent : '#94a3b8'}
+                      fill={isSelected ? accent + '10' : 'transparent'}
+                      opacity="0.75"
+                    />
+                    <circle cx="20" cy="8" r="2.5" strokeWidth="1"
+                      stroke={isSelected ? accent : '#94a3b8'}
+                      fill={isSelected ? accent + '0e' : 'transparent'}
+                      opacity="0.5"
+                    />
+                  </svg>
                   <div>
                     <p className="font-semibold text-sm text-slate-900 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
                       {service.name}
