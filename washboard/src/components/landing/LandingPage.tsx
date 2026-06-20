@@ -78,15 +78,15 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={44} height={44} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg shrink-0 object-contain" />
-            <span className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">WashBoard</span>
+            <span className="hidden sm:inline text-2xl font-extrabold tracking-tight">WashBoard</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ThemeToggle />
-            <Link href="/login" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors hidden sm:block px-3 py-2">
+            <Link href="/login" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors px-2 sm:px-3 py-2 whitespace-nowrap">
               Connexion
             </Link>
             <Link href="/signup" className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap">
-              <span className="sm:hidden">Essayer</span>
+              <span className="sm:hidden">Essai gratuit</span>
               <span className="hidden sm:inline">Essayer gratuitement</span>
             </Link>
           </div>
