@@ -151,11 +151,9 @@ export default function StepService({ services, selected, onNext, accent = '#256
               <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base bg-slate-100 dark:bg-slate-700 transition-colors"
-                    style={isSelected ? { backgroundColor: hex(accent, 0.15) } : undefined}
-                  >
-                    🧽
-                  </div>
+                    className="w-2 h-2 rounded-full shrink-0 transition-colors bg-slate-300 dark:bg-slate-600"
+                    style={isSelected ? { backgroundColor: accent } : undefined}
+                  />
                   <div>
                     <p className="font-semibold text-sm text-slate-900 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
                       {service.name}
