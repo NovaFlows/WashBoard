@@ -135,17 +135,17 @@ export default function StepService({ services, selected, onNext, accent = '#256
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez votre prestation</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
 
-      <div className="divide-y divide-slate-200 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden mb-6">
+      <div className="flex flex-col gap-3 mb-6">
         {services.map(service => {
           const isSelected = serviceId === service.id
           return (
             <button
               key={service.id}
               onClick={() => { setServiceId(service.id); setVehicleType(''); setProVehicles({}) }}
-              className="w-full text-left px-4 py-4 transition-all"
+              className="w-full text-left px-5 py-4 rounded-xl border-2 transition-all"
               style={isSelected
-                ? { backgroundColor: hex(accent, 0.08) }
-                : { backgroundColor: 'transparent' }
+                ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
+                : { borderColor: '#e2e8f0', backgroundColor: 'transparent' }
               }
             >
               <div className="w-full flex justify-between items-center">
