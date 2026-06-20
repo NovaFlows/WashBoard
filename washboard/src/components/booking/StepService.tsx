@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { Droplets, Sparkles, Gem, Crown, Clock, Check } from 'lucide-react'
 import type { Service, VehicleItem } from '@/types'
+
+const SERVICE_ICONS = [Droplets, Sparkles, Gem, Crown]
 
 type Props = {
   services: Service[]
@@ -136,49 +139,62 @@ export default function StepService({ services, selected, onNext, accent = '#256
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
 
       <div className="flex flex-col gap-3 mb-6">
-        {services.map(service => {
+        {services.map((service, idx) => {
           const isSelected = serviceId === service.id
+          const Icon = SERVICE_ICONS[idx % SERVICE_ICONS.length]
           return (
             <button
               key={service.id}
               onClick={() => { setServiceId(service.id); setVehicleType(''); setProVehicles({}) }}
-              className="w-full text-left px-5 py-4 rounded-xl border-2 transition-all"
+              className="w-full text-left px-4 py-4 rounded-2xl border-2 transition-all"
               style={isSelected
                 ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
                 : { borderColor: '#e2e8f0', backgroundColor: 'transparent' }
               }
             >
-              <div className="w-full flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-semibold text-sm text-slate-900 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
-                      {service.name}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{service.duration_minutes} min</p>
-                  </div>
+              <div className="flex items-start gap-3">
+                {/* Icône */}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors"
+                  style={{ backgroundColor: isSelected ? hex(accent, 0.15) : '#f1f5f9' }}
+                >
+                  <Icon size={18} style={{ color: isSelected ? accent : '#64748b' }} strokeWidth={1.8} />
                 </div>
-                <div className="flex items-center gap-2">
+
+                {/* Contenu */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm text-slate-900 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
+                      {service.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Clock size={11} className="text-slate-400 shrink-0" />
+                    <span className="text-xs text-slate-400">{service.duration_minutes} min</span>
+                  </div>
+                  {service.description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{service.description}</p>
+                  )}
+                </div>
+
+                {/* Prix + radio */}
+                <div className="flex flex-col items-end gap-2 shrink-0">
                   <div className="text-right">
                     {hasOverrides(service) && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 leading-none mb-0.5">à partir de</p>
+                      <p className="text-xs text-slate-400 leading-none mb-0.5">à partir de</p>
                     )}
-                    <span className="text-lg font-bold text-slate-700 dark:text-slate-300" style={isSelected ? { color: accent } : undefined}>
+                    <span className="text-lg font-bold text-slate-800 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
                       {hasOverrides(service) ? minPrice(service) : service.price}€
                     </span>
                   </div>
                   <div
-                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all shrink-0"
-                    style={isSelected ? { borderColor: accent, backgroundColor: accent } : { borderColor: '#94a3b8' }}
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                    style={isSelected ? { borderColor: accent, backgroundColor: accent } : { borderColor: '#cbd5e1' }}
                   >
-                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {isSelected && <Check size={11} color="white" strokeWidth={3} />}
                   </div>
                 </div>
               </div>
-              {service.description && (
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-left">
-                  {service.description}
-                </p>
-              )}
             </button>
           )
         })}
