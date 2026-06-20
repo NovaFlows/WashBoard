@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
+import { createCalendarEvent } from '@/lib/google-calendar'
 import { computeTravelFee } from '@/lib/travelFee'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides').eq('id', bookingData.service_id).single(),
   ])
 
@@ -88,6 +89,20 @@ export async function POST(req: Request) {
   const base_price   = bookedPriceInput ?? (unit_price * count)
   const booked_price = base_price + computed_travel_fee
 
+  // Créer l'événement Google Calendar si le laveur a connecté son compte
+  let google_calendar_event_id: string | null = null
+  if (washer?.google_refresh_token) {
+    const start = new Date(bookingData.scheduled_at)
+    const end   = new Date(start.getTime() + 60 * 60 * 1000) // 1h par défaut
+    google_calendar_event_id = await createCalendarEvent(washer.google_refresh_token, {
+      summary:     `🚗 ${bookingData.client_name} — ${service?.name ?? 'Réservation'}`,
+      description: `Client : ${bookingData.client_name}\nTél : ${bookingData.client_phone}\nEmail : ${bookingData.client_email}\nMontant : ${booked_price}€`,
+      location:    bookingData.address,
+      startIso:    start.toISOString(),
+      endIso:      end.toISOString(),
+    })
+  }
+
   const { error } = await supabase
     .from('bookings')
     .insert({
@@ -103,6 +118,7 @@ export async function POST(req: Request) {
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
       travel_fee:       computed_travel_fee,
+      google_calendar_event_id,
     })
 
   if (error) {
