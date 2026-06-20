@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Droplets, Sparkles, Gem, Crown, Clock, Check } from 'lucide-react'
+import { Clock, Check } from 'lucide-react'
 import type { Service, VehicleItem } from '@/types'
-
-const SERVICE_ICONS = [Droplets, Sparkles, Gem, Crown]
 
 type Props = {
   services: Service[]
@@ -139,9 +137,8 @@ export default function StepService({ services, selected, onNext, accent = '#256
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
 
       <div className="flex flex-col gap-3 mb-6">
-        {services.map((service, idx) => {
+        {services.map((service) => {
           const isSelected = serviceId === service.id
-          const Icon = SERVICE_ICONS[idx % SERVICE_ICONS.length]
           return (
             <button
               key={service.id}
@@ -153,14 +150,6 @@ export default function StepService({ services, selected, onNext, accent = '#256
               }
             >
               <div className="flex items-start gap-3">
-                {/* Icône */}
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors"
-                  style={{ backgroundColor: isSelected ? hex(accent, 0.15) : '#f1f5f9' }}
-                >
-                  <Icon size={18} style={{ color: isSelected ? accent : '#64748b' }} strokeWidth={1.8} />
-                </div>
-
                 {/* Contenu */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
