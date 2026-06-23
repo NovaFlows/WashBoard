@@ -53,6 +53,8 @@ function getNextDays(count: number): Date[] {
   return days
 }
 
+const SLOT_STEP = 30
+
 function generateSlots(start: string, end: string, durationMinutes: number): string[] {
   const slots: string[] = []
   const [sh, sm] = start.split(':').map(Number)
@@ -63,7 +65,7 @@ function generateSlots(start: string, end: string, durationMinutes: number): str
     const h = Math.floor(current / 60).toString().padStart(2, '0')
     const m = (current % 60).toString().padStart(2, '0')
     slots.push(`${h}:${m}`)
-    current += durationMinutes
+    current += SLOT_STEP
   }
   return slots
 }
@@ -87,6 +89,10 @@ export default function StepSlot({
   const [smartDiscountType,  setSmartDiscountType]  = useState<'fixed' | 'percent'>('fixed')
   const [smartDiscountValue, setSmartDiscountValue] = useState(0)
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
+  const [morningVisible,     setMorningVisible]     = useState(6)
+  const [afternoonVisible,   setAfternoonVisible]   = useState(6)
+
+  const SLOTS_PER_PAGE = 6
 
   // Debounce address changes (800 ms) to avoid spamming the API
   useEffect(() => {
@@ -296,7 +302,7 @@ export default function StepSlot({
             return (
               <button
                 key={day.toISOString()}
-                onClick={() => { if (isAvailable) { setSelectedDate(day); setSelectedTime(null) } }}
+                onClick={() => { if (isAvailable) { setSelectedDate(day); setSelectedTime(null); setMorningVisible(6); setAfternoonVisible(6) } }}
                 disabled={!isAvailable}
                 className={`flex-shrink-0 flex flex-col items-center py-2.5 px-3 rounded-xl border-2 text-xs transition-all min-w-[52px] ${
                   isSelected    ? 'text-white shadow-md' :
@@ -372,30 +378,58 @@ export default function StepSlot({
                 </div>
               )}
 
-              {/* Regular slots */}
-              {regularSlots.length > 0 && (
-                <div>
-                  {smartSlotsInDay.length > 0 && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Autres créneaux disponibles</p>
-                  )}
-                  <div className="grid grid-cols-4 gap-2">
-                    {regularSlots.map(slot => (
-                      <button
-                        key={slot}
-                        onClick={() => setSelectedTime(slot)}
-                        className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
-                          selectedTime === slot
-                            ? 'text-white shadow-sm'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
-                        }`}
-                        style={selectedTime === slot ? { backgroundColor: accent, borderColor: accent } : undefined}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+              {/* Regular slots — Matin / Après-midi */}
+              {regularSlots.length > 0 && (() => {
+                const morning   = regularSlots.filter(s => parseInt(s) < 12)
+                const afternoon = regularSlots.filter(s => parseInt(s) >= 12)
+
+                const SlotButton = ({ slot }: { slot: string }) => (
+                  <button
+                    key={slot}
+                    onClick={() => setSelectedTime(slot)}
+                    className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                      selectedTime === slot
+                        ? 'text-white shadow-sm'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:border-slate-300'
+                    }`}
+                    style={selectedTime === slot ? { backgroundColor: accent, borderColor: accent } : undefined}
+                  >
+                    {slot}
+                  </button>
+                )
+
+                const Section = ({ label, slots, visible, onMore }: { label: string; slots: string[]; visible: number; onMore: () => void }) => {
+                  if (slots.length === 0) return null
+                  const shown = slots.slice(0, visible)
+                  const hasMore = slots.length > visible
+                  return (
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{label}</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {shown.map(slot => <SlotButton key={slot} slot={slot} />)}
+                      </div>
+                      {hasMore && (
+                        <button
+                          onClick={onMore}
+                          className="mt-2.5 w-full py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          Voir plus ({slots.length - visible} créneaux)
+                        </button>
+                      )}
+                    </div>
+                  )
+                }
+
+                return (
+                  <div>
+                    {smartSlotsInDay.length > 0 && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Autres créneaux disponibles</p>
+                    )}
+                    <Section label="Matin" slots={morning} visible={morningVisible} onMore={() => setMorningVisible(v => v + SLOTS_PER_PAGE)} />
+                    <Section label="Après-midi" slots={afternoon} visible={afternoonVisible} onMore={() => setAfternoonVisible(v => v + SLOTS_PER_PAGE)} />
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </>
           )}
         </div>
