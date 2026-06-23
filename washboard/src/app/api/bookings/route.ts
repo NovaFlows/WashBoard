@@ -127,37 +127,43 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Erreur lors de la réservation' }, { status: 500 })
   }
 
-  // Envoi emails en arrière-plan — ne bloque pas la réponse
+  // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)
   if (washer && service) {
-    // Email client : accusé de réception
-    sendBookingRequest({
-      to: bookingData.client_email,
-      clientName: bookingData.client_name,
-      washerName: washer.name,
-      serviceName: service.name,
-      servicePrice: booked_price,
-      isSmartSlot: is_smart_slot,
-      smartDiscount: smart_discount,
-      address: bookingData.address,
-      scheduledAt: bookingData.scheduled_at,
-      bookingId: id,
-    }).catch(err => console.error('[email/client]', err))
-
-    // Email laveur : notification nouvelle réservation
-    if (washerEmail) {
-      sendWasherNotification({
-        to: washerEmail,
-        washerName: washer.name,
+    const emailJobs: Promise<unknown>[] = [
+      sendBookingRequest({
+        to: bookingData.client_email,
         clientName: bookingData.client_name,
-        clientEmail: bookingData.client_email,
-        clientPhone: bookingData.client_phone,
+        washerName: washer.name,
         serviceName: service.name,
+        servicePrice: booked_price,
+        isSmartSlot: is_smart_slot,
+        smartDiscount: smart_discount,
         address: bookingData.address,
         scheduledAt: bookingData.scheduled_at,
-        bookedPrice: booked_price,
         bookingId: id,
-      }).catch(err => console.error('[email/washer]', err))
+      }).catch(err => console.error('[email/client]', err)),
+    ]
+
+    if (washerEmail) {
+      emailJobs.push(
+        sendWasherNotification({
+          to: washerEmail,
+          washerName: washer.name,
+          clientName: bookingData.client_name,
+          clientEmail: bookingData.client_email,
+          clientPhone: bookingData.client_phone,
+          serviceName: service.name,
+          address: bookingData.address,
+          scheduledAt: bookingData.scheduled_at,
+          bookedPrice: booked_price,
+          bookingId: id,
+        }).catch(err => console.error('[email/washer]', err))
+      )
+    } else {
+      console.warn('[email/washer] washerEmail null, notification non envoyée — washer.user_id:', washer?.user_id)
     }
+
+    await Promise.all(emailJobs)
   }
 
   return Response.json({ data: { id } }, { status: 201 })
