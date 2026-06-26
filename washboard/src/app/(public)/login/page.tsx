@@ -92,12 +92,7 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Mot de passe</label>
-                  <Link href="/forgot-password" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Mot de passe</label>
                 <input
                   type="password"
                   value={password}
@@ -135,8 +130,14 @@ export default function LoginPage() {
             </form>
           </div>
 
+          <p className="text-center text-sm mt-4">
+            <Link href="/forgot-password" className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              Mot de passe oublié ?
+            </Link>
+          </p>
+
           {/* Lien inscription */}
-          <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">
+          <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-3">
             Pas de compte ?{' '}
             <Link href="/signup" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
               Inscrivez-vous
