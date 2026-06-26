@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
   })
 
   if (error || !data?.properties?.action_link) {
-    return NextResponse.json({ error: 'Aucun compte trouvé pour cet email.' }, { status: 400 })
+    console.error('[reset-password] generateLink error:', error)
+    const msg = error?.message?.toLowerCase().includes('not found') || error?.status === 404
+      ? 'Aucun compte trouvé pour cet email.'
+      : `Erreur génération du lien : ${error?.message ?? 'inconnue'}`
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
 
   const resetLink = data.properties.action_link
