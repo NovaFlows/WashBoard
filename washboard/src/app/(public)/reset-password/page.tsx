@@ -17,35 +17,43 @@ export default function ResetPasswordPage() {
   const supabase = createClient()
 
   // Deux formats possibles selon la config Supabase :
-  //  - implicit flow : tokens dans le hash (#access_token=...&type=recovery)
+  //  - implicit flow : tokens dans le hash (#access_token=...&refresh_token=...)
   //  - PKCE flow      : code dans la query (?code=xxx)
+  // On établit explicitement la session pour que updateUser fonctionne.
   useEffect(() => {
     const hash   = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const params = new URLSearchParams(window.location.search)
+    const accessToken  = hash.get('access_token')
+    const refreshToken = hash.get('refresh_token')
+    const code         = params.get('code')
 
-    // Implicit flow : le client traite le hash automatiquement (detectSessionInUrl)
-    if (hash.get('access_token') || hash.get('type') === 'recovery') {
-      setReady(true)
+    async function init() {
+      // Implicit flow : on pose la session à partir des tokens du hash
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        if (!error) { setReady(true); return }
+      }
+
+      // PKCE flow : échange du code contre une session
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!error) { setReady(true); return }
+      }
+
+      // Session déjà active ?
+      const { data } = await supabase.auth.getSession()
+      if (data.session) { setReady(true); return }
+
+      setError('Lien invalide ou expiré. Recommencez la procédure.')
     }
+    init()
 
-    // PKCE flow : échange explicite du code
-    const code = params.get('code')
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code)
-        .then(() => setReady(true))
-        .catch(() => setError('Lien invalide ou expiré. Recommencez la procédure.'))
-    }
-
-    // Filet de sécurité : événement officiel
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
-
-    // Si déjà une session active (token déjà consommé), on peut quand même reset
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true)
-    })
-
     return () => subscription.unsubscribe()
   }, [supabase])
 
@@ -98,13 +106,22 @@ export default function ResetPasswordPage() {
                 <p className="text-xs text-slate-400">Redirection vers la connexion...</p>
               </div>
             ) : !ready ? (
-              <div className="text-center py-4 space-y-3">
-                <svg className="w-6 h-6 animate-spin text-blue-500 mx-auto" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Vérification du lien...</p>
-              </div>
+              error ? (
+                <div className="text-center space-y-4">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                  <Link href="/forgot-password" className="block w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm text-center transition-colors">
+                    Renvoyer un lien
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center py-4 space-y-3">
+                  <svg className="w-6 h-6 animate-spin text-blue-500 mx-auto" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Vérification du lien...</p>
+                </div>
+              )
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
