@@ -16,9 +16,18 @@ export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Supabase envoie le token dans le hash de l'URL (#access_token=...&type=recovery)
-  // onAuthStateChange détecte l'événement PASSWORD_RECOVERY une fois le hash traité
+  // Supabase v2 PKCE : le code arrive en query string (?code=xxx)
+  // Le client l'échange automatiquement et déclenche PASSWORD_RECOVERY
   useEffect(() => {
+    // Échange explicite si le code est dans l'URL (PKCE flow)
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).catch(() => {
+        setError('Lien invalide ou expiré. Recommencez la procédure.')
+      })
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
