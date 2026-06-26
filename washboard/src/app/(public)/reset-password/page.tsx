@@ -16,21 +16,36 @@ export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Supabase v2 PKCE : le code arrive en query string (?code=xxx)
-  // Le client l'échange automatiquement et déclenche PASSWORD_RECOVERY
+  // Deux formats possibles selon la config Supabase :
+  //  - implicit flow : tokens dans le hash (#access_token=...&type=recovery)
+  //  - PKCE flow      : code dans la query (?code=xxx)
   useEffect(() => {
-    // Échange explicite si le code est dans l'URL (PKCE flow)
+    const hash   = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).catch(() => {
-        setError('Lien invalide ou expiré. Recommencez la procédure.')
-      })
+
+    // Implicit flow : le client traite le hash automatiquement (detectSessionInUrl)
+    if (hash.get('access_token') || hash.get('type') === 'recovery') {
+      setReady(true)
     }
 
+    // PKCE flow : échange explicite du code
+    const code = params.get('code')
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code)
+        .then(() => setReady(true))
+        .catch(() => setError('Lien invalide ou expiré. Recommencez la procédure.'))
+    }
+
+    // Filet de sécurité : événement officiel
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
+
+    // Si déjà une session active (token déjà consommé), on peut quand même reset
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setReady(true)
+    })
+
     return () => subscription.unsubscribe()
   }, [supabase])
 

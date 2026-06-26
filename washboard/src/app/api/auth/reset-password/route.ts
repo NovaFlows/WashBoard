@@ -11,11 +11,18 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  // Origine réelle de la requête (évite tout souci de slash/variable d'env mal réglée)
+  const origin = (
+    req.headers.get('origin') ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    'https://washboard.fr'
+  ).replace(/\/$/, '')
+
   const { data, error } = await admin.auth.admin.generateLink({
     type: 'recovery',
     email: email.trim(),
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://washboard.fr'}/reset-password`,
+      redirectTo: `${origin}/reset-password`,
     },
   })
 
