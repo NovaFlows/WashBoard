@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
@@ -10,7 +9,6 @@ export default function ForgotPasswordPage() {
   const [sent, setSent]       = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
-  const supabase = createClient()
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
 
@@ -18,15 +16,15 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const redirectTo = `${window.location.origin}/reset-password`
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    })
+    const json = await res.json()
     setLoading(false)
-    if (error) {
-      if (error.message?.toLowerCase().includes('rate') || error.status === 429) {
-        setError('Trop de demandes envoyées. Attendez quelques minutes avant de réessayer.')
-      } else {
-        setError(`Erreur : ${error.message}`)
-      }
+    if (!res.ok) {
+      setError(json.error ?? 'Une erreur est survenue.')
       return
     }
     setSent(true)
