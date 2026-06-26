@@ -22,7 +22,11 @@ export default function ForgotPasswordPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
     setLoading(false)
     if (error) {
-      setError("Une erreur est survenue. Vérifiez l'adresse email.")
+      if (error.message?.toLowerCase().includes('rate') || error.status === 429) {
+        setError('Trop de demandes envoyées. Attendez quelques minutes avant de réessayer.')
+      } else {
+        setError(`Erreur : ${error.message}`)
+      }
       return
     }
     setSent(true)
