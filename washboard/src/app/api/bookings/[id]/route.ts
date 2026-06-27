@@ -20,10 +20,13 @@ export async function PATCH(
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const body = await request.json()
-  const { status, notes, closed_late } = body as { status?: string; notes?: string; closed_late?: boolean }
+  const { status, notes, closed_late, scheduled_at } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string }
 
   if (status && !VALID_STATUSES.includes(status))
     return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
+
+  if (scheduled_at !== undefined && isNaN(new Date(scheduled_at).getTime()))
+    return NextResponse.json({ error: 'Date invalide' }, { status: 400 })
 
   // Récupérer la réservation courante + service
   const { data: booking } = await supabase
@@ -35,11 +38,12 @@ export async function PATCH(
 
   if (!booking) return NextResponse.json({ error: 'Réservation introuvable' }, { status: 404 })
 
-  // Mettre à jour le statut / les notes
+  // Mettre à jour le statut / les notes / l'horaire
   const updates: Record<string, unknown> = {}
-  if (status      !== undefined) updates.status      = status
-  if (notes       !== undefined) updates.notes       = notes
-  if (closed_late !== undefined) updates.closed_late = closed_late
+  if (status       !== undefined) updates.status       = status
+  if (notes        !== undefined) updates.notes        = notes
+  if (closed_late  !== undefined) updates.closed_late  = closed_late
+  if (scheduled_at !== undefined) updates.scheduled_at = scheduled_at
 
   const { data: updated, error } = await supabase
     .from('bookings')
@@ -50,6 +54,19 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // ── Déplacement d'horaire : mettre à jour l'événement Google Calendar ────
+  if (scheduled_at !== undefined && scheduled_at !== booking.scheduled_at
+      && booking.google_calendar_event_id && washer.google_refresh_token) {
+    const svc = booking.services as { duration_minutes: number } | null
+    const newEndIso = new Date(
+      new Date(scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * 60_000
+    ).toISOString()
+    await patchCalendarEvent(washer.google_refresh_token, booking.google_calendar_event_id, {
+      startIso: scheduled_at,
+      endIso:   newEndIso,
+    })
+  }
 
   // ── Opérations asynchrones (Google Calendar + email) ────────────────────
   if (status && status !== booking.status) {

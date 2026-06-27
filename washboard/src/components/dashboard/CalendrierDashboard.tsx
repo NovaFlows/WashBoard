@@ -155,6 +155,13 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   const [editNotes,   setEditNotes]   = useState('')
   const [notesSaving, setNotesSaving] = useState(false)
 
+  // Reprogrammation (modifier date/heure d'un RDV existant)
+  const [rescheduling,     setRescheduling]     = useState(false)
+  const [editDate,         setEditDate]         = useState('')
+  const [editTime,         setEditTime]         = useState('')
+  const [rescheduleSaving, setRescheduleSaving] = useState(false)
+  const [rescheduleErr,    setRescheduleErr]    = useState<string | null>(null)
+
   // Unavailabilities
   const [unavails,    setUnavails]    = useState(initialUnavail)
   const [addModal,    setAddModal]    = useState<{ start: string; end: string; label: string; team_members_off: number } | null>(null)
@@ -432,6 +439,65 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   function openBooking(b: Booking) {
     setSelected(b)
     setEditNotes(b.notes ?? '')
+    setRescheduling(false)
+    setRescheduleErr(null)
+  }
+
+  function startReschedule(b: Booking) {
+    const d = new Date(b.scheduled_at)
+    setEditDate(toDateStr(d))
+    setEditTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)
+    setRescheduleErr(null)
+    setRescheduling(true)
+  }
+
+  async function saveReschedule() {
+    if (!selected) return
+    setRescheduleErr(null)
+    const newStart = new Date(`${editDate}T${editTime}:00`)
+    if (isNaN(newStart.getTime())) { setRescheduleErr('Date ou heure invalide'); return }
+
+    const durationMin = selected.services?.duration_minutes ?? 60
+    const newEnd      = new Date(newStart.getTime() + durationMin * 60_000)
+    const dayStr      = editDate
+
+    // Capacité de l'équipe ce jour-là (congés partiels)
+    const dayUnavail    = unavails.find(u => u.start_date <= dayStr && dayStr <= u.end_date)
+    const effectiveTeam = Math.max(0, teamSize - (dayUnavail?.team_members_off ?? 0))
+    if (effectiveTeam === 0) { setRescheduleErr("Toute l'équipe est en congés ce jour-là"); return }
+
+    // RDV qui se chevauchent (hors le RDV courant et les annulés)
+    const overlapping = bookings.filter(b => {
+      if (b.id === selected.id || b.status === 'cancelled') return false
+      const bStart = new Date(b.scheduled_at).getTime()
+      const bEnd   = bStart + (b.services?.duration_minutes ?? 60) * 60_000
+      return bStart < newEnd.getTime() && bEnd > newStart.getTime()
+    })
+    if (overlapping.length >= effectiveTeam) {
+      setRescheduleErr(`Créneau complet — ${overlapping.length}/${effectiveTeam} laveur${effectiveTeam > 1 ? 's' : ''} déjà occupé${effectiveTeam > 1 ? 's' : ''} à cet horaire`)
+      return
+    }
+
+    const scheduled_at = newStart.toISOString()
+    setRescheduleSaving(true)
+    try {
+      const res = await fetch(`/api/bookings/${selected.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduled_at }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setRescheduleErr(json.error ?? 'Erreur lors de la modification')
+        return
+      }
+      setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, scheduled_at } : b)
+        .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)))
+      setSelected(prev => prev ? { ...prev, scheduled_at } : prev)
+      setRescheduling(false)
+    } finally {
+      setRescheduleSaving(false)
+    }
   }
 
   function openGmail(b: Booking) {
@@ -1337,10 +1403,59 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   ) : `${(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€`}
                 </Row>
               )}
-              <Row icon="calendar">
-                {new Date(selected.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                {' '}à {fmt(new Date(selected.scheduled_at))}
-              </Row>
+              {rescheduling ? (
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 shrink-0 text-blue-500 mt-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
+                        className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="time" value={editTime} onChange={e => setEditTime(e.target.value)}
+                        className="w-24 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    {rescheduleErr && <p className="text-xs text-red-600 dark:text-red-400">{rescheduleErr}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveReschedule}
+                        disabled={rescheduleSaving}
+                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
+                      >
+                        {rescheduleSaving ? 'Enregistrement...' : 'Enregistrer'}
+                      </button>
+                      <button
+                        onClick={() => setRescheduling(false)}
+                        className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400 group/resched">
+                  <svg className="w-4 h-4 shrink-0 text-slate-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span className="flex-1">
+                    {new Date(selected.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {' '}à {fmt(new Date(selected.scheduled_at))}
+                  </span>
+                  {selected.status !== 'cancelled' && selected.status !== 'done' && (
+                    <button
+                      onClick={() => startReschedule(selected)}
+                      className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Modifier
+                    </button>
+                  )}
+                </div>
+              )}
               <Row icon="pin">{selected.address}</Row>
             </div>
 

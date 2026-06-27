@@ -69,12 +69,20 @@ export async function createCalendarEvent(refreshToken: string, event: CalendarE
   }
 }
 
-export async function patchCalendarEvent(refreshToken: string, eventId: string, patch: { summary: string }): Promise<void> {
+export async function patchCalendarEvent(
+  refreshToken: string,
+  eventId: string,
+  patch: { summary?: string; startIso?: string; endIso?: string },
+): Promise<void> {
   try {
     const client = oauthClient()
     client.setCredentials({ refresh_token: refreshToken })
     const cal = google.calendar({ version: 'v3', auth: client })
-    await cal.events.patch({ calendarId: 'primary', eventId, requestBody: patch })
+    const requestBody: Record<string, unknown> = {}
+    if (patch.summary  !== undefined) requestBody.summary = patch.summary
+    if (patch.startIso !== undefined) requestBody.start   = { dateTime: toParisOffsetIso(patch.startIso) }
+    if (patch.endIso   !== undefined) requestBody.end     = { dateTime: toParisOffsetIso(patch.endIso) }
+    await cal.events.patch({ calendarId: 'primary', eventId, requestBody })
   } catch (e) {
     console.error('[GCal] patchEvent error:', e)
   }
