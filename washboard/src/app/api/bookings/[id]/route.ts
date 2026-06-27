@@ -91,7 +91,7 @@ export async function PATCH(
           location: booking.address,
           startIso: booking.scheduled_at,
           endIso,
-        })
+        }, washer.id)
         if (eventId) {
           await supabase
             .from('bookings')

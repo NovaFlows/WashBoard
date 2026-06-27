@@ -1,4 +1,5 @@
 import { google } from 'googleapis'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 function oauthClient() {
   return new google.auth.OAuth2(
@@ -6,6 +7,26 @@ function oauthClient() {
     process.env.GOOGLE_CLIENT_SECRET!,
     process.env.GOOGLE_REDIRECT_URI!,
   )
+}
+
+// Détecte un token Google révoqué/expiré
+function isInvalidGrant(e: unknown): boolean {
+  const err = e as { message?: string; response?: { data?: { error?: string } } }
+  return err?.message === 'invalid_grant' || err?.response?.data?.error === 'invalid_grant'
+}
+
+// Efface le token invalide pour que l'UI repasse sur "Connecter" (reconnexion requise)
+async function clearWasherToken(washerId: string) {
+  try {
+    const admin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    await admin.from('washers').update({ google_refresh_token: null }).eq('id', washerId)
+    console.warn('[GCal] token invalide effacé pour washer', washerId)
+  } catch (e) {
+    console.error('[GCal] clearToken error:', e)
+  }
 }
 
 export function getGoogleAuthUrl(washerId: string): string {
@@ -47,7 +68,7 @@ interface CalendarEvent {
   endIso: string
 }
 
-export async function createCalendarEvent(refreshToken: string, event: CalendarEvent): Promise<string | null> {
+export async function createCalendarEvent(refreshToken: string, event: CalendarEvent, washerId?: string): Promise<string | null> {
   try {
     const client = oauthClient()
     client.setCredentials({ refresh_token: refreshToken })
@@ -65,6 +86,7 @@ export async function createCalendarEvent(refreshToken: string, event: CalendarE
     return res.data.id ?? null
   } catch (e) {
     console.error('[GCal] createEvent error:', e)
+    if (isInvalidGrant(e) && washerId) await clearWasherToken(washerId)
     return null
   }
 }

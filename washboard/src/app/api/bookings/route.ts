@@ -101,7 +101,7 @@ export async function POST(req: Request) {
       location:    bookingData.address,
       startIso:    start.toISOString(),
       endIso:      end.toISOString(),
-    })
+    }, bookingData.washer_id)
   }
 
   const { error } = await supabase
