@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
-import { createCalendarEvent } from '@/lib/google-calendar'
 import { computeTravelFee } from '@/lib/travelFee'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
@@ -89,20 +88,9 @@ export async function POST(req: Request) {
   const base_price   = bookedPriceInput ?? (unit_price * count)
   const booked_price = base_price + computed_travel_fee
 
-  // Créer l'événement Google Calendar si le laveur a connecté son compte
-  let google_calendar_event_id: string | null = null
-  if (washer?.google_refresh_token) {
-    const start        = new Date(bookingData.scheduled_at)
-    const durationMs   = (service?.duration_minutes ?? 60) * 60 * 1000
-    const end          = new Date(start.getTime() + durationMs)
-    google_calendar_event_id = await createCalendarEvent(washer.google_refresh_token, {
-      summary:     `🚗 ${bookingData.client_name} — ${service?.name ?? 'Réservation'}`,
-      description: `Client : ${bookingData.client_name}\nTél : ${bookingData.client_phone}\nEmail : ${bookingData.client_email}\nMontant : ${booked_price}€`,
-      location:    bookingData.address,
-      startIso:    start.toISOString(),
-      endIso:      end.toISOString(),
-    }, bookingData.washer_id)
-  }
+  // L'événement Google Agenda est créé uniquement à la confirmation du RDV
+  // (voir PATCH /api/bookings/[id] quand status passe à 'confirmed'),
+  // pas à la création — les RDV en attente ne sont pas ajoutés à l'agenda.
 
   const { error } = await supabase
     .from('bookings')
@@ -119,7 +107,6 @@ export async function POST(req: Request) {
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
       travel_fee:       computed_travel_fee,
-      google_calendar_event_id,
     })
 
   if (error) {
