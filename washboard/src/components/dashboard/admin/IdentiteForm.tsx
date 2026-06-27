@@ -694,12 +694,17 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
                 ? 'Compte connecté — les RDV confirmés sont automatiquement ajoutés à votre agenda.'
                 : 'Connectez votre compte pour synchroniser les RDV confirmés dans Google Agenda.'}
             </p>
+            {washer.google_refresh_token && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                Les RDV n&apos;apparaissent plus ? <a href="/api/auth/google-calendar" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Reconnecter le compte</a>
+              </p>
+            )}
           </div>
           <a
             href="/api/auth/google-calendar"
             className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
               washer.google_refresh_token
-                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
                 : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
           >
