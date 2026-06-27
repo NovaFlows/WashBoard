@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 
-type ExistingBooking  = { scheduled_at: string; services: { duration_minutes: number } | null }
+type ExistingBooking  = { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }
+
+// Durée réelle bloquée = durée de la prestation × nombre de véhicules
+function bookingDurationMin(b: ExistingBooking): number {
+  return (b.services?.duration_minutes ?? 60) * Math.max(1, b.vehicle_count ?? 1)
+}
 type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number }
 
 function toDateStr(d: Date) {
@@ -33,7 +38,7 @@ function countOverlaps(slotTime: string, date: Date, duration: number, bookings:
   const slotEnd = new Date(slotStart.getTime() + duration * 60_000)
   return bookings.filter(b => {
     const bStart = new Date(b.scheduled_at)
-    const bEnd   = new Date(bStart.getTime() + (b.services?.duration_minutes ?? 60) * 60_000)
+    const bEnd   = new Date(bStart.getTime() + bookingDurationMin(b) * 60_000)
     return bStart < slotEnd && bEnd > slotStart
   }).length
 }

@@ -55,12 +55,14 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
+  const vehicleCount = Math.max(1, booking.vehicle_count ?? 1)
+
   // ── Déplacement d'horaire : mettre à jour l'événement Google Calendar ────
   if (scheduled_at !== undefined && scheduled_at !== booking.scheduled_at
       && booking.google_calendar_event_id && washer.google_refresh_token) {
     const svc = booking.services as { duration_minutes: number } | null
     const newEndIso = new Date(
-      new Date(scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * 60_000
+      new Date(scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * vehicleCount * 60_000
     ).toISOString()
     await patchCalendarEvent(washer.google_refresh_token, booking.google_calendar_event_id, {
       startIso: scheduled_at,
@@ -72,7 +74,7 @@ export async function PATCH(
   if (status && status !== booking.status) {
     const svc = booking.services as { name: string; price: number; duration_minutes: number } | null
     const endIso = new Date(
-      new Date(booking.scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * 60_000
+      new Date(booking.scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * vehicleCount * 60_000
     ).toISOString()
 
     const eventTitle = `🚗 ${svc?.name ?? 'Lavage'} — ${booking.client_name}`

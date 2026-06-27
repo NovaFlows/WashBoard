@@ -21,7 +21,21 @@ type Booking = {
   booked_price: number | null
   selected_addons: { id: string; label: string; price: number; category: string }[] | null
   travel_fee: number | null
+  vehicle_count: number | null
+  vehicles_detail: { type: string; count: number; unit_price: number }[] | null
   services: Service | null
+}
+
+const VEHICLE_LABELS: Record<string, string> = {
+  citadine_2p: 'Citadine 2p', citadine: 'Citadine', berline: 'Berline',
+  SUV: 'SUV / 4x4', monospace: 'Monospace', '7places': '7 places',
+  utilitaire: 'Van / Utilitaire', 'camping-car': 'Camping-car', camion: 'Camion',
+  moto: 'Moto', scooter: 'Scooter', velo: 'Vélo / Trottinette',
+}
+
+// Durée réelle bloquée = durée prestation × nombre de véhicules
+function effectiveDuration(b: Booking): number {
+  return (b.services?.duration_minutes ?? 60) * Math.max(1, b.vehicle_count ?? 1)
 }
 
 const STATUS = {
@@ -61,7 +75,7 @@ type WeekBooking = Booking & { col: number; totalCols: number }
 function layoutDayBookings(bookings: Booking[]): WeekBooking[] {
   if (bookings.length === 0) return []
   const getMs  = (b: Booking) => new Date(b.scheduled_at).getTime()
-  const getEnd = (b: Booking) => getMs(b) + (b.services?.duration_minutes ?? 60) * 60_000
+  const getEnd = (b: Booking) => getMs(b) + effectiveDuration(b) * 60_000
   const sorted = [...bookings].sort((a, b) => getMs(a) - getMs(b))
 
   const colEnds: number[] = []
@@ -231,7 +245,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     // ── Vérification de disponibilité ──────────────────────────────────────
     const selectedStart = new Date(`${manualModal.date}T${manualModal.time}:00`)
     const svcCheck      = services.find(s => s.id === manualModal.service_id)
-    const durationMs    = (svcCheck?.duration_minutes ?? 60) * 60_000
+    const durationMs    = (svcCheck?.duration_minutes ?? 60) * Math.max(1, manualModal.vehicle_count) * 60_000
     const selectedEnd   = new Date(selectedStart.getTime() + durationMs)
     const dayStr        = manualModal.date
 
@@ -248,7 +262,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const overlapping = bookings.filter(b => {
       if (b.status === 'cancelled') return false
       const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + (b.services?.duration_minutes ?? 60) * 60_000
+      const bEnd   = bStart + effectiveDuration(b) * 60_000
       return bStart < selectedEnd.getTime() && bEnd > selectedStart.getTime()
     })
 
@@ -267,7 +281,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
 
       for (const b of sameDayActive) {
         const bStart  = new Date(b.scheduled_at).getTime()
-        const bEnd    = bStart + (b.services?.duration_minutes ?? 60) * 60_000
+        const bEnd    = bStart + effectiveDuration(b) * 60_000
         const newStart = selectedStart.getTime()
         const newEnd   = selectedEnd.getTime()
 
@@ -358,9 +372,11 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       notes:        manualModal.notes || null,
       is_smart_slot: false,
       smart_discount: 0,
-      booked_price:    null,
+      booked_price:    manualModal.booked_price,
       selected_addons: null,
       travel_fee:      null,
+      vehicle_count:   manualModal.vehicle_count,
+      vehicles_detail: [{ type: manualModal.vehicle_type, count: manualModal.vehicle_count, unit_price: svc ? (svc.vehicle_price_overrides?.[manualModal.vehicle_type] ?? svc.price) : 0 }],
       services:        svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
     }
     // Applique toujours le statut choisi (l'API crée en 'pending' par défaut)
@@ -457,7 +473,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const newStart = new Date(`${editDate}T${editTime}:00`)
     if (isNaN(newStart.getTime())) { setRescheduleErr('Date ou heure invalide'); return }
 
-    const durationMin = selected.services?.duration_minutes ?? 60
+    const durationMin = effectiveDuration(selected)
     const newEnd      = new Date(newStart.getTime() + durationMin * 60_000)
     const dayStr      = editDate
 
@@ -470,7 +486,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const overlapping = bookings.filter(b => {
       if (b.id === selected.id || b.status === 'cancelled') return false
       const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + (b.services?.duration_minutes ?? 60) * 60_000
+      const bEnd   = bStart + effectiveDuration(b) * 60_000
       return bStart < newEnd.getTime() && bEnd > newStart.getTime()
     })
     if (overlapping.length >= effectiveTeam) {
@@ -815,7 +831,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       const m = d.getMinutes()
                       if (h < HOUR_START || h >= HOUR_END) return null
                       const top      = (h - HOUR_START) * HOUR_H + m * (HOUR_H / 60)
-                      const height   = Math.max((b.services?.duration_minutes ?? 60) * (HOUR_H / 60), 28)
+                      const height   = Math.max(effectiveDuration(b) * (HOUR_H / 60), 28)
                       const widthPct = 100 / b.totalCols
                       const leftPct  = b.col * widthPct
                       return (
@@ -915,7 +931,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   const h = d.getHours(), m = d.getMinutes()
                   if (h < HOUR_START || h >= HOUR_END) return null
                   const top      = (h - HOUR_START) * HOUR_H + m * (HOUR_H / 60)
-                  const height   = Math.max((b.services?.duration_minutes ?? 60) * (HOUR_H / 60), 28)
+                  const height   = Math.max(effectiveDuration(b) * (HOUR_H / 60), 28)
                   const widthPct = 100 / b.totalCols
                   const leftPct  = b.col * widthPct
                   return (
@@ -1403,6 +1419,11 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   ) : `${(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€`}
                 </Row>
               )}
+              {selected.vehicles_detail && selected.vehicles_detail.length > 0 && (
+                <Row icon="car">
+                  {selected.vehicles_detail.map(v => `${VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
+                </Row>
+              )}
               {rescheduling ? (
                 <div className="flex items-start gap-2">
                   <svg className="w-4 h-4 shrink-0 text-blue-500 mt-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1560,13 +1581,14 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   )
 }
 
-function Row({ icon, children }: { icon: 'mail' | 'phone' | 'bolt' | 'calendar' | 'pin'; children: React.ReactNode }) {
+function Row({ icon, children }: { icon: 'mail' | 'phone' | 'bolt' | 'calendar' | 'pin' | 'car'; children: React.ReactNode }) {
   const icons = {
     mail:     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>,
     phone:    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>,
     bolt:     <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>,
     calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
     pin:      <><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></>,
+    car:      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13l1.5-4.5A2 2 0 016.4 7h11.2a2 2 0 011.9 1.5L21 13m-18 0v5a1 1 0 001 1h1a1 1 0 001-1v-1h12v1a1 1 0 001 1h1a1 1 0 001-1v-5m-18 0h18M7 16h.01M17 16h.01"/>,
   }
   return (
     <div className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">

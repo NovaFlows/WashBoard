@@ -8,7 +8,7 @@ import StepSlot from './StepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './StepConfirmation'
 
-type ExistingBooking = { scheduled_at: string; services: { duration_minutes: number } | null }
+type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }
 type Unavailability  = { id: string; start_date: string; end_date: string }
 
 type Props = {
@@ -151,7 +151,7 @@ export default function BookingForm({ washer, services, availabilities, existing
             existingBookings={existingBookings}
             unavailabilities={unavailabilities}
             teamSize={washer.team_size ?? 1}
-            serviceDuration={services.find(s => s.id === form.service_id)?.duration_minutes ?? 60}
+            serviceDuration={(services.find(s => s.id === form.service_id)?.duration_minutes ?? 60) * Math.max(1, form.vehicle_count ?? 1)}
             servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
             washerId={washer.id}
             hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
