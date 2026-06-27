@@ -162,6 +162,8 @@ function BookingCard({ booking, loading, onUpdate }: {
   const basePrice          = booking.booked_price ?? booking.services?.price ?? 0
   const travelFee          = booking.travel_fee ?? 0
   const servicePrice       = basePrice - travelFee
+  const isSmart            = booking.is_smart_slot && Number(booking.smart_discount) > 0
+  const finalPrice         = isSmart ? basePrice - Number(booking.smart_discount) : basePrice
 
   const [open, setOpen]           = useState(false)
   const [notesText, setNotesText] = useState(booking.notes ?? '')
@@ -203,7 +205,18 @@ function BookingCard({ booking, loading, onUpdate }: {
                 <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
-                <span>{booking.services.name} — <span className="font-semibold text-slate-700 dark:text-slate-300">{basePrice}€</span></span>
+                <span>
+                  {booking.services.name} —{' '}
+                  {isSmart ? (
+                    <>
+                      <span className="line-through opacity-50">{basePrice}€</span>{' '}
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{finalPrice.toFixed(2).replace(/\.00$/, '')}€</span>{' '}
+                      <span className="text-amber-500 font-bold">★</span>
+                    </>
+                  ) : (
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{basePrice}€</span>
+                  )}
+                </span>
               </div>
             )}
           </div>
