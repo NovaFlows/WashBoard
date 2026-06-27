@@ -1,6 +1,17 @@
 import type { Service } from '@/types'
 import type { FormState } from './BookingForm'
 
+const VEHICLE_LABELS: Record<string, string> = {
+  citadine_2p: 'Citadine 2p',
+  citadine:    'Citadine',
+  berline:     'Berline',
+  SUV:         'SUV / 4x4',
+  monospace:   'Monospace',
+  '7places':   '7 places',
+  utilitaire:  'Van / Utilitaire',
+  velo:        'Vélo',
+}
+
 type Props = {
   washerName: string
   bookingId: string
@@ -34,6 +45,13 @@ export default function StepConfirmation({ washerName, bookingId, form, services
                 ? `${service.name} — ${(displayPrice - Number(form.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★`
                 : `${service.name} — ${displayPrice}€`
             }
+          />
+        )}
+        {form.vehicles_detail && form.vehicles_detail.length > 0 && (
+          <Row
+            label={`Véhicule${form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}`}
+            value={form.vehicles_detail.map(v => `${VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
+            right
           />
         )}
         {form.selected_addons && form.selected_addons.length > 0 && (
