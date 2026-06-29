@@ -28,6 +28,11 @@ export type Washer = {
   website_url: string | null
   account_status: 'active' | 'deactivated' | 'pending_deletion'
   deletion_scheduled_at: string | null
+  plan: 'essentiel' | 'pro' | 'business'
+  grandfathered: boolean
+  review_enabled: boolean
+  review_delay_hours: number
+  google_review_url: string | null
   created_at: string
 }
 

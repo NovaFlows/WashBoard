@@ -1,13 +1,53 @@
 'use client'
 
+import { useState } from 'react'
+import type { Plan } from '@/lib/plan'
+
 type Props = {
   subscriptionStatus: string
   trialEndsAt: string | null
   washerName: string
   washerEmail: string
+  plan: Plan
+  grandfathered: boolean
 }
 
 const PRICE = 49
+
+const PLAN_CARDS: { key: Plan; name: string; price: number; tagline: string; features: string[] }[] = [
+  {
+    key: 'essentiel', name: 'Essentiel', price: 49,
+    tagline: 'Pour démarrer et être pro tout de suite.',
+    features: [
+      'Page de réservation personnalisée',
+      'Agenda + créneaux intelligents',
+      'Frais de déplacement, multi-véhicules',
+      'CRM analytique',
+      'Avis Google par email',
+    ],
+  },
+  {
+    key: 'pro', name: 'Pro', price: 69,
+    tagline: 'Pour piloter votre activité.',
+    features: [
+      'Tout l’Essentiel',
+      'Comptabilité (CA, dépenses, résultat)',
+      'Avis Google par SMS (150/mois)',
+      'Relances de suivi client',
+    ],
+  },
+  {
+    key: 'business', name: 'Business', price: 99,
+    tagline: 'Pour les équipes de plusieurs laveurs.',
+    features: [
+      'Tout le Pro',
+      'Multi-laveurs (RDV simultanés)',
+      'SMS illimités',
+      'Personnalisation avancée',
+      'Support prioritaire',
+    ],
+  },
+]
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'active') {
@@ -34,9 +74,10 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washerName, washerEmail }: Props) {
+export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
+  const [now] = useState(() => Date.now())
   const daysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
     : null
 
   const virementSubject = encodeURIComponent(`Abonnement WashBoard — ${washerName}`)
@@ -46,6 +87,16 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
   const virementHref = `https://mail.google.com/mail/?view=cm&to=novaflows.pro@gmail.com&su=${virementSubject}&body=${virementBody}`
 
   const paypalHref = `https://paypal.me/WashBoardSAAS/${PRICE}`
+
+  const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? PRICE
+
+  function upgradeHref(target: typeof PLAN_CARDS[number]) {
+    const su = encodeURIComponent(`Passage au plan ${target.name} — ${washerName}`)
+    const body = encodeURIComponent(
+      `Bonjour,\n\nJe souhaite passer au plan ${target.name} (${target.price}€/mois) pour l'espace "${washerName}".\n\nEmail du compte : ${washerEmail}\n\nMerci.`
+    )
+    return `https://mail.google.com/mail/?view=cm&to=novaflows.pro@gmail.com&su=${su}&body=${body}`
+  }
 
   return (
     <div className="space-y-6">
@@ -59,7 +110,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
           </div>
           <div className="text-right">
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Tarif</p>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{PRICE}€<span className="text-sm font-medium text-slate-400">/mois</span></p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{currentPrice}€<span className="text-sm font-medium text-slate-400">/mois</span></p>
           </div>
         </div>
 
@@ -86,6 +137,68 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
             Votre accès est suspendu. Réglez votre abonnement pour retrouver l'accès complet.
           </div>
         )}
+      </div>
+
+      {/* Nos offres */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Nos offres</h2>
+        {grandfathered ? (
+          <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-4">
+            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong> sans changer d&apos;offre.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Choisissez l&apos;offre adaptée à votre activité.</p>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {PLAN_CARDS.map(card => {
+            const isCurrent = !grandfathered && plan === card.key
+            return (
+              <div
+                key={card.key}
+                className={`rounded-2xl border-2 p-4 flex flex-col ${
+                  isCurrent
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
+                    : 'border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-bold text-slate-900 dark:text-slate-100">{card.name}</p>
+                  {isCurrent && (
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-600 text-white">Actuel</span>
+                  )}
+                </div>
+                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-0.5">
+                  {card.price}€<span className="text-xs font-medium text-slate-400">/mois</span>
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{card.tagline}</p>
+                <ul className="space-y-1.5 flex-1 mb-4">
+                  {card.features.map(f => (
+                    <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                      <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {!isCurrent && !grandfathered && (
+                  <a
+                    href={upgradeHref(card)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors"
+                  >
+                    Choisir {card.name}
+                  </a>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-4">
+          Changement d&apos;offre activé manuellement sous 24h après votre demande.
+        </p>
       </div>
 
       {/* Options de paiement */}

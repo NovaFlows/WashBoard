@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Washer } from '@/types'
 import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import { hasFeature } from '@/lib/plan'
 
 type Props = {
   washer: Washer
@@ -56,8 +57,14 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [tierDraft, setTierDraft] = useState({ max_minutes: '', fee: '' })
   const [tierErr, setTierErr] = useState<string | null>(null)
   const [travelFeeMode, setTravelFeeMode] = useState<'base' | 'previous'>(washer.travel_fee_mode ?? 'base')
+  const [reviewEnabled, setReviewEnabled] = useState(washer.review_enabled ?? true)
+  const [reviewUrl, setReviewUrl] = useState(washer.google_review_url ?? '')
+  const [reviewDelay, setReviewDelay] = useState(String(washer.review_delay_hours ?? 3))
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
+
+  const [reviewMsg, setReviewMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [reviewLoading, setReviewLoading] = useState(false)
 
   const [newEmail, setNewEmail] = useState(email)
   const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -73,6 +80,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+  const canTeam = hasFeature(washer, 'multi_laveurs')
 
   function addTier() {
     const mins = parseInt(tierDraft.max_minutes)
@@ -113,6 +121,28 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       setProfileMsg({ ok: false, text: 'Erreur lors de la mise à jour' })
     }
     setProfileLoading(false)
+  }
+
+  async function saveReview(e: React.FormEvent) {
+    e.preventDefault()
+    setReviewMsg(null)
+    if (reviewEnabled && !reviewUrl.trim()) {
+      setReviewMsg({ ok: false, text: "Renseignez votre lien d'avis Google ou désactivez l'envoi" })
+      return
+    }
+    setReviewLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        review_enabled: reviewEnabled,
+        google_review_url: reviewUrl.trim() || null,
+        review_delay_hours: Math.max(0, parseInt(reviewDelay) || 0),
+      }),
+    })
+    setReviewMsg(res.ok ? { ok: true, text: 'Réglages enregistrés' } : { ok: false, text: 'Erreur lors de la mise à jour' })
+    if (res.ok) router.refresh()
+    setReviewLoading(false)
   }
 
   async function saveEmail(e: React.FormEvent) {
@@ -267,26 +297,91 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
           <div>
             <label className={labelClass}>Nombre de laveurs</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={teamSize}
-                onChange={e => setTeamSize(e.target.value)}
-                onBlur={() => {
-                  const v = parseInt(teamSize)
-                  setTeamSize(String(isNaN(v) || v < 1 ? 1 : v))
-                }}
-                className={`${inputClass} w-24`}
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {parseInt(teamSize) <= 1 ? 'Aucun chevauchement de RDV' : `Jusqu'à ${teamSize} RDV simultanés`}
-              </p>
-            </div>
+            {canTeam ? (
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={teamSize}
+                  onChange={e => setTeamSize(e.target.value)}
+                  onBlur={() => {
+                    const v = parseInt(teamSize)
+                    setTeamSize(String(isNaN(v) || v < 1 ? 1 : v))
+                  }}
+                  className={`${inputClass} w-24`}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {parseInt(teamSize) <= 1 ? 'Aucun chevauchement de RDV' : `Jusqu'à ${teamSize} RDV simultanés`}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <input type="number" value={1} disabled className={`${inputClass} w-24 opacity-50 cursor-not-allowed`} />
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  La gestion d&apos;équipe (RDV simultanés) fait partie du plan Business.{' '}
+                  <Link href="/dashboard/abonnement" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Voir les offres</Link>
+                </p>
+              </div>
+            )}
           </div>
           <Feedback msg={profileMsg} />
           <SaveButton loading={profileLoading} />
+        </form>
+      </Card>
+
+      {/* Avis Google — suivi client */}
+      <Card title="Avis Google" icon="⭐">
+        <form onSubmit={saveReview} noValidate className="space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
+            Envoyez automatiquement un email à vos clients après un lavage terminé pour leur demander un avis Google.
+          </p>
+
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Demande d&apos;avis automatique</span>
+            <button
+              type="button"
+              onClick={() => setReviewEnabled(v => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${reviewEnabled ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${reviewEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </label>
+
+          <div>
+            <label className={labelClass}>Lien d&apos;avis Google</label>
+            <input
+              type="url"
+              value={reviewUrl}
+              onChange={e => setReviewUrl(e.target.value)}
+              placeholder="https://g.page/r/..."
+              className={inputClass}
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+              Depuis votre fiche Google Business → <strong>Demander des avis</strong> → copiez le lien à partager.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Délai avant l&apos;envoi</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={168}
+                value={reviewDelay}
+                onChange={e => setReviewDelay(e.target.value)}
+                className={`${inputClass} w-24`}
+              />
+              <span className="text-sm text-slate-500 dark:text-slate-400">heures après « terminé »</span>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+              Conseillé : 3h (le temps que le client profite de sa voiture propre).
+            </p>
+          </div>
+
+          <Feedback msg={reviewMsg} />
+          <SaveButton loading={reviewLoading} />
         </form>
       </Card>
 

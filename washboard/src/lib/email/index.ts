@@ -258,6 +258,53 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   })
 }
 
+// ── Email 4 : demande d'avis Google (suivi client) ────────────────────────
+type SendReviewRequestParams = {
+  to: string
+  clientName: string
+  washerName: string
+  reviewUrl: string
+}
+
+export async function sendReviewRequest(params: SendReviewRequestParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  return resend.emails.send({
+    from: `WashBoard <noreply@washboard.fr>`,
+    to: params.to,
+    subject: `Votre avis compte pour ${params.washerName} ⭐`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;text-align:center;">
+      <h1 style="margin:0 0 6px;color:#ffffff;font-size:21px;font-weight:800;">Merci pour votre confiance !</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Comment s'est passé votre lavage avec ${params.washerName} ?</p>
+    </div>
+    <div style="padding:32px 40px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:15px;color:#0f172a;">Bonjour <strong>${params.clientName}</strong>,</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+        Votre véhicule est tout propre ? On espère que vous êtes satisfait·e !
+        Un petit avis Google aiderait énormément <strong>${params.washerName}</strong> — ça prend moins d'une minute.
+      </p>
+      <div style="font-size:30px;letter-spacing:4px;margin-bottom:24px;">⭐⭐⭐⭐⭐</div>
+      <a href="${params.reviewUrl}" target="_blank"
+         style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">
+        Laisser un avis Google
+      </a>
+      <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;">Merci beaucoup pour votre soutien 🙏</p>
+    </div>
+    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${params.washerName}</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 // ── Email 3 : notification nouvelle réservation au laveur ─────────────────
 type SendWasherNotificationParams = {
   to: string

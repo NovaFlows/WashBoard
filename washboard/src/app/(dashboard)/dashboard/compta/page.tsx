@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ComptaDashboard from '@/components/dashboard/ComptaDashboard'
+import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 
 export default async function ComptaPage() {
   const supabase = await createClient()
@@ -10,6 +12,24 @@ export default async function ComptaPage() {
 
   const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
+
+  // La comptabilité fait partie du plan Pro (et au-dessus)
+  if (!hasFeature(washer, 'compta')) {
+    return (
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status}>
+        <div className="p-4">
+          <div className="mb-6">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Comptabilité</h1>
+          </div>
+          <UpgradePrompt
+            title="Gérez votre comptabilité"
+            description="Suivez votre chiffre d'affaires, vos dépenses et votre résultat chaque mois. Disponible à partir du plan Pro."
+            planLabel={requiredPlanLabel('compta')}
+          />
+        </div>
+      </DashboardShell>
+    )
+  }
 
   // Revenus du mois courant pour le SSR initial
   const now   = new Date()

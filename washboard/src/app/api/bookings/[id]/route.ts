@@ -125,6 +125,16 @@ export async function PATCH(
       })
     }
 
+    // Suivi client : planifier la demande d'avis Google (envoi différé par le cron)
+    if (status === 'done' && washer.review_enabled && washer.google_review_url
+        && booking.client_email && !booking.review_request_sent_at) {
+      const delayMs = Math.max(0, Number(washer.review_delay_hours ?? 3)) * 3_600_000
+      await supabase
+        .from('bookings')
+        .update({ review_request_at: new Date(Date.now() + delayMs).toISOString() })
+        .eq('id', id)
+    }
+
     if (status === 'cancelled' && booking.google_calendar_event_id && washer.google_refresh_token) {
       await deleteCalendarEvent(washer.google_refresh_token, booking.google_calendar_event_id)
     }

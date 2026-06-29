@@ -27,6 +27,8 @@ export default async function AbonnementPage() {
         trialEndsAt={washer.trial_ends_at ?? null}
         washerName={washer.name}
         washerEmail={user.email ?? ''}
+        plan={washer.plan ?? 'essentiel'}
+        grandfathered={washer.grandfathered ?? false}
       />
     </DashboardShell>
   )
