@@ -53,7 +53,8 @@
         (ne bloque pas le build). NB : ces erreurs existaient déjà avant.
 - [ ] **Aucun test automatisé** : poser une base de tests (au moins sur la logique
       critique : prix, créneaux, gating des plans, `hasFeature`).
-- [ ] **`.env.example`** documentant les 11 variables d'env (sans valeurs).
+- [x] 2026-06-29 — **`.env.example`** documentant les 11 variables d'env (sans valeurs)
+      + exception `.gitignore` pour le rendre traçable.
 
 ## 🟡 Roadmap produit
 
