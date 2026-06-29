@@ -40,6 +40,8 @@ export default async function BookingPage({ params }: Props) {
     .single()
 
   if (!washer) notFound()
+  // Compte désactivé ou en cours de suppression : page de réservation masquée
+  if (washer.account_status && washer.account_status !== 'active') notFound()
 
   const { data: services } = await supabase
     .from('services')

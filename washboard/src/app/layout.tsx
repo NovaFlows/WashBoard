@@ -57,6 +57,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
+        {/* Script anti-flash : applique le thème avant le 1er paint. Rendu côté
+            serveur (composant serveur) → aucun avertissement React côté client. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`,
+          }}
+        />
         <RecoveryRedirect />
         <ThemeProvider>{children}</ThemeProvider>
       </body>

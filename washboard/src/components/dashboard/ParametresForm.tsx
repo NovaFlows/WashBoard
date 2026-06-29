@@ -317,6 +317,147 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={pwdLoading} label="Changer le mot de passe" />
         </form>
       </Card>
+
+      {/* Zone de danger */}
+      <DangerZone washer={washer} />
+    </div>
+  )
+}
+
+/* ── Zone de danger : désactivation / suppression de compte ── */
+function DangerZone({ washer }: { washer: Washer }) {
+  const router = useRouter()
+  const status = washer.account_status ?? 'active'
+  const [busy, setBusy]               = useState(false)
+  const [err, setErr]                 = useState<string | null>(null)
+  const [showDelete, setShowDelete]   = useState(false)
+  const [confirmName, setConfirmName] = useState('')
+
+  const [now] = useState(() => Date.now())
+  const daysLeft = washer.deletion_scheduled_at
+    ? Math.max(0, 30 - Math.floor((now - new Date(washer.deletion_scheduled_at).getTime()) / (1000 * 60 * 60 * 24)))
+    : 30
+
+  async function call(action: 'deactivate' | 'reactivate' | 'delete', confirm_name?: string) {
+    setBusy(true); setErr(null)
+    const res = await fetch('/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, confirm_name }),
+    })
+    const json = await res.json().catch(() => null)
+    setBusy(false)
+    if (!res.ok) { setErr(json?.error ?? 'Une erreur est survenue'); return }
+    setShowDelete(false); setConfirmName('')
+    router.refresh()
+  }
+
+  // ── Compte en cours de suppression ──
+  if (status === 'pending_deletion') {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-red-300 dark:border-red-800 shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2"><span>⏳</span>Suppression programmée</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">
+          Votre compte sera <strong>définitivement supprimé dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</strong>.
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Toutes vos données (clients, rendez-vous, comptabilité) seront effacées. Votre page de réservation est déjà masquée.
+        </p>
+        {err && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{err}</p>}
+        <button onClick={() => call('reactivate')} disabled={busy}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+          {busy ? '...' : 'Annuler la suppression'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Compte désactivé ──
+  if (status === 'deactivated') {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-300 dark:border-amber-800 shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-2"><span>⏸️</span>Compte désactivé</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.
+        </p>
+        {err && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{err}</p>}
+        <button onClick={() => call('reactivate')} disabled={busy}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+          {busy ? '...' : 'Réactiver mon compte'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Compte actif : désactiver / supprimer ──
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-red-200 dark:border-red-900/50 shadow-sm p-5">
+      <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2"><span>⚠️</span>Zone de danger</h2>
+
+      <div className="flex items-start justify-between gap-4 flex-wrap pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex-1 min-w-[12rem]">
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Désactiver mon compte</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masque votre page de réservation. Réversible à tout moment, vos données sont conservées.</p>
+        </div>
+        <button onClick={() => call('deactivate')} disabled={busy}
+          className="px-4 py-2 border-2 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-40 transition-colors shrink-0">
+          Désactiver
+        </button>
+      </div>
+
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex-1 min-w-[12rem]">
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Supprimer définitivement</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Efface votre compte et toutes vos données après 30 jours. Irréversible passé ce délai.</p>
+        </div>
+        <button onClick={() => { setShowDelete(true); setErr(null); setConfirmName('') }}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors shrink-0">
+          Supprimer
+        </button>
+      </div>
+
+      {err && !showDelete && <p className="text-xs text-red-600 dark:text-red-400 mt-3">{err}</p>}
+
+      {/* Modal de confirmation */}
+      {showDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !busy && setShowDelete(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Supprimer définitivement le compte</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+              Cette action programme la suppression de votre compte et de <strong>toutes vos données</strong> (clients, rendez-vous, comptabilité, prestations). Vous avez <strong>30 jours</strong> pour annuler avant l&apos;effacement définitif.
+            </p>
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 mb-4">
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Si vous avez un abonnement en cours, pensez à le résilier avant la prochaine échéance pour éviter d&apos;être prélevé.
+              </p>
+            </div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+              Pour confirmer, tapez le nom de votre entreprise : <strong className="text-slate-800 dark:text-slate-200">{washer.name}</strong>
+            </label>
+            <input
+              type="text"
+              value={confirmName}
+              onChange={e => setConfirmName(e.target.value)}
+              placeholder={washer.name}
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 mb-2"
+            />
+            {err && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{err}</p>}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => call('delete', confirmName)}
+                disabled={busy || confirmName.trim().toLowerCase() !== washer.name.trim().toLowerCase()}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
+              >
+                {busy ? 'Suppression...' : 'Supprimer mon compte'}
+              </button>
+              <button onClick={() => setShowDelete(false)} disabled={busy}
+                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-semibold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

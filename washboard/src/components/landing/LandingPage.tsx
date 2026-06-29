@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@/components/ui/ThemeProvider'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
