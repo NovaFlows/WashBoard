@@ -7,7 +7,7 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-06-29
+> Dernière mise à jour : 2026-06-29 (mission autonome : icônes, anti-spam, code mort, eslint, env)
 
 ---
 
@@ -69,8 +69,9 @@
 
 ## 🟢 Polish / UX
 
-- [ ] **Page d'accueil dashboard** : si ce n'est qu'un redirect, en faire une vraie
-      (RDV du jour, raccourcis, chiffres clés).
+- [x] 2026-06-29 — **Page d'accueil dashboard** : vérifiée — déjà une vraie page
+      (3 cartes stats En attente/Confirmés/Terminés + liste complète des RDV). Rien à faire.
+      Amélioration possible plus tard : « RDV du jour » mis en avant, raccourcis rapides.
 - [ ] **Accessibilité** : passe au-delà du `<h1>` déjà ajouté (focus, aria, contrastes).
 - [ ] **États de chargement** harmonisés (skeletons / spinners cohérents).
 
