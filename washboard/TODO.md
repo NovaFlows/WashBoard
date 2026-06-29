@@ -41,9 +41,16 @@
         landing (LandingPage L148 & L465). NE PAS supprimer sans décision produit.
         → Si ce flux démo n'est plus voulu : retirer les 2 liens landing puis supprimer
           les 4 fichiers. Sinon, à laisser tel quel (ou migrer vers un vrai flux).
-- [ ] **Corriger la dette eslint pré-existante** (sans changer le comportement) :
-  - [ ] `ComptaDashboard` : `setState` synchrone dans un `useEffect`
-  - [ ] Apostrophes non échappées (`react/no-unescaped-entities`) dans plusieurs fichiers
+- [~] **Dette eslint pré-existante** (sans changer le comportement) :
+  - [x] 2026-06-29 — Apostrophes non échappées (`react/no-unescaped-entities`) :
+        IdentiteForm, ParametresForm, AbonnementPanel → corrigées
+  - [x] 2026-06-29 — `Date.now()` pendant le render (DashboardShell) → capture via useState
+  - [ ] **7× `setState` synchrone dans un `useEffect`** — NON corrigées (risque de
+        changer le comportement, hors consigne) : ThemeProvider, ThemeToggle,
+        LandingPage (sync de thème), ComptaDashboard, StepSlot ×3 (data-fetching/zone).
+        Ce sont des patterns légitimes (fetch on mount, sync DOM) que la règle
+        React 19 juge trop strictement. À refactorer prudemment au cas par cas
+        (ne bloque pas le build). NB : ces erreurs existaient déjà avant.
 - [ ] **Aucun test automatisé** : poser une base de tests (au moins sur la logique
       critique : prix, créneaux, gating des plans, `hasFeature`).
 - [ ] **`.env.example`** documentant les 11 variables d'env (sans valeurs).

@@ -134,7 +134,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
 
         {subscriptionStatus === 'expired' && (
           <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
-            Votre accès est suspendu. Réglez votre abonnement pour retrouver l'accès complet.
+            Votre accès est suspendu. Réglez votre abonnement pour retrouver l&apos;accès complet.
           </div>
         )}
       </div>

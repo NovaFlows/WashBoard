@@ -186,7 +186,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       <Card title="Mon profil" icon={User}>
         <form onSubmit={saveProfile} noValidate className="space-y-4">
           <div>
-            <label className={labelClass}>Nom de l'entreprise</label>
+            <label className={labelClass}>Nom de l&apos;entreprise</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputClass} />
           </div>
           <div>
@@ -212,7 +212,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               {tiers.map(t => (
                 <div key={t.max_minutes} className="flex items-center gap-2 text-sm">
                   <span className="flex-1 text-slate-700 dark:text-slate-300">
-                    Jusqu'à {t.max_minutes} min → <strong>{t.fee}€</strong>
+                    Jusqu&apos;à {t.max_minutes} min → <strong>{t.fee}€</strong>
                   </span>
                   <button
                     type="button"
@@ -566,7 +566,7 @@ function ClientTab({ washer }: { washer: Washer }) {
     <div className="space-y-5">
       <Card title="Votre page de réservation" icon={Link2}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-          Partagez ce lien à vos clients pour qu'ils puissent réserver en ligne.
+          Partagez ce lien à vos clients pour qu&apos;ils puissent réserver en ligne.
         </p>
         <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
           <span className="text-sm text-blue-600 dark:text-blue-400 font-mono flex-1 truncate">/book/{washer.slug}</span>
@@ -581,7 +581,7 @@ function ClientTab({ washer }: { washer: Washer }) {
 
       <Card title="Personnalisation de la page client" icon={Palette}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Configurez votre logo, votre message d'accueil, vos prestations et vos disponibilités.
+          Configurez votre logo, votre message d&apos;accueil, vos prestations et vos disponibilités.
         </p>
         <Link
           href="/dashboard/admin"

@@ -14,6 +14,7 @@ type Props = {
 
 function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string | null; subscriptionStatus?: string | null }) {
   const [dismissed, setDismissed] = useState(false)
+  const [now] = useState(() => Date.now())
 
   if (!subscriptionStatus || subscriptionStatus === 'active') return null
   if (dismissed) return null
@@ -30,7 +31,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string
   }
 
   if (subscriptionStatus === 'trial' && trialEndsAt) {
-    const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24))
     const isUrgent = daysLeft <= 7
 
     if (daysLeft <= 0) {

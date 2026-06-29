@@ -409,7 +409,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
 
       {/* Message d'accueil */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Message d'accueil</h2>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Message d&apos;accueil</h2>
         <label className={labelClass}>Affiché sous votre nom sur la page de réservation</label>
         <textarea
           value={message}
@@ -469,7 +469,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Zone d'intervention</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Zone d&apos;intervention</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Bloquez les réservations hors de votre secteur</p>
           </div>
           <button
@@ -524,7 +524,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
                   )}
                 </div>
                 <div>
-                  <label className={labelClass}>Rayon d'intervention</label>
+                  <label className={labelClass}>Rayon d&apos;intervention</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="range" min={5} max={150} step={5}
