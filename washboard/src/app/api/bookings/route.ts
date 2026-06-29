@@ -2,10 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { computeTravelFee } from '@/lib/travelFee'
+import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
+// Plafonds anti-spam (réservation publique)
+const IP_LIMIT = 8           // réservations max par IP
+const IP_WINDOW_MS = 10 * 60 * 1000  // sur 10 minutes
+const WASHER_DAILY_CAP = 60  // réservations max par laveur et par jour
+
 const BookingSchema = z.object({
+  hp:              z.string().optional(),   // honeypot : doit rester vide
   washer_id:       z.string().uuid(),
   service_id:      z.string().uuid(),
   vehicle_type:    z.string().min(1),
@@ -38,6 +45,18 @@ const BookingSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  // ── Anti-spam #1 : rate-limit par IP ────────────────────────────────────
+  cleanupRateLimit()
+  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim()
+    || req.headers.get('x-real-ip') || 'unknown'
+  const rl = rateLimit(`book:${ip}`, IP_LIMIT, IP_WINDOW_MS)
+  if (!rl.ok) {
+    return Response.json(
+      { error: 'Trop de réservations en peu de temps. Réessayez dans quelques minutes.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
+
   const body = await req.json()
   const parsed = BookingSchema.safeParse(body)
 
@@ -48,13 +67,38 @@ export async function POST(req: Request) {
     )
   }
 
+  // ── Anti-spam #2 : honeypot (champ piège rempli uniquement par les bots) ──
+  const { hp, ...cleanData } = parsed.data
+  if (hp && hp.trim()) {
+    // On renvoie un succès factice pour ne pas révéler le piège au bot.
+    return Response.json({ data: { id: randomUUID() } }, { status: 201 })
+  }
+
   const {
     vehicle_type, vehicle_count, is_smart_slot, smart_discount,
     booked_price: bookedPriceInput, is_professional, company_name, siret, billing_address,
     vehicles_detail, selected_addons, travel_fee,
     ...bookingData
-  } = parsed.data
+  } = cleanData
   const id = randomUUID()
+
+  // ── Anti-spam #3 : plafond de réservations par laveur et par jour ────────
+  const admin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0)
+  const { count: dailyCount } = await admin
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('washer_id', bookingData.washer_id)
+    .gte('created_at', startOfDay.toISOString())
+  if ((dailyCount ?? 0) >= WASHER_DAILY_CAP) {
+    return Response.json(
+      { error: 'Ce prestataire a atteint sa limite de réservations pour aujourd\'hui. Réessayez demain.' },
+      { status: 429 },
+    )
+  }
 
   const supabase = await createClient()
 

@@ -13,9 +13,11 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Anti-spam sur `POST /api/bookings`** (réservation publique) : honeypot +
-      rate-limit par IP + plafond par laveur/jour. Aujourd'hui n'importe qui peut
-      spammer de fausses réservations → faux RDV, emails parasites, CRM pollué.
+- [x] 2026-06-29 — **Anti-spam sur `POST /api/bookings`** (réservation publique) :
+      honeypot (champ piège) + rate-limit par IP (8/10min, en mémoire) + plafond
+      par laveur/jour (60/j). Rate-limit testé (9ᵉ requête → 429).
+  - [ ] Amélioration future : rate-limit cross-instances (Upstash/Redis ou table)
+        car la mémoire serverless n'est pas partagée entre instances.
 
 - [x] 2026-06-29 — **Remplacer TOUS les emojis/icônes "template IA" par des icônes sobres**
       (lucide-react). Passage projet entier fait :

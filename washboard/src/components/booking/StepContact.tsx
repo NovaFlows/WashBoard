@@ -13,6 +13,7 @@ type Props = {
     company_name?: string
     siret?: string
     billing_address?: string
+    hp?: string
   }) => void
   onBack: () => void
   accent?: string
@@ -27,6 +28,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   const [siret,          setSiret]          = useState('')
   const [siretTouched,   setSiretTouched]   = useState(false)
   const [billingAddress, setBillingAddress] = useState('')
+  const [hp, setHp] = useState('') // honeypot anti-spam (caché aux humains)
 
   const phoneDigits = phone.replace(/\D/g, '')
   const phoneValid  = phoneDigits.length === 10
@@ -49,6 +51,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
       client_name:  name,
       client_email: email,
       client_phone: phone,
+      hp,
       ...(isProfessional && {
         company_name:    companyName.trim(),
         siret:           siretDigits,
@@ -116,6 +119,13 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           </div>
         </div>
       )}
+
+      {/* Honeypot anti-spam : invisible aux humains, rempli par les bots */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
+        <label>Ne pas remplir ce champ
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" value={hp} onChange={e => setHp(e.target.value)} />
+        </label>
+      </div>
 
       {/* Infos contact */}
       <div className="space-y-4 mb-6">
