@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { Sun, Moon } from 'lucide-react'
 import type { Washer, ZoneConfig } from '@/types'
 import { DEPARTMENTS } from '@/lib/france-departments'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
@@ -343,9 +344,9 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             }`}
           >
             <div className="w-full h-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center gap-2">
-              <span className="text-sm">☀️</span>
+              <Sun size={14} strokeWidth={2} className="text-slate-500 dark:text-slate-400" />
               <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Clair / Sombre</span>
-              <span className="text-sm">🌙</span>
+              <Moon size={14} strokeWidth={2} className="text-slate-500 dark:text-slate-400" />
             </div>
             {!bgTheme && (
               <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Palette, SprayCan, Calendar, type LucideIcon } from 'lucide-react'
 import type { Washer, Service, ServiceCategory, Availability, Unavailability } from '@/types'
 import IdentiteForm from './IdentiteForm'
 import PrestationsManager from './PrestationsManager'
@@ -8,10 +9,10 @@ import DisponibilitesManager from './DisponibilitesManager'
 
 type Tab = 'identite' | 'prestations' | 'disponibilites'
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'identite',        label: 'Identité',        icon: '🎨' },
-  { key: 'prestations',     label: 'Prestations',     icon: '🧽' },
-  { key: 'disponibilites',  label: 'Disponibilités',  icon: '📅' },
+const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
+  { key: 'identite',        label: 'Identité',        icon: Palette },
+  { key: 'prestations',     label: 'Prestations',     icon: SprayCan },
+  { key: 'disponibilites',  label: 'Disponibilités',  icon: Calendar },
 ]
 
 type Props = {
@@ -39,7 +40,7 @@ export default function AdminTabs({ washer, services, categories, availabilities
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            <span>{t.icon}</span>
+            <t.icon size={16} strokeWidth={2} />
             <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}

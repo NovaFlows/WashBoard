@@ -229,7 +229,7 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {uTeamMembersOff >= teamSize
-                    ? '⚠ Toute l\'équipe — les créneaux seront bloqués'
+                    ? 'Toute l\'équipe — les créneaux seront bloqués'
                     : `${teamSize - uTeamMembersOff} laveur(s) restant — capacité réduite`}
                 </p>
               </div>

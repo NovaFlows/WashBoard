@@ -1115,7 +1115,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   </div>
                   <p className={`text-xs mt-2 text-center font-medium ${addModal.team_members_off >= teamSize ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500'}`}>
                     {addModal.team_members_off >= teamSize
-                      ? '⚠ Toute l\'équipe — les créneaux seront bloqués'
+                      ? 'Toute l\'équipe — les créneaux seront bloqués'
                       : `${teamSize - addModal.team_members_off} laveur${teamSize - addModal.team_members_off > 1 ? 's' : ''} restant — capacité réduite`
                     }
                   </p>
@@ -1158,7 +1158,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               {delModal.label && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{delModal.label}</p>}
               {teamSize > 1 && (
                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">
-                  {isFullyUnavailable(delModal) ? '⚠ Toute l\'équipe' : `${delModal.team_members_off} / ${teamSize} laveurs`}
+                  {isFullyUnavailable(delModal) ? 'Toute l\'équipe' : `${delModal.team_members_off} / ${teamSize} laveurs`}
                 </p>
               )}
             </div>
@@ -1371,7 +1371,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               {/* Avertissement faisabilité */}
               {feasibilityWarn && (
                 <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-xl p-4">
-                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">⚠ Problème de faisabilité détecté</p>
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">Problème de faisabilité détecté</p>
                   <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed mb-3">{feasibilityWarn}</p>
                   <p className="text-xs text-amber-600 dark:text-amber-500 font-medium mb-3">Êtes-vous sûr de vouloir créer ce rendez-vous ?</p>
                   <div className="flex gap-2">

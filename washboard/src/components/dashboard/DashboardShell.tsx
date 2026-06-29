@@ -52,7 +52,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string
       }`}>
         <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
           <span>
-            {isUrgent ? '⚠ ' : ''}Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
+            Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
           </span>
           <Link
             href="/dashboard/abonnement"

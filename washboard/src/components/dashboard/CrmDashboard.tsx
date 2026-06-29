@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts'
+import { Hourglass, ClipboardList, Euro, CheckCircle2, BarChart3, Building2, type LucideIcon } from 'lucide-react'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type Booking = {
@@ -317,11 +318,11 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
 
   const recentBookings = isFiltered ? displayBookings : displayBookings.slice(0, 6)
 
-  const kpis = [
-    { label: 'En attente',         value: pending,        suffix: '',  color: 'amber',   icon: '⏳' },
-    { label: 'Total réservations', value: total,          suffix: '',  color: 'blue',    icon: '📋' },
-    { label: "Chiffre d'affaires", value: revenue,        suffix: '€', color: 'emerald', icon: '💶' },
-    { label: 'Taux de succès',     value: completionRate, suffix: '%', color: 'purple',  icon: '✅' },
+  const kpis: { label: string; value: number; suffix: string; color: string; icon: LucideIcon }[] = [
+    { label: 'En attente',         value: pending,        suffix: '',  color: 'amber',   icon: Hourglass },
+    { label: 'Total réservations', value: total,          suffix: '',  color: 'blue',    icon: ClipboardList },
+    { label: "Chiffre d'affaires", value: revenue,        suffix: '€', color: 'emerald', icon: Euro },
+    { label: 'Taux de succès',     value: completionRate, suffix: '%', color: 'purple',  icon: CheckCircle2 },
   ]
 
   const kpiColors: Record<string, string> = {
@@ -462,7 +463,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
   if (bookings.length === 0) {
     return (
       <div className="text-center py-16">
-        <p className="text-4xl mb-3">📊</p>
+        <BarChart3 size={40} strokeWidth={1.5} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">Pas encore de données</h2>
         <p className="text-sm text-slate-400 dark:text-slate-500">Les statistiques apparaîtront dès votre première réservation</p>
       </div>
@@ -521,7 +522,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}>
-                {f === 'all' ? 'Tous' : f === 'individual' ? '👤 Particuliers' : '🏢 Professionnels'}
+                {f === 'all' ? 'Tous' : f === 'individual' ? 'Particuliers' : 'Professionnels'}
               </button>
             ))}
           </div>
@@ -667,7 +668,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
           <div key={kpi.label} className={`rounded-2xl border p-4 ${kpiColors[kpi.color]}`}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium opacity-70">{kpi.label}</p>
-              <span className="text-lg">{kpi.icon}</span>
+              <kpi.icon size={18} strokeWidth={2} className="opacity-70" />
             </div>
             <p className="text-3xl font-extrabold tracking-tight">
               {kpi.value}{kpi.suffix}
@@ -791,7 +792,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
               return (
                 <div key={b.id} className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
                   <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-500 shrink-0">
-                    {b.is_professional ? '🏢' : b.client_name.charAt(0).toUpperCase()}
+                    {b.is_professional ? <Building2 size={16} strokeWidth={2} /> : b.client_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">

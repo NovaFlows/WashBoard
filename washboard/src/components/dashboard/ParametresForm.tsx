@@ -7,6 +7,7 @@ import type { Washer } from '@/types'
 import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { hasFeature } from '@/lib/plan'
+import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
 
 type Props = {
   washer: Washer
@@ -182,7 +183,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   return (
     <div className="space-y-5">
       {/* Profil */}
-      <Card title="Mon profil" icon="👤">
+      <Card title="Mon profil" icon={User}>
         <form onSubmit={saveProfile} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Nom de l'entreprise</label>
@@ -331,7 +332,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       </Card>
 
       {/* Avis Google — suivi client */}
-      <Card title="Avis Google" icon="⭐">
+      <Card title="Avis Google" icon={Star}>
         <form onSubmit={saveReview} noValidate className="space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
             Envoyez automatiquement un email à vos clients après un lavage terminé pour leur demander un avis Google.
@@ -386,7 +387,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       </Card>
 
       {/* Email */}
-      <Card title="Adresse email" icon="✉️">
+      <Card title="Adresse email" icon={Mail}>
         <form onSubmit={saveEmail} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Email</label>
@@ -398,7 +399,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       </Card>
 
       {/* Mot de passe */}
-      <Card title="Mot de passe" icon="🔒">
+      <Card title="Mot de passe" icon={Lock}>
         <form onSubmit={savePassword} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Nouveau mot de passe</label>
@@ -451,7 +452,7 @@ function DangerZone({ washer }: { washer: Washer }) {
   if (status === 'pending_deletion') {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-red-300 dark:border-red-800 shadow-sm p-5">
-        <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2"><span>⏳</span>Suppression programmée</h2>
+        <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2"><Hourglass size={15} strokeWidth={2} />Suppression programmée</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">
           Votre compte sera <strong>définitivement supprimé dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</strong>.
         </p>
@@ -471,7 +472,7 @@ function DangerZone({ washer }: { washer: Washer }) {
   if (status === 'deactivated') {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-300 dark:border-amber-800 shadow-sm p-5">
-        <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-2"><span>⏸️</span>Compte désactivé</h2>
+        <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-2"><PauseCircle size={15} strokeWidth={2} />Compte désactivé</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
           Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.
         </p>
@@ -487,7 +488,7 @@ function DangerZone({ washer }: { washer: Washer }) {
   // ── Compte actif : désactiver / supprimer ──
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-red-200 dark:border-red-900/50 shadow-sm p-5">
-      <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2"><span>⚠️</span>Zone de danger</h2>
+      <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2"><AlertTriangle size={15} strokeWidth={2} />Zone de danger</h2>
 
       <div className="flex items-start justify-between gap-4 flex-wrap pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex-1 min-w-[12rem]">
@@ -563,7 +564,7 @@ function ClientTab({ washer }: { washer: Washer }) {
 
   return (
     <div className="space-y-5">
-      <Card title="Votre page de réservation" icon="🔗">
+      <Card title="Votre page de réservation" icon={Link2}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
           Partagez ce lien à vos clients pour qu'ils puissent réserver en ligne.
         </p>
@@ -578,7 +579,7 @@ function ClientTab({ washer }: { washer: Washer }) {
         </div>
       </Card>
 
-      <Card title="Personnalisation de la page client" icon="🎨">
+      <Card title="Personnalisation de la page client" icon={Palette}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Configurez votre logo, votre message d'accueil, vos prestations et vos disponibilités.
         </p>
@@ -597,11 +598,11 @@ function ClientTab({ washer }: { washer: Washer }) {
 }
 
 /* ── Composants utilitaires ── */
-function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Card({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-        <span>{icon}</span>{title}
+        <Icon size={16} strokeWidth={2} className="text-slate-400 dark:text-slate-500" />{title}
       </h2>
       {children}
     </div>

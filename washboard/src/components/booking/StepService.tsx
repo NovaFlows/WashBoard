@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Clock, Check } from 'lucide-react'
+import { Clock, Check, User, Building2 } from 'lucide-react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
 
 type Props = {
@@ -134,7 +134,7 @@ export default function StepService({ services, categories, selected, onNext, ac
               : 'text-slate-500 dark:text-slate-400'
           }`}
         >
-          <span>👤</span> Particulier
+          <User size={15} strokeWidth={2} /> Particulier
         </button>
         <button
           onClick={() => { setIsPro(true) }}
@@ -144,7 +144,7 @@ export default function StepService({ services, categories, selected, onNext, ac
               : 'text-slate-500 dark:text-slate-400'
           }`}
         >
-          <span>🏢</span> Professionnel
+          <Building2 size={15} strokeWidth={2} /> Professionnel
         </button>
       </div>
 
