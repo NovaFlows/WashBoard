@@ -63,7 +63,7 @@ type Props = {
     billing_address: string | null
     services: { name: string } | null
     washers: { name: string; phone: string | null } | null
-    vehicles_detail?: { type: string; count: number; unit_price: number }[] | null
+    vehicles_detail?: { type: string; count: number; unit_price: number; label?: string }[] | null
   }
 }
 
@@ -180,7 +180,7 @@ export default function BookingPDF({ booking }: Props) {
           {isMultiVehicle && vehiclesDetail!.map((item, i) => {
             const lineTotal = item.unit_price * item.count
             const lineTotalStr = Number.isInteger(lineTotal) ? String(lineTotal) : lineTotal.toFixed(2)
-            const label = VEHICLE_LABELS[item.type] ?? item.type
+            const label = item.label ?? VEHICLE_LABELS[item.type] ?? item.type
             return (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 7, paddingLeft: 28, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
                 <Text style={{ fontSize: 10, color: '#475569' }}>{label} × {item.count}  ({item.unit_price}€/véh)</Text>

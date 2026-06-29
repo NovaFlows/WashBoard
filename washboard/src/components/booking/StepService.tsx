@@ -1,25 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Clock, Check } from 'lucide-react'
-import type { Service, VehicleItem } from '@/types'
+import type { Service, ServiceCategory, VehicleItem } from '@/types'
 
 type Props = {
   services: Service[]
+  categories: ServiceCategory[]
   selected: { service_id?: string; vehicle_type?: string }
   onNext: (data: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number; is_professional: boolean; vehicles_detail?: VehicleItem[] }) => void
   accent?: string
 }
 
-const VEHICLE_LABELS: Record<string, { label: string; icon: string; img?: string }> = {
-  citadine_2p: { label: 'Citadine 2p',     icon: '', img: '/vehicles/citadine_2p.png' },
-  citadine:    { label: 'Citadine',         icon: '', img: '/vehicles/citadine.png' },
-  berline:     { label: 'Berline',          icon: '', img: '/vehicles/berline.png' },
-  SUV:         { label: 'SUV / 4x4',        icon: '', img: '/vehicles/suv.png' },
-  monospace:   { label: 'Monospace',        icon: '', img: '/vehicles/monospace.png' },
-  '7places':   { label: '7 places',         icon: '', img: '/vehicles/monospace.png' },
-  utilitaire:  { label: 'Van / Utilitaire', icon: '', img: '/vehicles/utilitaire.png' },
-  velo:        { label: 'Vélo',             icon: '', img: '/vehicles/bike.svg' },
+// Images pour les types « voiture » historiques (résolus par id de type).
+const VEHICLE_IMAGES: Record<string, string> = {
+  citadine_2p: '/vehicles/citadine_2p.png',
+  citadine:    '/vehicles/citadine.png',
+  berline:     '/vehicles/berline.png',
+  SUV:         '/vehicles/suv.png',
+  monospace:   '/vehicles/monospace.png',
+  '7places':   '/vehicles/monospace.png',
+  utilitaire:  '/vehicles/utilitaire.png',
+  velo:        '/vehicles/bike.svg',
 }
 
 function hex(color: string, opacity: number) {
@@ -40,13 +42,41 @@ function hasOverrides(service: Service): boolean {
   return overrides.length > 0 && overrides.some(p => p !== service.price)
 }
 
-export default function StepService({ services, selected, onNext, accent = '#2563eb' }: Props) {
+const UNCATEGORIZED = '__none__'
+
+export default function StepService({ services, categories, selected, onNext, accent = '#2563eb' }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
-  // Panier : un compteur par type de véhicule (permet de mélanger les types)
+  // Panier : un compteur par type (permet de mélanger les types)
   const [basket,    setBasket]    = useState<Record<string, number>>({})
 
+  // Onglets : seules les catégories qui ont au moins une prestation.
+  const tabs = useMemo(() => {
+    const list = categories
+      .filter(c => services.some(s => s.category_id === c.id))
+      .map(c => ({ id: c.id, name: c.name }))
+    const hasUncategorized = services.some(s => !s.category_id || !categories.some(c => c.id === s.category_id))
+    if (hasUncategorized) list.push({ id: UNCATEGORIZED, name: list.length > 0 ? 'Autres' : 'Prestations' })
+    return list
+  }, [categories, services])
+
+  const [activeTab, setActiveTab] = useState(() => tabs[0]?.id ?? '')
+
+  const visibleServices = useMemo(() => {
+    if (!activeTab) return services
+    if (activeTab === UNCATEGORIZED)
+      return services.filter(s => !s.category_id || !categories.some(c => c.id === s.category_id))
+    return services.filter(s => s.category_id === activeTab)
+  }, [services, categories, activeTab])
+
   const selectedService = services.find(s => s.id === serviceId)
+
+  // Résout le nom (et l'image éventuelle) d'un type pour la prestation sélectionnée.
+  function typeInfo(service: Service, typeId: string): { name: string; img?: string } {
+    const cat = categories.find(c => c.id === service.category_id)
+    const t = cat?.types.find(tt => tt.id === typeId)
+    return { name: t?.name ?? typeId, img: VEHICLE_IMAGES[typeId] }
+  }
 
   const basketCount = Object.values(basket).reduce((sum, c) => sum + c, 0)
   const basketTotal = selectedService
@@ -54,6 +84,12 @@ export default function StepService({ services, selected, onNext, accent = '#256
     : 0
 
   const canContinue = !!serviceId && basketCount > 0
+
+  function selectTab(id: string) {
+    setActiveTab(id)
+    setServiceId('')
+    setBasket({})
+  }
 
   function setVehicleCount(type: string, count: number) {
     setBasket(prev => {
@@ -70,7 +106,12 @@ export default function StepService({ services, selected, onNext, accent = '#256
     if (!canContinue || !selectedService) return
     const vehicles_detail: VehicleItem[] = Object.entries(basket)
       .filter(([, c]) => c > 0)
-      .map(([type, count]) => ({ type, count, unit_price: vehiclePrice(selectedService, type) }))
+      .map(([type, count]) => ({
+        type,
+        count,
+        unit_price: vehiclePrice(selectedService, type),
+        label: typeInfo(selectedService, type).name,
+      }))
     onNext({
       service_id:      serviceId,
       vehicle_type:    vehicles_detail[0].type,
@@ -83,8 +124,8 @@ export default function StepService({ services, selected, onNext, accent = '#256
 
   return (
     <div>
-      {/* Toggle Particulier / Professionnel */}
-      <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-5">
+      {/* Toggle Particulier / Professionnel (facturation) */}
+      <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-4">
         <button
           onClick={() => { setIsPro(false) }}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
@@ -108,8 +149,30 @@ export default function StepService({ services, selected, onNext, accent = '#256
       </div>
 
       {isPro && (
-        <div className="mb-5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-400">
+        <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-400">
           Une facture avec vos informations société vous sera envoyée à la confirmation.
+        </div>
+      )}
+
+      {/* Onglets de catégories — répartis sur toute la largeur */}
+      {tabs.length > 1 && (
+        <div className="flex w-full gap-2 mb-4">
+          {tabs.map(t => {
+            const active = activeTab === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => selectTab(t.id)}
+                className="flex-1 min-w-0 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-all truncate"
+                style={active
+                  ? { borderColor: accent, backgroundColor: hex(accent, 0.08), color: accent }
+                  : { borderColor: '#e2e8f0', color: '#64748b' }
+                }
+              >
+                {t.name}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -117,7 +180,10 @@ export default function StepService({ services, selected, onNext, accent = '#256
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
 
       <div className="flex flex-col gap-3 mb-6">
-        {services.map((service) => {
+        {visibleServices.length === 0 && (
+          <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">Aucune prestation dans cette catégorie.</p>
+        )}
+        {visibleServices.map((service) => {
           const isSelected = serviceId === service.id
           return (
             <button
@@ -169,14 +235,14 @@ export default function StepService({ services, selected, onNext, accent = '#256
         })}
       </div>
 
-      {/* Sélection des véhicules — panier multi-types (1 SUV + 1 monospace, etc.) */}
+      {/* Sélection des types — panier multi-types (1 SUV + 1 monospace, etc.) */}
       {selectedService && (
         <div className="mb-6">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vos véhicules</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs véhicules, de types différents si besoin.</p>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs éléments, de types différents si besoin.</p>
           <div className="space-y-2">
             {selectedService.vehicle_types.map(type => {
-              const info  = VEHICLE_LABELS[type] ?? { label: type, icon: '🚘' }
+              const info  = typeInfo(selectedService, type)
               const price = vehiclePrice(selectedService, type)
               const count = basket[type] ?? 0
               return (
@@ -188,14 +254,12 @@ export default function StepService({ services, selected, onNext, accent = '#256
                     : { borderColor: '#e2e8f0' }
                   }
                 >
-                  {info.img ? (
-                    <img src={info.img} alt={info.label} className="w-12 h-12 object-contain shrink-0 opacity-80" />
-                  ) : (
-                    <span className="text-xl w-7 text-center shrink-0">{info.icon}</span>
+                  {info.img && (
+                    <img src={info.img} alt={info.name} className="w-12 h-12 object-contain shrink-0 opacity-80" />
                   )}
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{info.label}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">{price}€/véhicule</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{info.name}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{price}€/unité</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -221,17 +285,17 @@ export default function StepService({ services, selected, onNext, accent = '#256
           {basketCount > 0 && (
             <div className="mt-3 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-1.5">
               {Object.entries(basket).map(([type, count]) => {
-                const info  = VEHICLE_LABELS[type] ?? { label: type, icon: '🚘' }
+                const info  = typeInfo(selectedService, type)
                 const price = vehiclePrice(selectedService, type)
                 return (
                   <div key={type} className="flex justify-between text-sm">
-                    <span className="text-slate-500 dark:text-slate-400">{info.label} × {count}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{info.name} × {count}</span>
                     <span className="text-slate-700 dark:text-slate-300">{price * count}€</span>
                   </div>
                 )
               })}
               <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-0.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
-                <span>Total ({basketCount} véhicule{basketCount > 1 ? 's' : ''})</span>
+                <span>Total ({basketCount} élément{basketCount > 1 ? 's' : ''})</span>
                 <span>{basketTotal}€</span>
               </div>
             </div>

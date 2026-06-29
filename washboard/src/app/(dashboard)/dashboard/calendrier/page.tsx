@@ -16,6 +16,7 @@ export default async function CalendrierPage() {
     { data: bookings },
     { data: unavailabilities },
     { data: services },
+    { data: categories },
   ] = await Promise.all([
     supabase
       .from('bookings')
@@ -32,6 +33,11 @@ export default async function CalendrierPage() {
       .select('*')
       .eq('washer_id', washer.id)
       .order('created_at'),
+    supabase
+      .from('service_categories')
+      .select('*')
+      .eq('washer_id', washer.id)
+      .order('display_order'),
   ])
 
   return (
@@ -41,6 +47,7 @@ export default async function CalendrierPage() {
         unavailabilities={unavailabilities ?? []}
         teamSize={washer.team_size ?? 1}
         services={services ?? []}
+        categories={categories ?? []}
         washerId={washer.id}
       />
     </DashboardShell>

@@ -46,6 +46,12 @@ export default async function BookingPage({ params }: Props) {
     .select('*')
     .eq('washer_id', washer.id)
 
+  const { data: categories } = await supabase
+    .from('service_categories')
+    .select('*')
+    .eq('washer_id', washer.id)
+    .order('display_order')
+
   const { data: availabilities } = await supabase
     .from('availabilities')
     .select('*')
@@ -127,6 +133,7 @@ export default async function BookingPage({ params }: Props) {
         <BookingForm
           washer={washer}
           services={services ?? []}
+          categories={categories ?? []}
           availabilities={availabilities ?? []}
           existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }[]}
           unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string }[]}

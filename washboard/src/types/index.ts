@@ -36,9 +36,23 @@ export type ServiceAddon = {
   category: string
 }
 
+export type CategoryType = {
+  id: string
+  name: string
+}
+
+export type ServiceCategory = {
+  id: string
+  washer_id: string
+  name: string
+  types: CategoryType[]
+  display_order: number
+}
+
 export type Service = {
   id: string
   washer_id: string
+  category_id: string | null
   name: string
   description: string | null
   price: number
@@ -97,6 +111,7 @@ export type VehicleItem = {
   type: string
   count: number
   unit_price: number
+  label?: string
 }
 
 export type BookingFormData = {

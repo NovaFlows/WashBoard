@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import type { CategoryType } from '@/types'
+
+function sanitizeTypes(raw: unknown): CategoryType[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((t) => {
+      const obj = t as { id?: unknown; name?: unknown }
+      const name = typeof obj?.name === 'string' ? obj.name.trim() : ''
+      const id = typeof obj?.id === 'string' && obj.id ? obj.id : crypto.randomUUID()
+      return { id, name }
+    })
+    .filter((t) => t.name.length > 0)
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
@@ -10,23 +23,18 @@ export async function POST(request: NextRequest) {
     .from('washers').select('id').eq('user_id', user.id).single()
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
-  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id } = await request.json()
-  if (!name?.trim() || price === undefined || !duration_minutes) {
-    return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
+  const { name, types, display_order } = await request.json()
+  if (!name?.trim()) {
+    return NextResponse.json({ error: 'Nom de catégorie requis' }, { status: 400 })
   }
 
   const { data, error } = await supabase
-    .from('services')
+    .from('service_categories')
     .insert({
       washer_id: washer.id,
-      category_id: category_id ?? null,
       name: name.trim(),
-      description: description?.trim() || null,
-      price: Number(price),
-      duration_minutes: Number(duration_minutes),
-      vehicle_types: vehicle_types ?? [],
-      vehicle_price_overrides: vehicle_price_overrides ?? {},
-      addons: addons ?? [],
+      types: sanitizeTypes(types),
+      display_order: Number(display_order) || 0,
     })
     .select()
     .single()

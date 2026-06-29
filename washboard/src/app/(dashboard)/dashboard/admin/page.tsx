@@ -14,10 +14,12 @@ export default async function AdminPage() {
 
   const [
     { data: services },
+    { data: categories },
     { data: availabilities },
     { data: unavailabilities },
   ] = await Promise.all([
     supabase.from('services').select('*').eq('washer_id', washer.id).order('created_at'),
+    supabase.from('service_categories').select('*').eq('washer_id', washer.id).order('display_order'),
     supabase.from('availabilities').select('*').eq('washer_id', washer.id).order('day_of_week'),
     supabase.from('unavailabilities').select('*').eq('washer_id', washer.id).order('start_date'),
   ])
@@ -39,7 +41,7 @@ export default async function AdminPage() {
           Configurez ce que vos clients voient sur votre page de réservation
         </p>
       </div>
-      <AdminTabs washer={washer} services={services ?? []} availabilities={availabilities ?? []} unavailabilities={unavailabilities ?? []} />
+      <AdminTabs washer={washer} services={services ?? []} categories={categories ?? []} availabilities={availabilities ?? []} unavailabilities={unavailabilities ?? []} />
     </DashboardShell>
   )
 }

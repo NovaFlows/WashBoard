@@ -20,7 +20,7 @@ type Booking = {
   selected_addons: ServiceAddon[] | null
   travel_fee: number | null
   vehicle_count: number | null
-  vehicles_detail: { type: string; count: number; unit_price: number }[] | null
+  vehicles_detail: { type: string; count: number; unit_price: number; label?: string }[] | null
   services: Service | null
 }
 
@@ -321,7 +321,7 @@ function BookingCard({ booking, loading, onUpdate }: {
             )}
             {booking.vehicles_detail && booking.vehicles_detail.length > 0 && (
               <Row icon="car">
-                {booking.vehicles_detail.map(v => `${VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
+                {booking.vehicles_detail.map(v => `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
               </Row>
             )}
             <Row icon="calendar">

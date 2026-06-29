@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Washer, Service, Availability, BookingFormData } from '@/types'
+import type { Washer, Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import StepService from './StepService'
 import StepOptions from './StepOptions'
 import StepSlot from './StepSlot'
@@ -14,6 +14,7 @@ type Unavailability  = { id: string; start_date: string; end_date: string }
 type Props = {
   washer: Washer
   services: Service[]
+  categories: ServiceCategory[]
   availabilities: Availability[]
   existingBookings: ExistingBooking[]
   unavailabilities: Unavailability[]
@@ -23,7 +24,7 @@ type Props = {
 export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function BookingForm({ washer, services, availabilities, existingBookings, unavailabilities, accent = '#2563eb' }: Props) {
+export default function BookingForm({ washer, services, categories, availabilities, existingBookings, unavailabilities, accent = '#2563eb' }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -126,6 +127,7 @@ export default function BookingForm({ washer, services, availabilities, existing
         {step === 1 && (
           <StepService
             services={services}
+            categories={categories}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
               updateForm(data)

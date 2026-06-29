@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Washer, Service, Availability, Unavailability } from '@/types'
+import type { Washer, Service, ServiceCategory, Availability, Unavailability } from '@/types'
 import IdentiteForm from './IdentiteForm'
 import PrestationsManager from './PrestationsManager'
 import DisponibilitesManager from './DisponibilitesManager'
@@ -17,11 +17,12 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 type Props = {
   washer: Washer
   services: Service[]
+  categories: ServiceCategory[]
   availabilities: Availability[]
   unavailabilities: Unavailability[]
 }
 
-export default function AdminTabs({ washer, services, availabilities, unavailabilities }: Props) {
+export default function AdminTabs({ washer, services, categories, availabilities, unavailabilities }: Props) {
   const [tab, setTab] = useState<Tab>('identite')
 
   return (
@@ -45,7 +46,7 @@ export default function AdminTabs({ washer, services, availabilities, unavailabi
       </div>
 
       {tab === 'identite'       && <IdentiteForm washer={washer} />}
-      {tab === 'prestations'    && <PrestationsManager services={services} />}
+      {tab === 'prestations'    && <PrestationsManager services={services} categories={categories} />}
       {tab === 'disponibilites' && <DisponibilitesManager availabilities={availabilities} unavailabilities={unavailabilities} teamSize={washer.team_size ?? 1} />}
     </div>
   )

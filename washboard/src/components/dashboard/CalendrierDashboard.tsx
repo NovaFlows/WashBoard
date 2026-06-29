@@ -4,7 +4,8 @@ import { useState } from 'react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 
 type Service = { name: string; price: number; duration_minutes: number }
-type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number> }
+type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number>; category_id: string | null; vehicle_types: string[] }
+type Category = { id: string; name: string; types: { id: string; name: string }[] }
 type Booking = {
   id: string
   client_name: string
@@ -22,7 +23,7 @@ type Booking = {
   selected_addons: { id: string; label: string; price: number; category: string }[] | null
   travel_fee: number | null
   vehicle_count: number | null
-  vehicles_detail: { type: string; count: number; unit_price: number }[] | null
+  vehicles_detail: { type: string; count: number; unit_price: number; label?: string }[] | null
   services: Service | null
 }
 
@@ -154,9 +155,21 @@ function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; washerId: string }
+type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string }
 
-export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, washerId }: Props) {
+export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId }: Props) {
+  // Types disponibles pour une prestation = types de sa catégorie qu'elle propose
+  function serviceTypes(serviceId: string): { id: string; name: string }[] {
+    const svc = services.find(s => s.id === serviceId)
+    if (!svc) return []
+    const cat = categories.find(c => c.id === svc.category_id)
+    const catTypes = cat?.types ?? []
+    const filtered = catTypes.filter(t => svc.vehicle_types.includes(t.id))
+    return filtered.length > 0 ? filtered : catTypes
+  }
+  function typeName(serviceId: string, typeId: string): string {
+    return serviceTypes(serviceId).find(t => t.id === typeId)?.name ?? VEHICLE_LABELS[typeId] ?? typeId
+  }
   const today = new Date()
   const [view,        setView]        = useState<'month' | 'week' | 'day'>('month')
   const [current,     setCurrent]     = useState(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -187,9 +200,10 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const now = new Date()
     now.setMinutes(0, 0, 0)
     now.setHours(now.getHours() + 1)
+    const firstService = services[0]?.id ?? ''
     return {
-      service_id: services[0]?.id ?? '',
-      vehicle_type: 'citadine',
+      service_id: firstService,
+      vehicle_type: serviceTypes(firstService)[0]?.id ?? 'citadine',
       vehicle_count: 1,
       booked_price: services[0]?.price ?? 0,
       date: toDateStr(now),
@@ -218,6 +232,10 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     setManualModal(prev => {
       if (!prev) return prev
       const next = { ...prev, [key]: value }
+      // Changement de prestation : réinitialise le type sur le 1er type de sa catégorie
+      if (key === 'service_id') {
+        next.vehicle_type = serviceTypes(next.service_id)[0]?.id ?? ''
+      }
       // Recalcul prix automatique si service ou count change
       if (key === 'service_id' || key === 'vehicle_count' || key === 'vehicle_type') {
         const svc = services.find(s => s.id === next.service_id)
@@ -338,6 +356,12 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
         service_id:      manualModal.service_id,
         vehicle_type:    manualModal.vehicle_type,
         vehicle_count:   manualModal.vehicle_count,
+        vehicles_detail: [{
+          type:       manualModal.vehicle_type,
+          count:      manualModal.vehicle_count,
+          unit_price: (() => { const s = services.find(s => s.id === manualModal.service_id); return s ? (s.vehicle_price_overrides?.[manualModal.vehicle_type] ?? s.price) : 0 })(),
+          label:      typeName(manualModal.service_id, manualModal.vehicle_type),
+        }],
         booked_price:    manualModal.booked_price,
         address:         manualModal.address,
         scheduled_at,
@@ -376,7 +400,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       selected_addons: null,
       travel_fee:      null,
       vehicle_count:   manualModal.vehicle_count,
-      vehicles_detail: [{ type: manualModal.vehicle_type, count: manualModal.vehicle_count, unit_price: svc ? (svc.vehicle_price_overrides?.[manualModal.vehicle_type] ?? svc.price) : 0 }],
+      vehicles_detail: [{ type: manualModal.vehicle_type, count: manualModal.vehicle_count, unit_price: svc ? (svc.vehicle_price_overrides?.[manualModal.vehicle_type] ?? svc.price) : 0, label: typeName(manualModal.service_id, manualModal.vehicle_type) }],
       services:        svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
     }
     // Applique toujours le statut choisi (l'API crée en 'pending' par défaut)
@@ -1201,11 +1225,17 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Type de véhicule</label>
-                      <select value={manualModal.vehicle_type} onChange={e => updateManual('vehicle_type', e.target.value)}
-                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        {VEHICLE_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
-                      </select>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Type</label>
+                      {(() => {
+                        const opts = serviceTypes(manualModal.service_id)
+                        const list = opts.length > 0 ? opts.map(t => ({ value: t.id, label: t.name })) : VEHICLE_TYPES
+                        return (
+                          <select value={manualModal.vehicle_type} onChange={e => updateManual('vehicle_type', e.target.value)}
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            {list.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                          </select>
+                        )
+                      })()}
                     </div>
                     <div className="w-24">
                       <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Quantité</label>
@@ -1421,7 +1451,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               )}
               {selected.vehicles_detail && selected.vehicles_detail.length > 0 && (
                 <Row icon="car">
-                  {selected.vehicles_detail.map(v => `${VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
+                  {selected.vehicles_detail.map(v => `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
                 </Row>
               )}
               {rescheduling ? (
