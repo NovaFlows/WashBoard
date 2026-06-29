@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
   if (!category || !label || amount == null) {
     return NextResponse.json({ error: 'Champs manquants' }, { status: 400 })
   }
+  if (!Number.isFinite(Number(amount)) || Number(amount) < 0) {
+    return NextResponse.json({ error: 'Le montant doit être positif' }, { status: 400 })
+  }
 
   const { data, error } = await supabase
     .from('washer_recurring_expenses')

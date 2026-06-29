@@ -255,7 +255,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const busy = logoStatus === 'removing' || logoStatus === 'uploading'
 
   return (
-    <form onSubmit={save} className="space-y-5">
+    <form onSubmit={save} noValidate className="space-y-5">
       {/* Logo */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Logo</h2>

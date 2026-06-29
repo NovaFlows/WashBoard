@@ -128,7 +128,12 @@ export default async function BookingPage({ params }: Props) {
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Réservez votre lavage à domicile en quelques clics</p>
           </div>
         )}
-        {themed && <div className="mb-6" />}
+        {themed && (
+          <>
+            <h1 className="sr-only">Réservez votre lavage avec {washer.name}</h1>
+            <div className="mb-6" />
+          </>
+        )}
 
         <BookingForm
           washer={washer}

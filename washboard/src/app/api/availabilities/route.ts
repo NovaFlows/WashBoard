@@ -14,6 +14,12 @@ export async function POST(request: NextRequest) {
   if (day_of_week === undefined || !start_time || !end_time) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
+  if (Number(day_of_week) < 0 || Number(day_of_week) > 6) {
+    return NextResponse.json({ error: 'Jour invalide' }, { status: 400 })
+  }
+  if (String(start_time) >= String(end_time)) {
+    return NextResponse.json({ error: "L'heure de fin doit être après l'heure de début" }, { status: 400 })
+  }
 
   const { data, error } = await supabase
     .from('availabilities')

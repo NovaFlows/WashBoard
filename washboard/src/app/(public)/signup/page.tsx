@@ -20,6 +20,14 @@ export default function SignupPage() {
     e.preventDefault()
     setError(null)
 
+    if (!name.trim()) {
+      setError("Le nom de votre entreprise est requis")
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Adresse email invalide')
+      return
+    }
     if (password !== confirm) {
       setError('Les mots de passe ne correspondent pas')
       return
@@ -80,7 +88,7 @@ export default function SignupPage() {
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSignup} noValidate className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Nom de votre entreprise

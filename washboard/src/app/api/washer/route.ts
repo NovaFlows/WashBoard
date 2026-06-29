@@ -14,8 +14,16 @@ export async function PATCH(request: NextRequest) {
     zone_config,
   } = await request.json()
 
+  // ── Validations ──────────────────────────────────────────────────────────
+  if (name !== undefined && !String(name).trim()) {
+    return NextResponse.json({ error: "Le nom de l'entreprise est requis" }, { status: 400 })
+  }
+  if (phone !== undefined && String(phone).trim() && !/^[+0-9 ().-]{6,20}$/.test(String(phone).trim())) {
+    return NextResponse.json({ error: 'Numéro de téléphone invalide' }, { status: 400 })
+  }
+
   const updates: Record<string, unknown> = {}
-  if (name !== undefined) updates.name = name?.trim() ?? null
+  if (name !== undefined) updates.name = String(name).trim()
   if (phone !== undefined) updates.phone = phone?.trim() || null
   if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null
   if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
@@ -25,7 +33,13 @@ export async function PATCH(request: NextRequest) {
   if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
   if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type
   if (smart_slot_discount_value !== undefined) updates.smart_slot_discount_value = Math.max(0, Number(smart_slot_discount_value))
-  if (travel_fee_tiers !== undefined) updates.travel_fee_tiers = travel_fee_tiers
+  if (travel_fee_tiers !== undefined) {
+    // Ne conserver que les paliers cohérents (durée > 0, frais >= 0)
+    updates.travel_fee_tiers = Array.isArray(travel_fee_tiers)
+      ? travel_fee_tiers.filter((t: { max_minutes: number; fee: number }) =>
+          Number(t?.max_minutes) > 0 && Number.isFinite(Number(t?.fee)) && Number(t?.fee) >= 0)
+      : []
+  }
   if (base_address !== undefined) updates.base_address = base_address?.trim() || null
   if (travel_fee_mode !== undefined) updates.travel_fee_mode = travel_fee_mode
   if (background_theme !== undefined) updates.background_theme = background_theme || null

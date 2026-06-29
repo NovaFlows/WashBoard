@@ -126,6 +126,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
   const [showRecForm,     setShowRecForm]      = useState(false)
   const [recForm,         setRecForm]          = useState({ category: 'abonnement', label: '', amount: '', day_of_month: '1' })
   const [savingRec,       setSavingRec]        = useState(false)
+  const [recErr,          setRecErr]           = useState<string | null>(null)
   const [deletingRec,     setDeletingRec]      = useState<string | null>(null)
   const [togglingRec,     setTogglingRec]      = useState<string | null>(null)
 
@@ -138,7 +139,9 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
 
   async function addRecurring(e: React.FormEvent) {
     e.preventDefault()
-    if (!recForm.label.trim() || !recForm.amount) return
+    setRecErr(null)
+    if (!recForm.label.trim() || !recForm.amount) { setRecErr('Libellé et montant requis'); return }
+    if (parseFloat(recForm.amount) < 0) { setRecErr('Le montant doit être positif'); return }
     setSavingRec(true)
     const res = await fetch('/api/expenses/recurring', {
       method: 'POST',
@@ -192,6 +195,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
     e.preventDefault()
     setFormErr(null)
     if (!form.label.trim() || !form.amount) { setFormErr('Libellé et montant requis'); return }
+    if (parseFloat(form.amount) < 0) { setFormErr('Le montant doit être positif'); return }
     setSaving(true)
     const res = await fetch('/api/expenses', {
       method: 'POST',
@@ -199,7 +203,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
     })
     if (res.ok) { setForm({ date: today, category: 'carburant', label: '', amount: '' }); fetchData() }
-    else setFormErr('Erreur lors de la sauvegarde')
+    else { const j = await res.json().catch(() => null); setFormErr(j?.error ?? 'Erreur lors de la sauvegarde') }
     setSaving(false)
   }
 
@@ -326,7 +330,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
           {/* Formulaire ajout */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Ajouter un frais</h2>
-            <form onSubmit={addExpense} className="space-y-3">
+            <form onSubmit={addExpense} noValidate className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Date</label>
@@ -420,7 +424,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
 
         {showRecForm && (
           <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-            <form onSubmit={addRecurring} className="space-y-3">
+            <form onSubmit={addRecurring} noValidate className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Catégorie</label>
@@ -443,6 +447,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                   <input type="number" min={0} step={0.01} value={recForm.amount} onChange={e => setRecForm(p => ({ ...p, amount: e.target.value }))} placeholder="49.00" className={`${inputClass} w-full`} />
                 </div>
               </div>
+              {recErr && <p className="text-xs text-red-500">{recErr}</p>}
               <button type="submit" disabled={savingRec} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
                 {savingRec ? 'Ajout...' : '+ Ajouter ce frais récurrent'}
               </button>

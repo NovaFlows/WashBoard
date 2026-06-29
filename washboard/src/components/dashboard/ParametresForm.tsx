@@ -14,6 +14,9 @@ type Props = {
 
 type Tab = 'general' | 'client'
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[+0-9 ().-]{6,20}$/
+
 export default function ParametresForm({ washer, email }: Props) {
   const [tab, setTab] = useState<Tab>('general')
 
@@ -51,6 +54,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [baseAddress, setBaseAddress] = useState(washer.base_address ?? '')
   const [tiers, setTiers] = useState<{ max_minutes: number; fee: number }[]>(washer.travel_fee_tiers ?? [])
   const [tierDraft, setTierDraft] = useState({ max_minutes: '', fee: '' })
+  const [tierErr, setTierErr] = useState<string | null>(null)
   const [travelFeeMode, setTravelFeeMode] = useState<'base' | 'previous'>(washer.travel_fee_mode ?? 'base')
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -73,7 +77,9 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   function addTier() {
     const mins = parseInt(tierDraft.max_minutes)
     const fee  = parseFloat(tierDraft.fee)
-    if (isNaN(mins) || mins <= 0 || isNaN(fee) || fee < 0) return
+    setTierErr(null)
+    if (isNaN(mins) || mins <= 0) { setTierErr('La durée doit être un nombre de minutes positif'); return }
+    if (isNaN(fee) || fee < 0) { setTierErr('Le frais doit être positif ou nul'); return }
     setTiers(prev => [...prev.filter(t => t.max_minutes !== mins), { max_minutes: mins, fee }].sort((a, b) => a.max_minutes - b.max_minutes))
     setTierDraft({ max_minutes: '', fee: '' })
   }
@@ -84,8 +90,10 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
-    setProfileLoading(true)
     setProfileMsg(null)
+    if (!name.trim()) { setProfileMsg({ ok: false, text: "Le nom de l'entreprise est requis" }); return }
+    if (phone.trim() && !PHONE_RE.test(phone.trim())) { setProfileMsg({ ok: false, text: 'Numéro de téléphone invalide' }); return }
+    setProfileLoading(true)
     const res = await fetch('/api/washer', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -109,9 +117,10 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
   async function saveEmail(e: React.FormEvent) {
     e.preventDefault()
-    setEmailLoading(true)
     setEmailMsg(null)
-    const { error } = await supabase.auth.updateUser({ email: newEmail })
+    if (!EMAIL_RE.test(newEmail.trim())) { setEmailMsg({ ok: false, text: 'Adresse email invalide' }); return }
+    setEmailLoading(true)
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
     setEmailMsg(error
       ? { ok: false, text: 'Erreur : ' + error.message }
       : { ok: true, text: 'Un email de confirmation a été envoyé' }
@@ -144,7 +153,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     <div className="space-y-5">
       {/* Profil */}
       <Card title="Mon profil" icon="👤">
-        <form onSubmit={saveProfile} className="space-y-4">
+        <form onSubmit={saveProfile} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Nom de l'entreprise</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputClass} />
@@ -216,6 +225,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
                 + Ajouter
               </button>
             </div>
+            {tierErr && <p className="text-xs text-red-500 mt-2">{tierErr}</p>}
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
               Les frais sont calculés automatiquement selon la durée de trajet.
             </p>
@@ -282,7 +292,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
       {/* Email */}
       <Card title="Adresse email" icon="✉️">
-        <form onSubmit={saveEmail} className="space-y-4">
+        <form onSubmit={saveEmail} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Email</label>
             <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required className={inputClass} />
@@ -294,7 +304,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
       {/* Mot de passe */}
       <Card title="Mot de passe" icon="🔒">
-        <form onSubmit={savePassword} className="space-y-4">
+        <form onSubmit={savePassword} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Nouveau mot de passe</label>
             <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min. 6 caractères" required className={inputClass} />

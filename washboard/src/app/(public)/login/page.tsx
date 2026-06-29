@@ -16,8 +16,10 @@ export default function LoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
     setError(null)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
+    if (!password) { setError('Mot de passe requis'); return }
+    setLoading(true)
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
@@ -79,7 +81,7 @@ export default function LoginPage() {
 
           {/* Formulaire */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} noValidate className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
                 <input

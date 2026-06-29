@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
   })
 
   if (authError) {
-    const msg = authError.message.includes('already registered')
-      ? 'Cet email est déjà utilisé'
-      : authError.message
+    const raw = authError.message.toLowerCase()
+    const isDuplicate = raw.includes('already') || (raw.includes('email') && raw.includes('exist'))
+    const msg = isDuplicate ? 'Cet email est déjà utilisé' : authError.message
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
