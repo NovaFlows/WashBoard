@@ -15,23 +15,20 @@ export function useTheme() {
   return useContext(ThemeContext)
 }
 
-// Provider léger (remplace next-themes) : aucune balise <script> rendue côté
-// client — le script anti-flash est injecté côté serveur dans le layout, donc
-// React ne déclenche jamais l'avertissement "script tag while rendering".
+// Provider léger (remplace next-themes) : le thème est stocké dans un cookie,
+// lu côté serveur par le layout qui pose la classe `dark` sur <html>. Aucune
+// balise <script> n'est rendue → plus d'avertissement React 19 en dev.
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light')
 
-  // Synchronise l'état React avec ce que le script anti-flash a déjà appliqué.
+  // L'état initial reflète la classe déjà posée par le serveur (depuis le cookie).
   useEffect(() => {
-    let stored: string | null = null
-    try { stored = localStorage.getItem('theme') } catch { /* indisponible */ }
-    if (stored === 'dark' || stored === 'light') setThemeState(stored)
-    else setThemeState(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
+    setThemeState(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
   }, [])
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t)
-    try { localStorage.setItem('theme', t) } catch { /* indisponible */ }
+    document.cookie = `theme=${t};path=/;max-age=31536000;samesite=lax`
     document.documentElement.classList.toggle('dark', t === 'dark')
   }, [])
 

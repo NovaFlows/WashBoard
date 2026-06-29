@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
   if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null
   if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
   if (brand_color !== undefined) updates.brand_color = brand_color || null
-  if (team_size !== undefined) updates.team_size = Math.max(1, Math.floor(Number(team_size)))
+  if (team_size !== undefined) updates.team_size = Math.min(50, Math.max(1, Math.floor(Number(team_size)) || 1))
   if (smart_slot_enabled !== undefined) updates.smart_slot_enabled = Boolean(smart_slot_enabled)
   if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
   if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type

@@ -3,8 +3,42 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useTheme } from '@/components/ui/ThemeProvider'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
+
+// Slogans du hero qui défilent (le segment `hl` est surligné en bleu).
+const SLOGANS: { pre: string; hl: string; post: string }[] = [
+  { pre: 'Le logiciel des laveurs auto mobiles qui veulent ', hl: 'gagner plus', post: ' sur le même trajet.' },
+  { pre: 'Tes clients réservent seuls, ', hl: 'toi tu roules plein', post: '.' },
+  { pre: 'Groupe tes RDV par zone : ', hl: 'roule moins, gagne plus', post: '.' },
+]
+
+function RotatingHeadline() {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setI(p => (p + 1) % SLOGANS.length), 4000)
+    return () => clearInterval(id)
+  }, [])
+  const s = SLOGANS[i]
+  return (
+    <span className="block relative min-h-[2.4em]">
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -14 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className="block"
+        >
+          {s.pre}
+          <span className="text-blue-600 dark:text-blue-500">{s.hl}</span>
+          {s.post}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
 
 function FadeUp({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
@@ -101,9 +135,7 @@ export default function LandingPage() {
             Logiciel de gestion pour laveurs auto mobiles & detailing
           </motion.div>
           <motion.h1 variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }} className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight mb-6 text-slate-900 dark:text-white">
-            Le logiciel des laveurs auto mobiles qui veulent{' '}
-            <span className="text-blue-600 dark:text-blue-500">gagner plus</span>{' '}
-            sur le même trajet.
+            <RotatingHeadline />
           </motion.h1>
           <motion.p variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }} className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
             WashBoard est le logiciel tout-en-un pour les laveurs auto mobiles et prestataires de detailing à domicile.

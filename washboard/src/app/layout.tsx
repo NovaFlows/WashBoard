@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
@@ -45,25 +46,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Thème lu depuis le cookie côté serveur : la classe `dark` est posée
+  // directement sur <html>. Pas de flash, et aucune balise <script> rendue
+  // (donc plus d'avertissement React 19 / badge "Issue" en dev).
+  const isDark = (await cookies()).get("theme")?.value === "dark";
+
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased${isDark ? " dark" : ""}`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
-        {/* Script anti-flash : applique le thème avant le 1er paint. Rendu côté
-            serveur (composant serveur) → aucun avertissement React côté client. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`,
-          }}
-        />
         <RecoveryRedirect />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
