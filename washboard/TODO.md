@@ -34,11 +34,13 @@
 
 ## 🟠 Robustesse / dette technique
 
-- [ ] **Supprimer le code mort / legacy** (vérifier qu'aucun import n'y pointe) :
-  - [ ] `src/app/booking/page.tsx` (ancienne page, créneaux codés en dur)
-  - [ ] `src/app/api/booking/availability/route.ts` + `src/app/api/booking/book/route.ts`
-  - [ ] `src/lib/googleCalendar.ts` (doublon de `google-calendar.ts`)
-  - [ ] `src/lib/scrapeReviews.ts` (doublon de `googleReviews.ts`)
+- [~] **Code mort / legacy** — vérifié avant suppression :
+  - [x] 2026-06-29 — `src/lib/scrapeReviews.ts` supprimé (aucun import, vrai code mort)
+  - [!] `src/app/booking/page.tsx` + `src/app/api/booking/*` + `src/lib/googleCalendar.ts`
+        **PAS morts** : ils servent le flux « Réserver un appel » lié depuis la
+        landing (LandingPage L148 & L465). NE PAS supprimer sans décision produit.
+        → Si ce flux démo n'est plus voulu : retirer les 2 liens landing puis supprimer
+          les 4 fichiers. Sinon, à laisser tel quel (ou migrer vers un vrai flux).
 - [ ] **Corriger la dette eslint pré-existante** (sans changer le comportement) :
   - [ ] `ComptaDashboard` : `setState` synchrone dans un `useEffect`
   - [ ] Apostrophes non échappées (`react/no-unescaped-entities`) dans plusieurs fichiers
