@@ -82,6 +82,14 @@ describe('countConflicts — barrière serveur anti-double-réservation', () => 
   it('aucun RDV → 0', () => {
     expect(countConflicts(ms(10, 0), ms(11, 0), [])).toBe(0)
   })
+
+  // Données RÉELLES du bug prod (timestamps UTC exacts, indépendants du fuseau)
+  it('REPRO PROD (timestamps réels) : Manon 12:00 (180 min) vs POUILLY 11:00 (210 min) → conflit', () => {
+    const pouilly11 = { startMs: Date.parse('2026-07-01T09:00:00Z'), durationMin: 210 } // 11:00→14:30 Paris
+    const manonStart = Date.parse('2026-07-01T10:00:00Z')                                 // 12:00 Paris
+    const manonEnd   = manonStart + 180 * 60_000                                          // 15:00 Paris
+    expect(countConflicts(manonStart, manonEnd, [pouilly11])).toBe(1) // doit être bloqué
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────

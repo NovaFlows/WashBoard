@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
@@ -59,17 +60,26 @@ export default async function BookingPage({ params }: Props) {
     .select('*')
     .eq('washer_id', washer.id)
 
+  // Les RDV existants et les indisponibilités sont nécessaires au filtrage des
+  // créneaux occupés, mais la RLS interdit leur lecture au visiteur public (anon).
+  // → lecture via le service-role, en se limitant à des données NON personnelles
+  //   (horaire + durée), jamais de nom/email/téléphone côté client.
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
   const [
     { data: existingBookings },
     { data: unavailabilities },
   ] = await Promise.all([
-    supabase
+    admin
       .from('bookings')
       .select('scheduled_at, vehicle_count, services(duration_minutes)')
       .eq('washer_id', washer.id)
       .neq('status', 'cancelled')
       .gte('scheduled_at', new Date().toISOString()),
-    supabase
+    admin
       .from('unavailabilities')
       .select('id, start_date, end_date')
       .eq('washer_id', washer.id),

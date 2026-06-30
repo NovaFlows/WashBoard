@@ -20,11 +20,20 @@
         car la mémoire serverless n'est pas partagée entre instances.
 
 - [x] 2026-06-30 — **FIX BUG PROD : double-réservation** (un client réservait un créneau
-      déjà occupé). Cause : le filtre des créneaux était uniquement côté client (données
-      figées au chargement de la page), aucune vérification serveur à la soumission.
-      Corrigé : barrière serveur dans `/api/bookings` (recompte les conflits + capacité,
-      refuse en 409) — sauf pour le laveur lui-même (réservation manuelle = peut forcer).
-      Logique extraite et testée : `countConflicts`, `effectiveTeamSize` dans `lib/slots`.
+      déjà occupé). Diagnostic **vérifié empiriquement** (clé anon + clé service-role) :
+      **VRAIE CAUSE = RLS**. La page publique `/book` lit les RDV existants avec le client
+      **anonyme**, or la table `bookings` n'autorise la lecture qu'au propriétaire →
+      `permission denied` → liste vide → **aucun créneau occupé n'était filtré** côté client.
+      (Le calendrier du laveur, lui, est authentifié → voit ses RDV → bloque bien.)
+      Corrigé sur 2 fronts :
+      - **Page `/book`** : lecture des RDV occupés + indispos via le **service-role**
+        (données NON personnelles : horaire + durée), pour que le filtre client fonctionne.
+      - **Serveur `/api/bookings`** : barrière de sécurité (recompte conflits + capacité,
+        409) — sauf le laveur (manuel = peut forcer). Logique pure testée
+        (`countConflicts`, `effectiveTeamSize`) + test sur les **timestamps réels** du bug.
+      - (Théorie initiale « embed services en tableau » écartée : l'embed est bien un objet.)
+  - [ ] À vérifier : d'autres lectures publiques bloquées par la RLS ?
+        (`unavailabilities` était aussi concerné → passé en service-role sur `/book`.)
   - [x] 2026-06-30 — **Batterie de tests calendrier** (lib/slots) : génération de créneaux,
         chevauchement, conflits, capacité (absences), temps de trajet (faisabilité),
         durée × véhicules, cas limites (back-to-back, bornes, repro du bug prod). 66 tests au total.
