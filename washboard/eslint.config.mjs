@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Décision assumée : patterns fetch-on-mount / sync DOM légitimes.
+      // Conservé en avertissement (visible) sans bloquer le build / la CI.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

@@ -47,8 +47,16 @@
         (ThemeProvider, ThemeToggle, LandingPage, ComptaDashboard, StepSlot ×3).
         Patterns légitimes (fetch on mount, sync DOM), ne bloquent pas le build,
         existaient déjà avant. Won't-fix.
-- [ ] **Aucun test automatisé** : poser une base de tests (au moins sur la logique
-      critique : prix, créneaux, gating des plans, `hasFeature`).
+- [x] 2026-06-30 — **Base de tests + CI** posées :
+  - Vitest configuré (`npm run test`), 20 tests sur la logique critique :
+    `lib/plan.ts` (gating €), `lib/rateLimit.ts` (anti-spam), `lib/travelFee.ts`
+    (helper pur `pickTravelFee` extrait + testé).
+  - CI GitHub Actions (`.github/workflows/ci.yml`) : typecheck + lint + test + build
+    à chaque push/PR.
+  - Règle `react-hooks/set-state-in-effect` passée en `warn` (assumée).
+  - [ ] À étendre plus tard : extraire en libs pures + tester le calcul de prix,
+        la remise « créneau optimisé » et la génération de créneaux (aujourd'hui
+        intégrés dans les composants/routes).
 - [x] 2026-06-29 — **`.env.example`** documentant les 11 variables d'env (sans valeurs)
       + exception `.gitignore` pour le rendre traçable.
 

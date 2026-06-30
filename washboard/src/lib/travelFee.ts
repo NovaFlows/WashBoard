@@ -2,6 +2,17 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 type Tier = { max_minutes: number; fee: number }
 
+/** Sélectionne le frais de déplacement selon la durée de trajet (en minutes).
+ *  Prend le 1er palier dont max_minutes >= durée ; au-delà, le palier le plus élevé.
+ *  Fonction pure (testable). Renvoie 0 si aucun palier.
+ */
+export function pickTravelFee(tiers: Tier[], durationMin: number): number {
+  if (!tiers || tiers.length === 0) return 0
+  const sorted = [...tiers].sort((a, b) => a.max_minutes - b.max_minutes)
+  const matching = sorted.find(t => durationMin <= t.max_minutes)
+  return matching ? matching.fee : (sorted[sorted.length - 1]?.fee ?? 0)
+}
+
 /** Résout l'adresse d'origine selon le mode du laveur.
  *  - 'base'     : toujours depuis base_address
  *  - 'previous' : depuis l'adresse du dernier RDV terminé avant scheduled_at, sinon base_address
@@ -65,9 +76,7 @@ export async function computeTravelFee(
     if (typeof durationSec !== 'number') return 0
 
     const durationMin = durationSec / 60
-    const sorted = [...tiers].sort((a, b) => a.max_minutes - b.max_minutes)
-    const matching = sorted.find(t => durationMin <= t.max_minutes)
-    return matching ? matching.fee : (sorted[sorted.length - 1]?.fee ?? 0)
+    return pickTravelFee(tiers, durationMin)
   } catch {
     return 0
   }
