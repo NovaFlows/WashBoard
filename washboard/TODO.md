@@ -71,6 +71,25 @@
 - [ ] **QA #3** : tester manuellement le clic sur les cartes prestation (artefact
       Playwright probable) ; éventuellement ajouter des `data-testid`.
 
+## 🏗️ Infra & environnements (quand il y aura de vrais clients)
+
+> Aujourd'hui : dev (localhost) + prod suffisent. Vercel fournit déjà des Preview
+> Deployments gratuits (URL auto par branche) = recette à la demande. PAS besoin
+> d'environnement de recette/staging dédié à ce stade.
+
+- [ ] **PRIORITÉ — Séparer la base de données dev / prod.** Aujourd'hui le local et
+      la prod partagent le **même projet Supabase** → tester en local mute les vraies
+      données, et une manip SQL touche directement la prod. À faire dès qu'il y a des
+      utilisateurs réels : projet Supabase dédié au dev (ou Supabase Branching), avec
+      des variables d'env distinctes local/prod.
+- [ ] **Workflow branches + Preview (optionnel)** : pour les features risquées, créer
+      une branche → Vercel génère une URL de preview → valider → merger sur master.
+      Évite de pousser direct en prod sur du code chaud. (Pas obligatoire en solo.)
+- [x] 2026-06-30 — **Le déploiement est bloqué par les tests** : Build Command Vercel
+      = `npm run test && npm run lint && npm run build` (un échec bloque la mise en ligne).
+- [ ] **Environnement de recette/staging dédié** : seulement quand il y aura une
+      équipe / un testeur, ou des migrations risquées. Inutile avant.
+
 ## 🟢 Polish / UX
 
 - [x] 2026-06-29 — **Page d'accueil dashboard** : vérifiée — déjà une vraie page
