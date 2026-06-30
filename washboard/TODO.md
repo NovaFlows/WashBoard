@@ -30,27 +30,23 @@
   - [x] DashboardShell (nav), AbonnementPanel, LandingPage : vérifiés, déjà propres
   - Note : laissés volontairement → emails (⭐ marketing), titres Google Calendar
     (🚗 ✅, utiles au laveur dans son agenda), close-buttons ✕/✓ (glyphes monochromes).
-  - [ ] Reste : `pdf/BookingPDF.tsx` (1 emoji, react-pdf — à voir si on le retire)
+  - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
+        (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
 
 ## 🟠 Robustesse / dette technique
 
 - [~] **Code mort / legacy** — vérifié avant suppression :
   - [x] 2026-06-29 — `src/lib/scrapeReviews.ts` supprimé (aucun import, vrai code mort)
-  - [!] `src/app/booking/page.tsx` + `src/app/api/booking/*` + `src/lib/googleCalendar.ts`
-        **PAS morts** : ils servent le flux « Réserver un appel » lié depuis la
-        landing (LandingPage L148 & L465). NE PAS supprimer sans décision produit.
-        → Si ce flux démo n'est plus voulu : retirer les 2 liens landing puis supprimer
-          les 4 fichiers. Sinon, à laisser tel quel (ou migrer vers un vrai flux).
+  - [x] 2026-06-30 — DÉCISION : on **garde** le flux « Réserver un appel »
+        (`booking/page.tsx` + `api/booking/*` + `googleCalendar.ts`). Pas du code mort.
 - [~] **Dette eslint pré-existante** (sans changer le comportement) :
   - [x] 2026-06-29 — Apostrophes non échappées (`react/no-unescaped-entities`) :
         IdentiteForm, ParametresForm, AbonnementPanel → corrigées
   - [x] 2026-06-29 — `Date.now()` pendant le render (DashboardShell) → capture via useState
-  - [ ] **7× `setState` synchrone dans un `useEffect`** — NON corrigées (risque de
-        changer le comportement, hors consigne) : ThemeProvider, ThemeToggle,
-        LandingPage (sync de thème), ComptaDashboard, StepSlot ×3 (data-fetching/zone).
-        Ce sont des patterns légitimes (fetch on mount, sync DOM) que la règle
-        React 19 juge trop strictement. À refactorer prudemment au cas par cas
-        (ne bloque pas le build). NB : ces erreurs existaient déjà avant.
+  - [x] 2026-06-30 — DÉCISION : on **assume** les 7× `setState` dans `useEffect`
+        (ThemeProvider, ThemeToggle, LandingPage, ComptaDashboard, StepSlot ×3).
+        Patterns légitimes (fetch on mount, sync DOM), ne bloquent pas le build,
+        existaient déjà avant. Won't-fix.
 - [ ] **Aucun test automatisé** : poser une base de tests (au moins sur la logique
       critique : prix, créneaux, gating des plans, `hasFeature`).
 - [x] 2026-06-29 — **`.env.example`** documentant les 11 variables d'env (sans valeurs)
