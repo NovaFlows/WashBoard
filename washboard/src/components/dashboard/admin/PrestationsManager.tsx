@@ -46,11 +46,17 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
   }
 
   function toggleVehicle(v: string) {
+    const removing = form.vehicle_types.includes(v)
+    // En désélectionnant un type, on retire aussi sa surcharge de prix pour
+    // ne pas laisser de surcharge « orpheline » qui fausserait le « à partir de ».
+    const overrides = { ...form.vehicle_price_overrides }
+    if (removing) delete overrides[v]
     onChange({
       ...form,
-      vehicle_types: form.vehicle_types.includes(v)
+      vehicle_types: removing
         ? form.vehicle_types.filter(x => x !== v)
         : [...form.vehicle_types, v],
+      vehicle_price_overrides: overrides,
     })
   }
 

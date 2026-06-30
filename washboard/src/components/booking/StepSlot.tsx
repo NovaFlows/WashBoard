@@ -3,13 +3,11 @@
 import { useState, useEffect } from 'react'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible } from '@/lib/slots'
+import { effectiveDuration, smartPrice as computeSmartPrice, smartDiscountAmount } from '@/lib/pricing'
 
 type ExistingBooking  = { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }
 
-// Durée réelle bloquée = durée de la prestation × nombre de véhicules
-function bookingDurationMin(b: ExistingBooking): number {
-  return (b.services?.duration_minutes ?? 60) * Math.max(1, b.vehicle_count ?? 1)
-}
 type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number }
 
 function toDateStr(d: Date) {
@@ -31,18 +29,6 @@ type Props = {
   accent?: string
 }
 
-function countOverlaps(slotTime: string, date: Date, duration: number, bookings: ExistingBooking[]): number {
-  const [h, m] = slotTime.split(':').map(Number)
-  const slotStart = new Date(date)
-  slotStart.setHours(h, m, 0, 0)
-  const slotEnd = new Date(slotStart.getTime() + duration * 60_000)
-  return bookings.filter(b => {
-    const bStart = new Date(b.scheduled_at)
-    const bEnd   = new Date(bStart.getTime() + bookingDurationMin(b) * 60_000)
-    return bStart < slotEnd && bEnd > slotStart
-  }).length
-}
-
 const DAY_NAMES   = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTH_NAMES = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc']
 
@@ -56,23 +42,6 @@ function getNextDays(count: number): Date[] {
     days.push(d)
   }
   return days
-}
-
-const SLOT_STEP = 30
-
-function generateSlots(start: string, end: string, durationMinutes: number): string[] {
-  const slots: string[] = []
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  let current = sh * 60 + sm
-  const endMinutes = eh * 60 + em
-  while (current + durationMinutes <= endMinutes) {
-    const h = Math.floor(current / 60).toString().padStart(2, '0')
-    const m = (current % 60).toString().padStart(2, '0')
-    slots.push(`${h}:${m}`)
-    current += SLOT_STEP
-  }
-  return slots
 }
 
 export default function StepSlot({
@@ -193,46 +162,23 @@ export default function StepSlot({
 
   const effectiveTeamSize = selectedDate ? getEffectiveTeamSize(selectedDate) : teamSize
 
+  const overlapBookings = existingBookings.map(b => ({
+    scheduled_at: b.scheduled_at,
+    durationMin: effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count),
+  }))
+
   const slotsForDay = selectedDate
     ? availabilities
         .filter(a => a.day_of_week === selectedDate.getDay())
         .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
-        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, existingBookings) < effectiveTeamSize)
-        .filter(slot => isSlotFeasible(slot, selectedDate))
+        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
+        .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []
 
-  // Vérifier si un créneau local tombe dans une fenêtre UTC — timezone-safe
-  function isSmartSlot(slotTime: string, date: Date): boolean {
-    const [h, m] = slotTime.split(':').map(Number)
-    const slotDate = new Date(date)
-    slotDate.setHours(h, m, 0, 0)
-    const ms = slotDate.getTime()
-    return smartWindows.some(w => ms >= new Date(w.start).getTime() && ms <= new Date(w.end).getTime())
-  }
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
+  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, smartWindows)) : slotsForDay
 
-  // Filtrer les créneaux physiquement impossibles (temps de trajet insuffisant entre clients)
-  function isSlotFeasible(slotTime: string, date: Date): boolean {
-    if (bookingConstraints.length === 0) return true
-    const [h, m] = slotTime.split(':').map(Number)
-    const slotDate = new Date(date)
-    slotDate.setHours(h, m, 0, 0)
-    const slotStart = slotDate.getTime()
-    const slotEnd   = slotStart + serviceDuration * 60_000
-    return bookingConstraints.every(c => {
-      const bStart = new Date(c.start).getTime()
-      const bEnd   = new Date(c.end).getTime()
-      if (bEnd <= slotStart)  return bEnd + c.travelToNew * 1000 <= slotStart  // RDV avant → trajet vers nouveau client
-      if (bStart >= slotEnd)  return slotEnd + c.travelFromNew * 1000 <= bStart // RDV après → trajet depuis nouveau client
-      return false // chevauchement
-    })
-  }
-
-  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSmartSlot(s, selectedDate)) : []
-  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSmartSlot(s, selectedDate)) : slotsForDay
-
-  const smartPrice = smartDiscountType === 'percent'
-    ? Math.max(0, servicePrice * (1 - smartDiscountValue / 100))
-    : Math.max(0, servicePrice - smartDiscountValue)
+  const smartPrice = computeSmartPrice(servicePrice, { type: smartDiscountType, value: smartDiscountValue })
   const smartPriceStr = Number.isInteger(smartPrice) ? String(smartPrice) : smartPrice.toFixed(2)
 
   const canContinue = selectedDate && selectedTime && address.trim().length > 5 && zoneAllowed
@@ -242,10 +188,8 @@ export default function StepSlot({
     const [h, m] = selectedTime.split(':').map(Number)
     const dt = new Date(selectedDate)
     dt.setHours(h, m, 0, 0)
-    const isSmart = isSmartSlot(selectedTime, dt)
-    const discount = isSmart
-      ? (smartDiscountType === 'percent' ? servicePrice * smartDiscountValue / 100 : smartDiscountValue)
-      : 0
+    const isSmart = isSlotInWindows(selectedTime, dt, smartWindows)
+    const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
     onNext({
       scheduled_at: dt.toISOString(),
       address,

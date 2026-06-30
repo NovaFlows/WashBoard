@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { computeTravelFee } from '@/lib/travelFee'
+import { vehiclePrice } from '@/lib/pricing'
 import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
@@ -127,8 +128,7 @@ export async function POST(req: Request) {
     : (travel_fee ?? 0)
 
   // Prix effectif : base (service + options) + frais de déplacement
-  const overrides    = (service?.vehicle_price_overrides ?? {}) as Record<string, number>
-  const unit_price   = overrides[vehicle_type] ?? service?.price ?? 0
+  const unit_price   = service ? vehiclePrice(service, vehicle_type) : 0
   const count        = vehicle_count ?? 1
   const base_price   = bookedPriceInput ?? (unit_price * count)
   const booked_price = base_price + computed_travel_fee

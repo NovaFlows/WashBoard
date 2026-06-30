@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Clock, Check, User, Building2 } from 'lucide-react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
+import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
 
 type Props = {
   services: Service[]
@@ -26,20 +27,6 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 function hex(color: string, opacity: number) {
   return color + Math.round(opacity * 255).toString(16).padStart(2, '0')
-}
-
-function vehiclePrice(service: Service, vehicleType: string): number {
-  return service.vehicle_price_overrides?.[vehicleType] ?? service.price
-}
-
-function minPrice(service: Service): number {
-  const prices = [service.price, ...Object.values(service.vehicle_price_overrides ?? {})]
-  return Math.min(...prices)
-}
-
-function hasOverrides(service: Service): boolean {
-  const overrides = Object.values(service.vehicle_price_overrides ?? {})
-  return overrides.length > 0 && overrides.some(p => p !== service.price)
 }
 
 const UNCATEGORIZED = '__none__'
@@ -215,11 +202,11 @@ export default function StepService({ services, categories, selected, onNext, ac
                 {/* Prix + radio */}
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <div className="text-right">
-                    {hasOverrides(service) && (
+                    {hasPriceOverrides(service) && (
                       <p className="text-xs text-slate-400 leading-none mb-0.5">à partir de</p>
                     )}
                     <span className="text-lg font-bold text-slate-800 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
-                      {hasOverrides(service) ? minPrice(service) : service.price}€
+                      {hasPriceOverrides(service) ? minVehiclePrice(service) : service.price}€
                     </span>
                   </div>
                   <div

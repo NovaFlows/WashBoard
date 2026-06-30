@@ -54,9 +54,16 @@
   - CI GitHub Actions (`.github/workflows/ci.yml`) : typecheck + lint + test + build
     à chaque push/PR.
   - Règle `react-hooks/set-state-in-effect` passée en `warn` (assumée).
-  - [ ] À étendre plus tard : extraire en libs pures + tester le calcul de prix,
-        la remise « créneau optimisé » et la génération de créneaux (aujourd'hui
-        intégrés dans les composants/routes).
+  - [x] 2026-06-30 — Logique métier extraite en libs pures + testée :
+        `lib/pricing.ts` (prix par type, remise « créneau optimisé », durée effective)
+        et `lib/slots.ts` (génération de créneaux, chevauchement, fenêtres optimisées,
+        faisabilité). StepService / StepSlot / API bookings recâblés dessus.
+        44 tests au total.
+  - [x] 2026-06-30 — **FIX BUG PROD** : « à partir de 30€ » au lieu de 120€. Cause :
+        surcharge de prix « orpheline » (type désélectionné dont la surcharge restait
+        dans le JSON) tirait le minimum vers le bas. Corrigé : le calcul ne regarde
+        plus que les types réellement proposés ; et désélectionner un type supprime
+        sa surcharge. Test de non-régression ajouté.
 - [x] 2026-06-29 — **`.env.example`** documentant les 11 variables d'env (sans valeurs)
       + exception `.gitignore` pour le rendre traçable.
 
