@@ -68,8 +68,10 @@
       clé API à fournir), fonction `sendSms()`, compteur de quota mensuel + blocage.
 - [ ] **Photos avant/après** : feature premium évidente pour laveurs/detailers.
 - [ ] **QA #1** : vérifier le 404 `/book` d'un vrai compte (données/slug, pas du code).
-- [ ] **QA #3** : tester manuellement le clic sur les cartes prestation (artefact
-      Playwright probable) ; éventuellement ajouter des `data-testid`.
+- [x] 2026-06-30 — **QA #3** : vérifié manuellement → le clic sur une carte prestation
+      fonctionne. C'était bien un **artefact Playwright** (clic synthétique), pas un bug.
+  - [ ] Optionnel : ajouter des `data-testid` sur les cartes pour fiabiliser les
+        futurs tests automatisés.
 
 ## 🏗️ Infra & environnements (quand il y aura de vrais clients)
 
