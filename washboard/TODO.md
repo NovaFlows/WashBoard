@@ -19,6 +19,16 @@
   - [ ] Amélioration future : rate-limit cross-instances (Upstash/Redis ou table)
         car la mémoire serverless n'est pas partagée entre instances.
 
+- [x] 2026-06-30 — **FIX BUG PROD : double-réservation** (un client réservait un créneau
+      déjà occupé). Cause : le filtre des créneaux était uniquement côté client (données
+      figées au chargement de la page), aucune vérification serveur à la soumission.
+      Corrigé : barrière serveur dans `/api/bookings` (recompte les conflits + capacité,
+      refuse en 409) — sauf pour le laveur lui-même (réservation manuelle = peut forcer).
+      Logique extraite et testée : `countConflicts`, `effectiveTeamSize` dans `lib/slots`.
+  - [x] 2026-06-30 — **Batterie de tests calendrier** (lib/slots) : génération de créneaux,
+        chevauchement, conflits, capacité (absences), temps de trajet (faisabilité),
+        durée × véhicules, cas limites (back-to-back, bornes, repro du bug prod). 66 tests au total.
+
 - [x] 2026-06-29 — **Remplacer TOUS les emojis/icônes "template IA" par des icônes sobres**
       (lucide-react). Passage projet entier fait :
   - [x] `admin/AdminTabs.tsx` : onglets → Palette / SprayCan / Calendar

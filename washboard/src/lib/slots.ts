@@ -49,6 +49,25 @@ export function isSlotInWindows(slotTime: string, date: Date, windows: TimeWindo
   return windows.some(w => start >= new Date(w.start).getTime() && start <= new Date(w.end).getTime())
 }
 
+export type DayUnavailability = { start_date: string; end_date: string; team_members_off?: number | null }
+
+/** Capacité effective un jour donné = nb de laveurs − absences couvrant ce jour. */
+export function effectiveTeamSize(teamSize: number, unavailabilities: DayUnavailability[], dateStr: string): number {
+  const u = unavailabilities.find(x => x.start_date <= dateStr && dateStr <= x.end_date)
+  return u ? Math.max(0, teamSize - (u.team_members_off ?? 1)) : teamSize
+}
+
+export type BookingInterval = { startMs: number; durationMin: number }
+
+/** Nombre de réservations existantes qui chevauchent l'intervalle [newStart,newEnd[.
+ *  Sert à la vérification serveur anti-double-réservation. */
+export function countConflicts(newStartMs: number, newEndMs: number, bookings: BookingInterval[]): number {
+  return bookings.filter(b => {
+    const bEnd = b.startMs + b.durationMin * 60_000
+    return b.startMs < newEndMs && bEnd > newStartMs
+  }).length
+}
+
 /** Vrai si le créneau est physiquement faisable vu les temps de trajet entre RDV. */
 export function isSlotFeasible(slotTime: string, date: Date, durationMin: number, constraints: FeasibilityConstraint[]): boolean {
   if (constraints.length === 0) return true

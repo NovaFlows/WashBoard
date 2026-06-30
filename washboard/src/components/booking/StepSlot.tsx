@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize } from '@/lib/slots'
 import { effectiveDuration, smartPrice as computeSmartPrice, smartDiscountAmount } from '@/lib/pricing'
 
 type ExistingBooking  = { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }
@@ -150,10 +150,7 @@ export default function StepSlot({
   const availableDaysOfWeek = availabilities.map(a => a.day_of_week)
 
   function getEffectiveTeamSize(date: Date): number {
-    const s = toDateStr(date)
-    const u = unavailabilities.find(u => u.start_date <= s && s <= u.end_date)
-    if (!u) return teamSize
-    return Math.max(0, teamSize - (u.team_members_off ?? 1))
+    return computeEffectiveTeamSize(teamSize, unavailabilities, toDateStr(date))
   }
 
   function isDateUnavailable(date: Date): boolean {

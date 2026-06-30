@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { computeTravelFee } from '@/lib/travelFee'
-import { vehiclePrice } from '@/lib/pricing'
+import { vehiclePrice, effectiveDuration } from '@/lib/pricing'
+import { countConflicts, effectiveTeamSize } from '@/lib/slots'
 import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
@@ -103,11 +104,49 @@ export async function POST(req: Request) {
 
   const supabase = await createClient()
 
+  // L'auteur est-il le laveur lui-même ? (réservation manuelle = autorisée à forcer)
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes').eq('id', bookingData.service_id).single(),
   ])
+
+  // ── Barrière anti-double-réservation (uniquement pour le public, pas le laveur) ──
+  const isOwner = !!authUser && washer?.user_id === authUser.id
+  if (!isOwner && service) {
+    const newStart = new Date(bookingData.scheduled_at).getTime()
+    const newDur   = effectiveDuration(service.duration_minutes ?? 60, vehicle_count ?? 1)
+    const newEnd   = newStart + newDur * 60_000
+    // RDV proches : créés jusqu'à 12h avant le début (couvre les longues prestations)
+    const windowStart = new Date(newStart - 12 * 60 * 60_000).toISOString()
+    const [{ data: nearby }, { data: unavs }] = await Promise.all([
+      admin.from('bookings')
+        .select('scheduled_at, vehicle_count, services(duration_minutes)')
+        .eq('washer_id', bookingData.washer_id)
+        .neq('status', 'cancelled')
+        .gte('scheduled_at', windowStart)
+        .lte('scheduled_at', new Date(newEnd).toISOString()),
+      admin.from('unavailabilities')
+        .select('start_date, end_date, team_members_off')
+        .eq('washer_id', bookingData.washer_id),
+    ])
+    const intervals = (nearby ?? []).map((b) => {
+      const svc = b.services as { duration_minutes: number } | { duration_minutes: number }[] | null
+      const dur = Array.isArray(svc) ? svc[0]?.duration_minutes : svc?.duration_minutes
+      return { startMs: new Date(b.scheduled_at).getTime(), durationMin: effectiveDuration(dur ?? 60, b.vehicle_count) }
+    })
+    const conflicts = countConflicts(newStart, newEnd, intervals)
+    const dateStr   = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+    const capacity  = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
+    if (conflicts >= capacity) {
+      return Response.json(
+        { error: 'Ce créneau vient d\'être réservé. Merci de choisir un autre horaire.' },
+        { status: 409 },
+      )
+    }
+  }
 
   // Récupérer l'email du laveur via le service role (auth.users)
   let washerEmail: string | null = null
