@@ -8,7 +8,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const {
-    name, phone, logo_url, welcome_message, brand_color, team_size,
+    name, phone, slug, logo_url, welcome_message, brand_color, team_size,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
     review_enabled, review_delay_hours, google_review_url,
@@ -24,6 +24,21 @@ export async function PATCH(request: NextRequest) {
   }
 
   const updates: Record<string, unknown> = {}
+
+  // Slug personnalisé : format strict + unicité
+  if (slug !== undefined) {
+    const s = String(slug).trim().toLowerCase()
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
+      return NextResponse.json({ error: 'Lien invalide : 3 à 40 caractères, lettres minuscules, chiffres et tirets uniquement (sans tiret au début/fin).' }, { status: 400 })
+    }
+    const { data: taken } = await supabase
+      .from('washers').select('id').eq('slug', s).neq('user_id', user.id).maybeSingle()
+    if (taken) {
+      return NextResponse.json({ error: 'Ce lien est déjà utilisé. Choisissez-en un autre.' }, { status: 409 })
+    }
+    updates.slug = s
+  }
+
   if (name !== undefined) updates.name = String(name).trim()
   if (phone !== undefined) updates.phone = phone?.trim() || null
   if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null

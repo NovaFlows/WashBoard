@@ -17,6 +17,8 @@ export default async function AbonnementPage() {
       washerName={washer.name}
       trialEndsAt={washer.trial_ends_at}
       subscriptionStatus={washer.subscription_status}
+      plan={washer.plan}
+      grandfathered={washer.grandfathered}
     >
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Abonnement</h1>

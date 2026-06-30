@@ -130,6 +130,12 @@
 
 ## ✅ Fait
 
+- [x] 2026-07-01 — **Badge de plan dans le dashboard** : visible dans le header sur toutes
+      les pages (Essentiel/Pro/Business, ou « Accès complet » si grandfathered), cliquable
+      → page Abonnement.
+- [x] 2026-07-01 — **Choix du slug** : le laveur édite son lien `/book/...` depuis
+      Paramètres → Page client. Validation serveur (format + unicité), saisie filtrée.
+
 - [x] 2026-06-29 — Slogan rotatif du hero (3 phrases animées)
 - [x] 2026-06-29 — Page 404 personnalisée (`not-found.tsx`)
 - [x] 2026-06-29 — Plafond serveur du nombre de laveurs (#16)

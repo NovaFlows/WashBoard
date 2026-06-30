@@ -16,7 +16,7 @@ export default async function ComptaPage() {
   // La comptabilité fait partie du plan Pro (et au-dessus)
   if (!hasFeature(washer, 'compta')) {
     return (
-      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status}>
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered}>
         <div className="p-4">
           <div className="mb-6">
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Comptabilité</h1>

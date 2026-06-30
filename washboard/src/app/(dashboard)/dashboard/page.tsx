@@ -35,7 +35,7 @@ export default async function DashboardPage() {
   const done = all.filter(b => b.status === 'done').length
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered}>
       <div className="grid grid-cols-3 gap-3 mb-8">
         <StatCard label="En attente" value={pending} color="amber" />
         <StatCard label="Confirmés" value={confirmed} color="emerald" />

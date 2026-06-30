@@ -4,12 +4,36 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { PLAN_LABELS, type Plan } from '@/lib/plan'
 
 type Props = {
   washerName: string
   children: React.ReactNode
   trialEndsAt?: string | null
   subscriptionStatus?: string | null
+  plan?: Plan
+  grandfathered?: boolean
+}
+
+function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
+  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[plan ?? 'essentiel']
+  const color = grandfathered
+    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+    : plan === 'business' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400'
+    : plan === 'pro'      ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
+    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+  return (
+    <Link
+      href="/dashboard/abonnement"
+      title="Voir mon abonnement"
+      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap hover:opacity-80 transition-opacity ${color}`}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+        <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zM5 20h14"/>
+      </svg>
+      {label}
+    </Link>
+  )
 }
 
 function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string | null; subscriptionStatus?: string | null }) {
@@ -78,7 +102,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -109,6 +133,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <PlanBadge plan={plan} grandfathered={grandfathered} />
             <form action="/api/auth/logout" method="POST">
               <button className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2.5 sm:px-4 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-semibold border border-slate-200 dark:border-slate-700 whitespace-nowrap">
                 <span className="hidden sm:inline">Déconnexion</span>

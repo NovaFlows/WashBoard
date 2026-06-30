@@ -560,18 +560,63 @@ function DangerZone({ washer }: { washer: Washer }) {
 
 /* ── Onglet Page client ── */
 function ClientTab({ washer }: { washer: Washer }) {
-  const bookingUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/book/${washer.slug}`
+  const router = useRouter()
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const [slug, setSlug] = useState(washer.slug)
+  const [slugMsg, setSlugMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [slugLoading, setSlugLoading] = useState(false)
+
+  async function saveSlug() {
+    const s = slug.trim().toLowerCase()
+    setSlugMsg(null)
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
+      setSlugMsg({ ok: false, text: '3 à 40 caractères : minuscules, chiffres et tirets (pas au début ni à la fin).' })
+      return
+    }
+    if (s === washer.slug) { setSlugMsg({ ok: true, text: 'Lien inchangé' }); return }
+    setSlugLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: s }),
+    })
+    const json = await res.json().catch(() => null)
+    setSlugLoading(false)
+    if (!res.ok) { setSlugMsg({ ok: false, text: json?.error ?? 'Erreur lors de la mise à jour' }); return }
+    setSlugMsg({ ok: true, text: 'Lien mis à jour' })
+    router.refresh()
+  }
 
   return (
     <div className="space-y-5">
-      <Card title="Votre page de réservation" icon={Link2}>
+      <Card title="Votre lien de réservation" icon={Link2}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-          Partagez ce lien à vos clients pour qu&apos;ils puissent réserver en ligne.
+          Personnalisez le lien que vous partagez à vos clients.
         </p>
-        <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-          <span className="text-sm text-blue-600 dark:text-blue-400 font-mono flex-1 truncate">/book/{washer.slug}</span>
+        <div className="flex items-stretch gap-2">
+          <div className="flex items-center flex-1 border border-slate-300 dark:border-slate-600 rounded-xl overflow-hidden bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-blue-500">
+            <span className="px-3 text-sm text-slate-400 dark:text-slate-500 select-none whitespace-nowrap border-r border-slate-200 dark:border-slate-700">/book/</span>
+            <input
+              value={slug}
+              onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              placeholder="mon-entreprise"
+              className="flex-1 min-w-0 px-3 py-2.5 text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+            />
+          </div>
           <button
-            onClick={() => navigator.clipboard.writeText(bookingUrl)}
+            onClick={saveSlug}
+            disabled={slugLoading}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shrink-0"
+          >
+            {slugLoading ? '...' : 'Enregistrer'}
+          </button>
+        </div>
+        <Feedback msg={slugMsg} />
+
+        <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-3">
+          <span className="text-sm text-blue-600 dark:text-blue-400 font-mono flex-1 truncate">{origin}/book/{washer.slug}</span>
+          <button
+            onClick={() => navigator.clipboard.writeText(`${origin}/book/${washer.slug}`)}
             className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0"
           >
             Copier

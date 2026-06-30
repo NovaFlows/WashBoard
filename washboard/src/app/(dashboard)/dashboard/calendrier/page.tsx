@@ -41,7 +41,7 @@ export default async function CalendrierPage() {
   ])
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered}>
       <CalendrierDashboard
         bookings={bookings ?? []}
         unavailabilities={unavailabilities ?? []}
