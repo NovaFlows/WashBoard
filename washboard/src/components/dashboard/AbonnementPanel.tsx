@@ -13,6 +13,7 @@ type Props = {
   grandfathered: boolean
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
+  cancelsAt: string | null
   successParam?: boolean
   cancelledParam?: boolean
 }
@@ -60,7 +61,7 @@ function StatusBadge({ status, cardRegistered }: { status: string; cardRegistere
 
 export default function AbonnementPanel({
   subscriptionStatus, trialEndsAt, plan, grandfathered,
-  stripeCustomerId, stripeSubscriptionId, successParam, cancelledParam,
+  stripeCustomerId, stripeSubscriptionId, cancelsAt, successParam, cancelledParam,
 }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
@@ -122,6 +123,19 @@ export default function AbonnementPanel({
           </svg>
           Paiement annulé. Vous pouvez réessayer à tout moment.
           <button onClick={() => router.replace('/dashboard/abonnement')} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
+        </div>
+      )}
+
+      {/* Résiliation programmée */}
+      {cancelsAt && subscriptionStatus === 'active' && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium flex items-center gap-2">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <span>
+            Résiliation programmée le <strong>{new Date(cancelsAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
+            Votre accès reste actif jusqu&apos;à cette date. Pour annuler la résiliation, cliquez sur &laquo;&nbsp;Gérer mon abonnement&nbsp;&raquo;.
+          </span>
         </div>
       )}
 

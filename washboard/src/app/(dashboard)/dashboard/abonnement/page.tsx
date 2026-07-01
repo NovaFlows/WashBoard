@@ -36,6 +36,7 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
         grandfathered={washer.grandfathered ?? false}
         stripeCustomerId={washer.stripe_customer_id ?? null}
         stripeSubscriptionId={washer.stripe_subscription_id ?? null}
+        cancelsAt={washer.cancels_at ?? null}
         successParam={params.success === '1'}
         cancelledParam={params.cancelled === '1'}
       />

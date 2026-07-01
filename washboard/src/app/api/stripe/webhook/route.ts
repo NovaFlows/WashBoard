@@ -56,9 +56,15 @@ export async function POST(req: NextRequest) {
                        : sub.status === 'past_due' ? 'past_due'
                        : 'expired'
 
+      // Résiliation programmée : l'abonnement reste actif jusqu'à cancel_at
+      const cancelsAt = sub.cancel_at_period_end && sub.cancel_at
+        ? new Date(sub.cancel_at * 1000).toISOString()
+        : null
+
       await admin.from('washers').update({
         ...(plan ? { plan } : {}),
         subscription_status: status,
+        cancels_at: cancelsAt,
       }).eq('stripe_customer_id', customerId)
       break
     }
@@ -68,6 +74,7 @@ export async function POST(req: NextRequest) {
       await admin.from('washers').update({
         subscription_status:    'expired',
         stripe_subscription_id: null,
+        cancels_at:             null,
       }).eq('stripe_customer_id', sub.customer as string)
       break
     }
