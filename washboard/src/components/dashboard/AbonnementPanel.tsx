@@ -246,9 +246,8 @@ export default function AbonnementPanel({
                       {isLoading ? 'Redirection…' : isCurrent ? 'Commencer mon abonnement' : `Choisir ${card.name}`}
                     </button>
                     {subscriptionStatus === 'trial' && daysLeft !== null && daysLeft > 0 && (
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center leading-tight">
-                        La facturation commence immédiatement.<br />
-                        Vous pouvez aussi attendre la fin de vos {daysLeft} jour{daysLeft > 1 ? 's' : ''} d&apos;essai.
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-500 text-center leading-tight">
+                        Carte enregistrée maintenant, facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''} — à la fin de votre essai.
                       </p>
                     )}
                   </div>

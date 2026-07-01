@@ -14,12 +14,21 @@ export async function POST(req: NextRequest) {
 
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, stripe_customer_id')
+    .select('id, stripe_customer_id, subscription_status, trial_ends_at')
     .eq('user_id', user.id)
     .single()
   if (!washer) return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+
+  // Si l'utilisateur est en essai avec des jours restants, différer la facturation
+  let trialEnd: number | undefined
+  if (washer.subscription_status === 'trial' && washer.trial_ends_at) {
+    const trialEndDate = new Date(washer.trial_ends_at)
+    if (trialEndDate.getTime() > Date.now()) {
+      trialEnd = Math.floor(trialEndDate.getTime() / 1000)
+    }
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
@@ -31,6 +40,7 @@ export async function POST(req: NextRequest) {
     ),
     client_reference_id: user.id,
     metadata: { washer_id: washer.id, plan },
+    ...(trialEnd ? { subscription_data: { trial_end: trialEnd } } : {}),
     success_url: `${appUrl}/dashboard/abonnement?success=1`,
     cancel_url:  `${appUrl}/dashboard/abonnement?cancelled=1`,
   })
