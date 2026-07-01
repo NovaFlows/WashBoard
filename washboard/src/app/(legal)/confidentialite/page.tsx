@@ -26,20 +26,20 @@ export default function Confidentialite() {
         <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2">2.1 Données des laveurs (utilisateurs du logiciel)</h3>
         <ul>
           <li>Nom, prénom, email, numéro de téléphone</li>
-          <li>Nom commercial et informations sur l'activité (zone d'intervention, prestations, tarifs)</li>
+          <li>Nom commercial et informations sur l&apos;activité (zone d&apos;intervention, prestations, tarifs)</li>
           <li>Données de connexion (email, mot de passe chiffré)</li>
-          <li>Données comptables saisies (chiffre d'affaires, dépenses)</li>
+          <li>Données comptables saisies (chiffre d&apos;affaires, dépenses)</li>
         </ul>
         <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">2.2 Données des clients des laveurs (via page de réservation)</h3>
         <ul>
           <li>Nom, prénom, email, numéro de téléphone</li>
-          <li>Adresse du lieu d'intervention</li>
+          <li>Adresse du lieu d&apos;intervention</li>
           <li>Détails de la réservation (service, véhicule, créneau, prix)</li>
         </ul>
         <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">2.3 Données de navigation</h3>
         <ul>
           <li>Adresse IP (utilisée uniquement pour la protection anti-spam des formulaires)</li>
-          <li>Aucun cookie de traçage ou de publicité n'est utilisé</li>
+          <li>Aucun cookie de traçage ou de publicité n&apos;est utilisé</li>
         </ul>
       </Section>
 
@@ -54,11 +54,11 @@ export default function Confidentialite() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {[
               ['Gestion du compte laveur et accès au logiciel', 'Exécution du contrat'],
-              ['Envoi des emails de confirmation de réservation', 'Exécution du contrat'],
-              ['Envoi des demandes d\'avis Google aux clients', 'Intérêt légitime'],
-              ['Protection anti-spam (rate-limiting par IP)', 'Intérêt légitime'],
-              ['Facturation et gestion de l\'abonnement', 'Obligation légale / contrat'],
-              ['Suppression des comptes après résiliation (purge 30j)', 'Obligation légale / contrat'],
+              ["Envoi des emails de confirmation de réservation", 'Exécution du contrat'],
+              ["Envoi des demandes d’avis Google aux clients", 'Intérêt légitime'],
+              ["Protection anti-spam (rate-limiting par IP)", 'Intérêt légitime'],
+              ["Facturation et gestion de l’abonnement", 'Obligation légale / contrat'],
+              ["Suppression des comptes après résiliation (purge 30j)", 'Obligation légale / contrat'],
             ].map(([fin, base]) => (
               <tr key={fin}>
                 <td className="py-2 pr-4">{fin}</td>
@@ -71,7 +71,7 @@ export default function Confidentialite() {
 
       <Section title="4. Durée de conservation">
         <ul>
-          <li><strong>Données des laveurs actifs :</strong> pendant toute la durée de l'abonnement</li>
+          <li><strong>Données des laveurs actifs :</strong> pendant toute la durée de l&apos;abonnement</li>
           <li><strong>Après résiliation :</strong> 30 jours (délai de réactivation possible), puis suppression définitive</li>
           <li><strong>Données de réservation des clients finaux :</strong> conservées pendant la durée du contrat avec le laveur, puis supprimées avec le compte</li>
           <li><strong>Adresses IP (anti-spam) :</strong> non persistées — stockées en mémoire vive uniquement (supprimées au redémarrage du serveur)</li>
@@ -90,9 +90,10 @@ export default function Confidentialite() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {[
               ['Supabase Inc.', 'Base de données (stockage des données)', 'UE (eu-west-1)'],
-              ['Vercel Inc.', 'Hébergement de l\'application web', 'USA / CDN mondial'],
+              ['Vercel Inc.', "Hébergement de l’application web", 'USA / CDN mondial'],
               ['Resend Inc.', 'Envoi des emails transactionnels', 'USA'],
               ['Google LLC', 'Geocoding / Maps (calcul des zones)', 'USA'],
+              ['Stripe Inc.', 'Paiement en ligne sécurisé', 'USA'],
             ].map(([p, r, l]) => (
               <tr key={p}>
                 <td className="py-2 pr-4 font-medium">{p}</td>
@@ -111,11 +112,11 @@ export default function Confidentialite() {
       <Section title="6. Vos droits (RGPD)">
         <p>Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants :</p>
         <ul>
-          <li><strong>Droit d'accès :</strong> obtenir une copie de vos données personnelles</li>
+          <li><strong>Droit d&apos;accès :</strong> obtenir une copie de vos données personnelles</li>
           <li><strong>Droit de rectification :</strong> corriger des données inexactes ou incomplètes</li>
-          <li><strong>Droit à l'effacement :</strong> demander la suppression de vos données</li>
+          <li><strong>Droit à l&apos;effacement :</strong> demander la suppression de vos données</li>
           <li><strong>Droit à la portabilité :</strong> recevoir vos données dans un format structuré</li>
-          <li><strong>Droit d'opposition :</strong> vous opposer à un traitement basé sur l'intérêt légitime</li>
+          <li><strong>Droit d&apos;opposition :</strong> vous opposer à un traitement basé sur l&apos;intérêt légitime</li>
           <li><strong>Droit à la limitation :</strong> limiter le traitement de vos données</li>
         </ul>
         <p>
@@ -124,17 +125,17 @@ export default function Confidentialite() {
         </p>
         <p>
           Vous pouvez également introduire une réclamation auprès de la <strong>CNIL</strong> (Commission Nationale
-          de l'Informatique et des Libertés) : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a>.
+          de l&apos;Informatique et des Libertés) : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a>.
         </p>
       </Section>
 
       <Section title="7. Cookies">
         <p>
-          WashBoard n'utilise pas de cookies publicitaires ou de traçage. Les seuls cookies déposés sont :
+          WashBoard n&apos;utilise pas de cookies publicitaires ou de traçage. Les seuls cookies déposés sont :
         </p>
         <ul>
-          <li><strong>Cookie de session :</strong> nécessaire à l'authentification des laveurs (cookie Supabase sécurisé, HttpOnly)</li>
-          <li><strong>Cookie de thème :</strong> mémorise la préférence d'affichage clair/sombre (stockage local, aucune donnée personnelle)</li>
+          <li><strong>Cookie de session :</strong> nécessaire à l&apos;authentification des laveurs (cookie Supabase sécurisé, HttpOnly)</li>
+          <li><strong>Cookie de thème :</strong> mémorise la préférence d&apos;affichage clair/sombre (stockage local, aucune donnée personnelle)</li>
         </ul>
         <p>Ces cookies sont strictement nécessaires au fonctionnement du service et ne nécessitent pas de consentement.</p>
       </Section>
@@ -143,7 +144,7 @@ export default function Confidentialite() {
         <p>
           WashBoard met en œuvre les mesures techniques et organisationnelles appropriées pour protéger vos données :
           chiffrement des mots de passe (gestion par Supabase Auth), connexions HTTPS, accès aux données restreint
-          par des politiques RLS (Row Level Security) en base de données, clés d'API serveur non exposées au navigateur.
+          par des politiques RLS (Row Level Security) en base de données, clés d&apos;API serveur non exposées au navigateur.
         </p>
       </Section>
 

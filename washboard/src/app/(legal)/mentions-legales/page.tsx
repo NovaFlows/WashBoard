@@ -30,23 +30,28 @@ export default function MentionsLegales() {
           <li>340 Pine Street, Suite 701 — San Francisco, CA 94104, États-Unis</li>
           <li>Site : <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">vercel.com</a></li>
         </ul>
-        <p>Les données sont stockées via <strong>Supabase Inc.</strong> (infrastructure PostgreSQL) sur des serveurs situés dans l'Union Européenne.</p>
+        <p>
+          Les données sont stockées via <strong>Supabase Inc.</strong> (infrastructure PostgreSQL) sur des serveurs
+          situés dans l&apos;Union Européenne.
+        </p>
       </Section>
 
       <Section title="3. Propriété intellectuelle">
         <p>
-          L'ensemble des éléments constituant le site washboard.fr (textes, graphismes, logiciels, marques, logos) est la propriété
-          exclusive de l'éditeur ou fait l'objet d'autorisations d'utilisation. Toute reproduction, représentation, modification
-          ou exploitation, totale ou partielle, sans autorisation écrite préalable est interdite et constitue une contrefaçon
-          sanctionnée par les articles L.335-2 et suivants du Code de la Propriété Intellectuelle.
+          L&apos;ensemble des éléments constituant le site washboard.fr (textes, graphismes, logiciels, marques, logos)
+          est la propriété exclusive de l&apos;éditeur ou fait l&apos;objet d&apos;autorisations d&apos;utilisation.
+          Toute reproduction, représentation, modification ou exploitation, totale ou partielle, sans autorisation
+          écrite préalable est interdite et constitue une contrefaçon sanctionnée par les articles L.335-2 et suivants
+          du Code de la Propriété Intellectuelle.
         </p>
       </Section>
 
       <Section title="4. Limitation de responsabilité">
         <p>
-          L'éditeur s'efforce d'assurer l'exactitude et la mise à jour des informations diffusées sur ce site. Toutefois, il ne
-          peut garantir l'exactitude, la précision ou l'exhaustivité des informations mises à disposition. L'éditeur décline
-          toute responsabilité pour toute imprécision, inexactitude ou omission portant sur des informations disponibles sur le site.
+          L&apos;éditeur s&apos;efforce d&apos;assurer l&apos;exactitude et la mise à jour des informations diffusées
+          sur ce site. Toutefois, il ne peut garantir l&apos;exactitude, la précision ou l&apos;exhaustivité des
+          informations mises à disposition. L&apos;éditeur décline toute responsabilité pour toute imprécision,
+          inexactitude ou omission portant sur des informations disponibles sur le site.
         </p>
       </Section>
 
@@ -59,7 +64,8 @@ export default function MentionsLegales() {
 
       <Section title="6. Droit applicable">
         <p>
-          Les présentes mentions légales sont soumises au droit français. En cas de litige, les tribunaux français seront seuls compétents.
+          Les présentes mentions légales sont soumises au droit français. En cas de litige, les tribunaux français
+          seront seuls compétents.
         </p>
       </Section>
     </article>
