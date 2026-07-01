@@ -63,6 +63,20 @@
   - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
         (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
 
+## 🛡️ Prod-grade (observabilité + non-régression)
+
+- [x] 2026-07-02 — **Socle prod mis en place** (commit 9342092) :
+  - `lib/logger.ts` : logs structurés JSON (filtrables Vercel par event/level).
+  - `lib/apiError.ts` : `AppError` + `withErrorHandling` + `errorResponse` →
+    chaque erreur API renvoie un `errorId` traçable (loggé serveur).
+  - Routes critiques enveloppées : stripe/webhook, stripe/checkout, bookings.
+  - Error boundaries React : `global-error.tsx` + `(dashboard)/error.tsx` (affichent le `digest`).
+  - `GET /api/health` : ping Supabase (200/503) pour moniteur uptime.
+  - Seuils de couverture (`vitest.config`) + CI `test:coverage` → anti-régression.
+  - `docs/RUNBOOK.md` : procédure d'incident.
+  - [ ] Brancher un moniteur uptime externe sur `/api/health` (UptimeRobot / Better Stack).
+  - [ ] Optionnel : Sentry (nécessite un compte + DSN) pour agrégation d'erreurs + alertes.
+
 ## 🟠 Robustesse / dette technique
 
 - [~] **Code mort / legacy** — vérifié avant suppression :
