@@ -321,11 +321,14 @@ function BookingCard({ booking, loading, onUpdate }: {
             )}
             {booking.vehicles_detail && booking.vehicles_detail.length > 0 && (
               <Row icon="car">
-                {booking.vehicles_detail.map(v => {
-                  const base = `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`
+                {booking.vehicles_detail.flatMap(v => {
+                  const label = v.label ?? VEHICLE_LABELS[v.type] ?? v.type
                   const mdls = (v.models ?? []).map(m => m.trim()).filter(Boolean)
-                  return mdls.length ? `${base} (${mdls.join(', ')})` : base
-                }).join(' · ')}
+                  if (mdls.length === 0) return [`${label} × ${v.count}`]
+                  const lines = mdls.map(m => `${label} — ${m}`)
+                  if (mdls.length < v.count) lines.push(`${label} × ${v.count - mdls.length}`)
+                  return lines
+                }).map((line, i) => <span key={i} className="block">{line}</span>)}
               </Row>
             )}
             <Row icon="calendar">

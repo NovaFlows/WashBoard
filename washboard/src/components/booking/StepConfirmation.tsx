@@ -48,15 +48,21 @@ export default function StepConfirmation({ washerName, bookingId, form, services
           />
         )}
         {form.vehicles_detail && form.vehicles_detail.length > 0 && (
-          <Row
-            label={`Véhicule${form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}`}
-            value={form.vehicles_detail.map(v => {
-              const base = `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`
-              const mdls = (v.models ?? []).map(m => m.trim()).filter(Boolean)
-              return mdls.length ? `${base} (${mdls.join(', ')})` : base
-            }).join(' · ')}
-            right
-          />
+          <div className="flex justify-between text-sm gap-3">
+            <span className="text-slate-500 dark:text-slate-400 shrink-0">
+              Véhicule{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
+            </span>
+            <div className="font-medium text-slate-900 dark:text-slate-100 text-right space-y-0.5">
+              {form.vehicles_detail.flatMap(v => {
+                const label = v.label ?? VEHICLE_LABELS[v.type] ?? v.type
+                const mdls = (v.models ?? []).map(m => m.trim()).filter(Boolean)
+                if (mdls.length === 0) return [`${label} × ${v.count}`]
+                const lines = mdls.map(m => `${label} — ${m}`)
+                if (mdls.length < v.count) lines.push(`${label} × ${v.count - mdls.length}`)
+                return lines
+              }).map((line, i) => <div key={i}>{line}</div>)}
+            </div>
+          </div>
         )}
         {form.selected_addons && form.selected_addons.length > 0 && (
           form.selected_addons.map(a => (
