@@ -7,11 +7,17 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-06-29 (mission autonome : icônes, anti-spam, code mort, eslint, env)
+> Dernière mise à jour : 2026-07-01 (plans Pro/Business « en cours de développement » + tarifs landing)
 
 ---
 
 ## 🔴 Priorité haute
+
+- [x] 2026-07-01 — **Plans Pro (69€) & Business (99€) « en cours de développement »** :
+      non sélectionnables sur la page Abonnement (badge « Bientôt » + bouton désactivé).
+      Descriptif des offres centralisé dans `lib/plan.ts` (`PLAN_CARDS`, flag `comingSoon`),
+      partagé entre la page Abonnement et la landing. Section tarifs de la landing refaite
+      en grille 3 plans (Essentiel = CTA signup, Pro/Business = désactivés).
 
 - [x] 2026-06-29 — **Anti-spam sur `POST /api/bookings`** (réservation publique) :
       honeypot (champ piège) + rate-limit par IP (8/10min, en mémoire) + plafond

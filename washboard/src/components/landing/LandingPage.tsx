@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { PLAN_CARDS } from '@/lib/plan'
 
 // Slogans du hero qui défilent (le segment `hl` est surligné en bleu).
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
@@ -387,41 +388,60 @@ export default function LandingPage() {
       {/* ── Pricing ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">Un seul tarif. Tout inclus.</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-lg">Pas de frais cachés, pas de paliers compliqués.</p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">
+            Des offres qui grandissent avec toi
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 text-lg">Commence à 49€/mois. Sans engagement, résiliable à tout moment.</p>
         </FadeUp>
-        <FadeUp className="max-w-sm mx-auto">
-          <div className="bg-white dark:bg-slate-900 border-2 border-blue-500 dark:border-blue-600 rounded-2xl p-8 text-center relative shadow-xl shadow-blue-100 dark:shadow-blue-950/30">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-              <span className="bg-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded-full">Le plus populaire</span>
-            </div>
-            <p className="text-5xl font-extrabold text-slate-900 dark:text-white mt-2">49€<span className="text-xl font-medium text-slate-400">/mois</span></p>
-            <p className="text-slate-400 text-sm mt-1 mb-6">Sans engagement · Résiliable à tout moment</p>
-            <div className="space-y-3 text-left mb-8">
-              {[
-                'Page de réservation personnalisée',
-                'Créneaux optimisés par zone',
-                'Calendrier & gestion des RDV',
-                'CRM clients (pros + particuliers)',
-                'Export PDF & Excel',
-                'Confirmation email automatique',
-                'Connexion Google Calendar',
-                'Accompagnement à la mise en place',
-                'Support WhatsApp gratuit — 06 84 14 04 38',
-              ].map((feat) => (
-                <div key={feat} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-                  <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {feat}
+        <FadeGroup className="grid sm:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
+          {PLAN_CARDS.map((card) => {
+            const featured = card.key === 'essentiel'
+            return (
+              <FadeItem
+                key={card.key}
+                className={`relative flex flex-col rounded-2xl p-6 sm:p-8 ${
+                  featured
+                    ? 'bg-white dark:bg-slate-900 border-2 border-blue-500 dark:border-blue-600 shadow-xl shadow-blue-100 dark:shadow-blue-950/30'
+                    : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                  {featured ? (
+                    <span className="bg-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded-full">Le plus populaire</span>
+                  ) : card.comingSoon ? (
+                    <span className="bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 text-xs font-bold px-4 py-1.5 rounded-full">Bientôt disponible</span>
+                  ) : null}
                 </div>
-              ))}
-            </div>
-            <Link href="/signup" className="block w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-base">
-              Commencer gratuitement — 1 mois
-            </Link>
-            <p className="text-xs text-slate-400 mt-3">Sans carte bancaire pour l&apos;essai</p>
-          </div>
+                <p className="text-lg font-bold text-slate-900 dark:text-white mt-2">{card.name}</p>
+                <p className="text-4xl font-extrabold text-slate-900 dark:text-white mt-2">
+                  {card.price}€<span className="text-lg font-medium text-slate-400">/mois</span>
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-6">{card.tagline}</p>
+                <div className="space-y-3 text-left mb-8 flex-1">
+                  {card.features.map((feat) => (
+                    <div key={feat} className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+                      <svg className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {feat}
+                    </div>
+                  ))}
+                </div>
+                {card.comingSoon ? (
+                  <span className="block w-full text-center py-3.5 rounded-xl font-semibold text-sm bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
+                    En cours de développement
+                  </span>
+                ) : (
+                  <Link href="/signup" className="block w-full text-center py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-base">
+                    Commencer gratuitement
+                  </Link>
+                )}
+              </FadeItem>
+            )
+          })}
+        </FadeGroup>
+        <FadeUp className="text-center mt-8">
+          <p className="text-xs text-slate-400">Essai 1 mois offert · Sans carte bancaire · Support WhatsApp gratuit — 06 84 14 04 38</p>
         </FadeUp>
       </section>
 

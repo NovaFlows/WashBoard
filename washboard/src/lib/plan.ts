@@ -39,6 +39,47 @@ export const SMS_QUOTA: Record<Plan, number> = {
   business:  100000,
 }
 
+// Descriptif des offres (partagé entre la page Abonnement et la landing).
+// `comingSoon` = offre affichée mais pas encore sélectionnable (en développement).
+export type PlanCard = { key: Plan; name: string; price: number; tagline: string; features: string[]; comingSoon?: boolean }
+
+export const PLAN_CARDS: PlanCard[] = [
+  {
+    key: 'essentiel', name: 'Essentiel', price: 49,
+    tagline: 'Pour démarrer et être pro tout de suite.',
+    features: [
+      'Page de réservation personnalisée',
+      'Agenda + créneaux intelligents',
+      'Frais de déplacement, multi-véhicules',
+      'CRM analytique',
+      'Avis Google par email',
+    ],
+  },
+  {
+    key: 'pro', name: 'Pro', price: 69,
+    tagline: 'Pour piloter votre activité.',
+    comingSoon: true,
+    features: [
+      'Tout l’Essentiel',
+      'Comptabilité (CA, dépenses, résultat)',
+      'Avis Google par SMS (150/mois)',
+      'Relances de suivi client',
+    ],
+  },
+  {
+    key: 'business', name: 'Business', price: 99,
+    tagline: 'Pour les équipes de plusieurs laveurs.',
+    comingSoon: true,
+    features: [
+      'Tout le Pro',
+      'Multi-laveurs (RDV simultanés)',
+      'SMS illimités',
+      'Personnalisation avancée',
+      'Support prioritaire',
+    ],
+  },
+]
+
 type PlanInfo = { plan?: string | null; grandfathered?: boolean | null }
 
 export function washerPlan(w: PlanInfo | null | undefined): Plan {

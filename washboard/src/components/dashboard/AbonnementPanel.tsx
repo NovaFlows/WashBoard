@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Plan } from '@/lib/plan'
+import { PLAN_CARDS, type Plan } from '@/lib/plan'
 
 type Props = {
   subscriptionStatus: string
@@ -13,41 +13,6 @@ type Props = {
 }
 
 const PRICE = 49
-
-const PLAN_CARDS: { key: Plan; name: string; price: number; tagline: string; features: string[] }[] = [
-  {
-    key: 'essentiel', name: 'Essentiel', price: 49,
-    tagline: 'Pour démarrer et être pro tout de suite.',
-    features: [
-      'Page de réservation personnalisée',
-      'Agenda + créneaux intelligents',
-      'Frais de déplacement, multi-véhicules',
-      'CRM analytique',
-      'Avis Google par email',
-    ],
-  },
-  {
-    key: 'pro', name: 'Pro', price: 69,
-    tagline: 'Pour piloter votre activité.',
-    features: [
-      'Tout l’Essentiel',
-      'Comptabilité (CA, dépenses, résultat)',
-      'Avis Google par SMS (150/mois)',
-      'Relances de suivi client',
-    ],
-  },
-  {
-    key: 'business', name: 'Business', price: 99,
-    tagline: 'Pour les équipes de plusieurs laveurs.',
-    features: [
-      'Tout le Pro',
-      'Multi-laveurs (RDV simultanés)',
-      'SMS illimités',
-      'Personnalisation avancée',
-      'Support prioritaire',
-    ],
-  },
-]
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'active') {
@@ -164,9 +129,11 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
               >
                 <div className="flex items-center justify-between mb-1">
                   <p className="font-bold text-slate-900 dark:text-slate-100">{card.name}</p>
-                  {isCurrent && (
+                  {isCurrent ? (
                     <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-600 text-white">Actuel</span>
-                  )}
+                  ) : card.comingSoon ? (
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">Bientôt</span>
+                  ) : null}
                 </div>
                 <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-0.5">
                   {card.price}€<span className="text-xs font-medium text-slate-400">/mois</span>
@@ -182,7 +149,11 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                     </li>
                   ))}
                 </ul>
-                {!isCurrent && !grandfathered && (
+                {card.comingSoon ? (
+                  <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
+                    En cours de développement
+                  </span>
+                ) : !isCurrent && !grandfathered ? (
                   <a
                     href={upgradeHref(card)}
                     target="_blank"
@@ -191,7 +162,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                   >
                     Choisir {card.name}
                   </a>
-                )}
+                ) : null}
               </div>
             )
           })}
