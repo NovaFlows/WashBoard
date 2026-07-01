@@ -14,6 +14,7 @@ type Props = {
   plan?: Plan
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
+  cancelsAt?: string | null
 }
 
 function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
@@ -37,12 +38,33 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
   )
 }
 
-function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null }) {
+function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null }) {
   const [dismissed, setDismissed] = useState(false)
   const [now] = useState(() => Date.now())
 
-  if (!subscriptionStatus || subscriptionStatus === 'active') return null
   if (dismissed) return null
+
+  // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
+  if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
+    const endDate = new Date(cancelsAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    return (
+      <div className="bg-red-600 text-white text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
+          <span>Abonnement résilié — valable jusqu&apos;au {endDate}</span>
+          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:text-red-100">
+            Réactiver →
+          </Link>
+        </div>
+        <button onClick={() => setDismissed(true)} aria-label="Fermer" className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    )
+  }
+
+  if (!subscriptionStatus || subscriptionStatus === 'active') return null
 
   if (subscriptionStatus === 'expired') {
     return (
@@ -124,7 +146,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId }: 
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -132,7 +154,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
-        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} />
+        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
         <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button

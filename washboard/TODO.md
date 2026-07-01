@@ -13,6 +13,10 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **Remplir les placeholders légaux** dès que l'entité est créée (micro-entreprise ou autre) :
+      fichiers `src/app/(legal)/mentions-legales/page.tsx`, `cgv/page.tsx`, `confidentialite/page.tsx`.
+      Remplacer `[NOM LÉGAL]`, `[FORME JURIDIQUE]`, `[SIRET]`, `[ADRESSE COMPLÈTE]`.
+
 - [x] 2026-07-01 — **Plans Pro (69€) & Business (99€) « en cours de développement »** :
       non sélectionnables sur la page Abonnement (badge « Bientôt » + bouton désactivé).
       Descriptif des offres centralisé dans `lib/plan.ts` (`PLAN_CARDS`, flag `comingSoon`),
