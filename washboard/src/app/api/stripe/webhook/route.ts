@@ -26,11 +26,19 @@ export async function POST(req: NextRequest) {
       const plan     = session.metadata?.plan
       if (!washerId || !plan) break
 
+      const subscriptionId = session.subscription as string
+      const subscription   = await stripe.subscriptions.retrieve(subscriptionId)
+
+      // Si l'abonnement est en période d'essai différée (trial_end passé à Stripe),
+      // on garde subscription_status = 'trial' pour préserver l'essai,
+      // mais on stocke les IDs — l'UI détecte "carte enregistrée" via stripe_subscription_id non null.
+      const newStatus = subscription.status === 'trialing' ? 'trial' : 'active'
+
       await admin.from('washers').update({
-        stripe_customer_id:      session.customer as string,
-        stripe_subscription_id:  session.subscription as string,
+        stripe_customer_id:     session.customer as string,
+        stripe_subscription_id: subscriptionId,
         plan,
-        subscription_status: 'active',
+        subscription_status:    newStatus,
       }).eq('id', washerId)
       break
     }
@@ -40,7 +48,8 @@ export async function POST(req: NextRequest) {
       const customerId = sub.customer as string
       const priceId    = sub.items.data[0]?.price.id
       const plan       = priceId ? planFromPriceId(priceId) : null
-      const status     = sub.status === 'active' ? 'active'
+      const status     = sub.status === 'active'   ? 'active'
+                       : sub.status === 'trialing' ? 'trial'
                        : sub.status === 'past_due' ? 'past_due'
                        : 'expired'
 

@@ -12,16 +12,25 @@ type Props = {
   plan: Plan
   grandfathered: boolean
   stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
   successParam?: boolean
   cancelledParam?: boolean
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, cardRegistered }: { status: string; cardRegistered?: boolean }) {
   if (status === 'active') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full">
         <span className="w-2 h-2 bg-emerald-500 rounded-full" />
         Abonnement actif
+      </span>
+    )
+  }
+  if (status === 'trial' && cardRegistered) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full">
+        <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+        Carte enregistrée
       </span>
     )
   }
@@ -51,7 +60,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AbonnementPanel({
   subscriptionStatus, trialEndsAt, plan, grandfathered,
-  stripeCustomerId, successParam, cancelledParam,
+  stripeCustomerId, stripeSubscriptionId, successParam, cancelledParam,
 }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
@@ -61,10 +70,11 @@ export default function AbonnementPanel({
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
     : null
 
-  const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
-  const hasStripe    = !!stripeCustomerId
-  const canManage    = hasStripe && (subscriptionStatus === 'active' || subscriptionStatus === 'past_due')
-  const needsPayment = !grandfathered && subscriptionStatus !== 'active'
+  const currentPrice   = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
+  const hasStripe      = !!stripeCustomerId
+  const cardRegistered = !!stripeSubscriptionId && subscriptionStatus === 'trial'
+  const canManage      = hasStripe && (subscriptionStatus === 'active' || subscriptionStatus === 'past_due' || cardRegistered)
+  const needsPayment   = !grandfathered && subscriptionStatus !== 'active' && !cardRegistered
 
   async function startCheckout(planKey: Plan) {
     setLoading(planKey)
@@ -120,7 +130,7 @@ export default function AbonnementPanel({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Statut actuel</p>
-            <StatusBadge status={subscriptionStatus} />
+            <StatusBadge status={subscriptionStatus} cardRegistered={cardRegistered} />
           </div>
           <div className="text-right">
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Tarif</p>
@@ -130,12 +140,16 @@ export default function AbonnementPanel({
 
         {subscriptionStatus === 'trial' && daysLeft !== null && (
           <div className={`mt-4 p-3 rounded-xl text-sm font-medium ${
-            daysLeft <= 7
+            cardRegistered
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+              : daysLeft <= 7
               ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
               : 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
           }`}>
-            {daysLeft === 0
-              ? 'Votre essai gratuit a expiré aujourd\'hui.'
+            {cardRegistered
+              ? `Votre carte est enregistrée. La facturation de ${currentPrice} €/mois débutera dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}, à la fin de votre essai.`
+              : daysLeft === 0
+              ? "Votre essai gratuit a expiré aujourd'hui."
               : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? 's' : ''} d'essai gratuit.`}
           </div>
         )}

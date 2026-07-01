@@ -13,6 +13,7 @@ type Props = {
   subscriptionStatus?: string | null
   plan?: Plan
   grandfathered?: boolean
+  stripeSubscriptionId?: string | null
 }
 
 function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
@@ -36,7 +37,7 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
   )
 }
 
-function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string | null; subscriptionStatus?: string | null }) {
+function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null }) {
   const [dismissed, setDismissed] = useState(false)
   const [now] = useState(() => Date.now())
 
@@ -57,6 +58,27 @@ function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string
   if (subscriptionStatus === 'trial' && trialEndsAt) {
     const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24))
     const isUrgent = daysLeft <= 7
+
+    // Carte enregistrée, facturation différée
+    if (stripeSubscriptionId) {
+      return (
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+          <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
+            <span>
+              ✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}
+            </span>
+            <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
+              Gérer →
+            </Link>
+          </div>
+          <button onClick={() => setDismissed(true)} aria-label="Fermer" className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      )
+    }
 
     if (daysLeft <= 0) {
       return (
@@ -102,7 +124,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus }: { trialEndsAt?: string
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -110,7 +132,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
-        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} />
+        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} />
         <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button

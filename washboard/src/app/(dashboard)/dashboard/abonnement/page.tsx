@@ -21,6 +21,7 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
       subscriptionStatus={washer.subscription_status}
       plan={washer.plan}
       grandfathered={washer.grandfathered}
+      stripeSubscriptionId={washer.stripe_subscription_id ?? null}
     >
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Abonnement</h1>
@@ -34,6 +35,7 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
         plan={washer.plan ?? 'essentiel'}
         grandfathered={washer.grandfathered ?? false}
         stripeCustomerId={washer.stripe_customer_id ?? null}
+        stripeSubscriptionId={washer.stripe_subscription_id ?? null}
         successParam={params.success === '1'}
         cancelledParam={params.cancelled === '1'}
       />
