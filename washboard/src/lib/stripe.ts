@@ -1,7 +1,9 @@
 import Stripe from 'stripe'
 import type { Plan } from '@/lib/plan'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+export function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
 export const STRIPE_PRICE_IDS: Record<Plan, string> = {
   essentiel: process.env.STRIPE_PRICE_ID_ESSENTIEL!,

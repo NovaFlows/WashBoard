@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { stripe, planFromPriceId } from '@/lib/stripe'
+import { getStripe, planFromPriceId } from '@/lib/stripe'
 import type Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+    event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
   } catch {
     return NextResponse.json({ error: 'Webhook signature invalide' }, { status: 400 })
   }
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       if (!washerId || !plan) break
 
       const subscriptionId = session.subscription as string
-      const subscription   = await stripe.subscriptions.retrieve(subscriptionId)
+      const subscription   = await getStripe().subscriptions.retrieve(subscriptionId)
 
       // Si l'abonnement est en période d'essai différée (trial_end passé à Stripe),
       // on garde subscription_status = 'trial' pour préserver l'essai,
