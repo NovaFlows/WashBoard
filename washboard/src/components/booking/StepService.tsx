@@ -72,7 +72,12 @@ export default function StepService({ services, categories, selected, onNext, ac
     ? Object.entries(basket).reduce((sum, [type, count]) => sum + vehiclePrice(selectedService, type) * count, 0)
     : 0
 
-  const canContinue = !!serviceId && basketCount > 0
+  // Le modèle est obligatoire pour chaque véhicule du panier
+  const allModelsFilled = Object.entries(basket).every(([type, count]) => {
+    const arr = models[type] ?? []
+    return Array.from({ length: count }).every((_, i) => (arr[i] ?? '').trim().length > 0)
+  })
+  const canContinue = !!serviceId && basketCount > 0 && allModelsFilled
 
   function selectTab(id: string) {
     setActiveTab(id)
@@ -309,9 +314,9 @@ export default function StepService({ services, categories, selected, onNext, ac
           {basketCount > 0 && (
             <div className="mt-4">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Modèle de vos véhicules <span className="text-slate-400 font-normal">(optionnel)</span>
+                Modèle de vos véhicules <span className="text-red-500">*</span>
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Aide le laveur à identifier votre véhicule (ex. « Peugeot 208 grise »).</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Obligatoire — aide le laveur à identifier votre véhicule (ex. « Peugeot 208 grise »).</p>
               <div className="space-y-2">
                 {Object.entries(basket).flatMap(([type, count]) =>
                   Array.from({ length: count }).map((_, i) => {
@@ -337,6 +342,11 @@ export default function StepService({ services, categories, selected, onNext, ac
         </div>
       )}
 
+      {selectedService && basketCount > 0 && !allModelsFilled && (
+        <p className="text-xs text-amber-600 dark:text-amber-500 mb-2 text-center">
+          Renseignez le modèle de chaque véhicule pour continuer.
+        </p>
+      )}
       <button
         onClick={handleNext}
         disabled={!canContinue}
