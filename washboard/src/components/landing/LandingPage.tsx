@@ -530,6 +530,9 @@ export default function LandingPage() {
           <div className="flex gap-4 text-xs text-slate-400">
             <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
             <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
+            <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
+            <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
+            <Link href="/confidentialite" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>
           </div>
         </div>
       </footer>
