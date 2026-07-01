@@ -26,17 +26,20 @@ export async function POST(req: NextRequest) {
       const plan     = session.metadata?.plan
       if (!washerId || !plan) break
 
-      const subscriptionId = session.subscription as string
-      const subscription   = await getStripe().subscriptions.retrieve(subscriptionId)
+      // Lire le statut actuel pour savoir si on était en essai (facturation différée)
+      const { data: washer } = await admin
+        .from('washers')
+        .select('subscription_status')
+        .eq('id', washerId)
+        .single()
 
-      // Si l'abonnement est en période d'essai différée (trial_end passé à Stripe),
-      // on garde subscription_status = 'trial' pour préserver l'essai,
-      // mais on stocke les IDs — l'UI détecte "carte enregistrée" via stripe_subscription_id non null.
-      const newStatus = subscription.status === 'trialing' ? 'trial' : 'active'
+      // Si le laveur était en trial → on garde 'trial' (billing différé, IDs stockés)
+      // Sinon → 'active' (paiement immédiat)
+      const newStatus = washer?.subscription_status === 'trial' ? 'trial' : 'active'
 
       await admin.from('washers').update({
         stripe_customer_id:     session.customer as string,
-        stripe_subscription_id: subscriptionId,
+        stripe_subscription_id: session.subscription as string,
         plan,
         subscription_status:    newStatus,
       }).eq('id', washerId)
