@@ -48,7 +48,6 @@ export async function POST(req: NextRequest) {
 
     case 'customer.subscription.updated': {
       const sub        = event.data.object as Stripe.Subscription
-      const customerId = sub.customer as string
       const priceId    = sub.items.data[0]?.price.id
       const plan       = priceId ? planFromPriceId(priceId) : null
       const status     = sub.status === 'active'   ? 'active'
@@ -63,21 +62,35 @@ export async function POST(req: NextRequest) {
         ? new Date(sub.cancel_at * 1000).toISOString()
         : null
 
-      await admin.from('washers').update({
+      // On matche sur stripe_subscription_id (fiable), fallback sur customer_id.
+      const { data, error } = await admin.from('washers').update({
         ...(plan ? { plan } : {}),
         subscription_status: status,
         cancels_at: cancelsAt,
-      }).eq('stripe_customer_id', customerId)
+      }).eq('stripe_subscription_id', sub.id).select('id')
+
+      if (error) console.error('[webhook] subscription.updated update error:', error)
+      if (!error && (!data || data.length === 0)) {
+        // Fallback : la ligne n'a pas stripe_subscription_id → matcher sur customer
+        const { error: err2 } = await admin.from('washers').update({
+          ...(plan ? { plan } : {}),
+          stripe_subscription_id: sub.id,
+          subscription_status: status,
+          cancels_at: cancelsAt,
+        }).eq('stripe_customer_id', sub.customer as string)
+        if (err2) console.error('[webhook] subscription.updated fallback error:', err2)
+      }
       break
     }
 
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription
-      await admin.from('washers').update({
+      const { error } = await admin.from('washers').update({
         subscription_status:    'expired',
         stripe_subscription_id: null,
         cancels_at:             null,
-      }).eq('stripe_customer_id', sub.customer as string)
+      }).eq('stripe_subscription_id', sub.id)
+      if (error) console.error('[webhook] subscription.deleted update error:', error)
       break
     }
 
