@@ -42,8 +42,9 @@
         409) — sauf le laveur (manuel = peut forcer). Logique pure testée
         (`countConflicts`, `effectiveTeamSize`) + test sur les **timestamps réels** du bug.
       - (Théorie initiale « embed services en tableau » écartée : l'embed est bien un objet.)
-  - [ ] À vérifier : d'autres lectures publiques bloquées par la RLS ?
-        (`unavailabilities` était aussi concerné → passé en service-role sur `/book`.)
+  - [x] 2026-07-02 — **Audit lectures publiques RLS** : trouvé 2 bugs → `/confirmation/[id]`
+        et `/api/bookings/[id]/pdf` lisaient `bookings` avec le client **anon** → 404 sous
+        RLS pour le client public. Passés en **service-role** ciblé sur l'UUID (jeton d'accès).
   - [x] 2026-06-30 — **Batterie de tests calendrier** (lib/slots) : génération de créneaux,
         chevauchement, conflits, capacité (absences), temps de trajet (faisabilité),
         durée × véhicules, cas limites (back-to-back, bornes, repro du bug prod). 66 tests au total.
@@ -98,16 +99,21 @@
 
 ## 🟡 Roadmap produit
 
-- [ ] **Stripe** : remplacer la facturation manuelle (PayPal/virement) par un
-      abonnement automatisé + gestion des changements de plan + statut.
+- [x] 2026-07-02 — **Stripe** : abonnement automatisé (checkout + portail + webhook),
+      essai avec facturation différée, résiliation programmée, bandeaux d'état.
+      Audit sécurité/fiabilité fait : blocage comingSoon + grandfathered côté serveur,
+      garde-fou double-abonnement, webhook 500 sur erreur DB (retries), reset cancels_at,
+      trial_end < 48h géré. Logique pure extraite dans `lib/subscription.ts` (+ tests).
+  - [ ] Mineurs restants (non-code) : vérifier `NEXT_PUBLIC_APP_URL` = www en prod ;
+        désactiver l'adaptive pricing Stripe (clients voyaient VND).
 - [ ] **Phase 3 — Avis par SMS** (plans Pro/Business) : intégrer Brevo (compte +
       clé API à fournir), fonction `sendSms()`, compteur de quota mensuel + blocage.
 - [ ] **Photos avant/après** : feature premium évidente pour laveurs/detailers.
 - [ ] **QA #1** : vérifier le 404 `/book` d'un vrai compte (données/slug, pas du code).
 - [x] 2026-06-30 — **QA #3** : vérifié manuellement → le clic sur une carte prestation
       fonctionne. C'était bien un **artefact Playwright** (clic synthétique), pas un bug.
-  - [ ] Optionnel : ajouter des `data-testid` sur les cartes pour fiabiliser les
-        futurs tests automatisés.
+  - [x] 2026-07-02 — `data-testid` ajoutés : `service-card`, `category-tab`,
+        `vehicle-increment`/`decrement`/`count`, `service-continue`.
 
 ## 🏗️ Infra & environnements (quand il y aura de vrais clients)
 
@@ -133,8 +139,13 @@
 - [x] 2026-06-29 — **Page d'accueil dashboard** : vérifiée — déjà une vraie page
       (3 cartes stats En attente/Confirmés/Terminés + liste complète des RDV). Rien à faire.
       Amélioration possible plus tard : « RDV du jour » mis en avant, raccourcis rapides.
-- [ ] **Accessibilité** : passe au-delà du `<h1>` déjà ajouté (focus, aria, contrastes).
-- [ ] **États de chargement** harmonisés (skeletons / spinners cohérents).
+- [~] **Accessibilité** : passe au-delà du `<h1>` déjà ajouté (focus, aria, contrastes).
+  - [x] 2026-07-02 — `aria-label` sur boutons icône-seule (+/- véhicules, fermer menu),
+        `aria-hidden` sur les icônes décoratives, `aria-live` sur le compteur véhicules.
+  - [ ] Reste : focus-visible cohérent, contrastes, navigation clavier complète.
+- [x] 2026-07-02 — **États de chargement** harmonisés : composant partagé
+      `ui/Spinner.tsx`, 8 spinners SVG dupliqués factorisés (auth, AbonnementPanel,
+      StepContact, CrmDashboard).
 
 ---
 
