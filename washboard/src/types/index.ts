@@ -119,6 +119,7 @@ export type VehicleItem = {
   count: number
   unit_price: number
   label?: string
+  models?: string[]
 }
 
 export type BookingFormData = {

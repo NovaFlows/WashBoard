@@ -130,6 +130,10 @@
 
 ## ✅ Fait
 
+- [x] 2026-07-01 — **Modèle de véhicule par le client** : à la réservation, un champ
+      texte libre optionnel par véhicule (ex. « Peugeot 208 grise »). Stocké dans
+      `vehicles_detail.models` (JSONB, pas de SQL). Affiché côté laveur (liste RDV +
+      calendrier), sur la confirmation client et le PDF.
 - [x] 2026-07-01 — **Badge de plan dans le dashboard** : visible dans le header sur toutes
       les pages (Essentiel/Pro/Business, ou « Accès complet » si grandfathered), cliquable
       → page Abonnement.

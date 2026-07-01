@@ -36,6 +36,7 @@ const BookingSchema = z.object({
     count:      z.number().int().min(1),
     unit_price: z.number().min(0),
     label:      z.string().optional(),
+    models:     z.array(z.string()).optional(),
   })).optional(),
   selected_addons: z.array(z.object({
     id:       z.string(),

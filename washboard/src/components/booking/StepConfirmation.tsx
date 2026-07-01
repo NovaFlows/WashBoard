@@ -50,7 +50,11 @@ export default function StepConfirmation({ washerName, bookingId, form, services
         {form.vehicles_detail && form.vehicles_detail.length > 0 && (
           <Row
             label={`Véhicule${form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}`}
-            value={form.vehicles_detail.map(v => `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
+            value={form.vehicles_detail.map(v => {
+              const base = `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`
+              const mdls = (v.models ?? []).map(m => m.trim()).filter(Boolean)
+              return mdls.length ? `${base} (${mdls.join(', ')})` : base
+            }).join(' · ')}
             right
           />
         )}

@@ -63,7 +63,7 @@ type Props = {
     billing_address: string | null
     services: { name: string } | null
     washers: { name: string; phone: string | null } | null
-    vehicles_detail?: { type: string; count: number; unit_price: number; label?: string }[] | null
+    vehicles_detail?: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
   }
 }
 
@@ -181,9 +181,10 @@ export default function BookingPDF({ booking }: Props) {
             const lineTotal = item.unit_price * item.count
             const lineTotalStr = Number.isInteger(lineTotal) ? String(lineTotal) : lineTotal.toFixed(2)
             const label = item.label ?? VEHICLE_LABELS[item.type] ?? item.type
+            const mdls = (item.models ?? []).map(m => m.trim()).filter(Boolean)
             return (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 7, paddingLeft: 28, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                <Text style={{ fontSize: 10, color: '#475569' }}>{label} × {item.count}  ({item.unit_price}€/véh)</Text>
+                <Text style={{ fontSize: 10, color: '#475569' }}>{label} × {item.count}{mdls.length ? ` — ${mdls.join(', ')}` : ''}  ({item.unit_price}€/véh)</Text>
                 <Text style={{ fontSize: 10, color: '#475569' }}>{lineTotalStr}€</Text>
               </View>
             )

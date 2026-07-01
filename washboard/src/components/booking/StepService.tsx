@@ -36,6 +36,8 @@ export default function StepService({ services, categories, selected, onNext, ac
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   // Panier : un compteur par type (permet de mélanger les types)
   const [basket,    setBasket]    = useState<Record<string, number>>({})
+  // Modèle (texte libre) par véhicule : un tableau par type, aligné sur le compteur
+  const [models,    setModels]    = useState<Record<string, string[]>>({})
 
   // Onglets : seules les catégories qui ont au moins une prestation.
   const tabs = useMemo(() => {
@@ -76,16 +78,30 @@ export default function StepService({ services, categories, selected, onNext, ac
     setActiveTab(id)
     setServiceId('')
     setBasket({})
+    setModels({})
   }
 
   function setVehicleCount(type: string, count: number) {
+    const clamped = Math.min(99, Math.max(0, count))
     setBasket(prev => {
-      if (count <= 0) {
-        const next = { ...prev }
-        delete next[type]
-        return next
-      }
-      return { ...prev, [type]: Math.min(99, count) }
+      if (clamped <= 0) { const next = { ...prev }; delete next[type]; return next }
+      return { ...prev, [type]: clamped }
+    })
+    // Aligne le tableau des modèles sur le nouveau compteur
+    setModels(prev => {
+      if (clamped <= 0) { const next = { ...prev }; delete next[type]; return next }
+      const arr = [...(prev[type] ?? [])]
+      while (arr.length < clamped) arr.push('')
+      arr.length = clamped
+      return { ...prev, [type]: arr }
+    })
+  }
+
+  function setModel(type: string, index: number, value: string) {
+    setModels(prev => {
+      const arr = [...(prev[type] ?? [])]
+      arr[index] = value
+      return { ...prev, [type]: arr }
     })
   }
 
@@ -98,6 +114,7 @@ export default function StepService({ services, categories, selected, onNext, ac
         count,
         unit_price: vehiclePrice(selectedService, type),
         label: typeInfo(selectedService, type).name,
+        models: (models[type] ?? []).slice(0, count).map(m => m.trim()),
       }))
     onNext({
       service_id:      serviceId,
@@ -175,7 +192,7 @@ export default function StepService({ services, categories, selected, onNext, ac
           return (
             <button
               key={service.id}
-              onClick={() => { setServiceId(service.id); setBasket({}) }}
+              onClick={() => { setServiceId(service.id); setBasket({}); setModels({}) }}
               className="w-full text-left px-4 py-4 rounded-2xl border-2 transition-all"
               style={isSelected
                 ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
@@ -284,6 +301,36 @@ export default function StepService({ services, categories, selected, onNext, ac
               <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-0.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
                 <span>Total ({basketCount} élément{basketCount > 1 ? 's' : ''})</span>
                 <span>{basketTotal}€</span>
+              </div>
+            </div>
+          )}
+
+          {/* Modèle par véhicule (optionnel) */}
+          {basketCount > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Modèle de vos véhicules <span className="text-slate-400 font-normal">(optionnel)</span>
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Aide le laveur à identifier votre véhicule (ex. « Peugeot 208 grise »).</p>
+              <div className="space-y-2">
+                {Object.entries(basket).flatMap(([type, count]) =>
+                  Array.from({ length: count }).map((_, i) => {
+                    const info = typeInfo(selectedService, type)
+                    return (
+                      <div key={`${type}-${i}`} className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 w-28 shrink-0 truncate">
+                          {info.name}{count > 1 ? ` #${i + 1}` : ''}
+                        </span>
+                        <input
+                          value={models[type]?.[i] ?? ''}
+                          onChange={e => setModel(type, i, e.target.value)}
+                          placeholder="Modèle du véhicule"
+                          className="flex-1 min-w-0 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-slate-300"
+                        />
+                      </div>
+                    )
+                  }),
+                )}
               </div>
             </div>
           )}

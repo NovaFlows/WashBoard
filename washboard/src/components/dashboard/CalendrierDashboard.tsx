@@ -23,7 +23,7 @@ type Booking = {
   selected_addons: { id: string; label: string; price: number; category: string }[] | null
   travel_fee: number | null
   vehicle_count: number | null
-  vehicles_detail: { type: string; count: number; unit_price: number; label?: string }[] | null
+  vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
   services: Service | null
 }
 
@@ -1451,7 +1451,11 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               )}
               {selected.vehicles_detail && selected.vehicles_detail.length > 0 && (
                 <Row icon="car">
-                  {selected.vehicles_detail.map(v => `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`).join(', ')}
+                  {selected.vehicles_detail.map(v => {
+                    const base = `${v.label ?? VEHICLE_LABELS[v.type] ?? v.type} × ${v.count}`
+                    const mdls = (v.models ?? []).map(m => m.trim()).filter(Boolean)
+                    return mdls.length ? `${base} (${mdls.join(', ')})` : base
+                  }).join(' · ')}
                 </Row>
               )}
               {rescheduling ? (
