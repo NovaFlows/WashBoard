@@ -48,10 +48,10 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
     const endDate = new Date(cancelsAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
     return (
-      <div className="bg-red-600 text-white text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+      <div className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-b border-red-200 dark:border-red-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
         <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
           <span>Abonnement résilié — valable jusqu&apos;au {endDate}</span>
-          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:text-red-100">
+          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
             Réactiver →
           </Link>
         </div>
