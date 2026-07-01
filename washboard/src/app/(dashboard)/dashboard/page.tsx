@@ -15,13 +15,9 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (!washer) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <p className="text-slate-500 dark:text-slate-400">Profil laveur non trouvé. Contactez le support.</p>
-      </div>
-    )
-  }
+  // Session orpheline (ligne washer supprimée mais session auth encore active) :
+  // on déconnecte pour éviter la boucle "profil non trouvé".
+  if (!washer) redirect('/api/auth/logout')
 
   const { data: bookings } = await supabase
     .from('bookings')
