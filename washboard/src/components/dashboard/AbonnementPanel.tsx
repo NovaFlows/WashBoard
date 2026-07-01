@@ -230,7 +230,7 @@ export default function AbonnementPanel({
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
                     En cours de développement
                   </span>
-                ) : !isCurrent && needsPayment ? (
+                ) : needsPayment ? (
                   <button
                     onClick={() => startCheckout(card.key)}
                     disabled={!!loading}
@@ -242,7 +242,7 @@ export default function AbonnementPanel({
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                       </svg>
                     )}
-                    {isLoading ? 'Redirection…' : `Choisir ${card.name}`}
+                    {isLoading ? 'Redirection…' : isCurrent ? 'Commencer mon abonnement' : `Choisir ${card.name}`}
                   </button>
                 ) : null}
               </div>
