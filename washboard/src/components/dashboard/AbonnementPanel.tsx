@@ -231,19 +231,27 @@ export default function AbonnementPanel({
                     En cours de développement
                   </span>
                 ) : needsPayment ? (
-                  <button
-                    onClick={() => startCheckout(card.key)}
-                    disabled={!!loading}
-                    className="flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-colors"
-                  >
-                    {isLoading && (
-                      <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                      </svg>
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => startCheckout(card.key)}
+                      disabled={!!loading}
+                      className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-colors"
+                    >
+                      {isLoading && (
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                      )}
+                      {isLoading ? 'Redirection…' : isCurrent ? 'Commencer mon abonnement' : `Choisir ${card.name}`}
+                    </button>
+                    {subscriptionStatus === 'trial' && daysLeft !== null && daysLeft > 0 && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center leading-tight">
+                        La facturation commence immédiatement.<br />
+                        Vous pouvez aussi attendre la fin de vos {daysLeft} jour{daysLeft > 1 ? 's' : ''} d&apos;essai.
+                      </p>
                     )}
-                    {isLoading ? 'Redirection…' : isCurrent ? 'Commencer mon abonnement' : `Choisir ${card.name}`}
-                  </button>
+                  </div>
                 ) : null}
               </div>
             )
