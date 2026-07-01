@@ -22,6 +22,16 @@ export default defineConfig({
         'src/lib/googleReviews.ts',   // scraping HTTP
         'src/lib/supabase/**',        // wrappers client Supabase
       ],
+      // Garde-fou anti-régression : si la couverture de la couche métier passe
+      // sous ces seuils, `npm run test:coverage` échoue (et donc la CI). On laisse
+      // une marge sous le niveau actuel (~99%) pour ne pas bloquer sur du bruit,
+      // tout en empêchant une chute franche (ex. nouveau module non testé).
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
     },
   },
 })

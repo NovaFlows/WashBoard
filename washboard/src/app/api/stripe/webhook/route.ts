@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getStripe, planFromPriceId } from '@/lib/stripe'
 import { mapStripeStatus, stripeCancelToIso } from '@/lib/subscription'
+import { withErrorHandling } from '@/lib/apiError'
+import { logger } from '@/lib/logger'
 import type Stripe from 'stripe'
 
-export async function POST(req: NextRequest) {
+export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest) => {
   const body = await req.text()
   const sig  = req.headers.get('stripe-signature') ?? ''
 
   let event: Stripe.Event
   try {
     event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
-  } catch {
+  } catch (err) {
+    logger.warn('stripe.webhook.bad_signature', {}, err)
     return NextResponse.json({ error: 'Webhook signature invalide' }, { status: 400 })
   }
 
@@ -48,7 +51,8 @@ export async function POST(req: NextRequest) {
         subscription_status:    newStatus,
         cancels_at:             null, // ré-abonnement : on efface toute résiliation antérieure
       }).eq('id', washerId)
-      if (error) { console.error('[webhook] checkout.completed error:', error); dbError = error }
+      if (error) { logger.error('stripe.webhook.checkout_completed.db', { washerId }, error); dbError = error }
+      else logger.info('stripe.webhook.checkout_completed', { washerId, plan, newStatus })
       break
     }
 
@@ -66,7 +70,7 @@ export async function POST(req: NextRequest) {
         cancels_at: cancelsAt,
       }).eq('stripe_subscription_id', sub.id).select('id')
 
-      if (error) { console.error('[webhook] subscription.updated error:', error); dbError = error }
+      if (error) { logger.error('stripe.webhook.subscription_updated.db', { subId: sub.id }, error); dbError = error }
       else if (!data || data.length === 0) {
         // Fallback : la ligne n'a pas encore stripe_subscription_id → matcher sur customer
         const { error: err2 } = await admin.from('washers').update({
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
           subscription_status: status,
           cancels_at: cancelsAt,
         }).eq('stripe_customer_id', sub.customer as string)
-        if (err2) { console.error('[webhook] subscription.updated fallback error:', err2); dbError = err2 }
+        if (err2) { logger.error('stripe.webhook.subscription_updated.fallback.db', { subId: sub.id }, err2); dbError = err2 }
       }
       break
     }
@@ -87,7 +91,7 @@ export async function POST(req: NextRequest) {
         stripe_subscription_id: null,
         cancels_at:             null,
       }).eq('stripe_subscription_id', sub.id)
-      if (error) { console.error('[webhook] subscription.deleted error:', error); dbError = error }
+      if (error) { logger.error('stripe.webhook.subscription_deleted.db', { subId: sub.id }, error); dbError = error }
       break
     }
 
@@ -96,7 +100,7 @@ export async function POST(req: NextRequest) {
       const { error } = await admin.from('washers').update({
         subscription_status: 'past_due',
       }).eq('stripe_customer_id', invoice.customer as string)
-      if (error) { console.error('[webhook] invoice.payment_failed error:', error); dbError = error }
+      if (error) { logger.error('stripe.webhook.invoice_payment_failed.db', { customer: invoice.customer }, error); dbError = error }
       break
     }
   }
@@ -107,4 +111,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true })
-}
+})

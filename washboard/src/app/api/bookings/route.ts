@@ -5,6 +5,8 @@ import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, effectiveDuration } from '@/lib/pricing'
 import { countConflicts, effectiveTeamSize } from '@/lib/slots'
 import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
+import { withErrorHandling, errorResponse } from '@/lib/apiError'
+import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
@@ -47,7 +49,7 @@ const BookingSchema = z.object({
   travel_fee: z.number().min(0).optional().default(0),
 })
 
-export async function POST(req: Request) {
+export const POST = withErrorHandling('bookings.create', async (req: Request) => {
   // ── Anti-spam #1 : rate-limit par IP ────────────────────────────────────
   cleanupRateLimit()
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim()
@@ -195,8 +197,7 @@ export async function POST(req: Request) {
     })
 
   if (error) {
-    console.error('Booking insert error:', error)
-    return Response.json({ error: 'Erreur lors de la réservation' }, { status: 500 })
+    return errorResponse('bookings.insert.db', error, { washerId: bookingData.washer_id })
   }
 
   // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)
@@ -213,7 +214,7 @@ export async function POST(req: Request) {
         address: bookingData.address,
         scheduledAt: bookingData.scheduled_at,
         bookingId: id,
-      }).catch(err => console.error('[email/client]', err)),
+      }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     ]
 
     if (washerEmail) {
@@ -229,14 +230,15 @@ export async function POST(req: Request) {
           scheduledAt: bookingData.scheduled_at,
           bookedPrice: booked_price,
           bookingId: id,
-        }).catch(err => console.error('[email/washer]', err))
+        }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
       )
     } else {
-      console.warn('[email/washer] washerEmail null, notification non envoyée — washer.user_id:', washer?.user_id)
+      logger.warn('bookings.email.washer_missing', { bookingId: id, washerUserId: washer?.user_id })
     }
 
     await Promise.all(emailJobs)
   }
 
+  logger.info('bookings.created', { bookingId: id, washerId: bookingData.washer_id, bookedPrice: booked_price })
   return Response.json({ data: { id } }, { status: 201 })
-}
+})
