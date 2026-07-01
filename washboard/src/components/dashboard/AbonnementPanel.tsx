@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PLAN_CARDS, type Plan } from '@/lib/plan'
+import { Spinner } from '@/components/ui/Spinner'
 
 type Props = {
   subscriptionStatus: string
@@ -220,10 +221,7 @@ export default function AbonnementPanel({
             className="mt-4 flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
           >
             {loading === 'portal' ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
+              <Spinner />
             ) : (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
@@ -291,12 +289,7 @@ export default function AbonnementPanel({
                       disabled={!!loading}
                       className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-colors"
                     >
-                      {isLoading && (
-                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                        </svg>
-                      )}
+                      {isLoading && <Spinner className="w-3.5 h-3.5" />}
                       {isLoading ? 'Redirection…' : isCurrent ? 'Commencer mon abonnement' : `Choisir ${card.name}`}
                     </button>
                     {subscriptionStatus === 'trial' && daysLeft !== null && daysLeft > 0 && (

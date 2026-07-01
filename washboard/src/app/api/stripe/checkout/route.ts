@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe, STRIPE_PRICE_IDS } from '@/lib/stripe'
 import { PLAN_CARDS, type Plan } from '@/lib/plan'
+import { isAlreadySubscribed, computeTrialEnd } from '@/lib/subscription'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -20,19 +21,22 @@ export async function POST(req: NextRequest) {
 
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at')
+    .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at, grandfathered')
     .eq('user_id', user.id)
     .single()
   if (!washer) return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
 
+  // Les laveurs historiques (grandfathered) ont déjà tout débloqué → pas de paiement.
+  if (washer.grandfathered) {
+    return NextResponse.json(
+      { error: 'Votre compte bénéficie déjà d’un accès complet, aucun abonnement nécessaire.' },
+      { status: 400 },
+    )
+  }
+
   // Garde-fou double abonnement : un laveur déjà abonné (paiement en cours ou
   // carte déjà enregistrée pendant l'essai) ne doit pas créer une 2ᵉ souscription.
-  const alreadySubscribed =
-    !!washer.stripe_subscription_id &&
-    (washer.subscription_status === 'active' ||
-     washer.subscription_status === 'past_due' ||
-     washer.subscription_status === 'trial')
-  if (alreadySubscribed) {
+  if (isAlreadySubscribed({ subscriptionId: washer.stripe_subscription_id, status: washer.subscription_status })) {
     return NextResponse.json(
       { error: 'Vous avez déjà un abonnement. Utilisez « Gérer mon abonnement » pour le modifier.' },
       { status: 409 },
@@ -41,14 +45,8 @@ export async function POST(req: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
 
-  // Si l'utilisateur est en essai avec des jours restants, différer la facturation
-  let trialEnd: number | undefined
-  if (washer.subscription_status === 'trial' && washer.trial_ends_at) {
-    const trialEndDate = new Date(washer.trial_ends_at)
-    if (trialEndDate.getTime() > Date.now()) {
-      trialEnd = Math.floor(trialEndDate.getTime() / 1000)
-    }
-  }
+  // Facturation différée à la fin de l'essai (si l'essai reste ≥ 48h, contrainte Stripe).
+  const trialEnd = computeTrialEnd(washer.subscription_status, washer.trial_ends_at)
 
   const session = await getStripe().checkout.sessions.create({
     mode: 'subscription',

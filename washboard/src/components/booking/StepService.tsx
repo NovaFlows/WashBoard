@@ -171,6 +171,9 @@ export default function StepService({ services, categories, selected, onNext, ac
             return (
               <button
                 key={t.id}
+                data-testid="category-tab"
+                data-category-id={t.id}
+                data-active={active}
                 onClick={() => selectTab(t.id)}
                 className="flex-1 min-w-0 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-all truncate"
                 style={active
@@ -197,6 +200,9 @@ export default function StepService({ services, categories, selected, onNext, ac
           return (
             <button
               key={service.id}
+              data-testid="service-card"
+              data-service-id={service.id}
+              data-selected={isSelected}
               onClick={() => { setServiceId(service.id); setBasket({}); setModels({}) }}
               className="w-full text-left px-4 py-4 rounded-2xl border-2 transition-all"
               style={isSelected
@@ -272,12 +278,20 @@ export default function StepService({ services, categories, selected, onNext, ac
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
+                      data-testid="vehicle-decrement"
+                      data-vehicle-type={type}
+                      aria-label={`Retirer un véhicule (${type})`}
                       onClick={() => setVehicleCount(type, count - 1)}
                       disabled={count === 0}
                       className="w-8 h-8 rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-30"
                     >−</button>
-                    <span className="w-6 text-center text-sm font-semibold text-slate-900 dark:text-slate-100">{count}</span>
+                    <span data-testid="vehicle-count" data-vehicle-type={type} aria-live="polite" className="w-6 text-center text-sm font-semibold text-slate-900 dark:text-slate-100">{count}</span>
                     <button
+                      type="button"
+                      data-testid="vehicle-increment"
+                      data-vehicle-type={type}
+                      aria-label={`Ajouter un véhicule (${type})`}
                       onClick={() => setVehicleCount(type, count + 1)}
                       className="w-8 h-8 rounded-lg border-2 font-bold flex items-center justify-center transition-colors"
                       style={count > 0
@@ -348,6 +362,7 @@ export default function StepService({ services, categories, selected, onNext, ac
         </p>
       )}
       <button
+        data-testid="service-continue"
         onClick={handleNext}
         disabled={!canContinue}
         className="w-full py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getStripe, planFromPriceId } from '@/lib/stripe'
+import { mapStripeStatus, stripeCancelToIso } from '@/lib/subscription'
 import type Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
@@ -55,17 +56,8 @@ export async function POST(req: NextRequest) {
       const sub        = event.data.object as Stripe.Subscription
       const priceId    = sub.items.data[0]?.price.id
       const plan       = priceId ? planFromPriceId(priceId) : null
-      const status     = sub.status === 'active'   ? 'active'
-                       : sub.status === 'trialing' ? 'trial'
-                       : sub.status === 'past_due' ? 'past_due'
-                       : 'expired'
-
-      // Résiliation programmée : l'abonnement reste actif jusqu'à cancel_at.
-      // Pendant un essai, Stripe met cancel_at_period_end=false mais renseigne
-      // cancel_at → on se base uniquement sur cancel_at.
-      const cancelsAt = sub.cancel_at
-        ? new Date(sub.cancel_at * 1000).toISOString()
-        : null
+      const status     = mapStripeStatus(sub.status)
+      const cancelsAt  = stripeCancelToIso(sub.cancel_at)
 
       // On matche sur stripe_subscription_id (fiable), fallback sur customer_id.
       const { data, error } = await admin.from('washers').update({
