@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { PLAN_CARDS, type Plan } from '@/lib/plan'
 
 type Props = {
@@ -10,9 +11,10 @@ type Props = {
   washerEmail: string
   plan: Plan
   grandfathered: boolean
+  stripeCustomerId: string | null
+  successParam?: boolean
+  cancelledParam?: boolean
 }
-
-const PRICE = 49
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'active') {
@@ -31,6 +33,14 @@ function StatusBadge({ status }: { status: string }) {
       </span>
     )
   }
+  if (status === 'past_due') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-sm font-semibold rounded-full">
+        <span className="w-2 h-2 bg-orange-500 rounded-full" />
+        Paiement en attente
+      </span>
+    )
+  }
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm font-semibold rounded-full">
       <span className="w-2 h-2 bg-red-500 rounded-full" />
@@ -39,32 +49,71 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
+export default function AbonnementPanel({
+  subscriptionStatus, trialEndsAt, plan, grandfathered,
+  stripeCustomerId, successParam, cancelledParam,
+}: Props) {
+  const router = useRouter()
+  const [loading, setLoading] = useState<string | null>(null)
   const [now] = useState(() => Date.now())
+
   const daysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
     : null
 
-  const virementSubject = encodeURIComponent(`Abonnement WashBoard — ${washerName}`)
-  const virementBody = encodeURIComponent(
-    `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard (49€/mois) pour l'espace "${washerName}".\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
-  )
-  const virementHref = `https://mail.google.com/mail/?view=cm&to=novaflows.pro@gmail.com&su=${virementSubject}&body=${virementBody}`
+  const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
+  const hasStripe    = !!stripeCustomerId
+  const canManage    = hasStripe && (subscriptionStatus === 'active' || subscriptionStatus === 'past_due')
+  const needsPayment = !grandfathered && subscriptionStatus !== 'active'
 
-  const paypalHref = `https://paypal.me/WashBoardSAAS/${PRICE}`
+  async function startCheckout(planKey: Plan) {
+    setLoading(planKey)
+    try {
+      const res  = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } finally {
+      setLoading(null)
+    }
+  }
 
-  const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? PRICE
-
-  function upgradeHref(target: typeof PLAN_CARDS[number]) {
-    const su = encodeURIComponent(`Passage au plan ${target.name} — ${washerName}`)
-    const body = encodeURIComponent(
-      `Bonjour,\n\nJe souhaite passer au plan ${target.name} (${target.price}€/mois) pour l'espace "${washerName}".\n\nEmail du compte : ${washerEmail}\n\nMerci.`
-    )
-    return `https://mail.google.com/mail/?view=cm&to=novaflows.pro@gmail.com&su=${su}&body=${body}`
+  async function openPortal() {
+    setLoading('portal')
+    try {
+      const res  = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } finally {
+      setLoading(null)
+    }
   }
 
   return (
     <div className="space-y-6">
+
+      {/* Banners retour Stripe */}
+      {successParam && (
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm font-medium flex items-center gap-2">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          Paiement reçu ! Votre abonnement est en cours d&apos;activation.
+          <button onClick={() => router.replace('/dashboard/abonnement')} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
+        </div>
+      )}
+      {cancelledParam && (
+        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium flex items-center gap-2">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Paiement annulé. Vous pouvez réessayer à tout moment.
+          <button onClick={() => router.replace('/dashboard/abonnement')} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
+        </div>
+      )}
 
       {/* Statut actuel */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
@@ -97,10 +146,37 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
           </div>
         )}
 
+        {subscriptionStatus === 'past_due' && (
+          <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+            Un paiement a échoué. Mettez à jour votre moyen de paiement pour conserver l&apos;accès.
+          </div>
+        )}
+
         {subscriptionStatus === 'expired' && (
           <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
-            Votre accès est suspendu. Réglez votre abonnement pour retrouver l&apos;accès complet.
+            Votre accès est suspendu. Réactivez votre abonnement pour retrouver l&apos;accès complet.
           </div>
+        )}
+
+        {/* Bouton portail Stripe */}
+        {canManage && (
+          <button
+            onClick={openPortal}
+            disabled={loading === 'portal'}
+            className="mt-4 flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+          >
+            {loading === 'portal' ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+              </svg>
+            )}
+            Gérer mon abonnement
+          </button>
         )}
       </div>
 
@@ -118,6 +194,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
         <div className="grid gap-4 sm:grid-cols-3">
           {PLAN_CARDS.map(card => {
             const isCurrent = !grandfathered && plan === card.key
+            const isLoading = loading === card.key
             return (
               <div
                 key={card.key}
@@ -153,87 +230,35 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
                     En cours de développement
                   </span>
-                ) : !isCurrent && !grandfathered ? (
-                  <a
-                    href={upgradeHref(card)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block text-center py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors"
+                ) : !isCurrent && needsPayment ? (
+                  <button
+                    onClick={() => startCheckout(card.key)}
+                    disabled={!!loading}
+                    className="flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-colors"
                   >
-                    Choisir {card.name}
-                  </a>
+                    {isLoading && (
+                      <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                    )}
+                    {isLoading ? 'Redirection…' : `Choisir ${card.name}`}
+                  </button>
                 ) : null}
               </div>
             )
           })}
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-4">
-          Changement d&apos;offre activé manuellement sous 24h après votre demande.
-        </p>
       </div>
-
-      {/* Options de paiement */}
-      {subscriptionStatus !== 'active' && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Activer mon abonnement</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Choisissez votre mode de paiement. Votre abonnement sera activé sous 24h après confirmation.</p>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-
-            {/* PayPal */}
-            <a
-              href={paypalHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-[#003087] dark:border-[#009cde] hover:bg-[#f5f8ff] dark:hover:bg-[#003087]/20 transition-colors text-center group"
-            >
-              <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none">
-                <path d="M7.5 3h7.125C17.25 3 19.5 5.25 19.5 7.875c0 3.375-2.625 6-6 6H11.25L10.125 21H6.375L7.5 3z" fill="#009cde"/>
-                <path d="M6 6h7.125c2.625 0 4.875 2.25 4.875 4.875 0 3.375-2.625 6-6 6H9.75L8.625 24H4.875L6 6z" fill="#003087" opacity="0.7"/>
-              </svg>
-              <div>
-                <p className="font-bold text-[#003087] dark:text-[#009cde] text-base">Payer par PayPal</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{PRICE}€ · Paiement sécurisé</p>
-              </div>
-              <span className="mt-1 px-4 py-2 bg-[#003087] dark:bg-[#009cde] text-white text-sm font-bold rounded-xl group-hover:opacity-90 transition-opacity">
-                Payer {PRICE}€ →
-              </span>
-            </a>
-
-            {/* Virement bancaire */}
-            <a
-              href={virementHref}
-              className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-center group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                </svg>
-              </div>
-              <div>
-                <p className="font-bold text-slate-800 dark:text-slate-200 text-base">Virement bancaire</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Envoyez une demande par email</p>
-              </div>
-              <span className="mt-1 px-4 py-2 bg-slate-700 dark:bg-slate-600 text-white text-sm font-bold rounded-xl group-hover:opacity-90 transition-opacity">
-                Faire une demande →
-              </span>
-            </a>
-
-          </div>
-
-          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-5">
-            Après réception de votre paiement, votre abonnement sera activé manuellement sous 24h ouvrées.
-          </p>
-        </div>
-      )}
 
       {/* FAQ */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Questions fréquentes</h2>
         {[
-          { q: 'Comment annuler mon abonnement ?', r: 'Contactez-nous sur WhatsApp au 06 84 14 04 38. Aucun engagement, résiliation immédiate.' },
+          { q: 'Comment annuler mon abonnement ?', r: 'Cliquez sur « Gérer mon abonnement » pour accéder au portail Stripe. Vous pouvez résilier à tout moment, sans engagement.' },
           { q: 'Mes données sont-elles conservées si j\'arrête ?', r: 'Oui, vos données (clients, RDV, historique) sont conservées 30 jours après résiliation.' },
-          { q: 'Puis-je changer de mode de paiement ?', r: 'Oui, écrivez-nous sur WhatsApp au 06 84 14 04 38 à tout moment.' },
+          { q: 'Comment mettre à jour mon moyen de paiement ?', r: 'Cliquez sur « Gérer mon abonnement » pour accéder au portail Stripe et mettre à jour votre carte bancaire.' },
+          { q: 'Le paiement est-il sécurisé ?', r: 'Oui. Les paiements sont traités par Stripe, certifié PCI DSS. WashBoard ne stocke aucune donnée bancaire.' },
         ].map(({ q, r }) => (
           <div key={q} className="border-t border-slate-100 dark:border-slate-800 pt-4 first:border-0 first:pt-0">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{q}</p>

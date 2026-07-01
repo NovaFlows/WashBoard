@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AbonnementPanel from '@/components/dashboard/AbonnementPanel'
 
-export default async function AbonnementPage() {
+export default async function AbonnementPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -11,6 +11,8 @@ export default async function AbonnementPage() {
   const { data: washer } = await supabase
     .from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
+
+  const params = await searchParams
 
   return (
     <DashboardShell
@@ -31,6 +33,9 @@ export default async function AbonnementPage() {
         washerEmail={user.email ?? ''}
         plan={washer.plan ?? 'essentiel'}
         grandfathered={washer.grandfathered ?? false}
+        stripeCustomerId={washer.stripe_customer_id ?? null}
+        successParam={params.success === '1'}
+        cancelledParam={params.cancelled === '1'}
       />
     </DashboardShell>
   )
