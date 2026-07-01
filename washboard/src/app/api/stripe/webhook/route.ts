@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
+  // Toute erreur d'écriture DB → on renvoie 500 pour que Stripe réessaie le webhook.
+  let dbError: unknown = null
+
   switch (event.type) {
     case 'checkout.session.completed': {
       const session  = event.data.object as Stripe.Checkout.Session
@@ -37,12 +40,14 @@ export async function POST(req: NextRequest) {
       // Sinon → 'active' (paiement immédiat)
       const newStatus = washer?.subscription_status === 'trial' ? 'trial' : 'active'
 
-      await admin.from('washers').update({
+      const { error } = await admin.from('washers').update({
         stripe_customer_id:     session.customer as string,
         stripe_subscription_id: session.subscription as string,
         plan,
         subscription_status:    newStatus,
+        cancels_at:             null, // ré-abonnement : on efface toute résiliation antérieure
       }).eq('id', washerId)
+      if (error) { console.error('[webhook] checkout.completed error:', error); dbError = error }
       break
     }
 
@@ -69,16 +74,16 @@ export async function POST(req: NextRequest) {
         cancels_at: cancelsAt,
       }).eq('stripe_subscription_id', sub.id).select('id')
 
-      if (error) console.error('[webhook] subscription.updated update error:', error)
-      if (!error && (!data || data.length === 0)) {
-        // Fallback : la ligne n'a pas stripe_subscription_id → matcher sur customer
+      if (error) { console.error('[webhook] subscription.updated error:', error); dbError = error }
+      else if (!data || data.length === 0) {
+        // Fallback : la ligne n'a pas encore stripe_subscription_id → matcher sur customer
         const { error: err2 } = await admin.from('washers').update({
           ...(plan ? { plan } : {}),
           stripe_subscription_id: sub.id,
           subscription_status: status,
           cancels_at: cancelsAt,
         }).eq('stripe_customer_id', sub.customer as string)
-        if (err2) console.error('[webhook] subscription.updated fallback error:', err2)
+        if (err2) { console.error('[webhook] subscription.updated fallback error:', err2); dbError = err2 }
       }
       break
     }
@@ -90,17 +95,23 @@ export async function POST(req: NextRequest) {
         stripe_subscription_id: null,
         cancels_at:             null,
       }).eq('stripe_subscription_id', sub.id)
-      if (error) console.error('[webhook] subscription.deleted update error:', error)
+      if (error) { console.error('[webhook] subscription.deleted error:', error); dbError = error }
       break
     }
 
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
-      await admin.from('washers').update({
+      const { error } = await admin.from('washers').update({
         subscription_status: 'past_due',
       }).eq('stripe_customer_id', invoice.customer as string)
+      if (error) { console.error('[webhook] invoice.payment_failed error:', error); dbError = error }
       break
     }
+  }
+
+  if (dbError) {
+    // 500 → Stripe rejoue le webhook plus tard (évite les états silencieusement perdus)
+    return NextResponse.json({ error: 'Erreur base de données' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })

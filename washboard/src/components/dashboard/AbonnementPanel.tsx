@@ -65,6 +65,7 @@ export default function AbonnementPanel({
 }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [now] = useState(() => Date.now())
 
   const daysLeft = trialEndsAt
@@ -79,6 +80,7 @@ export default function AbonnementPanel({
 
   async function startCheckout(planKey: Plan) {
     setLoading(planKey)
+    setErrorMsg(null)
     try {
       const res  = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -86,25 +88,49 @@ export default function AbonnementPanel({
         body: JSON.stringify({ plan: planKey }),
       })
       const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } finally {
+      if (data.url) {
+        window.location.assign(data.url)
+        return
+      }
+      setErrorMsg(data.error ?? 'Impossible de démarrer le paiement. Réessayez.')
+      setLoading(null)
+    } catch {
+      setErrorMsg('Erreur réseau. Vérifiez votre connexion et réessayez.')
       setLoading(null)
     }
   }
 
   async function openPortal() {
     setLoading('portal')
+    setErrorMsg(null)
     try {
       const res  = await fetch('/api/stripe/portal', { method: 'POST' })
       const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } finally {
+      if (data.url) {
+        window.location.assign(data.url)
+        return
+      }
+      setErrorMsg(data.error ?? 'Impossible d’ouvrir le portail. Réessayez.')
+      setLoading(null)
+    } catch {
+      setErrorMsg('Erreur réseau. Vérifiez votre connexion et réessayez.')
       setLoading(null)
     }
   }
 
   return (
     <div className="space-y-6">
+
+      {/* Message d'erreur */}
+      {errorMsg && (
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm font-medium flex items-center gap-2">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          {errorMsg}
+          <button onClick={() => setErrorMsg(null)} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
+        </div>
+      )}
 
       {/* Banners retour Stripe */}
       {successParam && (
