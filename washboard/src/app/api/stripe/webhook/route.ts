@@ -56,8 +56,10 @@ export async function POST(req: NextRequest) {
                        : sub.status === 'past_due' ? 'past_due'
                        : 'expired'
 
-      // Résiliation programmée : l'abonnement reste actif jusqu'à cancel_at
-      const cancelsAt = sub.cancel_at_period_end && sub.cancel_at
+      // Résiliation programmée : l'abonnement reste actif jusqu'à cancel_at.
+      // Pendant un essai, Stripe met cancel_at_period_end=false mais renseigne
+      // cancel_at → on se base uniquement sur cancel_at.
+      const cancelsAt = sub.cancel_at
         ? new Date(sub.cancel_at * 1000).toISOString()
         : null
 
