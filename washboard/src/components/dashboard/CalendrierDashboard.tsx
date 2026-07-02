@@ -280,7 +280,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
 
       for (const b of sameDayActive) {
         const bStart  = new Date(b.scheduled_at).getTime()
-        const bEnd    = bStart + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
+        const bEnd    = bStart + effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * 60_000
         const newStart = selectedStart.getTime()
         const newEnd   = selectedEnd.getTime()
 
@@ -911,7 +911,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   const h = d.getHours(), m = d.getMinutes()
                   if (h < HOUR_START || h >= HOUR_END) return null
                   const top      = (h - HOUR_START) * HOUR_H + m * (HOUR_H / 60)
-                  const height   = Math.max(effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * (HOUR_H / 60), 28)
+                  const height   = Math.max(effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * (HOUR_H / 60), 28)
                   const widthPct = 100 / b.totalCols
                   const leftPct  = b.col * widthPct
                   return (
