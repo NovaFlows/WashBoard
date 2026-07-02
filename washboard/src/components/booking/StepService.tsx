@@ -69,8 +69,16 @@ export default function StepService({ services, categories, selected, onNext, ac
     ? Object.entries(basket).reduce((sum, [type, count]) => sum + vehiclePrice(selectedService, type) * count, 0)
     : 0
 
-  // Le modèle est obligatoire pour chaque véhicule du panier
+  // Types standards (véhicules) = slugs lisibles ; types custom dashboard = UUIDs
+  function isVehicleType(typeId: string): boolean {
+    return !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(typeId)
+  }
+
+  const hasVehicleInBasket = Object.keys(basket).some(isVehicleType)
+
+  // Le modèle est obligatoire uniquement pour les véhicules (pas les canapes, téléphones, etc.)
   const allModelsFilled = Object.entries(basket).every(([type, count]) => {
+    if (!isVehicleType(type)) return true
     const arr = models[type] ?? []
     return Array.from({ length: count }).every((_, i) => (arr[i] ?? '').trim().length > 0)
   })
@@ -321,39 +329,41 @@ export default function StepService({ services, categories, selected, onNext, ac
             </div>
           )}
 
-          {/* Modèle par véhicule (optionnel) */}
-          {basketCount > 0 && (
+          {/* Modèle — uniquement pour les types véhicule (pas les canapés, téléphones…) */}
+          {basketCount > 0 && hasVehicleInBasket && (
             <div className="mt-4">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Modèle de vos véhicules <span className="text-red-500">*</span>
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Obligatoire — aide le laveur à identifier votre véhicule (ex. « Peugeot 208 grise »).</p>
               <div className="space-y-2">
-                {Object.entries(basket).flatMap(([type, count]) =>
-                  Array.from({ length: count }).map((_, i) => {
-                    const info = typeInfo(selectedService, type)
-                    return (
-                      <div key={`${type}-${i}`} className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 w-28 shrink-0 truncate">
-                          {info.name}{count > 1 ? ` #${i + 1}` : ''}
-                        </span>
-                        <input
-                          value={models[type]?.[i] ?? ''}
-                          onChange={e => setModel(type, i, e.target.value)}
-                          placeholder="Modèle du véhicule"
-                          className="flex-1 min-w-0 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-slate-300"
-                        />
-                      </div>
-                    )
-                  }),
-                )}
+                {Object.entries(basket)
+                  .filter(([type]) => isVehicleType(type))
+                  .flatMap(([type, count]) =>
+                    Array.from({ length: count }).map((_, i) => {
+                      const info = typeInfo(selectedService, type)
+                      return (
+                        <div key={`${type}-${i}`} className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 w-28 shrink-0 truncate">
+                            {info.name}{count > 1 ? ` #${i + 1}` : ''}
+                          </span>
+                          <input
+                            value={models[type]?.[i] ?? ''}
+                            onChange={e => setModel(type, i, e.target.value)}
+                            placeholder="Modèle du véhicule"
+                            className="flex-1 min-w-0 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-slate-300"
+                          />
+                        </div>
+                      )
+                    }),
+                  )}
               </div>
             </div>
           )}
         </div>
       )}
 
-      {selectedService && basketCount > 0 && !allModelsFilled && (
+      {selectedService && basketCount > 0 && hasVehicleInBasket && !allModelsFilled && (
         <p className="text-xs text-amber-600 dark:text-amber-500 mb-2 text-center">
           Renseignez le modèle de chaque véhicule pour continuer.
         </p>
