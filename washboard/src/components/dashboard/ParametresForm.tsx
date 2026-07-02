@@ -67,6 +67,8 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
   const [reviewMsg, setReviewMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [reviewLoading, setReviewLoading] = useState(false)
+  const [smsTestMsg, setSmsTestMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [smsTestLoading, setSmsTestLoading] = useState(false)
 
   const [newEmail, setNewEmail] = useState(email)
   const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -384,20 +386,48 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           </div>
 
           {hasFeature(washer, 'avis_sms') && (
-            <div>
-              <label className={labelClass}>Expéditeur SMS</label>
-              <input
-                type="text"
-                value={smsSender}
-                onChange={e => setSmsSender(e.target.value.slice(0, 20))}
-                placeholder={washer.name.slice(0, 11)}
-                className={inputClass}
-                maxLength={20}
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-                Nom affiché sur le SMS du client. Max 11 caractères (ex. <strong>KookiClean</strong>) ou votre numéro de téléphone.
-              </p>
-            </div>
+            <>
+              <div>
+                <label className={labelClass}>Expéditeur SMS</label>
+                <input
+                  type="text"
+                  value={smsSender}
+                  onChange={e => setSmsSender(e.target.value.slice(0, 20))}
+                  placeholder={washer.name.slice(0, 11)}
+                  className={inputClass}
+                  maxLength={20}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                  Nom affiché sur le SMS du client. Max 11 caractères (ex. <strong>KookiClean</strong>) ou votre numéro de téléphone.
+                </p>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  disabled={smsTestLoading}
+                  onClick={async () => {
+                    setSmsTestMsg(null)
+                    setSmsTestLoading(true)
+                    const res = await fetch('/api/test-sms', { method: 'POST' })
+                    const json = await res.json()
+                    setSmsTestMsg(res.ok
+                      ? { ok: true, text: 'SMS envoyé sur votre téléphone !' }
+                      : { ok: false, text: json.error ?? 'Erreur' }
+                    )
+                    setSmsTestLoading(false)
+                  }}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors border border-slate-200 dark:border-slate-700"
+                >
+                  {smsTestLoading ? 'Envoi…' : 'Envoyer un SMS test'}
+                </button>
+                {smsTestMsg && (
+                  <p className={`text-xs mt-2 ${smsTestMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                    {smsTestMsg.text}
+                  </p>
+                )}
+              </div>
+            </>
           )}
 
           <Feedback msg={reviewMsg} />
