@@ -35,6 +35,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.test.example
+
+# Playwright auth sessions (contiennent des tokens — ne jamais committer)
+e2e/.washer-session.json
 
 # vercel
 .vercel
