@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { hasFeature } from '@/lib/plan'
 
 // Endpoint de diagnostic : vérifie pourquoi les emails/SMS d'avis ne partent pas.
 // Accessible uniquement par le laveur connecté.
@@ -11,7 +12,7 @@ export async function GET() {
 
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, name, review_enabled, google_review_url, review_delay_hours, review_channel, plan')
+    .select('id, name, review_enabled, google_review_url, review_delay_hours, review_channel, plan, grandfathered')
     .eq('user_id', user.id)
     .single()
 
@@ -27,7 +28,7 @@ export async function GET() {
   // 10 derniers RDV terminés
   const { data: recentDone } = await admin
     .from('bookings')
-    .select('id, client_name, client_email, status, review_request_at, review_request_sent_at, created_at')
+    .select('id, client_name, client_email, client_phone, status, review_request_at, review_request_sent_at, created_at')
     .eq('washer_id', washer.id)
     .eq('status', 'done')
     .order('created_at', { ascending: false })
@@ -48,7 +49,8 @@ export async function GET() {
     review_delay_hours: washer.review_delay_hours,
     review_channel: washer.review_channel ?? 'email (défaut)',
     plan: washer.plan,
-    sms_autorise: washer.plan === 'pro' || washer.plan === 'business' ? '✅' : '❌ plan Essentiel — SMS bloqué',
+    grandfathered: washer.grandfathered,
+    sms_autorise: hasFeature(washer, 'avis_sms') ? '✅' : '❌ plan insuffisant',
   }
 
   const diagBookings = (recentDone ?? []).map(b => {
@@ -62,6 +64,7 @@ export async function GET() {
       id: b.id,
       client: b.client_name,
       email: b.client_email ?? '❌ pas d\'email',
+      phone: b.client_phone ?? '❌ pas de téléphone',
       etat,
     }
   })
