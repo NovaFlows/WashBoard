@@ -61,6 +61,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [reviewEnabled, setReviewEnabled] = useState(washer.review_enabled ?? true)
   const [reviewUrl, setReviewUrl] = useState(washer.google_review_url ?? '')
   const [reviewDelay, setReviewDelay] = useState(String(washer.review_delay_hours ?? 3))
+  const [reviewChannel, setReviewChannel] = useState<'email' | 'sms'>(washer.review_channel ?? 'email')
   const [smsSender, setSmsSender] = useState(washer.sms_sender ?? '')
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -142,6 +143,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
         review_enabled: reviewEnabled,
         google_review_url: reviewUrl.trim() || null,
         review_delay_hours: Math.max(0, parseInt(reviewDelay) || 0),
+        review_channel: reviewChannel,
         sms_sender: smsSender.trim() || null,
       }),
     })
@@ -352,6 +354,34 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${reviewEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </label>
+
+          <div>
+            <label className={labelClass}>Canal d&apos;envoi</label>
+            <div className="flex gap-2">
+              {(['email', 'sms'] as const).map(c => {
+                const isSms = c === 'sms'
+                const disabled = isSms && !hasFeature(washer, 'avis_sms')
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => !disabled && setReviewChannel(c)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      reviewChannel === c
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : disabled
+                          ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                    }`}
+                  >
+                    {c === 'email' ? 'Email' : 'SMS'}
+                    {disabled && <span className="ml-1 text-xs">(Pro)</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
           <div>
             <label className={labelClass}>Lien d&apos;avis Google</label>

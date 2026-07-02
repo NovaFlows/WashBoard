@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
 
   const nowIso = new Date().toISOString()
 
-  // RDV dont l'avis est dû et pas encore envoyé
   const { data: due, error } = await admin
     .from('bookings')
     .select('id, client_name, client_email, client_phone, washer_id, status')
@@ -37,7 +36,6 @@ export async function GET(request: NextRequest) {
   let smsSent = 0
 
   for (const b of due ?? []) {
-    // Ne pas envoyer si le RDV a été annulé entre-temps
     if (b.status === 'cancelled' || !b.client_email) {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
       continue
@@ -45,31 +43,30 @@ export async function GET(request: NextRequest) {
 
     const { data: washer } = await admin
       .from('washers')
-      .select('name, review_enabled, google_review_url, plan, grandfathered, sms_sender')
+      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, sms_sender')
       .eq('id', b.washer_id)
       .single()
 
-    // Réglages désactivés ou lien manquant : on marque comme traité sans envoyer
     if (!washer?.review_enabled || !washer.google_review_url) {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
       continue
     }
 
-    // Email d'avis (tous les plans)
-    try {
-      await sendReviewRequest({
-        to: b.client_email,
-        clientName: b.client_name,
-        washerName: washer.name,
-        reviewUrl: washer.google_review_url,
-      })
-      emailSent++
-    } catch (e) {
-      console.error('[cron/send-reviews] email', b.id, e)
-    }
+    const channel = washer.review_channel ?? 'email'
 
-    // SMS d'avis (Pro/Business uniquement, si téléphone dispo et quota non épuisé)
-    if (b.client_phone && hasFeature(washer, 'avis_sms')) {
+    if (channel === 'email') {
+      try {
+        await sendReviewRequest({
+          to: b.client_email,
+          clientName: b.client_name,
+          washerName: washer.name,
+          reviewUrl: washer.google_review_url,
+        })
+        emailSent++
+      } catch (e) {
+        console.error('[cron/send-reviews] email', b.id, e)
+      }
+    } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
       const quota = SMS_QUOTA[washer.plan as Plan] ?? 0
       if (quota > 0) {
         const monthStart = new Date()
