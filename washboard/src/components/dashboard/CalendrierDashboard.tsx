@@ -922,7 +922,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 3px)` }}
                     >
                       <p className="text-xs font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{fmt(d)} — {b.client_name}</p>
-                      {b.services && <p className="text-[10px] leading-tight truncate opacity-80">{b.services.name} · {b.services.duration_minutes} min</p>}
+                      {b.services && <p className="text-[10px] leading-tight truncate opacity-80">{b.services.name} · {effectiveDuration(b.services.duration_minutes, b.vehicle_count)} min</p>}
                     </button>
                   )
                 })}
