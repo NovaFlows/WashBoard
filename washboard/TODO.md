@@ -82,13 +82,12 @@
 > Analytics = « que font les utilisateurs ? ». On les ajoute au fur et à mesure
 > que le besoin devient réel — inutile de tout mettre avant d'avoir des users.
 
-- [ ] **[PRIORITÉ 1 — maintenant] UptimeRobot** (uptime, gratuit, ~2 min de setup) :
-      créer un compte → moniteur HTTP(s) sur `https://www.washboard.fr/api/health`,
-      intervalle 5 min, alerte email (+ Slack/webhook si besoin). Répond à « on me
-      prévient si le site tombe ». Aucun code à écrire (le endpoint existe déjà).
-      - Décision (2026-07-02) : **UptimeRobot préféré à Better Stack** à ce stade
-        (solo, pré-lancement) — même besoin d'uptime, zéro friction, sans payer pour
-        les features d'équipe de Better Stack.
+- [x] 2026-07-02 — **UptimeRobot** branché (uptime) : moniteur sur
+      `https://www.washboard.fr/api/health` + alerte → on est prévenu si le site tombe.
+      - Décision : **UptimeRobot préféré à Better Stack** à ce stade (solo, pré-lancement)
+        — même besoin d'uptime, zéro friction, sans payer les features d'équipe.
+      - [ ] Optionnel : créer la Status Page UptimeRobot (favori = point vert/rouge)
+            + app mobile pour les push.
 
 - [ ] **[PRIORITÉ 2 — avant/juste après le lancement] Error tracking (Sentry OU PostHog)** :
       alertes automatiques + stack traces agrégées quand un bug survient en prod
