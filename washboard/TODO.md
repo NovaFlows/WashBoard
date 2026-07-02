@@ -74,8 +74,45 @@
   - `GET /api/health` : ping Supabase (200/503) pour moniteur uptime.
   - Seuils de couverture (`vitest.config`) + CI `test:coverage` → anti-régression.
   - `docs/RUNBOOK.md` : procédure d'incident.
-  - [ ] Brancher un moniteur uptime externe sur `/api/health` (UptimeRobot / Better Stack).
-  - [ ] Optionnel : Sentry (nécessite un compte + DSN) pour agrégation d'erreurs + alertes.
+
+### 📡 Outils externes de monitoring / analytics (feuille de route)
+
+> Chaque outil couvre un besoin **différent** — ce ne sont pas des concurrents.
+> Uptime = « est-ce en ligne ? » · Error tracking = « quel bug, alerte-moi » ·
+> Analytics = « que font les utilisateurs ? ». On les ajoute au fur et à mesure
+> que le besoin devient réel — inutile de tout mettre avant d'avoir des users.
+
+- [ ] **[PRIORITÉ 1 — maintenant] UptimeRobot** (uptime, gratuit, ~2 min de setup) :
+      créer un compte → moniteur HTTP(s) sur `https://www.washboard.fr/api/health`,
+      intervalle 5 min, alerte email (+ Slack/webhook si besoin). Répond à « on me
+      prévient si le site tombe ». Aucun code à écrire (le endpoint existe déjà).
+      - Décision (2026-07-02) : **UptimeRobot préféré à Better Stack** à ce stade
+        (solo, pré-lancement) — même besoin d'uptime, zéro friction, sans payer pour
+        les features d'équipe de Better Stack.
+
+- [ ] **[PRIORITÉ 2 — avant/juste après le lancement] Error tracking (Sentry OU PostHog)** :
+      alertes automatiques + stack traces agrégées quand un bug survient en prod
+      (au lieu de grep manuel dans Vercel). Aujourd'hui couvert « à la main » par
+      `errorId` + logs Vercel + RUNBOOK, mais pas d'alerte proactive.
+      - Nécessite : compte + DSN/clé, puis intégration (⚠ le plugin `@sentry/nextjs`
+        patche next.config/turbopack → tester le build avec soin, ce Next est
+        modifié — cf. AGENTS.md ; prévoir une intégration « dormante » activée par
+        variable d'env).
+      - Choix à trancher : **Sentry** (spécialiste erreurs, le plus mûr) vs
+        **PostHog error tracking** (si on prend PostHog pour l'analytics, ça évite
+        un 2ᵉ outil).
+
+- [ ] **[PRIORITÉ 3 — quand il y a de vrais utilisateurs] PostHog** (analytics produit) :
+      événements, funnels, rétention, session replay, feature flags. Sur WashBoard :
+      taux de complétion de l'inscription laveur, points d'abandon dans le tunnel de
+      réservation, conversion essai → abonnement. Sert à **optimiser le produit**,
+      pas à la fiabilité. Intégration : clé publique côté client (activée par env),
+      penser RGPD (bandeau/consentement — déjà mentionné dans la politique de conf.).
+
+- [ ] **[PLUS TARD — équipe / beaucoup d'users] Better Stack** : à envisager le jour où
+      on veut une **page de statut publique** (`status.washboard.fr`), de la **gestion
+      d'astreinte** (on-call, escalade) ou de l'**agrégation de logs** au-delà de Vercel.
+      Migration triviale depuis UptimeRobot (changer l'URL de ping). Pas avant.
 
 ## 🟠 Robustesse / dette technique
 
