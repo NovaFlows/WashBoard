@@ -1,24 +1,16 @@
 import { NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 
-// Health check pour monitoring uptime (UptimeRobot, Better Stack, cron-job.org…).
-// - 200 : l'app répond ET la base est joignable.
-// - 503 : la base ne répond pas → alerte.
-// Ne révèle aucune donnée : juste l'état des dépendances critiques.
+export const dynamic = 'force-dynamic'
 
-export const dynamic = 'force-dynamic' // jamais mis en cache
+const admin = createAdminClient()
 
 export async function GET() {
   const started = Date.now()
   let dbOk = false
 
   try {
-    const admin = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    )
-    // Requête ultra-légère (head + count) sur une table connue.
     const { error } = await admin.from('washers').select('id', { count: 'exact', head: true })
     dbOk = !error
     if (error) logger.error('health.db_error', {}, error)

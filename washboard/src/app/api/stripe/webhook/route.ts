@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripe, planFromPriceId } from '@/lib/stripe'
 import { mapStripeStatus, stripeCancelToIso } from '@/lib/subscription'
 import { withErrorHandling } from '@/lib/apiError'
@@ -18,10 +18,7 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
     return NextResponse.json({ error: 'Webhook signature invalide' }, { status: 400 })
   }
 
-  const admin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const admin = createAdminClient()
 
   // Toute erreur d'écriture DB → on renvoie 500 pour que Stripe réessaie le webhook.
   let dbError: unknown = null
@@ -33,26 +30,18 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
       const plan     = session.metadata?.plan
       if (!washerId || !plan) break
 
-      // Lire le statut actuel pour savoir si on était en essai (facturation différée)
-      const { data: washer } = await admin
-        .from('washers')
-        .select('subscription_status')
-        .eq('id', washerId)
-        .single()
-
-      // Si le laveur était en trial → on garde 'trial' (billing différé, IDs stockés)
-      // Sinon → 'active' (paiement immédiat)
-      const newStatus = washer?.subscription_status === 'trial' ? 'trial' : 'active'
-
+      // On écrit toujours 'active' ici ; si le checkout était en période d'essai
+      // (facturation différée), Stripe envoie ensuite un customer.subscription.updated
+      // avec status 'trialing' qui corrige le statut en 'trial' via mapStripeStatus.
       const { error } = await admin.from('washers').update({
         stripe_customer_id:     session.customer as string,
         stripe_subscription_id: session.subscription as string,
         plan,
-        subscription_status:    newStatus,
-        cancels_at:             null, // ré-abonnement : on efface toute résiliation antérieure
+        subscription_status:    'active',
+        cancels_at:             null,
       }).eq('id', washerId)
       if (error) { logger.error('stripe.webhook.checkout_completed.db', { washerId }, error); dbError = error }
-      else logger.info('stripe.webhook.checkout_completed', { washerId, plan, newStatus })
+      else logger.info('stripe.webhook.checkout_completed', { washerId, plan })
       break
     }
 
@@ -97,10 +86,13 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
 
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
+      const sub = invoice.parent?.subscription_details?.subscription
+      const subId = typeof sub === 'string' ? sub : (sub?.id ?? null)
+      if (!subId) break
       const { error } = await admin.from('washers').update({
         subscription_status: 'past_due',
-      }).eq('stripe_customer_id', invoice.customer as string)
-      if (error) { logger.error('stripe.webhook.invoice_payment_failed.db', { customer: invoice.customer }, error); dbError = error }
+      }).eq('stripe_subscription_id', subId)
+      if (error) { logger.error('stripe.webhook.invoice_payment_failed.db', { subId }, error); dbError = error }
       break
     }
   }

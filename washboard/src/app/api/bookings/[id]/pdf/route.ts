@@ -1,4 +1,4 @@
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
 import BookingPDF from '@/components/pdf/BookingPDF'
@@ -9,10 +9,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Route publique (le client télécharge sa confirmation sans être authentifié).
   // La RLS interdit la lecture de `bookings` à l'anon → service-role, ciblé sur
   // l'id exact (UUID = jeton d'accès).
-  const supabase = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabase = createAdminClient()
 
   const { data: booking } = await supabase
     .from('bookings')

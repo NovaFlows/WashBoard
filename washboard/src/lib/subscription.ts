@@ -37,6 +37,17 @@ export function isAlreadySubscribed(args: {
   )
 }
 
+export function isCardRegistered(
+  subscriptionId: string | null | undefined,
+  status: string | null | undefined,
+): boolean {
+  return !!subscriptionId && status === 'trial'
+}
+
+export function formatDateFR(date: string | Date): string {
+  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 // Détermine si l'on peut différer la facturation à la fin de l'essai.
 // Stripe exige un `trial_end` à au moins 48h dans le futur : sinon on facture
 // immédiatement (retourne null) plutôt que de risquer un rejet de la session.

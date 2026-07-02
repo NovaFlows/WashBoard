@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
+import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 
 type Props = {
   washerName: string
@@ -38,6 +39,16 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
   )
 }
 
+function DismissButton({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <button onClick={onDismiss} aria-label="Fermer" className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  )
+}
+
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null }) {
   const [dismissed, setDismissed] = useState(false)
   const [now] = useState(() => Date.now())
@@ -46,20 +57,15 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 
   // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
   if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
-    const endDate = new Date(cancelsAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
     return (
       <div className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-b border-red-200 dark:border-red-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
         <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
-          <span>Abonnement résilié — valable jusqu&apos;au {endDate}</span>
+          <span>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</span>
           <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
             Réactiver →
           </Link>
         </div>
-        <button onClick={() => setDismissed(true)} aria-label="Fermer" className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
+        <DismissButton onDismiss={() => setDismissed(true)} />
       </div>
     )
   }
@@ -82,7 +88,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     const isUrgent = daysLeft <= 7
 
     // Carte enregistrée, facturation différée
-    if (stripeSubscriptionId) {
+    if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
       return (
         <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
           <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
@@ -93,11 +99,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
               Gérer →
             </Link>
           </div>
-          <button onClick={() => setDismissed(true)} aria-label="Fermer" className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
+          <DismissButton onDismiss={() => setDismissed(true)} />
         </div>
       )
     }
@@ -130,15 +132,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
             Voir l&apos;abonnement →
           </Link>
         </div>
-        <button
-          onClick={() => setDismissed(true)}
-          aria-label="Fermer"
-          className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
+        <DismissButton onDismiss={() => setDismissed(true)} />
       </div>
     )
   }

@@ -4,6 +4,8 @@ import {
   stripeCancelToIso,
   isAlreadySubscribed,
   computeTrialEnd,
+  isCardRegistered,
+  formatDateFR,
 } from './subscription'
 
 describe('mapStripeStatus', () => {
@@ -45,6 +47,30 @@ describe('isAlreadySubscribed', () => {
   })
   it('faux si expiré même avec un ancien subscription id', () => {
     expect(isAlreadySubscribed({ subscriptionId: 'sub_1', status: 'expired' })).toBe(false)
+  })
+})
+
+describe('isCardRegistered', () => {
+  it('vrai si subscription id + statut trial', () => {
+    expect(isCardRegistered('sub_1', 'trial')).toBe(true)
+  })
+  it('faux sans subscription id', () => {
+    expect(isCardRegistered(null, 'trial')).toBe(false)
+    expect(isCardRegistered(undefined, 'trial')).toBe(false)
+  })
+  it('faux si statut non-trial même avec subscription id', () => {
+    expect(isCardRegistered('sub_1', 'active')).toBe(false)
+    expect(isCardRegistered('sub_1', null)).toBe(false)
+  })
+})
+
+describe('formatDateFR', () => {
+  it('formate une date ISO en français long', () => {
+    // 2026-07-21 → "21 juillet 2026"
+    expect(formatDateFR('2026-07-21T00:00:00.000Z')).toMatch(/21.*juillet.*2026/)
+  })
+  it('accepte un objet Date', () => {
+    expect(formatDateFR(new Date('2026-01-01T12:00:00Z'))).toMatch(/1.*janvier.*2026/)
   })
 })
 

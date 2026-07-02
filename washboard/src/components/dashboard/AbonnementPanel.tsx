@@ -1,8 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertTriangle } from 'lucide-react'
 import { PLAN_CARDS, type Plan } from '@/lib/plan'
+import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { Spinner } from '@/components/ui/Spinner'
 
 type Props = {
@@ -74,26 +76,28 @@ export default function AbonnementPanel({
     : null
 
   const currentPrice   = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
-  const hasStripe      = !!stripeCustomerId
-  const cardRegistered = !!stripeSubscriptionId && subscriptionStatus === 'trial'
-  const canManage      = hasStripe && (subscriptionStatus === 'active' || subscriptionStatus === 'past_due' || cardRegistered)
+  const cardRegistered = isCardRegistered(stripeSubscriptionId, subscriptionStatus)
+  const canManage      = !!stripeCustomerId && (subscriptionStatus === 'active' || subscriptionStatus === 'past_due' || cardRegistered)
   const needsPayment   = !grandfathered && subscriptionStatus !== 'active' && !cardRegistered
 
-  async function startCheckout(planKey: Plan) {
-    setLoading(planKey)
+  async function callStripeEndpoint(
+    url: string,
+    loadingKey: string,
+    body?: Record<string, unknown>,
+    fallback = 'Une erreur est survenue. Réessayez.',
+  ) {
+    setLoading(loadingKey)
     setErrorMsg(null)
     try {
-      const res  = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        window.location.assign(data.url)
-        return
+      const init: RequestInit = { method: 'POST' }
+      if (body) {
+        init.headers = { 'Content-Type': 'application/json' }
+        init.body = JSON.stringify(body)
       }
-      setErrorMsg(data.error ?? 'Impossible de démarrer le paiement. Réessayez.')
+      const res  = await fetch(url, init)
+      const data = await res.json()
+      if (data.url) { window.location.assign(data.url); return }
+      setErrorMsg(data.error ?? fallback)
       setLoading(null)
     } catch {
       setErrorMsg('Erreur réseau. Vérifiez votre connexion et réessayez.')
@@ -101,23 +105,11 @@ export default function AbonnementPanel({
     }
   }
 
-  async function openPortal() {
-    setLoading('portal')
-    setErrorMsg(null)
-    try {
-      const res  = await fetch('/api/stripe/portal', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) {
-        window.location.assign(data.url)
-        return
-      }
-      setErrorMsg(data.error ?? 'Impossible d’ouvrir le portail. Réessayez.')
-      setLoading(null)
-    } catch {
-      setErrorMsg('Erreur réseau. Vérifiez votre connexion et réessayez.')
-      setLoading(null)
-    }
-  }
+  const startCheckout = (planKey: Plan) =>
+    callStripeEndpoint('/api/stripe/checkout', planKey, { plan: planKey }, 'Impossible de démarrer le paiement. Réessayez.')
+
+  const openPortal = () =>
+    callStripeEndpoint('/api/stripe/portal', 'portal', undefined, "Impossible d'ouvrir le portail. Réessayez.")
 
   return (
     <div className="space-y-6">
@@ -125,9 +117,7 @@ export default function AbonnementPanel({
       {/* Message d'erreur */}
       {errorMsg && (
         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm font-medium flex items-center gap-2">
-          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
+          <AlertTriangle className="w-5 h-5 shrink-0" />
           {errorMsg}
           <button onClick={() => setErrorMsg(null)} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
         </div>
@@ -156,11 +146,9 @@ export default function AbonnementPanel({
       {/* Résiliation programmée */}
       {cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial') && (
         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium flex items-center gap-2">
-          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
+          <AlertTriangle className="w-5 h-5 shrink-0" />
           <span>
-            Résiliation programmée le <strong>{new Date(cancelsAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
+            Résiliation programmée le <strong>{formatDateFR(cancelsAt)}</strong>.
             Votre accès reste actif jusqu&apos;à cette date. Pour annuler la résiliation, cliquez sur &laquo;&nbsp;Gérer mon abonnement&nbsp;&raquo;.
           </span>
         </div>

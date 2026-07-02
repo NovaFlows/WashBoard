@@ -1,4 +1,4 @@
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 
 type Props = { params: Promise<{ id: string }> }
@@ -10,10 +10,7 @@ export default async function ConfirmationPage({ params }: Props) {
   // lecture de `bookings` aux non-propriétaires (client anon → permission denied →
   // page introuvable). On lit donc via le service-role, en se limitant à l'id exact
   // (UUID imprévisible = jeton d'accès), jamais une liste.
-  const supabase = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabase = createAdminClient()
 
   const { data: booking } = await supabase
     .from('bookings')
