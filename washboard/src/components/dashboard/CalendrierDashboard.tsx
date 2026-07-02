@@ -2,6 +2,11 @@
 
 import { useState } from 'react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import { effectiveDuration, formatPrice } from '@/lib/pricing'
+import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { haversineKm } from '@/lib/geo'
+import { toDateStr } from '@/lib/dateUtils'
+import { openGmail, openWhatsapp } from '@/lib/contact'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number>; category_id: string | null; vehicle_types: string[] }
@@ -25,18 +30,6 @@ type Booking = {
   vehicle_count: number | null
   vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
   services: Service | null
-}
-
-const VEHICLE_LABELS: Record<string, string> = {
-  citadine_2p: 'Citadine 2p', citadine: 'Citadine', berline: 'Berline',
-  SUV: 'SUV / 4x4', monospace: 'Monospace', '7places': '7 places',
-  utilitaire: 'Van / Utilitaire', 'camping-car': 'Camping-car', camion: 'Camion',
-  moto: 'Moto', scooter: 'Scooter', velo: 'Vélo / Trottinette',
-}
-
-// Durée réelle bloquée = durée prestation × nombre de véhicules
-function effectiveDuration(b: Booking): number {
-  return (b.services?.duration_minutes ?? 60) * Math.max(1, b.vehicle_count ?? 1)
 }
 
 const STATUS = {
@@ -76,7 +69,7 @@ type WeekBooking = Booking & { col: number; totalCols: number }
 function layoutDayBookings(bookings: Booking[]): WeekBooking[] {
   if (bookings.length === 0) return []
   const getMs  = (b: Booking) => new Date(b.scheduled_at).getTime()
-  const getEnd = (b: Booking) => getMs(b) + effectiveDuration(b) * 60_000
+  const getEnd = (b: Booking) => getMs(b) + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
   const sorted = [...bookings].sort((a, b) => getMs(a) - getMs(b))
 
   const colEnds: number[] = []
@@ -141,18 +134,6 @@ type ManualBooking = {
   billing_address: string
   notes: string
   status: 'pending' | 'confirmed'
-}
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-function toDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string }
@@ -280,7 +261,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const overlapping = bookings.filter(b => {
       if (b.status === 'cancelled') return false
       const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + effectiveDuration(b) * 60_000
+      const bEnd   = bStart + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
       return bStart < selectedEnd.getTime() && bEnd > selectedStart.getTime()
     })
 
@@ -299,7 +280,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
 
       for (const b of sameDayActive) {
         const bStart  = new Date(b.scheduled_at).getTime()
-        const bEnd    = bStart + effectiveDuration(b) * 60_000
+        const bEnd    = bStart + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
         const newStart = selectedStart.getTime()
         const newEnd   = selectedEnd.getTime()
 
@@ -497,7 +478,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const newStart = new Date(`${editDate}T${editTime}:00`)
     if (isNaN(newStart.getTime())) { setRescheduleErr('Date ou heure invalide'); return }
 
-    const durationMin = effectiveDuration(selected)
+    const durationMin = effectiveDuration(selected.services?.duration_minutes ?? 60, selected.vehicle_count)
     const newEnd      = new Date(newStart.getTime() + durationMin * 60_000)
     const dayStr      = editDate
 
@@ -510,7 +491,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const overlapping = bookings.filter(b => {
       if (b.id === selected.id || b.status === 'cancelled') return false
       const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + effectiveDuration(b) * 60_000
+      const bEnd   = bStart + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
       return bStart < newEnd.getTime() && bEnd > newStart.getTime()
     })
     if (overlapping.length >= effectiveTeam) {
@@ -538,31 +519,6 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     } finally {
       setRescheduleSaving(false)
     }
-  }
-
-  function openGmail(b: Booking) {
-    const date    = new Date(b.scheduled_at)
-    const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    const timeStr = fmt(date)
-    const subject = `Votre réservation — ${b.services?.name ?? 'Lavage'} du ${date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-    const body    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, '', ''].join('\n')
-    const url = new URL('https://mail.google.com/mail/')
-    url.searchParams.set('view', 'cm')
-    url.searchParams.set('to', b.client_email)
-    url.searchParams.set('su', subject)
-    url.searchParams.set('body', body)
-    window.open(url.toString(), '_blank', 'noopener')
-  }
-
-  function openWhatsapp(b: Booking) {
-    if (!b.client_phone) return
-    const date    = new Date(b.scheduled_at)
-    const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-    const timeStr = fmt(date)
-    const text    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, ''].join('\n')
-    let phone = b.client_phone.replace(/\D/g, '')
-    if (phone.startsWith('0')) phone = '33' + phone.slice(1)
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
   }
 
   async function updateStatus(id: string, status: string) {
@@ -855,7 +811,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       const m = d.getMinutes()
                       if (h < HOUR_START || h >= HOUR_END) return null
                       const top      = (h - HOUR_START) * HOUR_H + m * (HOUR_H / 60)
-                      const height   = Math.max(effectiveDuration(b) * (HOUR_H / 60), 28)
+                      const height   = Math.max(effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * (HOUR_H / 60), 28)
                       const widthPct = 100 / b.totalCols
                       const leftPct  = b.col * widthPct
                       return (
@@ -955,7 +911,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   const h = d.getHours(), m = d.getMinutes()
                   if (h < HOUR_START || h >= HOUR_END) return null
                   const top      = (h - HOUR_START) * HOUR_H + m * (HOUR_H / 60)
-                  const height   = Math.max(effectiveDuration(b) * (HOUR_H / 60), 28)
+                  const height   = Math.max(effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * (HOUR_H / 60), 28)
                   const widthPct = 100 / b.totalCols
                   const leftPct  = b.col * widthPct
                   return (
@@ -1442,7 +1398,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     <>
                       <span className="line-through opacity-50">{(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€</span>
                       {' '}
-                      <span className="font-semibold">{((selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0) - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
+                      <span className="font-semibold">{formatPrice((selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0) - Number(selected.smart_discount))}</span>
                       {' '}
                       <span className="text-amber-500 font-bold">★ smart</span>
                     </>
@@ -1537,7 +1493,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100">
                     {selected.is_smart_slot && Number(selected.smart_discount) > 0
-                      ? `${((selected.booked_price ?? selected.services?.price ?? 0) - Number(selected.smart_discount)).toFixed(2).replace(/\.00$/, '')}€`
+                      ? formatPrice((selected.booked_price ?? selected.services?.price ?? 0) - Number(selected.smart_discount))
                       : `${selected.booked_price ?? selected.services?.price ?? 0}€`}
                   </span>
                 </div>

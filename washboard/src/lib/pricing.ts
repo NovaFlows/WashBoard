@@ -51,3 +51,8 @@ export function smartPrice(basePrice: number, discount: SmartDiscount): number {
 export function finalDisplayPrice(basePrice: number, isSmartSlot: boolean, smartDiscount: number): number {
   return isSmartSlot ? Math.max(0, basePrice - smartDiscount) : basePrice
 }
+
+/** Formate un montant en euros : supprime les décimales inutiles (30.00 → "30€", 30.50 → "30.5€"). */
+export function formatPrice(n: number): string {
+  return n.toFixed(2).replace(/\.00$/, '') + '€'
+}

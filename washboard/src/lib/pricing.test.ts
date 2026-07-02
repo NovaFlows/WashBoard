@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   vehiclePrice, hasPriceOverrides, minVehiclePrice, effectiveDuration,
-  smartDiscountAmount, smartPrice, finalDisplayPrice,
+  smartDiscountAmount, smartPrice, finalDisplayPrice, formatPrice,
 } from './pricing'
 
 const svc = { price: 100, vehicle_price_overrides: { SUV: 130, citadine: 80 }, vehicle_types: ['SUV', 'citadine', 'berline'] }
@@ -77,5 +77,19 @@ describe('finalDisplayPrice', () => {
     expect(finalDisplayPrice(100, true, 15)).toBe(85)
     expect(finalDisplayPrice(100, false, 15)).toBe(100)
     expect(finalDisplayPrice(10, true, 50)).toBe(0)
+  })
+})
+
+describe('formatPrice', () => {
+  it('supprime les décimales .00', () => {
+    expect(formatPrice(30)).toBe('30€')
+    expect(formatPrice(30.00)).toBe('30€')
+  })
+  it('conserve les décimales non nulles', () => {
+    expect(formatPrice(30.5)).toBe('30.50€')
+    expect(formatPrice(9.99)).toBe('9.99€')
+  })
+  it('inclut toujours le signe €', () => {
+    expect(formatPrice(0)).toBe('0€')
   })
 })

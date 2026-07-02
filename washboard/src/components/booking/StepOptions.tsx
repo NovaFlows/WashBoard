@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Service, ServiceAddon } from '@/types'
+import { hex } from '@/lib/colorUtils'
 
 type Props = {
   service: Service
@@ -10,10 +11,6 @@ type Props = {
   onNext: (data: { selected_addons: ServiceAddon[]; booked_price: number }) => void
   onBack: () => void
   accent?: string
-}
-
-function hex(color: string, opacity: number) {
-  return color + Math.round(opacity * 255).toString(16).padStart(2, '0')
 }
 
 export default function StepOptions({ service, selectedAddons, basePrice, onNext, onBack, accent = '#2563eb' }: Props) {

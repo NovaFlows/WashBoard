@@ -1,16 +1,7 @@
 import type { Service } from '@/types'
 import type { FormState } from './BookingForm'
-
-const VEHICLE_LABELS: Record<string, string> = {
-  citadine_2p: 'Citadine 2p',
-  citadine:    'Citadine',
-  berline:     'Berline',
-  SUV:         'SUV / 4x4',
-  monospace:   'Monospace',
-  '7places':   '7 places',
-  utilitaire:  'Van / Utilitaire',
-  velo:        'Vélo',
-}
+import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { formatPrice } from '@/lib/pricing'
 
 type Props = {
   washerName: string
@@ -42,7 +33,7 @@ export default function StepConfirmation({ washerName, bookingId, form, services
             label="Prestation"
             value={
               form.is_smart_slot && Number(form.smart_discount) > 0
-                ? `${service.name} — ${(displayPrice - Number(form.smart_discount)).toFixed(2).replace(/\.00$/, '')}€ ★`
+                ? `${service.name} — ${formatPrice(displayPrice - Number(form.smart_discount))} ★`
                 : `${service.name} — ${displayPrice}€`
             }
           />
@@ -76,7 +67,7 @@ export default function StepConfirmation({ washerName, bookingId, form, services
           <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
             <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
             <span className="font-bold text-slate-900 dark:text-slate-100">
-              {(displayPrice + form.travel_fee - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)).toFixed(2).replace(/\.00$/, '')}€
+              {formatPrice(displayPrice + form.travel_fee - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0))}
             </span>
           </div>
         )}

@@ -1,16 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
-
-const VEHICLE_LABELS: Record<string, string> = {
-  citadine:      'Citadine',
-  berline:       'Berline',
-  SUV:           'SUV / 4x4',
-  moto:          'Moto',
-  scooter:       'Scooter',
-  utilitaire:    'Utilitaire / Van',
-  'camping-car': 'Camping-car',
-  camion:        'Camion',
-  velo:          'Vélo / Trottinette',
-}
+import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 
 const s = StyleSheet.create({
   page:        { backgroundColor: '#ffffff', fontFamily: 'Helvetica', fontSize: 10, color: '#0f172a', padding: 0 },

@@ -1,6 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { openGmail, openWhatsapp } from '@/lib/contact'
+import { formatPrice } from '@/lib/pricing'
 
 type ServiceAddon = { id: string; label: string; price: number; category: string }
 type Service = { name: string; price: number; duration_minutes: number }
@@ -24,13 +27,6 @@ type Booking = {
   services: Service | null
 }
 
-const VEHICLE_LABELS: Record<string, string> = {
-  citadine_2p: 'Citadine 2p', citadine: 'Citadine', berline: 'Berline',
-  SUV: 'SUV / 4x4', monospace: 'Monospace', '7places': '7 places',
-  utilitaire: 'Van / Utilitaire', 'camping-car': 'Camping-car', camion: 'Camion',
-  moto: 'Moto', scooter: 'Scooter', velo: 'Vélo / Trottinette',
-}
-
 type Props = {
   bookings: Booking[]
   washerId: string
@@ -46,31 +42,6 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
 
 function fmt(d: Date) {
   return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function openGmail(b: Booking) {
-  const date    = new Date(b.scheduled_at)
-  const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const timeStr = fmt(date)
-  const subject = `Votre réservation — ${b.services?.name ?? 'Lavage'} du ${date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-  const body    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, '', ''].join('\n')
-  const url = new URL('https://mail.google.com/mail/')
-  url.searchParams.set('view', 'cm')
-  url.searchParams.set('to', b.client_email)
-  url.searchParams.set('su', subject)
-  url.searchParams.set('body', body)
-  window.open(url.toString(), '_blank', 'noopener')
-}
-
-function openWhatsapp(b: Booking) {
-  if (!b.client_phone) return
-  const date    = new Date(b.scheduled_at)
-  const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const timeStr = fmt(date)
-  const text    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, ''].join('\n')
-  let phone = b.client_phone.replace(/\D/g, '')
-  if (phone.startsWith('0')) phone = '33' + phone.slice(1)
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
 }
 
 export default function BookingList({ bookings }: Props) {
@@ -219,7 +190,7 @@ function BookingCard({ booking, loading, onUpdate }: {
                   {isSmart ? (
                     <>
                       <span className="line-through opacity-50">{basePrice}€</span>{' '}
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{finalPrice.toFixed(2).replace(/\.00$/, '')}€</span>{' '}
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{formatPrice(finalPrice)}</span>{' '}
                       <span className="text-amber-500 font-bold">★</span>
                     </>
                   ) : (
@@ -312,7 +283,7 @@ function BookingCard({ booking, loading, onUpdate }: {
                   <>
                     <span className="line-through opacity-50">{servicePrice}€</span>
                     {' '}
-                    <span className="font-semibold">{(servicePrice - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€</span>
+                    <span className="font-semibold">{formatPrice(servicePrice - Number(booking.smart_discount))}</span>
                     {' '}
                     <span className="text-amber-500 font-bold">★ smart</span>
                   </>
@@ -358,7 +329,7 @@ function BookingCard({ booking, loading, onUpdate }: {
                 <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">
                   {booking.is_smart_slot && Number(booking.smart_discount) > 0
-                    ? `${(basePrice - Number(booking.smart_discount)).toFixed(2).replace(/\.00$/, '')}€`
+                    ? formatPrice(basePrice - Number(booking.smart_discount))
                     : `${basePrice}€`}
                 </span>
               </div>

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Clock, Check, User, Building2 } from 'lucide-react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
+import { hex } from '@/lib/colorUtils'
 
 type Props = {
   services: Service[]
@@ -23,10 +24,6 @@ const VEHICLE_IMAGES: Record<string, string> = {
   '7places':   '/vehicles/monospace.png',
   utilitaire:  '/vehicles/utilitaire.png',
   velo:        '/vehicles/bike.svg',
-}
-
-function hex(color: string, opacity: number) {
-  return color + Math.round(opacity * 255).toString(16).padStart(2, '0')
 }
 
 const UNCATEGORIZED = '__none__'

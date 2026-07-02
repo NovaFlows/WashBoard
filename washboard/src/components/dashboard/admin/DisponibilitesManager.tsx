@@ -79,8 +79,7 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
     setUnavails(u => u.filter(x => x.id !== id))
   }
 
-  const timeInput = "border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-  const dateInput = "border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const inputClass = "border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
 
   const today = toDateInput(new Date())
   const upcomingUnavails = unavails.filter(u => u.end_date >= today)
@@ -107,12 +106,12 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
         <div className="flex items-center gap-3 mb-4">
           <div>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Début</p>
-            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={timeInput} />
+            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputClass} />
           </div>
           <div className="text-slate-400 mt-5">→</div>
           <div>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fin</p>
-            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={timeInput} />
+            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={inputClass} />
           </div>
         </div>
         {slotErr && <p className="text-xs text-red-600 dark:text-red-400 mb-3">{slotErr}</p>}
@@ -172,12 +171,12 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
           <div className="flex items-center gap-3 flex-wrap">
             <div>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Du</p>
-              <input type="date" value={uStart} onChange={e => setUStart(e.target.value)} className={dateInput} />
+              <input type="date" value={uStart} onChange={e => setUStart(e.target.value)} className={inputClass} />
             </div>
             <div className="text-slate-400 mt-5">→</div>
             <div>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Au</p>
-              <input type="date" value={uEnd} onChange={e => setUEnd(e.target.value)} min={uStart} className={dateInput} />
+              <input type="date" value={uEnd} onChange={e => setUEnd(e.target.value)} min={uStart} className={inputClass} />
             </div>
           </div>
 

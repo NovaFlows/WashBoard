@@ -21,6 +21,7 @@ export default defineConfig({
         'src/lib/googleCalendar.ts',  // I/O Google Calendar
         'src/lib/googleReviews.ts',   // scraping HTTP
         'src/lib/supabase/**',        // wrappers client Supabase
+        'src/lib/contact.ts',         // utilise window.open (browser uniquement)
       ],
       // Garde-fou anti-régression : si la couverture de la couche métier passe
       // sous ces seuils, `npm run test:coverage` échoue (et donc la CI). On laisse

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { getMondayOf } from '@/lib/dateUtils'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -41,6 +42,8 @@ function getStatusKey(b: Booking) {
   return b.closed_late ? 'closed_late' : b.status
 }
 
+const isDone = (b: Booking) => b.status === 'confirmed' || b.status === 'done'
+
 function effectivePrice(b: Booking) {
   return b.booked_price ?? b.services?.price ?? 0
 }
@@ -56,14 +59,6 @@ function getLast6Months() {
     result.push({ year: d.getFullYear(), month: d.getMonth(), label: MONTHS_FR[d.getMonth()] })
   }
   return result
-}
-
-function getMondayOf(date: Date): Date {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  const day = d.getDay()
-  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
-  return d
 }
 
 function shortDate(d: Date): string {
@@ -253,10 +248,10 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
 
   const total    = displayBookings.length
   const revenue  = displayBookings
-    .filter(b => b.status === 'confirmed' || b.status === 'done')
+    .filter(b => isDone(b))
     .reduce((sum, b) => sum + effectivePrice(b), 0)
   const pending  = displayBookings.filter(b => b.status === 'pending').length
-  const done     = displayBookings.filter(b => b.status === 'done' || b.status === 'confirmed').length
+  const done     = displayBookings.filter(b => isDone(b)).length
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0
 
   const chartData = (() => {
@@ -269,7 +264,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
           const d = new Date(b.scheduled_at)
           return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate()
         })
-        return { label: DAYS_FR[i], Réservations: bs.length, CA: bs.filter(b => b.status === 'confirmed' || b.status === 'done').reduce((s, b) => s + effectivePrice(b), 0) }
+        return { label: DAYS_FR[i], Réservations: bs.length, CA: bs.filter(b => isDone(b)).reduce((s, b) => s + effectivePrice(b), 0) }
       })
     }
 
@@ -278,7 +273,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
       return Array.from({ length: daysInMonth }, (_, i) => {
         const dayN = i + 1
         const bs   = displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth && d.getDate() === dayN })
-        return { label: String(dayN), Réservations: bs.length, CA: bs.filter(b => b.status === 'confirmed' || b.status === 'done').reduce((s, b) => s + effectivePrice(b), 0) }
+        return { label: String(dayN), Réservations: bs.length, CA: bs.filter(b => isDone(b)).reduce((s, b) => s + effectivePrice(b), 0) }
       })
     }
 
@@ -288,7 +283,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
     return months.map(({ year, month, label }) => ({
       label,
       Réservations: displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === year && d.getMonth() === month }).length,
-      CA: displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === year && d.getMonth() === month && (b.status === 'confirmed' || b.status === 'done') }).reduce((sum, b) => sum + effectivePrice(b), 0),
+      CA: displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === year && d.getMonth() === month && (isDone(b)) }).reduce((sum, b) => sum + effectivePrice(b), 0),
     }))
   })()
 

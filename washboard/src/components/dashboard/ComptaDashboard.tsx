@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { getMondayOf } from '@/lib/dateUtils'
+import { formatPrice } from '@/lib/pricing'
 
 type PeriodType = 'jour' | 'semaine' | 'mois' | 'annee'
 
@@ -47,14 +49,6 @@ const CAT_COLORS: Record<string, string> = {
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 
 function toISO(d: Date) { return d.toISOString().slice(0, 10) }
-
-function getMondayOf(d: Date): Date {
-  const r = new Date(d)
-  r.setHours(0,0,0,0)
-  const day = r.getDay()
-  r.setDate(r.getDate() - (day === 0 ? 6 : day - 1))
-  return r
-}
 
 function getPeriodRange(type: PeriodType, ref: Date): { start: string; end: string; label: string } {
   const d = new Date(ref)
@@ -259,16 +253,16 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4">
           <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">CA</p>
-          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{totalRevenue.toFixed(2).replace(/\.00$/, '')}€</p>
+          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(totalRevenue)}</p>
         </div>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-4">
           <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Dépenses</p>
-          <p className="text-xl font-bold text-red-700 dark:text-red-300">{totalExpenses.toFixed(2).replace(/\.00$/, '')}€</p>
+          <p className="text-xl font-bold text-red-700 dark:text-red-300">{formatPrice(totalExpenses)}</p>
         </div>
         <div className={`border rounded-2xl p-4 ${result >= 0 ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'}`}>
           <p className={`text-xs font-medium mb-1 ${result >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>Résultat</p>
           <p className={`text-xl font-bold ${result >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>
-            {result >= 0 ? '+' : ''}{result.toFixed(2).replace(/\.00$/, '')}€
+            {result >= 0 ? '+' : ''}{formatPrice(result)}
           </p>
         </div>
       </div>
@@ -299,10 +293,10 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                     return (
                       <tr key={row.month} className={`${empty ? 'opacity-40' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors`}>
                         <td className="px-5 py-3 font-medium text-slate-700 dark:text-slate-300">{MONTHS_FR[row.month - 1]}</td>
-                        <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{row.revenue > 0 ? `${row.revenue.toFixed(2).replace(/\.00$/, '')}€` : '—'}</td>
-                        <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-semibold">{row.expenses > 0 ? `−${row.expenses.toFixed(2).replace(/\.00$/, '')}€` : '—'}</td>
+                        <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{row.revenue > 0 ? formatPrice(row.revenue) : '—'}</td>
+                        <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-semibold">{row.expenses > 0 ? `−${formatPrice(row.expenses)}` : '—'}</td>
                         <td className={`px-5 py-3 text-right font-bold ${empty ? '' : res >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-600 dark:text-orange-400'}`}>
-                          {empty ? '—' : `${res >= 0 ? '+' : ''}${res.toFixed(2).replace(/\.00$/, '')}€`}
+                          {empty ? '—' : `${res >= 0 ? '+' : ''}${formatPrice(res)}`}
                         </td>
                       </tr>
                     )
@@ -311,10 +305,10 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                     <td className="px-5 py-3 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total</td>
-                    <td className="px-4 py-3 text-right font-bold text-emerald-700 dark:text-emerald-300">{totalRevenue.toFixed(2).replace(/\.00$/, '')}€</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">−{totalExpenses.toFixed(2).replace(/\.00$/, '')}€</td>
+                    <td className="px-4 py-3 text-right font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(totalRevenue)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">−{formatPrice(totalExpenses)}</td>
                     <td className={`px-5 py-3 text-right font-bold ${result >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-600 dark:text-orange-400'}`}>
-                      {result >= 0 ? '+' : ''}{result.toFixed(2).replace(/\.00$/, '')}€
+                      {result >= 0 ? '+' : ''}{formatPrice(result)}
                     </td>
                   </tr>
                 </tfoot>
@@ -386,7 +380,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                         <span className="ml-1.5 text-xs text-slate-400" title="Frais récurrent auto-généré">↻</span>
                       )}
                     </span>
-                    <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{Number(ex.amount).toFixed(2).replace(/\.00$/, '')}€</span>
+                    <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{formatPrice(Number(ex.amount))}</span>
                     <button
                       onClick={() => deleteExpense(ex.id)}
                       disabled={deleting === ex.id}
@@ -466,7 +460,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                 </span>
                 <span className="flex-1 text-sm text-slate-700 dark:text-slate-300 truncate">{r.label}</span>
                 <span className="shrink-0 text-xs text-slate-400">le {r.day_of_month}</span>
-                <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{Number(r.amount).toFixed(2).replace(/\.00$/, '')}€/mois</span>
+                <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{formatPrice(Number(r.amount))}/mois</span>
                 <button
                   onClick={() => toggleRecurring(r.id, !r.active)}
                   disabled={togglingRec === r.id}
