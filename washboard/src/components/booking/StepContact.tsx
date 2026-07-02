@@ -11,6 +11,7 @@ type Props = {
     client_name: string
     client_email: string
     client_phone: string
+    notes?: string
     company_name?: string
     siret?: string
     billing_address?: string
@@ -25,6 +26,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   const [email,          setEmail]          = useState('')
   const [phone,          setPhone]          = useState('')
   const [phoneTouched,   setPhoneTouched]   = useState(false)
+  const [notes,          setNotes]          = useState('')
   const [companyName,    setCompanyName]    = useState('')
   const [siret,          setSiret]          = useState('')
   const [siretTouched,   setSiretTouched]   = useState(false)
@@ -52,6 +54,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
       client_name:  name,
       client_email: email,
       client_phone: phone,
+      notes:        notes.trim() || undefined,
       hp,
       ...(isProfessional && {
         company_name:    companyName.trim(),
@@ -171,6 +174,19 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
               {phoneDigits.length < 10 ? `Numéro trop court (${phoneDigits.length}/10 chiffres)` : 'Numéro trop long — 10 chiffres attendus'}
             </p>
           )}
+        </div>
+        <div>
+          <label className={labelClass}>
+            Note pour le laveur <span className="text-slate-400 font-normal">(optionnel)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="N° d'appartement, code portail, couleur du véhicule, accès particulier…"
+            rows={3}
+            className={`${inputClass} resize-none`}
+            style={{ '--tw-ring-color': accent } as React.CSSProperties}
+          />
         </div>
       </div>
 

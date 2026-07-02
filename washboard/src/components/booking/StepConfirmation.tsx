@@ -78,6 +78,7 @@ export default function StepConfirmation({ washerName, bookingId, form, services
           />
         )}
         {form.address && <Row label="Adresse" value={form.address} right />}
+        {form.notes && <Row label="Note" value={form.notes} right />}
       </div>
 
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5">

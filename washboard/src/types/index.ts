@@ -140,6 +140,7 @@ export type BookingFormData = {
   client_name: string
   client_email: string
   client_phone: string
+  notes?: string
   is_smart_slot?: boolean
   smart_discount?: number
 }

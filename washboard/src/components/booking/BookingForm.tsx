@@ -54,9 +54,10 @@ export default function BookingForm({ washer, services, categories, availabiliti
     setForm(prev => ({ ...prev, ...data }))
   }
 
-  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'>) {
+  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string }) {
     setLoading(true)
     setError(null)
+    if (contactData.notes) updateForm({ notes: contactData.notes })
     const payload = {
       ...form,
       ...contactData,

@@ -27,6 +27,7 @@ const BookingSchema = z.object({
   client_name:     z.string().min(2),
   client_email:    z.string().email(),
   client_phone:    z.string().min(10),
+  notes:           z.string().max(1000).optional(),
   is_smart_slot:   z.boolean().optional().default(false),
   smart_discount:  z.number().min(0).optional().default(0),
   is_professional: z.boolean().optional().default(false),

@@ -179,6 +179,14 @@ export default function StepSlot({
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []
 
+  // Si le créneau sélectionné est devenu infaisable (contraintes de trajet chargées après),
+  // on le désélectionne pour éviter qu'un client valide un RDV physiquement impossible.
+  useEffect(() => {
+    if (selectedTime && slotsForDay.length > 0 && !slotsForDay.includes(selectedTime)) {
+      setSelectedTime(null)
+    }
+  }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
   const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, smartWindows)) : slotsForDay
 
