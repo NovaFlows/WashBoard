@@ -222,9 +222,18 @@ function BookingCard({ booking, loading, onUpdate }: {
               </div>
             )}
             {booking.status === 'pending' && isExpiredPending && (
-              <span className="px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-xs font-semibold rounded-lg border border-orange-200 dark:border-orange-800">
-                Créneau passé
-              </span>
+              <div className="flex flex-col sm:flex-row gap-1.5">
+                <span className="px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-xs font-semibold rounded-lg border border-orange-200 dark:border-orange-800">
+                  Créneau passé
+                </span>
+                <button
+                  onClick={() => onUpdate(booking.id, 'done', true)}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors border border-slate-200 dark:border-slate-700"
+                >
+                  Clôturer
+                </button>
+              </div>
             )}
             {booking.status === 'confirmed' && !isExpiredConfirmed && (
               <div className="flex flex-col sm:flex-row gap-1.5">
@@ -355,9 +364,13 @@ function BookingCard({ booking, loading, onUpdate }: {
             <div className="flex gap-2">
               {booking.status === 'pending' && (
                 isExpiredPending ? (
-                  <span className="flex-1 text-center py-2.5 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-sm font-semibold rounded-xl border border-orange-200 dark:border-orange-800">
-                    Créneau passé
-                  </span>
+                  <button
+                    onClick={() => onUpdate(booking.id, 'done', true)}
+                    disabled={isLoading}
+                    className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-sm font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors border border-slate-200 dark:border-slate-700"
+                  >
+                    Clôturer
+                  </button>
                 ) : (
                   <button
                     onClick={() => onUpdate(booking.id, 'confirmed')}
