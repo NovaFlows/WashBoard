@@ -159,7 +159,7 @@
 - [ ] **Phase 3 — Avis par SMS** (plans Pro/Business) : intégrer Brevo (compte +
       clé API à fournir), fonction `sendSms()`, compteur de quota mensuel + blocage.
 - [ ] **Photos avant/après** : feature premium évidente pour laveurs/detailers.
-- [ ] **QA #1** : vérifier le 404 `/book` d'un vrai compte (données/slug, pas du code).
+- [x] 2026-07-02 — **QA #1** : vérifier le 404 `/book` d'un vrai compte (données/slug, pas du code).
 - [x] 2026-06-30 — **QA #3** : vérifié manuellement → le clic sur une carte prestation
       fonctionne. C'était bien un **artefact Playwright** (clic synthétique), pas un bug.
   - [x] 2026-07-02 — `data-testid` ajoutés : `service-card`, `category-tab`,
@@ -230,6 +230,6 @@
 - [ ] Vérifier que tout le SQL de la session est passé (catégories, GRANTs compta,
       account_status, plan + `grandfathered = true`, colonnes avis). Voir l'historique
       du chat pour le bloc consolidé.
-- [ ] `CRON_SECRET` défini dans Vercel.
-- [ ] Cron-job.org : `https://washboard.fr/api/cron/send-reviews` toutes les heures,
+- [x] 2026-07-02 — `CRON_SECRET` défini dans Vercel.
+- [x] 2026-07-02 — Cron-job.org : `https://washboard.fr/api/cron/send-reviews` toutes les heures,
       header `Authorization: Bearer <CRON_SECRET>`.
