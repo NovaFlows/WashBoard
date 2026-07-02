@@ -8,17 +8,21 @@ type Props = {
   service: Service
   selectedAddons: ServiceAddon[]
   basePrice: number
+  baseDuration: number
+  vehicleCount: number
   onNext: (data: { selected_addons: ServiceAddon[]; booked_price: number }) => void
   onBack: () => void
   accent?: string
 }
 
-export default function StepOptions({ service, selectedAddons, basePrice, onNext, onBack, accent = '#2563eb' }: Props) {
+export default function StepOptions({ service, selectedAddons, basePrice, baseDuration, vehicleCount, onNext, onBack, accent = '#2563eb' }: Props) {
   const [selected, setSelected] = useState<ServiceAddon[]>(selectedAddons)
 
   const categories = [...new Set(service.addons.map(a => a.category))]
   const addonsTotal = selected.reduce((sum, a) => sum + a.price, 0)
   const total = basePrice + addonsTotal
+  const addonsDurTotal = selected.reduce((sum, a) => sum + (a.duration_minutes ?? 0), 0)
+  const totalDuration = (baseDuration + addonsDurTotal) * Math.max(1, vehicleCount)
 
   function toggle(addon: ServiceAddon) {
     setSelected(prev =>
@@ -65,12 +69,17 @@ export default function StepOptions({ service, selectedAddons, basePrice, onNext
                     </div>
                     <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{addon.label}</span>
                   </div>
-                  <span
-                    className="text-sm font-semibold shrink-0 ml-3"
-                    style={isSel ? { color: accent } : { color: '#64748b' }}
-                  >
-                    +{addon.price}€
-                  </span>
+                  <div className="flex flex-col items-end shrink-0 ml-3">
+                    <span
+                      className="text-sm font-semibold"
+                      style={isSel ? { color: accent } : { color: '#64748b' }}
+                    >
+                      +{addon.price}€
+                    </span>
+                    {addon.duration_minutes ? (
+                      <span className="text-xs text-slate-400 dark:text-slate-500">+{addon.duration_minutes} min</span>
+                    ) : null}
+                  </div>
                 </button>
               )
             })}
@@ -93,6 +102,10 @@ export default function StepOptions({ service, selectedAddons, basePrice, onNext
         <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
           <span>Total estimé</span>
           <span>{total}€</span>
+        </div>
+        <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500">
+          <span>Durée estimée</span>
+          <span>{totalDuration} min</span>
         </div>
       </div>
 

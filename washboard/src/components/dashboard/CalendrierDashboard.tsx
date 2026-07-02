@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { effectiveDuration, formatPrice } from '@/lib/pricing'
+import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { haversineKm } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
@@ -25,7 +25,7 @@ type Booking = {
   is_smart_slot: boolean
   smart_discount: number
   booked_price: number | null
-  selected_addons: { id: string; label: string; price: number; category: string }[] | null
+  selected_addons: { id: string; label: string; price: number; category: string; duration_minutes?: number }[] | null
   travel_fee: number | null
   vehicle_count: number | null
   vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
@@ -69,7 +69,7 @@ type WeekBooking = Booking & { col: number; totalCols: number }
 function layoutDayBookings(bookings: Booking[]): WeekBooking[] {
   if (bookings.length === 0) return []
   const getMs  = (b: Booking) => new Date(b.scheduled_at).getTime()
-  const getEnd = (b: Booking) => getMs(b) + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
+  const getEnd = (b: Booking) => getMs(b) + effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * 60_000
   const sorted = [...bookings].sort((a, b) => getMs(a) - getMs(b))
 
   const colEnds: number[] = []
@@ -261,7 +261,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const overlapping = bookings.filter(b => {
       if (b.status === 'cancelled') return false
       const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
+      const bEnd   = bStart + effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * 60_000
       return bStart < selectedEnd.getTime() && bEnd > selectedStart.getTime()
     })
 
@@ -478,7 +478,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const newStart = new Date(`${editDate}T${editTime}:00`)
     if (isNaN(newStart.getTime())) { setRescheduleErr('Date ou heure invalide'); return }
 
-    const durationMin = effectiveDuration(selected.services?.duration_minutes ?? 60, selected.vehicle_count)
+    const durationMin = effectiveDuration((selected.services?.duration_minutes ?? 60) + addonsDuration(selected.selected_addons), selected.vehicle_count)
     const newEnd      = new Date(newStart.getTime() + durationMin * 60_000)
     const dayStr      = editDate
 
@@ -491,7 +491,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     const overlapping = bookings.filter(b => {
       if (b.id === selected.id || b.status === 'cancelled') return false
       const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * 60_000
+      const bEnd   = bStart + effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * 60_000
       return bStart < newEnd.getTime() && bEnd > newStart.getTime()
     })
     if (overlapping.length >= effectiveTeam) {
@@ -811,7 +811,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       const m = d.getMinutes()
                       if (h < HOUR_START || h >= HOUR_END) return null
                       const top      = (h - HOUR_START) * HOUR_H + m * (HOUR_H / 60)
-                      const height   = Math.max(effectiveDuration(b.services?.duration_minutes ?? 60, b.vehicle_count) * (HOUR_H / 60), 28)
+                      const height   = Math.max(effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * (HOUR_H / 60), 28)
                       const widthPct = 100 / b.totalCols
                       const leftPct  = b.col * widthPct
                       return (
@@ -922,7 +922,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 3px)` }}
                     >
                       <p className="text-xs font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{fmt(d)} — {b.client_name}</p>
-                      {b.services && <p className="text-[10px] leading-tight truncate opacity-80">{b.services.name} · {effectiveDuration(b.services.duration_minutes, b.vehicle_count)} min</p>}
+                      {b.services && <p className="text-[10px] leading-tight truncate opacity-80">{b.services.name} · {effectiveDuration((b.services.duration_minutes) + addonsDuration(b.selected_addons), b.vehicle_count)} min</p>}
                     </button>
                   )
                 })}
@@ -1393,7 +1393,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               {selected.client_phone && <Row icon="phone">{selected.client_phone}</Row>}
               {selected.services && (
                 <Row icon="bolt">
-                  {selected.services.name} · {selected.services.duration_minutes} min ·{' '}
+                  {selected.services.name} · {effectiveDuration((selected.services.duration_minutes) + addonsDuration(selected.selected_addons), selected.vehicle_count)} min ·{' '}
                   {selected.is_smart_slot && Number(selected.smart_discount) > 0 ? (
                     <>
                       <span className="line-through opacity-50">{(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€</span>

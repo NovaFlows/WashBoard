@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { computeTravelFee } from '@/lib/travelFee'
-import { vehiclePrice, effectiveDuration } from '@/lib/pricing'
+import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { countConflicts, effectiveTeamSize } from '@/lib/slots'
 import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
@@ -42,10 +42,11 @@ const BookingSchema = z.object({
     models:     z.array(z.string()).optional(),
   })).optional(),
   selected_addons: z.array(z.object({
-    id:       z.string(),
-    label:    z.string(),
-    price:    z.number(),
-    category: z.string(),
+    id:               z.string(),
+    label:            z.string(),
+    price:            z.number(),
+    category:         z.string(),
+    duration_minutes: z.number().optional(),
   })).optional(),
   travel_fee: z.number().min(0).optional().default(0),
 })
@@ -121,13 +122,13 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   const isOwner = !!authUser && washer?.user_id === authUser.id
   if (!isOwner && service) {
     const newStart = new Date(bookingData.scheduled_at).getTime()
-    const newDur   = effectiveDuration(service.duration_minutes ?? 60, vehicle_count ?? 1)
+    const newDur   = effectiveDuration((service.duration_minutes ?? 60) + addonsDuration(selected_addons), vehicle_count ?? 1)
     const newEnd   = newStart + newDur * 60_000
     // RDV proches : créés jusqu'à 12h avant le début (couvre les longues prestations)
     const windowStart = new Date(newStart - 12 * 60 * 60_000).toISOString()
     const [{ data: nearby }, { data: unavs }] = await Promise.all([
       admin.from('bookings')
-        .select('scheduled_at, vehicle_count, services(duration_minutes)')
+        .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
         .eq('washer_id', bookingData.washer_id)
         .neq('status', 'cancelled')
         .gte('scheduled_at', windowStart)
@@ -139,7 +140,8 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     const intervals = (nearby ?? []).map((b) => {
       const svc = b.services as { duration_minutes: number } | { duration_minutes: number }[] | null
       const dur = Array.isArray(svc) ? svc[0]?.duration_minutes : svc?.duration_minutes
-      return { startMs: new Date(b.scheduled_at).getTime(), durationMin: effectiveDuration(dur ?? 60, b.vehicle_count) }
+      const bAddons = (b.selected_addons as { duration_minutes?: number }[] | null) ?? []
+      return { startMs: new Date(b.scheduled_at).getTime(), durationMin: effectiveDuration((dur ?? 60) + addonsDuration(bAddons), b.vehicle_count) }
     })
     const conflicts = countConflicts(newStart, newEnd, intervals)
     const dateStr   = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })

@@ -32,7 +32,12 @@ export function minVehiclePrice(service: PricedService): number {
   return Math.min(...offeredTypePrices(service))
 }
 
-/** Durée réellement bloquée = durée prestation × nombre de véhicules (min 1). */
+/** Durée supplémentaire totale apportée par les options sélectionnées. */
+export function addonsDuration(addons: { duration_minutes?: number }[] | null | undefined): number {
+  return (addons ?? []).reduce((sum, a) => sum + (a.duration_minutes ?? 0), 0)
+}
+
+/** Durée réellement bloquée = (durée prestation + options) × nombre de véhicules (min 1). */
 export function effectiveDuration(durationMinutes: number, vehicleCount: number | null | undefined): number {
   return durationMinutes * Math.max(1, vehicleCount ?? 1)
 }

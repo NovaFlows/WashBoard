@@ -41,6 +41,7 @@ export type ServiceAddon = {
   label: string
   price: number
   category: string
+  duration_minutes?: number
 }
 
 export type CategoryType = {

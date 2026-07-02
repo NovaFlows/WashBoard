@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  vehiclePrice, hasPriceOverrides, minVehiclePrice, effectiveDuration,
+  vehiclePrice, hasPriceOverrides, minVehiclePrice, addonsDuration, effectiveDuration,
   smartDiscountAmount, smartPrice, finalDisplayPrice, formatPrice,
 } from './pricing'
 
@@ -49,12 +49,44 @@ describe('surcharge orpheline (type non proposé) — bug prod', () => {
   })
 })
 
+describe('addonsDuration', () => {
+  it('retourne 0 sans options', () => {
+    expect(addonsDuration([])).toBe(0)
+  })
+  it('retourne 0 si null ou undefined', () => {
+    expect(addonsDuration(null)).toBe(0)
+    expect(addonsDuration(undefined)).toBe(0)
+  })
+  it('ignore les options sans duration_minutes', () => {
+    expect(addonsDuration([{}])).toBe(0)
+  })
+  it('somme les durées des options', () => {
+    expect(addonsDuration([{ duration_minutes: 15 }, { duration_minutes: 30 }])).toBe(45)
+  })
+  it('ignore les options sans durée dans un tableau mixte', () => {
+    expect(addonsDuration([{ duration_minutes: 15 }, {}])).toBe(15)
+  })
+})
+
 describe('effectiveDuration', () => {
   it('multiplie la durée par le nombre de véhicules (min 1)', () => {
     expect(effectiveDuration(60, 2)).toBe(120)
     expect(effectiveDuration(45, 1)).toBe(45)
     expect(effectiveDuration(60, null)).toBe(60)
     expect(effectiveDuration(60, 0)).toBe(60)
+  })
+})
+
+describe('effectiveDuration + addonsDuration — options avec durée', () => {
+  it('option vomi +15 min pour 1 véhicule → 90+15=105 min', () => {
+    expect(effectiveDuration(90 + addonsDuration([{ duration_minutes: 15 }]), 1)).toBe(105)
+  })
+  it('deux options pour 2 véhicules → (90+45)×2=270 min', () => {
+    expect(effectiveDuration(90 + addonsDuration([{ duration_minutes: 15 }, { duration_minutes: 30 }]), 2)).toBe(270)
+  })
+  it('sans options → comportement inchangé', () => {
+    expect(effectiveDuration(90 + addonsDuration([]), 2)).toBe(180)
+    expect(effectiveDuration(90 + addonsDuration(null), 2)).toBe(180)
   })
 })
 

@@ -19,7 +19,7 @@ type ServiceFormProps = {
 
 function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-  const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '' })
+  const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '', duration_minutes: '' })
 
   const selectedCategory = categories.find(c => c.id === form.category_id)
   const availableTypes = selectedCategory?.types ?? []
@@ -31,9 +31,10 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
       label: draft.label.trim(),
       category: draft.category.trim() || 'Options',
       price: Number(draft.price),
+      ...(draft.duration_minutes ? { duration_minutes: Number(draft.duration_minutes) } : {}),
     }
     onChange({ ...form, addons: [...form.addons, addon] })
-    setDraft(d => ({ ...d, label: '', price: '' }))
+    setDraft(d => ({ ...d, label: '', price: '', duration_minutes: '' }))
   }
 
   function removeAddon(id: string) {
@@ -210,6 +211,7 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
                 <span className="text-xs text-slate-400 shrink-0 w-32 truncate">{addon.category}</span>
                 <span className="flex-1 text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{addon.label}</span>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 shrink-0">+{addon.price}€</span>
+                {addon.duration_minutes ? <span className="text-xs text-slate-400 shrink-0">+{addon.duration_minutes}min</span> : null}
                 <button
                   type="button"
                   onClick={() => removeAddon(addon.id)}
@@ -226,7 +228,7 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
           <option value="Traitements spéciaux" />
         </datalist>
 
-        <div className="grid grid-cols-[1fr_1fr_5rem_auto] gap-2 items-end">
+        <div className="grid grid-cols-[1fr_1fr_5rem_5rem_auto] gap-2 items-end">
           <input
             list="addon-categories"
             value={draft.category}
@@ -247,7 +249,19 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
               min="0"
               value={draft.price}
               onChange={e => setDraft(d => ({ ...d, price: e.target.value }))}
-              placeholder="15"
+              placeholder="15€"
+              className={inputClass}
+              onKeyDown={e => e.key === 'Enter' && addAddon()}
+            />
+          </div>
+          <div className="relative">
+            <input
+              type="number"
+              min="5"
+              step="5"
+              value={draft.duration_minutes}
+              onChange={e => setDraft(d => ({ ...d, duration_minutes: e.target.value }))}
+              placeholder="+min"
               className={inputClass}
               onKeyDown={e => e.key === 'Enter' && addAddon()}
             />
