@@ -9,7 +9,7 @@ import StepSlot from './StepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './StepConfirmation'
 
-type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }
+type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; selected_addons?: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }
 type Unavailability  = { id: string; start_date: string; end_date: string }
 
 type Props = {

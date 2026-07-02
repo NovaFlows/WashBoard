@@ -75,7 +75,7 @@ export default async function BookingPage({ params }: Props) {
   ] = await Promise.all([
     admin
       .from('bookings')
-      .select('scheduled_at, vehicle_count, services(duration_minutes)')
+      .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
       .eq('washer_id', washer.id)
       .neq('status', 'cancelled')
       .gte('scheduled_at', new Date().toISOString()),
@@ -152,7 +152,7 @@ export default async function BookingPage({ params }: Props) {
           services={services ?? []}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
-          existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; services: { duration_minutes: number } | null }[]}
+          existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; selected_addons: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }[]}
           unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string }[]}
           accent={washer.brand_color ?? '#2563eb'}
         />

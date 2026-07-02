@@ -4,9 +4,8 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-const admin = createAdminClient()
-
 export async function GET() {
+  const admin = createAdminClient()
   const started = Date.now()
   let dbOk = false
 

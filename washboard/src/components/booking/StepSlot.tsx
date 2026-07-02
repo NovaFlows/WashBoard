@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize } from '@/lib/slots'
-import { effectiveDuration, smartPrice as computeSmartPrice, smartDiscountAmount } from '@/lib/pricing'
+import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount } from '@/lib/pricing'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
-type ExistingBooking  = { scheduled_at: string; vehicle_count: number | null; services: EmbedService }
+type ExistingBooking  = { scheduled_at: string; vehicle_count: number | null; selected_addons?: { duration_minutes?: number }[] | null; services: EmbedService }
 
 function embedDuration(services: EmbedService): number {
   const dm = Array.isArray(services) ? services[0]?.duration_minutes : services?.duration_minutes
@@ -168,7 +168,7 @@ export default function StepSlot({
 
   const overlapBookings = existingBookings.map(b => ({
     scheduled_at: b.scheduled_at,
-    durationMin: effectiveDuration(embedDuration(b.services), b.vehicle_count),
+    durationMin: effectiveDuration(embedDuration(b.services) + addonsDuration(b.selected_addons), b.vehicle_count),
   }))
 
   const slotsForDay = selectedDate
