@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     const { data: washer } = await admin
       .from('washers')
-      .select('name, review_enabled, google_review_url, plan, grandfathered')
+      .select('name, review_enabled, google_review_url, plan, grandfathered, sms_sender')
       .eq('id', b.washer_id)
       .single()
 
@@ -85,8 +85,10 @@ export async function GET(request: NextRequest) {
 
         if ((count ?? 0) < quota) {
           try {
+            const sender = (washer.sms_sender ?? washer.name).slice(0, 11)
             await sendSms({
               to: b.client_phone,
+              sender,
               content: `Bonjour ${b.client_name}, merci pour votre confiance ! Pouvez-vous laisser un avis sur notre travail ? ${washer.google_review_url}`,
             })
             await admin.from('bookings').update({ review_sms_sent_at: nowIso }).eq('id', b.id)

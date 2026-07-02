@@ -11,7 +11,7 @@ export async function PATCH(request: NextRequest) {
     name, phone, slug, logo_url, welcome_message, brand_color, team_size,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
-    review_enabled, review_delay_hours, google_review_url,
+    review_enabled, review_delay_hours, google_review_url, sms_sender,
     zone_config,
   } = await request.json()
 
@@ -64,6 +64,7 @@ export async function PATCH(request: NextRequest) {
   if (review_enabled !== undefined) updates.review_enabled = Boolean(review_enabled)
   if (review_delay_hours !== undefined) updates.review_delay_hours = Math.min(168, Math.max(0, Math.floor(Number(review_delay_hours)) || 0))
   if (google_review_url !== undefined) updates.google_review_url = google_review_url?.trim() || null
+  if (sms_sender !== undefined) updates.sms_sender = sms_sender?.trim().slice(0, 20) || null
 
   if (zone_config !== undefined) {
     let config = zone_config as ZoneConfig

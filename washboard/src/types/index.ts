@@ -33,6 +33,7 @@ export type Washer = {
   review_enabled: boolean
   review_delay_hours: number
   google_review_url: string | null
+  sms_sender: string | null
   created_at: string
 }
 

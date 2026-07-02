@@ -11,12 +11,15 @@ export function normalizePhone(raw: string): string | null {
   return null
 }
 
-export async function sendSms({ to, content }: { to: string; content: string }): Promise<void> {
+export async function sendSms({ to, content, sender = 'WashBoard' }: { to: string; content: string; sender?: string }): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) throw new Error('BREVO_API_KEY manquant')
 
   const phone = normalizePhone(to)
   if (!phone) throw new Error(`Numéro de téléphone invalide : ${to}`)
+
+  // Brevo: alphanumeric sender max 11 chars, phone number sender in E.164
+  const safeSender = sender.slice(0, 11)
 
   const res = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
     method: 'POST',
@@ -25,7 +28,7 @@ export async function sendSms({ to, content }: { to: string; content: string }):
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: 'WashBoard',
+      sender: safeSender,
       recipient: phone,
       content,
     }),

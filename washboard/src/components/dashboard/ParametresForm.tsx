@@ -61,6 +61,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [reviewEnabled, setReviewEnabled] = useState(washer.review_enabled ?? true)
   const [reviewUrl, setReviewUrl] = useState(washer.google_review_url ?? '')
   const [reviewDelay, setReviewDelay] = useState(String(washer.review_delay_hours ?? 3))
+  const [smsSender, setSmsSender] = useState(washer.sms_sender ?? '')
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -139,6 +140,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
         review_enabled: reviewEnabled,
         google_review_url: reviewUrl.trim() || null,
         review_delay_hours: Math.max(0, parseInt(reviewDelay) || 0),
+        sms_sender: smsSender.trim() || null,
       }),
     })
     setReviewMsg(res.ok ? { ok: true, text: 'Réglages enregistrés' } : { ok: false, text: 'Erreur lors de la mise à jour' })
@@ -380,6 +382,23 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               Conseillé : 3h (le temps que le client profite de sa voiture propre).
             </p>
           </div>
+
+          {hasFeature(washer, 'avis_sms') && (
+            <div>
+              <label className={labelClass}>Expéditeur SMS</label>
+              <input
+                type="text"
+                value={smsSender}
+                onChange={e => setSmsSender(e.target.value.slice(0, 20))}
+                placeholder={washer.name.slice(0, 11)}
+                className={inputClass}
+                maxLength={20}
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                Nom affiché sur le SMS du client. Max 11 caractères (ex. <strong>KookiClean</strong>) ou votre numéro de téléphone.
+              </p>
+            </div>
+          )}
 
           <Feedback msg={reviewMsg} />
           <SaveButton loading={reviewLoading} />
