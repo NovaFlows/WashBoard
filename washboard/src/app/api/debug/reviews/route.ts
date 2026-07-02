@@ -11,7 +11,7 @@ export async function GET() {
 
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, name, review_enabled, google_review_url, review_delay_hours, plan')
+    .select('id, name, review_enabled, google_review_url, review_delay_hours, review_channel, plan')
     .eq('user_id', user.id)
     .single()
 
@@ -46,7 +46,9 @@ export async function GET() {
     review_enabled: washer.review_enabled,
     google_review_url: washer.google_review_url ?? '❌ non renseigné',
     review_delay_hours: washer.review_delay_hours,
+    review_channel: washer.review_channel ?? 'email (défaut)',
     plan: washer.plan,
+    sms_autorise: washer.plan === 'pro' || washer.plan === 'business' ? '✅' : '❌ plan Essentiel — SMS bloqué',
   }
 
   const diagBookings = (recentDone ?? []).map(b => {
