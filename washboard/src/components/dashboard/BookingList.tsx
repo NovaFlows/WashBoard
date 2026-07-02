@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { openGmail, openWhatsapp } from '@/lib/contact'
-import { formatPrice } from '@/lib/pricing'
+import { formatPrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 
-type ServiceAddon = { id: string; label: string; price: number; category: string }
+type ServiceAddon = { id: string; label: string; price: number; category: string; duration_minutes?: number }
 type Service = { name: string; price: number; duration_minutes: number }
 type Booking = {
   id: string
@@ -278,7 +278,7 @@ function BookingCard({ booking, loading, onUpdate }: {
             {booking.client_phone && <Row icon="phone">{booking.client_phone}</Row>}
             {booking.services && (
               <Row icon="bolt">
-                {booking.services.name} · {booking.services.duration_minutes} min ·{' '}
+                {booking.services.name} · {effectiveDuration((booking.services.duration_minutes) + addonsDuration(booking.selected_addons), booking.vehicle_count)} min ·{' '}
                 {booking.is_smart_slot && Number(booking.smart_discount) > 0 ? (
                   <>
                     <span className="line-through opacity-50">{servicePrice}€</span>
