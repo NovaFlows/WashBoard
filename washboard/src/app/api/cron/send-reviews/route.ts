@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
         console.error('[cron/send-reviews] email', b.id, e)
       }
     } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
-      const quota = SMS_QUOTA[washer.plan as Plan] ?? 0
+      const effectivePlan = washer.grandfathered ? 'business' : (washer.plan as Plan)
+      const quota = SMS_QUOTA[effectivePlan] ?? 0
       if (quota > 0) {
         const monthStart = new Date()
         monthStart.setDate(1)
