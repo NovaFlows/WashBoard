@@ -17,3 +17,30 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Focus visible global — anneau cohérent pour la navigation clavier uniquement */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Lien "aller au contenu" pour lecteurs d'écran et navigation clavier */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: #1e40af;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0 0 6px 6px;
+  text-decoration: none;
+  transition: top 0.1s;
+}
+.skip-to-content:focus-visible {
+  top: 0;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}

@@ -187,7 +187,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-3 sm:px-4 py-6 overflow-x-hidden">
+      <main id="main-content" className="max-w-3xl mx-auto px-3 sm:px-4 py-6 overflow-x-hidden">
         {children}
       </main>
 

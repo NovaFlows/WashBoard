@@ -133,7 +133,7 @@ export default async function BookingPage({ params }: Props) {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-8">
+      <main id="main-content" className="max-w-lg mx-auto px-4 py-8">
         {!themed && (
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{washer.name}</h1>

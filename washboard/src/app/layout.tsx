@@ -63,6 +63,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
+        <a href="#main-content" className="skip-to-content">Aller au contenu</a>
         <RecoveryRedirect />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
