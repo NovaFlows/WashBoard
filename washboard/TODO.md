@@ -154,8 +154,8 @@
       Audit sécurité/fiabilité fait : blocage comingSoon + grandfathered côté serveur,
       garde-fou double-abonnement, webhook 500 sur erreur DB (retries), reset cancels_at,
       trial_end < 48h géré. Logique pure extraite dans `lib/subscription.ts` (+ tests).
-  - [ ] Mineurs restants (non-code) : vérifier `NEXT_PUBLIC_APP_URL` = www en prod ;
-        désactiver l'adaptive pricing Stripe (clients voyaient VND).
+  - [x] 2026-07-03 — Mineurs restants (non-code) : `NEXT_PUBLIC_APP_URL` = www en prod ;
+        adaptive pricing Stripe désactivé (clients voyaient VND).
 - [ ] **Phase 3 — Avis par SMS** (plans Pro/Business) : intégrer Brevo (compte +
       clé API à fournir), fonction `sendSms()`, compteur de quota mensuel + blocage.
 - [ ] **Photos avant/après** : feature premium évidente pour laveurs/detailers.
