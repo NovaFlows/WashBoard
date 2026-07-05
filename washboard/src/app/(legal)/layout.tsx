@@ -20,10 +20,14 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
       <footer className="border-t border-slate-200 dark:border-slate-800 py-6">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-wrap gap-4 text-xs text-slate-400">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-wrap items-center gap-4 text-xs text-slate-400">
           <Link href="/mentions-legales" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
           <Link href="/cgv" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">CGV</Link>
           <Link href="/confidentialite" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>
+          <span className="ml-auto">
+            Conçu par{' '}
+            <a href="https://novaflows.fr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors font-medium">NovaFlows</a>
+          </span>
         </div>
       </footer>
     </div>

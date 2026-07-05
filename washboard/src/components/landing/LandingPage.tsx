@@ -526,7 +526,10 @@ export default function LandingPage() {
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
             <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
           </div>
-          <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel lavage auto mobile · Tous droits réservés</p>
+          <p className="text-xs text-slate-400">
+            © 2026 WashBoard · Logiciel lavage auto mobile · Conçu par{' '}
+            <a href="https://novaflows.fr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors font-medium">NovaFlows</a>
+          </p>
           <div className="flex gap-4 text-xs text-slate-400">
             <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
             <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
