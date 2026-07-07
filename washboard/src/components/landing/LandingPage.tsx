@@ -521,21 +521,31 @@ export default function LandingPage() {
             WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">laveurs auto mobiles</strong> et aux professionnels du <strong className="font-medium text-slate-500">detailing à domicile</strong>. Page de réservation en ligne, gestion des rendez-vous, CRM clients et comptabilité — conçu pour les indépendants du lavage automobile en France.
           </p>
         </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
-          </div>
-          <p className="text-xs text-slate-400">
-            © 2026 WashBoard · Logiciel lavage auto mobile · Conçu par{' '}
-            <a href="https://novaflows.fr/realisations" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors font-medium">NovaFlows</a>
-          </p>
-          <div className="flex gap-4 text-xs text-slate-400">
-            <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
-            <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
-            <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
-            <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
-            <Link href="/confidentialite" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">
+          <a
+            href="https://novaflows.fr/realisations"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-sm hover:shadow-md group"
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7.5 1L9.5 5.5H14L10.5 8.5L12 13L7.5 10L3 13L4.5 8.5L1 5.5H5.5L7.5 1Z"/>
+            </svg>
+            Conçu par <span className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">NovaFlows</span>
+          </a>
+          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
+            </div>
+            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel lavage auto mobile · Tous droits réservés</p>
+            <div className="flex gap-4 text-xs text-slate-400">
+              <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
+              <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
+              <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
+              <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
+              <Link href="/confidentialite" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>
+            </div>
           </div>
         </div>
       </footer>
