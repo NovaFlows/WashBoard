@@ -191,6 +191,20 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         {children}
       </main>
 
+      <footer className="max-w-3xl mx-auto px-3 sm:px-4 pb-6 text-center">
+        <p className="text-xs text-slate-400 dark:text-slate-600">
+          Créé par{' '}
+          <a
+            href="https://novaflows.fr/realisations"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-blue-500 transition-colors font-medium"
+          >
+            NovaFlows
+          </a>
+        </p>
+      </footer>
+
       {/* Bouton WhatsApp flottant */}
       <a
         href="https://wa.me/33684140438"
