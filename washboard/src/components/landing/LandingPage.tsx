@@ -329,9 +329,9 @@ export default function LandingPage() {
       {/* ── Features ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-24 border-t border-slate-100 dark:border-slate-800/50 pt-24">
         <FadeUp className="mb-14">
-          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Ce qu'on a mis dedans</p>
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Ce qu&apos;on a mis dedans</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-xl">
-            L'essentiel. Sans le reste.
+            L&apos;essentiel. Sans le reste.
           </h2>
         </FadeUp>
 
@@ -357,7 +357,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-4 space-y-1.5">
-              <p className="text-xs font-black text-white/40 uppercase tracking-wider mb-4">Bordeaux Sud — aujourd'hui</p>
+              <p className="text-xs font-black text-white/40 uppercase tracking-wider mb-4">Bordeaux Sud — aujourd&apos;hui</p>
               {[
                 { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
                 { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€ zone' },
@@ -419,7 +419,7 @@ export default function LandingPage() {
                 +1 951€
               </p>
               <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-2">de CA net par mois</p>
-              <p className="text-sm text-slate-400 dark:text-slate-600">+100€/jour · −49€/mois d'abonnement · 22 jours ouvrés</p>
+              <p className="text-sm text-slate-400 dark:text-slate-600">+100€/jour · −49€/mois d&apos;abonnement · 22 jours ouvrés</p>
             </div>
           </FadeUp>
         </div>

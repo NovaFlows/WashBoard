@@ -129,7 +129,7 @@ export default function ForgotPasswordPage() {
                   </svg>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-white/55 leading-relaxed">
-                  Clique sur le lien dans l'email pour créer un nouveau mot de passe.
+                  Clique sur le lien dans l&apos;email pour créer un nouveau mot de passe.
                   <span className="block text-xs text-slate-400 dark:text-white/25 mt-1">Pense à vérifier tes spams.</span>
                 </p>
                 <Link href="/login" className="block w-full py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#1651E8]/20 text-center">
