@@ -8,7 +8,7 @@
 // que soit leur plan, pour ne jamais leur retirer un acquis.
 
 export type Plan = 'essentiel' | 'pro' | 'business'
-export type Feature = 'avis_email' | 'compta' | 'avis_sms' | 'multi_laveurs'
+export type Feature = 'avis_email' | 'compta' | 'avis_sms' | 'multi_laveurs' | 'followup'
 
 const PLANS: Plan[] = ['essentiel', 'pro', 'business']
 const RANK: Record<Plan, number> = { essentiel: 0, pro: 1, business: 2 }
@@ -17,6 +17,7 @@ const MIN_PLAN: Record<Feature, Plan> = {
   avis_email:    'essentiel',
   compta:        'pro',
   avis_sms:      'pro',
+  followup:      'pro',
   multi_laveurs: 'business',
 }
 

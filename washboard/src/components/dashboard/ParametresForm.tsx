@@ -63,6 +63,11 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [reviewDelay, setReviewDelay] = useState(String(washer.review_delay_hours ?? 3))
   const [reviewChannel, setReviewChannel] = useState<'email' | 'sms'>(washer.review_channel ?? 'email')
   const [smsSender, setSmsSender] = useState(washer.sms_sender ?? '')
+  const [followupEnabled, setFollowupEnabled] = useState(washer.followup_enabled ?? false)
+  const [followupDelayDays, setFollowupDelayDays] = useState(String(washer.followup_delay_days ?? 90))
+  const [followupMessage, setFollowupMessage] = useState(washer.followup_message ?? '')
+  const [followupMsg, setFollowupMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [followupLoading, setFollowupLoading] = useState(false)
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -70,6 +75,28 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [reviewLoading, setReviewLoading] = useState(false)
   const [smsTestMsg, setSmsTestMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [smsTestLoading, setSmsTestLoading] = useState(false)
+
+  async function saveFollowup(e: React.FormEvent) {
+    e.preventDefault()
+    setFollowupMsg(null)
+    if (followupEnabled && !followupMessage.trim()) {
+      setFollowupMsg({ ok: false, text: 'Rédigez un message de relance ou désactivez la fonctionnalité' })
+      return
+    }
+    setFollowupLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        followup_enabled: followupEnabled,
+        followup_delay_days: Math.max(1, parseInt(followupDelayDays) || 90),
+        followup_message: followupMessage.trim() || null,
+      }),
+    })
+    setFollowupMsg(res.ok ? { ok: true, text: 'Réglages enregistrés' } : { ok: false, text: 'Erreur lors de la mise à jour' })
+    if (res.ok) router.refresh()
+    setFollowupLoading(false)
+  }
 
   const [newEmail, setNewEmail] = useState(email)
   const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -464,6 +491,64 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={reviewLoading} />
         </form>
       </Card>
+
+      {/* Relances clients — Pro+ uniquement */}
+      {hasFeature(washer, 'followup') && (
+        <Card title="Relances clients" icon={Hourglass}>
+          <form onSubmit={saveFollowup} noValidate className="space-y-4">
+            <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
+              Envoyez automatiquement un message à vos clients quand ils n&apos;ont pas repris rendez-vous depuis un certain temps.
+            </p>
+
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Relances automatiques</span>
+              <button
+                type="button"
+                onClick={() => setFollowupEnabled(v => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${followupEnabled ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${followupEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </label>
+
+            <div>
+              <label className={labelClass}>Délai avant relance</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={730}
+                  value={followupDelayDays}
+                  onChange={e => setFollowupDelayDays(e.target.value)}
+                  className={`${inputClass} w-24`}
+                />
+                <span className="text-sm text-slate-500 dark:text-slate-400">jours sans nouveau RDV</span>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                Ex : 90 jours → le client reçoit un message 3 mois après son dernier lavage.
+              </p>
+            </div>
+
+            <div>
+              <label className={labelClass}>Message de relance</label>
+              <textarea
+                value={followupMessage}
+                onChange={e => setFollowupMessage(e.target.value.slice(0, 500))}
+                placeholder={`Bonjour {{nom}}, ça fait un moment ! Vous voulez reprendre un lavage ? Réservez directement ici : [votre lien]`}
+                rows={4}
+                className={`${inputClass} resize-none`}
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">{'{{nom}}'}</code> sera remplacé par le prénom du client.
+                {followupMessage.length > 0 && <span className="ml-2">{followupMessage.length}/500</span>}
+              </p>
+            </div>
+
+            <Feedback msg={followupMsg} />
+            <SaveButton loading={followupLoading} />
+          </form>
+        </Card>
+      )}
 
       {/* Email */}
       <Card title="Adresse email" icon={Mail}>

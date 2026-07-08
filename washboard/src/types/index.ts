@@ -35,6 +35,9 @@ export type Washer = {
   google_review_url: string | null
   review_channel: 'email' | 'sms'
   sms_sender: string | null
+  followup_enabled: boolean
+  followup_delay_days: number
+  followup_message: string | null
   created_at: string
 }
 

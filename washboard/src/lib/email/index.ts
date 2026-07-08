@@ -258,6 +258,43 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   })
 }
 
+// ── Email 5 : relance client (rebooking) ─────────────────────────────────
+type SendFollowupEmailParams = {
+  to: string
+  clientName: string
+  washerName: string
+  message: string
+}
+
+export async function sendFollowupEmail(params: SendFollowupEmailParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  return resend.emails.send({
+    from: `${params.washerName} via WashBoard <noreply@washboard.fr>`,
+    to: params.to,
+    subject: `Un message de ${params.washerName} 👋`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651E8;padding:28px 40px;">
+      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Message de votre laveur</p>
+      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${params.washerName}</h1>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;line-height:1.7;white-space:pre-line;">${params.message}</p>
+    </div>
+    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${params.washerName}</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 // ── Email 4 : demande d'avis Google (suivi client) ────────────────────────
 type SendReviewRequestParams = {
   to: string

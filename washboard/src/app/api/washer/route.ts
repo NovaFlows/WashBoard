@@ -12,6 +12,7 @@ export async function PATCH(request: NextRequest) {
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
+    followup_enabled, followup_delay_days, followup_message,
     zone_config,
   } = await request.json()
 
@@ -66,6 +67,9 @@ export async function PATCH(request: NextRequest) {
   if (google_review_url !== undefined) updates.google_review_url = google_review_url?.trim() || null
   if (review_channel !== undefined && ['email', 'sms'].includes(review_channel)) updates.review_channel = review_channel
   if (sms_sender !== undefined) updates.sms_sender = sms_sender?.trim().slice(0, 20) || null
+  if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
+  if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))
+  if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
 
   if (zone_config !== undefined) {
     let config = zone_config as ZoneConfig
