@@ -22,7 +22,7 @@ function RotatingHeadline() {
   }, [])
   const s = SLOGANS[i]
   return (
-    <span className="block relative min-h-[2.2em]">
+    <span className="block relative h-[4em] sm:h-[3em]">
       <AnimatePresence mode="wait">
         <motion.span
           key={i}
@@ -30,7 +30,7 @@ function RotatingHeadline() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -14 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="block"
+          className="absolute inset-x-0 top-0"
         >
           {s.pre}
           <span className="hero-hl">{s.hl}</span>
