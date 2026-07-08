@@ -3,7 +3,7 @@
 import { useTheme } from './ThemeProvider'
 import { useEffect, useState } from 'react'
 
-export function ThemeToggle({ large }: { large?: boolean }) {
+export function ThemeToggle({ large, nav }: { large?: boolean; nav?: boolean }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -11,8 +11,10 @@ export function ThemeToggle({ large }: { large?: boolean }) {
   if (!mounted) return <div className={large ? 'w-12 h-12' : 'w-9 h-9'} />
 
   const isDark = theme === 'dark'
-  const size = large ? 22 : 16
-  const btnClass = large
+  const size = large ? 22 : 18
+  const btnClass = nav
+    ? 'w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors'
+    : large
     ? 'w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm'
     : 'w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors'
 
