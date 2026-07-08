@@ -425,6 +425,30 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Tutoriel ── */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-10 text-center">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Tutoriel</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+            WashBoard en 2 minutes
+          </h2>
+          <p className="mt-3 text-slate-500 dark:text-slate-400 text-base max-w-xl mx-auto">
+            Page de réservation, agenda, CRM — vois comment ça fonctionne avant même de t&apos;inscrire.
+          </p>
+        </FadeUp>
+        <FadeUp>
+          <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <video
+              src="/tuto.mp4"
+              controls
+              playsInline
+              className="w-full block"
+              style={{ aspectRatio: '16/9', background: '#09111E' }}
+            />
+          </div>
+        </FadeUp>
+      </section>
+
       {/* ── Pricing ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-12">
@@ -537,7 +561,7 @@ export default function LandingPage() {
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">
           <a
-            href="https://novaflows.fr/realisations"
+            href="https://novaflows.fr/realisations.html"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-500 dark:text-slate-400 hover:border-[#1651E8]/30 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-all shadow-sm hover:shadow-md group"
