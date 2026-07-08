@@ -59,7 +59,6 @@ export const PLAN_CARDS: PlanCard[] = [
   {
     key: 'pro', name: 'Pro', price: 69,
     tagline: 'Pour piloter votre activité.',
-    comingSoon: true,
     features: [
       'Tout l’Essentiel',
       'Comptabilité (CA, dépenses, résultat)',
