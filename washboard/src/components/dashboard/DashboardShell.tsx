@@ -195,7 +195,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         <p className="text-xs text-slate-400 dark:text-slate-600">
           Créé par{' '}
           <a
-            href="https://novaflows.fr/realisations.html"
+            href="https://novaflows.fr/realisations"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-blue-500 transition-colors font-medium"

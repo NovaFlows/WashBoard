@@ -561,7 +561,7 @@ export default function LandingPage() {
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">
           <a
-            href="https://novaflows.fr/realisations.html"
+            href="https://novaflows.fr/realisations"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-500 dark:text-slate-400 hover:border-[#1651E8]/30 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-all shadow-sm hover:shadow-md group"

@@ -26,7 +26,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
           <Link href="/confidentialite" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>
           <span className="ml-auto">
             Conçu par{' '}
-            <a href="https://novaflows.fr/realisations.html" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors font-medium">NovaFlows</a>
+            <a href="https://novaflows.fr/realisations" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors font-medium">NovaFlows</a>
           </span>
         </div>
       </footer>
