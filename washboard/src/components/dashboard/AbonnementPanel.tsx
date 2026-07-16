@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { PLAN_CARDS, type Plan } from '@/lib/plan'
 
 type Props = {
@@ -37,7 +38,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
-  const [now] = [Date.now()]
+  const [now] = useState(() => Date.now())
 
   const daysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
