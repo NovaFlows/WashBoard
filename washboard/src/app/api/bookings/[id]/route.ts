@@ -110,6 +110,8 @@ export async function PATCH(
         washerName:    washer.name,
         washerPhone:   washer.phone ?? null,
         serviceName:   svc?.name ?? 'Lavage',
+        vehicleType:   booking.vehicle_type ?? undefined,
+        vehicleCount:  booking.vehicle_count ?? undefined,
         servicePrice:  Number(booking.booked_price ?? svc?.price ?? 0),
         isSmartSlot:   booking.is_smart_slot,
         smartDiscount: Number(booking.smart_discount ?? 0),

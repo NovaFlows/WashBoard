@@ -1,5 +1,15 @@
 import { Resend } from 'resend'
 
+function formatVehicle(type?: string, count?: number): string | null {
+  if (!type) return null
+  const labels: Record<string, string> = {
+    citadine: 'Citadine', citadine_2p: 'Citadine 2p', berline: 'Berline',
+    SUV: 'SUV / 4x4', monospace: 'Monospace', utilitaire: 'Utilitaire',
+  }
+  const label = labels[type] ?? type
+  return count && count > 1 ? `${label} ×${count}` : label
+}
+
 // ── Email 1 : accusé de réception (statut pending) ────────────────────────
 type SendRequestParams = {
   to: string
@@ -12,6 +22,8 @@ type SendRequestParams = {
   address: string
   scheduledAt: string
   bookingId: string
+  vehicleType?: string
+  vehicleCount?: number
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -24,6 +36,10 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const discount      = Number(params.smartDiscount ?? 0)
   const finalPrice    = params.isSmartSlot && discount > 0 ? Math.max(0, params.servicePrice - discount) : params.servicePrice
   const priceStr      = Number.isInteger(finalPrice) ? String(finalPrice) : finalPrice.toFixed(2)
+  const vehicleLabel1 = formatVehicle(params.vehicleType, params.vehicleCount)
+  const vehicleRow1   = vehicleLabel1
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Véhicule</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${vehicleLabel1}</td></tr>`
+    : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
@@ -56,6 +72,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
           <td style="padding:10px 16px;color:#64748b;">Prestation</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.serviceName}</td>
         </tr>
+        ${vehicleRow1}
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Date</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${formattedDate}</td>
@@ -99,6 +116,7 @@ type SendConfirmationParams = {
   washerPhone?: string | null
   serviceName: string
   vehicleType?: string
+  vehicleCount?: number
   servicePrice: number
   isSmartSlot?: boolean
   smartDiscount?: number
@@ -128,7 +146,8 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
 
   const appUrl    = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const pdfUrl    = `${appUrl}/api/bookings/${params.bookingId}/pdf`
-  const vehicleLabel = params.vehicleType ? ` — ${params.vehicleType}` : ''
+  const vehicleStr   = formatVehicle(params.vehicleType, params.vehicleCount)
+  const vehicleLabel = vehicleStr ? ` — ${vehicleStr}` : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
@@ -350,6 +369,8 @@ type SendWasherNotificationParams = {
   clientEmail: string
   clientPhone: string
   serviceName: string
+  vehicleType?: string
+  vehicleCount?: number
   address: string
   scheduledAt: string
   bookedPrice: number
@@ -365,6 +386,10 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
   const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://washboard.fr'}/dashboard`
+  const vehicleLabel3 = formatVehicle(params.vehicleType, params.vehicleCount)
+  const vehicleRow3   = vehicleLabel3
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Véhicule</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;">${vehicleLabel3}</td></tr>`
+    : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
@@ -399,6 +424,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
           <td style="padding:10px 16px;color:#64748b;">Prestation</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.serviceName}</td>
         </tr>
+        ${vehicleRow3}
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Date</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${formattedDate} à ${time}</td>

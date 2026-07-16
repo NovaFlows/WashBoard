@@ -217,6 +217,8 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         address: bookingData.address,
         scheduledAt: bookingData.scheduled_at,
         bookingId: id,
+        vehicleType: vehicle_type ?? undefined,
+        vehicleCount: vehicle_count ?? undefined,
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     ]
 
@@ -229,6 +231,8 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           clientEmail: bookingData.client_email,
           clientPhone: bookingData.client_phone,
           serviceName: service.name,
+          vehicleType: vehicle_type ?? undefined,
+          vehicleCount: vehicle_count ?? undefined,
           address: bookingData.address,
           scheduledAt: bookingData.scheduled_at,
           bookedPrice: booked_price,
