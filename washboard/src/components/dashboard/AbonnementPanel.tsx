@@ -1,11 +1,6 @@
-﻿'use client'
+'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { AlertTriangle } from 'lucide-react'
 import { PLAN_CARDS, type Plan } from '@/lib/plan'
-import { isCardRegistered, formatDateFR } from '@/lib/subscription'
-import { Spinner } from '@/components/ui/Spinner'
 
 type Props = {
   subscriptionStatus: string
@@ -14,27 +9,14 @@ type Props = {
   washerEmail: string
   plan: Plan
   grandfathered: boolean
-  stripeCustomerId: string | null
-  stripeSubscriptionId: string | null
-  cancelsAt: string | null
-  successParam?: boolean
-  cancelledParam?: boolean
 }
 
-function StatusBadge({ status, cardRegistered }: { status: string; cardRegistered?: boolean }) {
+function StatusBadge({ status }: { status: string }) {
   if (status === 'active') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full">
         <span className="w-2 h-2 bg-emerald-500 rounded-full" />
         Abonnement actif
-      </span>
-    )
-  }
-  if (status === 'trial' && cardRegistered) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full">
-        <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-        Carte enregistrée
       </span>
     )
   }
@@ -46,14 +28,6 @@ function StatusBadge({ status, cardRegistered }: { status: string; cardRegistere
       </span>
     )
   }
-  if (status === 'past_due') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-sm font-semibold rounded-full">
-        <span className="w-2 h-2 bg-orange-500 rounded-full" />
-        Paiement en attente
-      </span>
-    )
-  }
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm font-semibold rounded-full">
       <span className="w-2 h-2 bg-red-500 rounded-full" />
@@ -62,104 +36,32 @@ function StatusBadge({ status, cardRegistered }: { status: string; cardRegistere
   )
 }
 
-export default function AbonnementPanel({
-  subscriptionStatus, trialEndsAt, plan, grandfathered,
-  stripeCustomerId, stripeSubscriptionId, cancelsAt, successParam, cancelledParam,
-}: Props) {
-  const router = useRouter()
-  const [loading, setLoading] = useState<string | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [now] = useState(() => Date.now())
+export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
+  const [now] = [Date.now()]
 
   const daysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
     : null
 
-  const currentPrice   = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
-  const cardRegistered = isCardRegistered(stripeSubscriptionId, subscriptionStatus)
-  const canManage      = !!stripeCustomerId && (subscriptionStatus === 'active' || subscriptionStatus === 'past_due' || cardRegistered)
-  const needsPayment   = !grandfathered && subscriptionStatus !== 'active' && !cardRegistered
+  const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
 
-  async function callStripeEndpoint(
-    url: string,
-    loadingKey: string,
-    body?: Record<string, unknown>,
-    fallback = 'Une erreur est survenue. Réessayez.',
-  ) {
-    setLoading(loadingKey)
-    setErrorMsg(null)
-    try {
-      const init: RequestInit = { method: 'POST' }
-      if (body) {
-        init.headers = { 'Content-Type': 'application/json' }
-        init.body = JSON.stringify(body)
-      }
-      const res  = await fetch(url, init)
-      const data = await res.json()
-      if (data.url) { window.location.assign(data.url); return }
-      setErrorMsg(data.error ?? fallback)
-      setLoading(null)
-    } catch {
-      setErrorMsg('Erreur réseau. Vérifiez votre connexion et réessayez.')
-      setLoading(null)
-    }
+  function virementHref(planName: string, price: number) {
+    const subject = encodeURIComponent(`Abonnement WashBoard ${planName} — ${washerName}`)
+    const body = encodeURIComponent(
+      `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard ${planName} (${price}€/mois) pour l'espace "${washerName}".\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
+    )
+    return `mailto:novaflows.pro@gmail.com?subject=${subject}&body=${body}`
   }
-
-  const startCheckout = (planKey: Plan) =>
-    callStripeEndpoint('/api/stripe/checkout', planKey, { plan: planKey }, 'Impossible de démarrer le paiement. Réessayez.')
-
-  const openPortal = () =>
-    callStripeEndpoint('/api/stripe/portal', 'portal', undefined, "Impossible d'ouvrir le portail. Réessayez.")
 
   return (
     <div className="space-y-6">
-
-      {/* Message d'erreur */}
-      {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm font-medium flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
-          {errorMsg}
-          <button onClick={() => setErrorMsg(null)} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
-        </div>
-      )}
-
-      {/* Banners retour Stripe */}
-      {successParam && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm font-medium flex items-center gap-2">
-          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          Paiement reçu ! Votre abonnement est en cours d&apos;activation.
-          <button onClick={() => router.replace('/dashboard/abonnement')} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
-        </div>
-      )}
-      {cancelledParam && (
-        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium flex items-center gap-2">
-          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          Paiement annulé. Vous pouvez réessayer à tout moment.
-          <button onClick={() => router.replace('/dashboard/abonnement')} className="ml-auto text-xs underline opacity-70 hover:opacity-100">Fermer</button>
-        </div>
-      )}
-
-      {/* Résiliation programmée */}
-      {cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial') && (
-        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
-          <span>
-            Résiliation programmée le <strong>{formatDateFR(cancelsAt)}</strong>.
-            Votre accès reste actif jusqu&apos;à cette date. Pour annuler la résiliation, cliquez sur &laquo;&nbsp;Gérer mon abonnement&nbsp;&raquo;.
-          </span>
-        </div>
-      )}
 
       {/* Statut actuel */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Statut actuel</p>
-            <StatusBadge status={subscriptionStatus} cardRegistered={cardRegistered} />
+            <StatusBadge status={subscriptionStatus} />
           </div>
           <div className="text-right">
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Tarif</p>
@@ -169,15 +71,11 @@ export default function AbonnementPanel({
 
         {subscriptionStatus === 'trial' && daysLeft !== null && (
           <div className={`mt-4 p-3 rounded-xl text-sm font-medium ${
-            cardRegistered
-              ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-              : daysLeft <= 7
+            daysLeft <= 7
               ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
               : 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
           }`}>
-            {cardRegistered
-              ? `Votre carte est enregistrée. La facturation de ${currentPrice} €/mois débutera dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}, à la fin de votre essai.`
-              : daysLeft === 0
+            {daysLeft === 0
               ? "Votre essai gratuit a expiré aujourd'hui."
               : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? 's' : ''} d'essai gratuit.`}
           </div>
@@ -189,34 +87,10 @@ export default function AbonnementPanel({
           </div>
         )}
 
-        {subscriptionStatus === 'past_due' && (
-          <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
-            Un paiement a échoué. Mettez à jour votre moyen de paiement pour conserver l&apos;accès.
-          </div>
-        )}
-
         {subscriptionStatus === 'expired' && (
           <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
-            Votre accès est suspendu. Réactivez votre abonnement pour retrouver l&apos;accès complet.
+            Votre accès est suspendu. Réglez votre abonnement pour retrouver l&apos;accès complet.
           </div>
-        )}
-
-        {/* Bouton portail Stripe */}
-        {canManage && (
-          <button
-            onClick={openPortal}
-            disabled={loading === 'portal'}
-            className="mt-4 flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
-          >
-            {loading === 'portal' ? (
-              <Spinner />
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-              </svg>
-            )}
-            Gérer mon abonnement
-          </button>
         )}
       </div>
 
@@ -234,7 +108,6 @@ export default function AbonnementPanel({
         <div className="grid gap-4 sm:grid-cols-3">
           {PLAN_CARDS.map(card => {
             const isCurrent = !grandfathered && plan === card.key
-            const isLoading = loading === card.key
             return (
               <div
                 key={card.key}
@@ -266,41 +139,52 @@ export default function AbonnementPanel({
                     </li>
                   ))}
                 </ul>
+
                 {card.comingSoon ? (
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
                     En cours de développement
                   </span>
-                ) : needsPayment ? (
-                  <div className="space-y-1.5">
-                    <button
-                      onClick={() => startCheckout(card.key)}
-                      disabled={!!loading}
-                      className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-colors"
+                ) : subscriptionStatus !== 'active' ? (
+                  <div className="space-y-2">
+                    <a
+                      href={`https://paypal.me/WashBoardSAAS/${card.price}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-2 bg-[#003087] hover:bg-[#00256b] text-white text-xs font-semibold rounded-xl transition-colors"
                     >
-                      {isLoading && <Spinner className="w-3.5 h-3.5" />}
-                      {isLoading ? 'Redirection…' : isCurrent ? 'Commencer mon abonnement' : `Choisir ${card.name}`}
-                    </button>
-                    {subscriptionStatus === 'trial' && daysLeft !== null && daysLeft > 0 && (
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center leading-tight">
-                        Aucun débit aujourd&apos;hui — la facturation débutera dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}, à la fin de votre essai.
-                      </p>
-                    )}
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                        <path d="M7.5 3h7.125C17.25 3 19.5 5.25 19.5 7.875c0 3.375-2.625 6-6 6H11.25L10.125 21H6.375L7.5 3z" opacity=".8"/>
+                      </svg>
+                      PayPal — {card.price}€
+                    </a>
+                    <a
+                      href={virementHref(card.name, card.price)}
+                      className="flex items-center justify-center gap-2 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors"
+                    >
+                      Virement bancaire
+                    </a>
                   </div>
                 ) : null}
               </div>
             )
           })}
         </div>
+
+        {subscriptionStatus !== 'active' && (
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-5">
+            Après réception de votre paiement, votre abonnement sera activé manuellement sous 24h ouvrées.
+          </p>
+        )}
       </div>
 
       {/* FAQ */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Questions fréquentes</h2>
         {[
-          { q: 'Comment annuler mon abonnement ?', r: 'Cliquez sur « Gérer mon abonnement » pour accéder au portail Stripe. Vous pouvez résilier à tout moment, sans engagement.' },
+          { q: 'Comment annuler mon abonnement ?', r: 'Envoyez-nous un email à novaflows.pro@gmail.com. Aucun engagement, résiliation immédiate.' },
           { q: 'Mes données sont-elles conservées si j\'arrête ?', r: 'Oui, vos données (clients, RDV, historique) sont conservées 30 jours après résiliation.' },
-          { q: 'Comment mettre à jour mon moyen de paiement ?', r: 'Cliquez sur « Gérer mon abonnement » pour accéder au portail Stripe et mettre à jour votre carte bancaire.' },
-          { q: 'Le paiement est-il sécurisé ?', r: 'Oui. Les paiements sont traités par Stripe, certifié PCI DSS. WashBoard ne stocke aucune donnée bancaire.' },
+          { q: 'Puis-je changer de mode de paiement ?', r: 'Oui, contactez-nous par email à tout moment.' },
+          { q: 'Comment changer de plan ?', r: 'Contactez-nous à novaflows.pro@gmail.com et nous l\'activons sous 24h.' },
         ].map(({ q, r }) => (
           <div key={q} className="border-t border-slate-100 dark:border-slate-800 pt-4 first:border-0 first:pt-0">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{q}</p>
