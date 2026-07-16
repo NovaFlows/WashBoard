@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import type { VehicleItem } from '@/types'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -8,6 +9,16 @@ function formatVehicle(type?: string, count?: number): string | null {
   }
   const label = labels[type] ?? type
   return count && count > 1 ? `${label} ×${count}` : label
+}
+
+function vehiclesHtml(items: VehicleItem[], rightAlign = false): string {
+  const align = rightAlign ? 'text-align:right;' : ''
+  return items.map(v => {
+    const label = formatVehicle(v.type, v.count) ?? v.type
+    const mdls  = (v.models ?? []).filter(Boolean)
+    const sub   = mdls.length ? `<br/><span style="font-size:11px;color:#94a3b8;font-weight:400;">${mdls.join(' · ')}</span>` : ''
+    return `<span style="display:block;${align}">${label}${sub}</span>`
+  }).join('')
 }
 
 // ── Email 1 : accusé de réception (statut pending) ────────────────────────
@@ -24,6 +35,9 @@ type SendRequestParams = {
   bookingId: string
   vehicleType?: string
   vehicleCount?: number
+  vehiclesDetail?: VehicleItem[]
+  notes?: string
+  selectedAddons?: Array<{ label: string; price: number }>
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -36,9 +50,17 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const discount      = Number(params.smartDiscount ?? 0)
   const finalPrice    = params.isSmartSlot && discount > 0 ? Math.max(0, params.servicePrice - discount) : params.servicePrice
   const priceStr      = Number.isInteger(finalPrice) ? String(finalPrice) : finalPrice.toFixed(2)
-  const vehicleLabel1 = formatVehicle(params.vehicleType, params.vehicleCount)
-  const vehicleRow1   = vehicleLabel1
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Véhicule</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${vehicleLabel1}</td></tr>`
+  const vehicleContent1 = params.vehiclesDetail?.length
+    ? vehiclesHtml(params.vehiclesDetail, true)
+    : (formatVehicle(params.vehicleType, params.vehicleCount) ?? null)
+  const vehicleRow1 = vehicleContent1
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Véhicule(s)</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${vehicleContent1}</td></tr>`
+    : ''
+  const addonsRow1 = params.selectedAddons?.length
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Options</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.selectedAddons.map(a => a.label).join(' · ')}</td></tr>`
+    : ''
+  const notesRow1 = params.notes
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Notes</td><td style="padding:10px 16px;font-size:12px;color:#475569;line-height:1.5;font-style:italic;">${params.notes}</td></tr>`
     : ''
 
   return resend.emails.send({
@@ -73,6 +95,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.serviceName}</td>
         </tr>
         ${vehicleRow1}
+        ${addonsRow1}
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Date</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${formattedDate}</td>
@@ -85,6 +108,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
           <td style="padding:10px 16px;color:#64748b;">Adresse</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.address}</td>
         </tr>
+        ${notesRow1}
         <tr>
           <td style="padding:10px 16px;color:#64748b;">Montant estimé</td>
           <td style="padding:10px 16px;font-weight:700;color:#0f172a;text-align:right;">${priceStr}€${params.isSmartSlot && discount > 0 ? ' ★' : ''} <span style="font-weight:400;color:#94a3b8;">(sur place)</span></td>
@@ -117,6 +141,8 @@ type SendConfirmationParams = {
   serviceName: string
   vehicleType?: string
   vehicleCount?: number
+  vehiclesDetail?: VehicleItem[]
+  notes?: string
   servicePrice: number
   isSmartSlot?: boolean
   smartDiscount?: number
@@ -146,8 +172,20 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
 
   const appUrl    = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const pdfUrl    = `${appUrl}/api/bookings/${params.bookingId}/pdf`
-  const vehicleStr   = formatVehicle(params.vehicleType, params.vehicleCount)
+  const vehicleStr   = params.vehiclesDetail?.length
+    ? params.vehiclesDetail.map(v => {
+        const lbl  = formatVehicle(v.type, v.count) ?? v.type
+        const mdls = (v.models ?? []).filter(Boolean)
+        return mdls.length ? `${lbl} (${mdls.join(', ')})` : lbl
+      }).join(', ')
+    : (formatVehicle(params.vehicleType, params.vehicleCount) ?? '')
   const vehicleLabel = vehicleStr ? ` — ${vehicleStr}` : ''
+  const notesBox2    = params.notes
+    ? `<div style="margin:0 40px 20px;background:#fefce8;border-left:4px solid #fbbf24;padding:12px 16px;border-radius:0 6px 6px 0;">
+        <p style="margin:0 0 2px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Notes du client</p>
+        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${params.notes}</p>
+      </div>`
+    : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
@@ -251,6 +289,8 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
       <!-- Mode de règlement -->
       <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;text-align:right;">Mode de règlement : paiement comptant sur place</p>
     </div>
+
+    ${notesBox2}
 
     <!-- Encart facture -->
     <div style="margin:0 40px 24px;background:#eff6ff;border-left:4px solid #3b82f6;padding:14px 18px;border-radius:0 6px 6px 0;">
@@ -371,6 +411,9 @@ type SendWasherNotificationParams = {
   serviceName: string
   vehicleType?: string
   vehicleCount?: number
+  vehiclesDetail?: VehicleItem[]
+  notes?: string
+  selectedAddons?: Array<{ label: string; price: number }>
   address: string
   scheduledAt: string
   bookedPrice: number
@@ -386,9 +429,20 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
   const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://washboard.fr'}/dashboard`
-  const vehicleLabel3 = formatVehicle(params.vehicleType, params.vehicleCount)
-  const vehicleRow3   = vehicleLabel3
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Véhicule</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;">${vehicleLabel3}</td></tr>`
+  const vehicleContent3 = params.vehiclesDetail?.length
+    ? vehiclesHtml(params.vehiclesDetail)
+    : (formatVehicle(params.vehicleType, params.vehicleCount) ?? null)
+  const vehicleRow3 = vehicleContent3
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Véhicule(s)</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;">${vehicleContent3}</td></tr>`
+    : ''
+  const addonsRow3 = params.selectedAddons?.length
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Options</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.selectedAddons.map(a => a.label).join(' · ')}</td></tr>`
+    : ''
+  const notesBox3 = params.notes
+    ? `<div style="margin-top:20px;background:#fefce8;border-left:4px solid #fbbf24;padding:14px 16px;border-radius:0 6px 6px 0;">
+        <p style="margin:0 0 4px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Notes du client</p>
+        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${params.notes}</p>
+      </div>`
     : ''
 
   return resend.emails.send({
@@ -425,6 +479,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.serviceName}</td>
         </tr>
         ${vehicleRow3}
+        ${addonsRow3}
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Date</td>
           <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${formattedDate} à ${time}</td>
@@ -438,6 +493,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
           <td style="padding:10px 16px;font-weight:700;color:#0f172a;">${priceStr}€</td>
         </tr>
       </table>
+      ${notesBox3}
       <div style="margin-top:24px;text-align:center;">
         <a href="${dashboardUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;">
           Voir dans WashBoard

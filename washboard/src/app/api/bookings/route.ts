@@ -219,6 +219,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         bookingId: id,
         vehicleType: vehicle_type ?? undefined,
         vehicleCount: vehicle_count ?? undefined,
+        vehiclesDetail: vehicles_detail ?? undefined,
+        notes: bookingData.notes ?? undefined,
+        selectedAddons: selected_addons ?? undefined,
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     ]
 
@@ -233,6 +236,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           serviceName: service.name,
           vehicleType: vehicle_type ?? undefined,
           vehicleCount: vehicle_count ?? undefined,
+          vehiclesDetail: vehicles_detail ?? undefined,
+          notes: bookingData.notes ?? undefined,
+          selectedAddons: selected_addons ?? undefined,
           address: bookingData.address,
           scheduledAt: bookingData.scheduled_at,
           bookedPrice: booked_price,
