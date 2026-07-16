@@ -16,7 +16,7 @@ function vehiclesHtml(items: VehicleItem[], rightAlign = false): string {
   return items.map(v => {
     const label = formatVehicle(v.type, v.count) ?? v.type
     const mdls  = (v.models ?? []).filter(Boolean)
-    const sub   = mdls.length ? `<br/><span style="font-size:11px;color:#94a3b8;font-weight:400;">${mdls.join(' · ')}</span>` : ''
+    const sub   = mdls.length ? `<br/><span style="font-size:13px;color:#1e40af;font-weight:700;">${mdls.join(' · ')}</span>` : ''
     return `<span style="display:block;${align}">${label}${sub}</span>`
   }).join('')
 }
