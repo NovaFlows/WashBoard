@@ -508,3 +508,187 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
 </html>`.trim(),
   })
 }
+
+// ── Email : rappel J-3 avant fin du trial ────────────────────────────────
+export async function sendTrialReminder({ to, washerName, trialEndsAt, appUrl }: {
+  to: string; washerName: string; trialEndsAt: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  const date = new Date(trialEndsAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Votre essai gratuit se termine dans 3 jours — WashBoard`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#f59e0b;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Plus que 3 jours ⏳</h1>
+      <p style="margin:0;color:#fef3c7;font-size:13px;">Votre essai gratuit WashBoard se termine bientôt</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Votre période d&apos;essai gratuit se termine le <strong>${date}</strong>.
+        Pour continuer à utiliser WashBoard sans interruption, activez votre abonnement avant cette date.
+      </p>
+      <div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">
+          Après expiration, vous avez encore 30 jours pour régulariser avant que votre page de réservation soit suspendue.
+        </p>
+      </div>
+      <div style="text-align:center;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Activer mon abonnement →
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : expiration du trial (J0) ─────────────────────────────────────
+export async function sendTrialExpired({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Votre essai gratuit a expiré — WashBoard`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#ef4444;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Essai expiré 🔴</h1>
+      <p style="margin:0;color:#fecaca;font-size:13px;">Votre période d&apos;essai gratuit est terminée</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Votre essai gratuit WashBoard est arrivé à son terme. Votre dashboard reste accessible,
+        mais votre page de réservation sera suspendue dans <strong>30 jours</strong> si vous n&apos;activez pas votre abonnement.
+      </p>
+      <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#b91c1c;font-weight:600;">
+          Sans abonnement actif, vos clients ne pourront plus réserver en ligne dans 30 jours.
+        </p>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Activer mon abonnement — 49€/mois →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : rappel renouvellement abonnement J-3 ─────────────────────────
+export async function sendSubReminder({ to, washerName, endsAt, appUrl }: {
+  to: string; washerName: string; endsAt: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  const date = new Date(endsAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Votre abonnement WashBoard se termine dans 3 jours`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#f59e0b;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Renouvellement dans 3 jours ⏳</h1>
+      <p style="margin:0;color:#fef3c7;font-size:13px;">Votre abonnement WashBoard arrive à échéance</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Votre abonnement WashBoard se termine le <strong>${date}</strong>.
+        Pour continuer à recevoir des réservations sans interruption, renouvelez votre paiement avant cette date.
+      </p>
+      <div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">
+          Effectuez votre paiement de 49€ par PayPal ou virement — activation sous 24h ouvrées.
+        </p>
+      </div>
+      <div style="text-align:center;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Renouveler mon abonnement →
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : abonnement payant expiré (J0) ────────────────────────────────
+export async function sendSubExpired({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Votre abonnement WashBoard a expiré`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#ef4444;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Abonnement expiré 🔴</h1>
+      <p style="margin:0;color:#fecaca;font-size:13px;">Votre abonnement WashBoard est arrivé à échéance</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Votre abonnement WashBoard est expiré. Votre page de réservation sera suspendue
+        dans <strong>30 jours</strong> si vous ne renouvelez pas votre paiement.
+      </p>
+      <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#b91c1c;font-weight:600;">
+          Sans renouvellement, vos clients ne pourront plus réserver en ligne dans 30 jours.
+        </p>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Renouveler mon abonnement — 49€/mois →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
