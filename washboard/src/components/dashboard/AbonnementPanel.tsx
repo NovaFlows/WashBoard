@@ -100,7 +100,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Nos offres</h2>
         {grandfathered ? (
           <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-4">
-            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong> sans changer d&apos;offre. Tout est inclus dans votre plan à 49€/mois.
+            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong>{' '}sans changer d&apos;offre. Tout est inclus dans votre plan à 49€/mois.
           </p>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Choisissez l&apos;offre adaptée à votre activité.</p>
