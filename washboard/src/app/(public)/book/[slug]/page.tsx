@@ -41,8 +41,36 @@ export default async function BookingPage({ params }: Props) {
     .single()
 
   if (!washer) notFound()
-  // Compte désactivé ou en cours de suppression : page de réservation masquée
   if (washer.account_status && washer.account_status !== 'active') notFound()
+
+  // Abonnement expiré depuis plus de 30 jours : page de réservation suspendue
+  const isBlocked = (() => {
+    if (washer.grandfathered || washer.subscription_status === 'active') return false
+    if (!washer.trial_ends_at) return false
+    const graceEnd = new Date(washer.trial_ends_at)
+    graceEnd.setDate(graceEnd.getDate() + 30)
+    return new Date() > graceEnd
+  })()
+
+  if (isBlocked) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ maxWidth: '400px', textAlign: 'center' }}>
+          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔒</div>
+          <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>Page temporairement indisponible</h1>
+          <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.6', marginBottom: '24px' }}>
+            La page de réservation de <strong>{washer.name}</strong> est momentanément suspendue.
+            Contactez directement votre prestataire pour prendre rendez-vous.
+          </p>
+          {washer.phone && (
+            <a href={`tel:${washer.phone}`} style={{ display: 'inline-block', background: '#2563eb', color: '#fff', textDecoration: 'none', fontWeight: '700', fontSize: '14px', padding: '12px 24px', borderRadius: '10px' }}>
+              Appeler {washer.name}
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   const { data: services } = await supabase
     .from('services')

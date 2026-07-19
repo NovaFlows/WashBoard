@@ -114,12 +114,22 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, grandfathered').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes').eq('id', bookingData.service_id).single(),
   ])
 
-  // ── Barrière anti-double-réservation (uniquement pour le public, pas le laveur) ──
+  // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──
   const isOwner = !!authUser && washer?.user_id === authUser.id
+  if (!isOwner && washer && !washer.grandfathered && washer.subscription_status !== 'active') {
+    const trialEndsAt = washer.trial_ends_at ? new Date(washer.trial_ends_at) : null
+    if (trialEndsAt) {
+      const graceEnd = new Date(trialEndsAt)
+      graceEnd.setDate(graceEnd.getDate() + 30)
+      if (new Date() > graceEnd) {
+        return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
+      }
+    }
+  }
   if (!isOwner && service) {
     const newStart = new Date(bookingData.scheduled_at).getTime()
     const newDur   = effectiveDuration((service.duration_minutes ?? 60) + addonsDuration(selected_addons), vehicle_count ?? 1)
