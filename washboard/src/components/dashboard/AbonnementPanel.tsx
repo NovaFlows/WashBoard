@@ -141,7 +141,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                   ))}
                 </ul>
 
-                {grandfathered ? (
+                {grandfathered && card.key !== 'essentiel' ? (
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
                     Inclus dans votre plan
                   </span>
