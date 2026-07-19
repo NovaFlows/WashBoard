@@ -100,7 +100,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Nos offres</h2>
         {grandfathered ? (
           <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-4">
-            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong> sans changer d&apos;offre.
+            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong> sans changer d&apos;offre. Tout est inclus dans votre plan à 49€/mois.
           </p>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Choisissez l&apos;offre adaptée à votre activité.</p>
@@ -141,7 +141,11 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                   ))}
                 </ul>
 
-                {card.comingSoon ? (
+                {grandfathered ? (
+                  <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+                    Inclus dans votre plan
+                  </span>
+                ) : card.comingSoon ? (
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
                     En cours de développement
                   </span>
