@@ -48,20 +48,18 @@ export async function GET(request: NextRequest) {
       .gte('trial_ends_at', expiredMin.toISOString())
       .lte('trial_ends_at', nowIso),
 
-    // Abonné payant J-3
+    // Abonné payant J-3 (grandfathered inclus : ils paient 49€/mois quand même)
     admin.from('washers')
       .select('id, user_id, name, subscription_ends_at')
       .eq('subscription_status', 'active')
-      .eq('grandfathered', false)
       .is('sub_reminder_sent_at', null)
       .gte('subscription_ends_at', reminderMin.toISOString())
       .lte('subscription_ends_at', reminderMax.toISOString()),
 
-    // Abonné payant J0 (expiration non renouvelée)
+    // Abonné payant J0 (grandfathered inclus)
     admin.from('washers')
       .select('id, user_id, name, subscription_ends_at')
       .eq('subscription_status', 'active')
-      .eq('grandfathered', false)
       .is('sub_expired_sent_at', null)
       .gte('subscription_ends_at', expiredMin.toISOString())
       .lte('subscription_ends_at', nowIso),
