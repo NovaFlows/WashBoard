@@ -97,6 +97,21 @@ export function requiredPlanLabel(feature: Feature): string {
   return PLAN_LABELS[MIN_PLAN[feature]]
 }
 
+// Vrai si la période de grâce de 30 jours après l'échéance (subscription_ends_at,
+// ou trial_ends_at si jamais encore abonné) est dépassée. Un abonnement actif
+// n'est jamais concerné — à vérifier séparément par l'appelant.
+export function graceEnded(
+  subscriptionEndsAt: string | null,
+  trialEndsAt: string | null,
+  now: Date = new Date(),
+): boolean {
+  const baseDate = subscriptionEndsAt ? new Date(subscriptionEndsAt) : trialEndsAt ? new Date(trialEndsAt) : null
+  if (!baseDate) return false
+  const graceEnd = new Date(baseDate)
+  graceEnd.setDate(graceEnd.getDate() + 30)
+  return now > graceEnd
+}
+
 // Nombre de mois dus depuis la dernière échéance payée (subscription_ends_at,
 // ou trial_ends_at si jamais encore abonné). 0 tant que l'échéance n'est pas
 // passée ; 1 dès le jour J ; +1 par tranche de 30 jours de retard supplémentaire.

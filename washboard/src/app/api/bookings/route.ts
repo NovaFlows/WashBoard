@@ -5,6 +5,7 @@ import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { countConflicts, effectiveTeamSize } from '@/lib/slots'
 import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
+import { graceEnded } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
@@ -120,19 +121,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──
   const isOwner = !!authUser && washer?.user_id === authUser.id
-  if (!isOwner && washer && washer.subscription_status !== 'active') {
-    const baseDate = washer.subscription_ends_at
-      ? new Date(washer.subscription_ends_at)
-      : washer.trial_ends_at
-      ? new Date(washer.trial_ends_at)
-      : null
-    if (baseDate) {
-      const graceEnd = new Date(baseDate)
-      graceEnd.setDate(graceEnd.getDate() + 30)
-      if (new Date() > graceEnd) {
-        return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
-      }
-    }
+  if (!isOwner && washer && washer.subscription_status !== 'active'
+    && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
+    return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
   }
   if (!isOwner && service) {
     const newStart = new Date(bookingData.scheduled_at).getTime()

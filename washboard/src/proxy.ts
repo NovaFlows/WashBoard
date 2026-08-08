@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { graceEnded } from '@/lib/plan'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -35,19 +36,12 @@ export async function proxy(request: NextRequest) {
   if (user && request.nextUrl.pathname.startsWith('/dashboard') && !request.nextUrl.pathname.startsWith('/dashboard/abonnement')) {
     const { data: washer } = await supabase
       .from('washers')
-      .select('subscription_status, trial_ends_at')
+      .select('subscription_status, trial_ends_at, subscription_ends_at')
       .eq('user_id', user.id)
       .single()
 
-    if (washer) {
-      const isExpiredStatus = washer.subscription_status === 'expired'
-      const isTrialExpired = washer.subscription_status === 'trial' &&
-        washer.trial_ends_at &&
-        new Date(washer.trial_ends_at) < new Date()
-
-      if (isExpiredStatus || isTrialExpired) {
-        return NextResponse.redirect(new URL('/dashboard/abonnement', request.url))
-      }
+    if (washer && washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
+      return NextResponse.redirect(new URL('/dashboard/abonnement', request.url))
     }
   }
 

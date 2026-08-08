@@ -6,6 +6,7 @@ import BookingForm from '@/components/booking/BookingForm'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
+import { graceEnded } from '@/lib/plan'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -45,18 +46,8 @@ export default async function BookingPage({ params }: Props) {
 
   // Abonnement expiré depuis plus de 30 jours : page de réservation suspendue
   // grandfathered n'exempte pas du paiement — s'ils ne paient pas, on bloque aussi
-  const isBlocked = (() => {
-    if (washer.subscription_status === 'active') return false
-    const baseDate = washer.subscription_ends_at
-      ? new Date(washer.subscription_ends_at)
-      : washer.trial_ends_at
-      ? new Date(washer.trial_ends_at)
-      : null
-    if (!baseDate) return false
-    const graceEnd = new Date(baseDate)
-    graceEnd.setDate(graceEnd.getDate() + 30)
-    return new Date() > graceEnd
-  })()
+  const isBlocked = washer.subscription_status !== 'active'
+    && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)
 
   if (isBlocked) {
     return (
