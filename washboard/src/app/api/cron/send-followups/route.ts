@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendFollowupEmail } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
+import { graceEnded } from '@/lib/plan'
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const { data: washers, error: washerErr } = await admin
     .from('washers')
-    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender')
+    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
 
@@ -29,6 +30,9 @@ export async function GET(request: NextRequest) {
   let smsSent = 0
 
   for (const washer of washers ?? []) {
+    // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
+    if (washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) continue
+
     const delayCutoff = new Date()
     delayCutoff.setDate(delayCutoff.getDate() - (washer.followup_delay_days ?? 90))
     const cutoffIso = delayCutoff.toISOString()

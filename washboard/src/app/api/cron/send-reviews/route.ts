@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendReviewRequest } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
-import { hasFeature, SMS_QUOTA } from '@/lib/plan'
+import { hasFeature, SMS_QUOTA, graceEnded } from '@/lib/plan'
 import type { Plan } from '@/lib/plan'
 
 // Envoie les demandes d'avis Google dont l'heure programmée est passée.
@@ -43,11 +43,17 @@ export async function GET(request: NextRequest) {
 
     const { data: washer } = await admin
       .from('washers')
-      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, sms_sender')
+      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
       .eq('id', b.washer_id)
       .single()
 
     if (!washer?.review_enabled || !washer.google_review_url) {
+      await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
+      continue
+    }
+
+    // Accès coupé après la grâce de 30 jours : plus de demandes d'avis envoyées en son nom
+    if (washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
       continue
     }

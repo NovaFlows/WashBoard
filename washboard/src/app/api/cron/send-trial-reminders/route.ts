@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { sendTrialReminder, sendTrialExpired, sendSubReminder, sendSubExpired } from '@/lib/email'
+import { sendTrialReminder, sendTrialExpired, sendSubReminder, sendSubExpired, sendGraceEndingWarning } from '@/lib/email'
 
 // Tourne chaque matin à 8h (cron-job.org : 0 8 * * *)
 export async function GET(request: NextRequest) {
@@ -24,11 +24,16 @@ export async function GET(request: NextRequest) {
   // Fenêtre J0 : expiré depuis [hier 23h, maintenant]
   const expiredMin = new Date(now); expiredMin.setDate(expiredMin.getDate() - 1); expiredMin.setHours(23, 0, 0, 0)
 
+  // Fenêtre J-5 avant fin de la grâce de 30 jours (coupure totale)
+  const graceWarnMin = new Date(now); graceWarnMin.setDate(graceWarnMin.getDate() + 4); graceWarnMin.setHours(23, 0, 0, 0)
+  const graceWarnMax = new Date(now); graceWarnMax.setDate(graceWarnMax.getDate() + 5); graceWarnMax.setHours(23, 59, 59, 999)
+
   const [
     { data: trialsToRemind },
     { data: trialsExpired },
     { data: subsToRemind },
     { data: subsExpired },
+    { data: graceCandidates },
   ] = await Promise.all([
     // Trial J-3
     admin.from('washers')
@@ -63,9 +68,24 @@ export async function GET(request: NextRequest) {
       .is('sub_expired_sent_at', null)
       .gte('subscription_ends_at', expiredMin.toISOString())
       .lte('subscription_ends_at', nowIso),
+
+    // Candidats à l'avertissement de fin de grâce (filtrés en JS ci-dessous,
+    // car l'échéance de référence est soit trial_ends_at, soit subscription_ends_at)
+    admin.from('washers')
+      .select('id, user_id, name, trial_ends_at, subscription_ends_at')
+      .neq('subscription_status', 'active')
+      .is('grace_reminder_sent_at', null),
   ])
 
-  const counts = { trialReminder: 0, trialExpired: 0, subReminder: 0, subExpired: 0 }
+  const graceToWarn = (graceCandidates ?? []).filter(w => {
+    const anchor = w.subscription_ends_at ?? w.trial_ends_at
+    if (!anchor) return false
+    const cutoff = new Date(anchor)
+    cutoff.setDate(cutoff.getDate() + 30)
+    return cutoff >= graceWarnMin && cutoff <= graceWarnMax
+  })
+
+  const counts = { trialReminder: 0, trialExpired: 0, subReminder: 0, subExpired: 0, graceWarning: 0 }
 
   for (const washer of trialsToRemind ?? []) {
     if (!washer.user_id) continue
@@ -112,6 +132,19 @@ export async function GET(request: NextRequest) {
       }).eq('id', washer.id)
       counts.subExpired++
     } catch (e) { console.error('[cron] sub_expired', washer.id, e) }
+  }
+
+  for (const washer of graceToWarn) {
+    if (!washer.user_id) continue
+    const { data: { user } } = await admin.auth.admin.getUserById(washer.user_id)
+    if (!user?.email) continue
+    const anchor = washer.subscription_ends_at ?? washer.trial_ends_at
+    const cutoff = new Date(anchor!); cutoff.setDate(cutoff.getDate() + 30)
+    try {
+      await sendGraceEndingWarning({ to: user.email, washerName: washer.name, cutoffDate: cutoff.toISOString() })
+      await admin.from('washers').update({ grace_reminder_sent_at: nowIso }).eq('id', washer.id)
+      counts.graceWarning++
+    } catch (e) { console.error('[cron] grace_warning', washer.id, e) }
   }
 
   return NextResponse.json({ ok: true, ...counts })
