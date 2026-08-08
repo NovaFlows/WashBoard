@@ -114,16 +114,20 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, grandfathered').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes').eq('id', bookingData.service_id).single(),
   ])
 
   // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──
   const isOwner = !!authUser && washer?.user_id === authUser.id
-  if (!isOwner && washer && !washer.grandfathered && washer.subscription_status !== 'active') {
-    const trialEndsAt = washer.trial_ends_at ? new Date(washer.trial_ends_at) : null
-    if (trialEndsAt) {
-      const graceEnd = new Date(trialEndsAt)
+  if (!isOwner && washer && washer.subscription_status !== 'active') {
+    const baseDate = washer.subscription_ends_at
+      ? new Date(washer.subscription_ends_at)
+      : washer.trial_ends_at
+      ? new Date(washer.trial_ends_at)
+      : null
+    if (baseDate) {
+      const graceEnd = new Date(baseDate)
       graceEnd.setDate(graceEnd.getDate() + 30)
       if (new Date() > graceEnd) {
         return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })

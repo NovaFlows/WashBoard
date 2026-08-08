@@ -44,10 +44,16 @@ export default async function BookingPage({ params }: Props) {
   if (washer.account_status && washer.account_status !== 'active') notFound()
 
   // Abonnement expiré depuis plus de 30 jours : page de réservation suspendue
+  // grandfathered n'exempte pas du paiement — s'ils ne paient pas, on bloque aussi
   const isBlocked = (() => {
-    if (washer.grandfathered || washer.subscription_status === 'active') return false
-    if (!washer.trial_ends_at) return false
-    const graceEnd = new Date(washer.trial_ends_at)
+    if (washer.subscription_status === 'active') return false
+    const baseDate = washer.subscription_ends_at
+      ? new Date(washer.subscription_ends_at)
+      : washer.trial_ends_at
+      ? new Date(washer.trial_ends_at)
+      : null
+    if (!baseDate) return false
+    const graceEnd = new Date(baseDate)
     graceEnd.setDate(graceEnd.getDate() + 30)
     return new Date() > graceEnd
   })()
