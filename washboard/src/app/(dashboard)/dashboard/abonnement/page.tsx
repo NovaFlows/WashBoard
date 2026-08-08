@@ -29,6 +29,7 @@ export default async function AbonnementPage() {
       <AbonnementPanel
         subscriptionStatus={washer.subscription_status ?? 'trial'}
         trialEndsAt={washer.trial_ends_at ?? null}
+        subscriptionEndsAt={washer.subscription_ends_at ?? null}
         washerName={washer.name}
         washerEmail={user.email ?? ''}
         plan={washer.plan ?? 'essentiel'}

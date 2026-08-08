@@ -96,3 +96,18 @@ export function hasFeature(w: PlanInfo | null | undefined, feature: Feature): bo
 export function requiredPlanLabel(feature: Feature): string {
   return PLAN_LABELS[MIN_PLAN[feature]]
 }
+
+// Nombre de mois dus depuis la dernière échéance payée (subscription_ends_at,
+// ou trial_ends_at si jamais encore abonné). 0 tant que l'échéance n'est pas
+// passée ; 1 dès le jour J ; +1 par tranche de 30 jours de retard supplémentaire.
+export function monthsOwed(
+  subscriptionEndsAt: string | null,
+  trialEndsAt: string | null,
+  now: Date = new Date(),
+): number {
+  const baseDate = subscriptionEndsAt ? new Date(subscriptionEndsAt) : trialEndsAt ? new Date(trialEndsAt) : null
+  if (!baseDate) return 0
+  const diffDays = (now.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)
+  if (diffDays <= 0) return 0
+  return Math.floor(diffDays / 30) + 1
+}

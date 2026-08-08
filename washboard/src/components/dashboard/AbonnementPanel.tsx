@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { PLAN_CARDS, type Plan } from '@/lib/plan'
+import { PLAN_CARDS, monthsOwed, type Plan } from '@/lib/plan'
 
 type Props = {
   subscriptionStatus: string
   trialEndsAt: string | null
+  subscriptionEndsAt: string | null
   washerName: string
   washerEmail: string
   plan: Plan
@@ -37,7 +38,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
+export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
   const [now] = useState(() => Date.now())
 
   const daysLeft = trialEndsAt
@@ -46,10 +47,15 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
 
   const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
 
+  const owed = subscriptionStatus === 'active' ? 0 : monthsOwed(subscriptionEndsAt, trialEndsAt, new Date(now))
+  const dueMonths = Math.max(1, owed)
+
   function virementHref(planName: string, price: number) {
+    const total = price * dueMonths
+    const monthsNote = dueMonths > 1 ? ` (${dueMonths} mois à régulariser)` : ''
     const subject = encodeURIComponent(`Abonnement WashBoard ${planName} — ${washerName}`)
     const body = encodeURIComponent(
-      `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard ${planName} (${price}€/mois) pour l'espace "${washerName}".\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
+      `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard ${planName} (${price}€/mois) pour l'espace "${washerName}".\nMontant à régler : ${total}€${monthsNote}\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
     )
     return `mailto:novaflows.pro@gmail.com?subject=${subject}&body=${body}`
   }
@@ -91,6 +97,12 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
         {subscriptionStatus === 'expired' && (
           <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
             Votre accès est suspendu. Réglez votre abonnement pour retrouver l&apos;accès complet.
+          </div>
+        )}
+
+        {owed > 1 && (
+          <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+            Vous avez <strong>{owed} mois</strong> de paiement en retard. Merci de régulariser au plus vite pour éviter la suspension de votre page de réservation.
           </div>
         )}
       </div>
@@ -151,8 +163,13 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                   </span>
                 ) : subscriptionStatus !== 'active' ? (
                   <div className="space-y-2">
+                    {dueMonths > 1 && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold text-center">
+                        {dueMonths} mois dus — total {card.price * dueMonths}€
+                      </p>
+                    )}
                     <a
-                      href={`https://paypal.me/WashBoardSAAS/${card.price}`}
+                      href={`https://paypal.me/WashBoardSAAS/${card.price * dueMonths}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 py-2 bg-[#003087] hover:bg-[#00256b] text-white text-xs font-semibold rounded-xl transition-colors"
@@ -160,7 +177,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, washe
                       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
                         <path d="M7.5 3h7.125C17.25 3 19.5 5.25 19.5 7.875c0 3.375-2.625 6-6 6H11.25L10.125 21H6.375L7.5 3z" opacity=".8"/>
                       </svg>
-                      PayPal — {card.price}€
+                      PayPal — {card.price * dueMonths}€
                     </a>
                     <a
                       href={virementHref(card.name, card.price)}
