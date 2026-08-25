@@ -15,7 +15,7 @@ function embedDuration(services: EmbedService): number {
   return dm ?? 60
 }
 
-type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number }
+type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
 
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
