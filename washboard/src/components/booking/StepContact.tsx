@@ -124,10 +124,25 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
         </div>
       )}
 
-      {/* Honeypot anti-spam : invisible aux humains, rempli par les bots */}
+      {/* Honeypot anti-spam : invisible aux humains, rempli par les bots.
+          Le nom ne doit ressembler à AUCUN champ connu (« website », « company »…) :
+          Chrome et les gestionnaires de mots de passe remplissent ces noms
+          automatiquement en ignorant autocomplete="off", ce qui faisait passer de
+          vrais clients pour des bots et perdait silencieusement leur réservation.
+          Les attributs data-* ci-dessous demandent à 1Password/LastPass de passer. */}
       <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
         <label>Ne pas remplir ce champ
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" value={hp} onChange={e => setHp(e.target.value)} />
+          <input
+            type="text"
+            name="wb-confirm-c7f3"
+            tabIndex={-1}
+            autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
+            value={hp}
+            onChange={e => setHp(e.target.value)}
+          />
         </label>
       </div>
 

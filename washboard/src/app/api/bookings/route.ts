@@ -78,7 +78,13 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // ── Anti-spam #2 : honeypot (champ piège rempli uniquement par les bots) ──
   const { hp, ...cleanData } = parsed.data
   if (hp && hp.trim()) {
-    // On renvoie un succès factice pour ne pas révéler le piège au bot.
+    // On renvoie un succès factice pour ne pas révéler le piège au bot. Comme
+    // rien n'est enregistré, on trace le rejet : un autofill navigateur qui
+    // remplirait ce champ ferait perdre de vraies réservations en silence.
+    logger.warn('bookings.honeypot_triggered', {
+      washerId: cleanData.washer_id,
+      clientEmail: cleanData.client_email,
+    })
     return Response.json({ data: { id: randomUUID() } }, { status: 201 })
   }
 
