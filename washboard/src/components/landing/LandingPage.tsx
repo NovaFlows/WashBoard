@@ -130,26 +130,100 @@ export default function LandingPage() {
           .dark .hero-hl { -webkit-text-fill-color: #ffffff; }
         }
         /* Nav — suit le thème */
+        /* La nav reprend exactement la couleur de depart du hero (opaque, sans
+           filet) : toute transparence ou bordure recreerait une demarcation */
         .wb-nav {
-          background: rgba(255, 255, 255, 0.94);
-          border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+          background: #EBF5FF;
+          border-bottom: none;
         }
         .dark .wb-nav {
-          background: rgba(9, 17, 30, 0.95);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          background: #09111E;
+          border-bottom: none;
         }
-        /* Hero — suit le thème */
+        /* Hero — suit le thème. Dégradé vertical (et non diagonal) pour que la
+           toute premiere ligne du hero soit uniforme et colle exactement a la
+           couleur de la nav : un degrade diagonal la ferait varier en largeur. */
         .wb-hero {
-          background: linear-gradient(140deg, #EBF5FF 0%, #F4F9FF 45%, #FFFFFF 100%);
+          background: linear-gradient(to bottom, #EBF5FF 0%, #F4F9FF 45%, #FFFFFF 100%);
         }
         .dark .wb-hero {
-          background: linear-gradient(150deg, #09111E 0%, #0C1D38 65%, #09111E 100%);
+          background: linear-gradient(to bottom, #09111E 0%, #0C1D38 65%, #020617 100%);
         }
-        /* Dégradé radial aqua — fond clair uniquement */
+        /* Dégradé radial aqua — fond clair uniquement. Masque en haut pour que
+           le halo n'apporte rien sur la ligne de jonction avec la nav. */
         .wb-hero-glow {
           background: radial-gradient(ellipse 75% 50% at 50% -5%, rgba(0, 196, 212, 0.13), transparent);
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 30%);
         }
         .dark .wb-hero-glow { background: none; }
+
+        /* TEST — ciel étoilé + nuages qui dérivent, dark mode uniquement */
+        .wb-stars {
+          position: absolute;
+          inset: 0;
+          background-image:
+            radial-gradient(1.6px 1.6px at 8% 14%, rgba(255,255,255,0.9), transparent),
+            radial-gradient(1.4px 1.4px at 22% 26%, rgba(255,255,255,0.7), transparent),
+            radial-gradient(1.2px 1.2px at 35% 9%, rgba(255,255,255,0.85), transparent),
+            radial-gradient(1.6px 1.6px at 48% 31%, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1.2px 1.2px at 62% 16%, rgba(255,255,255,0.9), transparent),
+            radial-gradient(1.5px 1.5px at 75% 23%, rgba(255,255,255,0.7), transparent),
+            radial-gradient(1.2px 1.2px at 88% 11%, rgba(255,255,255,0.8), transparent),
+            radial-gradient(1.5px 1.5px at 15% 41%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1.2px 1.2px at 93% 38%, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1.6px 1.6px at 56% 46%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1.2px 1.2px at 4% 33%, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1.4px 1.4px at 68% 5%, rgba(255,255,255,0.7), transparent);
+          background-repeat: no-repeat;
+          animation: wbStarTwinkle 4.5s ease-in-out infinite;
+        }
+        @keyframes wbStarTwinkle {
+          0%, 100% { opacity: 0.65; }
+          50% { opacity: 1; }
+        }
+        /* Vraie photo (vue aérienne au-dessus des nuages, dégradé bleu) —
+           les tentatives en CSS pur (radial-gradient) ne pouvaient jamais
+           ressembler à une vraie texture de nuage : mauvais medium. Fondu
+           en haut pour se fondre dans le dégradé du hero, léger drift du
+           cadrage pour donner une impression de mouvement lent. */
+        .wb-cloud-photo {
+          position: absolute;
+          left: -5%; right: -5%; bottom: 0;
+          height: 340px;
+          background-image: url('/hero-clouds-light.jpg');
+          background-size: 130% auto;
+          background-position: center bottom;
+          opacity: 1;
+          /* Remonte les blancs de la photo sans la delaver completement */
+          filter: brightness(1.18) saturate(0.75);
+          -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMjYiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIwNSBMMTIwLDE4MCBMMjQwLDIzMCBMMzYwLDE3MCBMNDgwLDI0NSBMNjAwLDE5NSBMNzIwLDE2MCBMODQwLDIyNSBMOTYwLDE4NSBMMTA4MCwyNDAgTDEyMDAsMTc1IEwxMzIwLDIxNSBMMTQ0MCwxNjUgTDE2MDAsMjI1IEwxNjAwLDMwMCBMMTQ0MCwyNzAgTDEzMjAsMzEwIEwxMjAwLDI3NSBMMTA4MCwzMTUgTDk2MCwyODAgTDg0MCwyNTggTDcyMCwzMDUgTDYwMCwyNzggTDQ4MCwzMTIgTDM2MCwyNjUgTDI0MCwzMDAgTDEyMCwyNzIgTDAsMjk1IFoiLz4KPC9zdmc+Cg==');
+          mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMjYiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIwNSBMMTIwLDE4MCBMMjQwLDIzMCBMMzYwLDE3MCBMNDgwLDI0NSBMNjAwLDE5NSBMNzIwLDE2MCBMODQwLDIyNSBMOTYwLDE4NSBMMTA4MCwyNDAgTDEyMDAsMTc1IEwxMzIwLDIxNSBMMTQ0MCwxNjUgTDE2MDAsMjI1IEwxNjAwLDMwMCBMMTQ0MCwyNzAgTDEzMjAsMzEwIEwxMjAwLDI3NSBMMTA4MCwzMTUgTDk2MCwyODAgTDg0MCwyNTggTDcyMCwzMDUgTDYwMCwyNzggTDQ4MCwzMTIgTDM2MCwyNjUgTDI0MCwzMDAgTDEyMCwyNzIgTDAsMjk1IFoiLz4KPC9zdmc+Cg==');
+          mask-size: 100% 100%;
+          mask-repeat: no-repeat;
+          -webkit-mask-size: 100% 100%;
+          -webkit-mask-repeat: no-repeat;
+          animation: wbCloudPhotoDrift 90s ease-in-out infinite;
+        }
+        .dark .wb-cloud-photo {
+          background-image: url('/hero-clouds-test.jpg');
+          opacity: 0.95;
+          /* Le contraste evite que brightness ne remonte aussi le ciel sombre
+             et ne transforme la bande en voile laiteux sans relief */
+          filter: brightness(1.28) contrast(1.45) saturate(0.65);
+        }
+        @keyframes wbCloudPhotoDrift {
+          0%, 100% { background-position: center bottom; }
+          50% { background-position: 60% bottom; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .wb-stars, .wb-cloud-photo { animation: none; }
+        }
+        /* Fondu : le blanc de la section suivante remonte sur les nuages, dark mode uniquement */
+        .wb-cloud-fade-white { background: none; }
+        .dark .wb-cloud-fade-white {
+          background: linear-gradient(to bottom, transparent 0%, transparent 66%, #FFFFFF 100%);
+        }
         /* Carte planning — suit le thème */
         .wb-schedule {
           background: rgba(255, 255, 255, 0.95);
@@ -191,6 +265,13 @@ export default function LandingPage() {
         {/* Halo aqua — fond clair seulement */}
         <div aria-hidden className="absolute inset-x-0 top-0 h-[500px] pointer-events-none overflow-hidden">
           <div className="wb-hero-glow absolute inset-0" />
+        </div>
+
+        {/* TEST — nuages (clair + sombre) et étoiles (sombre uniquement) */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="wb-stars hidden dark:block" />
+          <div className="wb-cloud-photo" />
+          <div className="wb-cloud-fade-white absolute inset-x-0 bottom-0 h-[340px]" />
         </div>
 
         <div className="relative max-w-6xl mx-auto">
@@ -285,44 +366,46 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pain points ── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24">
-        <FadeUp>
-          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-12">
-            Ce que tu fais encore à la main
-          </p>
-        </FadeUp>
-        <div className="divide-y divide-slate-200 dark:divide-slate-800">
-          {[
-            {
-              n: '01',
-              title: 'Tu gères les réservations sur WhatsApp',
-              desc: 'Un RDV confirmé = 4 messages échangés. Multiplié par 8 clients par jour, ça fait beaucoup pour pas grand chose.',
-            },
-            {
-              n: '02',
-              title: 'Tes trajets ne sont pas optimisés',
-              desc: 'Bordeaux Nord à 9h, Bordeaux Sud à 10h30. 45 minutes de route entre les deux. Deux fois par semaine, ça chiffre.',
-            },
-            {
-              n: '03',
-              title: 'Tu estimes ton CA, tu ne le sais pas vraiment',
-              desc: 'Tu penses avoir fait 1 400€ cette semaine. Tu vérifies en fin de mois et c\'est rarement ce que tu pensais.',
-            },
-          ].map((pain) => (
-            <FadeUp
-              key={pain.n}
-              className="py-8 sm:py-10 grid grid-cols-[3.5rem_1fr] sm:grid-cols-[5rem_1fr_2fr] gap-x-6 sm:gap-x-10 gap-y-1 items-start"
-            >
-              <span className="text-4xl sm:text-6xl font-black text-[#1651E8]/25 dark:text-[#6A9FFF]/20 leading-none row-span-2 sm:row-span-1 pt-0.5">
-                {pain.n}
-              </span>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{pain.title}</h3>
-              <p className="col-start-2 sm:col-start-3 sm:row-start-1 text-slate-500 dark:text-slate-400 leading-relaxed text-sm sm:text-base">
-                {pain.desc}
-              </p>
-            </FadeUp>
-          ))}
+      {/* ── Pain points — bande toujours blanche, meme en dark mode ── */}
+      <section className="relative bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-24">
+          <FadeUp>
+            <p className="text-xs font-black text-slate-400 uppercase tracking-[0.22em] mb-12">
+              Ce que tu fais encore à la main
+            </p>
+          </FadeUp>
+          <div className="divide-y divide-slate-200">
+            {[
+              {
+                n: '01',
+                title: 'Tu gères les réservations sur WhatsApp',
+                desc: 'Un RDV confirmé = 4 messages échangés. Multiplié par 8 clients par jour, ça fait beaucoup pour pas grand chose.',
+              },
+              {
+                n: '02',
+                title: 'Tes trajets ne sont pas optimisés',
+                desc: 'Bordeaux Nord à 9h, Bordeaux Sud à 10h30. 45 minutes de route entre les deux. Deux fois par semaine, ça chiffre.',
+              },
+              {
+                n: '03',
+                title: 'Tu estimes ton CA, tu ne le sais pas vraiment',
+                desc: 'Tu penses avoir fait 1 400€ cette semaine. Tu vérifies en fin de mois et c\'est rarement ce que tu pensais.',
+              },
+            ].map((pain) => (
+              <FadeUp
+                key={pain.n}
+                className="py-8 sm:py-10 grid grid-cols-[3.5rem_1fr] sm:grid-cols-[5rem_1fr_2fr] gap-x-6 sm:gap-x-10 gap-y-1 items-start"
+              >
+                <span className="text-4xl sm:text-6xl font-black text-[#1651E8]/25 leading-none row-span-2 sm:row-span-1 pt-0.5">
+                  {pain.n}
+                </span>
+                <h3 className="text-lg font-bold text-slate-900">{pain.title}</h3>
+                <p className="col-start-2 sm:col-start-3 sm:row-start-1 text-slate-500 leading-relaxed text-sm sm:text-base">
+                  {pain.desc}
+                </p>
+              </FadeUp>
+            ))}
+          </div>
         </div>
       </section>
 
