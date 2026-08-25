@@ -1,34 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendReviewRequest } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
 import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/lib/plan'
 import type { Plan } from '@/lib/plan'
+import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 
 // Envoie les demandes d'avis Google dont l'heure programmée est passée.
 // Appelée régulièrement (toutes les heures) par un planificateur externe
 // (cron-job.org) ou Vercel Cron, avec l'en-tête « Authorization: Bearer <CRON_SECRET> ».
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  const authHeader = request.headers.get('authorization')
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
-  const admin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const test = parseTestMode(request)
+  if ('error' in test) return NextResponse.json({ error: test.error }, { status: 400 })
+
+  const admin = createAdminClient()
 
   const nowIso = new Date().toISOString()
 
-  const { data: due, error } = await admin
+  let dueQuery = admin
     .from('bookings')
     .select('id, client_name, client_email, client_phone, washer_id, status')
-    .lte('review_request_at', nowIso)
     .is('review_request_sent_at', null)
     .not('review_request_at', 'is', null)
     .limit(200)
+
+  // En mode test on ignore l'heure programmée (H+3 par défaut) pour déclencher
+  // tout de suite ; hors test on ne prend que les envois réellement échus.
+  if (test.enabled) dueQuery = dueQuery.eq('washer_id', test.washerId)
+  else dueQuery = dueQuery.lte('review_request_at', nowIso)
+
+  const { data: due, error } = await dueQuery
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -108,5 +112,5 @@ export async function GET(request: NextRequest) {
     await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
   }
 
-  return NextResponse.json({ ok: true, emailSent, smsSent, processed: (due ?? []).length })
+  return NextResponse.json({ ok: true, emailSent, smsSent, processed: (due ?? []).length, test: test.enabled })
 }

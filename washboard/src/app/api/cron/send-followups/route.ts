@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendFollowupEmail } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
 import { graceEnded } from '@/lib/plan'
+import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  const authHeader = request.headers.get('authorization')
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
-  const admin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const test = parseTestMode(request)
+  if ('error' in test) return NextResponse.json({ error: test.error }, { status: 400 })
+
+  const admin = createAdminClient()
 
   const nowIso = new Date().toISOString()
 
-  const { data: washers, error: washerErr } = await admin
+  let washerQuery = admin
     .from('washers')
     .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
+
+  if (test.enabled) washerQuery = washerQuery.eq('id', test.washerId)
+
+  const { data: washers, error: washerErr } = await washerQuery
 
   if (washerErr) return NextResponse.json({ error: washerErr.message }, { status: 500 })
 
@@ -33,8 +35,12 @@ export async function GET(request: NextRequest) {
     // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
     if (washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) continue
 
+    // En mode test le délai est lu en MINUTES au lieu de jours : un RDV vieux
+    // de quelques minutes devient éligible, sans attendre 90 jours.
+    const delay = washer.followup_delay_days ?? 90
     const delayCutoff = new Date()
-    delayCutoff.setDate(delayCutoff.getDate() - (washer.followup_delay_days ?? 90))
+    if (test.enabled) delayCutoff.setMinutes(delayCutoff.getMinutes() - delay)
+    else delayCutoff.setDate(delayCutoff.getDate() - delay)
     const cutoffIso = delayCutoff.toISOString()
 
     const { data: candidates } = await admin
@@ -95,5 +101,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, emailSent, smsSent })
+  return NextResponse.json({ ok: true, emailSent, smsSent, test: test.enabled })
 }
