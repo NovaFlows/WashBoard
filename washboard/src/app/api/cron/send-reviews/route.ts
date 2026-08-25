@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendReviewRequest } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
-import { hasFeature, SMS_QUOTA, graceEnded } from '@/lib/plan'
+import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/lib/plan'
 import type { Plan } from '@/lib/plan'
 
 // Envoie les demandes d'avis Google dont l'heure programmée est passée.
@@ -73,8 +73,9 @@ export async function GET(request: NextRequest) {
         console.error('[cron/send-reviews] email', b.id, e)
       }
     } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
-      const effectivePlan = washer.grandfathered ? 'business' : (washer.plan as Plan)
-      const quota = SMS_QUOTA[effectivePlan] ?? 0
+      const quota = washer.grandfathered
+        ? GRANDFATHERED_SMS_QUOTA
+        : SMS_QUOTA[washer.plan as Plan] ?? 0
       if (quota > 0) {
         const monthStart = new Date()
         monthStart.setDate(1)

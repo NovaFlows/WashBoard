@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe, STRIPE_PRICE_IDS } from '@/lib/stripe'
-import { PLAN_CARDS, type Plan } from '@/lib/plan'
+import { type Plan } from '@/lib/plan'
 import { isAlreadySubscribed, computeTrialEnd } from '@/lib/subscription'
 import { withErrorHandling, AppError } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
@@ -14,12 +14,6 @@ export const POST = withErrorHandling('stripe.checkout', async (req: NextRequest
   const { plan } = await req.json() as { plan: Plan }
   const priceId = STRIPE_PRICE_IDS[plan]
   if (!priceId) throw new AppError('plan inconnu', { status: 400, publicMessage: 'Plan invalide' })
-
-  // Blocage serveur : impossible de souscrire à une offre encore en développement.
-  const planCard = PLAN_CARDS.find(c => c.key === plan)
-  if (planCard?.comingSoon) {
-    throw new AppError('plan comingSoon', { status: 400, publicMessage: 'Cette offre n’est pas encore disponible' })
-  }
 
   const { data: washer } = await supabase
     .from('washers')

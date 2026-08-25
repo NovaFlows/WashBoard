@@ -7,14 +7,12 @@ describe('planFromPriceId', () => {
     vi.resetModules()
     vi.stubEnv('STRIPE_PRICE_ID_ESSENTIEL', 'price_ess')
     vi.stubEnv('STRIPE_PRICE_ID_PRO', 'price_pro')
-    vi.stubEnv('STRIPE_PRICE_ID_BUSINESS', 'price_biz')
   })
 
   it('mappe un price id connu vers son plan', async () => {
     const { planFromPriceId } = await import('./stripe')
     expect(planFromPriceId('price_ess')).toBe('essentiel')
     expect(planFromPriceId('price_pro')).toBe('pro')
-    expect(planFromPriceId('price_biz')).toBe('business')
   })
 
   it('retourne null pour un price id inconnu', async () => {
@@ -23,9 +21,9 @@ describe('planFromPriceId', () => {
     expect(planFromPriceId('')).toBeNull()
   })
 
-  it('STRIPE_PRICE_IDS expose les 3 plans', async () => {
+  it('STRIPE_PRICE_IDS expose les 2 plans', async () => {
     const { STRIPE_PRICE_IDS } = await import('./stripe')
-    expect(Object.keys(STRIPE_PRICE_IDS).sort()).toEqual(['business', 'essentiel', 'pro'])
+    expect(Object.keys(STRIPE_PRICE_IDS).sort()).toEqual(['essentiel', 'pro'])
   })
 
   it('getStripe retourne une instance Stripe utilisable', async () => {

@@ -9,7 +9,6 @@ export function getStripe() {
 export const STRIPE_PRICE_IDS: Record<Plan, string> = {
   essentiel: process.env.STRIPE_PRICE_ID_ESSENTIEL!,
   pro:       process.env.STRIPE_PRICE_ID_PRO!,
-  business:  process.env.STRIPE_PRICE_ID_BUSINESS!,
 }
 
 export function planFromPriceId(priceId: string): Plan | null {

@@ -35,18 +35,20 @@ export default function CGV() {
           <li>La confirmation automatique des réservations par email</li>
         </ul>
         <p>
-          Les fonctionnalités disponibles dépendent du plan souscrit (Essentiel, Pro, Business).
-          Les plans Pro et Business sont actuellement en cours de développement.
+          Les fonctionnalités disponibles dépendent du plan souscrit (Essentiel, Pro).
         </p>
       </Section>
 
       <Section title="3. Tarifs et facturation">
         <p>L&apos;abonnement WashBoard est proposé aux tarifs suivants :</p>
         <ul>
-          <li><strong>Essentiel :</strong> 49 € HT / mois</li>
-          <li><strong>Pro :</strong> 69 € HT / mois (disponible prochainement)</li>
-          <li><strong>Business :</strong> 99 € HT / mois (disponible prochainement)</li>
+          <li><strong>Essentiel :</strong> 49 € HT / mois, ou 490 € HT / an (2 mois offerts)</li>
+          <li><strong>Pro :</strong> 69 € HT / mois, ou 690 € HT / an (2 mois offerts)</li>
         </ul>
+        <p>
+          L&apos;engagement annuel est facturé en une fois pour douze mois. Les tarifs
+          mensuels équivalents affichés (40,83 € et 57,50 €) sont indicatifs.
+        </p>
         <p>
           Tous les prix sont exprimés en euros hors taxes. La TVA applicable est celle en vigueur au moment de la facturation.
         </p>

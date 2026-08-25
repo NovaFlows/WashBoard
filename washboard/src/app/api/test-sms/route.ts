@@ -16,7 +16,7 @@ export async function POST() {
 
   if (!washer) return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
   if (!hasFeature(washer, 'avis_sms')) {
-    return NextResponse.json({ error: 'Fonctionnalité réservée aux plans Pro et Business' }, { status: 403 })
+    return NextResponse.json({ error: 'Fonctionnalité réservée au plan Pro' }, { status: 403 })
   }
   if (!washer.phone) {
     return NextResponse.json({ error: 'Ajoutez votre numéro de téléphone dans Paramètres > Général pour recevoir le SMS test' }, { status: 400 })

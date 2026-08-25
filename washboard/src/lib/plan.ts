@@ -1,48 +1,73 @@
 // Plans WashBoard et contrôle d'accès aux fonctionnalités.
 //
 // - essentiel (49€) : résa, agenda, CRM, avis Google par email
-// - pro (69€)       : + comptabilité, avis par SMS (quota), suivi client
-// - business (99€)  : + multi-laveurs, SMS illimité, perso avancée
+// - pro (69€)       : + comptabilité, avis par SMS (quota), suivi client,
+//                     multi-laveurs
 //
 // Les laveurs `grandfathered` (clients historiques) ont tout débloqué quel
 // que soit leur plan, pour ne jamais leur retirer un acquis.
 
-export type Plan = 'essentiel' | 'pro' | 'business'
+export type Plan = 'essentiel' | 'pro'
 export type Feature = 'avis_email' | 'compta' | 'avis_sms' | 'multi_laveurs' | 'followup'
+export type BillingCycle = 'monthly' | 'yearly'
 
-const PLANS: Plan[] = ['essentiel', 'pro', 'business']
-const RANK: Record<Plan, number> = { essentiel: 0, pro: 1, business: 2 }
+const PLANS: Plan[] = ['essentiel', 'pro']
+const RANK: Record<Plan, number> = { essentiel: 0, pro: 1 }
 
 const MIN_PLAN: Record<Feature, Plan> = {
   avis_email:    'essentiel',
   compta:        'pro',
   avis_sms:      'pro',
   followup:      'pro',
-  multi_laveurs: 'business',
+  multi_laveurs: 'pro',
 }
 
 export const PLAN_LABELS: Record<Plan, string> = {
   essentiel: 'Essentiel',
   pro:       'Pro',
-  business:  'Business',
 }
 
 export const PLAN_PRICES: Record<Plan, number> = {
   essentiel: 49,
   pro:       69,
-  business:  99,
 }
 
 // Quota de SMS d'avis inclus par mois (0 = email uniquement).
 export const SMS_QUOTA: Record<Plan, number> = {
   essentiel: 0,
   pro:       150,
-  business:  100000,
+}
+
+// Les clients historiques avaient un quota illimité via l'ancien plan Business ;
+// on le leur conserve explicitement maintenant que ce plan n'existe plus.
+export const GRANDFATHERED_SMS_QUOTA = 100000
+
+// Engagement annuel : 2 mois offerts (on facture 10 mois pour 12).
+export const YEARLY_FREE_MONTHS = 2
+
+export function yearlyPrice(monthlyPrice: number): number {
+  return monthlyPrice * (12 - YEARLY_FREE_MONTHS)
+}
+
+// Prix mensuel équivalent d'un engagement annuel, arrondi au centime.
+export function yearlyMonthlyEquivalent(monthlyPrice: number): number {
+  return Math.round((yearlyPrice(monthlyPrice) / 12) * 100) / 100
+}
+
+// Formatage FR d'un montant : "40,83" / "57,50" / "490". Un montant rond
+// s'écrit sans centimes ; dès qu'il y en a, on affiche les deux décimales
+// (sinon on obtiendrait "57,5 €", qui ne se lit pas comme un prix).
+export function formatEuros(amount: number): string {
+  const decimals = Number.isInteger(amount) ? 0 : 2
+  return amount.toLocaleString('fr-FR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
 }
 
 // Descriptif des offres (partagé entre la page Abonnement et la landing).
-// `comingSoon` = offre affichée mais pas encore sélectionnable (en développement).
-export type PlanCard = { key: Plan; name: string; price: number; tagline: string; features: string[]; comingSoon?: boolean }
+// `price` est toujours le tarif mensuel ; l'annuel s'en déduit via yearlyPrice().
+export type PlanCard = { key: Plan; name: string; price: number; tagline: string; features: string[] }
 
 export const PLAN_CARDS: PlanCard[] = [
   {
@@ -64,18 +89,7 @@ export const PLAN_CARDS: PlanCard[] = [
       'Comptabilité (CA, dépenses, résultat)',
       'Avis Google par SMS (150/mois)',
       'Relances de suivi client',
-    ],
-  },
-  {
-    key: 'business', name: 'Business', price: 99,
-    tagline: 'Pour les équipes de plusieurs laveurs.',
-    comingSoon: true,
-    features: [
-      'Tout le Pro',
       'Multi-laveurs (RDV simultanés)',
-      'SMS illimités',
-      'Personnalisation avancée',
-      'Support prioritaire',
     ],
   },
 ]

@@ -353,7 +353,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               <div className="flex items-center gap-3">
                 <input type="number" value={1} disabled className={`${inputClass} w-24 opacity-50 cursor-not-allowed`} />
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                  La gestion d&apos;équipe (RDV simultanés) fait partie du plan Business.{' '}
+                  La gestion d&apos;équipe (RDV simultanés) fait partie du plan Pro.{' '}
                   <Link href="/dashboard/abonnement" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Voir les offres</Link>
                 </p>
               </div>

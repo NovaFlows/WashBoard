@@ -22,8 +22,7 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
   const label = grandfathered ? 'Accès complet' : PLAN_LABELS[plan ?? 'essentiel']
   const color = grandfathered
     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-    : plan === 'business' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400'
-    : plan === 'pro'      ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
+    : plan === 'pro' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
   return (
     <Link

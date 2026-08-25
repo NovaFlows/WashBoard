@@ -5,7 +5,11 @@ import Image from 'next/image'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { PLAN_CARDS } from '@/lib/plan'
+import {
+  PLAN_CARDS, YEARLY_FREE_MONTHS, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
+  type BillingCycle,
+} from '@/lib/plan'
+import BillingToggle from '@/components/ui/BillingToggle'
 
 // Slogans courts et uniformes — pas de saut de layout
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
@@ -86,6 +90,9 @@ function ThemeToggle() {
 }
 
 export default function LandingPage() {
+  // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
+  const [billing, setBilling] = useState<BillingCycle>('yearly')
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 overflow-x-hidden">
       <style>{`
@@ -191,7 +198,7 @@ export default function LandingPage() {
           position: absolute;
           left: -5%; right: -5%; bottom: 0;
           height: 340px;
-          background-image: url('/hero-clouds-light.jpg');
+          background-image: url('/hero-clouds.jpg');
           background-size: 130% auto;
           background-position: center bottom;
           opacity: 1;
@@ -205,12 +212,16 @@ export default function LandingPage() {
           -webkit-mask-repeat: no-repeat;
           animation: wbCloudPhotoDrift 90s ease-in-out infinite;
         }
+        /* En sombre on reprend la meme photo diurne (nuages deja blancs) : la
+           photo de nuit obligeait a monter brightness, ce qui remontait aussi
+           son ciel sombre et laissait un voile gris au-dessus des nuages.
+           Masque a bord serre pour couper net juste au-dessus des nuages, le
+           fondu ne se fait donc que vers le bas. */
         .dark .wb-cloud-photo {
-          background-image: url('/hero-clouds-test.jpg');
-          opacity: 0.95;
-          /* Le contraste evite que brightness ne remonte aussi le ciel sombre
-             et ne transforme la bande en voile laiteux sans relief */
-          filter: brightness(1.28) contrast(1.45) saturate(0.65);
+          opacity: 1;
+          filter: brightness(1.06) saturate(0.7);
+          -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTEiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIxNSBMOTAsMTk2IEwxODAsMjI0IEwyNzAsMTg4IEwzNjAsMjMyIEw0NTAsMjAwIEw1NDAsMTc4IEw2MzAsMjIyIEw3MjAsMTkwIEw4MTAsMjM2IEw5MDAsMTk4IEw5OTAsMjI2IEwxMDgwLDE4NCBMMTE3MCwyMjggTDEyNjAsMTk2IEwxMzUwLDIzNCBMMTQ0MCwxOTIgTDE1MjAsMjIwIEwxNjAwLDIwMCBMMTYwMCwzNDAgTDAsMzQwIFoiLz4KPC9zdmc+Cg==');
+          mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTEiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIxNSBMOTAsMTk2IEwxODAsMjI0IEwyNzAsMTg4IEwzNjAsMjMyIEw0NTAsMjAwIEw1NDAsMTc4IEw2MzAsMjIyIEw3MjAsMTkwIEw4MTAsMjM2IEw5MDAsMTk4IEw5OTAsMjI2IEwxMDgwLDE4NCBMMTE3MCwyMjggTDEyNjAsMTk2IEwxMzUwLDIzNCBMMTQ0MCwxOTIgTDE1MjAsMjIwIEwxNjAwLDIwMCBMMTYwMCwzNDAgTDAsMzQwIFoiLz4KPC9zdmc+Cg==');
         }
         @keyframes wbCloudPhotoDrift {
           0%, 100% { background-position: center bottom; }
@@ -534,15 +545,21 @@ export default function LandingPage() {
 
       {/* ── Pricing ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
-        <FadeUp className="mb-12">
+        <FadeUp className="mb-8">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Les formules</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-            49€/mois. Sans engagement.
+            {billing === 'yearly' ? `${formatEuros(yearlyMonthlyEquivalent(49))}€/mois en annuel.` : '49€/mois. Sans engagement.'}
           </h2>
         </FadeUp>
-        <FadeGroup className="grid sm:grid-cols-3 gap-6 items-stretch max-w-5xl">
+
+        <FadeUp className="mb-12">
+          <BillingToggle value={billing} onChange={setBilling} />
+        </FadeUp>
+
+        <FadeGroup className="grid sm:grid-cols-2 gap-6 items-stretch max-w-3xl">
           {PLAN_CARDS.map((card) => {
             const featured = card.key === 'essentiel'
+            const yearly = billing === 'yearly'
             return (
               <FadeItem
                 key={card.key}
@@ -552,13 +569,17 @@ export default function LandingPage() {
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                   {featured ? (
                     <span className="bg-[#1651E8] text-white text-xs font-bold px-4 py-1.5 rounded-full">Le plus populaire</span>
-                  ) : card.comingSoon ? (
-                    <span className="bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 text-xs font-bold px-4 py-1.5 rounded-full">Bientôt dispo</span>
                   ) : null}
                 </div>
                 <p className={`text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{card.name}</p>
                 <p className={`text-4xl font-black mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                  {card.price}€<span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>/mois</span>
+                  {yearly ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
+                  <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>/mois</span>
+                </p>
+                <p className={`text-xs mt-1.5 font-semibold ${featured ? 'text-emerald-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {yearly
+                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${YEARLY_FREE_MONTHS} mois offerts`
+                    : `Passez à l’année : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
                 </p>
                 <p className={`text-sm mt-1 mb-6 ${featured ? 'text-white/60' : 'text-slate-500 dark:text-slate-400'}`}>{card.tagline}</p>
                 <div className="space-y-3 text-left mb-8 flex-1">
@@ -571,15 +592,9 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                {card.comingSoon ? (
-                  <span className={`block w-full text-center py-3.5 rounded-xl text-sm font-semibold cursor-not-allowed ${featured ? 'bg-white/10 text-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
-                    En développement
-                  </span>
-                ) : (
-                  <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
-                    Je démarre
-                  </Link>
-                )}
+                <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
+                  Je démarre
+                </Link>
               </FadeItem>
             )
           })}

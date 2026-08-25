@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { PLAN_CARDS, monthsOwed, type Plan } from '@/lib/plan'
+import {
+  PLAN_CARDS, monthsOwed, YEARLY_FREE_MONTHS, formatEuros, yearlyPrice,
+  yearlyMonthlyEquivalent, type Plan, type BillingCycle,
+} from '@/lib/plan'
+import BillingToggle from '@/components/ui/BillingToggle'
 
 type Props = {
   subscriptionStatus: string
@@ -40,6 +44,8 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
   const [now] = useState(() => Date.now())
+  // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
+  const [billing, setBilling] = useState<BillingCycle>('yearly')
 
   const daysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
@@ -50,12 +56,21 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
   const owed = subscriptionStatus === 'active' ? 0 : monthsOwed(subscriptionEndsAt, trialEndsAt, new Date(now))
   const dueMonths = Math.max(1, owed)
 
-  function virementHref(planName: string, price: number) {
-    const total = price * dueMonths
-    const monthsNote = dueMonths > 1 ? ` (${dueMonths} mois à régulariser)` : ''
+  // Montant à régler pour une offre : l'année entière si engagement annuel,
+  // sinon le mensuel multiplié par les mois éventuellement en retard.
+  function amountFor(monthlyPrice: number) {
+    return billing === 'yearly' ? yearlyPrice(monthlyPrice) : monthlyPrice * dueMonths
+  }
+
+  function virementHref(planName: string, monthlyPrice: number) {
+    const total = amountFor(monthlyPrice)
+    const cycleLabel = billing === 'yearly'
+      ? `${formatEuros(yearlyPrice(monthlyPrice))}€/an, soit ${formatEuros(yearlyMonthlyEquivalent(monthlyPrice))}€/mois`
+      : `${monthlyPrice}€/mois`
+    const monthsNote = billing === 'monthly' && dueMonths > 1 ? ` (${dueMonths} mois à régulariser)` : ''
     const subject = encodeURIComponent(`Abonnement WashBoard ${planName} — ${washerName}`)
     const body = encodeURIComponent(
-      `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard ${planName} (${price}€/mois) pour l'espace "${washerName}".\nMontant à régler : ${total}€${monthsNote}\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
+      `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard ${planName} (${cycleLabel}) pour l'espace "${washerName}".\nMontant à régler : ${formatEuros(total)}€${monthsNote}\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
     )
     return `mailto:novaflows.pro@gmail.com?subject=${subject}&body=${body}`
   }
@@ -118,7 +133,9 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Choisissez l&apos;offre adaptée à votre activité.</p>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <BillingToggle value={billing} onChange={setBilling} className="mb-5" />
+
+        <div className="grid gap-4 sm:grid-cols-2">
           {PLAN_CARDS.map(card => {
             const isCurrent = !grandfathered && plan === card.key
             return (
@@ -134,12 +151,16 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                   <p className="font-bold text-slate-900 dark:text-slate-100">{card.name}</p>
                   {isCurrent ? (
                     <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-600 text-white">Actuel</span>
-                  ) : card.comingSoon ? (
-                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">Bientôt</span>
                   ) : null}
                 </div>
                 <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-0.5">
-                  {card.price}€<span className="text-xs font-medium text-slate-400">/mois</span>
+                  {billing === 'yearly' ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
+                  <span className="text-xs font-medium text-slate-400">/mois</span>
+                </p>
+                <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
+                  {billing === 'yearly'
+                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${YEARLY_FREE_MONTHS} mois offerts`
+                    : `En annuel : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{card.tagline}</p>
                 <ul className="space-y-1.5 flex-1 mb-4">
@@ -157,19 +178,20 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
                     Inclus dans votre plan
                   </span>
-                ) : card.comingSoon ? (
-                  <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
-                    En cours de développement
-                  </span>
                 ) : subscriptionStatus !== 'active' ? (
                   <div className="space-y-2">
-                    {dueMonths > 1 && (
+                    {billing === 'monthly' && dueMonths > 1 && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold text-center">
                         {dueMonths} mois dus — total {card.price * dueMonths}€
                       </p>
                     )}
+                    {billing === 'yearly' && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold text-center">
+                        12 mois payés en une fois
+                      </p>
+                    )}
                     <a
-                      href={`https://paypal.me/WashBoardSAAS/${card.price * dueMonths}`}
+                      href={`https://paypal.me/WashBoardSAAS/${amountFor(card.price)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 py-2 bg-[#003087] hover:bg-[#00256b] text-white text-xs font-semibold rounded-xl transition-colors"
@@ -177,7 +199,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
                         <path d="M7.5 3h7.125C17.25 3 19.5 5.25 19.5 7.875c0 3.375-2.625 6-6 6H11.25L10.125 21H6.375L7.5 3z" opacity=".8"/>
                       </svg>
-                      PayPal — {card.price * dueMonths}€
+                      PayPal — {formatEuros(amountFor(card.price))}€
                     </a>
                     <a
                       href={virementHref(card.name, card.price)}
