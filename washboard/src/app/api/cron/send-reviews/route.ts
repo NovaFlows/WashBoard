@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
 
   let emailSent = 0
   let smsSent = 0
+  // Compté et renvoyé : sans ça, une panne du fournisseur (clé manquante,
+  // quota dépassé) laissait le job répondre « ok » avec 0 envoi, donc passer
+  // totalement inaperçue.
+  let failed = 0
 
   for (const b of due ?? []) {
     if (b.status === 'cancelled' || !b.client_email) {
@@ -74,6 +78,7 @@ export async function GET(request: NextRequest) {
         })
         emailSent++
       } catch (e) {
+        failed++
         console.error('[cron/send-reviews] email', b.id, e)
       }
     } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
@@ -103,6 +108,7 @@ export async function GET(request: NextRequest) {
             await admin.from('bookings').update({ review_sms_sent_at: nowIso }).eq('id', b.id)
             smsSent++
           } catch (e) {
+            failed++
             console.error('[cron/send-reviews] sms', b.id, e)
           }
         }
@@ -112,5 +118,5 @@ export async function GET(request: NextRequest) {
     await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
   }
 
-  return NextResponse.json({ ok: true, emailSent, smsSent, processed: (due ?? []).length, test: test.enabled })
+  return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, processed: (due ?? []).length, test: test.enabled })
 }

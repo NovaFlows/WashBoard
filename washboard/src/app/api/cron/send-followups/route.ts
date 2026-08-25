@@ -30,6 +30,10 @@ export async function GET(request: NextRequest) {
 
   let emailSent = 0
   let smsSent = 0
+  // Compté et renvoyé : sans ça, une panne du fournisseur (clé manquante,
+  // quota dépassé) laissait le job répondre « ok » avec 0 envoi, donc passer
+  // totalement inaperçue.
+  let failed = 0
 
   for (const washer of washers ?? []) {
     // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
@@ -96,10 +100,11 @@ export async function GET(request: NextRequest) {
           .update({ followup_sent_at: nowIso })
           .eq('id', booking.id)
       } catch (e) {
+        failed++
         console.error('[cron/send-followups]', booking.id, e)
       }
     }
   }
 
-  return NextResponse.json({ ok: true, emailSent, smsSent, test: test.enabled })
+  return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, test: test.enabled })
 }
