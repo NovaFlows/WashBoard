@@ -137,7 +137,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     const newEnd   = newStart + newDur * 60_000
     // RDV proches : créés jusqu'à 12h avant le début (couvre les longues prestations)
     const windowStart = new Date(newStart - 12 * 60 * 60_000).toISOString()
-    const [{ data: nearby }, { data: unavs }] = await Promise.all([
+    const [{ data: nearby }, { data: unavs, error: unavsErr }] = await Promise.all([
       admin.from('bookings')
         .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
         .eq('washer_id', bookingData.washer_id)
@@ -148,6 +148,18 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         .select('start_date, end_date, team_members_off')
         .eq('washer_id', bookingData.washer_id),
     ])
+    // Une lecture en echec donnerait `unavs = null`, donc « aucun conge », donc
+    // une capacite pleine : on accepterait des RDV pendant les absences du laveur.
+    // C'est arrive en prod (GRANT SELECT manquant pour service_role) — on refuse
+    // plutot que de reserver a l'aveugle.
+    if (unavsErr) {
+      logger.error('bookings.unavailabilities.read_failed',
+        { washerId: bookingData.washer_id }, unavsErr)
+      return Response.json(
+        { error: 'Impossible de vérifier les disponibilités. Merci de réessayer dans un instant.' },
+        { status: 503 },
+      )
+    }
     const intervals = (nearby ?? []).map((b) => {
       const svc = b.services as { duration_minutes: number } | { duration_minutes: number }[] | null
       const dur = Array.isArray(svc) ? svc[0]?.duration_minutes : svc?.duration_minutes

@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded } from '@/lib/plan'
+import { logger } from '@/lib/logger'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -96,7 +97,7 @@ export default async function BookingPage({ params }: Props) {
 
   const [
     { data: existingBookings },
-    { data: unavailabilities },
+    { data: unavailabilities, error: unavailabilitiesErr },
   ] = await Promise.all([
     admin
       .from('bookings')
@@ -109,6 +110,13 @@ export default async function BookingPage({ params }: Props) {
       .select('id, start_date, end_date')
       .eq('washer_id', washer.id),
   ])
+
+  // Sans cette trace, un echec de lecture passait pour « aucun conge » et les
+  // creneaux d'absence restaient reservables, sans le moindre signal (bug prod).
+  if (unavailabilitiesErr) {
+    logger.error('book.unavailabilities.read_failed',
+      { washerId: washer.id, slug }, unavailabilitiesErr)
+  }
 
   const bgStyle = getBgStyle(washer.background_theme)
   const themed  = !!bgStyle
