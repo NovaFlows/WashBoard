@@ -7,25 +7,57 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-07-01 (plans Pro/Business « en cours de développement » + tarifs landing)
+> Dernière mise à jour : 2026-08-26 (suppression du plan Business + forfaits annuels,
+> mode test des crons, fix honeypot, refonte hero)
 
 ---
 
 ## 🔴 Priorité haute
 
+- [ ] **Pousser la branche `feat/refonte-hero-et-forfaits`** (6 commits, non poussée à la
+      demande d'Alexandre : son associé travaille en parallèle sur master).
+      Tant qu'elle n'est pas déployée, le **mode test des crons n'existe pas en prod** →
+      impossible de déclencher un job à la demande, on dépend de l'horaire planifié.
+
+- [ ] **Finir le test de la relance par SMS.** L'avis par SMS est validé
+      (reçu le 2026-08-26 à 01h via le cron de prod). La relance, elle, n'a été testée
+      qu'en **email** : `BREVO_API_KEY` n'est pas dans `.env.local` (uniquement sur Vercel),
+      donc l'envoi SMS échouait en local. La réservation de test `dbd2b4f2` a été remise
+      éligible (`followup_sent_at = null`) → soit copier la clé Brevo en local, soit
+      laisser le cron de prod la traiter.
+
+- [ ] **Nettoyer la réservation de test `dbd2b4f2`** chez Kooki Clean une fois le test SMS
+      terminé (sa `scheduled_at` a été reculée au 2026-08-25 21:11 pour rendre la relance
+      éligible — donnée faussée si on la laisse).
+
 - [ ] **Remplir les placeholders légaux** dès que l'entité est créée (micro-entreprise ou autre) :
       fichiers `src/app/(legal)/mentions-legales/page.tsx`, `cgv/page.tsx`, `confidentialite/page.tsx`.
       Remplacer `[NOM LÉGAL]`, `[FORME JURIDIQUE]`, `[SIRET]`, `[ADRESSE COMPLÈTE]`.
 
-- [x] 2026-07-01 — **Plans Pro (69€) & Business (99€) « en cours de développement »** :
-      non sélectionnables sur la page Abonnement (badge « Bientôt » + bouton désactivé).
-      Descriptif des offres centralisé dans `lib/plan.ts` (`PLAN_CARDS`, flag `comingSoon`),
-      partagé entre la page Abonnement et la landing. Section tarifs de la landing refaite
-      en grille 3 plans (Essentiel = CTA signup, Pro/Business = désactivés).
+- [x] 2026-08-26 — **Plan Business supprimé + forfaits annuels** (remplace l'entrée du
+      2026-07-01 ci-dessous, devenue caduque) :
+      offre réduite à Essentiel (49€) et Pro (69€), le **multi-laveurs bascule dans Pro**.
+      Engagement annuel = **2 mois offerts** (490€/an → 40,83€/mois ; 690€/an → 57,50€/mois),
+      **présélectionné** via un `BillingToggle` partagé landing + page Abonnement.
+      Montants PayPal/virement adaptés au cycle. Le quota SMS illimité des grandfathered
+      passait par le plan Business → conservé explicitement (`GRANDFATHERED_SMS_QUOTA`).
+      Mécanisme `comingSoon` retiré (plus aucune offre ne l'utilisait).
+  - [x] 2026-07-01 — ~~Plans Pro (69€) & Business (99€) « en cours de développement »~~ :
+        descriptif centralisé dans `lib/plan.ts` (`PLAN_CARDS`), partagé Abonnement + landing.
+        Toujours valable **sauf** la partie Business et le flag `comingSoon`.
 
 - [x] 2026-06-29 — **Anti-spam sur `POST /api/bookings`** (réservation publique) :
       honeypot (champ piège) + rate-limit par IP (8/10min, en mémoire) + plafond
       par laveur/jour (60/j). Rate-limit testé (9ᵉ requête → 429).
+  - [x] 2026-08-26 — **FIX BUG PROD : le honeypot mangeait de vraies réservations.**
+        Le champ piège s'appelait `name="website"` : Chrome et les gestionnaires de mots
+        de passe le remplissent automatiquement en **ignorant `autocomplete="off"`**.
+        La route renvoie alors un **faux `201` sans rien insérer** (pour ne pas révéler le
+        piège au bot) → le client voyait un écran de confirmation pour une réservation
+        inexistante, sans email ni la moindre trace. Reproduit puis corrigé : nom neutre
+        (`wb-confirm-c7f3`) + `data-lpignore` / `data-1p-ignore` / `data-form-type`,
+        et `logger.warn` au déclenchement pour rendre le rejet observable.
+        ⚠️ Combien de vraies réservations perdues avant ça ? Invérifiable (aucune trace).
   - [ ] Amélioration future : rate-limit cross-instances (Upstash/Redis ou table)
         car la mémoire serverless n'est pas partagée entre instances.
 
@@ -115,6 +147,23 @@
 
 ## 🟠 Robustesse / dette technique
 
+- [ ] **Renommer `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` → `GOOGLE_MAPS_API_KEY`.** La clé n'est
+      utilisée que côté serveur (routes `places/*`, `zone/check`, `slots/smart`, `washer`),
+      mais le préfixe `NEXT_PUBLIC_` est un piège : le jour où quelqu'un la référence dans
+      un composant client, elle part dans le bundle du navigateur. À changer dans le code
+      **et** dans les variables Vercel.
+
+- [ ] **Les routes `api/places/*` avalent l'erreur Google** et renvoient une liste vide
+      (`catch { return { suggestions: [] } }`). Le 2026-08-26, l'autocomplétion était HS en
+      prod à cause d'une facturation Google désactivée (`REQUEST_DENIED`) et ça ressemblait
+      juste à « pas de suggestions ». Logger le `status` renvoyé par Google rendrait ce type
+      de panne visible immédiatement. Même famille de bug que le honeypot et les crons
+      silencieux — chercher les autres `catch` muets.
+
+- [ ] **Optimisation coût Places** : l'autocomplétion n'utilise pas de *session token*, donc
+      Google facture **chaque requête** au lieu d'une session (frappes + détail final = 1 unité).
+      Inutile au volume actuel (~19 réservations/mois, coût 0 €), à faire si le volume monte.
+
 - [~] **Code mort / legacy** — vérifié avant suppression :
   - [x] 2026-06-29 — `src/lib/scrapeReviews.ts` supprimé (aucun import, vrai code mort)
   - [x] 2026-06-30 — DÉCISION : on **garde** le flux « Réserver un appel »
@@ -156,8 +205,20 @@
       trial_end < 48h géré. Logique pure extraite dans `lib/subscription.ts` (+ tests).
   - [x] 2026-07-03 — Mineurs restants (non-code) : `NEXT_PUBLIC_APP_URL` = www en prod ;
         adaptive pricing Stripe désactivé (clients voyaient VND).
-- [ ] **Phase 3 — Avis par SMS** (plans Pro/Business) : intégrer Brevo (compte +
-      clé API à fournir), fonction `sendSms()`, compteur de quota mensuel + blocage.
+- [x] 2026-08-26 — **Phase 3 — Avis par SMS** (plan Pro) : Brevo intégré, `sendSms()`,
+      quota mensuel + blocage. **Validé en prod** : SMS d'avis reçu le 2026-08-26 à 01h.
+      Reste la relance par SMS à vérifier (voir « Priorité haute »).
+- [x] 2026-08-26 — **Mode test des crons** : `?test=1&washer=<id>` sur `send-reviews` et
+      `send-followups` court-circuite les délais (relances lues en **minutes** au lieu de
+      jours, avis déclenchés sans attendre l'heure programmée). Le paramètre `washer` est
+      **obligatoire** → sans lui la route renvoie 400, pour ne jamais arroser tous les
+      clients par accident. Auth + client admin factorisés dans `lib/cronRequest.ts`
+      (dupliqués dans 3 routes auparavant), 7 tests.
+- [x] 2026-08-26 — **Les crons signalent enfin leurs échecs.** Une panne du fournisseur
+      (clé manquante, quota dépassé) était avalée par le `catch` : le job répondait
+      `{"ok":true,"smsSent":0}` et l'arrêt des envois passait **totalement inaperçu**.
+      Découvert en testant (`BREVO_API_KEY manquant` en local). Compteur `failed` renvoyé
+      + `ok:false` au premier échec → visible directement dans cron-job.org.
 - [ ] **Photos avant/après** : feature premium évidente pour laveurs/detailers.
 - [x] 2026-07-02 — **QA #1** : vérifier le 404 `/book` d'un vrai compte (données/slug, pas du code).
 - [x] 2026-06-30 — **QA #3** : vérifié manuellement → le clic sur une carte prestation
@@ -185,6 +246,16 @@
       équipe / un testeur, ou des migrations risquées. Inutile avant.
 
 ## 🟢 Polish / UX
+
+- [x] 2026-08-26 — **Refonte du hero** (inspiration peekly.app) : ciel étoilé en CSS
+      (dark uniquement) + bande de nuages en **vraie photo générée**, la même dans les deux
+      thèmes. Les tentatives en dégradés CSS purs étaient vouées à l'échec — inspection du
+      DOM de Peekly : leurs nuages sont une photo, pas du CSS.
+      Masque SVG à bord ondulé (un fondu droit se voyait), fondu vers le bas uniquement.
+      Jonction nav/hero **sans démarcation, vérifiée au pixel** (écart max 1/255 en clair,
+      0/255 en sombre, contre 21/255 avant) : dégradé passé en vertical (le diagonal faisait
+      varier la ligne du haut), halo aqua masqué en haut, bordure de nav retirée.
+      Bande « Ce que tu fais encore à la main » forcée en blanc dans les deux thèmes.
 
 - [x] 2026-06-29 — **Page d'accueil dashboard** : vérifiée — déjà une vraie page
       (3 cartes stats En attente/Confirmés/Terminés + liste complète des RDV). Rien à faire.
@@ -233,3 +304,12 @@
 - [x] 2026-07-02 — `CRON_SECRET` défini dans Vercel.
 - [x] 2026-07-02 — Cron-job.org : `https://washboard.fr/api/cron/send-reviews` toutes les heures,
       header `Authorization: Bearer <CRON_SECRET>`.
+- [x] 2026-08-26 — **Facturation Google Cloud réactivée** (projet `washboard-496704`).
+      L'essai gratuit avait expiré le 17/08 → `REQUEST_DENIED` sur toutes les API Maps :
+      autocomplétion d'adresse, zones de couverture et frais de déplacement étaient **cassés
+      en prod**. Places / Geocoding / Distance Matrix vérifiées OK depuis.
+      Budget d'alerte « WashBoard Maps Alert » : 10€/mois, seuils 50/90/100%.
+      Note : **aucun crédit Maps récurrent** sur le compte (le crédit d'essai de 256,52€ a
+      expiré sans être consommé) — on est en compte payant, à 0€ grâce aux paliers gratuits.
+  - [ ] Vérifier que la **clé Vercel est bien la même** que celle du `.env.local`, sinon la
+        prod reste cassée pour les vrais clients.
