@@ -96,8 +96,8 @@ export default async function BookingPage({ params }: Props) {
   )
 
   const [
-    { data: existingBookings },
-    { data: unavailabilities, error: unavailabilitiesErr },
+    { data: existingBookings, error: bookingsError },
+    { data: unavailabilities, error: unavailError },
   ] = await Promise.all([
     admin
       .from('bookings')
@@ -107,16 +107,16 @@ export default async function BookingPage({ params }: Props) {
       .gte('scheduled_at', new Date().toISOString()),
     admin
       .from('unavailabilities')
-      .select('id, start_date, end_date')
+      .select('id, start_date, end_date, team_members_off')
       .eq('washer_id', washer.id),
   ])
 
-  // Sans cette trace, un echec de lecture passait pour « aucun conge » et les
-  // creneaux d'absence restaient reservables, sans le moindre signal (bug prod).
-  if (unavailabilitiesErr) {
-    logger.error('book.unavailabilities.read_failed',
-      { washerId: washer.id, slug }, unavailabilitiesErr)
-  }
+  // Ne jamais avaler ces erreurs en silence : une lecture qui échoue ici (clé
+  // service-role absente/invalide, RLS mal configurée, GRANT manquant...) retombe
+  // sur `?? []` plus bas et fait apparaître TOUS les créneaux comme libres côté
+  // client — déjà vécu en prod (double-réservation, congés ignorés). Voir TODO.md.
+  if (bookingsError) logger.error('book.bookings.fetch_failed', { washerId: washer.id, slug }, bookingsError)
+  if (unavailError) logger.error('book.unavailabilities.fetch_failed', { washerId: washer.id, slug }, unavailError)
 
   const bgStyle = getBgStyle(washer.background_theme)
   const themed  = !!bgStyle
@@ -186,7 +186,7 @@ export default async function BookingPage({ params }: Props) {
           categories={categories ?? []}
           availabilities={availabilities ?? []}
           existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; selected_addons: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }[]}
-          unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string }[]}
+          unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string; team_members_off?: number | null }[]}
           accent={washer.brand_color ?? '#2563eb'}
         />
 
