@@ -74,7 +74,27 @@
         409) — sauf le laveur (manuel = peut forcer). Logique pure testée
         (`countConflicts`, `effectiveTeamSize`) + test sur les **timestamps réels** du bug.
       - (Théorie initiale « embed services en tableau » écartée : l'embed est bien un objet.)
-  - [x] 2026-07-02 — **Audit lectures publiques RLS** : trouvé 2 bugs → `/confirmation/[id]`
+    - [x] 2026-08-26 — **FIX BUG PROD : les congés du laveur étaient ignorés côté public.**
+        Un laveur pose 2 jours de congé → les clients pouvaient quand même réserver dessus
+        (signalé par un vrai client). Cause : **`GRANT SELECT` manquant sur
+        `unavailabilities` pour `service_role`** (42501). Les deux lectures passent par le
+        service-role et faisaient `unavs ?? []` → l'erreur devenait « aucun congé » :
+        la page `/book` n'excluait pas les créneaux d'absence, **et** le garde-fou serveur
+        de `POST /api/bookings` calculait une capacité à effectif plein, donc ne bloquait pas.
+        Les deux défenses tombaient ensemble, en silence. Le laveur, lui, voyait bien ses
+        congés dans son calendrier (client authentifié → RLS normales), d'où l'invisibilité.
+        - Correctifs : `GRANT SELECT ON public.unavailabilities TO service_role;` (passé en prod),
+          erreur de lecture désormais tracée des deux côtés + **503** à la création plutôt
+          qu'une réservation posée à l'aveugle.
+        - Message du 409 corrigé : « le prestataire est absent ce jour-là » quand la capacité
+          est nulle, au lieu de « ce créneau vient d'être réservé » — sinon le client
+          réessayait tous les horaires du même jour sans jamais comprendre.
+        - Dégâts constatés : **4 réservations** acceptées pendant des congés
+          (Kookii Clean ×3, ysclean ×1). Les 2 à venir étaient des tests → sans impact client.
+        - **3ᵉ occurrence du même motif** (avec le bug RLS du 30/06 et le honeypot) :
+          lecture/rejet silencieux → valeur par défaut permissive → garde-fou désactivé
+          sans le moindre signal. Piste de fond : auditer les `?? []` et `catch` muets.
+- [x] 2026-07-02 — **Audit lectures publiques RLS** : trouvé 2 bugs → `/confirmation/[id]`
         et `/api/bookings/[id]/pdf` lisaient `bookings` avec le client **anon** → 404 sous
         RLS pour le client public. Passés en **service-role** ciblé sur l'UUID (jeton d'accès).
   - [x] 2026-06-30 — **Batterie de tests calendrier** (lib/slots) : génération de créneaux,
@@ -152,6 +172,12 @@
       mais le préfixe `NEXT_PUBLIC_` est un piège : le jour où quelqu'un la référence dans
       un composant client, elle part dans le bundle du navigateur. À changer dans le code
       **et** dans les variables Vercel.
+
+- [ ] **Auditer tous les `?? []` et `catch` muets sur des lectures critiques.** Trois bugs
+      de prod en une seule session partagent le même motif : une lecture échoue, la valeur
+      par défaut est permissive, le garde-fou se désactive **sans aucun signal**
+      (RLS 30/06, honeypot, congés 26/08). Sur une donnée qui sert à *interdire* quelque
+      chose, une lecture en échec doit refuser, pas laisser passer.
 
 - [ ] **Les routes `api/places/*` avalent l'erreur Google** et renvoient une liste vide
       (`catch { return { suggestions: [] } }`). Le 2026-08-26, l'autocomplétion était HS en
@@ -301,6 +327,11 @@
 - [ ] Vérifier que tout le SQL de la session est passé (catégories, GRANTs compta,
       account_status, plan + `grandfathered = true`, colonnes avis). Voir l'historique
       du chat pour le bloc consolidé.
+      ⚠️ Ce point traînait, et un GRANT manquant a fini par coûter un bug de prod
+      (congés ignorés, 26/08). **Auditer les droits `service_role` sur TOUTES les tables**
+      lues côté serveur, pas seulement celles qu'on soupçonne.
+- [x] 2026-08-26 — `GRANT SELECT ON public.unavailabilities TO service_role;` passé en prod
+      (lecture vérifiée OK, blocage d'un RDV en congé retesté de bout en bout → 409).
 - [x] 2026-07-02 — `CRON_SECRET` défini dans Vercel.
 - [x] 2026-07-02 — Cron-job.org : `https://washboard.fr/api/cron/send-reviews` toutes les heures,
       header `Authorization: Bearer <CRON_SECRET>`.

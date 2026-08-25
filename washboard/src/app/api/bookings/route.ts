@@ -170,8 +170,15 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     const dateStr   = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
     const capacity  = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
     if (conflicts >= capacity) {
+      // Capacité nulle = personne ne travaille ce jour-là (congé). Le dire, sinon
+      // le client réessaie tous les horaires du même jour et se heurte au même
+      // refus « créneau déjà pris » sans jamais comprendre.
       return Response.json(
-        { error: 'Ce créneau vient d\'être réservé. Merci de choisir un autre horaire.' },
+        {
+          error: capacity === 0
+            ? 'Le prestataire est absent ce jour-là. Merci de choisir une autre date.'
+            : 'Ce créneau vient d\'être réservé. Merci de choisir un autre horaire.',
+        },
         { status: 409 },
       )
     }
