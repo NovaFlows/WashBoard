@@ -383,12 +383,24 @@
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
 
-- [ ] Vérifier que tout le SQL de la session est passé (catégories, GRANTs compta,
-      account_status, plan + `grandfathered = true`, colonnes avis). Voir l'historique
-      du chat pour le bloc consolidé.
-      ⚠️ Ce point traînait, et un GRANT manquant a fini par coûter un bug de prod
-      (congés ignorés, 26/08). **Auditer les droits `service_role` sur TOUTES les tables**
-      lues côté serveur, pas seulement celles qu'on soupçonne.
+- [x] 2026-08-26 — **Audit complet des droits `service_role`, sur TOUTES les tables.**
+      Le point « vérifier que tout le SQL est passé » traînait depuis juin, et un `GRANT`
+      oublié avait déjà causé le bug des congés. Cette fois les tables ne sont plus devinées
+      à la main : elles sont énumérées via le schéma OpenAPI de PostgREST.
+  - 8 tables exposées, **2 auxquelles il manquait les droits** : `washer_expenses` et
+    `washer_recurring_expenses` (SELECT **et** DELETE refusés, `42501`).
+  - **Conséquence RGPD** : le cron de purge des comptes supprime ces tables via le
+    service-role. La suppression était refusée et l'erreur non vérifiée → les données de
+    dépenses d'un compte supprimé pouvaient survivre à la purge, sans aucune trace.
+  - `GRANT SELECT, DELETE` passés en prod le 2026-08-26. Droits revérifiés : tout est OK.
+  - **Aucune donnée n'a fuité** : 0 ligne orpheline, et aucun compte n'était encore en
+    attente de suppression. Le bug était latent, pas encore déclenché.
+  - Code corrigé : erreur vérifiée et tracée, compteur `failed` renvoyé, et en cas d'échec
+    le laveur est sauté au lieu que son compte auth soit supprimé — sinon ses lignes de
+    dépenses deviendraient orphelines et non rattachables.
+  - Purge rejouée après le GRANT : `{"ok":true,"purged":0,"failed":0}`.
+  - **4ᵉ occurrence du motif « échec silencieux »** de la journée, après le bug RLS, le
+    honeypot et les congés.
 - [x] 2026-08-26 — `GRANT SELECT ON public.unavailabilities TO service_role;` passé en prod
       (lecture vérifiée OK, blocage d'un RDV en congé retesté de bout en bout → 409).
 - [x] 2026-07-02 — `CRON_SECRET` défini dans Vercel.
