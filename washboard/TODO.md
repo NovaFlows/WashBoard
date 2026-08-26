@@ -413,5 +413,5 @@
       Budget d'alerte « WashBoard Maps Alert » : 10€/mois, seuils 50/90/100%.
       Note : **aucun crédit Maps récurrent** sur le compte (le crédit d'essai de 256,52€ a
       expiré sans être consommé) — on est en compte payant, à 0€ grâce aux paliers gratuits.
-  - [ ] Vérifier que la **clé Vercel est bien la même** que celle du `.env.local`, sinon la
-        prod reste cassée pour les vrais clients.
+  - [x] 2026-08-26 — Clé Vercel vérifiée : l'autocomplétion répond en production, la clé
+        est donc valide et facturée. Rien à changer côté Vercel pour Maps.
