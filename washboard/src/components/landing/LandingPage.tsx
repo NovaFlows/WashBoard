@@ -299,12 +299,12 @@ export default function LandingPage() {
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={40} height={40} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg shrink-0 object-contain" />
             <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">WashBoard</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
-            <Link href="/login" className="hidden sm:block text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors px-3 py-2 whitespace-nowrap">
+            <Link href="/login" className="text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors px-2 sm:px-3 py-2 whitespace-nowrap">
               Connexion
             </Link>
-            <Link href="/signup" className="px-4 py-2 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap shadow-sm shadow-[#1651E8]/20">
+            <Link href="/signup" className="px-3 sm:px-4 py-2 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap shadow-sm shadow-[#1651E8]/20">
               Essai gratuit
             </Link>
           </div>
