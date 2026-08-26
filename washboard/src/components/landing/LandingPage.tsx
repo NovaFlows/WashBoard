@@ -94,7 +94,7 @@ export default function LandingPage() {
   const [billing, setBilling] = useState<BillingCycle>('yearly')
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 overflow-x-clip">
       <style>{`
         /* Gleam sections body (fond clair) */
         .wb-gleam {
