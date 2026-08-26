@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
-  description: "WashBoard est le logiciel tout-en-un pour les laveurs auto mobiles. Réservation en ligne, gestion des clients, agenda et comptabilité. Essai gratuit 14 jours.",
-  keywords: ["lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "washboard detailing", "logiciel detailing"],
+  title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
+  description: "Le logiciel tout-en-un des laveurs auto mobiles : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
+  keywords: ["outil laveur auto mobile", "outil gestion lavage auto", "logiciel laveur auto", "lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "logiciel detailing"],
   authors: [{ name: "WashBoard" }],
   creator: "WashBoard",
   metadataBase: new URL("https://washboard.fr"),
@@ -28,13 +28,13 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://washboard.fr",
     siteName: "WashBoard",
-    title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
-    description: "Réservation en ligne, gestion clients, agenda et comptabilité pour laveurs auto mobiles. Essai gratuit 14 jours.",
+    title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
+    description: "L'outil de gestion des laveurs auto mobiles : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "WashBoard — Logiciel de gestion pour laveurs auto mobiles",
-    description: "Réservation en ligne, gestion clients, agenda et comptabilité pour laveurs auto mobiles.",
+    title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
+    description: "L'outil de gestion des laveurs auto mobiles : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
   },
   robots: {
     index: true,

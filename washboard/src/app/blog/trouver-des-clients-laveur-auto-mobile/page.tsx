@@ -118,6 +118,13 @@ export default function Page() {
 
         <H2>4. Supprimer les frictions à la réservation</H2>
         <P>
+          C&apos;est le moment où un <strong>outil de gestion pour laveur auto mobile</strong>{' '}
+          change vraiment quelque chose. Tant que vous avez trois clients par semaine, un
+          carnet suffit. Passé une dizaine de rendez-vous, le temps passé à répondre aux
+          messages, à noter les adresses et à recaler les créneaux dépasse largement celui
+          qu&apos;il faudrait pour laver une voiture de plus.
+        </P>
+        <P>
           Beaucoup de clients potentiels se perdent entre l&apos;intention et le rendez-vous. Le
           scénario classique : la personne vous envoie un message, vous répondez deux heures plus
           tard entre deux voitures, elle répond le lendemain, il faut trois allers-retours pour

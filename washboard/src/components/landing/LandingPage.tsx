@@ -456,6 +456,10 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-xl">
             L&apos;essentiel. Sans le reste.
           </h2>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+            Un seul outil pour le laveur auto mobile : la réservation, l&apos;agenda, les clients
+            et les comptes. Pas dix logiciels qui ne se parlent pas.
+          </p>
         </FadeUp>
 
         {/* Feature phare */}
