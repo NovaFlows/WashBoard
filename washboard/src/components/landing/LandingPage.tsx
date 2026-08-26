@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, YEARLY_FREE_MONTHS, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
   type BillingCycle,
@@ -93,6 +93,19 @@ export default function LandingPage() {
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [billing, setBilling] = useState<BillingCycle>('yearly')
 
+  // La nav reprend le bleu ciel du hero ; passé le hero il n'y a plus de
+  // dégradé derrière elle, elle doit donc devenir opaque. Un observateur sur
+  // une sentinelle placée en fin de hero évite d'écouter le scroll en continu.
+  const heroEnd = useRef<HTMLDivElement>(null)
+  const [pastHero, setPastHero] = useState(false)
+  useEffect(() => {
+    const cible = heroEnd.current
+    if (!cible) return
+    const obs = new IntersectionObserver(([e]) => setPastHero(!e.isIntersecting), { rootMargin: '-64px 0px 0px 0px' })
+    obs.observe(cible)
+    return () => obs.disconnect()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 overflow-x-clip">
       <style>{`
@@ -146,6 +159,17 @@ export default function LandingPage() {
         .dark .wb-nav {
           background: #09111E;
           border-bottom: none;
+        }
+        /* Passé le hero : plus de dégradé derrière la nav, elle devient opaque
+           et gagne un filet, sans quoi une nav blanche sur fond blanc serait
+           impossible à distinguer du contenu. */
+        .wb-nav-solid {
+          background: rgba(255, 255, 255, 0.92);
+          border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+        .dark .wb-nav-solid {
+          background: rgba(2, 6, 23, 0.92);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
         /* Hero — suit le thème. Dégradé vertical (et non diagonal) pour que la
            toute premiere ligne du hero soit uniforme et colle exactement a la
@@ -254,7 +278,7 @@ export default function LandingPage() {
       `}</style>
 
       {/* ── Nav ── */}
-      <nav className="wb-nav sticky top-0 z-50 backdrop-blur-md transition-colors">
+      <nav className={`wb-nav ${pastHero ? 'wb-nav-solid' : ''} sticky top-0 z-50 backdrop-blur-md transition-colors`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={40} height={40} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg shrink-0 object-contain" />
@@ -379,6 +403,8 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      <div ref={heroEnd} aria-hidden className="h-px" />
 
       {/* ── Pain points — bande toujours blanche, meme en dark mode ── */}
       <section className="relative bg-white">
