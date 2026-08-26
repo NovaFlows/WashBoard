@@ -217,11 +217,18 @@ export default function LandingPage() {
            son ciel sombre et laissait un voile gris au-dessus des nuages.
            Masque a bord serre pour couper net juste au-dessus des nuages, le
            fondu ne se fait donc que vers le bas. */
+        /* En sombre, un masque a bord net decoupait le nuage en une forme blanche
+           qui ressemblait a un dessin. Un fondu long et progressif, une hauteur
+           reduite et une opacite basse le font lire comme de l'atmosphere
+           lointaine — et il ne remonte plus jusqu'au texte. */
         .dark .wb-cloud-photo {
-          opacity: 1;
-          filter: brightness(1.06) saturate(0.7);
-          -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTEiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIxNSBMOTAsMTk2IEwxODAsMjI0IEwyNzAsMTg4IEwzNjAsMjMyIEw0NTAsMjAwIEw1NDAsMTc4IEw2MzAsMjIyIEw3MjAsMTkwIEw4MTAsMjM2IEw5MDAsMTk4IEw5OTAsMjI2IEwxMDgwLDE4NCBMMTE3MCwyMjggTDEyNjAsMTk2IEwxMzUwLDIzNCBMMTQ0MCwxOTIgTDE1MjAsMjIwIEwxNjAwLDIwMCBMMTYwMCwzNDAgTDAsMzQwIFoiLz4KPC9zdmc+Cg==');
-          mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTEiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIxNSBMOTAsMTk2IEwxODAsMjI0IEwyNzAsMTg4IEwzNjAsMjMyIEw0NTAsMjAwIEw1NDAsMTc4IEw2MzAsMjIyIEw3MjAsMTkwIEw4MTAsMjM2IEw5MDAsMTk4IEw5OTAsMjI2IEwxMDgwLDE4NCBMMTE3MCwyMjggTDEyNjAsMTk2IEwxMzUwLDIzNCBMMTQ0MCwxOTIgTDE1MjAsMjIwIEwxNjAwLDIwMCBMMTYwMCwzNDAgTDAsMzQwIFoiLz4KPC9zdmc+Cg==');
+          height: 250px;
+          opacity: 0.85;
+          filter: brightness(0.95) saturate(0.6);
+          /* Totalement transparent sur la moitie haute : le nuage ne commence
+             qu'en dessous du texte, puis monte en douceur — jamais de bord net. */
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 44%, rgba(0,0,0,0.45) 68%, rgba(0,0,0,0.85) 86%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, transparent 44%, rgba(0,0,0,0.45) 68%, rgba(0,0,0,0.85) 86%, #000 100%);
         }
         @keyframes wbCloudPhotoDrift {
           0%, 100% { background-position: center bottom; }
@@ -233,7 +240,7 @@ export default function LandingPage() {
         /* Fondu : le blanc de la section suivante remonte sur les nuages, dark mode uniquement */
         .wb-cloud-fade-white { background: none; }
         .dark .wb-cloud-fade-white {
-          background: linear-gradient(to bottom, transparent 0%, transparent 66%, #FFFFFF 100%);
+          background: linear-gradient(to bottom, transparent 0%, transparent 72%, #FFFFFF 100%);
         }
         /* Carte planning — suit le thème */
         .wb-schedule {
@@ -285,7 +292,8 @@ export default function LandingPage() {
           <div className="wb-cloud-fade-white absolute inset-x-0 bottom-0 h-[340px]" />
         </div>
 
-        <div className="relative max-w-6xl mx-auto">
+        {/* z-10 explicite : le texte doit rester au-dessus des nuages quoi qu'il arrive */}
+        <div className="relative z-10 max-w-6xl mx-auto">
           <motion.div
             initial="hidden"
             animate="visible"
