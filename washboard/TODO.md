@@ -25,9 +25,23 @@
 - [x] 2026-08-26 — Réservation de test `dbd2b4f2` supprimée chez Kooki Clean. Kookii Clean
       (le vrai client) vérifié intact : 41 réservations.
 
-- [ ] **Remplir les placeholders légaux** dès que l'entité est créée (micro-entreprise ou autre) :
-      fichiers `src/app/(legal)/mentions-legales/page.tsx`, `cgv/page.tsx`, `confidentialite/page.tsx`.
-      Remplacer `[NOM LÉGAL]`, `[FORME JURIDIQUE]`, `[SIRET]`, `[ADRESSE COMPLÈTE]`.
+- [ ] **[PLANIFIÉ DÉBUT SEPTEMBRE 2026] Remplir les placeholders légaux** dès que l'entité
+      est créée (micro-entreprise ou autre) : fichiers `src/app/(legal)/mentions-legales/page.tsx`,
+      `cgv/page.tsx`, `confidentialite/page.tsx`. Remplacer `[NOM LÉGAL]`,
+      `[FORME JURIDIQUE]`, `[SIRET]`, `[ADRESSE COMPLÈTE]`.
+
+- [ ] **[PLANIFIÉ DÉBUT SEPTEMBRE 2026] Passage de Stripe en live** (voir la mémoire
+      `project-stripe-activation.md` pour la procédure complète). Deux points à ne pas
+      oublier ce jour-là :
+  - [ ] **Les forfaits annuels n'existent pas côté Stripe.** L'engagement annuel ajouté le
+        2026-08-26 (2 mois offerts) ne concerne que le paiement manuel PayPal/virement :
+        `STRIPE_PRICE_IDS` associe **un seul prix par plan**, sans notion de cycle, et
+        `POST /api/stripe/checkout` ne reçoit pas le cycle choisi. Il faudra créer les prix
+        annuels dans Stripe, étendre `STRIPE_PRICE_IDS` en `Record<Plan, Record<BillingCycle,
+        string>>`, et transmettre le cycle depuis le `BillingToggle`. Sans ça, un client qui
+        choisit l'annuel serait facturé au mois.
+  - [ ] Supprimer `STRIPE_PRICE_ID_BUSINESS` de Vercel : le plan Business a été retiré le
+        2026-08-26, la variable ne sert plus.
 
 - [x] 2026-08-26 — **Plan Business supprimé + forfaits annuels** (remplace l'entrée du
       2026-07-01 ci-dessous, devenue caduque) :
