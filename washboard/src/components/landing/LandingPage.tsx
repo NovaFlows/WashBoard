@@ -235,15 +235,30 @@ export default function LandingPage() {
           position: absolute;
           inset: 0;
           background: linear-gradient(to bottom,
-            rgba(235,245,255,0.82) 0%,
-            rgba(238,246,255,0.5) 42%,
-            rgba(255,255,255,0.72) 100%);
+            rgba(235,245,255,0.85) 0%,
+            rgba(240,247,255,0.55) 30%,
+            rgba(248,252,255,0.3) 60%,
+            rgba(255,255,255,0.15) 100%);
         }
         .dark .wb-cloud-tint {
           background: linear-gradient(to bottom,
-            rgba(9,17,30,0.88) 0%,
-            rgba(12,29,56,0.66) 42%,
-            rgba(2,6,23,0.5) 100%);
+            rgba(9,17,30,0.9) 0%,
+            rgba(12,29,56,0.7) 30%,
+            rgba(6,16,34,0.42) 60%,
+            rgba(2,6,23,0.25) 100%);
+        }
+        /* Ecrans etroits : le hero est ~70% plus haut que sur desktop, et en
+           « cover » la photo se cale sur la hauteur — on ne voit alors qu une bande
+           de 18% de sa largeur, prise au milieu, la ou il n y a que du ciel.
+           On la zoome et on l ancre en bas pour cadrer sur les nuages. La derive
+           est coupee : elle se battrait avec ce background-position, et elle
+           n apporte rien sur mobile. */
+        @media (max-width: 640px) {
+          .wb-cloud-photo {
+            background-size: auto 155%;
+            background-position: center bottom;
+            animation: none;
+          }
         }
         @keyframes wbCloudPhotoDrift {
           0%, 100% { background-position: center 62%; }
