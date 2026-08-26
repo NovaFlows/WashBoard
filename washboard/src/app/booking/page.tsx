@@ -47,6 +47,9 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [busySlots, setBusySlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
+  // Vrai si la liste des creneaux occupes n a pas pu etre chargee : on le dit
+  // au visiteur plutot que de lui presenter toutes les heures comme libres.
+  const [slotsError, setSlotsError] = useState(false)
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -58,12 +61,18 @@ export default function BookingPage() {
 
   const fetchAvailability = useCallback(async (dateStr: string) => {
     setLoadingSlots(true)
+    setSlotsError(false)
     setBusySlots([])
     try {
       const res = await fetch(`/api/booking/availability?date=${dateStr}`)
       const data = await res.json()
       setBusySlots(data.busySlots ?? [])
-    } catch {
+    } catch (e) {
+      // Meme motif que le bug de double-reservation : une lecture qui echoue
+      // laissait tous les creneaux paraitre libres. On previent l utilisateur
+      // au lieu de lui proposer des horaires potentiellement deja pris.
+      console.error('[booking] chargement des creneaux occupes', e)
+      setSlotsError(true)
       setBusySlots([])
     } finally {
       setLoadingSlots(false)
@@ -289,6 +298,12 @@ export default function BookingPage() {
                     </div>
                   ) : (
                     <div className="space-y-5 max-h-72 overflow-y-auto pr-1">
+                      {slotsError && (
+                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+                          Les créneaux déjà pris n’ont pas pu être vérifiés. Choisissez un horaire :
+                          nous vous confirmerons sa disponibilité.
+                        </p>
+                      )}
                       {GROUPS.map(group => {
                         const times = ALL_SLOTS.filter(s => s.group === group).map(s => s.time)
                         return (

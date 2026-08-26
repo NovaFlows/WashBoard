@@ -1,4 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getMapsApiKey } from '@/lib/googleMaps'
+import { logger } from '@/lib/logger'
 
 type Tier = { max_minutes: number; fee: number }
 
@@ -68,16 +70,22 @@ export async function computeTravelFee(
   if (!origin) return 0
 
   try {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    const apiKey = getMapsApiKey()
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destinationAddress)}&mode=driving&key=${apiKey}`
     const gmData = await (await fetch(url)).json()
     const durationSec = gmData?.rows?.[0]?.elements?.[0]?.duration?.value
 
-    if (typeof durationSec !== 'number') return 0
+    if (typeof durationSec !== 'number') {
+      // Cas vecu pendant la panne de facturation Google : les frais tombaient
+      // silencieusement a 0 sur chaque reservation.
+      logger.error('travelFee.no_duration', { washerId, status: gmData?.status ?? null })
+      return 0
+    }
 
     const durationMin = durationSec / 60
     return pickTravelFee(tiers, durationMin)
-  } catch {
+  } catch (e) {
+    logger.error('travelFee.distance_matrix_failed', { washerId }, e)
     return 0
   }
 }

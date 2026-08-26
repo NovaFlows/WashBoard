@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getMapsApiKey } from '@/lib/googleMaps'
+import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { ZoneConfig } from '@/types'
 
@@ -75,14 +77,18 @@ export async function PATCH(request: NextRequest) {
     let config = zone_config as ZoneConfig
     // Pour le mode vol d'oiseau, géocoder l'adresse de base une seule fois à la sauvegarde
     if (config?.enabled && config.type === 'crow' && config.center_address) {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      const apiKey = getMapsApiKey()
       if (apiKey) {
         try {
           const url  = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(config.center_address)}&key=${apiKey}`
           const data = await (await fetch(url)).json()
           const loc  = data.results?.[0]?.geometry?.location
           if (loc) config = { ...config, center_lat: loc.lat, center_lng: loc.lng }
-        } catch { /* geocoding facultatif */ }
+        } catch (e) {
+          // Facultatif : sans coordonnees la zone retombe sur le geocodage a la
+          // volee. On trace quand meme, une panne Google se voyait autrement nulle part.
+          logger.error('washer.zone.geocode_failed', {}, e)
+        }
       }
     }
     updates.zone_config = config

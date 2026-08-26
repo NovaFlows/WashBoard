@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getMapsApiKey } from '@/lib/googleMaps'
+import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/server'
 import type { ZoneConfig } from '@/types'
 import { getDeptCodeFromPostal } from '@/lib/france-departments'
@@ -29,8 +31,11 @@ export async function GET(request: NextRequest) {
   const config = washer?.zone_config as ZoneConfig | null
   if (!config?.enabled) return NextResponse.json({ allowed: true })
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  if (!apiKey) return NextResponse.json({ allowed: true })
+  const apiKey = getMapsApiKey()
+  if (!apiKey) {
+    logger.error('zone.check.no_api_key', { washerId })
+    return NextResponse.json({ allowed: true })
+  }
 
   try {
     if (config.type === 'road') {
@@ -84,7 +89,11 @@ export async function GET(request: NextRequest) {
       if (!deptCode) return NextResponse.json({ allowed: true })
       return NextResponse.json({ allowed: config.departments.includes(deptCode), department: deptCode, department_name: deptName })
     }
-  } catch {
+  } catch (e) {
+    // Choix produit assume : en cas de panne on LAISSE PASSER plutot que de
+    // refuser un client legitime parce que Google est tombe. Mais on trace —
+    // un echec muet ici accepterait silencieusement des adresses hors zone.
+    logger.error('zone.check.failed', { washerId, address }, e)
     return NextResponse.json({ allowed: true })
   }
 

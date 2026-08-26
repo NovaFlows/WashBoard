@@ -17,6 +17,10 @@ export default function AddressAutocomplete({ value, onChange, onSelectWithCoord
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [open, setOpen]               = useState(false)
   const debounceRef                   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Jeton de session Google : cree a la premiere frappe, reutilise pour toutes
+  // les requetes de la meme saisie, puis clos par la requete de details. Google
+  // facture alors la session entiere comme une unite, au lieu de chaque frappe.
+  const sessionRef                    = useRef<string | null>(null)
   const containerRef                  = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -35,7 +39,8 @@ export default function AddressAutocomplete({ value, onChange, onSelectWithCoord
     if (val.trim().length < 3) { setSuggestions([]); setOpen(false); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res  = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(val.trim())}`)
+        sessionRef.current ??= crypto.randomUUID()
+        const res  = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(val.trim())}&session=${sessionRef.current}`)
         const data = await res.json()
         setSuggestions(data.suggestions ?? [])
         setOpen((data.suggestions ?? []).length > 0)
@@ -52,11 +57,14 @@ export default function AddressAutocomplete({ value, onChange, onSelectWithCoord
     setOpen(false)
     if (onSelectWithCoords) {
       try {
-        const res  = await fetch(`/api/places/details?placeId=${s.placeId}`)
+        const res  = await fetch(`/api/places/details?placeId=${s.placeId}&session=${sessionRef.current ?? ''}`)
         const data = await res.json()
         if (data.lat && data.lng) onSelectWithCoords(s.label, data.lat, data.lng)
       } catch {
         // coordonnées indisponibles, le label est déjà mis à jour
+      } finally {
+        // Session close cote Google : la prochaine saisie en ouvrira une nouvelle.
+        sessionRef.current = null
       }
     }
   }

@@ -66,7 +66,7 @@ describe('computeTravelFee', () => {
   const tiers = [{ max_minutes: 15, fee: 5 }, { max_minutes: 30, fee: 10 }, { max_minutes: 60, fee: 20 }]
 
   beforeEach(() => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY', 'test-key')
+    vi.stubEnv('GOOGLE_MAPS_API_KEY', 'test-key')
   })
   afterEach(() => {
     vi.unstubAllGlobals()

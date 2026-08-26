@@ -173,22 +173,50 @@
       un composant client, elle part dans le bundle du navigateur. À changer dans le code
       **et** dans les variables Vercel.
 
-- [ ] **Auditer tous les `?? []` et `catch` muets sur des lectures critiques.** Trois bugs
-      de prod en une seule session partagent le même motif : une lecture échoue, la valeur
-      par défaut est permissive, le garde-fou se désactive **sans aucun signal**
-      (RLS 30/06, honeypot, congés 26/08). Sur une donnée qui sert à *interdire* quelque
-      chose, une lecture en échec doit refuser, pas laisser passer.
+- [x] 2026-08-26 — **Audit des lectures qui échouent en silence.** Motif commun aux trois
+      bugs de prod du jour : une lecture échoue, la valeur de repli est permissive, le
+      garde-fou saute sans aucun signal. Règle retenue : sur une donnée qui sert à
+      *interdire* quelque chose, un échec doit refuser ou au minimum se voir. Corrigés :
+  - `api/bookings` : l'échec de récupération de l'email du laveur était muet — il ne
+    recevait alors **aucune notification** de sa réservation. Tracé.
+  - `booking/page.tsx` : un échec de chargement des créneaux occupés faisait paraître
+    **toutes les heures libres** (même motif que la double-réservation du 30/06).
+    Tracé, et le visiteur est prévenu au lieu de se voir proposer des horaires pris.
+  - `zone/check` : le repli « on laisse passer » est **conservé** — refuser un client
+    légitime parce que Google est tombé serait pire que d'accepter une adresse hors
+    zone — mais il est désormais tracé.
+  - `travelFee` : repli à 0 € tracé. Pendant la panne de facturation Google, les frais
+    de déplacement tombaient silencieusement à zéro sur chaque réservation.
+  - `slots/smart` et le géocodage de `washer` : pannes tracées.
+  - Laissés tels quels, à raison : `supabase/server.ts` (motif Next standard pour les
+    cookies), `googleReviews` (décoratif), `purge-accounts` (nettoyage best-effort),
+    `AddressAutocomplete` (la vraie cause est maintenant tracée côté serveur).
+  - [ ] Reste ~100 lectures Supabase dont l'`error` n'est pas récupéré. La plupart sont
+        des écrans du dashboard où un échec donne une liste vide : gênant, pas dangereux.
+        À traiter au fil de l'eau, en priorisant tout ce qui **conditionne une
+        autorisation**.
 
-- [ ] **Les routes `api/places/*` avalent l'erreur Google** et renvoient une liste vide
-      (`catch { return { suggestions: [] } }`). Le 2026-08-26, l'autocomplétion était HS en
-      prod à cause d'une facturation Google désactivée (`REQUEST_DENIED`) et ça ressemblait
-      juste à « pas de suggestions ». Logger le `status` renvoyé par Google rendrait ce type
-      de panne visible immédiatement. Même famille de bug que le honeypot et les crons
-      silencieux — chercher les autres `catch` muets.
+- [x] 2026-08-26 — **Clé Maps renommée et centralisée.** `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
+      devient `GOOGLE_MAPS_API_KEY`, lue à un seul endroit (`lib/googleMaps.ts`) au lieu de
+      six. Le helper lit le nouveau nom **avec repli sur l'ancien**, pour que le déploiement
+      ne casse rien tant que Vercel n'est pas à jour.
+  - [ ] **Renommer la variable dans Vercel**, puis supprimer le repli sur l'ancien nom.
 
-- [ ] **Optimisation coût Places** : l'autocomplétion n'utilise pas de *session token*, donc
-      Google facture **chaque requête** au lieu d'une session (frappes + détail final = 1 unité).
-      Inutile au volume actuel (~19 réservations/mois, coût 0 €), à faire si le volume monte.
+- [x] 2026-08-26 — **Les routes `api/places/*` remontent les erreurs Google.** Le helper
+      `fetchGoogleMaps` distingue une absence de résultat (`ZERO_RESULTS`, normal) d'une
+      panne (`REQUEST_DENIED`, `OVER_QUERY_LIMIT`…) et trace la seconde. 9 tests, dont un
+      qui rejoue exactement le `REQUEST_DENIED` de la facturation désactivée.
+
+- [x] 2026-08-26 — **Session tokens Places.** L'autocomplétion et la requête de détail
+      partagent un jeton par saisie : Google facture la session entière comme une unité au
+      lieu de chaque frappe. Le jeton naît à la première frappe et meurt avec la requête
+      de détail.
+
+- [x] 2026-08-26 — **`BREVO_API_KEY` documentée dans `.env.example`** : la fonctionnalité
+      SMS existait sans que la variable soit listée.
+
+- [x] 2026-08-26 — **Relance par SMS validée** (`smsSent: 1`), dernier point ouvert du test
+      des crons. Les deux canaux, avis et relance, sont désormais vérifiés de bout en bout.
 
 - [~] **Code mort / legacy** — vérifié avant suppression :
   - [x] 2026-06-29 — `src/lib/scrapeReviews.ts` supprimé (aucun import, vrai code mort)

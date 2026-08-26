@@ -194,7 +194,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
       const { data: { user: washerUser } } = await admin.auth.admin.getUserById(washer.user_id)
       washerEmail = washerUser?.email ?? null
-    } catch { /* pas bloquant */ }
+    } catch (e) {
+      // Non bloquant pour le client, mais le laveur ne sera pas prevenu de sa
+      // reservation : ca doit se voir.
+      logger.error('bookings.washer_email.lookup_failed', { washerUserId: washer.user_id }, e)
+    }
   }
 
   // Calcul des frais de déplacement (mode base ou RDV précédent)

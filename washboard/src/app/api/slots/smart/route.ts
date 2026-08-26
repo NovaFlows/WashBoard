@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getMapsApiKey } from '@/lib/googleMaps'
+import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/server'
 import { addonsDuration } from '@/lib/pricing'
 
@@ -42,8 +44,11 @@ export async function GET(request: NextRequest) {
   // Pas de RDV ce jour → aucune contrainte de trajet
   if (!bookings?.length) return NextResponse.json({ ...empty, ...config })
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  if (!apiKey) return NextResponse.json({ ...empty, ...config })
+  const apiKey = getMapsApiKey()
+  if (!apiKey) {
+    logger.error('slots.smart.no_api_key', {})
+    return NextResponse.json({ ...empty, ...config })
+  }
 
   const bookingAddrs = bookings.map(b => encodeURIComponent(b.address)).join('|')
   const newAddr      = encodeURIComponent(address)
@@ -57,7 +62,10 @@ export async function GET(request: NextRequest) {
       fetch(`${base}&origins=${newAddr}&destinations=${bookingAddrs}`),
     ])
     ;[dmToNew, dmFromNew] = await Promise.all([r1.json(), r2.json()])
-  } catch {
+  } catch (e) {
+    // Sans distances, on renvoie « aucune contrainte » plutot que de bloquer
+    // la reservation — mais la panne doit se voir.
+    logger.error('slots.smart.distance_matrix_failed', {}, e)
     return NextResponse.json({ ...empty, ...config })
   }
 
