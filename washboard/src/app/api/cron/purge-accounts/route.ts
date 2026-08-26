@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 // Purge définitive des comptes dont la suppression a été demandée il y a plus
 // de 30 jours. Appelée quotidiennement par Vercel Cron (voir vercel.json).
@@ -30,10 +31,26 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   let purged = 0
+  let failed = 0
   for (const w of toPurge ?? []) {
-    // 1. Dépenses (au cas où elles ne se cascadent pas via le washer)
-    await admin.from('washer_expenses').delete().eq('washer_id', w.id)
-    await admin.from('washer_recurring_expenses').delete().eq('washer_id', w.id)
+    // 1. Dépenses (au cas où elles ne se cascadent pas via le washer).
+    //
+    // L'échec était avalé : le service_role n'avait pas le droit de supprimer
+    // ces tables (42501), donc les données de dépenses d'un compte supprimé
+    // pouvaient survivre à la purge RGPD sans que personne ne le sache.
+    // On saute ce laveur plutôt que de supprimer son compte auth : sans le
+    // washer, ces lignes deviendraient orphelines et non rattachables. La purge
+    // reessaiera au prochain passage.
+    const depenses = await Promise.all([
+      admin.from('washer_expenses').delete().eq('washer_id', w.id),
+      admin.from('washer_recurring_expenses').delete().eq('washer_id', w.id),
+    ])
+    const echec = depenses.find(r => r.error)
+    if (echec?.error) {
+      logger.error('purge.expenses.delete_failed', { washerId: w.id }, echec.error)
+      failed++
+      continue
+    }
 
     // 2. Logo dans le storage (best-effort)
     if (w.logo_url) {
@@ -46,12 +63,16 @@ export async function GET(request: NextRequest) {
     // 3. Utilisateur auth → cascade sur washers + services/bookings/dispos/catégories
     if (w.user_id) {
       const { error: delErr } = await admin.auth.admin.deleteUser(w.user_id)
-      if (delErr) { console.error('[purge] deleteUser', w.user_id, delErr.message); continue }
+      if (delErr) {
+        logger.error('purge.delete_user_failed', { washerId: w.id, userId: w.user_id }, delErr)
+        failed++
+        continue
+      }
     } else {
       await admin.from('washers').delete().eq('id', w.id)
     }
     purged++
   }
 
-  return NextResponse.json({ ok: true, purged })
+  return NextResponse.json({ ok: failed === 0, purged, failed })
 }
