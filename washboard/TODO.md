@@ -19,12 +19,8 @@
       ont été conservés (voir la section « Priorité haute » plus bas). Le mode test des
       crons est donc disponible en prod.
 
-- [ ] **Finir le test de la relance par SMS.** L'avis par SMS est validé
-      (reçu le 2026-08-26 à 01h via le cron de prod). La relance, elle, n'a été testée
-      qu'en **email** : `BREVO_API_KEY` n'est pas dans `.env.local` (uniquement sur Vercel),
-      donc l'envoi SMS échouait en local. La réservation de test `dbd2b4f2` a été remise
-      éligible (`followup_sent_at = null`) → soit copier la clé Brevo en local, soit
-      laisser le cron de prod la traiter.
+- [x] 2026-08-26 — **Relance par SMS validée** (smsSent: 1) apres ajout de BREVO_API_KEY
+      en local. Les deux canaux, avis et relance, sont verifies de bout en bout.
 
 - [ ] **Nettoyer la réservation de test `dbd2b4f2`** chez Kooki Clean une fois le test SMS
       terminé (sa `scheduled_at` a été reculée au 2026-08-25 21:11 pour rendre la relance
@@ -167,11 +163,7 @@
 
 ## 🟠 Robustesse / dette technique
 
-- [ ] **Renommer `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` → `GOOGLE_MAPS_API_KEY`.** La clé n'est
-      utilisée que côté serveur (routes `places/*`, `zone/check`, `slots/smart`, `washer`),
-      mais le préfixe `NEXT_PUBLIC_` est un piège : le jour où quelqu'un la référence dans
-      un composant client, elle part dans le bundle du navigateur. À changer dans le code
-      **et** dans les variables Vercel.
+- [x] 2026-08-26 — Cle Maps renommee cote code (voir plus bas). Reste le renommage Vercel.
 
 - [x] 2026-08-26 — **Audit des lectures qui échouent en silence.** Motif commun aux trois
       bugs de prod du jour : une lecture échoue, la valeur de repli est permissive, le
