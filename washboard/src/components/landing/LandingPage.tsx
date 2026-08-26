@@ -189,58 +189,52 @@ export default function LandingPage() {
           0%, 100% { opacity: 0.65; }
           50% { opacity: 1; }
         }
-        /* Vraie photo (vue aérienne au-dessus des nuages, dégradé bleu) —
-           les tentatives en CSS pur (radial-gradient) ne pouvaient jamais
-           ressembler à une vraie texture de nuage : mauvais medium. Fondu
-           en haut pour se fondre dans le dégradé du hero, léger drift du
-           cadrage pour donner une impression de mouvement lent. */
+        /* Photo de ciel en FOND du hero entier (comme peekly.app), et non une
+           bande en bas : c'est l'arriere-plan qui porte l'ambiance, le contenu
+           passe par-dessus. Cadrage qui derive tres lentement, pour du mouvement
+           sans distraction. */
         .wb-cloud-photo {
           position: absolute;
-          left: -5%; right: -5%; bottom: 0;
-          height: 340px;
+          inset: 0;
           background-image: url('/hero-clouds.jpg');
-          background-size: 130% auto;
-          background-position: center bottom;
-          opacity: 1;
-          /* Remonte les blancs de la photo sans la delaver completement */
-          filter: brightness(1.18) saturate(0.75);
-          -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMjYiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIwNSBMMTIwLDE4MCBMMjQwLDIzMCBMMzYwLDE3MCBMNDgwLDI0NSBMNjAwLDE5NSBMNzIwLDE2MCBMODQwLDIyNSBMOTYwLDE4NSBMMTA4MCwyNDAgTDEyMDAsMTc1IEwxMzIwLDIxNSBMMTQ0MCwxNjUgTDE2MDAsMjI1IEwxNjAwLDMwMCBMMTQ0MCwyNzAgTDEzMjAsMzEwIEwxMjAwLDI3NSBMMTA4MCwzMTUgTDk2MCwyODAgTDg0MCwyNTggTDcyMCwzMDUgTDYwMCwyNzggTDQ4MCwzMTIgTDM2MCwyNjUgTDI0MCwzMDAgTDEyMCwyNzIgTDAsMjk1IFoiLz4KPC9zdmc+Cg==');
-          mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDM0MCI+CiAgPGZpbHRlciBpZD0iYiI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMjYiLz48L2ZpbHRlcj4KICA8cGF0aCBmaWx0ZXI9InVybCgjYikiIGZpbGw9IiNmZmYiIGQ9Ik0wLDIwNSBMMTIwLDE4MCBMMjQwLDIzMCBMMzYwLDE3MCBMNDgwLDI0NSBMNjAwLDE5NSBMNzIwLDE2MCBMODQwLDIyNSBMOTYwLDE4NSBMMTA4MCwyNDAgTDEyMDAsMTc1IEwxMzIwLDIxNSBMMTQ0MCwxNjUgTDE2MDAsMjI1IEwxNjAwLDMwMCBMMTQ0MCwyNzAgTDEzMjAsMzEwIEwxMjAwLDI3NSBMMTA4MCwzMTUgTDk2MCwyODAgTDg0MCwyNTggTDcyMCwzMDUgTDYwMCwyNzggTDQ4MCwzMTIgTDM2MCwyNjUgTDI0MCwzMDAgTDEyMCwyNzIgTDAsMjk1IFoiLz4KPC9zdmc+Cg==');
-          mask-size: 100% 100%;
-          mask-repeat: no-repeat;
-          -webkit-mask-size: 100% 100%;
-          -webkit-mask-repeat: no-repeat;
-          animation: wbCloudPhotoDrift 90s ease-in-out infinite;
+          background-size: cover;
+          background-position: center 62%;
+          animation: wbCloudPhotoDrift 110s ease-in-out infinite;
         }
-        /* En sombre on reprend la meme photo diurne (nuages deja blancs) : la
-           photo de nuit obligeait a monter brightness, ce qui remontait aussi
-           son ciel sombre et laissait un voile gris au-dessus des nuages.
-           Masque a bord serre pour couper net juste au-dessus des nuages, le
-           fondu ne se fait donc que vers le bas. */
-        /* En sombre, un masque a bord net decoupait le nuage en une forme blanche
-           qui ressemblait a un dessin. Un fondu long et progressif, une hauteur
-           reduite et une opacite basse le font lire comme de l'atmosphere
-           lointaine — et il ne remonte plus jusqu'au texte. */
         .dark .wb-cloud-photo {
-          height: 250px;
-          opacity: 0.85;
-          filter: brightness(0.95) saturate(0.6);
-          /* Totalement transparent sur la moitie haute : le nuage ne commence
-             qu'en dessous du texte, puis monte en douceur — jamais de bord net. */
-          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 44%, rgba(0,0,0,0.45) 68%, rgba(0,0,0,0.85) 86%, #000 100%);
-          mask-image: linear-gradient(to bottom, transparent 0%, transparent 44%, rgba(0,0,0,0.45) 68%, rgba(0,0,0,0.85) 86%, #000 100%);
+          filter: brightness(0.6) saturate(0.45) contrast(1.05);
+        }
+        /* Voile teinte par-dessus la photo : ramene le ciel aux couleurs de la
+           marque et garantit le contraste du texte, quelle que soit la zone de
+           l'image qui se trouve derriere. */
+        .wb-cloud-tint {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to bottom,
+            rgba(235,245,255,0.82) 0%,
+            rgba(238,246,255,0.5) 42%,
+            rgba(255,255,255,0.72) 100%);
+        }
+        .dark .wb-cloud-tint {
+          background: linear-gradient(to bottom,
+            rgba(9,17,30,0.88) 0%,
+            rgba(12,29,56,0.66) 42%,
+            rgba(2,6,23,0.5) 100%);
         }
         @keyframes wbCloudPhotoDrift {
-          0%, 100% { background-position: center bottom; }
-          50% { background-position: 60% bottom; }
+          0%, 100% { background-position: center 62%; }
+          50% { background-position: 56% 56%; }
         }
         @media (prefers-reduced-motion: reduce) {
           .wb-stars, .wb-cloud-photo { animation: none; }
         }
-        /* Fondu : le blanc de la section suivante remonte sur les nuages, dark mode uniquement */
-        .wb-cloud-fade-white { background: none; }
+        /* Raccord vers la section blanche qui suit : la photo descend jusqu'en
+           bas du hero, le fondu est donc necessaire dans les deux themes. */
+        .wb-cloud-fade-white {
+          background: linear-gradient(to bottom, transparent 0%, transparent 58%, #FFFFFF 100%);
+        }
         .dark .wb-cloud-fade-white {
-          background: linear-gradient(to bottom, transparent 0%, transparent 72%, #FFFFFF 100%);
+          background: linear-gradient(to bottom, transparent 0%, transparent 64%, #FFFFFF 100%);
         }
         /* Carte planning — suit le thème */
         .wb-schedule {
@@ -287,8 +281,9 @@ export default function LandingPage() {
 
         {/* TEST — nuages (clair + sombre) et étoiles (sombre uniquement) */}
         <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="wb-stars hidden dark:block" />
           <div className="wb-cloud-photo" />
+          <div className="wb-cloud-tint" />
+          <div className="wb-stars hidden dark:block" />
           <div className="wb-cloud-fade-white absolute inset-x-0 bottom-0 h-[340px]" />
         </div>
 
