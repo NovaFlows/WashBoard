@@ -22,9 +22,8 @@
 - [x] 2026-08-26 — **Relance par SMS validée** (smsSent: 1) apres ajout de BREVO_API_KEY
       en local. Les deux canaux, avis et relance, sont verifies de bout en bout.
 
-- [ ] **Nettoyer la réservation de test `dbd2b4f2`** chez Kooki Clean une fois le test SMS
-      terminé (sa `scheduled_at` a été reculée au 2026-08-25 21:11 pour rendre la relance
-      éligible — donnée faussée si on la laisse).
+- [x] 2026-08-26 — Réservation de test `dbd2b4f2` supprimée chez Kooki Clean. Kookii Clean
+      (le vrai client) vérifié intact : 41 réservations.
 
 - [ ] **Remplir les placeholders légaux** dès que l'entité est créée (micro-entreprise ou autre) :
       fichiers `src/app/(legal)/mentions-legales/page.tsx`, `cgv/page.tsx`, `confidentialite/page.tsx`.
@@ -248,8 +247,14 @@
       (trouver des clients, tarifs, se lancer, organiser ses tournées). Index des articles
       centralisé dans `lib/blog.ts`, dont le sitemap est dérivé — publier un article suffit
       à le référencer. Métadonnées complètes + données structurées Article schema.org.
-  - [ ] **Soumettre le sitemap dans la Google Search Console** — sans ça, l'indexation
-        peut prendre des semaines.
+  - [x] 2026-08-26 — **Sitemap soumis** dans la Search Console (propriete www) :
+        « Operation effectuee », 7 URL decouvertes.
+  - [x] 2026-08-26 — **FIX SEO : canonical et sitemap etaient en non-www** alors que le
+        serveur redirige washboard.fr vers www en 308. Google recevait des signaux
+        contradictoires et chaque URL du sitemap coutait une redirection. metadataBase,
+        openGraph, robots.txt, SITE_URL et les liens des emails passes en www.
+  - [ ] Dans une semaine : regarder **Performances** (requetes reelles) pour choisir les
+        prochains articles, et **Pages > Non indexees** pour reperer un probleme technique.
   - [ ] Publier régulièrement : un article isolé ne construit pas d'autorité. Sujets
         candidats : matériel de départ, lavage sans eau, clients professionnels.
   - [ ] Relire les fourchettes de prix de l'article tarifs avec l'expérience terrain
