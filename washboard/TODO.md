@@ -7,17 +7,17 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-08-26 (suppression du plan Business + forfaits annuels,
-> mode test des crons, fix honeypot, refonte hero)
+> Dernière mise à jour : 2026-08-26 (blog SEO, centre d'aide, fiche client, hero + nav ;
+> et plus tôt : plan Business retiré, forfaits annuels, mode test des crons, 2 bugs prod)
 
 ---
 
 ## 🔴 Priorité haute
 
-- [ ] **Pousser la branche `feat/refonte-hero-et-forfaits`** (6 commits, non poussée à la
-      demande d'Alexandre : son associé travaille en parallèle sur master).
-      Tant qu'elle n'est pas déployée, le **mode test des crons n'existe pas en prod** →
-      impossible de déclencher un job à la demande, on dépend de l'horaire planifié.
+- [x] 2026-08-26 — **Branche `feat/refonte-hero-et-forfaits` poussée puis mergée sur master.**
+      Yanis avait corrigé le bug des congés de son côté en parallèle : les deux correctifs
+      ont été conservés (voir la section « Priorité haute » plus bas). Le mode test des
+      crons est donc disponible en prod.
 
 - [ ] **Finir le test de la relance par SMS.** L'avis par SMS est validé
       (reçu le 2026-08-26 à 01h via le cron de prod). La relance, elle, n'a été testée
@@ -224,6 +224,33 @@
 
 ## 🟡 Roadmap produit
 
+- [x] 2026-08-26 — **Blog SEO** : section `/blog` + 4 articles formant un cluster
+      (trouver des clients, tarifs, se lancer, organiser ses tournées). Index des articles
+      centralisé dans `lib/blog.ts`, dont le sitemap est dérivé — publier un article suffit
+      à le référencer. Métadonnées complètes + données structurées Article schema.org.
+  - [ ] **Soumettre le sitemap dans la Google Search Console** — sans ça, l'indexation
+        peut prendre des semaines.
+  - [ ] Publier régulièrement : un article isolé ne construit pas d'autorité. Sujets
+        candidats : matériel de départ, lavage sans eau, clients professionnels.
+  - [ ] Relire les fourchettes de prix de l'article tarifs avec l'expérience terrain
+        d'Alexandre — ce sont des ordres de grandeur, pas des chiffres sourcés.
+
+- [x] 2026-08-26 — **Centre d'aide dans l'espace connecté** (`/dashboard/guide`) :
+      barre de recherche (accents, casse et pluriel tolérés, tous les mots doivent
+      correspondre), 5 sections, 16 réponses, liens internes en bleu vers la bonne page.
+      Contenu et recherche dans `lib/guide.ts`, hors du composant. 14 tests, dont un qui
+      verrouille la validité de tous les liens internes.
+  - [ ] Relire le contenu : il a été écrit d'après les intitulés lus dans le code, pas
+        en manipulant l'interface. À confronter à la réalité écran par écran.
+
+- [x] 2026-08-26 — **Fiche client dans le CRM** : clic sur la pastille (initiale) →
+      coordonnées, adresses, nombre de lavages, CA, panier moyen, historique complet,
+      alerte si le client n'est pas revenu depuis 90 jours. Aucune requête supplémentaire,
+      agrégation pure dans `lib/clientProfile.ts` (11 tests). Regroupement sur l'email et
+      non le nom ; les annulations ne comptent ni dans le CA ni comme visite.
+  - [ ] Vérifier les chiffres sur un vrai client : c'est là qu'une erreur d'agrégation
+        se verrait.
+
 - [x] 2026-07-02 — **Stripe** : abonnement automatisé (checkout + portail + webhook),
       essai avec facturation différée, résiliation programmée, bandeaux d'état.
       Audit sécurité/fiabilité fait : blocage comingSoon + grandfathered côté serveur,
@@ -290,6 +317,18 @@
   - [x] 2026-07-02 — `aria-label` sur boutons icône-seule (+/- véhicules, fermer menu),
         `aria-hidden` sur les icônes décoratives, `aria-live` sur le compteur véhicules.
   - [ ] Reste : focus-visible cohérent, contrastes, navigation clavier complète.
+
+- [x] 2026-08-26 — **Hero : le ciel devient le fond**, photo en `cover` sur toute la hauteur
+      avec un voile teinté par-dessus pour le contraste du texte (au lieu d'une bande de
+      nuages en bas, qui ressemblait à un dessin et mordait sur le texte).
+- [x] 2026-08-26 — **FIX : la nav ne restait pas visible au scroll.** Elle était bien en
+      `position: sticky`, mais le conteneur parent portait `overflow-x-hidden` — un overflow
+      autre que `visible` fait de l'élément un conteneur de défilement, et le sticky se cale
+      dessus. `overflow-x-clip` coupe sans créer ce conteneur. Débordement horizontal
+      revérifié nul en 1400px comme en 390px.
+- [x] 2026-08-26 — **La nav devient opaque passé le hero** (blanche en clair, fond de page
+      en sombre) avec un filet : sans lui, une nav blanche sur contenu blanc serait
+      indistinguable. Détection par IntersectionObserver, pas par écouteur de scroll.
 - [x] 2026-07-02 — **États de chargement** harmonisés : composant partagé
       `ui/Spinner.tsx`, 8 spinners SVG dupliqués factorisés (auth, AbonnementPanel,
       StepContact, CrmDashboard).
