@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/dashboard/', '/api/', '/login', '/register'],
     },
-    sitemap: 'https://washboard.fr/sitemap.xml',
+    sitemap: 'https://www.washboard.fr/sitemap.xml',
   }
 }

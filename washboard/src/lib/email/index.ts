@@ -428,7 +428,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const time          = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
-  const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://washboard.fr'}/dashboard`
+  const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'}/dashboard`
   const vehicleContent3 = params.vehiclesDetail?.length
     ? vehiclesHtml(params.vehiclesDetail)
     : (formatVehicle(params.vehicleType, params.vehicleCount) ?? null)

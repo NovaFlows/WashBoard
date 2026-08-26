@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const origin = (
     req.headers.get('origin') ??
     process.env.NEXT_PUBLIC_APP_URL ??
-    'https://washboard.fr'
+    'https://www.washboard.fr'
   ).replace(/\/$/, '')
 
   const { data, error } = await admin.auth.admin.generateLink({

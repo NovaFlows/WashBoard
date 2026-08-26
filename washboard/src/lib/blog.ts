@@ -14,7 +14,7 @@ export type Article = {
   readingMinutes: number
 }
 
-export const SITE_URL = 'https://washboard.fr'
+export const SITE_URL = 'https://www.washboard.fr'
 
 export const ARTICLES: Article[] = [
   {
