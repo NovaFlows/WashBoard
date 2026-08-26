@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { H2, P, UL, Callout, ArticleHeader, Cta, AlsoRead, ArticleJsonLd } from '@/components/blog/Prose'
 
 const article = getArticle('trouver-des-clients-laveur-auto-mobile')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -24,78 +25,15 @@ export const metadata: Metadata = {
   },
 }
 
-// Données structurées : permettent à Google d'afficher la date et l'auteur, et
-// de comprendre que la page est un article de fond et non une page produit.
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Article',
-  headline: article.title,
-  description: article.description,
-  datePublished: article.publishedAt,
-  dateModified: article.updatedAt,
-  mainEntityOfPage: { '@type': 'WebPage', '@id': url },
-  author: { '@type': 'Organization', name: 'WashBoard', url: SITE_URL },
-  publisher: {
-    '@type': 'Organization',
-    name: 'WashBoard',
-    url: SITE_URL,
-    logo: { '@type': 'ImageObject', url: `${SITE_URL}/LogoWashBoard.png` },
-  },
-}
-
-function H2({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-2xl font-black tracking-tight text-balance mt-12 mb-4 scroll-mt-20">
-      {children}
-    </h2>
-  )
-}
-
-function P({ children }: { children: React.ReactNode }) {
-  return <p className="text-slate-700 dark:text-slate-300 leading-[1.75] mb-4">{children}</p>
-}
-
-function UL({ children }: { children: React.ReactNode }) {
-  return (
-    <ul className="list-disc pl-5 space-y-2 mb-5 text-slate-700 dark:text-slate-300 leading-[1.7] marker:text-slate-400 dark:marker:text-slate-600">
-      {children}
-    </ul>
-  )
-}
-
-function Callout({ children }: { children: React.ReactNode }) {
-  return (
-    <aside className="my-7 p-5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-      <div className="text-[0.95rem] text-slate-700 dark:text-slate-300 leading-[1.7] [&>p:last-child]:mb-0">
-        {children}
-      </div>
-    </aside>
-  )
-}
-
-export default function Article() {
+export default function Page() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-
+      <ArticleJsonLd article={article} siteUrl={SITE_URL} />
       <article>
-        <header className="mb-10 pb-8 border-b border-slate-200 dark:border-slate-800">
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 tabular-nums">
-            <time dateTime={article.publishedAt}>26 août 2026</time>
-            {' · '}{article.readingMinutes} min de lecture
-          </p>
-          <h1 className="text-3xl sm:text-[2.6rem] font-black tracking-tight leading-[1.1] text-balance mb-4">
-            {article.title}
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
-            Le nerf de la guerre en lavage auto à domicile, ce n&apos;est pas le matériel ni la
-            technique. C&apos;est de remplir l&apos;agenda toutes les semaines, pas seulement les
-            bonnes. Voici les canaux qui marchent vraiment, classés par rapport effort/résultat.
-          </p>
-        </header>
+        <ArticleHeader
+          article={article}
+          intro="Le nerf de la guerre en lavage auto à domicile, ce n'est pas le matériel ni la technique. C'est de remplir l'agenda toutes les semaines, pas seulement les bonnes. Voici les canaux qui marchent vraiment, classés par rapport effort/résultat."
+        />
 
         <P>
           La plupart des laveurs auto mobiles démarrent avec le bouche-à-oreille : la famille, les
@@ -274,23 +212,19 @@ export default function Article() {
           finissent par les automatiser.
         </P>
 
-        <div className="mt-12 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <h2 className="text-xl font-black tracking-tight mb-2">
-            Lave plus. Roule moins.
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
-            WashBoard s&apos;occupe des réservations, groupe vos rendez-vous par quartier, demande
-            les avis à votre place et relance vos anciens clients. Vous lavez des voitures, on gère
-            le reste.
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block px-5 py-3 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
-          >
-            Lancer mon mois gratuit
-          </Link>
-          <p className="text-xs text-slate-400 mt-3">Sans engagement · Sans carte bancaire</p>
-        </div>
+        <Cta title="Lave plus. Roule moins.">
+          WashBoard s&apos;occupe des réservations, groupe vos rendez-vous par quartier, demande
+          les avis à votre place et relance vos anciens clients. Vous lavez des voitures, on gère
+          le reste.
+        </Cta>
+
+        <AlsoRead
+          items={[
+            { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
+            { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
+            { href: '/blog/devenir-laveur-auto-mobile', label: 'Devenir laveur auto mobile : par où commencer' },
+          ]}
+        />
       </article>
     </>
   )
