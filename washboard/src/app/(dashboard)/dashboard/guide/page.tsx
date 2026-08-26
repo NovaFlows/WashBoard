@@ -29,17 +29,19 @@ export default async function GuidePage() {
           </p>
         </div>
 
-        <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg mb-10">
-          <video
-            src="/tuto.mp4"
-            controls
-            playsInline
-            className="w-full block"
-            style={{ aspectRatio: '16/9', background: '#09111E' }}
-          />
-        </div>
-
-        <GuideContent />
+        <GuideContent
+          intro={
+            <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg mb-10">
+              <video
+                src="/tuto.mp4"
+                controls
+                playsInline
+                className="w-full block"
+                style={{ aspectRatio: '16/9', background: '#09111E' }}
+              />
+            </div>
+          }
+        />
       </div>
     </DashboardShell>
   )

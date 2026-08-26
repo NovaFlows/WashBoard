@@ -42,7 +42,12 @@ function EntryCard({ entry }: { entry: GuideEntry }) {
   )
 }
 
-export default function GuideContent() {
+/**
+ * @param intro  Contenu affiche entre la recherche et les sections (la video
+ *               tuto). Masque des qu une recherche est active : on veut les
+ *               reponses, pas un lecteur video a faire defiler.
+ */
+export default function GuideContent({ intro }: { intro?: React.ReactNode }) {
   const [query, setQuery] = useState('')
 
   const sections = useMemo(() => searchGuide(query), [query])
@@ -77,6 +82,8 @@ export default function GuideContent() {
             : `${total} réponse${total > 1 ? 's' : ''} pour « ${query.trim()} »`}
         </p>
       )}
+
+      {!query.trim() && intro}
 
       {total === 0 && query.trim() ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center">

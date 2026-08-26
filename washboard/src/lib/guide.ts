@@ -122,8 +122,8 @@ export const GUIDE: GuideSection[] = [
         id: 'crm',
         question: 'Où retrouver l’historique d’un client ?',
         answer:
-          "Dans le [CRM](/dashboard/crm). Chaque client y figure avec ses coordonnées, ses rendez-vous passés, le chiffre d'affaires qu'il représente et vos notes. C'est utile avant une intervention : vous savez ce que vous avez déjà fait sur son véhicule.",
-        keywords: ['client', 'historique', 'fiche', 'contact', 'note'],
+          "Dans le [CRM](/dashboard/crm), cliquez sur la pastille ronde avec l'initiale du client, à gauche de son nom. Sa fiche s'ouvre : coordonnées, adresses utilisées, nombre de lavages, chiffre d'affaires, panier moyen et historique complet de ses rendez-vous. Si le client n'est pas revenu depuis plus de trois mois, la fiche vous le signale.",
+        keywords: ['client', 'historique', 'fiche', 'contact', 'pastille', 'initiale', 'profil'],
       },
       {
         id: 'avis',

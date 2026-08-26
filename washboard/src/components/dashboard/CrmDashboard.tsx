@@ -8,6 +8,8 @@ import {
 } from 'recharts'
 import { Hourglass, ClipboardList, Euro, CheckCircle2, BarChart3, Building2, type LucideIcon } from 'lucide-react'
 import { Spinner } from '@/components/ui/Spinner'
+import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
+import { buildClientProfile } from '@/lib/clientProfile'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type Booking = {
@@ -211,6 +213,10 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
   const [selectedDay,       setSelectedDay]       = useState(() => {
     const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`
   })
+
+  // Email du client dont la fiche est ouverte (null = aucune).
+  const [openClient, setOpenClient] = useState<string | null>(null)
+  const openProfile = openClient ? buildClientProfile(bookings, openClient) : null
 
   const availableYears = [...new Set(bookings.map(b => new Date(b.scheduled_at).getFullYear()))].sort((a, b) => b - a)
 
@@ -784,9 +790,15 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
               const date = new Date(b.scheduled_at)
               return (
                 <div key={b.id} className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-500 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setOpenClient(b.client_email)}
+                    aria-label={`Voir la fiche de ${b.client_name}`}
+                    title="Voir la fiche client"
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-500 shrink-0 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8]"
+                  >
                     {b.is_professional ? <Building2 size={16} strokeWidth={2} /> : b.client_name.charAt(0).toUpperCase()}
-                  </div>
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
@@ -810,6 +822,10 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
           </div>
         )}
       </div>
+
+      {openProfile && (
+        <ClientProfileModal profile={openProfile} onClose={() => setOpenClient(null)} />
+      )}
     </div>
   )
 }
