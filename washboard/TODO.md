@@ -14,6 +14,16 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **Mettre à jour Next.js (16.2.6 → 16.3.3+) : 9 vulnérabilités connues, dont une
+      haute.** Trouvé par l'agent cyber le 2026-08-27 via `npm audit --omit=dev`. La plus
+      grave : divulgation non authentifiée d'endpoints Server Function (corrigée en
+      16.3.3). 3 modérées, 6 hautes au total, la plupart via la chaîne de dépendances de
+      Next.js (postcss, sharp, nanoid, brace-expansion).
+      ⚠️ Ne pas lancer `npm audit fix --force` à l'aveugle : ce projet a un Next.js
+      **modifié par rapport au standard** (voir `AGENTS.md`), une montée de version
+      majeure peut casser des choses de façon non triviale. Faire évaluer l'ampleur
+      réelle par l'agent cyber puis tester avant de merger.
+
 - [x] 2026-08-26 — **Branche `feat/refonte-hero-et-forfaits` poussée puis mergée sur master.**
       Yanis avait corrigé le bug des congés de son côté en parallèle : les deux correctifs
       ont été conservés (voir la section « Priorité haute » plus bas). Le mode test des
