@@ -52,7 +52,6 @@ CREATE POLICY "Laveur lit ses propres evenements d'entonnoir" ON booking_funnel_
 
 -- Purge automatique : ces événements n'ont de valeur que récente (analyse de
 -- l'entonnoir des dernières semaines), pas d'intérêt à les garder indéfiniment
--- ni de raison RGPD de le faire. À rattacher au même mécanisme que la purge
--- RGPD existante (voir /api/cron/purge-accounts) plutôt qu'un cron séparé —
--- suggestion : supprimer les lignes de plus de 13 mois (recommandation CNIL
--- pour les données de mesure d'audience), TODO à part si on veut l'automatiser.
+-- ni de raison RGPD de le faire. Suppression des lignes de plus de 13 mois
+-- (recommandation CNIL pour les données de mesure d'audience), rattachée au
+-- cron quotidien /api/cron/purge-accounts (voir route.ts).

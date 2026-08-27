@@ -6,7 +6,14 @@ import { logger } from '@/lib/logger'
 // de 30 jours. Appelée quotidiennement par Vercel Cron (voir vercel.json).
 // Vercel ajoute automatiquement l'en-tête « Authorization: Bearer <CRON_SECRET> »
 // si la variable d'environnement CRON_SECRET est définie.
+//
+// Fait aussi office de purge RGPD pour `booking_funnel_events` (recommandation
+// CNIL : 13 mois max pour des données de mesure d'audience). Rattachée ici
+// plutôt qu'à un cron dédié : même nature (purge programmée, service-role,
+// déjà planifiée quotidiennement dans vercel.json), et créer une seconde
+// entrée de cron pour quelques lignes de purge serait disproportionné.
 const GRACE_DAYS = 30
+const FUNNEL_EVENTS_RETENTION_MONTHS = 13
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET
@@ -19,6 +26,20 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+
+  // Purge des événements d'entonnoir de plus de 13 mois, indépendamment du
+  // statut des comptes : cette rétention s'applique à tous les laveurs, pas
+  // seulement à ceux en cours de suppression.
+  const funnelCutoff = new Date()
+  funnelCutoff.setMonth(funnelCutoff.getMonth() - FUNNEL_EVENTS_RETENTION_MONTHS)
+  const { error: funnelPurgeError, count: funnelPurged } = await admin
+    .from('booking_funnel_events')
+    .delete({ count: 'exact' })
+    .lt('created_at', funnelCutoff.toISOString())
+
+  if (funnelPurgeError) {
+    logger.error('purge.funnel_events.delete_failed', {}, funnelPurgeError)
+  }
 
   const cutoff = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
@@ -74,5 +95,10 @@ export async function GET(request: NextRequest) {
     purged++
   }
 
-  return NextResponse.json({ ok: failed === 0, purged, failed })
+  return NextResponse.json({
+    ok: failed === 0 && !funnelPurgeError,
+    purged,
+    failed,
+    funnelEventsPurged: funnelPurged ?? 0,
+  })
 }

@@ -4,6 +4,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmDashboard from '@/components/dashboard/CrmDashboard'
 import VisitFunnel from '@/components/dashboard/VisitFunnel'
 import { buildFunnelSummary } from '@/lib/funnelStats'
+import { logger } from '@/lib/logger'
 
 const FUNNEL_WINDOW_DAYS = 30
 
@@ -24,11 +25,15 @@ export default async function CrmPage() {
 
   const since = new Date()
   since.setDate(since.getDate() - FUNNEL_WINDOW_DAYS)
-  const { data: funnelEvents } = await supabase
+  const { data: funnelEvents, error: funnelError } = await supabase
     .from('booking_funnel_events')
     .select('step, session_id')
     .eq('washer_id', washer.id)
     .gte('created_at', since.toISOString())
+
+  // Sans trace ici, un `?? []` silencieux ferait apparaître un entonnoir vide
+  // sans que personne ne remarque que la lecture a échoué (RLS, GRANT...).
+  if (funnelError) logger.warn('crm.funnel_events.fetch_failed', { washerId: washer.id }, funnelError)
   const funnelStats = buildFunnelSummary(funnelEvents ?? [])
 
   return (
