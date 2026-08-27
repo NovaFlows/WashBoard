@@ -7,6 +7,9 @@
 // Les laveurs `grandfathered` (clients historiques) ont tout débloqué quel
 // que soit leur plan, pour ne jamais leur retirer un acquis.
 
+/** Domaine servi en production (celui vers lequel washboard.fr redirige). */
+export const SITE_URL_FALLBACK = 'https://www.washboard.fr'
+
 export type Plan = 'essentiel' | 'pro'
 export type Feature = 'avis_email' | 'compta' | 'avis_sms' | 'multi_laveurs' | 'followup'
 export type BillingCycle = 'monthly' | 'yearly'

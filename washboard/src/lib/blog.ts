@@ -14,7 +14,9 @@ export type Article = {
   readingMinutes: number
 }
 
-export const SITE_URL = 'https://www.washboard.fr'
+// Source unique du domaine : defini dans plan.ts, re-exporte ici par commodite
+// pour les pages du blog qui l utilisent deja sous ce nom.
+export { SITE_URL_FALLBACK as SITE_URL } from '@/lib/plan'
 
 export const ARTICLES: Article[] = [
   {
