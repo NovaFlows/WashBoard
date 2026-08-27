@@ -14,6 +14,26 @@
 
 ## 🔴 Priorité haute
 
+- [x] 2026-08-27 — **Bug de sécurité/facturation corrigé : la page de réservation
+      publique ne voyait jamais les RDV existants du laveur (RLS).** Trouvé par
+      Alexandre en testant une réservation sur téléphone (créneau optimisé absent,
+      ET un créneau physiquement impossible juste après un RDV existant restait
+      réservable). Cause : `/api/slots/smart` et `lib/travelFee.ts` (mode "RDV
+      précédent") lisaient `bookings` via le client anonyme du visiteur, qui n'a
+      aucun droit RLS sur cette table (seule la création y est publique — voir
+      `schema.sql`). Résultat en silence pour tout vrai client : ni créneaux
+      optimisés, ni contrainte de trajet, **ni le bon frais de déplacement au
+      moment où la réservation est réellement enregistrée** (`api/bookings` POST) —
+      pas juste l'estimation affichée. Le bug était invisible aux tests d'Alexandre
+      car son navigateur PC reste connecté à son propre compte laveur (RLS le
+      laisse voir ses propres RDV). Corrigé : ces lectures passent maintenant par
+      le client admin (service_role) déjà utilisé ailleurs pour ce même besoin.
+      ⚠️ **À vérifier** : si **Kookii Clean** (vraie cliente) utilise le mode
+      "RDV précédent" pour ses frais de déplacement, ses vrais clients ont pu être
+      sous/sur-facturés en silence depuis la mise en place de cette fonctionnalité
+      — pas encore vérifié (nécessite de consulter sa config `travel_fee_mode`,
+      pas ses données de réservation).
+
 - [ ] **La routine cloud "réunion d'équipe quotidienne" n'a pas les droits d'écriture
       sur le dépôt GitHub.** Constaté le 2026-08-27 : sa première tentative de
       `git push` a renvoyé un 403 (`Claude doesn't have GitHub access to
