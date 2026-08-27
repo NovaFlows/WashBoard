@@ -14,6 +14,29 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **La routine cloud "réunion d'équipe quotidienne" n'a pas les droits d'écriture
+      sur le dépôt GitHub.** Constaté le 2026-08-27 : sa première tentative de
+      `git push` a renvoyé un 403 (`Claude doesn't have GitHub access to
+      NovaFlows/WashBoard for your organization` — lecture OK, écriture refusée).
+      Le rapport du jour est resté local dans la session cloud jusqu'à ce qu'un autre
+      push (celui de l'agent `dev`, voir ligne suivante) l'embarque par accident.
+      Sans correction, la routine ne pourra plus publier son rapport tous les matins.
+      À corriger via https://github.com/apps/claude/installations/select_target ou
+      claude.ai/customize/connectors (droits d'écriture de l'app Claude GitHub sur
+      NovaFlows/WashBoard).
+
+- [ ] **Appliquer la migration SQL de l'entonnoir de réservation** (table
+      `booking_funnel_events`) — créée par l'agent `dev` le 2026-08-27 sous forme de
+      fichier `washboard/supabase/migrations/003_booking_funnel_events.sql`, ce qui
+      contredit la convention du projet (SQL donné inline dans le chat, jamais de
+      fichier de migration). Le fichier reste dans le dépôt à titre de référence, mais
+      **le SQL doit être collé et exécuté manuellement dans l'éditeur SQL de
+      Supabase** — sans quoi la route `/api/analytics/funnel` (métriques de
+      conversion sur la page de réservation publique) échoue silencieusement
+      (comportement voulu : fail-safe, aucune réservation cassée, mais aucune donnée
+      collectée tant que la table n'existe pas). Rappeler aux agents `dev`/`cyber` de
+      ne plus créer de fichier de migration à l'avenir.
+
 - [ ] **Mettre à jour Next.js (16.2.6 → 16.3.3+) : 9 vulnérabilités connues, dont une
       haute.** Trouvé par l'agent cyber le 2026-08-27 via `npm audit --omit=dev`. La plus
       grave : divulgation non authentifiée d'endpoints Server Function (corrigée en
