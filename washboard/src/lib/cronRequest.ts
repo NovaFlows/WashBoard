@@ -1,19 +1,15 @@
 import type { NextRequest } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-// Auth + client admin partagés par les routes /api/cron/*.
+// Auth partagée par les routes /api/cron/*.
 // Le planificateur externe (cron-job.org) appelle avec « Authorization: Bearer <CRON_SECRET> ».
 export function isAuthorizedCron(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
   return Boolean(secret) && request.headers.get('authorization') === `Bearer ${secret}`
 }
 
-export function createAdminClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
+// Ré-exporté depuis lib/supabase/admin.ts (source unique du client service_role)
+// pour ne pas casser les routes cron qui l'importaient déjà depuis ce fichier.
+export { createAdminClient } from '@/lib/supabase/admin'
 
 // Mode test : `?test=1&washer=<uuid>`.
 //

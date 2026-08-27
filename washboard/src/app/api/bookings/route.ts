@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
@@ -97,10 +97,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   const id = randomUUID()
 
   // ── Anti-spam #3 : plafond de réservations par laveur et par jour ────────
-  const admin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const admin = createAdminClient()
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0)
   const { count: dailyCount } = await admin
     .from('bookings')
@@ -188,10 +185,6 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   let washerEmail: string | null = null
   if (washer?.user_id) {
     try {
-      const admin = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
       const { data: { user: washerUser } } = await admin.auth.admin.getUserById(washer.user_id)
       washerEmail = washerUser?.email ?? null
     } catch (e) {
@@ -203,7 +196,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Calcul des frais de déplacement (mode base ou RDV précédent)
   const computed_travel_fee = bookingData.address
-    ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at)
+    ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at, admin)
     : (travel_fee ?? 0)
 
   // Prix effectif : base (service + options) + frais de déplacement

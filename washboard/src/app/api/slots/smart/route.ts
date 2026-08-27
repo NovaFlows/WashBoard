@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { addonsDuration } from '@/lib/pricing'
 
 type DmResponse = {
@@ -32,8 +33,13 @@ export async function GET(request: NextRequest) {
     discountValue: (washer?.smart_slot_discount_value ?? 0)        as number,
   }
 
-  // Réservations du même jour (plage UTC couvrant la journée locale France)
-  const { data: bookings } = await supabase
+  // Réservations du même jour (plage UTC couvrant la journée locale France).
+  // Lecture via le client admin : un visiteur anonyme n'a aucun droit RLS sur
+  // `bookings` (seule la création y est publique), donc le client lié à sa
+  // session ne verrait jamais ces lignes — ni créneaux optimisés, ni
+  // contrainte de trajet ne se calculeraient, en silence.
+  const admin = createAdminClient()
+  const { data: bookings } = await admin
     .from('bookings')
     .select('scheduled_at, address, vehicle_count, selected_addons, services(duration_minutes)')
     .eq('washer_id', washerId)
@@ -70,6 +76,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (dmToNew.status !== 'OK' || dmFromNew.status !== 'OK') {
+    // Statut Google non-OK (REQUEST_DENIED, INVALID_REQUEST, OVER_QUERY_LIMIT…) :
+    // ce n'est pas une absence de résultat, c'est une panne — elle doit se voir.
+    logger.error('slots.smart.google_status_not_ok', {
+      statusToNew: dmToNew.status,
+      statusFromNew: dmFromNew.status,
+    })
     return NextResponse.json({ ...empty, ...config })
   }
 

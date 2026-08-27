@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
@@ -90,10 +90,7 @@ export default async function BookingPage({ params }: Props) {
   // créneaux occupés, mais la RLS interdit leur lecture au visiteur public (anon).
   // → lecture via le service-role, en se limitant à des données NON personnelles
   //   (horaire + durée), jamais de nom/email/téléphone côté client.
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const admin = createAdminClient()
 
   const [
     { data: existingBookings, error: bookingsError },

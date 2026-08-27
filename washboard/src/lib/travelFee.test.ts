@@ -107,6 +107,25 @@ describe('computeTravelFee', () => {
     expect(fee).toBe(5)
   })
 
+  it('mode previous : lit le RDV précédent via le client admin fourni, pas via le client anonyme', async () => {
+    // Le client "session" n'a aucun droit RLS sur bookings (anon) : s'il était
+    // utilisé pour la lecture du RDV précédent, on retomberait à tort sur
+    // base_address. Le client admin, lui, voit le RDV précédent.
+    const sessionClient = fakeSupabase({
+      washer: { travel_fee_tiers: tiers, base_address: '1 rue A', travel_fee_mode: 'previous' },
+      prevBookings: [], // simule RLS : aucune ligne visible pour ce client
+    })
+    const adminClient = fakeSupabase({
+      washer: { travel_fee_tiers: tiers, base_address: '1 rue A', travel_fee_mode: 'previous' },
+      prevBookings: [{ address: '9 rue Z', scheduled_at: '2026-07-01T08:00:00Z' }],
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: async () => ({ rows: [{ elements: [{ duration: { value: 10 * 60 } }] }] }), // 10 min → 5
+    }))
+    const fee = await computeTravelFee(sessionClient, 'w1', 'dest', '2026-07-01T10:00:00Z', adminClient)
+    expect(fee).toBe(5)
+  })
+
   it('mode previous sans RDV précédent : retombe sur l’adresse de base', async () => {
     const sb = fakeSupabase({
       washer: { travel_fee_tiers: tiers, base_address: '1 rue A', travel_fee_mode: 'previous' },

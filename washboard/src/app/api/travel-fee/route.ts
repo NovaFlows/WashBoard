@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { computeTravelFee } from '@/lib/travelFee'
 
 export async function GET(req: Request) {
@@ -14,6 +15,6 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createClient()
-  const fee = await computeTravelFee(supabase, washer_id, address, scheduled_at)
+  const fee = await computeTravelFee(supabase, washer_id, address, scheduled_at, createAdminClient())
   return Response.json({ fee })
 }
