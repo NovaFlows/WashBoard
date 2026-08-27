@@ -16,6 +16,7 @@ import {
   buildVisitTimingBreakdown,
   estimatePeakConcurrentSessions,
   comparePeriods,
+  normalizeHost,
 } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
 
@@ -79,6 +80,7 @@ export default async function CrmPage() {
   const visitTimingBreakdown = buildVisitTimingBreakdown(events)
   const peak7d = estimatePeakConcurrentSessions(events.filter(e => new Date(e.created_at) >= shortWindowSince))
   const peak30d = estimatePeakConcurrentSessions(events)
+  const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
@@ -101,6 +103,7 @@ export default async function CrmPage() {
           deviceConversionBreakdown={deviceConversionBreakdown}
           referrerConversionBreakdown={referrerConversionBreakdown}
           visitTimingBreakdown={visitTimingBreakdown}
+          websiteHost={websiteHost}
           accent={washer.brand_color ?? undefined}
           windowDays={FUNNEL_WINDOW_DAYS}
         />

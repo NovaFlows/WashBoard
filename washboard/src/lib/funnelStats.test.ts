@@ -9,8 +9,24 @@ import {
   buildVisitTimingBreakdown,
   estimatePeakConcurrentSessions,
   comparePeriods,
+  normalizeHost,
   type FunnelEventRow,
 } from './funnelStats'
+
+describe('normalizeHost', () => {
+  it('extrait le host d’une URL complète', () => {
+    expect(normalizeHost('https://www.kookiclean-lavage.fr/accueil')).toBe('kookiclean-lavage.fr')
+  })
+
+  it('retire le prefixe "www." dans les deux sens', () => {
+    expect(normalizeHost('www.kookiclean-lavage.fr')).toBe('kookiclean-lavage.fr')
+    expect(normalizeHost('kookiclean-lavage.fr')).toBe('kookiclean-lavage.fr')
+  })
+
+  it('est insensible à la casse', () => {
+    expect(normalizeHost('HTTPS://WWW.KookiClean-Lavage.FR')).toBe('kookiclean-lavage.fr')
+  })
+})
 
 describe('buildFunnelSummary', () => {
   it('retourne des zéros partout sans événement', () => {

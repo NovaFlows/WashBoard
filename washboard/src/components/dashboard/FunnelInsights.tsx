@@ -1,11 +1,12 @@
 import { Users, Percent, Activity, Smartphone, Globe, CalendarClock, type LucideIcon } from 'lucide-react'
-import type {
-  PeriodChange,
-  DeviceBreakdownItem,
-  ReferrerBreakdownItem,
-  DeviceConversionItem,
-  ReferrerConversionItem,
-  VisitTimingBreakdown,
+import {
+  normalizeHost,
+  type PeriodChange,
+  type DeviceBreakdownItem,
+  type ReferrerBreakdownItem,
+  type DeviceConversionItem,
+  type ReferrerConversionItem,
+  type VisitTimingBreakdown,
 } from '@/lib/funnelStats'
 
 type Props = {
@@ -20,12 +21,21 @@ type Props = {
   deviceConversionBreakdown: DeviceConversionItem[]
   referrerConversionBreakdown: ReferrerConversionItem[]
   visitTimingBreakdown: VisitTimingBreakdown
+  /** Site du laveur (profil), déjà normalisé côté serveur — sert à étiqueter
+   *  "Mon site web" plutôt qu'un nom de domaine brut dans les sources. */
+  websiteHost?: string
   accent?: string
   windowDays: number
 }
 
 const DEVICE_LABELS: Record<string, string> = {
   mobile: 'Mobile', tablet: 'Tablette', desktop: 'Ordinateur', inconnu: 'Inconnu',
+}
+
+function referrerLabel(host: string, websiteHost?: string): string {
+  if (host === 'direct') return 'Accès direct'
+  if (websiteHost && normalizeHost(host) === websiteHost) return 'Mon site web'
+  return host
 }
 
 function ChangeBadge({ change, windowDays }: { change: PeriodChange; windowDays: number }) {
@@ -174,19 +184,19 @@ function VisitTimingCard({ timing, accent }: { timing: VisitTimingBreakdown; acc
 export default function FunnelInsights({
   visitorCount, visitorChange, conversionRate, peak7d, peak30d,
   deviceBreakdown, referrerBreakdown, deviceConversionBreakdown, referrerConversionBreakdown,
-  visitTimingBreakdown, accent = '#2563eb', windowDays,
+  visitTimingBreakdown, websiteHost, accent = '#2563eb', windowDays,
 }: Props) {
   const deviceItems = deviceBreakdown.map(d => ({
     key: d.device, label: DEVICE_LABELS[d.device] ?? d.device, sessions: d.sessions, pct: d.pct,
   }))
   const referrerItems = referrerBreakdown.slice(0, 5).map(r => ({
-    key: r.host, label: r.host === 'direct' ? 'Accès direct' : r.host, sessions: r.sessions, pct: r.pct,
+    key: r.host, label: referrerLabel(r.host, websiteHost), sessions: r.sessions, pct: r.pct,
   }))
   const deviceConversionItems = deviceConversionBreakdown.map(d => ({
     key: d.device, label: DEVICE_LABELS[d.device] ?? d.device, sessions: d.sessions, conversionRate: d.conversionRate,
   }))
   const referrerConversionItems = referrerConversionBreakdown.slice(0, 5).map(r => ({
-    key: r.host, label: r.host === 'direct' ? 'Accès direct' : r.host, sessions: r.sessions, conversionRate: r.conversionRate,
+    key: r.host, label: referrerLabel(r.host, websiteHost), sessions: r.sessions, conversionRate: r.conversionRate,
   }))
 
   return (

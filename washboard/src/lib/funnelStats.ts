@@ -80,6 +80,19 @@ export function buildDeviceBreakdown(events: { session_id: string; device?: Devi
     .sort((a, b) => b.sessions - a.sessions)
 }
 
+/** Normalise un host ou une URL pour comparaison (minuscules, sans "www.").
+ *  Sert à reconnaître le site du laveur (renseigné en texte libre dans son
+ *  profil) parmi les referrers, que l'un des deux porte "www." ou non. */
+export function normalizeHost(input: string): string {
+  let host = input.trim().toLowerCase()
+  try {
+    if (host.includes('://')) host = new URL(host).host
+  } catch {
+    // Pas une URL valide (ex. juste "monsite.fr") : on garde tel quel.
+  }
+  return host.replace(/^www\./, '')
+}
+
 export type ReferrerBreakdownItem = { host: string; sessions: number; pct: number }
 
 /** Répartition des visiteurs par source de trafic (nom d'hôte du referrer,
