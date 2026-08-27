@@ -267,6 +267,10 @@
         serveur redirige washboard.fr vers www en 308. Google recevait des signaux
         contradictoires et chaque URL du sitemap coutait une redirection. metadataBase,
         openGraph, robots.txt, SITE_URL et les liens des emails passes en www.
+  - [x] 2026-08-27 — **Donnees structurees sur la page d accueil** (Organization +
+        SoftwareApplication, prix derives de PLAN_CARDS). Valide par le Rich Results
+        Test de Google : « 2 elements valides detectes », la ou il n y avait rien avant.
+        Pas d aggregateRating : inventer des avis fait sanctionner.
   - [ ] Dans une semaine : regarder **Performances** (requetes reelles) pour choisir les
         prochains articles, et **Pages > Non indexees** pour reperer un probleme technique.
   - [ ] Publier régulièrement : un article isolé ne construit pas d'autorité. Sujets
