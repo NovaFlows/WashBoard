@@ -25,17 +25,15 @@
       claude.ai/customize/connectors (droits d'écriture de l'app Claude GitHub sur
       NovaFlows/WashBoard).
 
-- [ ] **Appliquer la migration SQL de l'entonnoir de réservation** (table
-      `booking_funnel_events`) — créée par l'agent `dev` le 2026-08-27 sous forme de
-      fichier `washboard/supabase/migrations/003_booking_funnel_events.sql`, ce qui
-      contredit la convention du projet (SQL donné inline dans le chat, jamais de
-      fichier de migration). Le fichier reste dans le dépôt à titre de référence, mais
-      **le SQL doit être collé et exécuté manuellement dans l'éditeur SQL de
-      Supabase** — sans quoi la route `/api/analytics/funnel` (métriques de
-      conversion sur la page de réservation publique) échoue silencieusement
-      (comportement voulu : fail-safe, aucune réservation cassée, mais aucune donnée
-      collectée tant que la table n'existe pas). Rappeler aux agents `dev`/`cyber` de
-      ne plus créer de fichier de migration à l'avenir.
+- [x] 2026-08-27 — **Migration SQL de l'entonnoir de réservation appliquée** (table
+      `booking_funnel_events`, `washboard/supabase/migrations/003_booking_funnel_events.sql`).
+      Collée à la main dans l'éditeur SQL de Supabase par Alexandre. Confirmé
+      fonctionnel : la page CRM affiche des données réelles (visiteurs, conversion,
+      répartition appareil/source, timing des visites) sur le compte Kooki Clean.
+      ⚠️ Rappel qui reste valable : le fichier avait été créé par l'agent `dev`
+      sous forme de migration, ce qui contredit la convention du projet (SQL donné
+      inline dans le chat, jamais de fichier de migration) — à rappeler à `dev`/`cyber`
+      pour la prochaine fois.
 
 - [ ] **Mettre à jour Next.js (16.2.6 → 16.3.3+) : 9 vulnérabilités connues, dont une
       haute.** Trouvé par l'agent cyber le 2026-08-27 via `npm audit --omit=dev`. La plus
