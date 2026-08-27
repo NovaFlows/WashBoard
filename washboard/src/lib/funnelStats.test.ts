@@ -4,6 +4,9 @@ import {
   countDistinctSessions,
   buildDeviceBreakdown,
   buildReferrerBreakdown,
+  buildDeviceConversionBreakdown,
+  buildReferrerConversionBreakdown,
+  buildVisitTimingBreakdown,
   estimatePeakConcurrentSessions,
   comparePeriods,
   type FunnelEventRow,
@@ -127,6 +130,98 @@ describe('buildReferrerBreakdown', () => {
       { session_id: 'c', referrer_host: 'google.com' },
     ])
     expect(stats.map(s => s.host)).toEqual(['google.com', 'instagram.com'])
+  })
+})
+
+describe('buildDeviceConversionBreakdown', () => {
+  it('calcule le taux de conversion par appareil', () => {
+    const events = [
+      { session_id: 'a', device: 'mobile' as const, step: 'prestation' as const },
+      { session_id: 'a', device: 'mobile' as const, step: 'confirmation' as const },
+      { session_id: 'b', device: 'mobile' as const, step: 'prestation' as const },
+      { session_id: 'c', device: 'desktop' as const, step: 'prestation' as const },
+      { session_id: 'c', device: 'desktop' as const, step: 'confirmation' as const },
+    ]
+    const stats = buildDeviceConversionBreakdown(events)
+    const mobile = stats.find(s => s.device === 'mobile')!
+    const desktop = stats.find(s => s.device === 'desktop')!
+    expect(mobile).toEqual({ device: 'mobile', sessions: 2, conversions: 1, conversionRate: 50 })
+    expect(desktop).toEqual({ device: 'desktop', sessions: 1, conversions: 1, conversionRate: 100 })
+  })
+
+  it('classe les sessions sans appareil connu en "inconnu"', () => {
+    const stats = buildDeviceConversionBreakdown([{ session_id: 'a', step: 'prestation' }])
+    expect(stats).toEqual([{ device: 'inconnu', sessions: 1, conversions: 0, conversionRate: 0 }])
+  })
+
+  it('retourne un tableau vide sans événement', () => {
+    expect(buildDeviceConversionBreakdown([])).toEqual([])
+  })
+})
+
+describe('buildReferrerConversionBreakdown', () => {
+  it('calcule le taux de conversion par source de trafic', () => {
+    const events = [
+      { session_id: 'a', referrer_host: 'google.com', step: 'prestation' as const },
+      { session_id: 'a', referrer_host: 'google.com', step: 'confirmation' as const },
+      { session_id: 'b', referrer_host: 'google.com', step: 'prestation' as const },
+      { session_id: 'c', referrer_host: null, step: 'prestation' as const },
+    ]
+    const stats = buildReferrerConversionBreakdown(events)
+    const google = stats.find(s => s.host === 'google.com')!
+    const direct = stats.find(s => s.host === 'direct')!
+    expect(google).toEqual({ host: 'google.com', sessions: 2, conversions: 1, conversionRate: 50 })
+    expect(direct).toEqual({ host: 'direct', sessions: 1, conversions: 0, conversionRate: 0 })
+  })
+
+  it('retourne un tableau vide sans événement', () => {
+    expect(buildReferrerConversionBreakdown([])).toEqual([])
+  })
+})
+
+describe('buildVisitTimingBreakdown', () => {
+  it('retourne des listes vides et des dominants null sans événement', () => {
+    const result = buildVisitTimingBreakdown([])
+    expect(result.byWeekday.every(d => d.sessions === 0)).toBe(true)
+    expect(result.bySlot).toEqual([])
+    expect(result.topWeekday).toBeNull()
+    expect(result.topSlot).toBeNull()
+  })
+
+  it('regroupe par jour de semaine (heure de Paris) et par créneau horaire', () => {
+    const events = [
+      // jeudi 27/08/2026, 12h Paris (10h UTC, été = UTC+2)
+      { session_id: 'a', created_at: '2026-08-27T10:00:00Z' },
+      { session_id: 'b', created_at: '2026-08-27T10:30:00Z' },
+      // mardi 25/08/2026, 1h du matin Paris (23h30 UTC la veille)
+      { session_id: 'c', created_at: '2026-08-24T23:30:00Z' },
+      // jeudi 27/08/2026, 20h Paris (18h UTC, été = UTC+2) — couvre le créneau "Soir"
+      { session_id: 'd', created_at: '2026-08-27T18:00:00Z' },
+    ]
+    const result = buildVisitTimingBreakdown(events)
+    const jeudi = result.byWeekday.find(d => d.label === 'Jeudi')!
+    const mardi = result.byWeekday.find(d => d.label === 'Mardi')!
+    expect(jeudi.sessions).toBe(3)
+    expect(mardi.sessions).toBe(1)
+    expect(result.topWeekday).toBe('Jeudi')
+
+    const apresMidi = result.bySlot.find(s => s.label === 'Après-midi (12h-18h)')!
+    const nuit = result.bySlot.find(s => s.label === 'Nuit (0h-6h)')!
+    const soir = result.bySlot.find(s => s.label === 'Soir (18h-0h)')!
+    expect(apresMidi.sessions).toBe(2)
+    expect(nuit.sessions).toBe(1)
+    expect(soir.sessions).toBe(1)
+    expect(result.topSlot).toBe('Après-midi (12h-18h)')
+  })
+
+  it("ne compte qu'une fois une session qui revient sur plusieurs jours (premier événement)", () => {
+    const events = [
+      { session_id: 'a', created_at: '2026-08-27T10:00:00Z' }, // jeudi
+      { session_id: 'a', created_at: '2026-08-28T10:00:00Z' }, // vendredi, ignoré
+    ]
+    const result = buildVisitTimingBreakdown(events)
+    expect(result.byWeekday.find(d => d.label === 'Jeudi')!.sessions).toBe(1)
+    expect(result.byWeekday.find(d => d.label === 'Vendredi')!.sessions).toBe(0)
   })
 })
 

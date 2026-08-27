@@ -146,6 +146,142 @@ export function estimatePeakConcurrentSessions(
   return peak
 }
 
+export type DeviceConversionItem = {
+  device: Device | 'inconnu'
+  sessions: number
+  conversions: number
+  conversionRate: number
+}
+
+/** Taux de conversion (jusqu'à "confirmation") par type d'appareil — même
+ *  regroupement par session que buildDeviceBreakdown, croisé avec l'ensemble
+ *  des sessions ayant atteint l'étape finale. */
+export function buildDeviceConversionBreakdown(
+  events: { session_id: string; device?: Device | null; step: FunnelStep }[],
+): DeviceConversionItem[] {
+  const deviceBySession = new Map<string, Device | 'inconnu'>()
+  for (const { session_id, device } of events) {
+    if (!deviceBySession.has(session_id)) deviceBySession.set(session_id, device ?? 'inconnu')
+  }
+  const confirmedSessions = new Set(events.filter(e => e.step === 'confirmation').map(e => e.session_id))
+
+  const sessionsByDevice = new Map<Device | 'inconnu', number>()
+  const conversionsByDevice = new Map<Device | 'inconnu', number>()
+  for (const [sessionId, device] of deviceBySession) {
+    sessionsByDevice.set(device, (sessionsByDevice.get(device) ?? 0) + 1)
+    if (confirmedSessions.has(sessionId)) conversionsByDevice.set(device, (conversionsByDevice.get(device) ?? 0) + 1)
+  }
+
+  return [...sessionsByDevice.entries()]
+    .map(([device, sessions]) => {
+      const conversions = conversionsByDevice.get(device) ?? 0
+      return { device, sessions, conversions, conversionRate: sessions > 0 ? Math.round((conversions / sessions) * 100) : 0 }
+    })
+    .sort((a, b) => b.sessions - a.sessions)
+}
+
+export type ReferrerConversionItem = {
+  host: string
+  sessions: number
+  conversions: number
+  conversionRate: number
+}
+
+/** Taux de conversion (jusqu'à "confirmation") par source de trafic — même
+ *  regroupement par session que buildReferrerBreakdown, croisé avec
+ *  l'ensemble des sessions ayant atteint l'étape finale. */
+export function buildReferrerConversionBreakdown(
+  events: { session_id: string; referrer_host?: string | null; step: FunnelStep }[],
+): ReferrerConversionItem[] {
+  const hostBySession = new Map<string, string>()
+  for (const { session_id, referrer_host } of events) {
+    if (!hostBySession.has(session_id)) hostBySession.set(session_id, referrer_host || 'direct')
+  }
+  const confirmedSessions = new Set(events.filter(e => e.step === 'confirmation').map(e => e.session_id))
+
+  const sessionsByHost = new Map<string, number>()
+  const conversionsByHost = new Map<string, number>()
+  for (const [sessionId, host] of hostBySession) {
+    sessionsByHost.set(host, (sessionsByHost.get(host) ?? 0) + 1)
+    if (confirmedSessions.has(sessionId)) conversionsByHost.set(host, (conversionsByHost.get(host) ?? 0) + 1)
+  }
+
+  return [...sessionsByHost.entries()]
+    .map(([host, sessions]) => {
+      const conversions = conversionsByHost.get(host) ?? 0
+      return { host, sessions, conversions, conversionRate: sessions > 0 ? Math.round((conversions / sessions) * 100) : 0 }
+    })
+    .sort((a, b) => b.sessions - a.sessions)
+}
+
+const WEEKDAY_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+/** Classe une heure (0-23, heure de Paris) en créneau lisible (pure). Reste
+ *  volontairement simple — 4 créneaux, pas de heatmap heure par heure. */
+function slotForHour(hour: number): string {
+  if (hour < 6) return 'Nuit (0h-6h)'
+  if (hour < 12) return 'Matin (6h-12h)'
+  if (hour < 18) return 'Après-midi (12h-18h)'
+  return 'Soir (18h-0h)'
+}
+
+export type VisitTimingItem = { label: string; sessions: number; pct: number }
+
+export type VisitTimingBreakdown = {
+  /** Dans l'ordre chronologique (Lundi -> Dimanche), pas trié par volume. */
+  byWeekday: VisitTimingItem[]
+  bySlot: VisitTimingItem[]
+  topWeekday: string | null
+  topSlot: string | null
+}
+
+/** Répartit les visites (une par session, à l'heure de son premier événement)
+ *  par jour de semaine et par créneau horaire, en heure de Paris — cohérent
+ *  avec le reste du code qui affiche des horaires client (voir
+ *  api/bookings/route.ts). Une session qui revient sur plusieurs jours n'est
+ *  comptée qu'une fois, sur son premier événement. */
+export function buildVisitTimingBreakdown(events: { session_id: string; created_at: string }[]): VisitTimingBreakdown {
+  const firstSeenBySession = new Map<string, number>()
+  for (const { session_id, created_at } of events) {
+    const t = new Date(created_at).getTime()
+    const existing = firstSeenBySession.get(session_id)
+    if (existing === undefined || t < existing) firstSeenBySession.set(session_id, t)
+  }
+
+  const formatter = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', weekday: 'long', hour: 'numeric', hourCycle: 'h23' })
+  const weekdayCounts = new Map<string, number>()
+  const slotCounts = new Map<string, number>()
+
+  for (const t of firstSeenBySession.values()) {
+    const parts = formatter.formatToParts(new Date(t))
+    const weekdayRaw = parts.find(p => p.type === 'weekday')?.value ?? ''
+    const weekday = weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1)
+    const hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0')
+    weekdayCounts.set(weekday, (weekdayCounts.get(weekday) ?? 0) + 1)
+    const slot = slotForHour(hour)
+    slotCounts.set(slot, (slotCounts.get(slot) ?? 0) + 1)
+  }
+
+  const total = firstSeenBySession.size
+
+  const byWeekday = WEEKDAY_LABELS.map(label => {
+    const sessions = weekdayCounts.get(label) ?? 0
+    return { label, sessions, pct: total > 0 ? Math.round((sessions / total) * 100) : 0 }
+  })
+
+  const bySlot = [...slotCounts.entries()]
+    .map(([label, sessions]) => ({ label, sessions, pct: total > 0 ? Math.round((sessions / total) * 100) : 0 }))
+    .sort((a, b) => b.sessions - a.sessions)
+
+  const topWeekday = byWeekday.reduce<VisitTimingItem | null>((best, item) => (
+    item.sessions > 0 && (!best || item.sessions > best.sessions) ? item : best
+  ), null)?.label ?? null
+
+  const topSlot = bySlot[0] && bySlot[0].sessions > 0 ? bySlot[0].label : null
+
+  return { byWeekday, bySlot, topWeekday, topSlot }
+}
+
 export type PeriodChange = {
   pct: number | null
   /** "new" : la période précédente était à zéro, aucun pourcentage défini. */

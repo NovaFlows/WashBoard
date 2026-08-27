@@ -9,6 +9,9 @@ import {
   countDistinctSessions,
   buildDeviceBreakdown,
   buildReferrerBreakdown,
+  buildDeviceConversionBreakdown,
+  buildReferrerConversionBreakdown,
+  buildVisitTimingBreakdown,
   estimatePeakConcurrentSessions,
   comparePeriods,
 } from '@/lib/funnelStats'
@@ -69,6 +72,9 @@ export default async function CrmPage() {
   const visitorChange = comparePeriods(visitorCount, previousVisitorCount)
   const deviceBreakdown = buildDeviceBreakdown(events)
   const referrerBreakdown = buildReferrerBreakdown(events)
+  const deviceConversionBreakdown = buildDeviceConversionBreakdown(events)
+  const referrerConversionBreakdown = buildReferrerConversionBreakdown(events)
+  const visitTimingBreakdown = buildVisitTimingBreakdown(events)
   const peak7d = estimatePeakConcurrentSessions(events.filter(e => new Date(e.created_at) >= shortWindowSince))
   const peak30d = estimatePeakConcurrentSessions(events)
 
@@ -83,6 +89,9 @@ export default async function CrmPage() {
           peak30d={peak30d}
           deviceBreakdown={deviceBreakdown}
           referrerBreakdown={referrerBreakdown}
+          deviceConversionBreakdown={deviceConversionBreakdown}
+          referrerConversionBreakdown={referrerConversionBreakdown}
+          visitTimingBreakdown={visitTimingBreakdown}
           accent={washer.brand_color ?? undefined}
           windowDays={FUNNEL_WINDOW_DAYS}
         />
