@@ -198,15 +198,17 @@ export default function FunnelInsights({
         <KpiTile icon={Percent} label="Taux de conversion">
           {conversionRate}%
         </KpiTile>
-        <KpiTile
-          icon={Activity}
-          label="Pic simultané (est.)"
-          footer={<p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Approximation sur 1h glissante, pas une mesure temps réel</p>}
-        >
-          <span className="text-2xl">{peak7d}<span className="text-sm font-medium text-slate-400"> /7j</span></span>
-          <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
-          <span className="text-2xl">{peak30d}<span className="text-sm font-medium text-slate-400"> /30j</span></span>
-        </KpiTile>
+        <div className="col-span-2 md:col-span-1">
+          <KpiTile
+            icon={Activity}
+            label="Pic simultané (est.)"
+            footer={<p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Approximation sur 1h glissante, pas une mesure temps réel</p>}
+          >
+            <span className="text-2xl">{peak7d}<span className="text-sm font-medium text-slate-400"> /7j</span></span>
+            <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
+            <span className="text-2xl">{peak30d}<span className="text-sm font-medium text-slate-400"> /30j</span></span>
+          </KpiTile>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
