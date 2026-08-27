@@ -1,13 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Washer, Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import { addonsDuration } from '@/lib/pricing'
+import { trackFunnelStep, type FunnelStep } from '@/lib/funnelTracking'
 import StepService from './StepService'
 import StepOptions from './StepOptions'
 import StepSlot from './StepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './StepConfirmation'
+
+// Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
+// (voir migration 003 booking_funnel_events).
+const FUNNEL_STEP_NAMES: Record<number, FunnelStep> = {
+  1: 'prestation',
+  2: 'options',
+  3: 'creneau',
+  4: 'coordonnees',
+  5: 'confirmation',
+}
 
 type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; selected_addons?: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }
 type Unavailability  = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
@@ -34,6 +45,12 @@ export default function BookingForm({ washer, services, categories, availabiliti
 
   const selectedService = services.find(s => s.id === form.service_id)
   const hasAddons = (selectedService?.addons ?? []).length > 0
+
+  // Un événement par étape franchie, y compris à l'arrivée sur la page
+  // (step === 1 dès le montage). Ne bloque jamais le parcours si ça échoue.
+  useEffect(() => {
+    trackFunnelStep(washer.id, FUNNEL_STEP_NAMES[step])
+  }, [step, washer.id])
 
   // Stepper : 4 étapes si options dispo, 3 sinon
   const STEPS = hasAddons
