@@ -2,6 +2,8 @@
 // POST /api/analytics/funnel). Logique pure et testable ici ; l'unique bout
 // d'I/O navigateur (sessionStorage) est isolé dans getOrCreateSessionId.
 
+import { TRAFFIC_SOURCE_HOSTS, type TrafficSourceKey } from '@/lib/trafficSources'
+
 export type FunnelStep = 'prestation' | 'options' | 'creneau' | 'coordonnees' | 'confirmation'
 export type Device = 'mobile' | 'tablet' | 'desktop'
 
@@ -27,6 +29,20 @@ export function extractReferrerHost(referrer: string, currentHost: string): stri
   }
 }
 
+/** Détermine la source de trafic à enregistrer (pure, testable).
+ *
+ *  Priorité au paramètre `?utm_source=...` des liens dédiés générés par
+ *  WashBoard (Réglages, CRM) : fiable, il vient du lien lui-même, pas du
+ *  navigateur. Le `document.referrer` reste le repli pour tout le reste
+ *  (Google, un site qui pointe vers le laveur…), mais Instagram et TikTok
+ *  ont un historique connu de navigateurs intégrés qui ne le transmettent
+ *  pas — sans lien dédié, ces visites retombent alors sur "Accès direct". */
+export function resolveReferrerHost(referrer: string, currentHost: string, search: string): string | undefined {
+  const utmSource = new URLSearchParams(search).get('utm_source')?.toLowerCase() as TrafficSourceKey | null
+  if (utmSource && utmSource in TRAFFIC_SOURCE_HOSTS) return TRAFFIC_SOURCE_HOSTS[utmSource]
+  return extractReferrerHost(referrer, currentHost)
+}
+
 /** Session anonyme limitée à l'onglet du navigateur : pas de cookie
  *  persistant, pas de suivi d'une visite à l'autre. Reset à chaque nouvel
  *  onglet/fermeture — volontaire, voir la note RGPD dans la migration 003. */
@@ -49,7 +65,7 @@ export function trackFunnelStep(washerId: string, step: FunnelStep): void {
     washer_id:     washerId,
     session_id:    sessionId,
     step,
-    referrer_host: extractReferrerHost(document.referrer, window.location.host),
+    referrer_host: resolveReferrerHost(document.referrer, window.location.host, window.location.search),
     device:        detectDevice(window.innerWidth),
   })
   try {

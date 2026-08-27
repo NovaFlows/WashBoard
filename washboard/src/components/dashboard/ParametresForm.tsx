@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Washer } from '@/types'
 import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { hasFeature } from '@/lib/plan'
 import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
 
@@ -786,6 +787,11 @@ function ClientTab({ washer }: { washer: Washer }) {
             Copier
           </button>
         </div>
+
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-4 mb-2">
+          Un lien par réseau, pour savoir d&apos;où viennent vos clients dans le CRM
+        </p>
+        <TrafficSourceLinks baseUrl={`${origin}/book/${washer.slug}`} />
       </Card>
 
       <Card title="Personnalisation de la page client" icon={Palette}>

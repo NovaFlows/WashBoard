@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectDevice, extractReferrerHost } from './funnelTracking'
+import { detectDevice, extractReferrerHost, resolveReferrerHost } from './funnelTracking'
 
 describe('detectDevice', () => {
   it('classe en mobile sous 640px', () => {
@@ -39,5 +39,30 @@ describe('extractReferrerHost', () => {
 
   it('retourne undefined pour un referrer malformé plutôt que de lever une exception', () => {
     expect(extractReferrerHost('pas-une-url', 'www.washboard.fr')).toBeUndefined()
+  })
+})
+
+describe('resolveReferrerHost', () => {
+  it('priorise ?utm_source sur le referrer du navigateur', () => {
+    // Cas réel visé : navigateur intégré Instagram/TikTok qui ne transmet
+    // aucun referrer — sans le paramètre, ça retomberait sur "direct".
+    expect(resolveReferrerHost('', 'www.washboard.fr', '?utm_source=instagram')).toBe('instagram.com')
+    expect(resolveReferrerHost('', 'www.washboard.fr', '?utm_source=tiktok')).toBe('tiktok.com')
+    expect(resolveReferrerHost('', 'www.washboard.fr', '?utm_source=facebook')).toBe('facebook.com')
+    expect(resolveReferrerHost('', 'www.washboard.fr', '?utm_source=google')).toBe('google.com')
+  })
+
+  it('ignore un utm_source inconnu et retombe sur le referrer', () => {
+    expect(resolveReferrerHost('https://www.google.com/', 'www.washboard.fr', '?utm_source=newsletter'))
+      .toBe('www.google.com')
+  })
+
+  it('est insensible à la casse du paramètre', () => {
+    expect(resolveReferrerHost('', 'www.washboard.fr', '?utm_source=Instagram')).toBe('instagram.com')
+  })
+
+  it('sans utm_source, retombe sur extractReferrerHost', () => {
+    expect(resolveReferrerHost('https://www.instagram.com/', 'www.washboard.fr', '')).toBe('www.instagram.com')
+    expect(resolveReferrerHost('', 'www.washboard.fr', '')).toBeUndefined()
   })
 })
