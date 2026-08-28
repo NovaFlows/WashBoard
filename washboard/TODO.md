@@ -14,6 +14,24 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **Vérifier de bout en bout le paiement PayPal de l'engagement annuel.** Demandé
+      par Alexandre le 2026-08-28. Le calcul du montant est correct côté code
+      (`AbonnementPanel.tsx`, `amountFor()` utilise `yearlyPrice()` de `lib/plan.ts`,
+      déjà vérifiée) — le lien pointe vers `paypal.me/WashBoardSAAS/<montant annuel>`.
+      Reste à confirmer en conditions réelles : le lien s'ouvre bien avec le bon
+      montant pré-rempli pour chaque plan (Essentiel 490€, Pro 690€), et le compte
+      PayPal `WashBoardSAAS` est bien actif/rattaché à Alexandre.
+
+- [ ] **Défilement des avis clients cassé sur la page de réservation publique.**
+      Signalé par Alexandre le 2026-08-28 : la section "Avis clients" reste figée sur
+      les premiers avis. Cause probable (`book/[slug]/page.tsx`, ~ligne 215) : la liste
+      utilise `overflow-x-auto` + `scrollbar-none` (glissement horizontal à la souris/
+      au doigt) sans aucune barre visible, flèche ni indicateur — exactement le même
+      défaut que celui trouvé par l'agent `designer` sur le sélecteur de jour de
+      réservation (`StepSlot.tsx`), pas encore corrigé non plus. Un vrai carrousel
+      (flèches et/ou défilement automatique) réglerait les deux à la fois si le motif
+      est mutualisé. Bon candidat pour `designer`.
+
 - [x] 2026-08-27 — **Bug de sécurité/facturation corrigé : la page de réservation
       publique ne voyait jamais les RDV existants du laveur (RLS).** Trouvé par
       Alexandre en testant une réservation sur téléphone (créneau optimisé absent,
