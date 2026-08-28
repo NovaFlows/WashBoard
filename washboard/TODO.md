@@ -14,23 +14,38 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Vérifier de bout en bout le paiement PayPal de l'engagement annuel.** Demandé
-      par Alexandre le 2026-08-28. Le calcul du montant est correct côté code
-      (`AbonnementPanel.tsx`, `amountFor()` utilise `yearlyPrice()` de `lib/plan.ts`,
-      déjà vérifiée) — le lien pointe vers `paypal.me/WashBoardSAAS/<montant annuel>`.
-      Reste à confirmer en conditions réelles : le lien s'ouvre bien avec le bon
-      montant pré-rempli pour chaque plan (Essentiel 490€, Pro 690€), et le compte
-      PayPal `WashBoardSAAS` est bien actif/rattaché à Alexandre.
+- [ ] **Piste à creuser : des comptes fantômes peuvent rester dans `auth.users` sans
+      ligne `washers` correspondante**, bloquant l'email pour toute nouvelle inscription.
+      Trouvé le 2026-08-28 : `spotifypren1234@gmail.com` bloquait une inscription alors
+      qu'aucune fiche laveur n'existait pour ce compte (créé le 2026-06-20, jamais
+      rattaché). Supprimé manuellement (`admin.auth.admin.deleteUser`), mais la cause
+      reste à identifier : soit le flux d'inscription peut créer l'utilisateur auth puis
+      échouer avant de créer sa fiche `washers`, soit une fiche a été supprimée un jour
+      par un `DELETE FROM washers` direct sans passer par la suppression de l'utilisateur
+      auth associé (voir `api/cron/purge-accounts` pour la bonne méthode). À vérifier côté
+      `dev`/`cyber` : le flux de `signup` gère-t-il bien l'échec après création de
+      l'utilisateur auth (rollback), et combien d'autres comptes fantômes existent déjà ?
 
-- [ ] **Défilement des avis clients cassé sur la page de réservation publique.**
-      Signalé par Alexandre le 2026-08-28 : la section "Avis clients" reste figée sur
-      les premiers avis. Cause probable (`book/[slug]/page.tsx`, ~ligne 215) : la liste
-      utilise `overflow-x-auto` + `scrollbar-none` (glissement horizontal à la souris/
-      au doigt) sans aucune barre visible, flèche ni indicateur — exactement le même
-      défaut que celui trouvé par l'agent `designer` sur le sélecteur de jour de
-      réservation (`StepSlot.tsx`), pas encore corrigé non plus. Un vrai carrousel
-      (flèches et/ou défilement automatique) réglerait les deux à la fois si le motif
-      est mutualisé. Bon candidat pour `designer`.
+- [x] 2026-08-28 — **5 comptes de test supprimés de la base** (`thf`, `Washing`,
+      `Compte Démo`, `TestClaude`, `TesteurOrg`) à la demande d'Alexandre — même procédure
+      que la purge RGPD (`api/cron/purge-accounts` : dépenses → logo storage → utilisateur
+      auth, cascade sur `washers`/bookings/services). `ysclean` (actif, probablement le
+      compte de Yanis) et `BellAuto89` (essai en cours) conservés après vérification.
+      Ne restent que Kooki Clean, Kookii Clean, ysclean, BellAuto89.
+
+- [x] 2026-08-28 — **Paiement PayPal de l'engagement annuel vérifié de bout en bout par
+      Alexandre**, confirmé bon. Calcul du montant correct côté code (`AbonnementPanel.tsx`,
+      `amountFor()` utilise `yearlyPrice()` de `lib/plan.ts`), lien `paypal.me/WashBoardSAAS/
+      <montant annuel>` fonctionnel.
+
+- [x] 2026-08-28 — **Défilement des avis clients corrigé** sur la page de réservation
+      publique. Signalé par Alexandre : la section "Avis clients" restait figée sur les
+      premiers avis (`overflow-x-auto` seul, sans barre visible ni flèche). Extrait en
+      composant dédié `components/booking/ReviewsCarousel.tsx` : flèches gauche/droite
+      (affichées seulement quand il y a de quoi défiler de ce côté) + scroll-snap +
+      voile en dégradé derrière chaque flèche. tsc/lint/277 tests verts, poussé.
+      ⚠️ **Reste ouvert** : même défaut sur le sélecteur de jour de réservation
+      (`StepSlot.tsx`) — pas encore corrigé, à reprendre avec le même motif.
 
 - [x] 2026-08-27 — **Bug de sécurité/facturation corrigé : la page de réservation
       publique ne voyait jamais les RDV existants du laveur (RLS).** Trouvé par
