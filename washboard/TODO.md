@@ -65,14 +65,19 @@
       de nos données d'entraînement (version 2026, post-cutoff) — vérifié que le paquet
       vient bien du registre npm standard (`"next": "16.2.6"`, pas de fork/patch local),
       donc pas de risque de patch maison écrasé par la montée de version.
-      **Évaluation locale faite le 2026-08-27** (branche `chore/eval-nextjs-16.3.3`, non
-      fusionnée, non poussée) : `npm install next@16.3.3` seul (sans `--force`) suffit à
-      corriger les 6 vulnérabilités liées à Next.js (next, postcss, sharp, nanoid) —
-      restent brace-expansion/protobufjs/tmp/uuid, sans rapport avec Next.js. `tsc`, lint
-      (24 warnings inchangés, 0 erreur), `vitest run` (231/231) et `next build` (63 pages)
-      tous verts, aucune régression observée. Reste à faire avant de merger sur master :
-      go final de l'agent cyber + test manuel du golden path (page de réservation
-      publique) en environnement de dev, la CI ne couvrant pas le rendu réel.
+      ⚠️ **Évaluation refaite le 2026-08-28** : la 1ère évaluation (2026-08-27) avait été
+      faite dans le bac à sable temporaire d'une session cloud, jamais poussée — perdue
+      avec ce bac à sable avant que `cyber` ait pu la revoir. Reprise sur la branche
+      `chore/eval-nextjs-16.3.3`, **poussée cette fois** sur origin. `npm install
+      next@16.3.3` seul (sans `--force`) suffit à corriger les 4 vulnérabilités liées à
+      Next.js (next, postcss, sharp, nanoid) : 9 → 5 vulnérabilités, aucune restante liée
+      à Next.js (brace-expansion, tmp, protobufjs, uuid via exceljs — dépendances d'outils
+      annexes, pas exposées aux visiteurs). `tsc`, lint (25 warnings inchangés, 0 erreur),
+      `vitest run` (277/277) et `next build` (63 pages) tous verts, aucune régression
+      observée. `AGENTS.md` auto-régénéré par `next dev` (comportement connu), reverté
+      avant le commit. Serveur de dev lancé (port 3003) pour test manuel par Alexandre.
+      **Reste à faire avant de merger sur master** : test manuel du golden path (page de
+      réservation publique) par Alexandre + go final de l'agent `cyber`.
 
 - [x] 2026-08-26 — **Branche `feat/refonte-hero-et-forfaits` poussée puis mergée sur master.**
       Yanis avait corrigé le bug des congés de son côté en parallèle : les deux correctifs
