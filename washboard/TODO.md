@@ -74,8 +74,8 @@
       inline dans le chat, jamais de fichier de migration) — à rappeler à `dev`/`cyber`
       pour la prochaine fois.
 
-- [ ] **Mettre à jour Next.js (16.2.6 → 16.3.3+) : 9 vulnérabilités connues, dont une
-      haute.** Trouvé par l'agent cyber le 2026-08-27 via `npm audit --omit=dev`. La plus
+- [x] 2026-08-28 — **Next.js mis à jour (16.2.6 → 16.3.3), mergé sur master.** Trouvé par
+      l'agent cyber le 2026-08-27 via `npm audit --omit=dev`. La plus
       grave : divulgation non authentifiée d'endpoints Server Function (corrigée en
       16.3.3). 3 modérées, 6 hautes au total, la plupart via la chaîne de dépendances de
       Next.js (postcss, sharp, nanoid, brace-expansion).
@@ -93,9 +93,14 @@
       annexes, pas exposées aux visiteurs). `tsc`, lint (25 warnings inchangés, 0 erreur),
       `vitest run` (277/277) et `next build` (63 pages) tous verts, aucune régression
       observée. `AGENTS.md` auto-régénéré par `next dev` (comportement connu), reverté
-      avant le commit. Serveur de dev lancé (port 3003) pour test manuel par Alexandre.
-      **Reste à faire avant de merger sur master** : test manuel du golden path (page de
-      réservation publique) par Alexandre + go final de l'agent `cyber`.
+      avant le commit. **Test manuel du golden path fait par Alexandre** (page de
+      réservation publique) : confirmé bon. **`cyber` a rendu un GO explicite** le
+      2026-08-28 après audit indépendant (légitimité npm confirmée, `npm audit` reproduit,
+      diff limité à `package.json`/lock, recherche des CVE Next.js récentes — a même
+      vérifié que la faille critique RCE via l'optimisation d'images AVIF ne concerne pas
+      WashBoard, `next/image` n'y étant utilisé qu'avec des images locales/statiques).
+      Fusionné sur `master` (commit `ff672e9`), tsc/lint/277 tests re-vérifiés après
+      fusion, poussé.
 
 - [x] 2026-08-26 — **Branche `feat/refonte-hero-et-forfaits` poussée puis mergée sur master.**
       Yanis avait corrigé le bug des congés de son côté en parallèle : les deux correctifs
