@@ -28,11 +28,12 @@
       car son navigateur PC reste connecté à son propre compte laveur (RLS le
       laisse voir ses propres RDV). Corrigé : ces lectures passent maintenant par
       le client admin (service_role) déjà utilisé ailleurs pour ce même besoin.
-      ⚠️ **À vérifier** : si **Kookii Clean** (vraie cliente) utilise le mode
-      "RDV précédent" pour ses frais de déplacement, ses vrais clients ont pu être
-      sous/sur-facturés en silence depuis la mise en place de cette fonctionnalité
-      — pas encore vérifié (nécessite de consulter sa config `travel_fee_mode`,
-      pas ses données de réservation).
+      ~~⚠️ À vérifier : si **Kookii Clean** (vraie cliente) utilise le mode "RDV
+      précédent"...~~ **Classé sans suite le 2026-08-28** : Alexandre a tranché
+      que l'éventuelle mauvaise facturation historique (avant le correctif) n'est
+      pas un sujet à creuser. Le correctif lui-même reste en place et vérifié —
+      seule l'investigation rétroactive est abandonnée. Ne plus faire remonter ce
+      point dans les rapports d'équipe.
 
 - [ ] **La routine cloud "réunion d'équipe quotidienne" n'a pas les droits d'écriture
       sur le dépôt GitHub.** Constaté le 2026-08-27 : sa première tentative de
