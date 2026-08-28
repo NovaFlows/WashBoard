@@ -9,26 +9,33 @@ type Props = {
   themed: boolean
 }
 
-const CARD_WIDTH = 224 // w-56 (14rem) — largeur d'une carte pour le calcul de défilement
 const GAP = 12 // gap-3
-const PAGE_SIZE = 2 // nombre d'avis affichés par page
+const MOBILE_BREAKPOINT = 640 // correspond au "sm" de Tailwind
 const INTERVAL_MS = 7000
 
-/** Avis clients : défilement automatique, 2 par 2, sans flèches — juste un
- *  glissement passif toutes les 7s. La position repart de la position réelle
- *  de défilement à chaque tick, donc un glissement manuel (tactile) au milieu
- *  n'est jamais écrasé par un saut arrière. */
+/** Avis clients : défilement automatique, sans flèches. Une carte à la fois
+ *  sur mobile (2 côte à côte sur cet écran ne tenaient pas — la 2e était
+ *  coupée), 2 par 2 à partir de l'écran "sm". La largeur de carte et le pas
+ *  de défilement sont mesurés en direct dans le DOM (pas une valeur fixe) :
+ *  ils suivent la largeur réelle définie en CSS, y compris entre les
+ *  breakpoints. La position de page est recalculée depuis le scrollLeft réel
+ *  à chaque tick, donc un glissement manuel entre deux tick n'est jamais
+ *  écrasé par un saut arrière vers une position programmée obsolète. */
 export default function ReviewsCarousel({ reviews, aggregate, themed }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = scrollerRef.current
-    if (!el || reviews.length <= PAGE_SIZE) return
-
-    const pageStep = (CARD_WIDTH + GAP) * PAGE_SIZE
-    const totalPages = Math.ceil(reviews.length / PAGE_SIZE)
+    if (!el || reviews.length <= 1) return
 
     const id = setInterval(() => {
+      const firstCard = el.firstElementChild as HTMLElement | null
+      if (!firstCard) return
+      const cardWidth = firstCard.getBoundingClientRect().width
+      const pageSize = window.innerWidth < MOBILE_BREAKPOINT ? 1 : 2
+      const pageStep = (cardWidth + GAP) * pageSize
+      const totalPages = Math.ceil(reviews.length / pageSize)
+
       const currentPage = Math.round(el.scrollLeft / pageStep)
       const nextPage = (currentPage + 1) % totalPages
       el.scrollTo({ left: nextPage * pageStep, behavior: 'smooth' })
@@ -69,7 +76,7 @@ export default function ReviewsCarousel({ reviews, aggregate, themed }: Props) {
         {reviews.map((rv, i) => (
           <div
             key={i}
-            className={`shrink-0 w-56 rounded-xl p-3.5 snap-start ${
+            className={`shrink-0 w-[calc(100%-2.5rem)] sm:w-56 rounded-xl p-3.5 snap-start ${
               themed
                 ? 'bg-white/10 border border-white/15'
                 : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700'
