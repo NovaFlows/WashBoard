@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
+import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
@@ -189,54 +190,7 @@ export default async function BookingPage({ params }: Props) {
 
         {hasReviews && (
           <div className="mt-6">
-            <div className={`rounded-2xl overflow-hidden ${
-              themed
-                ? 'bg-white/10 backdrop-blur-sm border border-white/15'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm'
-            }`}>
-              <div className="px-5 pt-4 pb-3 flex items-center justify-between">
-                <p className={`text-sm font-semibold ${themed ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                  Avis clients
-                </p>
-                {reviewData.aggregate && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-amber-400 text-sm">★</span>
-                    <span className={`text-sm font-bold ${themed ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                      {reviewData.aggregate.value.toFixed(1)}
-                    </span>
-                    {reviewData.aggregate.count > 0 && (
-                      <span className={`text-xs ${themed ? 'text-white/50' : 'text-slate-400 dark:text-slate-500'}`}>
-                        · {reviewData.aggregate.count} avis
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-3 overflow-x-auto px-5 pb-4 scrollbar-none">
-                {reviewData.reviews.map((rv, i) => (
-                  <div
-                    key={i}
-                    className={`shrink-0 w-56 rounded-xl p-3.5 ${
-                      themed
-                        ? 'bg-white/10 border border-white/15'
-                        : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex gap-0.5 mb-2">
-                      {Array.from({ length: 5 }).map((_, s) => (
-                        <span key={s} className={s < rv.rating ? 'text-amber-400' : (themed ? 'text-white/20' : 'text-slate-200 dark:text-slate-600')}>★</span>
-                      ))}
-                    </div>
-                    <p className={`text-xs leading-relaxed line-clamp-4 mb-2 ${themed ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'}`}>
-                      &ldquo;{rv.text}&rdquo;
-                    </p>
-                    <p className={`text-[11px] font-semibold ${themed ? 'text-white/50' : 'text-slate-400 dark:text-slate-500'}`}>
-                      — {rv.author}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ReviewsCarousel reviews={reviewData.reviews} aggregate={reviewData.aggregate} themed={themed} />
           </div>
         )}
 
