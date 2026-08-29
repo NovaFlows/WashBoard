@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
+import { logger } from '@/lib/logger'
 
 function generateSlug(name: string): string {
   return name
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest) {
     const raw = authError.message.toLowerCase()
     const isDuplicate = raw.includes('already') || (raw.includes('email') && raw.includes('exist'))
     const msg = isDuplicate ? 'Cet email est déjà utilisé' : authError.message
+    // Un doublon est un cas normal (l'utilisateur a déjà un compte) ; le reste
+    // est une vraie panne de création de compte, qui doit se voir.
+    if (!isDuplicate) logger.error('signup.auth_create_failed', {}, authError)
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
@@ -54,7 +58,19 @@ export async function POST(request: NextRequest) {
     })
 
   if (washerError) {
-    await supabase.auth.admin.deleteUser(authData.user.id)
+    // L'utilisateur auth existe déjà à ce stade : sans rollback réussi, son
+    // email reste pris pour toujours alors qu'aucune fiche laveur n'existe —
+    // il ne peut plus se réinscrire et rien ne le signale (cas vécu en prod le
+    // 2026-08-28, compte fantôme découvert seulement parce qu'un test a échoué).
+    logger.error('signup.washer_insert_failed', { userId: authData.user.id }, washerError)
+
+    const { error: rollbackError } = await supabase.auth.admin.deleteUser(authData.user.id)
+    if (rollbackError) {
+      // Le rollback lui-même a échoué : le compte fantôme est créé, maintenant.
+      // C'est la seule trace qui permettra de le retrouver et de le purger.
+      logger.error('signup.rollback_failed', { userId: authData.user.id }, rollbackError)
+    }
+
     return NextResponse.json({ error: 'Erreur lors de la création du profil' }, { status: 500 })
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize } from '@/lib/slots'
@@ -72,6 +72,9 @@ export default function StepSlot({
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
   const [morningVisible,     setMorningVisible]     = useState(6)
   const [afternoonVisible,   setAfternoonVisible]   = useState(6)
+  const dayScrollerRef = useRef<HTMLDivElement>(null)
+  const [dayScrollLeft,  setDayScrollLeft]  = useState(false)
+  const [dayScrollRight, setDayScrollRight] = useState(false)
 
   const SLOTS_PER_PAGE = 6
 
@@ -80,6 +83,25 @@ export default function StepSlot({
     const t = setTimeout(() => setDebouncedAddress(address), 800)
     return () => clearTimeout(t)
   }, [address])
+
+  const updateDayScrollHints = useCallback(() => {
+    const el = dayScrollerRef.current
+    if (!el) return
+    setDayScrollLeft(el.scrollLeft > 4)
+    setDayScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    updateDayScrollHints()
+    const el = dayScrollerRef.current
+    if (!el) return
+    el.addEventListener('scroll', updateDayScrollHints, { passive: true })
+    window.addEventListener('resize', updateDayScrollHints)
+    return () => {
+      el.removeEventListener('scroll', updateDayScrollHints)
+      window.removeEventListener('resize', updateDayScrollHints)
+    }
+  }, [updateDayScrollHints])
 
   // Vérification de zone dès que l'adresse change (sans attendre la date)
   useEffect(() => {
@@ -255,7 +277,19 @@ export default function StepSlot({
 
       <div className="mb-4">
         <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Sélectionnez un jour</p>
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {/* Le voile en dégradé à droite est le seul indice qu'il reste des jours
+            hors écran : sans lui, la liste paraît finir au dernier jour visible
+            et un client peut croire qu'il n'y a plus de créneaux après. Pas de
+            défilement automatique ici (contrairement aux avis) : c'est une
+            sélection active, un déplacement subi serait pénible. */}
+        <div className="relative">
+          {dayScrollRight && (
+            <div className="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white dark:from-slate-900 to-transparent pointer-events-none z-[5]" />
+          )}
+          {dayScrollLeft && (
+            <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white dark:from-slate-900 to-transparent pointer-events-none z-[5]" />
+          )}
+          <div ref={dayScrollerRef} className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {days.map(day => {
             const isAvailable   = availableDaysOfWeek.includes(day.getDay()) && !isDateUnavailable(day)
             const isUnavailable = isDateUnavailable(day)
@@ -281,6 +315,7 @@ export default function StepSlot({
               </button>
             )
           })}
+          </div>
         </div>
       </div>
 
