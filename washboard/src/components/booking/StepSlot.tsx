@@ -5,6 +5,7 @@ import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount } from '@/lib/pricing'
+import { toDateStr } from '@/lib/dateUtils'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -16,10 +17,6 @@ function embedDuration(services: EmbedService): number {
 }
 
 type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
-
-function toDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 type Props = {
   availabilities: Availability[]

@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { logger } from '@/lib/logger'
+import { toDateStr } from '@/lib/dateUtils'
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const DAYS_FR = ['L','M','M','J','V','S','D']
@@ -27,10 +28,6 @@ const ALL_SLOTS = [
 ]
 
 const GROUPS = ['Matin', 'Après-midi', 'Soirée']
-
-function toDateStr(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
 
 function formatDateFr(dateStr: string): string {
   const [y, m, d] = dateStr.split('-')
