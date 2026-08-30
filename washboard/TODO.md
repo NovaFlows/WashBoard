@@ -46,13 +46,19 @@
       **11 fichiers de plus de 400 lignes** (44 h) — voir la section dédiée plus bas.
       Réduit dans la foulée :
       - **2 bugs réels trouvés en écrivant les tests** (voir entrées dédiées) ;
-      - couverture `src/lib` : 93,4 % → **96,5 %** (branches 88,7 % → 93,6 %) ;
-      - tests unitaires : 277 → **359** ;
+      - couverture `src/lib` : 93,4 % → **96,5 %** (branches 88,7 % → 93,7 %) ;
+      - tests unitaires : 277 → **371** ;
+      - **plus aucune fonction dupliquée dans le projet** (4 éliminées, dont
+        `haversineKm` qui existait en double alors qu'elle décide si un client est
+        dans la zone d'intervention — deux implémentations d'une règle
+        d'autorisation) ;
       - 20 `console.*` convertis vers le logger structuré (observabilité) ;
       - 168 lignes de CSS dupliquées factorisées ;
-      - blocs dupliqués entre fichiers : 70 → 48 ;
+      - blocs dupliqués entre fichiers : 70 → 42 ;
       - avertissements ESLint : 25 → 23 (les 23 restants sont le motif
         `set-state-in-effect` assumé dans `eslint.config.mjs`).
+      Nouveaux modules extraits et testés : `calendarLayout`, `comptaPeriod`,
+      `crmStats`, `categoryTypes`.
 
 - [x] 2026-08-30 — **BUG CORRIGÉ : la semaine comptable commençait le dimanche.**
       Trouvé en extrayant la logique de période de `ComptaDashboard` pour la tester.
@@ -351,7 +357,7 @@
 
 ## 🟠 Robustesse / dette technique
 
-### 📊 Dette mesurée au 2026-08-30 — 197,7 h ≈ 24,7 jours (note A, ratio 1,96 %)
+### 📊 Dette mesurée au 2026-08-30 — 195,2 h ≈ 24,4 jours (note A, ratio 1,94 %)
 
 Méthode SonarQube : chaque type de constat porte un coût de remédiation, la dette est
 leur somme ; le ratio compare ce coût au coût de développement estimé (30 min/ligne).
@@ -363,9 +369,9 @@ rien à faire, mais que le projet reste globalement sain.
 | Fonction > 300 lignes (composant monolithique) | 10 | 8 h | **80 h** |
 | Fichier > 400 lignes à découper | 11 | 4 h | **44 h** |
 | Fonction > 60 lignes à scinder | 50 | 45 min | 37,5 h |
-| Bloc dupliqué entre fichiers | 48 | 20 min | 16 h |
-| Ternaire imbriqué (lisibilité) | 60 | 8 min | 8 h |
-| Assertion non-null (`!`) | 37 | 10 min | 6,2 h |
+| Bloc dupliqué entre fichiers | 42 | 20 min | 14 h |
+| Ternaire imbriqué (lisibilité) | 59 | 8 min | 7,9 h |
+| Assertion non-null (`!`) | 35 | 10 min | 5,8 h |
 | Avertissement ESLint (motif assumé) | 23 | 10 min | 3,8 h |
 | Type `any` explicite | 4 | 15 min | 1 h |
 | Imbrication > 8 niveaux | 1 | 1 h | 1 h |
