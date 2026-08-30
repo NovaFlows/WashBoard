@@ -1,4 +1,5 @@
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
+export { formatHeure } from '@/lib/dateUtils'
 
 // Calculs de disposition du calendrier, extraits de `CalendrierDashboard.tsx`
 // (1594 lignes) où ils étaient noyés et non testés. Ce sont des fonctions
@@ -87,7 +88,3 @@ export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
-/** Heure au format court français (09:30). */
-export function formatHeure(date: Date): string {
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-}

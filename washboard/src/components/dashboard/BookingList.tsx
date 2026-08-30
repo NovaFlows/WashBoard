@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { openGmail, openWhatsapp } from '@/lib/contact'
 import { formatPrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
+import { formatHeure } from '@/lib/dateUtils'
 
 type ServiceAddon = { id: string; label: string; price: number; category: string; duration_minutes?: number }
 type Service = { name: string; price: number; duration_minutes: number }
@@ -38,10 +39,6 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   cancelled:   { label: 'Annulé',        dot: 'bg-red-400',     badge: 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800' },
   done:        { label: 'Terminé',       dot: 'bg-slate-400',   badge: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700' },
   closed_late: { label: 'Délai dépassé', dot: 'bg-orange-400',  badge: 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800' },
-}
-
-function fmt(d: Date) {
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
 export default function BookingList({ bookings }: Props) {
@@ -132,7 +129,7 @@ function BookingCard({ booking, loading, onUpdate }: {
 }) {
   const date               = new Date(booking.scheduled_at)
   const dayLabel           = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const timeLabel          = fmt(date)
+  const timeLabel          = formatHeure(date)
   const statusKey          = booking.closed_late ? 'closed_late' : booking.status
   const statusInfo         = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.pending
   const isLoading          = loading === booking.id

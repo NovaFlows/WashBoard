@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient } from '@supabase/supabase-js'
-
-function admin() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
-}
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
@@ -25,13 +19,13 @@ export async function POST(request: NextRequest) {
   const ext   = file.type === 'image/png' ? 'png' : 'jpg'
   const fileName = `${user.id}.${ext}`
 
-  const { error: uploadError } = await admin().storage
+  const { error: uploadError } = await createAdminClient().storage
     .from('backgrounds')
     .upload(fileName, bytes, { contentType: file.type, upsert: true })
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
-  const { data: { publicUrl } } = admin().storage.from('backgrounds').getPublicUrl(fileName)
+  const { data: { publicUrl } } = createAdminClient().storage.from('backgrounds').getPublicUrl(fileName)
 
   const { error: updateError } = await supabase
     .from('washers')

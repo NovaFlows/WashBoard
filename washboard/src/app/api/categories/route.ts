@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import type { CategoryType } from '@/types'
-
-function sanitizeTypes(raw: unknown): CategoryType[] {
-  if (!Array.isArray(raw)) return []
-  return raw
-    .map((t) => {
-      const obj = t as { id?: unknown; name?: unknown }
-      const name = typeof obj?.name === 'string' ? obj.name.trim() : ''
-      const id = typeof obj?.id === 'string' && obj.id ? obj.id : crypto.randomUUID()
-      return { id, name }
-    })
-    .filter((t) => t.name.length > 0)
-}
+import { sanitizeTypes } from '@/lib/categoryTypes'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()

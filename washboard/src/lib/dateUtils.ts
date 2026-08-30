@@ -10,3 +10,11 @@ export function getMondayOf(d: Date): Date {
   r.setDate(r.getDate() - (day === 0 ? 6 : day - 1))
   return r
 }
+
+/** Heure au format court français (09:05, 14:30).
+ *
+ *  Était recopiée dans trois fichiers (calendrier, liste de RDV, liens de
+ *  contact) sous le nom `fmt`. */
+export function formatHeure(date: Date): string {
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}

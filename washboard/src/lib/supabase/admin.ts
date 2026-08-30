@@ -18,5 +18,13 @@ export function createAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      // Côté serveur, il n'y a ni stockage de session à alimenter ni jeton à
+      // rafraîchir : chaque requête crée son client et le jette. Ces deux
+      // réglages venaient des routes d'upload (logo, fond), qui recréaient
+      // leur propre client admin — ils sont remontés ici pour que tous les
+      // appels en bénéficient.
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
   )
 }
