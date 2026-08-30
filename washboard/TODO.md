@@ -14,19 +14,61 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Brancher les tests e2e (Playwright) sur la CI.** Découvert le 2026-08-30 : le
-      projet a **22 tests e2e** couvrant le parcours de réservation complet, toutes les
-      pages du dashboard, les pages légales et `/api/health` — mais la CI ne les lance
-      pas (`.github/workflows/ci.yml` fait typecheck/lint/tests unitaires/build
-      seulement). C'est pour ça qu'on demande un test manuel du golden path à Alexandre
-      à chaque changement sensible, alors qu'une commande suffirait. Conséquence
-      concrète : le test du parcours de réservation était **cassé depuis le 2026-07-02**
-      (il ignorait l'étape « Options ») sans que personne ne le voie — corrigé le
-      2026-08-30. À faire : passer `TEST_WASHER_EMAIL`/`PASSWORD`/`SLUG` en secrets
-      GitHub Actions.
-      ⚠️ Piège rencontré : `playwright.config.ts` cible `localhost:3000` en dur, or ce
-      port est occupé par un autre projet d'Alexandre (Folyo) — les tests tapaient sur
-      la mauvaise application et échouaient faussement. À rendre configurable.
+- [ ] **⚠️ ACTION REQUISE D'ALEXANDRE : créer les 7 secrets GitHub** pour que le job e2e
+      de la CI tourne réellement. Sans eux, le job s'arrête proprement avec un
+      avertissement (il ne casse pas le build, mais ne teste rien).
+      Dans *Settings → Secrets and variables → Actions* du dépôt :
+      `E2E_SUPABASE_URL`, `E2E_SUPABASE_ANON_KEY`, `E2E_SUPABASE_SERVICE_ROLE_KEY`
+      (valeurs de `washboard/.env.local`), `E2E_WASHER_EMAIL`, `E2E_WASHER_PASSWORD`,
+      `E2E_WASHER_SLUG`, `E2E_CLIENT_EMAIL` (valeurs de `washboard/.env.test.local`).
+
+- [x] 2026-08-30 — **Couverture e2e complète + branchée sur la CI.** 22 → **123 tests**
+      couvrant l'inscription et ses validations, la connexion, le mot de passe oublié,
+      la réinitialisation, le parcours de réservation complet, l'administration de la
+      page client (prestations, disponibilités, zone, créneaux intelligents), la compta
+      (4 périodes, dépenses, récurrents), le CRM (entonnoir, liens par réseau, export),
+      le calendrier (3 vues), les paramètres, l'abonnement, le guide, le blog, les pages
+      légales, le SEO (sitemap/robots/JSON-LD) et les protections d'API (crons sans
+      secret, routes authentifiées vues d'un anonyme, honeypot).
+      Le job CI tourne sur un **build de production**, pas le serveur de dev.
+      ⚠️ La base Supabase étant partagée avec la prod, tout objet créé est préfixé
+      `[E2E]` et supprimé en `afterEach`, plus un nettoyage `always()` en CI. Aucun test
+      ne crée ni ne supprime de compte.
+      Corrigé au passage : `playwright.config.ts` ciblait `localhost:3000` en dur, port
+      occupé par un autre projet (Folyo) — les tests visaient la mauvaise application et
+      échouaient sans qu'on comprenne pourquoi. Port configurable via `E2E_PORT`.
+
+- [x] 2026-08-30 — **Audit de dette technique (méthode SonarQube) et réduction.**
+      Dette mesurée : **197,7 h ≈ 24,7 jours** · ratio 1,96 % → **note A**
+      (formule SonarQube : coût de remédiation / coût de développement estimé).
+      La note est bonne, mais elle vient du volume du projet : l'essentiel de la dette
+      restante est concentrée dans **10 composants monolithiques** (80 h) et
+      **11 fichiers de plus de 400 lignes** (44 h) — voir la section dédiée plus bas.
+      Réduit dans la foulée :
+      - **2 bugs réels trouvés en écrivant les tests** (voir entrées dédiées) ;
+      - couverture `src/lib` : 93,4 % → **96,5 %** (branches 88,7 % → 93,6 %) ;
+      - tests unitaires : 277 → **359** ;
+      - 20 `console.*` convertis vers le logger structuré (observabilité) ;
+      - 168 lignes de CSS dupliquées factorisées ;
+      - blocs dupliqués entre fichiers : 70 → 48 ;
+      - avertissements ESLint : 25 → 23 (les 23 restants sont le motif
+        `set-state-in-effect` assumé dans `eslint.config.mjs`).
+
+- [x] 2026-08-30 — **BUG CORRIGÉ : la semaine comptable commençait le dimanche.**
+      Trouvé en extrayant la logique de période de `ComptaDashboard` pour la tester.
+      `toISO` formatait via `toISOString()`, donc en UTC : la France étant toujours en
+      avance sur UTC, toute date prise à minuit reculait d'un jour. Conséquences réelles
+      pour le laveur : le CA hebdomadaire incluait le dimanche précédent et excluait le
+      dimanche courant (**en permanence**), et la vue « Jour » consultée avant 2 h du
+      matin affichait la veille. Le projet avait pourtant déjà la bonne fonction
+      (`toDateStr`) : `ComptaDashboard` avait redéfini la sienne. Corrigé et couvert par
+      22 tests (`lib/comptaPeriod.ts`).
+
+- [x] 2026-08-30 — **BUG CORRIGÉ : facturation non testée.** `graceEnded` (décide si on
+      **bloque les réservations** d'un laveur) et `monthsOwed` (décide **combien il
+      doit**) n'avaient aucun test — `plan.ts` plafonnait à 33 % de branches. Pas de
+      défaut trouvé dans leur logique, mais le risque était entier : 14 tests ajoutés,
+      à dates figées. `plan.ts` est désormais à 100 %.
 
 - [x] 2026-08-30 — **Comptes fantômes `auth.users` : cause tracée.** Le rollback
       existait bien dans `signup/route.ts` (confirmé par `cyber` et `dev`), mais **rien
@@ -308,6 +350,53 @@
       Migration triviale depuis UptimeRobot (changer l'URL de ping). Pas avant.
 
 ## 🟠 Robustesse / dette technique
+
+### 📊 Dette mesurée au 2026-08-30 — 197,7 h ≈ 24,7 jours (note A, ratio 1,96 %)
+
+Méthode SonarQube : chaque type de constat porte un coût de remédiation, la dette est
+leur somme ; le ratio compare ce coût au coût de développement estimé (30 min/ligne).
+La note A vient du volume du projet (20 144 lignes) — elle ne veut pas dire qu'il n'y a
+rien à faire, mais que le projet reste globalement sain.
+
+| Constat | Nb | Coût unitaire | Total |
+|---|---:|---:|---:|
+| Fonction > 300 lignes (composant monolithique) | 10 | 8 h | **80 h** |
+| Fichier > 400 lignes à découper | 11 | 4 h | **44 h** |
+| Fonction > 60 lignes à scinder | 50 | 45 min | 37,5 h |
+| Bloc dupliqué entre fichiers | 48 | 20 min | 16 h |
+| Ternaire imbriqué (lisibilité) | 60 | 8 min | 8 h |
+| Assertion non-null (`!`) | 37 | 10 min | 6,2 h |
+| Avertissement ESLint (motif assumé) | 23 | 10 min | 3,8 h |
+| Type `any` explicite | 4 | 15 min | 1 h |
+| Imbrication > 8 niveaux | 1 | 1 h | 1 h |
+| TODO/FIXME dans le code | 2 | 5 min | 0,2 h |
+
+**Où elle se concentre** (63 % de la dette dans 8 fichiers) :
+
+| Fichier | Lignes | Plus grosse fonction |
+|---|---:|---:|
+| `components/dashboard/CalendrierDashboard.tsx` | 1 544 | 1 434 |
+| `components/dashboard/CrmDashboard.tsx` | 815 | 628 |
+| `components/dashboard/ParametresForm.tsx` | 849 | 534 |
+| `components/dashboard/admin/IdentiteForm.tsx` | 729 | 663 |
+| `components/landing/LandingPage.tsx` | 739 | 647 |
+| `app/booking/page.tsx` | 486 | 445 |
+| `components/dashboard/admin/PrestationsManager.tsx` | 499 | 281 |
+| `components/booking/StepSlot.tsx` | 452 | 398 |
+
+- [ ] **Découper les composants monolithiques** (~80 h, le gros poste restant).
+      Volontairement **non fait en autonomie** : découper un composant de 1 400 lignes
+      touche l'outil de travail quotidien du laveur, et le risque de régression
+      dépasse le gain de confort tant qu'Alexandre n'est pas là pour valider le rendu.
+      Approche recommandée, la moins risquée en premier :
+  1. Extraire la **logique pure** de chaque gros composant vers `lib/` + tests. C'est
+     ce qui a été fait pour le calendrier, la compta et le CRM le 2026-08-30 — et ça a
+     révélé **2 bugs réels** au passage. Restent `IdentiteForm`, `StepSlot`,
+     `BookingList`, `booking/page.tsx`.
+  2. Puis seulement extraire des **sous-composants de rendu**, un par un, en
+     s'appuyant sur les 123 tests e2e comme filet.
+  3. Ne jamais faire les deux dans le même commit : si une régression apparaît, on
+     doit pouvoir dire lequel des deux l'a causée.
 
 - [x] 2026-08-26 — Cle Maps renommee cote code (voir plus bas). Reste le renommage Vercel.
 
