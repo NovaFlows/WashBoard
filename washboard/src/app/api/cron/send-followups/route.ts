@@ -3,6 +3,7 @@ import { sendFollowupEmail } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
 import { graceEnded } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
           .eq('id', booking.id)
       } catch (e) {
         failed++
-        console.error('[cron/send-followups]', booking.id, e)
+        logger.error('cron.followups.send_failed', { bookingId: booking.id }, e)
       }
     }
   }

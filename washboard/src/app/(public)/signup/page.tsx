@@ -41,62 +41,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans wb-auth-bg">
-      <style>{`
-        .wb-auth-bg {
-          background: linear-gradient(140deg, #EBF5FF 0%, #F4F9FF 45%, #FFFFFF 100%);
-        }
-        .dark .wb-auth-bg {
-          background: linear-gradient(150deg, #09111E 0%, #0C1D38 65%, #09111E 100%);
-        }
-        .wb-auth-glow {
-          background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,196,212,0.13), transparent);
-        }
-        .dark .wb-auth-glow { background: none; }
-        .wb-auth-card {
-          background: rgba(255,255,255,0.97);
-          border: 1px solid rgba(22,81,232,0.10);
-          box-shadow: 0 4px 32px rgba(22,81,232,0.07);
-        }
-        .dark .wb-auth-card {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.10);
-          box-shadow: none;
-        }
-        .wb-input {
-          width: 100%;
-          border: 1px solid rgba(22,81,232,0.15);
-          border-radius: 0.75rem;
-          padding: 0.625rem 1rem;
-          font-size: 0.875rem;
-          background: white;
-          color: #0f172a;
-          outline: none;
-          transition: box-shadow 0.15s, border-color 0.15s;
-        }
-        .dark .wb-input {
-          background: rgba(255,255,255,0.06);
-          border-color: rgba(255,255,255,0.12);
-          color: rgba(255,255,255,0.9);
-        }
-        .wb-input::placeholder { color: #94a3b8; }
-        .dark .wb-input::placeholder { color: rgba(255,255,255,0.3); }
-        .wb-input:focus {
-          border-color: #1651E8;
-          box-shadow: 0 0 0 3px rgba(22,81,232,0.12);
-        }
-        .dark .wb-input:focus {
-          border-color: #4A81FF;
-          box-shadow: 0 0 0 3px rgba(74,129,255,0.15);
-        }
-        .wb-label {
-          display: block;
-          font-size: 0.8125rem;
-          font-weight: 600;
-          margin-bottom: 0.375rem;
-          color: #475569;
-        }
-        .dark .wb-label { color: rgba(255,255,255,0.6); }
-      `}</style>
 
       <div aria-hidden className="fixed inset-x-0 top-0 h-[500px] pointer-events-none overflow-hidden">
         <div className="wb-auth-glow absolute inset-0" />

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (error || !data?.properties?.action_link) {
-    console.error('[reset-password] generateLink error:', error)
+    logger.error('auth.reset_password.generate_link_failed', {}, error)
     const msg = error?.message?.toLowerCase().includes('not found') || error?.status === 404
       ? 'Aucun compte trouvé pour cet email.'
       : `Erreur génération du lien : ${error?.message ?? 'inconnue'}`

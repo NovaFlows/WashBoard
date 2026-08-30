@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendTrialReminder, sendTrialExpired, sendSubReminder, sendSubExpired, sendGraceEndingWarning } from '@/lib/email'
+import { logger } from '@/lib/logger'
 
 // Tourne chaque matin à 8h (cron-job.org : 0 8 * * *)
 export async function GET(request: NextRequest) {
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
       await sendTrialReminder({ to: user.email, washerName: washer.name, trialEndsAt: washer.trial_ends_at })
       await admin.from('washers').update({ trial_reminder_sent_at: nowIso }).eq('id', washer.id)
       counts.trialReminder++
-    } catch (e) { console.error('[cron] trial_reminder', washer.id, e) }
+    } catch (e) { logger.error('cron.trial_reminder.send_failed', { washerId: washer.id }, e) }
   }
 
   for (const washer of trialsExpired ?? []) {
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
       await sendTrialExpired({ to: user.email, washerName: washer.name })
       await admin.from('washers').update({ trial_expired_sent_at: nowIso }).eq('id', washer.id)
       counts.trialExpired++
-    } catch (e) { console.error('[cron] trial_expired', washer.id, e) }
+    } catch (e) { logger.error('cron.trial_expired.send_failed', { washerId: washer.id }, e) }
   }
 
   for (const washer of subsToRemind ?? []) {
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       await sendSubReminder({ to: user.email, washerName: washer.name, endsAt: washer.subscription_ends_at })
       await admin.from('washers').update({ sub_reminder_sent_at: nowIso }).eq('id', washer.id)
       counts.subReminder++
-    } catch (e) { console.error('[cron] sub_reminder', washer.id, e) }
+    } catch (e) { logger.error('cron.sub_reminder.send_failed', { washerId: washer.id }, e) }
   }
 
   for (const washer of subsExpired ?? []) {
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
         subscription_status: 'expired',
       }).eq('id', washer.id)
       counts.subExpired++
-    } catch (e) { console.error('[cron] sub_expired', washer.id, e) }
+    } catch (e) { logger.error('cron.sub_expired.send_failed', { washerId: washer.id }, e) }
   }
 
   for (const washer of graceToWarn) {
@@ -144,7 +145,7 @@ export async function GET(request: NextRequest) {
       await sendGraceEndingWarning({ to: user.email, washerName: washer.name, cutoffDate: cutoff.toISOString() })
       await admin.from('washers').update({ grace_reminder_sent_at: nowIso }).eq('id', washer.id)
       counts.graceWarning++
-    } catch (e) { console.error('[cron] grace_warning', washer.id, e) }
+    } catch (e) { logger.error('cron.grace_warning.send_failed', { washerId: washer.id }, e) }
   }
 
   return NextResponse.json({ ok: true, ...counts })

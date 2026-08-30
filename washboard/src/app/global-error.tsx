@@ -6,6 +6,7 @@
 // serveur → l'utilisateur donne ce code, on retrouve l'incident dans Vercel.
 
 import { useEffect } from 'react'
+import { logger } from '@/lib/logger'
 
 export default function GlobalError({
   error,
@@ -16,12 +17,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     // Trace côté client (visible dans la console navigateur / outils de session)
-    console.error(JSON.stringify({
-      level: 'error',
-      event: 'react.global_error',
-      digest: error.digest,
-      message: error.message,
-    }))
+    logger.error('react.global_error', { digest: error.digest, message: error.message })
   }, [error])
 
   return (

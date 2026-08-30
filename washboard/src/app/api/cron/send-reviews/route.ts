@@ -4,6 +4,7 @@ import { sendSms } from '@/lib/sms'
 import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/lib/plan'
 import type { Plan } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
+import { logger } from '@/lib/logger'
 
 // Envoie les demandes d'avis Google dont l'heure programmée est passée.
 // Appelée régulièrement (toutes les heures) par un planificateur externe
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         emailSent++
       } catch (e) {
         failed++
-        console.error('[cron/send-reviews] email', b.id, e)
+        logger.error('cron.reviews.email_failed', { bookingId: b.id }, e)
       }
     } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
       const quota = washer.grandfathered
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
             smsSent++
           } catch (e) {
             failed++
-            console.error('[cron/send-reviews] sms', b.id, e)
+            logger.error('cron.reviews.sms_failed', { bookingId: b.id }, e)
           }
         }
       }

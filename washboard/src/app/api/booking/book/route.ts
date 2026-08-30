@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCalendarEvent, getBusySlots } from '@/lib/googleCalendar'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   const { dateStr, timeStr, firstname, lastname, email, message } = await req.json()
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
     await createCalendarEvent({ dateStr, timeStr, firstname, lastname, email, message: message ?? '' })
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('[booking/book]', err)
+    logger.error('booking.book.failed', {}, err)
     return NextResponse.json({ error: 'Impossible de créer le rendez-vous.' }, { status: 500 })
   }
 }

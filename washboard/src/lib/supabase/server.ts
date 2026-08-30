@@ -17,7 +17,13 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
-          } catch {}
+          } catch {
+            // Silence volontaire, et le seul du projet : écrire un cookie
+            // depuis un Server Component lève toujours. Le rafraîchissement
+            // de session est alors assuré par le proxy (`src/proxy.ts`), donc
+            // il n'y a rien à signaler ni à réparer ici. Tracer cette erreur
+            // noierait les vraies pannes sous un bruit permanent.
+          }
         },
       },
     }

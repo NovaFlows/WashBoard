@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getBusySlots } from '@/lib/googleCalendar'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const date = req.nextUrl.searchParams.get('date')
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
     const busySlots = await getBusySlots(date)
     return NextResponse.json({ busySlots })
   } catch (err) {
-    console.error('[booking/availability]', err)
+    logger.error('booking.availability.failed', {}, err)
     return NextResponse.json({ error: 'Calendar unavailable' }, { status: 500 })
   }
 }

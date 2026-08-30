@@ -1,5 +1,6 @@
 import { google } from 'googleapis'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 function oauthClient() {
   return new google.auth.OAuth2(
@@ -23,9 +24,9 @@ async function clearWasherToken(washerId: string) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
     await admin.from('washers').update({ google_refresh_token: null }).eq('id', washerId)
-    console.warn('[GCal] token invalide effacé pour washer', washerId)
+    logger.warn('gcal.token.cleared', { washerId })
   } catch (e) {
-    console.error('[GCal] clearToken error:', e)
+    logger.error('gcal.token.clear_failed', { washerId }, e)
   }
 }
 
@@ -85,7 +86,7 @@ export async function createCalendarEvent(refreshToken: string, event: CalendarE
     })
     return res.data.id ?? null
   } catch (e) {
-    console.error('[GCal] createEvent error:', e)
+    logger.error('gcal.event.create_failed', {}, e)
     if (isInvalidGrant(e) && washerId) await clearWasherToken(washerId)
     return null
   }
@@ -106,7 +107,7 @@ export async function patchCalendarEvent(
     if (patch.endIso   !== undefined) requestBody.end     = { dateTime: toParisOffsetIso(patch.endIso) }
     await cal.events.patch({ calendarId: 'primary', eventId, requestBody })
   } catch (e) {
-    console.error('[GCal] patchEvent error:', e)
+    logger.error('gcal.event.patch_failed', {}, e)
   }
 }
 
@@ -117,6 +118,6 @@ export async function deleteCalendarEvent(refreshToken: string, eventId: string)
     const cal = google.calendar({ version: 'v3', auth: client })
     await cal.events.delete({ calendarId: 'primary', eventId })
   } catch (e) {
-    console.error('[GCal] deleteEvent error:', e)
+    logger.error('gcal.event.delete_failed', {}, e)
   }
 }

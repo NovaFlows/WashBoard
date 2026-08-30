@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { logger } from '@/lib/logger'
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const DAYS_FR = ['L','M','M','J','V','S','D']
@@ -71,7 +72,7 @@ export default function BookingPage() {
       // Meme motif que le bug de double-reservation : une lecture qui echoue
       // laissait tous les creneaux paraitre libres. On previent l utilisateur
       // au lieu de lui proposer des horaires potentiellement deja pris.
-      console.error('[booking] chargement des creneaux occupes', e)
+      logger.error('booking.slots.load_failed', {}, e)
       setSlotsError(true)
       setBusySlots([])
     } finally {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createCalendarEvent, patchCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar'
 import { sendBookingConfirmation } from '@/lib/email'
+import { logger } from '@/lib/logger'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -120,7 +121,7 @@ export async function PATCH(
         address:       booking.address,
         scheduledAt:   booking.scheduled_at,
         bookingId:     booking.id,
-      }).catch(e => console.error('[Resend] email error:', e))
+      }).catch(e => logger.error('bookings.update.email_failed', { bookingId: id }, e))
     }
 
     if (status === 'done' && booking.google_calendar_event_id && washer.google_refresh_token) {
