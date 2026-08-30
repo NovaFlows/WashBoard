@@ -31,9 +31,16 @@ explicitement.
 ## Le fichier
 
 `h:/Desktop/Automatisation/NovaFlows_Prospecting/prospects.xlsx`, alimenté par le script
-`prospects.mjs` du même dossier. **Passe toujours par ce script**, n'écris jamais le
-`.xlsx` à la main : il gère la détection des doublons, le format des numéros et la
-structure des colonnes.
+`prospects.mjs` du même dossier (qui a ses propres dépendances : `npm install` sur place
+si jamais elles manquent). **Passe toujours par ce script**, n'écris jamais le `.xlsx` à
+la main : il gère la détection des doublons, le format des numéros et la structure des
+colonnes.
+
+Ce fichier sert au **démarchage manuel d'Alexandre** (téléphone, WhatsApp). Il ne
+remplace pas le CRM Notion du pipeline NovaFlows, qui sert à l'emailing automatisé et a
+ses propres statuts — les deux ne communiquent pas. Si tu vois un prospect qui devrait
+exister des deux côtés, signale-le à Alexandre plutôt que de recopier à la main : deux
+fichiers saisis en parallèle finissent toujours par diverger.
 
 ```bash
 cd "h:/Desktop/Automatisation/NovaFlows_Prospecting"
