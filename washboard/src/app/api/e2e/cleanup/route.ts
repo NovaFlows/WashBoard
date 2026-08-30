@@ -13,8 +13,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 //   - `prefix`       : supprime les objets de test portant ce préfixe
 const E2E_PREFIX = '[E2E]'
 
+/** L'endpoint est fermé en production… sauf quand la CI teste justement un
+ *  build de production (`npm run build && npm run start`), où le nettoyage
+ *  doit rester possible.
+ *
+ *  L'échappatoire est une variable dédiée qui n'existe QUE dans le workflow
+ *  GitHub Actions : `NODE_ENV` seul ne suffisait pas à distinguer les deux
+ *  situations. Elle ne doit jamais être définie sur Vercel — sinon n'importe
+ *  qui pourrait effacer les données `[E2E]` du site en ligne. */
+function nettoyageAutorisé(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.E2E_CLEANUP_ENABLED === 'true'
+}
+
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === 'production') {
+  if (!nettoyageAutorisé()) {
     return NextResponse.json({ error: 'Non disponible en production' }, { status: 403 })
   }
 

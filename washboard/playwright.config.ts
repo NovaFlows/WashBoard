@@ -72,9 +72,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    // En CI on teste le build de production (`npm run build && npm run start`),
+    // pas le serveur de dev : c'est ce qui part chez les clients, et certains
+    // écarts (rendu statique, variables inlinées) ne se voient qu'ainsi.
+    // En local, `npm run dev` reste le défaut, plus rapide à itérer.
+    command: process.env.E2E_WEB_COMMAND ?? 'npm run dev',
     url: BASE_URL,
-    reuseExistingServer: true,
-    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
   },
 })
