@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { materializeRecurring } from '@/lib/materializeRecurring'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -29,6 +30,19 @@ export async function GET(req: NextRequest) {
       .gte('date', `${year}-01-01`)
       .lte('date', `${year}-12-31`),
   ])
+
+  // Sans cette vérification, une lecture en échec produisait un bilan annuel
+  // à 0 € indiscernable d'une année sans activité — le laveur aurait pu croire
+  // à une perte de données ou déclarer un chiffre faux. Même motif que les
+  // bugs de production de la semaine : on refuse plutôt que d'inventer un zéro.
+  const erreur = bookingsRes.error ?? expensesRes.error
+  if (erreur) {
+    logger.error('compta.year_summary.read_failed', { washerId: washer.id, year }, erreur)
+    return NextResponse.json(
+      { error: 'Impossible de charger le bilan annuel. Réessayez dans un instant.' },
+      { status: 503 },
+    )
+  }
 
   const revenueByMonth: number[] = Array(12).fill(0)
   for (const b of bookingsRes.data ?? []) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
   const supabase = await createClient()
@@ -10,11 +11,24 @@ export async function GET() {
     .from('washers').select('id').eq('user_id', user.id).single()
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('unavailabilities')
     .select('*')
     .eq('washer_id', washer.id)
     .order('start_date')
+
+  // Un `data ?? []` muet ferait croire au laveur qu'il n'a aucun congé alors
+  // que la lecture a échoué — il verrait ses absences disparaître de l'écran
+  // sans comprendre pourquoi. C'est exactement le motif des bugs de production
+  // de cette semaine (congés ignorés, GRANT manquant) : on refuse plutôt que
+  // de répondre une liste vide trompeuse.
+  if (error) {
+    logger.error('unavailabilities.read_failed', { washerId: washer.id }, error)
+    return NextResponse.json(
+      { error: 'Impossible de charger vos absences. Réessayez dans un instant.' },
+      { status: 503 },
+    )
+  }
 
   return NextResponse.json(data ?? [])
 }
