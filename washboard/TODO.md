@@ -14,17 +14,30 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Piste à creuser : des comptes fantômes peuvent rester dans `auth.users` sans
-      ligne `washers` correspondante**, bloquant l'email pour toute nouvelle inscription.
-      Trouvé le 2026-08-28 : `spotifypren1234@gmail.com` bloquait une inscription alors
-      qu'aucune fiche laveur n'existait pour ce compte (créé le 2026-06-20, jamais
-      rattaché). Supprimé manuellement (`admin.auth.admin.deleteUser`), mais la cause
-      reste à identifier : soit le flux d'inscription peut créer l'utilisateur auth puis
-      échouer avant de créer sa fiche `washers`, soit une fiche a été supprimée un jour
-      par un `DELETE FROM washers` direct sans passer par la suppression de l'utilisateur
-      auth associé (voir `api/cron/purge-accounts` pour la bonne méthode). À vérifier côté
-      `dev`/`cyber` : le flux de `signup` gère-t-il bien l'échec après création de
-      l'utilisateur auth (rollback), et combien d'autres comptes fantômes existent déjà ?
+- [ ] **Brancher les tests e2e (Playwright) sur la CI.** Découvert le 2026-08-30 : le
+      projet a **22 tests e2e** couvrant le parcours de réservation complet, toutes les
+      pages du dashboard, les pages légales et `/api/health` — mais la CI ne les lance
+      pas (`.github/workflows/ci.yml` fait typecheck/lint/tests unitaires/build
+      seulement). C'est pour ça qu'on demande un test manuel du golden path à Alexandre
+      à chaque changement sensible, alors qu'une commande suffirait. Conséquence
+      concrète : le test du parcours de réservation était **cassé depuis le 2026-07-02**
+      (il ignorait l'étape « Options ») sans que personne ne le voie — corrigé le
+      2026-08-30. À faire : passer `TEST_WASHER_EMAIL`/`PASSWORD`/`SLUG` en secrets
+      GitHub Actions.
+      ⚠️ Piège rencontré : `playwright.config.ts` cible `localhost:3000` en dur, or ce
+      port est occupé par un autre projet d'Alexandre (Folyo) — les tests tapaient sur
+      la mauvaise application et échouaient faussement. À rendre configurable.
+
+- [x] 2026-08-30 — **Comptes fantômes `auth.users` : cause tracée.** Le rollback
+      existait bien dans `signup/route.ts` (confirmé par `cyber` et `dev`), mais **rien
+      n'y était loggué** : ni l'échec d'insert `washers`, ni l'échec du rollback
+      lui-même — or c'est ce second cas qui crée un compte fantôme (email pris à vie,
+      aucune fiche laveur, plus de réinscription possible), exactement le cas
+      `spotifypren1234@gmail.com` du 2026-08-28. Trois `logger.error` ajoutés, en
+      distinguant le doublon d'email (cas normal) d'une vraie panne. La prochaine
+      occurrence laissera une trace exploitable.
+      Reste optionnel : compter les comptes fantômes déjà existants (requête lecture
+      seule sur prod, à faire avec l'accord d'Alexandre).
 
 - [x] 2026-08-28 — **5 comptes de test supprimés de la base** (`thf`, `Washing`,
       `Compte Démo`, `TestClaude`, `TesteurOrg`) à la demande d'Alexandre — même procédure
@@ -43,9 +56,26 @@
       premiers avis (`overflow-x-auto` seul, sans barre visible ni flèche). Extrait en
       composant dédié `components/booking/ReviewsCarousel.tsx` : flèches gauche/droite
       (affichées seulement quand il y a de quoi défiler de ce côté) + scroll-snap +
-      voile en dégradé derrière chaque flèche. tsc/lint/277 tests verts, poussé.
-      ⚠️ **Reste ouvert** : même défaut sur le sélecteur de jour de réservation
-      (`StepSlot.tsx`) — pas encore corrigé, à reprendre avec le même motif.
+      voile en dégradé derrière chaque flèche. Puis, sur retour d'Alexandre : flèches
+      retirées au profit d'un défilement automatique (7 s), 1 avis à la fois sur mobile
+      (la 2e carte était coupée), 2 à partir de `sm`.
+
+- [x] 2026-08-30 — **Sélecteur de jour (`StepSlot.tsx`) : même défaut corrigé.** 14 jours
+      proposés mais 5-6 visibles, sans aucun indice de défilement — un client pouvait
+      croire qu'il n'y avait plus de disponibilité après le dernier jour affiché. Voile
+      en dégradé des deux côtés, affiché seulement quand il reste des jours hors écran.
+      Pas de défilement automatique ici (contrairement aux avis) : c'est une sélection
+      active, un déplacement subi serait pénible.
+
+- [x] 2026-08-30 — **5 vulnérabilités npm → 0.** `npm audit fix` règle `brace-expansion`,
+      `tmp` et `protobufjs`. Pour `uuid`, npm proposait de rétrograder `exceljs`
+      4.4.0 → 3.4.0 (breaking) : vérifié qu'`exceljs` n'appelle que `uuid.v4` alors que
+      la faille ne concerne que `v3/v5/v6` avec buffer — non atteignable. Résolu par un
+      `override` npm vers `uuid@11.1.1` sans toucher à `exceljs`. Vérifications de
+      non-régression : 7 paquets de prod changés seulement (les 4 vulnérables + 2 jeux de
+      données navigateur), 22 paquets restants en dev uniquement ; `uuid` n'a qu'un
+      dépendant (`exceljs`) et n'est utilisé nulle part dans notre code ; export Excel du
+      CRM re-testé de bout en bout ; **22/22 tests e2e verts**.
 
 - [x] 2026-08-27 — **Bug de sécurité/facturation corrigé : la page de réservation
       publique ne voyait jamais les RDV existants du laveur (RLS).** Trouvé par
