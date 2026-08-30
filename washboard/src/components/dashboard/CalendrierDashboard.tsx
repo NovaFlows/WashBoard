@@ -7,6 +7,9 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { haversineKm } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { openGmail, openWhatsapp } from '@/lib/contact'
+import {
+  getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure,
+} from '@/lib/calendarLayout'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number>; category_id: string | null; vehicle_types: string[] }
@@ -46,60 +49,6 @@ const HOUR_START  = 7
 const HOUR_END    = 20
 const HOUR_H      = 64 // px per hour slot
 
-function getWeekStart(date: Date): Date {
-  const d = new Date(date)
-  d.setDate(d.getDate() - (d.getDay() + 6) % 7)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function buildGrid(year: number, month: number): (Date | null)[] {
-  const first = new Date(year, month, 1)
-  const last  = new Date(year, month + 1, 0)
-  const grid: (Date | null)[] = []
-  const pad = (first.getDay() + 6) % 7
-  for (let i = 0; i < pad; i++) grid.push(null)
-  for (let d = 1; d <= last.getDate(); d++) grid.push(new Date(year, month, d))
-  while (grid.length < 42) grid.push(null)
-  return grid
-}
-
-type WeekBooking = Booking & { col: number; totalCols: number }
-
-function layoutDayBookings(bookings: Booking[]): WeekBooking[] {
-  if (bookings.length === 0) return []
-  const getMs  = (b: Booking) => new Date(b.scheduled_at).getTime()
-  const getEnd = (b: Booking) => getMs(b) + effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * 60_000
-  const sorted = [...bookings].sort((a, b) => getMs(a) - getMs(b))
-
-  const colEnds: number[] = []
-  const withCol = sorted.map(b => {
-    const start = getMs(b)
-    let col = colEnds.findIndex(end => end <= start)
-    if (col === -1) { col = colEnds.length; colEnds.push(getEnd(b)) }
-    else colEnds[col] = getEnd(b)
-    return { booking: b, col }
-  })
-
-  return withCol.map(({ booking, col }) => {
-    const start = getMs(booking), end = getEnd(booking)
-    const concurrent = withCol.filter(({ booking: b2 }) => getMs(b2) < end && getEnd(b2) > start)
-    const totalCols = Math.max(...concurrent.map(o => o.col)) + 1
-    return { ...booking, col, totalCols }
-  })
-}
-
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
-
-function dayKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-}
-
-function fmt(date: Date) {
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-}
 
 type Unavailability = { id: string; start_date: string; end_date: string; label: string | null; team_members_off: number }
 
@@ -705,7 +654,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                           onClick={e => { e.stopPropagation(); openBooking(b) }}
                           className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                         >
-                          {b.is_smart_slot && '★ '}{fmt(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
+                          {b.is_smart_slot && '★ '}{formatHeure(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
                         </button>
                       ))}
                       {overflow > 0 && (
@@ -821,7 +770,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                           className={`absolute rounded-md px-1.5 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                           style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 2px)` }}
                         >
-                          <p className="text-[10px] font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{fmt(d)}</p>
+                          <p className="text-[10px] font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{formatHeure(d)}</p>
                           <p className="text-[10px] leading-tight truncate opacity-80">{b.client_name.split(' ')[0]}</p>
                         </button>
                       )
@@ -921,7 +870,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       className={`absolute rounded-md px-2 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                       style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 3px)` }}
                     >
-                      <p className="text-xs font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{fmt(d)} — {b.client_name}</p>
+                      <p className="text-xs font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{formatHeure(d)} — {b.client_name}</p>
                       {b.services && <p className="text-[10px] leading-tight truncate opacity-80">{b.services.name} · {effectiveDuration((b.services.duration_minutes) + addonsDuration(b.selected_addons), b.vehicle_count)} min</p>}
                     </button>
                   )
@@ -974,7 +923,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 ${STATUS[b.status].bg} ${STATUS[b.status].text} hover:opacity-80 transition-opacity`}
                 >
                   <span className="text-sm font-semibold">{b.client_name}</span>
-                  <span className="text-xs opacity-80">{fmt(new Date(b.scheduled_at))}</span>
+                  <span className="text-xs opacity-80">{formatHeure(new Date(b.scheduled_at))}</span>
                 </button>
               ))}
             </div>
@@ -1458,7 +1407,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   </svg>
                   <span className="flex-1">
                     {new Date(selected.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                    {' '}à {fmt(new Date(selected.scheduled_at))}
+                    {' '}à {formatHeure(new Date(selected.scheduled_at))}
                   </span>
                   {selected.status !== 'cancelled' && selected.status !== 'done' && (
                     <button
