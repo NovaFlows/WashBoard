@@ -10,6 +10,9 @@ import { Hourglass, ClipboardList, Euro, CheckCircle2, BarChart3, Building2, typ
 import { Spinner } from '@/components/ui/Spinner'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import { buildClientProfile } from '@/lib/clientProfile'
+import {
+  getStatusKey, comptePourLeCA, effectivePrice, getLast6Months,
+} from '@/lib/crmStats'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type Booking = {
@@ -40,28 +43,8 @@ const STATUS_LABELS: Record<string, string> = {
   pending: 'En attente', confirmed: 'Confirmé', done: 'Terminé', cancelled: 'Annulé', closed_late: 'Délai dépassé',
 }
 
-function getStatusKey(b: Booking) {
-  return b.closed_late ? 'closed_late' : b.status
-}
-
-const isDone = (b: Booking) => b.status === 'confirmed' || b.status === 'done'
-
-function effectivePrice(b: Booking) {
-  return b.booked_price ?? b.services?.price ?? 0
-}
-
 const CHART_COLORS = ['#2563eb', '#7c3aed', '#059669', '#ea580c', '#e11d48', '#0891b2']
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-
-function getLast6Months() {
-  const result = []
-  const now = new Date()
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    result.push({ year: d.getFullYear(), month: d.getMonth(), label: MONTHS_FR[d.getMonth()] })
-  }
-  return result
-}
 
 function shortDate(d: Date): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
@@ -254,10 +237,10 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
 
   const total    = displayBookings.length
   const revenue  = displayBookings
-    .filter(b => isDone(b))
+    .filter(b => comptePourLeCA(b))
     .reduce((sum, b) => sum + effectivePrice(b), 0)
   const pending  = displayBookings.filter(b => b.status === 'pending').length
-  const done     = displayBookings.filter(b => isDone(b)).length
+  const done     = displayBookings.filter(b => comptePourLeCA(b)).length
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0
 
   const chartData = (() => {
@@ -270,7 +253,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
           const d = new Date(b.scheduled_at)
           return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate()
         })
-        return { label: DAYS_FR[i], Réservations: bs.length, CA: bs.filter(b => isDone(b)).reduce((s, b) => s + effectivePrice(b), 0) }
+        return { label: DAYS_FR[i], Réservations: bs.length, CA: bs.filter(b => comptePourLeCA(b)).reduce((s, b) => s + effectivePrice(b), 0) }
       })
     }
 
@@ -279,7 +262,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
       return Array.from({ length: daysInMonth }, (_, i) => {
         const dayN = i + 1
         const bs   = displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth && d.getDate() === dayN })
-        return { label: String(dayN), Réservations: bs.length, CA: bs.filter(b => isDone(b)).reduce((s, b) => s + effectivePrice(b), 0) }
+        return { label: String(dayN), Réservations: bs.length, CA: bs.filter(b => comptePourLeCA(b)).reduce((s, b) => s + effectivePrice(b), 0) }
       })
     }
 
@@ -289,7 +272,7 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
     return months.map(({ year, month, label }) => ({
       label,
       Réservations: displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === year && d.getMonth() === month }).length,
-      CA: displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === year && d.getMonth() === month && (isDone(b)) }).reduce((sum, b) => sum + effectivePrice(b), 0),
+      CA: displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === year && d.getMonth() === month && (comptePourLeCA(b)) }).reduce((sum, b) => sum + effectivePrice(b), 0),
     }))
   })()
 
