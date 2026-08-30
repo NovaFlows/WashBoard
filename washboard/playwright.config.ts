@@ -12,6 +12,13 @@ try {
 
 const SESSION_FILE = 'e2e/.washer-session.json'
 
+// Port configurable : le 3000 est souvent déjà pris par un autre projet sur la
+// machine de dev, et Playwright testait alors l'autre application sans le dire
+// (`reuseExistingServer`), avec des échecs incompréhensibles à la clé.
+// `E2E_PORT=3003 npx playwright test` pour cibler un serveur déjà lancé.
+const PORT = process.env.E2E_PORT ?? '3000'
+const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -21,7 +28,7 @@ export default defineConfig({
   reporter: 'list',
   timeout: 60_000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: BASE_URL,
     navigationTimeout: 60_000,
     trace: 'on-first-retry',
   },
@@ -43,10 +50,20 @@ export default defineConfig({
       testMatch: /client-booking\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // Contenu public sans session : blog, pages légales, SEO, API publiques,
+      // et les écrans d'authentification vus par un visiteur non connecté.
+      name: 'public',
+      testMatch: /(content-seo|api-public|auth-public)\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // 3. Tests laveur — nécessite l'authentification
     {
       name: 'washer',
-      testMatch: /washer\.spec\.ts/,
+      // Tout ce qui exige une session laveur : le dashboard et l'administration
+      // de la page client. Un seul projet plutôt qu'un par fichier — la session
+      // et les dépendances sont identiques.
+      testMatch: /(washer|dashboard-.*|admin-.*)\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
@@ -56,7 +73,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: BASE_URL,
     reuseExistingServer: true,
     timeout: 120_000,
   },
