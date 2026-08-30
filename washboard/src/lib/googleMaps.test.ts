@@ -81,7 +81,9 @@ describe('fetchGoogleMaps', () => {
   })
 
   it('ajoute la clé à l’URL', async () => {
-    const spy = vi.fn(async (_url: string) => ({ json: async () => ({ status: 'OK' }) }))
+    // Le paramètre est nécessaire au typage de `spy.mock.calls[0][0]`, même
+    // s'il n'est pas lu ici : sans lui, TypeScript voit un tuple vide.
+    const spy = vi.fn(async (url: string) => ({ json: async () => ({ status: 'OK', url }) }))
     vi.stubGlobal('fetch', spy)
     await fetchGoogleMaps('https://x?a=1', 'test')
     expect(String(spy.mock.calls[0][0])).toContain('key=cle-test')

@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getMondayOf } from '@/lib/dateUtils'
 import { formatPrice } from '@/lib/pricing'
+import {
+  getPeriodRange, navigatePeriod, isCurrentPeriod, type PeriodType,
+} from '@/lib/comptaPeriod'
 
-type PeriodType = 'jour' | 'semaine' | 'mois' | 'annee'
 
 type Expense = {
   id: string
@@ -48,55 +50,6 @@ const CAT_COLORS: Record<string, string> = {
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 
-function toISO(d: Date) { return d.toISOString().slice(0, 10) }
-
-function getPeriodRange(type: PeriodType, ref: Date): { start: string; end: string; label: string } {
-  const d = new Date(ref)
-  if (type === 'jour') {
-    const s = toISO(d)
-    return { start: s, end: s, label: d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }
-  }
-  if (type === 'semaine') {
-    const mon = getMondayOf(d)
-    const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
-    return {
-      start: toISO(mon), end: toISO(sun),
-      label: `${mon.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${sun.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`,
-    }
-  }
-  if (type === 'mois') {
-    const y = d.getFullYear(); const m = d.getMonth()
-    const last = new Date(y, m + 1, 0).getDate()
-    return {
-      start: `${y}-${String(m + 1).padStart(2, '0')}-01`,
-      end:   `${y}-${String(m + 1).padStart(2, '0')}-${String(last).padStart(2, '0')}`,
-      label: new Date(y, m, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
-    }
-  }
-  // annee
-  const y = d.getFullYear()
-  return { start: `${y}-01-01`, end: `${y}-12-31`, label: String(y) }
-}
-
-function navigate(type: PeriodType, ref: Date, dir: 1 | -1): Date {
-  const d = new Date(ref)
-  switch (type) {
-    case 'jour':    d.setDate(d.getDate() + dir); break
-    case 'semaine': d.setDate(d.getDate() + dir * 7); break
-    case 'mois':    d.setMonth(d.getMonth() + dir); break
-    case 'annee':   d.setFullYear(d.getFullYear() + dir); break
-  }
-  return d
-}
-
-function isToday(ref: Date, type: PeriodType): boolean {
-  const now = new Date()
-  if (type === 'jour')    return toISO(ref) === toISO(now)
-  if (type === 'semaine') return toISO(getMondayOf(ref)) === toISO(getMondayOf(now))
-  if (type === 'mois')    return ref.getFullYear() === now.getFullYear() && ref.getMonth() === now.getMonth()
-  if (type === 'annee')   return ref.getFullYear() === now.getFullYear()
-  return false
-}
 
 type Props = { initialRevenue: number; washerId: string }
 
@@ -240,11 +193,11 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
 
       {/* Navigation période */}
       <div className="flex items-center justify-between">
-        <button onClick={() => setRefDate(navigate(periodType, refDate, -1))} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <button onClick={() => setRefDate(navigatePeriod(periodType, refDate, -1))} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <span className="font-semibold text-slate-900 dark:text-slate-100 capitalize text-sm">{label}</span>
-        <button onClick={() => setRefDate(navigate(periodType, refDate, 1))} disabled={isToday(refDate, periodType)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-30">
+        <button onClick={() => setRefDate(navigatePeriod(periodType, refDate, 1))} disabled={isCurrentPeriod(refDate, periodType)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-30">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>

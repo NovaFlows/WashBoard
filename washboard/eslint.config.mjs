@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Rapports générés : les linter produit des avertissements sur du code
+    // qu'on n'écrit pas et qu'on ne peut pas corriger.
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
   {
     rules: {

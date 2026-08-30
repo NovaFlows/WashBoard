@@ -144,7 +144,6 @@ export default function BookingPage() {
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const date = new Date(viewYear, viewMonth, d)
     const dateStr = toDateStr(date)
-    const dow = date.getDay()
     calDays.push({ day: d, dateStr, isWeekend: false, isPast: date < today })
   }
 
