@@ -117,6 +117,7 @@ export default function StepOptions({ service, selectedAddons, basePrice, baseDu
           ← Retour
         </button>
         <button
+          data-testid="options-continue"
           onClick={() => onNext({ selected_addons: selected, booked_price: total })}
           className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
           style={{ backgroundColor: accent }}

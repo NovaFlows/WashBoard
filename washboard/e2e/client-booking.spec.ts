@@ -54,6 +54,16 @@ test.describe('Réservation client complète', () => {
     await expect(continuService).toBeEnabled({ timeout: 5_000 })
     await continuService.click()
 
+    // ── 2 bis. Étape "Options" — seulement si la prestation a des options ──
+    // Elle est conditionnelle (voir BookingForm : « step 2 = Options (si dispo) »),
+    // donc on la passe si elle apparaît au lieu de supposer qu'elle est absente :
+    // c'est ce que ce test supposait, et il échouait dès qu'une prestation avec
+    // options était choisie.
+    const optionsContinue = page.locator('[data-testid="options-continue"]')
+    if (await optionsContinue.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await optionsContinue.click()
+    }
+
     // ── 3. Choisir un créneau ─────────────────────────────────────────
     // L'étape "Créneau" est rendue
     await expect(page.locator('text=Choisissez un créneau')).toBeVisible({ timeout: 10_000 })
