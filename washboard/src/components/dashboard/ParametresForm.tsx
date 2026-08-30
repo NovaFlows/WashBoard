@@ -30,6 +30,7 @@ export default function ParametresForm({ washer, email }: Props) {
         {(['general', 'client'] as Tab[]).map(t => (
           <button
             key={t}
+            data-testid={`parametres-tab-${t}`}
             onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               tab === t
@@ -671,7 +672,9 @@ function DangerZone({ washer }: { washer: Washer }) {
           <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Supprimer définitivement</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Efface votre compte et toutes vos données après 30 jours. Irréversible passé ce délai.</p>
         </div>
-        <button onClick={() => { setShowDelete(true); setErr(null); setConfirmName('') }}
+        <button
+          data-testid="delete-account-open"
+          onClick={() => { setShowDelete(true); setErr(null); setConfirmName('') }}
           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors shrink-0">
           Supprimer
         </button>

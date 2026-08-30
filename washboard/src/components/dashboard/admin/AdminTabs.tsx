@@ -33,6 +33,7 @@ export default function AdminTabs({ washer, services, categories, availabilities
         {TABS.map(t => (
           <button
             key={t.key}
+            data-testid={`admin-tab-${t.key}`}
             onClick={() => setTab(t.key)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
               tab === t.key

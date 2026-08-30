@@ -25,6 +25,18 @@ export async function cleanupBookings(page: Page, clientEmail = TEST_CLIENT_EMAI
   await page.request.post('/api/e2e/cleanup', { data: { client_email: clientEmail } }).catch(() => {})
 }
 
+/** Supprime tous les objets `[E2E]` (prestations, catégories, dépenses).
+ *
+ *  Échoue bruyamment si le nettoyage ne marche pas : une première version
+ *  avalait l'erreur et laissait des prestations de test en base à chaque
+ *  exécution, sans que rien ne le signale. */
+export async function cleanupE2eObjects(page: Page): Promise<void> {
+  const res = await page.request.post('/api/e2e/cleanup', { data: { prefix: E2E_PREFIX } })
+  if (!res.ok()) {
+    throw new Error(`Nettoyage E2E échoué (${res.status()}) : ${await res.text()}`)
+  }
+}
+
 /** Vérifie qu'une page s'est rendue sans planter côté serveur ni côté client.
  *  Next.js affiche « Application error » quand un composant client lève, et une
  *  page 500 rendue proprement passerait sinon inaperçue dans un test qui ne
