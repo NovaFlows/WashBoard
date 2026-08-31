@@ -3,6 +3,7 @@ import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { ZoneConfig } from '@/types'
+import { normalizePhone } from '@/lib/phone'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -22,8 +23,19 @@ export async function PATCH(request: NextRequest) {
   if (name !== undefined && !String(name).trim()) {
     return NextResponse.json({ error: "Le nom de l'entreprise est requis" }, { status: 400 })
   }
-  if (phone !== undefined && String(phone).trim() && !/^[+0-9 ().-]{6,20}$/.test(String(phone).trim())) {
-    return NextResponse.json({ error: 'Numéro de téléphone invalide' }, { status: 400 })
+  // Le téléphone est normalisé ici comme à l'inscription : sans ça, un laveur
+  // pourrait ressaisir son numéro sous une autre forme (« +33612345678 » au
+  // lieu de « 0612345678 ») et créer un second compte avec le même numéro —
+  // la contrainte d'unicité ne verrait pas les deux écritures comme identiques.
+  let telephoneNormalise: string | null = null
+  if (phone !== undefined && String(phone).trim()) {
+    telephoneNormalise = normalizePhone(phone)
+    if (!telephoneNormalise) {
+      return NextResponse.json(
+        { error: 'Numéro de téléphone invalide (format attendu : 06 12 34 56 78)' },
+        { status: 400 },
+      )
+    }
   }
 
   const updates: Record<string, unknown> = {}
@@ -43,7 +55,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (name !== undefined) updates.name = String(name).trim()
-  if (phone !== undefined) updates.phone = phone?.trim() || null
+  if (phone !== undefined) updates.phone = telephoneNormalise
   if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null
   if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
   if (brand_color !== undefined) updates.brand_color = brand_color || null
