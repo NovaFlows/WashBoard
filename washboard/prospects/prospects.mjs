@@ -120,19 +120,45 @@ function valeurs(row) {
   return o
 }
 
+/** Compte Instagram normalisé (sans @, sans URL, en minuscules) — sert de clé
+ *  de secours quand le prospect ne publie pas de numéro. */
+function normaliserInsta(brut) {
+  return String(brut ?? '')
+    .trim().toLowerCase()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//, '')
+    .replace(/^@/, '')
+    .replace(/\/.*$/, '')
+}
+
 async function commandeAdd(args) {
-  if (!args.tel) { console.error('--tel est obligatoire'); process.exit(1) }
-  const tel = normaliserTel(args.tel)
-  if (!/^0\d{9}$/.test(tel)) {
+  // Beaucoup de laveurs trouvés sur Instagram ne publient AUCUN numéro : ils
+  // écrivent « contact en DM ». Exiger un téléphone rendrait ces prospects
+  // impossibles à enregistrer, alors que ce sont souvent les plus intéressants
+  // (pas de système de réservation du tout). Le compte Instagram fait alors
+  // office d'identifiant.
+  if (!args.tel && !args.instagram) {
+    console.error('Il faut au moins --tel ou --instagram pour identifier le prospect.')
+    process.exit(1)
+  }
+
+  const tel = args.tel ? normaliserTel(args.tel) : ''
+  if (tel && !/^0\d{9}$/.test(tel)) {
     console.error(`Numéro « ${args.tel} » non reconnu comme un mobile/fixe français à 10 chiffres.`)
     console.error('Ajoute-le quand même avec --force si c’est volontaire (numéro étranger).')
     if (args.force !== 'true') process.exit(1)
   }
+  const insta = normaliserInsta(args.instagram)
 
   const { wb, ws } = await chargerClasseur()
 
-  // Doublon : on refuse plutôt que d'empiler deux fiches pour la même personne.
-  const existant = lignesProspects(ws).find(r => normaliserTel(valeurs(r).tel) === tel)
+  // Doublon sur le téléphone OU sur le compte Instagram : on refuse plutôt que
+  // d'empiler deux fiches pour la même personne.
+  const existant = lignesProspects(ws).find(r => {
+    const v = valeurs(r)
+    const memeTel = tel && normaliserTel(v.tel) === tel
+    const memeInsta = insta && normaliserInsta(v.instagram) === insta
+    return memeTel || memeInsta
+  })
   if (existant) {
     const v = valeurs(existant)
     console.error(`Déjà présent (ligne ${existant.number}) : ${v.entreprise || v.nom || ''} — statut « ${v.statut} »`)
@@ -144,7 +170,7 @@ async function commandeAdd(args) {
     statut:     args.statut || 'à appeler',
     entreprise: args.entreprise || '',
     nom:        args.nom || '',
-    tel:        formaterTel(args.tel),
+    tel:        args.tel ? formaterTel(args.tel) : '',
     ville:      args.ville || '',
     site:       args.site || '',
     instagram:  args.instagram || '',
@@ -156,15 +182,28 @@ async function commandeAdd(args) {
     contact:    '',
   })
   await wb.xlsx.writeFile(FICHIER)
-  console.log(`Ajouté : ${args.entreprise || args.nom || formaterTel(args.tel)} (${formaterTel(args.tel)})`)
+  const identifiant = args.tel ? formaterTel(args.tel) : `@${insta}`
+  console.log(`Ajouté : ${args.entreprise || args.nom || identifiant} (${identifiant})`)
 }
 
 async function commandeUpdate(args) {
-  if (!args.tel) { console.error('--tel est obligatoire'); process.exit(1) }
-  const tel = normaliserTel(args.tel)
+  // On retrouve le prospect par son numéro ou par son compte Instagram — ceux
+  // qui n'ont pas publié de numéro doivent aussi pouvoir être mis à jour.
+  if (!args.tel && !args.instagram) {
+    console.error('Il faut --tel ou --instagram pour retrouver le prospect.')
+    process.exit(1)
+  }
+  const tel = args.tel ? normaliserTel(args.tel) : ''
+  const insta = normaliserInsta(args.instagram)
   const { wb, ws } = await chargerClasseur()
-  const ligne = lignesProspects(ws).find(r => normaliserTel(valeurs(r).tel) === tel)
-  if (!ligne) { console.error(`Aucun prospect avec le numéro ${formaterTel(args.tel)}`); process.exit(2) }
+  const ligne = lignesProspects(ws).find(r => {
+    const v = valeurs(r)
+    return (tel && normaliserTel(v.tel) === tel) || (insta && normaliserInsta(v.instagram) === insta)
+  })
+  if (!ligne) {
+    console.error(`Aucun prospect trouvé pour ${args.tel ?? args.instagram}`)
+    process.exit(2)
+  }
 
   const majs = []
   for (const c of COLONNES) {
@@ -181,7 +220,7 @@ async function commandeUpdate(args) {
   if (majs.length === 0) { console.error('Rien à mettre à jour.'); process.exit(1) }
   ligne.commit()
   await wb.xlsx.writeFile(FICHIER)
-  console.log(`Mis à jour (${formaterTel(args.tel)}) : ${majs.join(', ')}`)
+  console.log(`Mis à jour (${args.tel ? formaterTel(args.tel) : '@' + insta}) : ${majs.join(', ')}`)
 }
 
 async function commandeList(args) {
