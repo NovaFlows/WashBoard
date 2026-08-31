@@ -14,6 +14,22 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **Signal produit : un inscrit a tout configuré SAUF ses prestations, et s'est
+      arrêté là.** Constaté le 2026-08-31 sur le compte **BellAuto89** (inscrit le
+      2026-08-20, essai jusqu'au 2026-09-19). Il a fait le plus fastidieux — logo
+      téléversé, adresse de base, **28 créneaux de disponibilité**, 2 catégories — puis
+      **0 prestation**, donc 0 réservation possible : sa page publique ne peut rien
+      proposer, il n'a jamais vu le produit fonctionner. Il avait convenu d'un rendez-vous
+      avec Alexandre et n'est pas venu.
+      Deux lectures possibles, à départager : soit il a simplement été interrompu, soit
+      **l'écran Prestations coince** (c'est le seul formulaire qui exige de choisir une
+      catégorie *puis* de cocher des types avant de pouvoir enregistrer — le bouton reste
+      désactivé sans message expliquant ce qui manque). Quelqu'un qui investit autant de
+      temps puis bloque à la dernière étape mérite qu'on regarde.
+      À faire : l'appeler (fiche prospect créée avec l'accroche), puis faire juger l'écran
+      par `designer` et `ideas`. Si le problème est réel, il touche **tous** les nouveaux
+      inscrits, pas seulement lui.
+
 - [ ] **⚠️ ACTION REQUISE D'ALEXANDRE : créer les 7 secrets GitHub** pour que le job e2e
       de la CI tourne réellement. Sans eux, le job s'arrête proprement avec un
       avertissement (il ne casse pas le build, mais ne teste rien).
