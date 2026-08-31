@@ -5,12 +5,14 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
+import { isValidPhone } from '@/lib/phone'
 import Image from 'next/image'
 import Link from 'next/link'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,13 +25,14 @@ export default function SignupPage() {
     setError(null)
     if (!name.trim()) { setError("Le nom de votre entreprise est requis"); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
+    if (!isValidPhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78)'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
     setLoading(true)
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, phone }),
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Une erreur est survenue'); setLoading(false); return }
@@ -81,6 +84,13 @@ export default function SignupPage() {
               <div>
                 <label htmlFor="email" className="wb-label">Email</label>
                 <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="vous@exemple.com" autoComplete="email" className="wb-input" />
+              </div>
+              <div>
+                <label htmlFor="phone" className="wb-label">Téléphone</label>
+                <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="06 12 34 56 78" autoComplete="tel" className="wb-input" />
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                  Sert à sécuriser votre compte et à vous joindre en cas de souci.
+                </p>
               </div>
               <div>
                 <label htmlFor="password" className="wb-label">Mot de passe</label>

@@ -15,19 +15,33 @@ test.describe('Inscription — validations', () => {
     await expectNoAppError(page)
   })
 
-  test('la page affiche les quatre champs attendus', async ({ page }) => {
+  test('la page affiche les cinq champs attendus', async ({ page }) => {
     await expect(page.locator('input[placeholder="CleanCar"]')).toBeVisible()
     await expect(page.locator('input[type="email"]')).toBeVisible()
+    await expect(page.locator('input[type="tel"]')).toBeVisible()
     await expect(page.locator('input[placeholder="Min. 6 caractères"]')).toBeVisible()
     await expect(page.locator('input[placeholder="••••••••"]')).toBeVisible()
   })
 
   test('refuse un nom d’entreprise vide', async ({ page }) => {
     await page.locator('input[type="email"]').fill('e2e-nom-vide@example.test')
+    await page.locator('input[type="tel"]').fill('0612345678')
     await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
     await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
     await page.locator('button[type="submit"]').click()
     await expect(page.locator('text=Le nom de votre entreprise est requis')).toBeVisible()
+  })
+
+  test('refuse un numéro de téléphone invalide', async ({ page }) => {
+    // Le téléphone limite l'ouverture de plusieurs essais gratuits avec des
+    // emails différents : s'il devenait facultatif, la protection sauterait.
+    await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
+    await page.locator('input[type="email"]').fill('e2e-tel@example.test')
+    await page.locator('input[type="tel"]').fill('123')
+    await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
+    await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
+    await page.locator('button[type="submit"]').click()
+    await expect(page.locator('text=Numéro de téléphone invalide')).toBeVisible()
   })
 
   test('refuse une adresse email malformée', async ({ page }) => {
@@ -44,6 +58,7 @@ test.describe('Inscription — validations', () => {
   test('refuse deux mots de passe différents', async ({ page }) => {
     await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
     await page.locator('input[type="email"]').fill('e2e-mdp@example.test')
+    await page.locator('input[type="tel"]').fill('0612345678')
     await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
     await page.locator('input[placeholder="••••••••"]').fill('autrechose456')
     await page.locator('button[type="submit"]').click()
@@ -53,6 +68,7 @@ test.describe('Inscription — validations', () => {
   test('refuse un mot de passe de moins de 6 caractères', async ({ page }) => {
     await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
     await page.locator('input[type="email"]').fill('e2e-court@example.test')
+    await page.locator('input[type="tel"]').fill('0612345678')
     await page.locator('input[placeholder="Min. 6 caractères"]').fill('court')
     await page.locator('input[placeholder="••••••••"]').fill('court')
     await page.locator('button[type="submit"]').click()
@@ -66,6 +82,7 @@ test.describe('Inscription — validations', () => {
 
     await page.locator('input[placeholder="CleanCar"]').fill('E2E Doublon')
     await page.locator('input[type="email"]').fill(existing!)
+    await page.locator('input[type="tel"]').fill('0612345678')
     await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
     await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
     await page.locator('button[type="submit"]').click()

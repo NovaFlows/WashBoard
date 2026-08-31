@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
+import { normalizePhone } from '@/lib/phone'
 
 function generateSlug(name: string): string {
   return name
@@ -14,16 +15,59 @@ function generateSlug(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  const { name, email, password } = await request.json()
+  const { name, email, password, phone } = await request.json()
 
   if (!name?.trim() || !email?.includes('@') || !password || password.length < 6) {
     return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+  }
+
+  // Le téléphone limite l'ouverture de plusieurs essais gratuits avec des
+  // adresses email différentes. Il est stocké sous forme canonique (10
+  // chiffres) : sans ça « 06 12 34 56 78 » et « +33612345678 » passeraient
+  // pour deux numéros distincts et la vérification d'unicité ne servirait à
+  // rien.
+  const telephone = normalizePhone(phone)
+  if (!telephone) {
+    return NextResponse.json(
+      { error: 'Numéro de téléphone invalide (format attendu : 06 12 34 56 78)' },
+      { status: 400 },
+    )
   }
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+
+  // Vérification applicative AVANT de créer l'utilisateur auth : sans elle, on
+  // créerait le compte auth puis on échouerait à l'insert, laissant un compte
+  // fantôme si le rollback échoue lui aussi (cas vécu le 2026-08-28).
+  // La contrainte UNIQUE en base reste le garde-fou final en cas de course
+  // entre deux inscriptions simultanées.
+  const { data: dejaPris, error: erreurRecherche } = await supabase
+    .from('washers')
+    .select('id')
+    .eq('phone', telephone)
+    .maybeSingle()
+
+  if (erreurRecherche) {
+    // Laisser passer en cas d'échec de lecture reviendrait à désactiver la
+    // protection en silence, exactement le motif qu'on traque ailleurs.
+    logger.error('signup.phone_check_failed', {}, erreurRecherche)
+    return NextResponse.json(
+      { error: 'Impossible de vérifier vos informations. Réessayez dans un instant.' },
+      { status: 503 },
+    )
+  }
+
+  if (dejaPris) {
+    // Message volontairement identique en esprit à celui de l'email déjà
+    // utilisé : on ne révèle pas à qui appartient le numéro.
+    return NextResponse.json(
+      { error: 'Ce numéro de téléphone est déjà associé à un compte' },
+      { status: 400 },
+    )
+  }
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: email.trim(),
@@ -53,6 +97,7 @@ export async function POST(request: NextRequest) {
       user_id: authData.user.id,
       name: name.trim(),
       slug,
+      phone: telephone,
       trial_ends_at: trialEndsAt,
       subscription_status: 'trial',
     })
@@ -69,6 +114,17 @@ export async function POST(request: NextRequest) {
       // Le rollback lui-même a échoué : le compte fantôme est créé, maintenant.
       // C'est la seule trace qui permettra de le retrouver et de le purger.
       logger.error('signup.rollback_failed', { userId: authData.user.id }, rollbackError)
+    }
+
+    // Cas de course : deux inscriptions avec le même numéro au même instant.
+    // La vérification plus haut les a toutes deux laissées passer, c'est la
+    // contrainte UNIQUE en base qui tranche — on renvoie alors le vrai motif
+    // plutôt qu'une erreur technique incompréhensible.
+    if (washerError.code === '23505' && String(washerError.message).includes('phone')) {
+      return NextResponse.json(
+        { error: 'Ce numéro de téléphone est déjà associé à un compte' },
+        { status: 400 },
+      )
     }
 
     return NextResponse.json({ error: 'Erreur lors de la création du profil' }, { status: 500 })
