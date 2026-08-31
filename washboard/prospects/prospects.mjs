@@ -98,7 +98,18 @@ async function chargerClasseur() {
   if (fs.existsSync(FICHIER)) {
     await wb.xlsx.readFile(FICHIER)
     const ws = wb.getWorksheet(FEUILLE)
-    if (ws) return { wb, ws }
+    if (ws) {
+      // Les `key` des colonnes ne sont PAS stockées dans le .xlsx : après
+      // relecture, elles reviennent toutes à `undefined`. Sans cette
+      // réaffectation, `addRow({ statut, entreprise, … })` ne mappe plus rien
+      // et écrit une ligne vide — l'ajout paraissait réussir alors que rien
+      // n'était enregistré (constaté au premier usage réel, 3 prospects
+      // perdus sur 4).
+      ws.columns.forEach((col, i) => {
+        if (COLONNES[i]) { col.key = COLONNES[i].key; col.width = COLONNES[i].width }
+      })
+      return { wb, ws }
+    }
   }
   const ws = wb.addWorksheet(FEUILLE, { views: [{ state: 'frozen', ySplit: 1 }] })
   ws.columns = COLONNES
