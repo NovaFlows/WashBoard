@@ -30,11 +30,10 @@ explicitement.
 
 ## Le fichier
 
-`h:/Desktop/Automatisation/NovaFlows_Prospecting/prospects.xlsx`, alimenté par le script
-`prospects.mjs` du même dossier (qui a ses propres dépendances : `npm install` sur place
-si jamais elles manquent). **Passe toujours par ce script**, n'écris jamais le `.xlsx` à
-la main : il gère la détection des doublons, le format des numéros et la structure des
-colonnes.
+`washboard/prospects/prospects.xlsx`, alimenté par le script `prospects.mjs` du même
+dossier (qui a ses propres dépendances : `npm install` sur place si jamais elles
+manquent). **Passe toujours par ce script**, n'écris jamais le `.xlsx` à la main : il
+gère la détection des doublons, le format des numéros et la structure des colonnes.
 
 Ce fichier sert au **démarchage manuel d'Alexandre** (téléphone, WhatsApp). Il ne
 remplace pas le CRM Notion du pipeline NovaFlows, qui sert à l'emailing automatisé et a
@@ -43,7 +42,7 @@ exister des deux côtés, signale-le à Alexandre plutôt que de recopier à la 
 fichiers saisis en parallèle finissent toujours par diverger.
 
 ```bash
-cd "h:/Desktop/Automatisation/NovaFlows_Prospecting"
+cd "h:/Desktop/Automatisation/SaaS/WashBoard/washboard/prospects"
 
 node prospects.mjs add --tel "06 12 34 56 78" --entreprise "..." --ville "..." \
      --site "..." --instagram "..." --source "..." --analyse "..." --pitch "..."
@@ -55,11 +54,20 @@ node prospects.mjs list --statut "à appeler"
 Statuts disponibles : `à appeler` · `appelé - à relancer` · `RDV pris` · `client` ·
 `pas intéressé` · `injoignable`. N'en invente pas d'autres.
 
-⚠️ **Ce dossier n'est pas versionné, et c'est volontaire** : le fichier contient des
-numéros de téléphone et des noms, c'est-à-dire des données personnelles. Ne les copie
-jamais dans le dépôt WashBoard (qui part sur GitHub), ni dans un rapport, ni dans un
-commit. Si tu dois donner un exemple, invente un « Laveur Exemple » avec un numéro
-manifestement faux.
+⚠️ **Le dépôt WashBoard est PUBLIC, et le fichier de prospects contient des données
+personnelles** (numéros, noms). Le `.gitignore` du dossier exclut déjà `*.xlsx` : le
+fichier reste sur le disque d'Alexandre, seul le script est versionné.
+
+Ce garde-fou ne te dispense de rien :
+- ne retire jamais ces règles du `.gitignore`, et ne force jamais l'ajout d'un fichier
+  de données (`git add -f`) ;
+- n'écris aucun numéro ni nom de prospect **ailleurs** que dans le `.xlsx` — pas dans un
+  commentaire de code, pas dans un message de commit, pas dans un rapport d'équipe ;
+- un numéro commité par erreur reste dans l'historique Git **pour toujours**, même
+  supprimé ensuite. Si ça arrive, préviens Alexandre immédiatement plutôt que de tenter
+  de réparer seul.
+
+Pour un exemple, invente un « Laveur Exemple » avec un numéro manifestement faux.
 
 ## Comment tu analyses un prospect
 

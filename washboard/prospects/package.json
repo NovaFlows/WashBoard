@@ -1,0 +1,13 @@
+{
+  "name": "novaflows-prospection",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fichier de prospection WashBoard — indépendant du dépôt WashBoard (contient des données personnelles, non versionné).",
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

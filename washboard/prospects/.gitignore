@@ -1,0 +1,16 @@
+# ⚠️ Le dépôt WashBoard est PUBLIC. Le fichier de prospects contient des
+# numéros de téléphone et des noms — des données personnelles. Un commit
+# les rendrait visibles de tous, et Git en garde la trace pour toujours,
+# même après suppression du fichier.
+#
+# Le fichier reste sur le disque d'Alexandre ; seuls le script et sa
+# configuration sont versionnés (ils ne contiennent aucune donnée).
+prospects.xlsx
+*.xlsx
+*.csv
+
+# Sauvegardes Excel (créées automatiquement quand le fichier est ouvert)
+~$*
+
+node_modules/
+package-lock.json
