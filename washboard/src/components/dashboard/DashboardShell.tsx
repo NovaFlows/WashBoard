@@ -28,12 +28,16 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
     <Link
       href="/dashboard/abonnement"
       title="Voir mon abonnement"
-      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap hover:opacity-80 transition-opacity ${color}`}
+      aria-label={`Abonnement : ${label}`}
+      className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap hover:opacity-80 transition-opacity ${color}`}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
         <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zM5 20h14"/>
       </svg>
-      {label}
+      {/* Sur téléphone, seule la couronne reste : le libellé du plan poussait
+          « WashBoard » hors de l'écran, qui s'affichait « Wa… ». Le badge reste
+          cliquable et son intitulé passe par aria-label. */}
+      <span className="hidden sm:inline">{label}</span>
     </Link>
   )
 }
@@ -186,7 +190,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </div>
       </header>
 
-      <main id="main-content" className="max-w-3xl mx-auto px-3 sm:px-4 py-6 overflow-x-hidden">
+      <main id="main-content" className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden">
         {children}
       </main>
 
@@ -209,7 +213,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         href="https://wa.me/33684140438"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold px-3 py-3 sm:px-4 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105"
+        className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold p-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105"
         aria-label="Contacter le support WhatsApp"
       >
         <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">

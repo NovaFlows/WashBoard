@@ -1,5 +1,5 @@
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
-export { formatHeure } from '@/lib/dateUtils'
+export { formatHeure, formatHeureCompacte } from '@/lib/dateUtils'
 
 // Calculs de disposition du calendrier, extraits de `CalendrierDashboard.tsx`
 // (1594 lignes) où ils étaient noyés et non testés. Ce sont des fonctions

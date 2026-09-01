@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toDateStr, getMondayOf } from './dateUtils'
+import { toDateStr, getMondayOf, formatHeure, formatHeureCompacte } from './dateUtils'
 
 describe('toDateStr', () => {
   it('formate en YYYY-MM-DD (timezone locale)', () => {
@@ -31,5 +31,24 @@ describe('getMondayOf', () => {
     const mon = getMondayOf(d)
     expect(mon.getHours()).toBe(0)
     expect(mon.getMinutes()).toBe(0)
+  })
+})
+
+describe('formatHeureCompacte', () => {
+  // Ce format existe pour tenir dans une case du calendrier sur téléphone,
+  // où « 08:00 » se coupait en « 08:… ».
+  it('retire le zéro de tête et les minutes rondes', () => {
+    expect(formatHeureCompacte(new Date(2026, 8, 4, 8, 0))).toBe('8h')
+    expect(formatHeureCompacte(new Date(2026, 8, 4, 14, 0))).toBe('14h')
+  })
+
+  it('garde les minutes quand il y en a, sur deux chiffres', () => {
+    expect(formatHeureCompacte(new Date(2026, 8, 4, 8, 30))).toBe('8h30')
+    expect(formatHeureCompacte(new Date(2026, 8, 4, 9, 5))).toBe('9h05')
+  })
+
+  it('reste plus court que le format long, ce qui est toute sa raison d’être', () => {
+    const d = new Date(2026, 8, 4, 8, 0)
+    expect(formatHeureCompacte(d).length).toBeLessThan(formatHeure(d).length)
   })
 })

@@ -8,7 +8,7 @@ import { haversineKm } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { openGmail, openWhatsapp } from '@/lib/contact'
 import {
-  getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure,
+  getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure, formatHeureCompacte,
 } from '@/lib/calendarLayout'
 
 type Service = { name: string; price: number; duration_minutes: number }
@@ -654,7 +654,12 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                           onClick={e => { e.stopPropagation(); openBooking(b) }}
                           className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
                         >
-                          {b.is_smart_slot && '★ '}{formatHeure(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}
+                          {b.is_smart_slot && '★ '}
+                          {/* Sur téléphone la case est trop étroite pour « 08:00 Prénom » :
+                              le texte se coupait en « 08:… ». On y garde l'heure seule,
+                              en format court, et le prénom revient dès qu'il y a la place. */}
+                          <span className="sm:hidden">{formatHeureCompacte(new Date(b.scheduled_at))}</span>
+                          <span className="hidden sm:inline">{formatHeure(new Date(b.scheduled_at))} {b.client_name.split(' ')[0]}</span>
                         </button>
                       ))}
                       {overflow > 0 && (
