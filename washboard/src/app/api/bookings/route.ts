@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
+import { notifierLaveur } from '@/lib/push'
+import { formatHeure } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { countConflicts, effectiveTeamSize } from '@/lib/slots'
@@ -275,6 +277,19 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     } else {
       logger.warn('bookings.email.washer_missing', { bookingId: id, washerUserId: washer?.user_id })
     }
+
+    // Notification sur le téléphone, en PLUS de l'email et jamais à sa place :
+    // le laveur peut l'avoir refusée, avoir changé de téléphone, ou être sur un
+    // iPhone sans l'application installée. L'email reste le canal fiable.
+    const quand = new Date(bookingData.scheduled_at)
+    emailJobs.push(
+      notifierLaveur(bookingData.washer_id, {
+        title: 'Nouvelle réservation',
+        body: `${bookingData.client_name} — ${service.name}, ${quand.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
+        url: '/dashboard/calendrier',
+        tag: `booking-${id}`,
+      }).catch(err => logger.error('bookings.push.failed', { bookingId: id }, err))
+    )
 
     await Promise.all(emailJobs)
   }

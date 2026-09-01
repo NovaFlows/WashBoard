@@ -77,3 +77,48 @@ self.addEventListener('fetch', event => {
     )
   }
 })
+
+// ─── Notifications ────────────────────────────────────────────────────────
+// Reçues même quand l'application est fermée.
+
+self.addEventListener('push', event => {
+  let donnees = { title: 'WashBoard', body: 'Nouvelle activité sur votre compte.' }
+  try {
+    if (event.data) donnees = { ...donnees, ...event.data.json() }
+  } catch {
+    // Charge utile illisible : on affiche quand même quelque chose plutôt que
+    // de laisser le laveur sans information.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(donnees.title, {
+      body: donnees.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      // Un `tag` identique remplace la notification précédente au lieu d'en
+      // empiler dix si plusieurs réservations tombent d'affilée.
+      tag: donnees.tag || 'washboard',
+      data: { url: donnees.url || '/dashboard' },
+      lang: 'fr',
+    })
+  )
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const cible = event.notification.data?.url || '/dashboard'
+
+  // Si WashBoard est déjà ouvert, on y navigue plutôt que d'ouvrir un
+  // deuxième onglet.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(fenetres => {
+      for (const f of fenetres) {
+        if (f.url.includes(self.location.origin) && 'focus' in f) {
+          f.navigate(cible)
+          return f.focus()
+        }
+      }
+      return self.clients.openWindow(cible)
+    })
+  )
+})

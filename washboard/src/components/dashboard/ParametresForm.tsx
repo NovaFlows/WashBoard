@@ -9,6 +9,7 @@ import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { hasFeature } from '@/lib/plan'
 import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
+import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 
 type Props = {
   washer: Washer
@@ -579,6 +580,9 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={pwdLoading} label="Changer le mot de passe" />
         </form>
       </Card>
+
+      {/* Notifications sur le téléphone */}
+      <NotificationsToggle />
 
       {/* Zone de danger */}
       <DangerZone washer={washer} />
