@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
+import { ServiceWorkerRegistrar } from "@/components/ui/ServiceWorkerRegistrar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,36 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Barre d'état du téléphone accordée au thème actif, et pas de zoom bloqué :
+// un laveur doit pouvoir agrandir son planning au doigt.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)",  color: "#0f172a" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
+  manifest: "/manifest.webmanifest",
+  applicationName: "WashBoard",
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png",  sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png",  sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // Sans ce bloc, iOS ouvre le raccourci dans Safari avec sa barre d'adresse
+  // au lieu du plein écran, et n'autorise pas les notifications.
+  appleWebApp: {
+    capable: true,
+    title: "WashBoard",
+    statusBarStyle: "default",
+  },
   description: "Le logiciel tout-en-un des laveurs auto mobiles : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
   keywords: ["outil laveur auto mobile", "outil gestion lavage auto", "logiciel laveur auto", "lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "logiciel detailing"],
   authors: [{ name: "WashBoard" }],
@@ -64,7 +93,8 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
         <a href="#main-content" className="skip-to-content">Aller au contenu</a>
-        <RecoveryRedirect />
+        <ServiceWorkerRegistrar />
+          <RecoveryRedirect />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
