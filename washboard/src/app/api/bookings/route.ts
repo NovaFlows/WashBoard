@@ -284,8 +284,17 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     const quand = new Date(bookingData.scheduled_at)
     emailJobs.push(
       notifierLaveur(bookingData.washer_id, {
-        title: 'Nouvelle réservation',
-        body: `${bookingData.client_name} — ${service.name}, ${quand.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
+        // Les emoji servent de repères : le laveur retrouve la ligne qu'il
+        // cherche (qui ? quoi ? quand ?) sans lire la notification en entier,
+        // souvent d'un coup d'œil entre deux voitures. Un seul par ligne,
+        // toujours le même sens — s'ils changent d'une notification à l'autre,
+        // ils ne sont plus qu'une décoration.
+        title: '🚗 Nouvelle réservation',
+        body: [
+          `👤 ${bookingData.client_name}`,
+          `✨ ${service.name}`,
+          `📅 ${quand.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
+        ].join('\n'),
         url: '/dashboard/calendrier',
         tag: `booking-${id}`,
       }).catch(err => logger.error('bookings.push.failed', { bookingId: id }, err))
