@@ -118,3 +118,42 @@ test.describe('Paramètres — accès à la page client', () => {
     await expect(page.locator('a[href="/dashboard/admin"]').first()).toBeVisible({ timeout: 15_000 })
   })
 })
+
+test.describe('Paramètres — notifications', () => {
+  test('la section notifications est présente', async ({ page }) => {
+    await page.goto('/dashboard/parametres')
+    await expect(page.locator('text=Soyez prévenu sur votre téléphone')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test("l'enregistrement d'un appareil atteint réellement la base", async ({ page }) => {
+    // Ce test existe à cause d'un vrai incident : la table push_subscriptions a
+    // été créée avec sa policy RLS mais sans GRANT pour service_role, et toute
+    // écriture renvoyait « permission denied ». Aucun test unitaire ne pouvait
+    // le voir — ils simulent Supabase. Seul un appel réel le détecte.
+    //
+    // C'est la deuxième fois que ce défaut survient sur ce projet
+    // (booking_funnel_events le 2026-08-26), d'où ce filet.
+    await page.goto('/dashboard/parametres')
+
+    const faux = `https://e2e.invalid/${Date.now()}`
+    const res = await page.request.post('/api/push/subscribe', {
+      data: { endpoint: faux, keys: { p256dh: 'e2e-p256dh', auth: 'e2e-auth' } },
+    })
+
+    // 503 signalerait un souci de droits ou d'écriture côté base.
+    expect(res.status(), await res.text()).toBe(200)
+
+    // On retire l'appareil fictif : la base est partagée avec la production.
+    const suppr = await page.request.delete('/api/push/subscribe', { data: { endpoint: faux } })
+    expect(suppr.status()).toBe(200)
+  })
+
+  test('un visiteur non connecté ne peut pas enregistrer d’appareil', async ({ browser }) => {
+    const vierge = await browser.newContext({ storageState: { cookies: [], origins: [] } })
+    const res = await vierge.request.post('/api/push/subscribe', {
+      data: { endpoint: 'https://e2e.invalid/anonyme', keys: { p256dh: 'x', auth: 'y' } },
+    })
+    expect(res.status()).toBe(401)
+    await vierge.close()
+  })
+})
