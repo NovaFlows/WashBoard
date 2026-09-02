@@ -98,14 +98,73 @@ self.addEventListener('push', event => {
       // Un `tag` identique remplace la notification précédente au lieu d'en
       // empiler dix si plusieurs réservations tombent d'affilée.
       tag: donnees.tag || 'washboard',
-      data: { url: donnees.url || '/dashboard' },
+      data: { url: donnees.url || '/dashboard', bookingId: donnees.bookingId },
       lang: 'fr',
+      // Répondre sans ouvrir l'application : un appui long (Android) déroule
+      // la notification et affiche ces deux boutons.
+      //
+      // ⚠️ Sur iPhone, ils n'apparaîtront pas : WebKit ignore les actions
+      // personnalisées et n'affiche que son propre « Afficher ». La
+      // notification y reste simplement cliquable. On les déclare quand même,
+      // iOS les ignore sans rien casser.
+      actions: donnees.bookingId ? [
+        { action: 'confirmer', title: 'Confirmer' },
+        { action: 'refuser',   title: 'Refuser' },
+      ] : undefined,
     })
   )
 })
 
+/** Change le statut d'une réservation depuis un bouton de la notification.
+ *
+ *  `credentials: 'include'` est indispensable : sans les cookies de session,
+ *  l'API répondrait 401 et le laveur croirait avoir confirmé un rendez-vous
+ *  qui serait resté en attente. */
+async function changerStatut(bookingId, statut, libelle) {
+  try {
+    const res = await fetch(`/api/bookings/${bookingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: statut }),
+    })
+    if (!res.ok) throw new Error(String(res.status))
+
+    await self.registration.showNotification(libelle, {
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: `retour-${bookingId}`,
+      lang: 'fr',
+    })
+  } catch {
+    // Échec (hors ligne, session expirée) : on le dit au lieu de laisser
+    // croire que c'est fait, et on ouvre l'application pour reprendre à la
+    // main.
+    await self.registration.showNotification('Action impossible', {
+      body: 'Ouvrez WashBoard pour répondre à cette réservation.',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: `retour-${bookingId}`,
+      data: { url: '/dashboard/calendrier' },
+      lang: 'fr',
+    })
+  }
+}
+
 self.addEventListener('notificationclick', event => {
   event.notification.close()
+  const bookingId = event.notification.data?.bookingId
+
+  // Boutons « Confirmer » / « Refuser » : on répond sans ouvrir l'application.
+  if (event.action === 'confirmer' && bookingId) {
+    event.waitUntil(changerStatut(bookingId, 'confirmed', 'Rendez-vous confirmé'))
+    return
+  }
+  if (event.action === 'refuser' && bookingId) {
+    event.waitUntil(changerStatut(bookingId, 'cancelled', 'Rendez-vous refusé'))
+    return
+  }
+
   const cible = event.notification.data?.url || '/dashboard'
 
   // Si WashBoard est déjà ouvert, on y navigue plutôt que d'ouvrir un

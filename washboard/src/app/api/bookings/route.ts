@@ -297,6 +297,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         ].join('\n'),
         url: '/dashboard/calendrier',
         tag: `booking-${id}`,
+        bookingId: id,
       }).catch(err => logger.error('bookings.push.failed', { bookingId: id }, err))
     )
 

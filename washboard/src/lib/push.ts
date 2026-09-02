@@ -19,6 +19,14 @@ export type PushPayload = {
   url?: string
   /** Regroupe les notifications de même nature au lieu de les empiler. */
   tag?: string
+  /** Réservation concernée : permet de la confirmer ou de la refuser
+   *  directement depuis les boutons de la notification.
+   *
+   *  ⚠️ Ces boutons n'apparaissent que sur Android. iOS les ignore — WebKit
+   *  n'affiche que son propre « Afficher » et ne gère pas les actions
+   *  personnalisées. Sur iPhone, la notification reste donc simplement
+   *  cliquable, ce qui ouvre la fiche du rendez-vous. */
+  bookingId?: string
 }
 
 function configurer(): boolean {
