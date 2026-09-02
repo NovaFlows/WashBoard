@@ -1,53 +1,79 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { graceEnded } from '@/lib/plan'
+
+// Rafraîchissement de la session à chaque requête.
+//
+// Pourquoi ce fichier existe : un jeton d'accès Supabase ne vit qu'une heure.
+// Sans rien pour le renouveler côté serveur, un laveur qui rouvrait WashBoard
+// le lendemain était renvoyé vers la page de connexion — alors que son jeton
+// de rafraîchissement, lui, était toujours valable. Le rendu serveur lisait
+// simplement un cookie périmé et concluait « pas connecté ».
+//
+// C'est particulièrement visible depuis l'application installée sur le
+// téléphone : on s'attend à la retrouver ouverte, comme n'importe quelle app.
+//
+// `getUser()` renouvelle le jeton quand il a expiré ; il reste à réécrire les
+// cookies dans la réponse, sinon le navigateur garde les anciens et
+// l'opération recommence à chaque page.
+//
+// Ce fichier ne redirige personne : chaque page du tableau de bord vérifie
+// déjà l'accès de son côté. Y ajouter une garde ferait deux endroits à tenir
+// d'accord, et le premier oubli ouvrirait une page privée.
+//
+// ⚠️ En Next.js 16, `middleware.ts` est déprécié et renommé `proxy.ts`
+// (même comportement, autre nom de fichier et de fonction exportée).
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  let response = NextResponse.next({ request })
+
+  // Sans cookie de session, il n'y a rien à rafraîchir : une page de
+  // réservation client ou un appel d'API public n'en portent aucun. Cela évite
+  // un aller-retour vers Supabase qui, mesuré sur la suite de tests, rendait
+  // l'ensemble du site environ cinq fois plus lent.
+  const aUneSession = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+  if (!aUneSession) return response
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(cookiesToSet) {
+          // Les cookies vont dans la requête (pour le rendu qui suit) ET dans
+          // la réponse (pour que le navigateur les conserve).
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           )
         },
       },
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Un échec ici ne doit jamais empêcher la page de s'afficher : sans réseau
+  // vers Supabase, mieux vaut servir la page et laisser la garde de la page
+  // décider, plutôt que de renvoyer une erreur sur tout le site.
+  try {
+    await supabase.auth.getUser()
+  } catch {
+    // Session non rafraîchie : la page appliquera sa propre règle.
   }
 
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // Blocage si abonnement expiré (sauf sur la page abonnement elle-même)
-  if (user && request.nextUrl.pathname.startsWith('/dashboard') && !request.nextUrl.pathname.startsWith('/dashboard/abonnement')) {
-    const { data: washer } = await supabase
-      .from('washers')
-      .select('subscription_status, trial_ends_at, subscription_ends_at')
-      .eq('user_id', user.id)
-      .single()
-
-    if (washer && washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
-      return NextResponse.redirect(new URL('/dashboard/abonnement', request.url))
-    }
-  }
-
-  return supabaseResponse
+  return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  // Restreint aux zones qui lisent une session laveur. Le blog, la landing et
+  // les pages de réservation client n'en ont aucune : les y faire passer
+  // n'ajouterait que de la latence sur des pages vues par des inconnus.
+  matcher: [
+    '/dashboard/:path*',
+    '/api/:path*',
+    '/login',
+    '/signup',
+  ],
 }
