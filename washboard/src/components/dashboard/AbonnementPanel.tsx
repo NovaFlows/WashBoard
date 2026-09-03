@@ -162,11 +162,15 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                   {billing === 'yearly' ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
                   <span className="text-xs font-medium text-slate-400">/mois</span>
                 </p>
-                <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
-                  {billing === 'yearly'
-                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
-                    : `En annuel : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
-                </p>
+                {/* L'économie annuelle ne s'affiche qu'en vue annuelle. En vue
+                    mensuelle, cette ligne verte vendait l'engagement annuel au
+                    milieu des tarifs mensuels : le vert du produit signale une
+                    économie, il n'a rien à faire là où il n'y en a pas. */}
+                {billing === 'yearly' && (
+                  <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
+                    Soit {formatEuros(yearlyPrice(card.price))}€/an — {freeMonthsLabel()}
+                  </p>
+                )}
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{card.tagline}</p>
                 <ul className="space-y-1.5 flex-1 mb-4">
                   {card.features.map(f => (
