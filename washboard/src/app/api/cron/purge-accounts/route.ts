@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
+import { selectionnerFantomes } from '@/lib/ghostAccounts'
 
 // Purge définitive des comptes dont la suppression a été demandée il y a plus
 // de 30 jours. Appelée quotidiennement par Vercel Cron (voir vercel.json).
@@ -95,10 +96,63 @@ export async function GET(request: NextRequest) {
     purged++
   }
 
+  // ── Comptes fantômes ─────────────────────────────────────────────
+  //
+  // Un utilisateur d'authentification sans fiche laveur ne sert à rien, mais
+  // bloque son adresse email à vie : la personne ne peut plus se réinscrire, et
+  // rien ne le signale. L'inscription tente déjà d'annuler la création quand
+  // l'insertion de la fiche échoue, mais cette annulation peut échouer à son
+  // tour (réseau coupé, processus interrompu) — et personne ne repasse derrière.
+  // Trois de ces comptes traînaient en production le 2026-09-03, dont un qui
+  // empêchéait une vraie réinscription.
+  //
+  // Le délai de 24 h est essentiel : sans lui, on supprimerait le compte d'un
+  // laveur en train de s'inscrire, entre la création de l'utilisateur et
+  // l'insertion de sa fiche.
+  const AGE_MIN_HEURES = 24
+  let ghostsPurged = 0
+  let ghostsFailed = 0
+
+  try {
+    const { data: liste, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    if (listErr) throw listErr
+
+    const { data: tousLesWashers, error: washersErr } = await admin.from('washers').select('user_id')
+    if (washersErr) throw washersErr
+
+    // La sélection vit dans `lib/ghostAccounts` : elle décide de suppressions
+    // définitives et mérite d'être vérifiable sans base de données.
+    // Les erreurs de lecture ont déjà été relevées plus haut : sans cela une
+    // liste vide ferait passer TOUS les utilisateurs pour des fantômes.
+    const aSupprimer = selectionnerFantomes(
+      liste.users.map(u => ({ id: u.id, created_at: u.created_at })),
+      (tousLesWashers ?? []).map(w => w.user_id),
+      new Date(),
+      AGE_MIN_HEURES,
+    )
+
+    for (const id of aSupprimer) {
+      const u = { id, created_at: liste.users.find(x => x.id === id)?.created_at }
+      const { error: delErr } = await admin.auth.admin.deleteUser(u.id)
+      if (delErr) {
+        logger.error('purge.ghost.delete_failed', { userId: u.id }, delErr)
+        ghostsFailed++
+      } else {
+        logger.info('purge.ghost.deleted', { userId: u.id, createdAt: u.created_at })
+        ghostsPurged++
+      }
+    }
+  } catch (e) {
+    logger.error('purge.ghost.scan_failed', {}, e)
+    ghostsFailed++
+  }
+
   return NextResponse.json({
-    ok: failed === 0 && !funnelPurgeError,
+    ok: failed === 0 && ghostsFailed === 0 && !funnelPurgeError,
     purged,
     failed,
+    ghostsPurged,
+    ghostsFailed,
     funnelEventsPurged: funnelPurged ?? 0,
   })
 }
