@@ -25,7 +25,11 @@ type Booking = {
   travel_fee: number | null
   vehicle_count: number | null
   vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
-  services: Service | null
+  // La catégorie vient de la jointure `services(service_categories(name))` :
+  // sans elle, le laveur lit « Lavage complet » sans savoir s'il s'agit d'une
+  // voiture, d'un canapé ou d'un deux-roues — ce qui change tout ce qu'il doit
+  // prévoir avant de partir.
+  services: (Service & { service_categories?: { name: string } | null }) | null
 }
 
 type Props = {
@@ -183,6 +187,14 @@ function BookingCard({ booking, loading, onUpdate }: {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
                 <span>
+                  {/* La catégorie d'abord : « Lavage complet » ne dit pas si
+                      c'est une voiture ou un canapé, alors que ça change le
+                      matériel à emporter. */}
+                  {booking.services.service_categories?.name && (
+                    <span className="inline-block px-1.5 py-0.5 mr-1.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 align-middle">
+                      {booking.services.service_categories.name}
+                    </span>
+                  )}
                   {booking.services.name} —{' '}
                   {isSmart ? (
                     <>
@@ -284,7 +296,9 @@ function BookingCard({ booking, loading, onUpdate }: {
             {booking.client_phone && <Row icon="phone">{booking.client_phone}</Row>}
             {booking.services && (
               <Row icon="bolt">
-                {booking.services.name} · {effectiveDuration((booking.services.duration_minutes) + addonsDuration(booking.selected_addons), booking.vehicle_count)} min ·{' '}
+                {booking.services.service_categories?.name
+                  ? `${booking.services.service_categories.name} · ${booking.services.name}`
+                  : booking.services.name} · {effectiveDuration((booking.services.duration_minutes) + addonsDuration(booking.selected_addons), booking.vehicle_count)} min ·{' '}
                 {booking.is_smart_slot && Number(booking.smart_discount) > 0 ? (
                   <>
                     <span className="line-through opacity-50">{servicePrice}€</span>

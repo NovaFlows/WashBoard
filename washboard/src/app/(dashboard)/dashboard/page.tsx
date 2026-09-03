@@ -21,7 +21,7 @@ export default async function DashboardPage() {
 
   const { data: bookings } = await supabase
     .from('bookings')
-    .select('*, services(name, price, duration_minutes)')
+    .select('*, services(name, price, duration_minutes, service_categories(name))')
     .eq('washer_id', washer.id)
     .order('scheduled_at', { ascending: true })
 

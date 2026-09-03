@@ -20,7 +20,7 @@ export default async function CalendrierPage() {
   ] = await Promise.all([
     supabase
       .from('bookings')
-      .select('*, services(name, price, duration_minutes)')
+      .select('*, services(name, price, duration_minutes, service_categories(name))')
       .eq('washer_id', washer.id)
       .order('scheduled_at', { ascending: true }),
     supabase

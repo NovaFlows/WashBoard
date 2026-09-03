@@ -32,7 +32,9 @@ type Booking = {
   travel_fee: number | null
   vehicle_count: number | null
   vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
-  services: Service | null
+  // Catégorie jointe : « Lavage complet » ne dit pas si c'est une voiture ou
+  // un canapé, alors que ça change le matériel à emporter.
+  services: (Service & { service_categories?: { name: string } | null }) | null
 }
 
 const STATUS = {
@@ -331,7 +333,15 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       travel_fee:      null,
       vehicle_count:   manualModal.vehicle_count,
       vehicles_detail: [{ type: manualModal.vehicle_type, count: manualModal.vehicle_count, unit_price: svc ? (svc.vehicle_price_overrides?.[manualModal.vehicle_type] ?? svc.price) : 0, label: typeName(manualModal.service_id, manualModal.vehicle_type) }],
-      services:        svc ? { name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes } : null,
+      // La catégorie est reconstituée ici : ce rendez-vous est ajouté à la liste
+      // sans repasser par le serveur, il n'a donc pas la jointure. Sans ça, un
+      // rendez-vous créé à la main serait le seul à ne pas afficher son type.
+      services:        svc ? {
+        name: svc.name, price: svc.price, duration_minutes: svc.duration_minutes,
+        service_categories: categories.find(c => c.id === svc.category_id)
+          ? { name: categories.find(c => c.id === svc.category_id)!.name }
+          : null,
+      } : null,
     }
     // Applique toujours le statut choisi (l'API crée en 'pending' par défaut)
     await fetch(`/api/bookings/${json.data.id}`, {
@@ -1347,7 +1357,9 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
               {selected.client_phone && <Row icon="phone">{selected.client_phone}</Row>}
               {selected.services && (
                 <Row icon="bolt">
-                  {selected.services.name} · {effectiveDuration((selected.services.duration_minutes) + addonsDuration(selected.selected_addons), selected.vehicle_count)} min ·{' '}
+                  {selected.services.service_categories?.name
+                    ? `${selected.services.service_categories.name} · ${selected.services.name}`
+                    : selected.services.name} · {effectiveDuration((selected.services.duration_minutes) + addonsDuration(selected.selected_addons), selected.vehicle_count)} min ·{' '}
                   {selected.is_smart_slot && Number(selected.smart_discount) > 0 ? (
                     <>
                       <span className="line-through opacity-50">{(selected.booked_price ?? selected.services.price) - (selected.travel_fee ?? 0)}€</span>

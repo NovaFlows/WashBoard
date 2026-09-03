@@ -11,8 +11,6 @@ type Props = {
   subscriptionStatus: string
   trialEndsAt: string | null
   subscriptionEndsAt: string | null
-  washerName: string
-  washerEmail: string
   plan: Plan
   grandfathered: boolean
 }
@@ -42,7 +40,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, washerName, washerEmail, plan, grandfathered }: Props) {
+export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered }: Props) {
   const [now] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [billing, setBilling] = useState<BillingCycle>('yearly')
@@ -62,18 +60,6 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
     return billing === 'yearly' ? yearlyPrice(monthlyPrice) : monthlyPrice * dueMonths
   }
 
-  function virementHref(planName: string, monthlyPrice: number) {
-    const total = amountFor(monthlyPrice)
-    const cycleLabel = billing === 'yearly'
-      ? `${formatEuros(yearlyPrice(monthlyPrice))}€/an, soit ${formatEuros(yearlyMonthlyEquivalent(monthlyPrice))}€/mois`
-      : `${monthlyPrice}€/mois`
-    const monthsNote = billing === 'monthly' && dueMonths > 1 ? ` (${dueMonths} mois à régulariser)` : ''
-    const subject = encodeURIComponent(`Abonnement WashBoard ${planName} — ${washerName}`)
-    const body = encodeURIComponent(
-      `Bonjour,\n\nJe souhaite activer mon abonnement WashBoard ${planName} (${cycleLabel}) pour l'espace "${washerName}".\nMontant à régler : ${formatEuros(total)}€${monthsNote}\n\nEmail du compte : ${washerEmail}\n\nMerci de me confirmer les coordonnées bancaires pour effectuer le virement.\n\nCordialement,\n${washerName}`
-    )
-    return `mailto:novaflows.pro@gmail.com?subject=${subject}&body=${body}`
-  }
 
   return (
     <div className="space-y-6">
@@ -209,12 +195,6 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                         <path d="M7.5 3h7.125C17.25 3 19.5 5.25 19.5 7.875c0 3.375-2.625 6-6 6H11.25L10.125 21H6.375L7.5 3z" opacity=".8"/>
                       </svg>
                       PayPal — {formatEuros(amountFor(card.price))}€
-                    </a>
-                    <a
-                      href={virementHref(card.name, card.price)}
-                      className="flex items-center justify-center gap-2 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors"
-                    >
-                      Virement bancaire
                     </a>
                   </div>
                 ) : null}
