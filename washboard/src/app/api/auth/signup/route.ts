@@ -43,12 +43,15 @@ export async function POST(request: NextRequest) {
   // créerait le compte auth puis on échouerait à l'insert, laissant un compte
   // fantôme si le rollback échoue lui aussi (cas vécu le 2026-08-28).
   //
-  // C'est désormais la SEULE règle : la contrainte UNIQUE a été retirée de la
-  // base le 2026-09-03, parce qu'elle ne pouvait pas connaître les numéros
-  // exemptés (voir `isPhoneExemptFromUniqueness`) et refusait l'insertion même
-  // quand le code l'autorisait. Reste théoriquement possible : deux
-  // inscriptions au même instant avec le même numéro passeraient toutes deux
-  // — sans conséquence autre que deux comptes à rapprocher à la main.
+  // C'est la SEULE règle : il n'y a pas de contrainte UNIQUE en base, et c'est
+  // volontaire. Une contrainte SQL ne peut pas connaître les numéros exemptés
+  // (voir `isPhoneExemptFromUniqueness`, alimenté par une variable
+  // d'environnement) : elle refuserait l'insertion même quand le code
+  // l'autorise.
+  //
+  // Reste théoriquement possible : deux inscriptions au même instant avec le
+  // même numéro passeraient toutes les deux. Sans conséquence autre que deux
+  // comptes à rapprocher à la main, et hors de portée au volume actuel.
   const { data: dejaPris, error: erreurRecherche } = await supabase
     .from('washers')
     .select('id')
