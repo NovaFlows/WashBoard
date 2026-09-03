@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  PLAN_CARDS, monthsOwed, YEARLY_FREE_MONTHS, formatEuros, yearlyPrice,
+  PLAN_CARDS, monthsOwed, freeMonthsLabel, formatEuros, yearlyPrice,
   yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -127,7 +127,12 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Nos offres</h2>
         {grandfathered ? (
           <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-4">
-            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong>{' '}sans changer d&apos;offre. Tout est inclus dans votre plan à 49€/mois.
+            En tant que client historique, vous avez accès à <strong>toutes les fonctionnalités</strong>{' '}sans changer d&apos;offre. Tout est inclus dans votre plan à{' '}
+            {/* Le tarif était écrit en dur : il ne suivait ni la bascule
+                mensuel/annuel, ni un changement de prix dans `plan.ts`. */}
+            {billing === 'yearly'
+              ? `${formatEuros(yearlyMonthlyEquivalent(PLAN_CARDS[0].price))}€/mois, soit ${formatEuros(yearlyPrice(PLAN_CARDS[0].price))}€/an`
+              : `${formatEuros(PLAN_CARDS[0].price)}€/mois`}.
           </p>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Choisissez l&apos;offre adaptée à votre activité.</p>
@@ -159,7 +164,7 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                 </p>
                 <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
                   {billing === 'yearly'
-                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${YEARLY_FREE_MONTHS} mois offerts`
+                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
                     : `En annuel : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{card.tagline}</p>

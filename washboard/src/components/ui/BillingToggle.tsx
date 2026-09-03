@@ -1,6 +1,6 @@
 'use client'
 
-import { YEARLY_FREE_MONTHS, type BillingCycle } from '@/lib/plan'
+import { freeMonthsLabel, type BillingCycle } from '@/lib/plan'
 
 // Bascule mensuel / annuel, partagée entre la landing et la page Abonnement.
 // L'annuel est le choix par défaut côté appelant (useState('yearly')).
@@ -45,9 +45,13 @@ export default function BillingToggle({
           )
         })}
       </div>
-      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-        {YEARLY_FREE_MONTHS} mois offerts
-      </span>
+      {/* L'offre ne concerne que l'engagement annuel : l'afficher en vue
+          mensuelle laissait croire qu'un mois était offert dans tous les cas. */}
+      {value === 'yearly' && (
+        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+          {freeMonthsLabel()}
+        </span>
+      )}
     </div>
   )
 }

@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  hasFeature, washerPlan, requiredPlanLabel,
-  yearlyPrice, yearlyMonthlyEquivalent, formatEuros,
-  graceEnded, monthsOwed,
-} from './plan'
+import { hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent, formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel } from './plan'
 
 describe('washerPlan', () => {
   it('renvoie le plan valide', () => {
@@ -56,13 +52,34 @@ describe('requiredPlanLabel', () => {
 })
 
 describe('tarifs annuels', () => {
-  it('facture 10 mois pour 12 (2 mois offerts)', () => {
-    expect(yearlyPrice(49)).toBe(490)
-    expect(yearlyPrice(69)).toBe(690)
+  // Ces tests figeaient 490 et 690 €, valeurs de l'époque des 2 mois offerts :
+  // ils cassaient dès qu'on touchait à l'offre, sans rien révéler d'utile. On
+  // vérifie désormais la règle, qui elle ne change pas.
+  it('facture douze mois moins les mois offerts', () => {
+    expect(yearlyPrice(49)).toBe(49 * (12 - YEARLY_FREE_MONTHS))
+    expect(yearlyPrice(69)).toBe(69 * (12 - YEARLY_FREE_MONTHS))
   })
+
+  it('revient moins cher que douze mensualités', () => {
+    // Le sens de l'offre : si cette assertion tombe, l'engagement annuel
+    // coûterait plus cher que le mensuel.
+    expect(yearlyPrice(49)).toBeLessThan(49 * 12)
+    expect(yearlyMonthlyEquivalent(49)).toBeLessThan(49)
+  })
+
   it('calcule le mensuel équivalent arrondi au centime', () => {
-    expect(yearlyMonthlyEquivalent(49)).toBe(40.83)
-    expect(yearlyMonthlyEquivalent(69)).toBe(57.5)
+    expect(yearlyMonthlyEquivalent(49)).toBe(
+      Math.round((49 * (12 - YEARLY_FREE_MONTHS) / 12) * 100) / 100
+    )
+    // Un montant à décimales infinies ne doit pas fuir dans l'affichage.
+    expect(yearlyMonthlyEquivalent(49).toString().split('.')[1]?.length ?? 0).toBeLessThanOrEqual(2)
+  })
+
+  it('affiche l’offre au bon nombre', () => {
+    // « 1 mois offerts » était le défaut avant l'introduction de ce libellé.
+    expect(freeMonthsLabel()).toBe(
+      YEARLY_FREE_MONTHS > 1 ? `${YEARLY_FREE_MONTHS} mois offerts` : `${YEARLY_FREE_MONTHS} mois offert`
+    )
   })
   it('formate à la française sans centimes inutiles', () => {
     expect(formatEuros(40.83)).toBe('40,83')

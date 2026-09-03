@@ -6,7 +6,7 @@ import { useTheme } from '@/components/ui/ThemeProvider'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import {
-  PLAN_CARDS, YEARLY_FREE_MONTHS, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
+  PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
   type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -626,7 +626,7 @@ export default function LandingPage() {
                 </p>
                 <p className={`text-xs mt-1.5 font-semibold ${featured ? 'text-emerald-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                   {yearly
-                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${YEARLY_FREE_MONTHS} mois offerts`
+                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
                     : `Passez à l’année : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
                 </p>
                 <p className={`text-sm mt-1 mb-6 ${featured ? 'text-white/60' : 'text-slate-500 dark:text-slate-400'}`}>{card.tagline}</p>

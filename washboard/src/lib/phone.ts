@@ -43,3 +43,30 @@ export function formatPhone(brut: string | null | undefined): string {
   if (!n) return String(brut ?? '')
   return n.replace(/(\d{2})(?=\d)/g, '$1 ').trim()
 }
+
+/** Numéros autorisés à porter plusieurs comptes.
+ *
+ *  L'unicité du téléphone existe pour empêcher d'ouvrir plusieurs essais
+ *  gratuits avec des adresses email différentes. Elle gêne une seule
+ *  personne légitime : Alexandre, qui a besoin de plusieurs comptes de test
+ *  sur son propre numéro.
+ *
+ *  La liste passe par une variable d'environnement, jamais par le code : le
+ *  dépôt est public, et un numéro de téléphone y resterait inscrit pour
+ *  toujours dans l'historique.
+ *
+ *  Format attendu : numéros séparés par des virgules, dans n'importe quelle
+ *  écriture (ils sont normalisés ici).
+ */
+export function isPhoneExemptFromUniqueness(brut: string | null | undefined): boolean {
+  const numero = normalizePhone(brut)
+  if (!numero) return false
+
+  const liste = process.env.PHONE_UNIQUENESS_EXEMPT
+  if (!liste) return false
+
+  return liste
+    .split(',')
+    .map(n => normalizePhone(n))
+    .some(n => n !== null && n === numero)
+}

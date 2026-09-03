@@ -157,7 +157,7 @@ export const GUIDE: GuideSection[] = [
         id: 'abonnement',
         question: 'Comment gérer mon abonnement ?',
         answer:
-          "Tout se passe dans [Abonnement](/dashboard/abonnement) : votre formule en cours, la prochaine échéance et les moyens de paiement. L'engagement annuel revient moins cher que le mensuel, avec deux mois offerts.",
+          "Tout se passe dans [Abonnement](/dashboard/abonnement) : votre formule en cours, la prochaine échéance et les moyens de paiement. L'engagement annuel revient moins cher que le mensuel : le détail des offres et l'économie réalisée s'affichent sur la page.",
         keywords: ['abonnement', 'payer', 'facture', 'plan', 'formule', 'annuel', 'mensuel'],
       },
       {

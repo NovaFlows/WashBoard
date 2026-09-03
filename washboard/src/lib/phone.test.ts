@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { normalizePhone, isValidPhone, isMobilePhone, formatPhone } from './phone'
+import { describe, it, expect, afterEach } from 'vitest'
+import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness } from './phone'
 
 // Cette normalisation porte une règle anti-abus : sans forme canonique, la
 // contrainte d'unicité en base laisserait passer trois comptes d'essai avec le
@@ -94,5 +94,52 @@ describe('formatPhone', () => {
   it('gère l’absence de valeur', () => {
     expect(formatPhone(null)).toBe('')
     expect(formatPhone('')).toBe('')
+  })
+})
+
+describe('isPhoneExemptFromUniqueness', () => {
+  // L'unicité du numéro empêche d'ouvrir plusieurs essais gratuits. Elle gêne
+  // une seule personne légitime : Alexandre, qui teste sur son propre numéro.
+  // La liste vit dans une variable d'environnement — le dépôt est public.
+  const initial = process.env.PHONE_UNIQUENESS_EXEMPT
+
+  afterEach(() => {
+    if (initial === undefined) delete process.env.PHONE_UNIQUENESS_EXEMPT
+    else process.env.PHONE_UNIQUENESS_EXEMPT = initial
+  })
+
+  it('n’exempte personne quand la variable est absente', () => {
+    delete process.env.PHONE_UNIQUENESS_EXEMPT
+    expect(isPhoneExemptFromUniqueness('0612345678')).toBe(false)
+  })
+
+  it('exempte un numéro listé', () => {
+    process.env.PHONE_UNIQUENESS_EXEMPT = '0612345678'
+    expect(isPhoneExemptFromUniqueness('0612345678')).toBe(true)
+  })
+
+  it('reconnaît le numéro quelle que soit son écriture', () => {
+    // Sans normalisation des deux côtés, l'exemption ne s'appliquerait pas
+    // selon la façon dont le numéro a été saisi à l'inscription.
+    process.env.PHONE_UNIQUENESS_EXEMPT = '+33612345678'
+    expect(isPhoneExemptFromUniqueness('06 12 34 56 78')).toBe(true)
+  })
+
+  it('gère plusieurs numéros séparés par des virgules', () => {
+    process.env.PHONE_UNIQUENESS_EXEMPT = '0612345678, 06 84 14 04 38'
+    expect(isPhoneExemptFromUniqueness('0684140438')).toBe(true)
+    expect(isPhoneExemptFromUniqueness('0612345678')).toBe(true)
+    expect(isPhoneExemptFromUniqueness('0799887766')).toBe(false)
+  })
+
+  it('n’exempte pas un numéro absent de la liste', () => {
+    process.env.PHONE_UNIQUENESS_EXEMPT = '0612345678'
+    expect(isPhoneExemptFromUniqueness('0698765432')).toBe(false)
+  })
+
+  it('refuse une saisie invalide, même si la liste est mal remplie', () => {
+    process.env.PHONE_UNIQUENESS_EXEMPT = 'nimporte quoi'
+    expect(isPhoneExemptFromUniqueness('pas un numero')).toBe(false)
+    expect(isPhoneExemptFromUniqueness(null)).toBe(false)
   })
 })

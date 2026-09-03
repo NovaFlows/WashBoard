@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { PLAN_CARDS, formatEuros, yearlyPrice, freeMonthsLabel } from '@/lib/plan'
 
 export const metadata: Metadata = {
   title: 'Conditions Générales de Vente — WashBoard',
@@ -42,8 +43,14 @@ export default function CGV() {
       <Section title="3. Tarifs et facturation">
         <p>L&apos;abonnement WashBoard est proposé aux tarifs suivants :</p>
         <ul>
-          <li><strong>Essentiel :</strong> 49 € HT / mois, ou 490 € HT / an (2 mois offerts)</li>
-          <li><strong>Pro :</strong> 69 € HT / mois, ou 690 € HT / an (2 mois offerts)</li>
+          {/* Tarifs tirés de `plan.ts` : écrits en dur, des CGV finissent par
+              annoncer un prix que le produit ne pratique plus. */}
+          {PLAN_CARDS.map(c => (
+            <li key={c.key}>
+              <strong>{c.name} :</strong> {formatEuros(c.price)} € HT / mois,
+              ou {formatEuros(yearlyPrice(c.price))} € HT / an ({freeMonthsLabel()})
+            </li>
+          ))}
         </ul>
         <p>
           L&apos;engagement annuel est facturé en une fois pour douze mois. Les tarifs

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
-import { normalizePhone } from '@/lib/phone'
+import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
 
 function generateSlug(name: string): string {
   return name
@@ -39,11 +39,16 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Vérification applicative AVANT de créer l'utilisateur auth : sans elle, on
+  // Unicité du numéro, vérifiée AVANT de créer l'utilisateur auth : sans cela on
   // créerait le compte auth puis on échouerait à l'insert, laissant un compte
   // fantôme si le rollback échoue lui aussi (cas vécu le 2026-08-28).
-  // La contrainte UNIQUE en base reste le garde-fou final en cas de course
-  // entre deux inscriptions simultanées.
+  //
+  // C'est désormais la SEULE règle : la contrainte UNIQUE a été retirée de la
+  // base le 2026-09-03, parce qu'elle ne pouvait pas connaître les numéros
+  // exemptés (voir `isPhoneExemptFromUniqueness`) et refusait l'insertion même
+  // quand le code l'autorisait. Reste théoriquement possible : deux
+  // inscriptions au même instant avec le même numéro passeraient toutes deux
+  // — sans conséquence autre que deux comptes à rapprocher à la main.
   const { data: dejaPris, error: erreurRecherche } = await supabase
     .from('washers')
     .select('id')
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (dejaPris) {
+  if (dejaPris && !isPhoneExemptFromUniqueness(telephone)) {
     // Message volontairement identique en esprit à celui de l'email déjà
     // utilisé : on ne révèle pas à qui appartient le numéro.
     return NextResponse.json(
@@ -114,17 +119,6 @@ export async function POST(request: NextRequest) {
       // Le rollback lui-même a échoué : le compte fantôme est créé, maintenant.
       // C'est la seule trace qui permettra de le retrouver et de le purger.
       logger.error('signup.rollback_failed', { userId: authData.user.id }, rollbackError)
-    }
-
-    // Cas de course : deux inscriptions avec le même numéro au même instant.
-    // La vérification plus haut les a toutes deux laissées passer, c'est la
-    // contrainte UNIQUE en base qui tranche — on renvoie alors le vrai motif
-    // plutôt qu'une erreur technique incompréhensible.
-    if (washerError.code === '23505' && String(washerError.message).includes('phone')) {
-      return NextResponse.json(
-        { error: 'Ce numéro de téléphone est déjà associé à un compte' },
-        { status: 400 },
-      )
     }
 
     return NextResponse.json({ error: 'Erreur lors de la création du profil' }, { status: 500 })

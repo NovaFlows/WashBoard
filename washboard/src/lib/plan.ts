@@ -45,11 +45,22 @@ export const SMS_QUOTA: Record<Plan, number> = {
 // on le leur conserve explicitement maintenant que ce plan n'existe plus.
 export const GRANDFATHERED_SMS_QUOTA = 100000
 
-// Engagement annuel : 2 mois offerts (on facture 10 mois pour 12).
-export const YEARLY_FREE_MONTHS = 2
+// Engagement annuel : 1 mois offert (on facture 11 mois pour 12).
+export const YEARLY_FREE_MONTHS = 1
 
 export function yearlyPrice(monthlyPrice: number): number {
   return monthlyPrice * (12 - YEARLY_FREE_MONTHS)
+}
+
+/** « 1 mois offert » / « 2 mois offerts ».
+ *
+ *  L'accord était écrit en dur au pluriel à cinq endroits : passer l'offre à
+ *  un seul mois affichait « 1 mois offerts ». Une seule source évite d'en
+ *  oublier un. */
+export function freeMonthsLabel(): string {
+  return YEARLY_FREE_MONTHS > 1
+    ? `${YEARLY_FREE_MONTHS} mois offerts`
+    : `${YEARLY_FREE_MONTHS} mois offert`
 }
 
 // Prix mensuel équivalent d'un engagement annuel, arrondi au centime.
