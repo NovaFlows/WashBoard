@@ -14,7 +14,6 @@ import {
   buildDeviceConversionBreakdown,
   buildReferrerConversionBreakdown,
   buildVisitTimingBreakdown,
-  estimatePeakConcurrentSessions,
   comparePeriods,
   normalizeHost,
   restrictToSessionsReaching,
@@ -84,8 +83,14 @@ export default async function CrmPage() {
   const deviceConversionBreakdown = buildDeviceConversionBreakdown(funnelSessionEvents)
   const referrerConversionBreakdown = buildReferrerConversionBreakdown(funnelSessionEvents)
   const visitTimingBreakdown = buildVisitTimingBreakdown(funnelSessionEvents)
-  const peak7d = estimatePeakConcurrentSessions(events.filter(e => new Date(e.created_at) >= shortWindowSince))
-  const peak30d = estimatePeakConcurrentSessions(events)
+  // Le « pic de visiteurs simultanés » a été retiré de l'écran : c'est une
+  // mesure de charge serveur, sans usage pour un laveur, et son intitulé
+  // n'était compris de personne. On affiche à la place le nombre de visiteurs
+  // des 7 derniers jours — même unité que le compteur principal, donc
+  // directement comparable.
+  const visitors7d = countDistinctSessions(
+    funnelSessionEvents.filter(e => new Date(e.created_at) >= shortWindowSince)
+  )
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
   return (
@@ -102,8 +107,7 @@ export default async function CrmPage() {
           visitorCount={visitorCount}
           visitorChange={visitorChange}
           conversionCount={conversionCount}
-          peak7d={peak7d}
-          peak30d={peak30d}
+          visitors7d={visitors7d}
           deviceBreakdown={deviceBreakdown}
           referrerBreakdown={referrerBreakdown}
           deviceConversionBreakdown={deviceConversionBreakdown}

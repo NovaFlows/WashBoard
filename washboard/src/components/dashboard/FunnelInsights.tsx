@@ -6,8 +6,7 @@ type Props = {
   visitorChange: PeriodChange
   conversionCount: number
   /** Pic estimé de sessions actives dans une même fenêtre glissante d'1h. */
-  peak7d: number
-  peak30d: number
+  visitors7d: number
   deviceBreakdown: DeviceBreakdownItem[]
   referrerBreakdown: ReferrerBreakdownItem[]
   deviceConversionBreakdown: DeviceConversionItem[]
@@ -32,7 +31,11 @@ function referrerLabel(host: string, websiteHost?: string): string {
 
 function ChangeBadge({ change, windowDays }: { change: PeriodChange; windowDays: number }) {
   if (change.direction === 'new') {
-    return <p className="text-[11px] font-medium text-blue-600 dark:text-blue-400 mt-1">Aucun visiteur sur les {windowDays} jours précédents</p>
+    // Il n'y a rien à comparer : c'est la première période mesurée. L'ancienne
+    // formulation, « Aucun visiteur sur les 30 jours précédents », se lisait
+    // comme un reproche sur la période en cours alors qu'elle parlait de la
+    // précédente — et en bleu, elle attirait l'œil plus que le chiffre.
+    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Première période mesurée</p>
   }
   if (change.pct === null || change.direction === 'flat') {
     return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Stable vs les {windowDays} jours précédents</p>
@@ -174,7 +177,7 @@ function VisitTimingCard({ timing, accent }: { timing: VisitTimingBreakdown; acc
 // estimé) + répartitions par appareil et par source de trafic. Complète
 // VisitFunnel (le détail étape par étape) sans le remplacer.
 export default function FunnelInsights({
-  visitorCount, visitorChange, conversionCount, peak7d, peak30d,
+  visitorCount, visitorChange, conversionCount, visitors7d,
   deviceBreakdown, referrerBreakdown, deviceConversionBreakdown, referrerConversionBreakdown,
   visitTimingBreakdown, websiteHost, accent = '#2563eb', windowDays,
 }: Props) {
@@ -211,12 +214,14 @@ export default function FunnelInsights({
         <div className="col-span-2 md:col-span-1">
           <KpiTile
             icon={Activity}
-            label="Pic simultané (est.)"
-            footer={<p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Approximation sur 1h glissante, pas une mesure temps réel</p>}
+            label="Dont cette semaine"
+            footer={
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                Visiteurs des 7 derniers jours
+              </p>
+            }
           >
-            <span className="text-2xl">{peak7d}<span className="text-sm font-medium text-slate-400"> /7j</span></span>
-            <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
-            <span className="text-2xl">{peak30d}<span className="text-sm font-medium text-slate-400"> /30j</span></span>
+            {visitors7d}
           </KpiTile>
         </div>
       </div>
