@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { computeSetupProgress, type SetupInput } from './setupProgress'
+import {
+  computeSetupProgress,
+  ESSENTIAL_WEIGHT,
+  OPTIONAL_WEIGHT,
+  type SetupInput,
+} from './setupProgress'
 
-const complet: SetupInput = {
+const essentielsOk = {
   servicesCount: 3,
   availabilitiesCount: 5,
   baseAddress: '12 rue des Lilas, Cergy',
@@ -9,70 +14,126 @@ const complet: SetupInput = {
   logoUrl: 'https://exemple.test/logo.png',
 }
 
-describe('computeSetupProgress', () => {
-  it('annonce 100 % quand tout l’essentiel est en place', () => {
-    const r = computeSetupProgress(complet)
+const confortVide = {
+  googleCalendarConnected: false,
+  reviewsEnabled: false,
+  followupEnabled: false,
+  zoneEnabled: false,
+  smartSlotEnabled: false,
+  welcomeMessage: null,
+}
+
+const confortOk = {
+  googleCalendarConnected: true,
+  reviewsEnabled: true,
+  followupEnabled: true,
+  zoneEnabled: true,
+  smartSlotEnabled: true,
+  welcomeMessage: 'Bienvenue !',
+}
+
+const vide: SetupInput = {
+  servicesCount: 0, availabilitiesCount: 0,
+  baseAddress: null, phone: null, logoUrl: null,
+  ...confortVide,
+}
+
+describe('computeSetupProgress — pondération', () => {
+  it('atteint 80 % avec l’essentiel seul', () => {
+    // C'est tout l'objet de la pondération : un laveur pleinement opérationnel
+    // mais qui n'a activé aucun réglage de confort ne doit pas se croire à la
+    // traîne. À égalité de poids, il aurait lu 45 %.
+    const r = computeSetupProgress({ ...essentielsOk, ...confortVide })
+    expect(r.percent).toBe(ESSENTIAL_WEIGHT)
+    expect(r.essentialsDone).toBe(true)
+    expect(r.complete).toBe(false)
+  })
+
+  it('atteint 100 % quand tout est configuré', () => {
+    const r = computeSetupProgress({ ...essentielsOk, ...confortOk })
     expect(r.percent).toBe(100)
     expect(r.complete).toBe(true)
     expect(r.missing).toEqual([])
   })
 
-  it('annonce 0 % sur un compte vide', () => {
+  it('plafonne à 20 % avec le confort seul', () => {
+    // Un compte sans prestations reste visiblement bas, même s'il a activé
+    // toutes les options.
     const r = computeSetupProgress({
       servicesCount: 0, availabilitiesCount: 0,
       baseAddress: null, phone: null, logoUrl: null,
+      ...confortOk,
     })
-    expect(r.percent).toBe(0)
-    expect(r.missing).toHaveLength(5)
+    expect(r.percent).toBe(OPTIONAL_WEIGHT)
+    expect(r.essentialsDone).toBe(false)
   })
 
-  it('signale les prestations manquantes même quand tout le reste est fait', () => {
+  it('annonce 0 % sur un compte vide', () => {
+    const r = computeSetupProgress(vide)
+    expect(r.percent).toBe(0)
+    expect(r.missing).toHaveLength(11)
+  })
+
+  it('donne plus de poids à une prestation qu’à un message d’accueil', () => {
+    const sansPrestations = computeSetupProgress({
+      ...essentielsOk, servicesCount: 0, ...confortOk,
+    })
+    const sansAccueil = computeSetupProgress({
+      ...essentielsOk, ...confortOk, welcomeMessage: null,
+    })
+    expect(sansPrestations.percent).toBeLessThan(sansAccueil.percent)
+  })
+})
+
+describe('computeSetupProgress — ce qui manque', () => {
+  it('signale les prestations même quand tout le reste est fait', () => {
     // Cas réel : logo, adresse et 28 créneaux configurés, zéro prestation.
-    // La page publique ne proposait rien, et rien ne le disait au laveur.
-    const r = computeSetupProgress({ ...complet, servicesCount: 0 })
-    expect(r.complete).toBe(false)
+    const r = computeSetupProgress({ ...essentielsOk, servicesCount: 0, ...confortOk })
     expect(r.missing.map(m => m.key)).toEqual(['services'])
     expect(r.missing[0].blocking).toBe(true)
   })
 
-  it('fait remonter les points bloquants avant les autres', () => {
-    // On ne demande pas à quelqu'un d'ajouter son logo tant que sa page ne
-    // peut pas encaisser une réservation.
+  it('range les manques : bloquants, puis essentiels, puis confort', () => {
     const r = computeSetupProgress({
-      ...complet, logoUrl: null, phone: null, availabilitiesCount: 0,
+      ...essentielsOk, availabilitiesCount: 0, logoUrl: null,
+      ...confortOk, zoneEnabled: false,
     })
-    expect(r.missing[0].key).toBe('availabilities')
-    expect(r.missing[0].blocking).toBe(true)
-    expect(r.missing.slice(1).every(m => !m.blocking)).toBe(true)
+    expect(r.missing.map(m => m.key)).toEqual(['availabilities', 'logo', 'zone'])
   })
 
-  it('ne compte pas les réglages facultatifs', () => {
-    // Les frais de déplacement, les créneaux intelligents ou les relances
-    // n'entrent pas dans le calcul : un laveur qui ne s'en sert pas ne doit
-    // pas se croire en retard.
-    const r = computeSetupProgress(complet)
-    expect(r.items.map(i => i.key).sort()).toEqual(
-      ['availabilities', 'baseAddress', 'logo', 'phone', 'services']
-    )
+  it('n’inclut jamais les frais de déplacement', () => {
+    // Exclus volontairement : un laveur qui ne facture pas le déplacement n'a
+    // rien à configurer et ne doit pas être pénalisé.
+    const r = computeSetupProgress(vide)
+    expect(r.items.some(i => /déplacement|travel/i.test(i.key + i.label))).toBe(false)
   })
 
+  it('couvre les six réglages de confort demandés', () => {
+    const r = computeSetupProgress(vide)
+    const confort = r.items.filter(i => !i.essential).map(i => i.key).sort()
+    expect(confort).toEqual(['calendar', 'followup', 'reviews', 'smartSlot', 'welcome', 'zone'])
+  })
+})
+
+describe('computeSetupProgress — robustesse', () => {
   it('traite une chaîne d’espaces comme non renseignée', () => {
-    const r = computeSetupProgress({ ...complet, baseAddress: '   ', phone: '' })
-    expect(r.missing.map(m => m.key).sort()).toEqual(['baseAddress', 'phone'])
+    const r = computeSetupProgress({
+      ...essentielsOk, baseAddress: '   ', phone: '',
+      ...confortOk, welcomeMessage: '  ',
+    })
+    expect(r.missing.map(m => m.key).sort()).toEqual(['baseAddress', 'phone', 'welcome'])
   })
 
   it('donne un pourcentage entier, jamais à virgule', () => {
-    // Il s'affiche tel quel dans l'interface : « 60 % », pas « 60.000001 % ».
-    const r = computeSetupProgress({ ...complet, servicesCount: 0, phone: null })
+    // Il s'affiche tel quel : « 63 % », pas « 63.33333 % ».
+    const r = computeSetupProgress({
+      ...essentielsOk, servicesCount: 0, ...confortVide, zoneEnabled: true,
+    })
     expect(Number.isInteger(r.percent)).toBe(true)
-    expect(r.percent).toBe(60)
   })
 
   it('donne à chaque manque une page où le corriger', () => {
-    const r = computeSetupProgress({
-      servicesCount: 0, availabilitiesCount: 0,
-      baseAddress: null, phone: null, logoUrl: null,
-    })
+    const r = computeSetupProgress(vide)
     expect(r.missing.every(m => m.href.startsWith('/dashboard'))).toBe(true)
   })
 })

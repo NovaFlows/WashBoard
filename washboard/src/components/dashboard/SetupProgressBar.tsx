@@ -10,10 +10,16 @@ import type { SetupProgress } from '@/lib/setupProgress'
 // Il disparaît une fois tout en place : un compte configuré n'a pas besoin
 // qu'on lui rappelle chaque semaine qu'il est configuré.
 
+/** Onze éléments au total : tout lister ferait un mur. On montre les premiers,
+ *  déjà triés par urgence, et on annonce le reste d'un mot. */
+const MAX_AFFICHES = 4
+
 export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
   if (progress.complete) return null
 
   const bloquant = progress.missing.some(m => m.blocking)
+  const affiches = progress.missing.slice(0, MAX_AFFICHES)
+  const reste = progress.missing.length - affiches.length
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
@@ -40,11 +46,16 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           // Tant qu'un point bloquant manque, la page ne peut pas encaisser de
           // réservation : le dire franchement vaut mieux qu'un encouragement.
           ? 'Il manque encore de quoi permettre à vos clients de réserver.'
-          : 'Un compte complet inspire confiance et évite les allers-retours avec vos clients.'}
+          : progress.essentialsDone
+            // L'essentiel est fait : on ne réclame plus rien, on explique ce
+            // que le reste apporte. Ces réglages sont facultatifs, le ton doit
+            // le refléter.
+            ? 'Votre page fonctionne. Ces réglages vous feront gagner du temps et rassureront vos clients.'
+            : 'Un compte complet inspire confiance et évite les allers-retours avec vos clients.'}
       </p>
 
       <ul className="space-y-1.5">
-        {progress.missing.map(item => (
+        {affiches.map(item => (
           <li key={item.key}>
             <Link
               href={item.href}
@@ -68,6 +79,12 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           </li>
         ))}
       </ul>
+
+      {reste > 0 && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2.5">
+          et {reste} autre{reste > 1 ? 's' : ''} réglage{reste > 1 ? 's' : ''} facultatif{reste > 1 ? 's' : ''}
+        </p>
+      )}
     </div>
   )
 }

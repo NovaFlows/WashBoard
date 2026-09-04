@@ -38,6 +38,12 @@ export default async function ParametresPage() {
     baseAddress: washer.base_address ?? null,
     phone: washer.phone ?? null,
     logoUrl: washer.logo_url ?? null,
+    googleCalendarConnected: !!washer.google_refresh_token,
+    reviewsEnabled: !!washer.review_enabled,
+    followupEnabled: !!washer.followup_enabled,
+    zoneEnabled: !!washer.zone_config?.enabled,
+    smartSlotEnabled: !!washer.smart_slot_enabled,
+    welcomeMessage: washer.welcome_message ?? null,
   })
 
   return (
