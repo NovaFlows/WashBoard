@@ -34,6 +34,8 @@ export function GoogleBusinessPicker({
   const [occupe, setOccupe] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [choisi, setChoisi] = useState<string | null>(null)
+  const [manuel, setManuel] = useState(false)
+  const [identifiant, setIdentifiant] = useState('')
   // État initial déduit de la valeur reçue : le poser depuis l'effet
   // provoquerait un rendu en cascade au premier affichage.
   const [etatFiche, setEtatFiche] = useState<'verification' | 'ok' | 'muette' | null>(
@@ -133,6 +135,65 @@ export function GoogleBusinessPicker({
           </div>
 
           {erreur && <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{erreur}</p>}
+
+          {/* Beaucoup de laveurs sont mobiles : leur fiche Google n'a pas
+              d'adresse (« Dessert le Val-d'Oise et les zones à proximité »), et
+              ces fiches-là sont absentes de l'index de recherche de Google,
+              même quand elles s'affichent parfaitement dans son moteur.
+              Vérifié le 2026-09-04 sur une vraie fiche à 60 avis : introuvable
+              par les deux versions de l'API. D'où cette saisie directe. */}
+          <button
+            type="button"
+            onClick={() => setManuel(v => !v)}
+            className="text-xs font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline underline-offset-2 mt-2.5"
+          >
+            {manuel ? 'Revenir à la recherche' : 'Vous ne trouvez pas votre fiche ?'}
+          </button>
+
+          {manuel && (
+            <div className="mt-2.5 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+              <p className="text-xs text-slate-600 dark:text-slate-300 mb-2.5">
+                Les fiches sans adresse (activité à domicile) n&apos;apparaissent pas dans
+                la recherche ci-dessus. Récupérez l&apos;identifiant de votre fiche sur{' '}
+                <a
+                  href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline underline-offset-2"
+                >
+                  l&apos;outil de Google
+                </a>{' '}
+                (cherchez le nom de votre entreprise, puis copiez le « Place ID »).
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={identifiant}
+                  onChange={e => setIdentifiant(e.target.value)}
+                  placeholder="ChIJ…"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = identifiant.trim()
+                    if (!v) return
+                    onChange(v)
+                    setChoisi(null)
+                    setEtatFiche('verification')
+                    setManuel(false)
+                  }}
+                  disabled={!identifiant.trim()}
+                  className="shrink-0 px-4 rounded-xl bg-[#1651E8] text-white text-sm font-semibold disabled:opacity-40 hover:bg-[#0F4ACC] transition-colors"
+                >
+                  Relier
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                On vérifie tout de suite que la fiche répond — vous saurez immédiatement si c&apos;est la bonne.
+              </p>
+            </div>
+          )}
 
           {resultats.length > 0 && (
             <ul className="mt-2 space-y-1.5">
