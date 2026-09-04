@@ -1,4 +1,4 @@
-import { Users, Percent, Activity, Smartphone, Globe, CalendarClock, type LucideIcon } from 'lucide-react'
+import { Users, Percent, Smartphone, Globe, CalendarClock, type LucideIcon } from 'lucide-react'
 import { normalizeHost, type PeriodChange, type DeviceBreakdownItem, type ReferrerBreakdownItem, type DeviceConversionItem, type ReferrerConversionItem, type VisitTimingBreakdown, formatConversionRate } from '@/lib/funnelStats'
 
 type Props = {
@@ -6,7 +6,6 @@ type Props = {
   visitorChange: PeriodChange
   conversionCount: number
   /** Pic estimé de sessions actives dans une même fenêtre glissante d'1h. */
-  visitors7d: number
   deviceBreakdown: DeviceBreakdownItem[]
   referrerBreakdown: ReferrerBreakdownItem[]
   deviceConversionBreakdown: DeviceConversionItem[]
@@ -16,7 +15,7 @@ type Props = {
    *  "Mon site web" plutôt qu'un nom de domaine brut dans les sources. */
   websiteHost?: string
   accent?: string
-  windowDays: number
+  periodLabel: string
 }
 
 const DEVICE_LABELS: Record<string, string> = {
@@ -29,7 +28,7 @@ function referrerLabel(host: string, websiteHost?: string): string {
   return host
 }
 
-function ChangeBadge({ change, windowDays }: { change: PeriodChange; windowDays: number }) {
+function ChangeBadge({ change }: { change: PeriodChange }) {
   if (change.direction === 'new') {
     // Il n'y a rien à comparer : c'est la première période mesurée. L'ancienne
     // formulation, « Aucun visiteur sur les 30 jours précédents », se lisait
@@ -38,12 +37,12 @@ function ChangeBadge({ change, windowDays }: { change: PeriodChange; windowDays:
     return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Première période mesurée</p>
   }
   if (change.pct === null || change.direction === 'flat') {
-    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Stable vs les {windowDays} jours précédents</p>
+    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Stable par rapport à la période précédente</p>
   }
   const positive = change.pct > 0
   return (
     <p className={`text-[11px] font-medium mt-1 ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-      {positive ? '+' : ''}{change.pct}% vs les {windowDays} jours précédents
+      {positive ? '+' : ''}{change.pct}% par rapport à la période précédente
     </p>
   )
 }
@@ -177,9 +176,9 @@ function VisitTimingCard({ timing, accent }: { timing: VisitTimingBreakdown; acc
 // estimé) + répartitions par appareil et par source de trafic. Complète
 // VisitFunnel (le détail étape par étape) sans le remplacer.
 export default function FunnelInsights({
-  visitorCount, visitorChange, conversionCount, visitors7d,
+  visitorCount, visitorChange, conversionCount,
   deviceBreakdown, referrerBreakdown, deviceConversionBreakdown, referrerConversionBreakdown,
-  visitTimingBreakdown, websiteHost, accent = '#2563eb', windowDays,
+  visitTimingBreakdown, websiteHost, accent = '#2563eb', periodLabel,
 }: Props) {
   const deviceItems = deviceBreakdown.map(d => ({
     key: d.device, label: DEVICE_LABELS[d.device] ?? d.device, sessions: d.sessions, pct: d.pct,
@@ -196,8 +195,13 @@ export default function FunnelInsights({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <KpiTile icon={Users} label={`Visiteurs sur ${windowDays} jours`} footer={<ChangeBadge change={visitorChange} windowDays={windowDays} />}>
+      {/* La période est désormais choisie par le laveur : les chiffres doivent
+          dire sur quoi ils portent, sinon on ne sait plus ce qu'on regarde. */}
+      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+        {periodLabel}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <KpiTile icon={Users} label="Visiteurs" footer={<ChangeBadge change={visitorChange} />}>
           {visitorCount}
         </KpiTile>
         <KpiTile icon={Percent} label="Taux de conversion">
@@ -207,23 +211,10 @@ export default function FunnelInsights({
           {formatConversionRate(conversionCount, visitorCount)}
           {conversionCount > 0 && (
             <span className="block text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
-              {conversionCount} réservation{conversionCount > 1 ? 's' : ''} sur {visitorCount} visiteurs ({windowDays} jours)
+              {conversionCount} réservation{conversionCount > 1 ? 's' : ''} sur {visitorCount} visiteurs
             </span>
           )}
         </KpiTile>
-        <div className="col-span-2 md:col-span-1">
-          <KpiTile
-            icon={Activity}
-            label="Dont cette semaine"
-            footer={
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                Visiteurs des 7 derniers jours
-              </p>
-            }
-          >
-            {visitors7d}
-          </KpiTile>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

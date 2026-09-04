@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { getMondayOf } from '@/lib/dateUtils'
+
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -13,6 +13,7 @@ import { buildClientProfile } from '@/lib/clientProfile'
 import {
   getStatusKey, comptePourLeCA, effectivePrice, getLast6Months,
 } from '@/lib/crmStats'
+import { isInCrmPeriod, type CrmPeriodState } from '@/lib/crmPeriod'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type Booking = {
@@ -183,56 +184,32 @@ async function captureSvgAsBase64(
   })
 }
 
-export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
+export default function CrmDashboard({ bookings, period }: { bookings: Booking[]; period: CrmPeriodState }) {
   const barChartRef = useRef<HTMLDivElement>(null)
   const pieServiceRef = useRef<HTMLDivElement>(null)
   const pieStatusRef = useRef<HTMLDivElement>(null)
   const [exporting,         setExporting]         = useState(false)
   const [clientFilter,      setClientFilter]      = useState<'all' | 'individual' | 'professional'>('all')
-  const [periodType,        setPeriodType]        = useState<'all' | 'year' | 'month' | 'week' | 'day'>('all')
-  const [selectedYear,      setSelectedYear]      = useState(() => new Date().getFullYear())
-  const [selectedMonth,     setSelectedMonth]     = useState(() => new Date().getMonth())
-  const [selectedWeekStart, setSelectedWeekStart] = useState(() => getMondayOf(new Date()))
-  const [selectedDay,       setSelectedDay]       = useState(() => {
-    const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`
-  })
 
   // Email du client dont la fiche est ouverte (null = aucune).
   const [openClient, setOpenClient] = useState<string | null>(null)
   const openProfile = openClient ? buildClientProfile(bookings, openClient) : null
 
-  const availableYears = [...new Set(bookings.map(b => new Date(b.scheduled_at).getFullYear()))].sort((a, b) => b - a)
-
   const displayBookings = bookings.filter(b => {
     const d = new Date(b.scheduled_at)
     if (clientFilter === 'individual'   && b.is_professional)  return false
     if (clientFilter === 'professional' && !b.is_professional) return false
-    switch (periodType) {
-      case 'year':
-        if (d.getFullYear() !== selectedYear) return false
-        break
-      case 'month':
-        if (d.getFullYear() !== selectedYear || d.getMonth() !== selectedMonth) return false
-        break
-      case 'week': {
-        const weekEnd = new Date(selectedWeekStart); weekEnd.setDate(selectedWeekStart.getDate() + 7)
-        if (d < selectedWeekStart || d >= weekEnd) return false
-        break
-      }
-      case 'day': {
-        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-        if (ds !== selectedDay) return false
-        break
-      }
-    }
-    return true
+    // Meme fonction que pour les statistiques de visite : les deux moities de
+    // l'ecran portent forcement sur la meme periode.
+    return isInCrmPeriod(d, period)
   })
 
-  const isFiltered = clientFilter !== 'all' || periodType !== 'all'
+  const isFiltered = clientFilter !== 'all'
 
+  // La periode se remet a zero depuis le selecteur en haut d'ecran : ce
+  // bouton ne touche qu'au filtre client, seul etat encore local.
   function resetFilters() {
     setClientFilter('all')
-    setPeriodType('all')
   }
 
   const total    = displayBookings.length
@@ -244,11 +221,11 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0
 
   const chartData = (() => {
-    if (periodType === 'day') return null
+    if (period.type === 'day') return null
 
-    if (periodType === 'week') {
+    if (period.type === 'week') {
       return Array.from({ length: 7 }, (_, i) => {
-        const day = new Date(selectedWeekStart); day.setDate(selectedWeekStart.getDate() + i)
+        const day = new Date(period.weekStart); day.setDate(period.weekStart.getDate() + i)
         const bs  = displayBookings.filter(b => {
           const d = new Date(b.scheduled_at)
           return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate()
@@ -257,17 +234,17 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
       })
     }
 
-    if (periodType === 'month') {
-      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate()
+    if (period.type === 'month') {
+      const daysInMonth = new Date(period.year, period.month + 1, 0).getDate()
       return Array.from({ length: daysInMonth }, (_, i) => {
         const dayN = i + 1
-        const bs   = displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth && d.getDate() === dayN })
+        const bs   = displayBookings.filter(b => { const d = new Date(b.scheduled_at); return d.getFullYear() === period.year && d.getMonth() === period.month && d.getDate() === dayN })
         return { label: String(dayN), Réservations: bs.length, CA: bs.filter(b => comptePourLeCA(b)).reduce((s, b) => s + effectivePrice(b), 0) }
       })
     }
 
-    const months = periodType === 'year'
-      ? Array.from({ length: 12 }, (_, i) => ({ year: selectedYear, month: i, label: MONTHS_FR[i] }))
+    const months = period.type === 'year'
+      ? Array.from({ length: 12 }, (_, i) => ({ year: period.year, month: i, label: MONTHS_FR[i] }))
       : getLast6Months()
     return months.map(({ year, month, label }) => ({
       label,
@@ -455,11 +432,11 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
     )
   }
 
-  const weekEnd       = new Date(selectedWeekStart); weekEnd.setDate(selectedWeekStart.getDate() + 6)
-  const chartTitle    = periodType === 'year'  ? `Activité ${selectedYear}`
-                      : periodType === 'month' ? `${MONTHS_FR[selectedMonth]} ${selectedYear}`
-                      : periodType === 'week'  ? `Sem. du ${shortDate(selectedWeekStart)} au ${shortDate(weekEnd)}`
-                      : periodType === 'day'   ? selectedDay
+  const weekEnd       = new Date(period.weekStart); weekEnd.setDate(period.weekStart.getDate() + 6)
+  const chartTitle    = period.type === 'year'  ? `Activité ${period.year}`
+                      : period.type === 'month' ? `${MONTHS_FR[period.month]} ${period.year}`
+                      : period.type === 'week'  ? `Sem. du ${shortDate(period.weekStart)} au ${shortDate(weekEnd)}`
+                      : period.type === 'day'   ? period.day
                       : '6 derniers mois'
 
   return (
@@ -511,124 +488,6 @@ export default function CrmDashboard({ bookings }: { bookings: Booking[] }) {
           <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium">
             {total} résultat{total !== 1 ? 's' : ''}
           </span>
-        </div>
-
-        {/* Séparateur */}
-        <div className="border-t border-slate-100 dark:border-slate-800" />
-
-        {/* Ligne 2 : période */}
-        <div className="flex items-start gap-3 flex-wrap">
-          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-16 shrink-0 pt-1.5">Période</span>
-          <div className="flex flex-col gap-2 flex-1">
-
-            {/* Type de période */}
-            <div className="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
-              {(['all', 'year', 'month', 'week', 'day'] as const).map(p => (
-                <button key={p} onClick={() => setPeriodType(p)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                    periodType === p
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}>
-                  {p === 'all' ? 'Tout' : p === 'year' ? 'Année' : p === 'month' ? 'Mois' : p === 'week' ? 'Semaine' : 'Jour'}
-                </button>
-              ))}
-            </div>
-
-            {/* Sélecteur de valeur — Année */}
-            {periodType === 'year' && (
-              <div className="flex gap-1.5 flex-wrap">
-                {availableYears.map(y => (
-                  <button key={y} onClick={() => setSelectedYear(y)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
-                      selectedYear === y
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}>
-                    {y}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Sélecteur de valeur — Mois */}
-            {periodType === 'month' && (
-              <div className="flex flex-col gap-2">
-                {/* Sélecteur d'année en ligne */}
-                <div className="flex gap-1.5 flex-wrap">
-                  {availableYears.map(y => (
-                    <button key={y} onClick={() => setSelectedYear(y)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border-2 transition-all ${
-                        selectedYear === y
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
-                      }`}>
-                      {y}
-                    </button>
-                  ))}
-                </div>
-                {/* 12 mois */}
-                <div className="flex gap-1.5 flex-wrap">
-                  {MONTHS_FR.map((m, i) => (
-                    <button key={i} onClick={() => setSelectedMonth(i)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all min-w-[40px] text-center ${
-                        selectedMonth === i
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                      }`}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sélecteur de valeur — Semaine */}
-            {periodType === 'week' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSelectedWeekStart(prev => { const d = new Date(prev); d.setDate(d.getDate() - 7); return d })}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                </button>
-                <div className="px-4 py-1.5 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-xs font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">
-                  {shortDate(selectedWeekStart)} — {shortDate(weekEnd)}
-                </div>
-                <button
-                  onClick={() => setSelectedWeekStart(prev => { const d = new Date(prev); d.setDate(d.getDate() + 7); return d })}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            )}
-
-            {/* Sélecteur de valeur — Jour */}
-            {periodType === 'day' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSelectedDay(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                </button>
-                <input
-                  type="date"
-                  value={selectedDay}
-                  onChange={e => e.target.value && setSelectedDay(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-xs font-semibold text-blue-700 dark:text-blue-400 focus:outline-none"
-                />
-                <button
-                  onClick={() => setSelectedDay(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            )}
-
-          </div>
         </div>
 
         {/* Réinitialiser */}

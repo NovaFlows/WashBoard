@@ -4,20 +4,20 @@ type Props = {
   stats: FunnelStepStat[]
   accent?: string
   /** Nombre de jours couverts par `stats`, pour l'affichage du titre. */
-  windowDays: number
+  periodLabel: string
 }
 
 // Entonnoir de la page de réservation publique : où les visiteurs décrochent.
 // Une seule série (nombre de sessions) → pas besoin de légende, chaque barre
 // est directement étiquetée (voir dataviz: identity via label, pas couleur).
-export default function VisitFunnel({ stats, accent = '#2563eb', windowDays }: Props) {
+export default function VisitFunnel({ stats, accent = '#2563eb', periodLabel }: Props) {
   const hasData = stats.some(s => s.sessions > 0)
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <div className="flex items-baseline justify-between mb-1">
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Entonnoir de réservation</h3>
-        <span className="text-[11px] text-slate-400 dark:text-slate-500">{windowDays} derniers jours</span>
+        <span className="text-[11px] text-slate-400 dark:text-slate-500">{periodLabel}</span>
       </div>
       <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-4">
         Visiteurs de votre page de réservation, par étape atteinte.
