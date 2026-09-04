@@ -9,7 +9,9 @@
 //   • les fichiers fixes (icônes…)    → cache d'abord, ils ne changent pas
 //
 // Le numéro de version force le renouvellement du cache à chaque déploiement.
-const VERSION = 'washboard-v1'
+// v2 : purge les caches de la v1, qui pouvaient contenir des pages de tableau
+// de bord mises en cache avant qu'on ne les en exclue.
+const VERSION = 'washboard-v2'
 const HORS_LIGNE = '/hors-ligne'
 
 const FICHIERS_FIXES = [
@@ -64,16 +66,25 @@ self.addEventListener('fetch', event => {
   // Pages : le réseau fait foi. Le cache ne sert que si le réseau a échoué,
   // c'est-à-dire hors ligne — jamais pour « aller plus vite ».
   if (request.mode === 'navigate') {
+    // Les pages du tableau de bord ne sont JAMAIS mises en cache. Elles
+    // contiennent le planning, les clients et la comptabilité d'un laveur :
+    // une copie sur l'appareil survivrait à sa déconnexion, et pourrait lui
+    // réafficher un état périmé sans qu'il sache d'où il sort. Hors ligne, il
+    // voit l'écran dédié plutôt qu'un planning d'hier.
+    const prive = url.pathname.startsWith('/dashboard')
+
     event.respondWith(
       fetch(request)
         .then(reponse => {
-          if (reponse.ok) {
+          if (reponse.ok && !prive) {
             const copie = reponse.clone()
-            caches.open(VERSION).then(c => c.put(request, copie))
+            caches.open(VERSION).then(c => c.put(request, copie)).catch(() => {})
           }
           return reponse
         })
-        .catch(() => caches.match(request).then(enCache => enCache || caches.match(HORS_LIGNE)))
+        .catch(() => (prive
+          ? caches.match(HORS_LIGNE)
+          : caches.match(request).then(enCache => enCache || caches.match(HORS_LIGNE))))
     )
   }
 })

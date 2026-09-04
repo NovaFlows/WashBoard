@@ -67,12 +67,24 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Restreint aux zones qui lisent une session laveur. Le blog, la landing et
-  // les pages de réservation client n'en ont aucune : les y faire passer
-  // n'ajouterait que de la latence sur des pages vues par des inconnus.
+  // Uniquement les PAGES qui lisent une session laveur.
+  //
+  // `/api/:path*` en était volontairement retiré le 2026-09-04 : l'affichage
+  // d'un écran déclenche la navigation PUIS plusieurs appels d'API, tous en
+  // même temps. Chacun passait alors ici et tentait son propre
+  // rafraîchissement. Or Supabase fait tourner le jeton de rafraîchissement :
+  // le premier appel réussit et invalide le jeton, les suivants arrivent avec
+  // un jeton déjà consommé et perdent la session. D'où des reconnexions
+  // répétées, particulièrement visibles depuis l'application installée, qui
+  // ouvre le tableau de bord d'un coup.
+  //
+  // Les routes d'API n'en ont pas besoin : elles créent leur propre client
+  // Supabase, qui sait rafraîchir et écrire les cookies de son côté.
+  //
+  // Le blog, la landing et les pages de réservation client ne portent aucune
+  // session : les y faire passer n'ajouterait que de la latence.
   matcher: [
     '/dashboard/:path*',
-    '/api/:path*',
     '/login',
     '/signup',
   ],
