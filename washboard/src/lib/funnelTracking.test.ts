@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { detectDevice, extractReferrerHost, resolveReferrerHost } from './funnelTracking'
+import { describe, it, expect, afterEach } from 'vitest'
+import { detectDevice, extractReferrerHost, resolveReferrerHost, getOrCreateSessionId } from './funnelTracking'
 
 describe('detectDevice', () => {
   it('classe en mobile sous 640px', () => {
@@ -64,5 +64,29 @@ describe('resolveReferrerHost', () => {
   it('sans utm_source, retombe sur extractReferrerHost', () => {
     expect(resolveReferrerHost('https://www.instagram.com/', 'www.washboard.fr', '')).toBe('www.instagram.com')
     expect(resolveReferrerHost('', 'www.washboard.fr', '')).toBeUndefined()
+  })
+})
+
+describe('getOrCreateSessionId — stockage indisponible', () => {
+  // Les navigateurs intégrés de TikTok et Instagram, d'où vient une bonne part
+  // du trafic des laveurs, peuvent interdire sessionStorage. L'accès lève
+  // alors une exception au lieu de renvoyer null.
+  const vrai = Object.getOwnPropertyDescriptor(globalThis, 'window')
+
+  afterEach(() => {
+    // `window` est en lecture seule dans cet environnement : on restaure le
+    // descripteur d'origine plutôt que d'assigner la propriété.
+    if (vrai) Object.defineProperty(globalThis, 'window', vrai)
+  })
+
+  it('ne laisse pas l’exception casser le parcours de réservation', () => {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        get sessionStorage(): Storage { throw new Error('Access denied') },
+      },
+    })
+    expect(() => getOrCreateSessionId()).not.toThrow()
+    expect(getOrCreateSessionId()).toBe('')
   })
 })

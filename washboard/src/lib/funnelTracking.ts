@@ -48,11 +48,24 @@ export function resolveReferrerHost(referrer: string, currentHost: string, searc
  *  onglet/fermeture — volontaire, voir la note RGPD dans la migration 003. */
 export function getOrCreateSessionId(): string {
   if (typeof window === 'undefined') return ''
-  const existing = window.sessionStorage.getItem(SESSION_STORAGE_KEY)
-  if (existing) return existing
-  const id = crypto.randomUUID()
-  window.sessionStorage.setItem(SESSION_STORAGE_KEY, id)
-  return id
+  // `sessionStorage` lève une exception, et ne renvoie pas simplement null,
+  // quand le navigateur en interdit l'accès : navigation privée stricte,
+  // réglage « bloquer les données de sites », et surtout les navigateurs
+  // intégrés de TikTok ou Instagram — par où arrive une bonne part du trafic
+  // des laveurs. Sans ce garde-fou, l'exception remontait jusqu'au composant
+  // de réservation.
+  try {
+    const existing = window.sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (existing) return existing
+    const id = crypto.randomUUID()
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, id)
+    return id
+  } catch {
+    // Stockage indisponible : pas de session, donc pas de mesure pour cette
+    // visite. On préfère perdre une statistique qu'empêcher quelqu'un de
+    // réserver.
+    return ''
+  }
 }
 
 /** Envoie un événement d'entonnoir, sans jamais faire échouer l'appelant :
