@@ -157,3 +157,28 @@ test.describe('Analytics entonnoir', () => {
     expect(res.status()).toBeLessThan(500)
   })
 })
+
+test.describe('Accès support — protections', () => {
+  // Cette route ouvre une session sur le compte d'un client : c'est la plus
+  // sensible du produit. Chaque verrou est vérifié en tentant de le franchir.
+
+  test('un visiteur anonyme ne peut pas obtenir d’accès', async ({ request }) => {
+    const res = await request.post('/api/support/access', { data: { slug: TEST_WASHER_SLUG } })
+    expect(res.status()).toBe(401)
+  })
+
+  test('un visiteur anonyme ne peut pas ouvrir d’accès sur un compte', async ({ request }) => {
+    const res = await request.post('/api/support/grant')
+    expect(res.status()).toBe(401)
+  })
+
+  test('un visiteur anonyme ne peut pas lire l’état d’un accès', async ({ request }) => {
+    const res = await request.get('/api/support/grant')
+    expect(res.status()).toBe(401)
+  })
+
+  test('la page support n’est pas accessible sans être connecté', async ({ page }) => {
+    await page.goto('/dashboard/support')
+    await expect(page).toHaveURL(/\/login/)
+  })
+})

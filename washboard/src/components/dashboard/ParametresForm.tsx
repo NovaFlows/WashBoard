@@ -10,6 +10,7 @@ import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { hasFeature } from '@/lib/plan'
 import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
 import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
+import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
 
 type Props = {
   washer: Washer
@@ -583,6 +584,9 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
       {/* Notifications sur le téléphone */}
       <NotificationsToggle />
+
+      {/* Accès temporaire du support, ouvert et refermé par le laveur */}
+      <SupportAccessPanel />
 
       {/* Zone de danger */}
       <DangerZone washer={washer} />
