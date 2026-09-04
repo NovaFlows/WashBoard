@@ -42,8 +42,27 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
   }
 
   function changeCategory(catId: string) {
-    // Les types diffèrent d'une catégorie à l'autre : on réinitialise la sélection
-    onChange({ ...form, category_id: catId, vehicle_types: [], vehicle_price_overrides: {} })
+    // Tous les types de la catégorie sont cochés d'emblée.
+    //
+    // Le cas courant est de proposer sa prestation pour tout ce que la
+    // catégorie contient — une citadine comme un SUV, un canapé deux places
+    // comme un trois places. Partir de rien obligeait à tout cocher à la main
+    // avant de pouvoir avancer, et rien n'indiquait que c'était attendu :
+    // certains laveurs enregistraient une prestation sans aucun type, donc
+    // impossible à réserver.
+    //
+    // Décocher ce qu'on ne fait pas est plus rapide que cocher ce qu'on fait,
+    // et surtout : le résultat par défaut est utilisable.
+    //
+    // Les tarifs par type sont remis à zéro : ils portent sur les types de
+    // l'ancienne catégorie et n'ont aucun sens dans la nouvelle.
+    const categorie = categories.find(c => c.id === catId)
+    onChange({
+      ...form,
+      category_id: catId,
+      vehicle_types: (categorie?.types ?? []).map(t => t.id),
+      vehicle_price_overrides: {},
+    })
   }
 
   function toggleVehicle(v: string) {
@@ -321,7 +340,16 @@ export default function PrestationsManager({ services: initialServices, categori
 
   function startAdd() {
     setEditId(null)
-    setForm({ ...EMPTY, category_id: categories[0]?.id ?? '' })
+    // La première catégorie était déjà présélectionnée, mais sans ses types :
+    // le formulaire s'ouvrait donc sur une catégorie choisie et aucune case
+    // cochée, alors que passer par le menu déroulant les aurait toutes
+    // cochées. On aligne les deux chemins.
+    const premiere = categories[0]
+    setForm({
+      ...EMPTY,
+      category_id: premiere?.id ?? '',
+      vehicle_types: (premiere?.types ?? []).map(t => t.id),
+    })
     setError(null)
     setShowAdd(true)
   }
