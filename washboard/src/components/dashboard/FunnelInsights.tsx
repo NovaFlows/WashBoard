@@ -197,7 +197,7 @@ export default function FunnelInsights({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <KpiTile icon={Users} label="Visiteurs" footer={<ChangeBadge change={visitorChange} windowDays={windowDays} />}>
+        <KpiTile icon={Users} label={`Visiteurs sur ${windowDays} jours`} footer={<ChangeBadge change={visitorChange} windowDays={windowDays} />}>
           {visitorCount}
         </KpiTile>
         <KpiTile icon={Percent} label="Taux de conversion">
@@ -207,7 +207,7 @@ export default function FunnelInsights({
           {formatConversionRate(conversionCount, visitorCount)}
           {conversionCount > 0 && (
             <span className="block text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
-              {conversionCount} réservation{conversionCount > 1 ? 's' : ''} sur {visitorCount} visiteurs
+              {conversionCount} réservation{conversionCount > 1 ? 's' : ''} sur {visitorCount} visiteurs ({windowDays} jours)
             </span>
           )}
         </KpiTile>
