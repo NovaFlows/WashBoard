@@ -9,7 +9,6 @@ import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { BG_THEME_PRESETS, isCustomTheme } from '@/lib/themes'
 
 import type { BgThemePreset } from '@/lib/themes'
-import { GoogleBusinessPicker } from '@/components/dashboard/admin/GoogleBusinessPicker'
 
 type LogoStatus = 'idle' | 'removing' | 'uploading' | 'done' | 'error'
 
@@ -76,7 +75,6 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const bgFileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState(washer.welcome_message ?? '')
   const [websiteUrl, setWebsiteUrl] = useState(washer.website_url ?? '')
-  const [googlePlaceId, setGooglePlaceId] = useState(washer.google_place_id ?? '')
   const [color, setColor] = useState(washer.brand_color ?? '#2563eb')
   const [colorSaving, setColorSaving] = useState(false)
   const [colorSaved, setColorSaved] = useState(false)
@@ -242,7 +240,6 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       body: JSON.stringify({
         welcome_message: message,
         website_url: websiteUrl.trim() || null,
-        google_place_id: googlePlaceId.trim() || null,
       }),
     })
     if (res.ok) {
@@ -427,15 +424,8 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Présence en ligne</h2>
 
-        <GoogleBusinessPicker
-          value={googlePlaceId}
-          onChange={setGooglePlaceId}
-          labelClass={labelClass}
-          inputClass={inputClass}
-        />
-
         <div>
-          <label className={labelClass}>Site web <span className="font-normal text-slate-400">(utilisé seulement si aucune fiche Google n&apos;est reliée)</span></label>
+          <label className={labelClass}>Site web <span className="font-normal text-slate-400">(les avis présents sur votre site seront affichés sur la page client)</span></label>
           <input
             type="url"
             value={websiteUrl}
@@ -443,7 +433,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             placeholder="https://monsite.fr"
             className={inputClass}
           />
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Sert de repli : les avis de votre site ne sont lus que si aucune fiche Google n’est reliée ci-dessus</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Les avis clients visibles sur votre site seront récupérés automatiquement</p>
         </div>
       </div>
 

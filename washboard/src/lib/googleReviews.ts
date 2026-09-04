@@ -1,5 +1,3 @@
-import { fetchGoogleMaps } from '@/lib/googleMaps'
-
 export type GoogleReview = {
   author: string
   rating: number
@@ -90,71 +88,5 @@ export async function scrapeWebsiteReviews(websiteUrl: string): Promise<GoogleRe
     return { reviews: unique.slice(0, 5) }
   } catch {
     return { reviews: [] }
-  }
-}
-
-/** Avis publiés sur la fiche Google Business du laveur.
- *
- *  Préférable à la lecture de son site : la source est structurée, elle ne
- *  casse pas quand le site change de mise en page, et les avis y arrivent dès
- *  qu'un client les dépose.
- *
- *  ⚠️ Deux limites de Google, pas contournables :
- *  — l'API ne renvoie que **5 avis au maximum**, ceux qu'elle juge les plus
- *    pertinents. Impossible de tous les récupérer, ni de choisir lesquels.
- *  — le champ `reviews` est facturé plus cher que le reste de l'API Places.
- *    D'où le cache d'une journée côté Next : une page de réservation très
- *    visitée ne déclenche qu'un appel par jour et par laveur.
- */
-export async function fetchGooglePlaceReviews(placeId: string): Promise<GoogleReviewResult> {
-  if (!placeId.trim()) return { reviews: [] }
-
-  type Reponse = {
-    status?: string
-    error_message?: string
-    result?: {
-      rating?: number
-      user_ratings_total?: number
-      reviews?: {
-        author_name?: string
-        rating?: number
-        text?: string
-        relative_time_description?: string
-      }[]
-    }
-  }
-
-  const url =
-    'https://maps.googleapis.com/maps/api/place/details/json' +
-    `?place_id=${encodeURIComponent(placeId.trim())}` +
-    '&fields=rating,user_ratings_total,reviews' +
-    '&reviews_sort=newest' +
-    '&language=fr'
-
-  // Une journée de cache : le champ `reviews` est le plus cher de l'API
-  // Places, et une page de réservation très visitée la ferait payer à chaque
-  // ouverture. Même durée que la lecture du site, pour un comportement
-  // identique quelle que soit la source.
-  const data = await fetchGoogleMaps<Reponse>(url, 'reviews.google_place', 86_400)
-  if (!data?.result) return { reviews: [] }
-
-  const reviews: GoogleReview[] = (data.result.reviews ?? [])
-    // Un avis sans texte n'apporte rien à un visiteur : il afficherait une
-    // carte vide au milieu du carrousel.
-    .filter(r => (r.text ?? '').trim().length > 0)
-    .map(r => ({
-      author: (r.author_name ?? 'Client').trim(),
-      rating: Number(r.rating ?? 0),
-      text: (r.text ?? '').trim(),
-      relativeTime: (r.relative_time_description ?? '').trim(),
-    }))
-
-  const note = data.result.rating
-  const total = data.result.user_ratings_total
-  return {
-    reviews,
-    aggregate: typeof note === 'number' && typeof total === 'number' && total > 0
-      ? { value: note, count: total }
-      : undefined,
   }
 }
