@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendTrialReminder, sendTrialExpired, sendSubReminder, sendSubExpired, sendGraceEndingWarning } from '@/lib/email'
+import { notifierLaveur } from '@/lib/push'
 import { logger } from '@/lib/logger'
 
 // Tourne chaque matin à 8h (cron-job.org : 0 8 * * *)
@@ -105,6 +106,20 @@ export async function GET(request: NextRequest) {
     if (!user?.email) continue
     try {
       await sendTrialExpired({ to: user.email, washerName: washer.name })
+      // Notification en PLUS de l'email, jamais a sa place : un laveur peut
+      // ne pas l'avoir activee, ou etre sur iPhone sans l'application
+      // installee. L'email reste le canal fiable, et `notifierLaveur` ne leve
+      // jamais — un raté de notification ne doit pas empecher d'enregistrer
+      // que l'avis a ete envoye, sinon on le renverrait le lendemain.
+      await notifierLaveur(washer.id, {
+        title: '⏳ Votre essai est terminé',
+        body: [
+          'Vous gardez l’accès à tout pendant 30 jours.',
+          'Activez votre abonnement pour continuer ensuite.',
+        ].join('\n'),
+        url: '/dashboard/abonnement',
+        tag: `trial-expired-${washer.id}`,
+      })
       await admin.from('washers').update({ trial_expired_sent_at: nowIso }).eq('id', washer.id)
       counts.trialExpired++
     } catch (e) { logger.error('cron.trial_expired.send_failed', { washerId: washer.id }, e) }
@@ -127,6 +142,15 @@ export async function GET(request: NextRequest) {
     if (!user?.email) continue
     try {
       await sendSubExpired({ to: user.email, washerName: washer.name })
+      await notifierLaveur(washer.id, {
+        title: '⏳ Abonnement terminé',
+        body: [
+          'Vous gardez l’accès à tout pendant 30 jours.',
+          'Réglez votre abonnement pour ne rien interrompre.',
+        ].join('\n'),
+        url: '/dashboard/abonnement',
+        tag: `sub-expired-${washer.id}`,
+      })
       await admin.from('washers').update({
         sub_expired_sent_at: nowIso,
         subscription_status: 'expired',
@@ -143,6 +167,12 @@ export async function GET(request: NextRequest) {
     const cutoff = new Date(anchor!); cutoff.setDate(cutoff.getDate() + 30)
     try {
       await sendGraceEndingWarning({ to: user.email, washerName: washer.name, cutoffDate: cutoff.toISOString() })
+      await notifierLaveur(washer.id, {
+        title: '⚠️ Vos réservations vont s’arrêter',
+        body: `Sans abonnement, votre page ne prendra plus de rendez-vous à partir du ${cutoff.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`,
+        url: '/dashboard/abonnement',
+        tag: `grace-ending-${washer.id}`,
+      })
       await admin.from('washers').update({ grace_reminder_sent_at: nowIso }).eq('id', washer.id)
       counts.graceWarning++
     } catch (e) { logger.error('cron.grace_warning.send_failed', { washerId: washer.id }, e) }
