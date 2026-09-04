@@ -74,9 +74,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Compte introuvable' }, { status: 404 })
   }
 
+  // Origine réelle de la requête, même logique que la réinitialisation de mot
+  // de passe : évite un slash en trop ou une variable d'environnement mal
+  // réglée selon l'environnement.
+  const origin = (
+    request.headers.get('origin') ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    'https://www.washboard.fr'
+  ).replace(/\/$/, '')
+
   const { data: link, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
     email: authUser.user.email,
+    options: {
+      // ⚠️ Cette destination n'est respectée que si l'URL figure dans les
+      // « Redirect URLs » du projet Supabase (Authentication → URL
+      // Configuration). Sinon Supabase la remplace EN SILENCE par le Site URL
+      // du projet — la page d'accueil publique — et on atterrit sur la
+      // landing, connecté mais sans s'en rendre compte. Constaté le
+      // 2026-09-04 : `redirectTo` était bien envoyé, le lien revenait avec
+      // `redirect_to=https://washboard.fr`.
+      redirectTo: `${origin}/dashboard`,
+    },
   })
 
   if (linkError || !link?.properties?.action_link) {
