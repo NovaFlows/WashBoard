@@ -258,7 +258,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   return (
     <form onSubmit={save} noValidate className="space-y-5">
       {/* Logo */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <div id="identite" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Logo</h2>
         <div className="flex items-center gap-5">
           <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
@@ -466,7 +466,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       )}
 
       {/* Zone d'intervention */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+      <div id="zone" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Zone d&apos;intervention</h2>
@@ -618,7 +618,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       </div>
 
       {/* Créneaux intelligents */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+      <div id="creneaux" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Créneaux intelligents</h2>
@@ -686,7 +686,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       </div>
 
       {/* Google Agenda */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <div id="agenda" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Google Agenda</h2>

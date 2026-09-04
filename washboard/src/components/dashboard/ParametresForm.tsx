@@ -220,7 +220,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   return (
     <div className="space-y-5">
       {/* Profil */}
-      <Card title="Mon profil" icon={User}>
+      <Card id="profil" title="Mon profil" icon={User}>
         <form onSubmit={saveProfile} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Nom de l&apos;entreprise</label>
@@ -369,7 +369,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       </Card>
 
       {/* Avis Google — suivi client */}
-      <Card title="Avis Google" icon={Star}>
+      <Card id="avis" title="Avis Google" icon={Star}>
         <form onSubmit={saveReview} noValidate className="space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
             Envoyez automatiquement un email à vos clients après un lavage terminé pour leur demander un avis Google.
@@ -498,7 +498,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
       {/* Relances clients — Pro+ uniquement */}
       {hasFeature(washer, 'followup') && (
-        <Card title="Relances clients" icon={Hourglass}>
+        <Card id="relances" title="Relances clients" icon={Hourglass}>
           <form onSubmit={saveFollowup} noValidate className="space-y-4">
             <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
               Envoyez automatiquement un message à vos clients quand ils n&apos;ont pas repris rendez-vous depuis un certain temps.
@@ -824,9 +824,12 @@ function ClientTab({ washer }: { washer: Washer }) {
 }
 
 /* ── Composants utilitaires ── */
-function Card({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
+function Card({ id, title, icon: Icon, children }: { id?: string; title: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+    // `scroll-mt` : sans marge, l'en-tete fixe recouvre le titre de la section
+    // vers laquelle on vient de sauter, et on croit avoir atterri au mauvais
+    // endroit.
+    <div id={id} className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
         <Icon size={16} strokeWidth={2} className="text-slate-400 dark:text-slate-500" />{title}
       </h2>

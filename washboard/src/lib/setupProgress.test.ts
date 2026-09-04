@@ -137,3 +137,17 @@ describe('computeSetupProgress — robustesse', () => {
     expect(r.missing.every(m => m.href.startsWith('/dashboard'))).toBe(true)
   })
 })
+
+describe('computeSetupProgress — destinations', () => {
+  it('envoie chaque manque vers sa section, pas vers le haut d’une page', () => {
+    // Sans ancre, le laveur atterrissait en haut d'un ecran et devait
+    // retrouver lui-meme le reglage : le raccourci ne servait a rien.
+    const r = computeSetupProgress(vide)
+    expect(r.missing.every(m => m.href.includes('#'))).toBe(true)
+  })
+
+  it('ne pointe que vers des pages du tableau de bord', () => {
+    const r = computeSetupProgress(vide)
+    expect(r.missing.every(m => m.href.startsWith('/dashboard'))).toBe(true)
+  })
+})
