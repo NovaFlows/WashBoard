@@ -6,7 +6,7 @@ import BookingForm from '@/components/booking/BookingForm'
 import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
-import { scrapeWebsiteReviews } from '@/lib/googleReviews'
+import { scrapeWebsiteReviews, fetchGooglePlaceReviews } from '@/lib/googleReviews'
 import { graceEnded } from '@/lib/plan'
 import { logger } from '@/lib/logger'
 
@@ -119,7 +119,18 @@ export default async function BookingPage({ params }: Props) {
   const bgStyle = getBgStyle(washer.background_theme)
   const themed  = !!bgStyle
 
-  const reviewData = washer.website_url ? await scrapeWebsiteReviews(washer.website_url) : { reviews: [] }
+  // La fiche Google d'abord : source structurée, avis à jour dès qu'un client
+  // en dépose un, et insensible à une refonte du site du laveur. La lecture du
+  // site ne sert plus que de repli, pour ceux qui n'ont pas encore relié leur
+  // fiche — et si Google ne renvoie rien (fiche sans avis, quota, panne), on
+  // retombe dessus plutôt que d'afficher une page sans avis du tout.
+  let reviewData = washer.google_place_id
+    ? await fetchGooglePlaceReviews(washer.google_place_id)
+    : { reviews: [] as Awaited<ReturnType<typeof fetchGooglePlaceReviews>>['reviews'] }
+
+  if (reviewData.reviews.length === 0 && washer.website_url) {
+    reviewData = await scrapeWebsiteReviews(washer.website_url)
+  }
   const hasReviews = reviewData.reviews.length > 0 || !!reviewData.aggregate
 
   return (

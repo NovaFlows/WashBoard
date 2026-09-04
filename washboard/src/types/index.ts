@@ -26,6 +26,11 @@ export type Washer = {
   travel_fee_mode: 'base' | 'previous'
   background_theme: string | null
   website_url: string | null
+  /** Fiche Google Business du laveur : source principale des avis affichés sur
+   *  sa page de réservation. La colonne existait déjà en base et était acceptée
+   *  par l'API, mais manquait au type — elle n'était donc configurable nulle
+   *  part. */
+  google_place_id: string | null
   account_status: 'active' | 'deactivated' | 'pending_deletion'
   deletion_scheduled_at: string | null
   plan: 'essentiel' | 'pro'

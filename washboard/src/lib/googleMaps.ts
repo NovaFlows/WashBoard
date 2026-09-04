@@ -38,6 +38,13 @@ const STATUTS_NORMAUX = new Set(['OK', 'ZERO_RESULTS'])
 export async function fetchGoogleMaps<T extends { status?: string; error_message?: string }>(
   url: string,
   event: string,
+  /** Durée de mise en cache de la réponse, en secondes.
+   *
+   *  Par défaut aucun cache : un géocodage ou un calcul de trajet doit refléter
+   *  l'adresse qu'on vient de saisir. Mais certains appels sont à la fois
+   *  coûteux et stables — les avis d'une fiche Google, par exemple, changent
+   *  rarement dans la journée alors que chaque lecture est facturée. */
+  revalidate?: number,
 ): Promise<T | null> {
   const key = getMapsApiKey()
   if (!key) {
@@ -46,7 +53,8 @@ export async function fetchGoogleMaps<T extends { status?: string; error_message
   }
 
   try {
-    const res = await fetch(`${url}&key=${key}`)
+    const res = await fetch(`${url}&key=${key}`,
+      revalidate ? { next: { revalidate } } : undefined)
     const data = (await res.json()) as T
 
     if (data.status && !STATUTS_NORMAUX.has(data.status)) {
