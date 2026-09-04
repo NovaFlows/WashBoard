@@ -45,16 +45,6 @@ export default async function CrmPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
-      <div className="mb-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Liens par réseau</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Partagez le lien correspondant sur chaque réseau pour que la source apparaisse fiablement ci-dessous, même quand Instagram ou TikTok ne transmettent pas l&apos;origine du clic.
-          </p>
-          <TrafficSourceLinks baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`} accent={washer.brand_color ?? undefined} />
-        </div>
-      </div>
-
       {/* Les statistiques se calculent désormais dans le navigateur, à partir
           des événements bruts : changer de période ne recharge pas la page, et
           les visites comme les réservations portent sur la même sélection. */}
@@ -64,6 +54,19 @@ export default async function CrmPage() {
         websiteHost={websiteHost}
         accent={washer.brand_color ?? undefined}
       />
+
+      {/* Les liens de partage ferment la page : on les copie de temps en
+          temps, alors qu'on vient ici pour regarder ses chiffres. En tête,
+          ils repoussaient les statistiques sous la ligne de flottaison. */}
+      <div className="mt-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Liens par réseau</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            Partagez le lien correspondant sur chaque réseau pour que la source apparaisse fiablement dans les statistiques ci-dessus, même quand Instagram ou TikTok ne transmettent pas l&apos;origine du clic.
+          </p>
+          <TrafficSourceLinks baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`} accent={washer.brand_color ?? undefined} />
+        </div>
+      </div>
     </DashboardShell>
   )
 }
