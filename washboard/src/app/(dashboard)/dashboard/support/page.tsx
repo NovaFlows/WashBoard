@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isSupportMember } from '@/lib/supportAccess'
+import { logger } from '@/lib/logger'
 import SupportAccessForm from '@/components/dashboard/SupportAccessForm'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +25,17 @@ export default async function SupportPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  if (!isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)) {
+  const liste = process.env.SUPPORT_ADMIN_EMAILS
+  if (!isSupportMember(user.email, liste)) {
+    // La redirection reste muette pour le visiteur — inutile de lui révéler
+    // que cette page existe. Mais sans trace côté serveur, le refus est
+    // indiagnosticable : on ne sait pas distinguer « variable absente du
+    // déploiement » de « mauvaise adresse », alors que le remede diffère du
+    // tout au tout.
+    logger.warn('support.page.denied', {
+      email: user.email ?? null,
+      listeConfiguree: !!liste,
+    })
     redirect('/dashboard')
   }
 
