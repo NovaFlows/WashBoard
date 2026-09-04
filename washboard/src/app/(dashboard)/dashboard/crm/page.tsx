@@ -17,6 +17,7 @@ import {
   estimatePeakConcurrentSessions,
   comparePeriods,
   normalizeHost,
+  restrictToSessionsReaching,
 } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
 
@@ -70,14 +71,19 @@ export default async function CrmPage() {
   if (previousPeriodError) logger.warn('crm.funnel_events.previous_period_fetch_failed', { washerId: washer.id }, previousPeriodError)
 
   const visitorCount = funnelStats.find(s => s.step === 'prestation')?.sessions ?? 0
-  const conversionRate = funnelStats.find(s => s.step === 'confirmation')?.pctOfFirst ?? 0
+  const conversionCount = funnelStats.find(s => s.step === 'confirmation')?.sessions ?? 0
   const previousVisitorCount = countDistinctSessions(previousPeriodEvents ?? [])
   const visitorChange = comparePeriods(visitorCount, previousVisitorCount)
-  const deviceBreakdown = buildDeviceBreakdown(events)
-  const referrerBreakdown = buildReferrerBreakdown(events)
-  const deviceConversionBreakdown = buildDeviceConversionBreakdown(events)
-  const referrerConversionBreakdown = buildReferrerConversionBreakdown(events)
-  const visitTimingBreakdown = buildVisitTimingBreakdown(events)
+  // Les répartitions portent sur la même population que « Visiteurs » et que le
+  // taux de conversion : les sessions arrivées à l'étape « prestation ». Sans
+  // ce filtre, l'écran affichait « 812 visiteurs » au-dessus de « 846 mobiles
+  // + 5 ordinateurs ».
+  const funnelSessionEvents = restrictToSessionsReaching(events, 'prestation')
+  const deviceBreakdown = buildDeviceBreakdown(funnelSessionEvents)
+  const referrerBreakdown = buildReferrerBreakdown(funnelSessionEvents)
+  const deviceConversionBreakdown = buildDeviceConversionBreakdown(funnelSessionEvents)
+  const referrerConversionBreakdown = buildReferrerConversionBreakdown(funnelSessionEvents)
+  const visitTimingBreakdown = buildVisitTimingBreakdown(funnelSessionEvents)
   const peak7d = estimatePeakConcurrentSessions(events.filter(e => new Date(e.created_at) >= shortWindowSince))
   const peak30d = estimatePeakConcurrentSessions(events)
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
@@ -95,7 +101,7 @@ export default async function CrmPage() {
         <FunnelInsights
           visitorCount={visitorCount}
           visitorChange={visitorChange}
-          conversionRate={conversionRate}
+          conversionCount={conversionCount}
           peak7d={peak7d}
           peak30d={peak30d}
           deviceBreakdown={deviceBreakdown}

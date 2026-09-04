@@ -312,3 +312,44 @@ export function comparePeriods(current: number, previous: number): PeriodChange 
   const pct = Math.round(((current - previous) / previous) * 100)
   return { pct, direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' }
 }
+
+/** Met en forme un taux de conversion pour l'affichage.
+ *
+ *  `Math.round` seul écrase tout ce qui est sous 0,5 % à « 0 % ». Un laveur
+ *  ayant obtenu 2 réservations sur 812 visiteurs lisait donc « 0 % » et en
+ *  concluait que sa page ne convertissait rien — alors qu'elle lui avait
+ *  amené deux clients. On garde une décimale tant que le taux est inférieur
+ *  à 10 %, là où l'arrondi change le sens de la mesure.
+ *
+ *  Zéro reste « 0 % » : c'est alors la réalité, pas un artefact d'arrondi. */
+export function formatConversionRate(conversions: number, total: number): string {
+  if (total <= 0 || conversions <= 0) return '0 %'
+  const taux = (conversions / total) * 100
+  if (taux >= 10) return `${Math.round(taux)} %`
+  // `toFixed(1)` donnerait « 0.0 % » pour un taux très faible mais non nul :
+  // on remonte alors au premier chiffre significatif plutôt que d'afficher
+  // zéro, qui serait le défaut qu'on corrige ici.
+  const arrondi = Math.round(taux * 10) / 10
+  const valeur = arrondi > 0 ? arrondi : Math.round(taux * 100) / 100
+  return `${valeur.toString().replace('.', ',')} %`
+}
+
+/** Restreint les événements aux sessions ayant atteint une étape donnée.
+ *
+ *  Sans ce filtre, le tableau de bord comptait deux populations différentes
+ *  sur le même écran : « Visiteurs » ne retenait que les sessions arrivées à
+ *  l'étape « prestation », tandis que les répartitions par appareil et par
+ *  source prenaient toutes les sessions ayant émis le moindre événement. D'où
+ *  un écran affichant « 812 visiteurs » au-dessus de « 846 mobiles + 5
+ *  ordinateurs » — un total supérieur au total, ce qui décrédibilise toute la
+ *  page.
+ *
+ *  Tout parle désormais de la même population : celle qui sert aussi de base
+ *  au taux de conversion. */
+export function restrictToSessionsReaching<T extends { step: FunnelStep; session_id: string }>(
+  events: T[],
+  step: FunnelStep,
+): T[] {
+  const sessions = new Set(events.filter(e => e.step === step).map(e => e.session_id))
+  return events.filter(e => sessions.has(e.session_id))
+}

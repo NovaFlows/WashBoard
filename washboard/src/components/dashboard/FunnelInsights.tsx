@@ -1,18 +1,10 @@
 import { Users, Percent, Activity, Smartphone, Globe, CalendarClock, type LucideIcon } from 'lucide-react'
-import {
-  normalizeHost,
-  type PeriodChange,
-  type DeviceBreakdownItem,
-  type ReferrerBreakdownItem,
-  type DeviceConversionItem,
-  type ReferrerConversionItem,
-  type VisitTimingBreakdown,
-} from '@/lib/funnelStats'
+import { normalizeHost, type PeriodChange, type DeviceBreakdownItem, type ReferrerBreakdownItem, type DeviceConversionItem, type ReferrerConversionItem, type VisitTimingBreakdown, formatConversionRate } from '@/lib/funnelStats'
 
 type Props = {
   visitorCount: number
   visitorChange: PeriodChange
-  conversionRate: number
+  conversionCount: number
   /** Pic estimé de sessions actives dans une même fenêtre glissante d'1h. */
   peak7d: number
   peak30d: number
@@ -101,7 +93,7 @@ function BreakdownList({ title, items, accent, icon: Icon }: {
 
 function ConversionBreakdownList({ title, items, accent, icon: Icon }: {
   title: string
-  items: { key: string; label: string; sessions: number; conversionRate: number }[]
+  items: { key: string; label: string; sessions: number; conversionRate: number; conversions: number }[]
   accent: string
   icon: LucideIcon
 }) {
@@ -119,7 +111,7 @@ function ConversionBreakdownList({ title, items, accent, icon: Icon }: {
             <div key={item.key}>
               <div className="flex items-center justify-between mb-1 text-xs">
                 <span className="font-medium text-slate-700 dark:text-slate-300">{item.label}</span>
-                <span className="text-slate-500 dark:text-slate-400 tabular-nums">{item.conversionRate}% sur {item.sessions}</span>
+                <span className="text-slate-500 dark:text-slate-400 tabular-nums">{formatConversionRate(item.conversions, item.sessions)} sur {item.sessions}</span>
               </div>
               <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${Math.max(item.conversionRate, 2)}%`, backgroundColor: accent }} />
@@ -182,7 +174,7 @@ function VisitTimingCard({ timing, accent }: { timing: VisitTimingBreakdown; acc
 // estimé) + répartitions par appareil et par source de trafic. Complète
 // VisitFunnel (le détail étape par étape) sans le remplacer.
 export default function FunnelInsights({
-  visitorCount, visitorChange, conversionRate, peak7d, peak30d,
+  visitorCount, visitorChange, conversionCount, peak7d, peak30d,
   deviceBreakdown, referrerBreakdown, deviceConversionBreakdown, referrerConversionBreakdown,
   visitTimingBreakdown, websiteHost, accent = '#2563eb', windowDays,
 }: Props) {
@@ -193,10 +185,10 @@ export default function FunnelInsights({
     key: r.host, label: referrerLabel(r.host, websiteHost), sessions: r.sessions, pct: r.pct,
   }))
   const deviceConversionItems = deviceConversionBreakdown.map(d => ({
-    key: d.device, label: DEVICE_LABELS[d.device] ?? d.device, sessions: d.sessions, conversionRate: d.conversionRate,
+    key: d.device, label: DEVICE_LABELS[d.device] ?? d.device, sessions: d.sessions, conversionRate: d.conversionRate, conversions: d.conversions,
   }))
   const referrerConversionItems = referrerConversionBreakdown.slice(0, 5).map(r => ({
-    key: r.host, label: referrerLabel(r.host, websiteHost), sessions: r.sessions, conversionRate: r.conversionRate,
+    key: r.host, label: referrerLabel(r.host, websiteHost), sessions: r.sessions, conversionRate: r.conversionRate, conversions: r.conversions,
   }))
 
   return (
@@ -206,7 +198,15 @@ export default function FunnelInsights({
           {visitorCount}
         </KpiTile>
         <KpiTile icon={Percent} label="Taux de conversion">
-          {conversionRate}%
+          {/* Le pourcentage arrondi écrasait « 2 réservations sur 812 » en
+              « 0 % ». On garde le taux exact et on rappelle le compte brut :
+              c'est lui qui parle au laveur, pas la décimale. */}
+          {formatConversionRate(conversionCount, visitorCount)}
+          {conversionCount > 0 && (
+            <span className="block text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+              {conversionCount} réservation{conversionCount > 1 ? 's' : ''} sur {visitorCount} visiteurs
+            </span>
+          )}
         </KpiTile>
         <div className="col-span-2 md:col-span-1">
           <KpiTile

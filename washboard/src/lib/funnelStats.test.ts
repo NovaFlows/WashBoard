@@ -1,17 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildFunnelSummary,
-  countDistinctSessions,
-  buildDeviceBreakdown,
-  buildReferrerBreakdown,
-  buildDeviceConversionBreakdown,
-  buildReferrerConversionBreakdown,
-  buildVisitTimingBreakdown,
-  estimatePeakConcurrentSessions,
-  comparePeriods,
-  normalizeHost,
-  type FunnelEventRow,
-} from './funnelStats'
+import { buildFunnelSummary, countDistinctSessions, buildDeviceBreakdown, buildReferrerBreakdown, buildDeviceConversionBreakdown, buildReferrerConversionBreakdown, buildVisitTimingBreakdown, estimatePeakConcurrentSessions, comparePeriods, normalizeHost, type FunnelEventRow, formatConversionRate, restrictToSessionsReaching } from './funnelStats'
 
 describe('normalizeHost', () => {
   it('extrait le host d’une URL complète', () => {
@@ -298,5 +286,66 @@ describe('comparePeriods', () => {
 
   it('reste "flat" si les deux périodes sont à zéro', () => {
     expect(comparePeriods(0, 0)).toEqual({ pct: null, direction: 'flat' })
+  })
+})
+
+describe('formatConversionRate', () => {
+  // Un laveur avec 2 réservations sur 812 visiteurs lisait « 0 % » : l'arrondi
+  // effaçait la seule bonne nouvelle de son tableau de bord.
+  it('ne réduit pas un vrai résultat à zéro', () => {
+    expect(formatConversionRate(2, 812)).toBe('0,2 %')
+  })
+
+  it('garde une décimale sous 10 %, où l’arrondi change le sens', () => {
+    expect(formatConversionRate(3, 100)).toBe('3 %')
+    expect(formatConversionRate(35, 1000)).toBe('3,5 %')
+  })
+
+  it('arrondit normalement au-delà de 10 %', () => {
+    expect(formatConversionRate(1, 5)).toBe('20 %')
+    expect(formatConversionRate(126, 1000)).toBe('13 %')
+  })
+
+  it('descend au centième plutôt que d’afficher zéro', () => {
+    // 1 sur 5000 = 0,02 % : « 0,0 % » serait le même mensonge que « 0 % ».
+    expect(formatConversionRate(1, 5000)).toBe('0,02 %')
+  })
+
+  it('affiche zéro quand c’est réellement zéro', () => {
+    expect(formatConversionRate(0, 812)).toBe('0 %')
+    expect(formatConversionRate(0, 0)).toBe('0 %')
+  })
+})
+
+describe('restrictToSessionsReaching', () => {
+  // Le tableau de bord affichait « 812 visiteurs » au-dessus de « 846 mobiles
+  // + 5 ordinateurs » : deux populations différentes sur le même écran.
+  const events = [
+    { step: 'prestation' as const, session_id: 'a', created_at: '2026-09-01T10:00:00Z', device: 'mobile' as const },
+    { step: 'creneau' as const,    session_id: 'a', created_at: '2026-09-01T10:01:00Z', device: 'mobile' as const },
+    { step: 'options' as const,    session_id: 'b', created_at: '2026-09-01T10:02:00Z', device: 'desktop' as const },
+  ]
+
+  it('écarte une session qui n’a jamais atteint l’étape de référence', () => {
+    const r = restrictToSessionsReaching(events, 'prestation')
+    expect(r.map(e => e.session_id)).toEqual(['a', 'a'])
+  })
+
+  it('garde tous les événements des sessions retenues', () => {
+    const r = restrictToSessionsReaching(events, 'prestation')
+    expect(r.map(e => e.step)).toEqual(['prestation', 'creneau'])
+  })
+
+  it('rend le compte des visiteurs cohérent avec les répartitions', () => {
+    // C'est tout l'objet du filtre : les deux chiffres doivent porter sur la
+    // même population.
+    const filtres = restrictToSessionsReaching(events, 'prestation')
+    const visiteurs = buildFunnelSummary(filtres).find(s => s.step === 'prestation')?.sessions ?? 0
+    const parAppareil = buildDeviceBreakdown(filtres).reduce((t, d) => t + d.sessions, 0)
+    expect(parAppareil).toBe(visiteurs)
+  })
+
+  it('renvoie une liste vide si personne n’atteint l’étape', () => {
+    expect(restrictToSessionsReaching(events, 'confirmation')).toEqual([])
   })
 })
