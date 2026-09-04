@@ -77,10 +77,16 @@ export default function SupportAccessForm() {
           <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-1">
             {resultat.washerName} a bien ouvert l&apos;accès
           </p>
-          <p className="text-xs text-emerald-700/90 dark:text-emerald-500/90 mb-3">
-            Ouvrez ce lien dans une fenêtre de navigation privée : sinon vous perdez
-            votre propre session et vous devrez vous reconnecter.
-          </p>
+          <ul className="text-xs text-emerald-700/90 dark:text-emerald-500/90 mb-3 space-y-1">
+            <li>
+              <strong>À usage unique et valable peu de temps</strong> : ouvrez-le maintenant.
+              Demander un nouvel accès annule celui-ci.
+            </li>
+            <li>
+              Ouvrez-le en <strong>navigation privée</strong> : sinon vous perdez votre propre
+              session et devrez vous reconnecter.
+            </li>
+          </ul>
           <a
             href={resultat.url}
             target="_blank"
