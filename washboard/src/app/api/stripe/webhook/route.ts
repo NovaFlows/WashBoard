@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripe, planFromPriceId } from '@/lib/stripe'
-import { mapStripeStatus, stripeCancelToIso } from '@/lib/subscription'
+import { mapStripeStatus, stripeCancelToIso, stripePeriodEndToIso } from '@/lib/subscription'
 import { withErrorHandling } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import type Stripe from 'stripe'
@@ -45,16 +45,27 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
       break
     }
 
+    // `created` traite comme `updated` : l'evenement de checkout ne porte pas
+    // les items de l'abonnement, donc pas la fin de periode payee. Sans lui,
+    // `subscription_ends_at` restait vide entre la souscription et la premiere
+    // modification — et la periode de grace ne s'appuyait sur rien.
+    case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const sub        = event.data.object as Stripe.Subscription
       const priceId    = sub.items.data[0]?.price.id
       const plan       = priceId ? planFromPriceId(priceId) : null
       const status     = mapStripeStatus(sub.status)
       const cancelsAt  = stripeCancelToIso(sub.cancel_at)
+      // Fin de la période payée : c'est l'ancrage de la période de grâce, qui
+      // n'était jusqu'ici JAMAIS écrite. Sans elle, le calcul retombait sur la
+      // date d'essai et un échec de prélèvement coupait la page du laveur le
+      // jour même, au lieu des 30 jours promis.
+      const endsAt = stripePeriodEndToIso(sub.items?.data)
 
       // On matche sur stripe_subscription_id (fiable), fallback sur customer_id.
       const { data, error } = await admin.from('washers').update({
         ...(plan ? { plan } : {}),
+        ...(endsAt ? { subscription_ends_at: endsAt } : {}),
         subscription_status: status,
         cancels_at: cancelsAt,
       }).eq('stripe_subscription_id', sub.id).select('id')
@@ -64,6 +75,7 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
         // Fallback : la ligne n'a pas encore stripe_subscription_id → matcher sur customer
         const { error: err2 } = await admin.from('washers').update({
           ...(plan ? { plan } : {}),
+          ...(endsAt ? { subscription_ends_at: endsAt } : {}),
           stripe_subscription_id: sub.id,
           subscription_status: status,
           cancels_at: cancelsAt,

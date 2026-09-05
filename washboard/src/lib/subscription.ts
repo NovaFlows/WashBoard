@@ -24,6 +24,30 @@ export function stripeCancelToIso(cancelAt: number | null | undefined): string |
   return cancelAt ? new Date(cancelAt * 1000).toISOString() : null
 }
 
+/** Fin de la période payée en cours, telle que Stripe la renvoie.
+ *
+ *  C'est la date d'ancrage de la période de grâce : `subscription_ends_at`.
+ *  Elle était lue à six endroits du code mais ÉCRITE NULLE PART. Pour tout
+ *  laveur ayant dépassé son essai, le calcul retombait donc sur une date
+ *  d'essai ancienne, la grâce était considérée comme terminée, et un simple
+ *  échec de prélèvement coupait sa page de réservation le jour même — alors
+ *  que le produit promet 30 jours. Signalé par un audit externe le 2026-09-05.
+ *
+ *  ⚠️ Depuis Stripe 2025, `current_period_end` n'est plus sur l'abonnement
+ *  mais sur chacun de ses ITEMS. Le lire à l'ancien emplacement rend
+ *  `undefined` sans erreur — exactement le genre de silence qui a créé le
+ *  problème. On prend la fin la plus lointaine des items : tant qu'une ligne
+ *  est payée, l'abonnement l'est. */
+export function stripePeriodEndToIso(
+  items: { current_period_end?: number | null }[] | null | undefined,
+): string | null {
+  const fins = (items ?? [])
+    .map(i => i.current_period_end)
+    .filter((v): v is number => typeof v === 'number' && v > 0)
+  if (fins.length === 0) return null
+  return new Date(Math.max(...fins) * 1000).toISOString()
+}
+
 // Un laveur est déjà abonné (donc ne doit pas créer une 2ᵉ souscription) dès qu'il
 // a un abonnement Stripe rattaché et un statut « vivant » (actif, en relance, ou
 // essai avec carte déjà enregistrée).

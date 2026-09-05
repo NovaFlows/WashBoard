@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  mapStripeStatus,
-  stripeCancelToIso,
-  isAlreadySubscribed,
-  computeTrialEnd,
-  isCardRegistered,
-  formatDateFR,
-} from './subscription'
+import { mapStripeStatus, stripeCancelToIso, isAlreadySubscribed, computeTrialEnd, isCardRegistered, formatDateFR, stripePeriodEndToIso } from './subscription'
 
 describe('mapStripeStatus', () => {
   it('mappe les statuts vivants', () => {
@@ -90,5 +83,33 @@ describe('computeTrialEnd', () => {
   it('gère les entrées invalides', () => {
     expect(computeTrialEnd('trial', null, now)).toBeUndefined()
     expect(computeTrialEnd('trial', 'pas-une-date', now)).toBeUndefined()
+  })
+})
+
+describe('stripePeriodEndToIso', () => {
+  // `subscription_ends_at` était lue à six endroits et écrite nulle part : la
+  // période de grâce de 30 jours n'existait pas en pratique.
+  it('convertit la fin de période en date lisible', () => {
+    const t = Math.floor(new Date('2026-10-15T12:00:00Z').getTime() / 1000)
+    expect(stripePeriodEndToIso([{ current_period_end: t }])).toBe('2026-10-15T12:00:00.000Z')
+  })
+
+  it('retient la fin la plus lointaine quand il y a plusieurs lignes', () => {
+    // Tant qu'une ligne est payée, l'abonnement l'est.
+    const tot = Math.floor(new Date('2026-10-01T00:00:00Z').getTime() / 1000)
+    const tard = Math.floor(new Date('2026-12-01T00:00:00Z').getTime() / 1000)
+    expect(stripePeriodEndToIso([{ current_period_end: tot }, { current_period_end: tard }]))
+      .toBe('2026-12-01T00:00:00.000Z')
+  })
+
+  it('renvoie null plutôt qu’une date fantaisiste quand Stripe ne dit rien', () => {
+    // Depuis 2025, `current_period_end` a changé de place : le lire au mauvais
+    // endroit rend `undefined` sans erreur. Mieux vaut null qu'une date de 1970,
+    // qui ferait croire à une grâce terminée depuis cinquante ans.
+    expect(stripePeriodEndToIso([])).toBeNull()
+    expect(stripePeriodEndToIso(null)).toBeNull()
+    expect(stripePeriodEndToIso(undefined)).toBeNull()
+    expect(stripePeriodEndToIso([{ current_period_end: undefined }])).toBeNull()
+    expect(stripePeriodEndToIso([{ current_period_end: 0 }])).toBeNull()
   })
 })
