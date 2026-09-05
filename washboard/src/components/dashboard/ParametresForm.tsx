@@ -775,6 +775,10 @@ function ClientTab({ washer }: { washer: Washer }) {
   const [slug, setSlug] = useState(washer.slug)
   const [slugMsg, setSlugMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [slugLoading, setSlugLoading] = useState(false)
+  // Retenu après un changement réussi : la boîte de confirmation disparaît dès
+  // qu'on clique, alors que le travail de remplacement des liens, lui, reste à
+  // faire. Le rappel doit donc survivre à la fenêtre.
+  const [ancienLien, setAncienLien] = useState<string | null>(null)
 
   async function saveSlug() {
     const s = slug.trim().toLowerCase()
@@ -784,6 +788,24 @@ function ClientTab({ washer }: { washer: Washer }) {
       return
     }
     if (s === washer.slug) { setSlugMsg({ ok: true, text: 'Lien inchangé' }); return }
+
+    // Ce lien est déjà en circulation : dans une bio Instagram, sur un site,
+    // sur des cartes de visite, dans des QR codes imprimés. Le changer n'est
+    // pas un réglage de plus, c'est une rupture — et rien ne redirige l'ancien
+    // vers le nouveau. On demande confirmation, et on dit ce que ça implique.
+    const ancien = `${origin}/book/${washer.slug}`
+    const confirme = window.confirm(
+      'Changer votre lien de réservation ?\n\n'
+      + `Ancien :  ${ancien}\n`
+      + `Nouveau : ${origin}/book/${s}\n\n`
+      + 'L\'ancien lien cessera de fonctionner immédiatement. Les clients qui '
+      + 'l\'utiliseront tomberont sur une page « introuvable ».\n\n'
+      + 'Pensez à le remplacer partout où vous l\'avez publié : Instagram, '
+      + 'Facebook, votre fiche Google, votre site internet, vos cartes de '
+      + 'visite et vos QR codes.',
+    )
+    if (!confirme) return
+
     setSlugLoading(true)
     const res = await fetch('/api/washer', {
       method: 'PATCH',
@@ -793,7 +815,7 @@ function ClientTab({ washer }: { washer: Washer }) {
     const json = await res.json().catch(() => null)
     setSlugLoading(false)
     if (!res.ok) { setSlugMsg({ ok: false, text: json?.error ?? 'Erreur lors de la mise à jour' }); return }
-    setSlugMsg({ ok: true, text: 'Lien mis à jour' })
+    setAncienLien(ancien)
     router.refresh()
   }
 
@@ -801,7 +823,8 @@ function ClientTab({ washer }: { washer: Washer }) {
     <div className="space-y-5">
       <Card title="Votre lien de réservation" icon={Link2}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-          Personnalisez le lien que vous partagez à vos clients.
+          Personnalisez le lien que vous partagez à vos clients. Une fois modifié,
+          l&apos;ancien lien ne fonctionne plus — pensez-y s&apos;il est déjà publié quelque part.
         </p>
         <div className="flex items-stretch gap-2">
           <div className="flex items-center flex-1 border border-slate-300 dark:border-slate-600 rounded-xl overflow-hidden bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-blue-500">
@@ -822,6 +845,19 @@ function ClientTab({ washer }: { washer: Washer }) {
           </button>
         </div>
         <Feedback msg={slugMsg} />
+
+        {ancienLien && (
+          <div className="mt-3 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Lien mis à jour — il reste à le remplacer ailleurs
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-1 leading-relaxed">
+              <span className="font-mono line-through break-all">{ancienLien}</span> ne fonctionne plus.
+              Remplacez-le sur Instagram, Facebook, votre fiche Google, votre site internet,
+              vos cartes de visite et vos QR codes.
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-3">
           <span className="text-sm text-blue-600 dark:text-blue-400 font-mono flex-1 truncate">{origin}/book/{washer.slug}</span>
