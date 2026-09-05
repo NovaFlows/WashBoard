@@ -11,11 +11,16 @@ export async function POST(request: NextRequest) {
   const file = formData.get('file') as File
   if (!file) return NextResponse.json({ error: 'Fichier manquant' }, { status: 400 })
 
-  // 5 Mo etait bien trop large pour une image servie a chaque visiteur : le
-  // fond est desormais compresse dans le navigateur, 3 Mo suffisent largement
-  // comme garde-fou.
-  if (file.size > 3 * 1024 * 1024) {
-    return NextResponse.json({ error: 'Image trop lourde (3 Mo maximum)' }, { status: 413 })
+  // Un fond compresse a 1920 px pese 150 a 500 Ko. La limite laisse une marge
+  // confortable tout en refusant ce qui n'est pas passe par la compression :
+  // celle-ci rend le fichier d'origine quand elle echoue, et sans limite
+  // serree cet echec se traduirait par des megaoctets servis a chaque
+  // visiteur.
+  if (file.size > 1_500 * 1024) {
+    return NextResponse.json(
+      { error: 'Image trop lourde. Essayez avec une image plus legere ou de plus petite taille.' },
+      { status: 413 },
+    )
   }
 
   const bytes = await file.arrayBuffer()

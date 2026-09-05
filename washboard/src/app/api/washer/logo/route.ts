@@ -11,15 +11,22 @@ export async function POST(request: NextRequest) {
   const file = formData.get('file') as File
   if (!file) return NextResponse.json({ error: 'Fichier manquant' }, { status: 400 })
 
-  // Garde-fou de taille. La compression se fait dans le navigateur, mais rien
-  // n'oblige un appelant à passer par là : sans cette limite, un fichier de
-  // plusieurs mégaoctets serait servi à chaque visiteur de la page de
-  // réservation. C'est ainsi qu'un logo de 4 Mo a fait dépasser de 60 % le
-  // quota mensuel de bande passante pendant un pic de trafic.
-  const TAILLE_MAX = 2 * 1024 * 1024
+  // Garde-fou de taille, volontairement serré.
+  //
+  // La compression se fait dans le navigateur et rend des logos de 20 à 80 Ko.
+  // Cette limite est six fois plus haute : elle ne gêne aucun envoi normal,
+  // mais refuse tout ce qui ne serait PAS passé par la compression — un
+  // navigateur qui ne la supporte pas, ou un appel direct à l'API.
+  //
+  // Le point important : `compressImage` rend le fichier d'origine quand elle
+  // échoue, pour ne jamais empêcher quelqu'un de mettre son logo. Sans limite
+  // serrée ici, cet échec passerait inaperçu et on servirait de nouveau des
+  // mégaoctets à chaque visiteur. C'est ainsi qu'un logo de 4 Mo a fait
+  // dépasser de 60 % le quota mensuel de bande passante.
+  const TAILLE_MAX = 500 * 1024
   if (file.size > TAILLE_MAX) {
     return NextResponse.json(
-      { error: 'Image trop lourde (2 Mo maximum). Réessayez avec une image plus petite.' },
+      { error: 'Image trop lourde. Essayez avec une image plus légère ou de plus petite taille.' },
       { status: 413 },
     )
   }
