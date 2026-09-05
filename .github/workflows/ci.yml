@@ -88,14 +88,27 @@ jobs:
       # Sans secrets, l'application ne démarre pas et tous les tests
       # échoueraient de façon illisible. On le dit franchement et on s'arrête
       # là, plutôt que de laisser un job rouge que personne ne sait relire.
+      # Sur la branche principale, l'absence de secrets fait ECHOUER le job.
+      #
+      # Auparavant, elle produisait un simple avertissement et le job passait au
+      # vert : les 135 tests etaient sautes sans que rien ne le signale dans la
+      # liste des verifications. Le nombre de tests ECRITS ne dit rien du nombre
+      # reellement EXECUTE. Signale par un audit externe le 2026-09-05.
+      #
+      # Sur une branche de contributeur externe, les secrets ne sont pas
+      # transmis par GitHub : on continue d'avertir sans bloquer, sinon aucune
+      # contribution ne pourrait jamais passer.
       - name: Vérifier la présence des secrets
         id: secrets
         run: |
-          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
-            echo "::warning::Secrets E2E absents — tests de bout en bout ignorés."
+          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "::warning::Secrets E2E indisponibles sur un fork — tests de bout en bout ignorés."
             echo "present=false" >> "$GITHUB_OUTPUT"
           else
-            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "::error::Secrets E2E absents : les tests de bout en bout n'ont PAS été exécutés."
+            exit 1
           fi
 
       - name: Installer le navigateur Playwright

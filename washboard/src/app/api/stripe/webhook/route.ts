@@ -20,6 +20,33 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
 
   const admin = createAdminClient()
 
+  // ── Un événement n'est traité qu'une fois ────────────────────────────
+  //
+  // Stripe rejoue un webhook jusqu'à 72 h quand la réponse tarde ou échoue. Sans
+  // cette trace, un événement ancien pouvait écraser un état plus récent :
+  // réactiver un compte en défaut de paiement, ou ressusciter un abonnement
+  // supprimé. Signalé par un audit externe le 2026-09-05.
+  //
+  // L'insertion sert de verrou : la clé primaire rejette le doublon, ce qui
+  // règle aussi le cas de deux livraisons simultanées.
+  const { error: dejaVu } = await admin
+    .from('stripe_events')
+    .insert({ id: event.id, type: event.type })
+
+  if (dejaVu) {
+    // 23505 = clé dupliquée : déjà traité. On répond 200 pour que Stripe
+    // cesse de réessayer.
+    if (dejaVu.code === '23505') {
+      logger.info('stripe.webhook.duplicate_ignored', { eventId: event.id, type: event.type })
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    // Toute autre erreur : on ne traite PAS l'événement. Sans certitude de
+    // pouvoir marquer qu'il l'a été, on risquerait de le rejouer indéfiniment
+    // — mieux vaut laisser Stripe réessayer proprement.
+    logger.error('stripe.webhook.dedup_failed', { eventId: event.id }, dejaVu)
+    return NextResponse.json({ error: 'Traitement impossible' }, { status: 500 })
+  }
+
   // Toute erreur d'écriture DB → on renvoie 500 pour que Stripe réessaie le webhook.
   let dbError: unknown = null
 
@@ -110,6 +137,16 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
   }
 
   if (dbError) {
+    // L'événement a été marqué comme traité AVANT le traitement, pour servir de
+    // verrou contre les livraisons simultanées. Le traitement ayant échoué, il
+    // faut retirer cette marque : sans cela, le rejeu de Stripe serait rejeté
+    // comme doublon et l'événement perdu définitivement — un abonnement
+    // pourrait rester bloqué dans un mauvais état sans que personne ne le voie.
+    const { error: nettoyage } = await admin.from('stripe_events').delete().eq('id', event.id)
+    if (nettoyage) {
+      // Ce cas mérite une alerte : l'événement est perdu pour de bon.
+      logger.error('stripe.webhook.dedup_cleanup_failed', { eventId: event.id }, nettoyage)
+    }
     // 500 → Stripe rejoue le webhook plus tard (évite les états silencieusement perdus)
     return NextResponse.json({ error: 'Erreur base de données' }, { status: 500 })
   }
