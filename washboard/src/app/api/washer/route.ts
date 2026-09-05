@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
+import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -36,6 +37,41 @@ export async function PATCH(request: NextRequest) {
         { status: 400 },
       )
     }
+  }
+
+  // Plan réel du laveur, lu en base — jamais déduit de ce que le navigateur
+  // envoie. Sans ce contrôle, un compte Essentiel activait les relances
+  // automatiques et le multi-laveurs par un simple appel à cette route, et
+  // consommait des SMS facturés à WashBoard sans jamais passer au plan Pro.
+  // Signalé par un audit externe le 2026-09-05.
+  const { data: profil, error: profilError } = await supabase
+    .from('washers').select('plan, grandfathered').eq('user_id', user.id).single()
+
+  if (profilError || !profil) {
+    // Sans certitude sur le plan, on ne débloque rien : laisser passer
+    // reviendrait à offrir le Pro dès qu'une lecture échoue.
+    logger.error('washer.plan_read_failed', { userId: user.id }, profilError)
+    return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
+  }
+
+  const refusePro = (fonctionnalite: Feature) =>
+    NextResponse.json(
+      { error: `Cette option est réservée au plan ${requiredPlanLabel(fonctionnalite)}.` },
+      { status: 403 },
+    )
+
+  // Plusieurs laveurs simultanés : réservé au Pro.
+  if (team_size !== undefined && Number(team_size) > 1 && !hasFeature(profil, 'multi_laveurs')) {
+    return refusePro('multi_laveurs')
+  }
+  // Relances automatiques : réservées au Pro. Seule l'ACTIVATION est bloquée —
+  // un laveur qui rétrograde doit pouvoir les désactiver.
+  if (followup_enabled === true && !hasFeature(profil, 'followup')) {
+    return refusePro('followup')
+  }
+  // Demande d'avis par SMS : même règle.
+  if (review_channel === 'sms' && !hasFeature(profil, 'avis_sms')) {
+    return refusePro('avis_sms')
   }
 
   const updates: Record<string, unknown> = {}

@@ -30,12 +30,17 @@ async function clearWasherToken(washerId: string) {
   }
 }
 
-export function getGoogleAuthUrl(washerId: string): string {
+/** URL d'autorisation Google.
+ *
+ *  `state` porte un jeton aléatoire à usage unique, PAS l'identifiant du
+ *  laveur. Y mettre l'identifiant laissait choisir à l'appelant sur quel compte
+ *  son jeton Google serait écrit. */
+export function getGoogleAuthUrl(state: string): string {
   return oauthClient().generateAuthUrl({
     access_type: 'offline',
     scope: ['https://www.googleapis.com/auth/calendar.events'],
     prompt: 'consent',
-    state: washerId,
+    state,
   })
 }
 
