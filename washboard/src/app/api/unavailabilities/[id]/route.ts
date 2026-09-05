@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,6 +9,6 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { supabase, washerId } = auth.ctx
 
   const { error } = await supabase.from('unavailabilities').delete().eq('id', id).eq('washer_id', washerId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('unavailabilities.id.delete.db', error)
   return NextResponse.json({ success: true })
 }

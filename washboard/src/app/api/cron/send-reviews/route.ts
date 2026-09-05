@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { sendReviewRequest } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
 import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/lib/plan'
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   const { data: due, error } = await dueQuery
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('cron.send-reviews.get.db', error)
 
   let emailSent = 0
   let smsSent = 0

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     .gte('scheduled_at', start + 'T00:00:00')
     .lte('scheduled_at', end + 'T23:59:59')
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('compta.revenue.get.db', error)
 
   const revenue = (data ?? []).reduce((sum, b) => {
     const price    = Number(b.booked_price ?? 0)

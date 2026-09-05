@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
+import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 
@@ -43,8 +43,7 @@ const FunnelEventSchema = z.object({
 
 export async function POST(req: Request) {
   cleanupRateLimit()
-  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim()
-    || req.headers.get('x-real-ip') || 'unknown'
+  const ip = clientIp(req)
   if (!rateLimit(`funnel-ip:${ip}`, IP_LIMIT, IP_WINDOW_MS).ok) {
     // Silencieux côté client : ce n'est que du tracking, pas une action utilisateur.
     return new Response(null, { status: 204 })

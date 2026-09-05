@@ -2,22 +2,45 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { logger } from '@/lib/logger'
+import { trustedOrigin } from '@/lib/appOrigin'
+import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
+
+// Chaque appel envoie un vrai email depuis noreply@washboard.fr, sans qu'on
+// soit connecté. Sans plafond, n'importe qui pouvait donc inonder la boîte d'un
+// laveur en rejouant la requête, et brûler au passage le quota Resend du
+// produit. Deux compteurs : l'un par appelant, l'autre par adresse visée — le
+// second protège une victime ciblée depuis plusieurs adresses IP.
+const IP_LIMIT       = 5
+const EMAIL_LIMIT    = 3
+const FENETRE_MS     = 15 * 60 * 1000
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
   if (!email?.trim()) return NextResponse.json({ error: 'Email requis' }, { status: 400 })
+
+  cleanupRateLimit()
+  const cible = email.trim().toLowerCase()
+  const trop = !rateLimit(`reset-ip:${clientIp(req)}`, IP_LIMIT, FENETRE_MS).ok
+            || !rateLimit(`reset-mail:${cible}`, EMAIL_LIMIT, FENETRE_MS).ok
+  if (trop) {
+    logger.warn('auth.reset_password.rate_limited', { ip: clientIp(req) })
+    return NextResponse.json(
+      { error: 'Trop de demandes. Réessayez dans quelques minutes.' },
+      { status: 429 },
+    )
+  }
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Origine réelle de la requête (évite tout souci de slash/variable d'env mal réglée)
-  const origin = (
-    req.headers.get('origin') ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    'https://www.washboard.fr'
-  ).replace(/\/$/, '')
+  // Origine du lien de réinitialisation. L'en-tête `Origin` n'est plus repris
+  // tel quel : il est confronté aux origines connues du site (voir appOrigin).
+  // Sans ce filtre, une requête portant `Origin: https://attaquant.tld` faisait
+  // partir depuis noreply@washboard.fr un email dont le lien livrait le jeton
+  // de récupération à l'attaquant. Signalé par un audit externe le 2026-09-05.
+  const origin = trustedOrigin(req.headers.get('origin'))
 
   const { data, error } = await admin.auth.admin.generateLink({
     type: 'recovery',
@@ -29,10 +52,16 @@ export async function POST(req: NextRequest) {
 
   if (error || !data?.properties?.action_link) {
     logger.error('auth.reset_password.generate_link_failed', {}, error)
-    const msg = error?.message?.toLowerCase().includes('not found') || error?.status === 404
-      ? 'Aucun compte trouvé pour cet email.'
-      : `Erreur génération du lien : ${error?.message ?? 'inconnue'}`
-    return NextResponse.json({ error: msg }, { status: 400 })
+    // Le message brut de Supabase n'est plus renvoyé : il décrivait le rouage
+    // interne qui avait cassé. Le détail part dans les journaux, le visiteur
+    // reçoit une phrase compréhensible.
+    const introuvable = error?.message?.toLowerCase().includes('not found') || error?.status === 404
+    return NextResponse.json(
+      { error: introuvable
+          ? 'Aucun compte trouvé pour cet email.'
+          : "L'envoi a échoué. Réessayez dans quelques instants." },
+      { status: 400 },
+    )
   }
 
   const resetLink = data.properties.action_link

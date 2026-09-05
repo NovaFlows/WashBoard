@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
@@ -147,6 +148,6 @@ export async function PATCH(request: NextRequest) {
     .update(updates)
     .eq('user_id', user.id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('washer.patch.db', error)
   return NextResponse.json({ success: true })
 }

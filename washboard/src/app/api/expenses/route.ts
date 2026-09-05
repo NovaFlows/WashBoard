@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient } from '@/lib/supabase/server'
 import { materializeRecurring } from '@/lib/materializeRecurring'
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   if (end)   query = query.lte('date', end)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('expenses.get.db', error)
   return NextResponse.json({ expenses: data })
 }
 
@@ -51,6 +52,6 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('expenses.post.db', error)
   return NextResponse.json({ expense: data }, { status: 201 })
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     .from('logos')
     .upload(fileName, bytes, { contentType: file.type || 'image/png', upsert: true })
 
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
+  if (uploadError) return errorResponse('washer.logo.post.db', uploadError)
 
   const { data: { publicUrl } } = createAdminClient().storage.from('logos').getPublicUrl(fileName)
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     .update({ logo_url: publicUrl })
     .eq('user_id', user.id)
 
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+  if (updateError) return errorResponse('washer.logo.post.db', updateError)
 
   return NextResponse.json({ url: publicUrl })
 }

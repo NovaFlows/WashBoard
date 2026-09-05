@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 
 // Actions sur le compte du laveur connecté :
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { error } = await supabase.from('washers').update(updates).eq('id', washer.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('account.post.db', error)
 
   return NextResponse.json({ success: true, account_status: updates.account_status })
 }

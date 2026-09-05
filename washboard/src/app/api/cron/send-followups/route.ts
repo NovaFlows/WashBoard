@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { sendFollowupEmail } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
 import { graceEnded } from '@/lib/plan'
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const { data: washers, error: washerErr } = await washerQuery
 
-  if (washerErr) return NextResponse.json({ error: washerErr.message }, { status: 500 })
+  if (washerErr) return errorResponse('cron.send-followups.get.db', washerErr)
 
   let emailSent = 0
   let smsSent = 0

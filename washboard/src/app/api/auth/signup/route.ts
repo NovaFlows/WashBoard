@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
+import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 
 function generateSlug(name: string): string {
   return name
@@ -14,7 +15,23 @@ function generateSlug(name: string): string {
     .slice(0, 40)
 }
 
+// Route publique qui crée des comptes et des lignes en base. Sans plafond, une
+// boucle pouvait ouvrir des centaines d'essais gratuits — coût Supabase, base
+// polluée, et le contrôle d'unicité du téléphone à passer en revue à la main.
+const INSCRIPTIONS_MAX = 5
+const FENETRE_MS = 60 * 60 * 1000
+
 export async function POST(request: NextRequest) {
+  cleanupRateLimit()
+  const ip = clientIp(request)
+  if (!rateLimit(`signup-ip:${ip}`, INSCRIPTIONS_MAX, FENETRE_MS).ok) {
+    logger.warn('auth.signup.rate_limited', { ip })
+    return NextResponse.json(
+      { error: 'Trop de tentatives d\'inscription. Réessayez dans une heure.' },
+      { status: 429 },
+    )
+  }
+
   const { name, email, password, phone } = await request.json()
 
   if (!name?.trim() || !email?.includes('@') || !password || password.length < 6) {
@@ -86,7 +103,11 @@ export async function POST(request: NextRequest) {
   if (authError) {
     const raw = authError.message.toLowerCase()
     const isDuplicate = raw.includes('already') || (raw.includes('email') && raw.includes('exist'))
-    const msg = isDuplicate ? 'Cet email est déjà utilisé' : authError.message
+    // Hors doublon, le message de Supabase décrivait le rouage interne qui
+    // avait cassé : il part dans les journaux, pas dans la réponse.
+    const msg = isDuplicate
+      ? 'Cet email est déjà utilisé'
+      : "La création du compte a échoué. Réessayez dans quelques instants."
     // Un doublon est un cas normal (l'utilisateur a déjà un compte) ; le reste
     // est une vraie panne de création de compte, qui doit se voir.
     if (!isDuplicate) logger.error('signup.auth_create_failed', {}, authError)

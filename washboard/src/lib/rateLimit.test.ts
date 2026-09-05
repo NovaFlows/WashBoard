@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { rateLimit, cleanupRateLimit } from './rateLimit'
+import { rateLimit, cleanupRateLimit, clientIp } from './rateLimit'
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -54,5 +54,34 @@ describe('cleanupRateLimit', () => {
     cleanupRateLimit()
     // après purge, une clé expirée repart de zéro (donc autorisée)
     expect(rateLimit('bulk:0', 1, 1000).ok).toBe(true)
+  })
+})
+
+describe('clientIp', () => {
+  const req = (entetes: Record<string, string>) => ({
+    headers: { get: (n: string) => entetes[n] ?? null },
+  })
+
+  it('prend la première adresse de la chaîne de proxys', () => {
+    // Vercel empile « client, proxy1, proxy2 » : seule la première est le visiteur.
+    expect(clientIp(req({ 'x-forwarded-for': '203.0.113.7, 10.0.0.1, 10.0.0.2' }))).toBe('203.0.113.7')
+  })
+
+  it('tolère les espaces autour de l\'adresse', () => {
+    expect(clientIp(req({ 'x-forwarded-for': '  203.0.113.7  ' }))).toBe('203.0.113.7')
+  })
+
+  it('retombe sur x-real-ip', () => {
+    expect(clientIp(req({ 'x-real-ip': '203.0.113.9' }))).toBe('203.0.113.9')
+  })
+
+  it('ignore un x-forwarded-for vide au profit de x-real-ip', () => {
+    expect(clientIp(req({ 'x-forwarded-for': '', 'x-real-ip': '203.0.113.9' }))).toBe('203.0.113.9')
+  })
+
+  it('rend « unknown » quand aucun en-tête n\'est présent', () => {
+    // Tous ces appels partagent alors le même compteur : c'est le comportement
+    // prudent, mieux vaut trop limiter que pas du tout.
+    expect(clientIp(req({}))).toBe('unknown')
   })
 })

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { selectionnerFantomes } from '@/lib/ghostAccounts'
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     .eq('account_status', 'pending_deletion')
     .lt('deletion_scheduled_at', cutoff)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('cron.purge-accounts.get.db', error)
 
   let purged = 0
   let failed = 0

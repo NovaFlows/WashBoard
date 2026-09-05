@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMapsApiKey } from '@/lib/googleMaps'
-import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verdictZone } from '@/lib/zone'
 import type { ZoneConfig } from '@/types'
-import { getDeptCodeFromPostal } from '@/lib/france-departments'
-import { haversineKm } from '@/lib/geo'
+
+// Appelée pendant la saisie de l'adresse, pour prévenir le client avant qu'il
+// aille au bout du formulaire. La règle elle-même vit dans `@/lib/zone` et est
+// rejouée à la création de réservation : cette route est un confort
+// d'interface, pas un contrôle de sécurité.
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -13,8 +16,8 @@ export async function GET(request: NextRequest) {
 
   if (!washerId || !address) return NextResponse.json({ allowed: true })
 
-  // Appelée depuis la page de réservation publique, sans session : lecture
-  // côté serveur, la table `washers` n'étant plus lisible par la clé publique.
+  // Sans session : lecture côté serveur, la table `washers` n'étant plus
+  // lisible par la clé publique.
   const supabase = createAdminClient()
   const { data: washer } = await supabase
     .from('washers')
@@ -22,74 +25,11 @@ export async function GET(request: NextRequest) {
     .eq('id', washerId)
     .single()
 
-  const config = washer?.zone_config as ZoneConfig | null
-  if (!config?.enabled) return NextResponse.json({ allowed: true })
-
-  const apiKey = getMapsApiKey()
-  if (!apiKey) {
-    logger.error('zone.check.no_api_key', { washerId })
-    return NextResponse.json({ allowed: true })
-  }
-
-  try {
-    if (config.type === 'road') {
-      const url  = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(config.center_address)}&destinations=${encodeURIComponent(address)}&mode=driving&key=${apiKey}`
-      const data = await (await fetch(url)).json()
-      const el   = data.rows?.[0]?.elements?.[0]
-      // Adresse non reconnue → on laisse passer (adresse peut-être incomplète)
-      if (el?.status !== 'OK') return NextResponse.json({ allowed: true })
-      const distance_km = Math.round(el.distance.value / 1000)
-      return NextResponse.json({ allowed: distance_km <= config.radius_km, distance_km, radius_km: config.radius_km })
-    }
-
-    if (config.type === 'crow') {
-      let centerLat: number | undefined = config.center_lat
-      let centerLng: number | undefined = config.center_lng
-      // Coordonnées absentes (géocodage raté à la sauvegarde) → on géocode maintenant
-      if (!centerLat || !centerLng) {
-        const geoCenter = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(config.center_address)}&key=${apiKey}`)).json()
-        const loc = geoCenter.results?.[0]?.geometry?.location
-        if (!loc) return NextResponse.json({ allowed: true })
-        centerLat = loc.lat as number
-        centerLng = loc.lng as number
-      }
-      if (!centerLat || !centerLng) return NextResponse.json({ allowed: true })
-      const url  = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
-      const data = await (await fetch(url)).json()
-      const loc  = data.results?.[0]?.geometry?.location
-      // Adresse non reconnue → on laisse passer
-      if (!loc) return NextResponse.json({ allowed: true })
-      const distance_km = Math.round(haversineKm(centerLat, centerLng, loc.lat, loc.lng))
-      return NextResponse.json({ allowed: distance_km <= config.radius_km, distance_km, radius_km: config.radius_km })
-    }
-
-    if (config.type === 'departments') {
-      // On ne vérifie que si l'adresse contient un code postal 5 chiffres — seul signal fiable d'adresse complète
-      if (!/\b\d{5}\b/.test(address)) return NextResponse.json({ allowed: true })
-
-      // API adresse du gouvernement français — gratuite, sans clé, retourne le code dept directement
-      const url  = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`
-      const data = await (await fetch(url)).json()
-      const feature = data.features?.[0]
-      // Adresse non reconnue → on laisse passer
-      if (!feature) return NextResponse.json({ allowed: true })
-
-      // context = "31, Haute-Garonne, Occitanie" → premier élément = code dept
-      const context  = (feature.properties?.context as string) ?? ''
-      const parts    = context.split(', ')
-      const deptCode = parts[0]?.trim()
-      const deptName = parts[1]?.trim() ?? deptCode
-
-      if (!deptCode) return NextResponse.json({ allowed: true })
-      return NextResponse.json({ allowed: config.departments.includes(deptCode), department: deptCode, department_name: deptName })
-    }
-  } catch (e) {
-    // Choix produit assume : en cas de panne on LAISSE PASSER plutot que de
-    // refuser un client legitime parce que Google est tombe. Mais on trace —
-    // un echec muet ici accepterait silencieusement des adresses hors zone.
-    logger.error('zone.check.failed', { washerId, address }, e)
-    return NextResponse.json({ allowed: true })
-  }
-
-  return NextResponse.json({ allowed: true })
+  const verdict = await verdictZone(
+    washer?.zone_config as ZoneConfig | null,
+    address,
+    getMapsApiKey(),
+    { washerId },
+  )
+  return NextResponse.json(verdict)
 }

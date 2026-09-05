@@ -54,7 +54,12 @@ export async function PATCH(
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (error) {
+    // Le message de Postgres décrivait la contrainte ou la colonne fautive :
+    // utile dans les journaux, pas dans une réponse HTTP.
+    logger.error('bookings.id.update.db', { bookingId: id, washerId: washer.id }, error)
+    return NextResponse.json({ error: 'La modification a échoué.' }, { status: 400 })
+  }
 
   const vehicleCount = Math.max(1, booking.vehicle_count ?? 1)
 

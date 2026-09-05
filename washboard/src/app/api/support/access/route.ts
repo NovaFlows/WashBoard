@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { isSupportAccessActive, isSupportMember } from '@/lib/supportAccess'
+import { trustedOrigin } from '@/lib/appOrigin'
 
 // Ouvre une session sur le compte d'un laveur, pour l'aider à le configurer.
 //
@@ -74,14 +75,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Compte introuvable' }, { status: 404 })
   }
 
-  // Origine réelle de la requête, même logique que la réinitialisation de mot
-  // de passe : évite un slash en trop ou une variable d'environnement mal
-  // réglée selon l'environnement.
-  const origin = (
-    request.headers.get('origin') ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    'https://www.washboard.fr'
-  ).replace(/\/$/, '')
+  // Même logique que la réinitialisation de mot de passe : l'en-tête `Origin`
+  // n'est retenu que s'il correspond à une origine connue du site. Ici l'enjeu
+  // est plus lourd encore — le lien ouvre une session SUR LE COMPTE DU LAVEUR.
+  const origin = trustedOrigin(request.headers.get('origin'))
 
   const { data: link, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',

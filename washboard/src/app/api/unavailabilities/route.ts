@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 
@@ -52,6 +53,6 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('unavailabilities.post.db', error)
   return NextResponse.json({ data }, { status: 201 })
 }

@@ -4,8 +4,12 @@ import { notifierLaveur } from '@/lib/push'
 import { formatHeure } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
-import { countConflicts, effectiveTeamSize } from '@/lib/slots'
-import { rateLimit, cleanupRateLimit } from '@/lib/rateLimit'
+import { effectiveTeamSize } from '@/lib/slots'
+import { verdictDate, creneauDansOuverture } from '@/lib/bookingWindow'
+import { verdictZone } from '@/lib/zone'
+import { getMapsApiKey } from '@/lib/googleMaps'
+import type { ZoneConfig } from '@/types'
+import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { graceEnded } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
@@ -56,8 +60,7 @@ const BookingSchema = z.object({
 export const POST = withErrorHandling('bookings.create', async (req: Request) => {
   // ── Anti-spam #1 : rate-limit par IP ────────────────────────────────────
   cleanupRateLimit()
-  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim()
-    || req.headers.get('x-real-ip') || 'unknown'
+  const ip = clientIp(req)
   const rl = rateLimit(`book:${ip}`, IP_LIMIT, IP_WINDOW_MS)
   if (!rl.ok) {
     return Response.json(
@@ -125,7 +128,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -150,54 +153,112 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
     return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
   }
-  if (!isOwner && service) {
-    const newStart = new Date(bookingData.scheduled_at).getTime()
-    const newDur   = effectiveDuration((service.duration_minutes ?? 60) + addonsDuration(selected_addons), vehicle_count ?? 1)
-    const newEnd   = newStart + newDur * 60_000
-    // RDV proches : créés jusqu'à 12h avant le début (couvre les longues prestations)
-    const windowStart = new Date(newStart - 12 * 60 * 60_000).toISOString()
-    const [{ data: nearby }, { data: unavs, error: unavsErr }] = await Promise.all([
-      admin.from('bookings')
-        .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
-        .eq('washer_id', bookingData.washer_id)
-        .neq('status', 'cancelled')
-        .gte('scheduled_at', windowStart)
-        .lte('scheduled_at', new Date(newEnd).toISOString()),
-      admin.from('unavailabilities')
-        .select('start_date, end_date, team_members_off')
-        .eq('washer_id', bookingData.washer_id),
-    ])
-    // Une lecture en echec donnerait `unavs = null`, donc « aucun conge », donc
-    // une capacite pleine : on accepterait des RDV pendant les absences du laveur.
-    // C'est arrive en prod (GRANT SELECT manquant pour service_role) — on refuse
-    // plutot que de reserver a l'aveugle.
-    if (unavsErr) {
-      logger.error('bookings.unavailabilities.read_failed',
-        { washerId: bookingData.washer_id }, unavsErr)
+  // Durée réellement bloquée par ce rendez-vous. Calculée ici parce qu'elle
+  // sert deux fois : au contrôle des horaires, puis à l'enregistrement de la
+  // fin du créneau en base (colonne `ends_at`, cf. réservation atomique).
+  const dureeMinutes = effectiveDuration(
+    (service?.duration_minutes ?? 60) + addonsDuration(selected_addons),
+    vehicle_count ?? 1,
+  )
+  const debutMs = new Date(bookingData.scheduled_at).getTime()
+  const finMs   = debutMs + dureeMinutes * 60_000
+
+  // Capacité du jour : nombre de laveurs, moins les absences. Nécessaire même
+  // pour une réservation saisie par le laveur, car c'est elle que la fonction
+  // de réservation atomique compare au nombre de rendez-vous qui se chevauchent.
+  const { data: unavs, error: unavsErr } = await admin
+    .from('unavailabilities')
+    .select('start_date, end_date, team_members_off')
+    .eq('washer_id', bookingData.washer_id)
+
+  // Une lecture en echec donnerait `unavs = null`, donc « aucun conge », donc
+  // une capacite pleine : on accepterait des RDV pendant les absences du laveur.
+  // C'est arrive en prod (GRANT SELECT manquant pour service_role) — on refuse
+  // plutot que de reserver a l'aveugle.
+  if (unavsErr) {
+    logger.error('bookings.unavailabilities.read_failed',
+      { washerId: bookingData.washer_id }, unavsErr)
+    return Response.json(
+      { error: 'Impossible de vérifier les disponibilités. Merci de réessayer dans un instant.' },
+      { status: 503 },
+    )
+  }
+
+  const dateStr  = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+  const capacite = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
+
+  // ── Le moment et le lieu demandés sont-ils réservables ? ─────────────────
+  //
+  // Ces trois contrôles n'existaient que dans le navigateur. Un appel direct à
+  // cette route créait donc un rendez-vous daté de l'an dernier, à 3h du matin
+  // un jour de fermeture, ou à 400 km de la zone desservie — et le laveur le
+  // découvrait dans son agenda. Signalé par un audit externe le 2026-09-05.
+  //
+  // Le laveur qui saisit lui-même un rendez-vous depuis son tableau de bord
+  // reste libre de forcer : c'est son métier, pas une anomalie.
+  if (!isOwner) {
+    const quand = verdictDate(bookingData.scheduled_at)
+    if (quand !== 'ok') {
+      logger.warn('bookings.rejected.date', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, verdict: quand,
+      })
+      return Response.json(
+        {
+          error: quand === 'passe'
+            ? 'Ce créneau est déjà passé. Merci de choisir une autre date.'
+            : 'Cette date n\'est pas ouverte à la réservation.',
+        },
+        { status: 400 },
+      )
+    }
+
+    if (capacite === 0) {
+      // Le dire explicitement, sinon le client réessaie tous les horaires du
+      // même jour et se heurte au même refus sans jamais comprendre pourquoi.
+      return Response.json(
+        { error: 'Le prestataire est absent ce jour-là. Merci de choisir une autre date.' },
+        { status: 409 },
+      )
+    }
+
+    const { data: plages, error: plagesErr } = await admin
+      .from('availabilities')
+      .select('day_of_week, start_time, end_time')
+      .eq('washer_id', bookingData.washer_id)
+
+    // Même raisonnement que pour les congés : sans les horaires, on ne sait
+    // pas si le créneau est ouvert. Accepter reviendrait à ne rien vérifier.
+    if (plagesErr) {
+      logger.error('bookings.availabilities.read_failed',
+        { washerId: bookingData.washer_id }, plagesErr)
       return Response.json(
         { error: 'Impossible de vérifier les disponibilités. Merci de réessayer dans un instant.' },
         { status: 503 },
       )
     }
-    const intervals = (nearby ?? []).map((b) => {
-      const svc = b.services as { duration_minutes: number } | { duration_minutes: number }[] | null
-      const dur = Array.isArray(svc) ? svc[0]?.duration_minutes : svc?.duration_minutes
-      const bAddons = (b.selected_addons as { duration_minutes?: number }[] | null) ?? []
-      return { startMs: new Date(b.scheduled_at).getTime(), durationMin: effectiveDuration((dur ?? 60) + addonsDuration(bAddons), b.vehicle_count) }
-    })
-    const conflicts = countConflicts(newStart, newEnd, intervals)
-    const dateStr   = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
-    const capacity  = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
-    if (conflicts >= capacity) {
-      // Capacité nulle = personne ne travaille ce jour-là (congé). Le dire, sinon
-      // le client réessaie tous les horaires du même jour et se heurte au même
-      // refus « créneau déjà pris » sans jamais comprendre.
+
+    if (!creneauDansOuverture(bookingData.scheduled_at, dureeMinutes, plages ?? [])) {
+      logger.warn('bookings.rejected.hors_ouverture', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, dureeMinutes,
+      })
       return Response.json(
-        {
-          error: capacity === 0
-            ? 'Le prestataire est absent ce jour-là. Merci de choisir une autre date.'
-            : 'Ce créneau vient d\'être réservé. Merci de choisir un autre horaire.',
-        },
+        { error: 'Ce créneau ne fait pas partie des horaires du prestataire.' },
+        { status: 409 },
+      )
+    }
+
+    const zone = await verdictZone(
+      washer?.zone_config as ZoneConfig | null,
+      bookingData.address,
+      getMapsApiKey(),
+      { washerId: bookingData.washer_id },
+    )
+    if (!zone.allowed) {
+      logger.warn('bookings.rejected.hors_zone', {
+        washerId: bookingData.washer_id, distanceKm: zone.distance_km, departement: zone.department,
+      })
+      return Response.json(
+        { error: 'Cette adresse est en dehors de la zone desservie par ce prestataire.' },
         { status: 409 },
       )
     }
@@ -261,10 +322,24 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // (voir PATCH /api/bookings/[id] quand status passe à 'confirmed'),
   // pas à la création — les RDV en attente ne sont pas ajoutés à l'agenda.
 
-  const { error } = await supabase
-    .from('bookings')
-    .insert({
+  // ── Enregistrement ────────────────────────────────────────────────────────
+  //
+  // Le comptage des chevauchements et l'insertion passent par une seule
+  // fonction SQL. Avant, on comptait en JavaScript puis on insérait : entre les
+  // deux, une autre réservation pouvait s'intercaler. Deux clients qui
+  // validaient le même créneau à quelques millisecondes d'intervalle voyaient
+  // tous les deux « zéro conflit » et étaient tous les deux acceptés — le
+  // laveur se retrouvait avec deux rendez-vous simultanés à honorer.
+  // Fenêtre étroite mais parfaitement atteignable en la provoquant, et c'est
+  // exactement ce que fait un créneau publié sur les réseaux. Signalé par un
+  // audit externe le 2026-09-05.
+  //
+  // `p_capacity: null` = pas de plafond : le laveur qui saisit lui-même un
+  // rendez-vous garde le droit de surcharger sa journée.
+  const { error } = await supabase.rpc('create_booking_atomic', {
+    p_booking: {
       id, ...bookingData,
+      ends_at:         new Date(finMs).toISOString(),
       is_smart_slot:   is_smart_slot ?? false,
       smart_discount:  smart_discount ?? 0,
       booked_price,
@@ -276,9 +351,22 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
       travel_fee:       computed_travel_fee,
-    })
+    },
+    p_capacity: isOwner ? null : capacite,
+  })
 
   if (error) {
+    // La fonction signale un créneau plein par un message dédié : c'est un
+    // refus normal côté client, pas une panne à remonter comme une erreur 500.
+    if (error.message?.includes('SLOT_TAKEN')) {
+      logger.info('bookings.rejected.creneau_plein', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, capacite,
+      })
+      return Response.json(
+        { error: 'Ce créneau vient d\'être réservé. Merci de choisir un autre horaire.' },
+        { status: 409 },
+      )
+    }
     return errorResponse('bookings.insert.db', error, { washerId: bookingData.washer_id })
   }
 

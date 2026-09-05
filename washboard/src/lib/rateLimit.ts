@@ -24,6 +24,18 @@ export function rateLimit(key: string, limit: number, windowMs: number): { ok: b
   return { ok: true, retryAfter: 0 }
 }
 
+/** Adresse de l'appelant, telle que Vercel la transmet.
+ *
+ *  Extraite ici parce que quatre routes en avaient besoin et que la troisième
+ *  copie du même `split(',')[0].trim()` commençait à diverger. `unknown` quand
+ *  aucun en-tête n'est présent : tous ces appels partagent alors le même
+ *  compteur, ce qui est le comportement prudent. */
+export function clientIp(req: { headers: { get(name: string): string | null } }): string {
+  return (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim()
+    || req.headers.get('x-real-ip')
+    || 'unknown'
+}
+
 // Nettoyage opportuniste pour éviter une croissance illimitée de la Map.
 export function cleanupRateLimit() {
   const now = Date.now()

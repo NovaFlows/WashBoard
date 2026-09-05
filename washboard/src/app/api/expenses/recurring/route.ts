@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/apiError'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
@@ -15,7 +16,7 @@ export async function GET() {
     .eq('washer_id', washer.id)
     .order('created_at')
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('expenses.recurring.get.db', error)
   return NextResponse.json({ recurring: data })
 }
 
@@ -41,6 +42,6 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return errorResponse('expenses.recurring.post.db', error)
   return NextResponse.json({ recurring: data }, { status: 201 })
 }
