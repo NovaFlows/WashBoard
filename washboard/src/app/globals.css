@@ -104,3 +104,25 @@ body {
   color: #475569;
 }
 .dark .wb-label { color: rgba(255,255,255,0.6); }
+
+/* ── iOS : empêcher le zoom automatique à la saisie ──────────────────────────
+   Safari agrandit la page dès qu'un champ de moins de 16px reçoit le focus, et
+   ne revient jamais à l'échelle d'origine tout seul. Concrètement : on tapait
+   son mot de passe sur iPhone, Safari zoomait, et le tableau de bord s'ouvrait
+   agrandi — il fallait dézoomer à la main à chaque connexion.
+
+   16px est le seuil exact retenu par WebKit ; en dessous, il zoome. La règle
+   ne s'applique qu'aux petits écrans, la typographie d'origine est conservée
+   ailleurs. Elle vise tous les champs de saisie, pas seulement `.wb-input` :
+   il en reste ailleurs en `text-sm`, et le zoom se déclenche au premier venu.
+
+   L'autre correctif possible — `maximum-scale=1` dans la balise viewport —
+   est écarté volontairement : il empêche AUSSI de zoomer à la main, ce qui
+   rend le site inutilisable pour qui voit mal. */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
