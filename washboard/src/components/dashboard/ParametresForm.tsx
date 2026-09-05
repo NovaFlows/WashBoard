@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Washer } from '@/types'
@@ -769,9 +769,18 @@ function DangerZone({ washer }: { washer: Washer }) {
 }
 
 /* ── Onglet Page client ── */
+// Les endroits où un laveur publie son lien. Liste unique : elle sert à la
+// fenêtre de confirmation ET au rappel qui reste affiché ensuite, et les deux
+// doivent dire la même chose.
+const LIEUX_A_METTRE_A_JOUR = [
+  'Instagram', 'Facebook', 'Fiche Google', 'Site internet', 'Cartes de visite', 'QR codes',
+]
+
 function ClientTab({ washer }: { washer: Washer }) {
   const router = useRouter()
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // Sans `https://`, qui n'apprend rien et mange une ligne entière sur mobile.
+  const domaine = origin.replace(/^https?:\/\//, '')
   const [slug, setSlug] = useState(washer.slug)
   const [slugMsg, setSlugMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [slugLoading, setSlugLoading] = useState(false)
@@ -779,6 +788,17 @@ function ClientTab({ washer }: { washer: Washer }) {
   // qu'on clique, alors que le travail de remplacement des liens, lui, reste à
   // faire. Le rappel doit donc survivre à la fenêtre.
   const [ancienLien, setAncienLien] = useState<string | null>(null)
+  // Le nouveau lien en attente de confirmation, ou null si la fenêtre est fermée.
+  const [confirmSlug, setConfirmSlug] = useState<string | null>(null)
+
+  // Échap referme la fenêtre : sur ordinateur c'est le réflexe, et sans ça le
+  // seul moyen de renoncer est de viser « Annuler ».
+  useEffect(() => {
+    if (!confirmSlug) return
+    const auClavier = (e: KeyboardEvent) => { if (e.key === 'Escape') setConfirmSlug(null) }
+    window.addEventListener('keydown', auClavier)
+    return () => window.removeEventListener('keydown', auClavier)
+  }, [confirmSlug])
 
   async function saveSlug() {
     const s = slug.trim().toLowerCase()
@@ -792,20 +812,15 @@ function ClientTab({ washer }: { washer: Washer }) {
     // Ce lien est déjà en circulation : dans une bio Instagram, sur un site,
     // sur des cartes de visite, dans des QR codes imprimés. Le changer n'est
     // pas un réglage de plus, c'est une rupture — et rien ne redirige l'ancien
-    // vers le nouveau. On demande confirmation, et on dit ce que ça implique.
-    const ancien = `${origin}/book/${washer.slug}`
-    const confirme = window.confirm(
-      'Changer votre lien de réservation ?\n\n'
-      + `Ancien :  ${ancien}\n`
-      + `Nouveau : ${origin}/book/${s}\n\n`
-      + 'L\'ancien lien cessera de fonctionner immédiatement. Les clients qui '
-      + 'l\'utiliseront tomberont sur une page « introuvable ».\n\n'
-      + 'Pensez à le remplacer partout où vous l\'avez publié : Instagram, '
-      + 'Facebook, votre fiche Google, votre site internet, vos cartes de '
-      + 'visite et vos QR codes.',
-    )
-    if (!confirme) return
+    // vers le nouveau. D'où la confirmation, avec ce que ça implique.
+    setConfirmSlug(s)
+  }
 
+  async function appliquerSlug() {
+    const s = confirmSlug
+    if (!s) return
+    const ancien = `${origin}/book/${washer.slug}`
+    setConfirmSlug(null)
     setSlugLoading(true)
     const res = await fetch('/api/washer', {
       method: 'PATCH',
@@ -852,10 +867,19 @@ function ClientTab({ washer }: { washer: Washer }) {
               Lien mis à jour — il reste à le remplacer ailleurs
             </p>
             <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-1 leading-relaxed">
-              <span className="font-mono line-through break-all">{ancienLien}</span> ne fonctionne plus.
-              Remplacez-le sur Instagram, Facebook, votre fiche Google, votre site internet,
-              vos cartes de visite et vos QR codes.
+              <span className="font-mono line-through break-all">{ancienLien.replace(/^https?:\/\//, '')}</span> ne
+              fonctionne plus. Pensez à le remplacer :
             </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {LIEUX_A_METTRE_A_JOUR.map(lieu => (
+                <span
+                  key={lieu}
+                  className="text-[11px] font-medium px-2 py-1 rounded-lg bg-white/70 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/25"
+                >
+                  {lieu}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
@@ -873,6 +897,76 @@ function ClientTab({ washer }: { washer: Washer }) {
           Un lien par réseau, pour savoir d&apos;où viennent vos clients dans le CRM
         </p>
         <TrafficSourceLinks baseUrl={`${origin}/book/${washer.slug}`} />
+
+        {confirmSlug && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setConfirmSlug(null)}
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="titre-changer-lien"
+              className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 dark:border-slate-700 p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 id="titre-changer-lien" className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">
+                Changer votre lien de réservation ?
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                L&apos;ancien cessera de fonctionner immédiatement. Les clients qui
+                l&apos;utiliseront tomberont sur une page « introuvable ».
+              </p>
+
+              {/* Avant / après, l'un sous l'autre : une URL ne tient pas sur une
+                  demi-largeur de téléphone sans se couper n'importe où. */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700 overflow-hidden mb-4">
+                <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-0.5">Actuel</p>
+                  <p className="text-xs font-mono text-slate-400 dark:text-slate-500 line-through break-all">
+                    {domaine}/book/{washer.slug}
+                  </p>
+                </div>
+                <div className="px-3 py-2.5 bg-blue-50/70 dark:bg-blue-500/10">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-0.5">Nouveau</p>
+                  <p className="text-xs font-mono font-medium text-blue-700 dark:text-blue-300 break-all">
+                    {domaine}/book/{confirmSlug}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
+                À remplacer partout où vous l&apos;avez publié :
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-5">
+                {LIEUX_A_METTRE_A_JOUR.map(lieu => (
+                  <span
+                    key={lieu}
+                    className="text-[11px] font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/25"
+                  >
+                    {lieu}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmSlug(null)}
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={appliquerSlug}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  Changer le lien
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card title="Personnalisation de la page client" icon={Palette}>
