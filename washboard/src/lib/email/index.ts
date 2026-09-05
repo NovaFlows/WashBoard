@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import type { VehicleItem } from '@/types'
+import { escapeHtml } from '@/lib/escapeHtml'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -60,7 +61,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
     ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Options</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.selectedAddons.map(a => a.label).join(' · ')}</td></tr>`
     : ''
   const notesRow1 = params.notes
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Notes</td><td style="padding:10px 16px;font-size:12px;color:#475569;line-height:1.5;font-style:italic;">${params.notes}</td></tr>`
+    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Notes</td><td style="padding:10px 16px;font-size:12px;color:#475569;line-height:1.5;font-style:italic;">${escapeHtml(params.notes)}</td></tr>`
     : ''
 
   return resend.emails.send({
@@ -77,14 +78,14 @@ export async function sendBookingRequest(params: SendRequestParams) {
     <!-- Header -->
     <div style="background:#f59e0b;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Demande reçue ⏳</h1>
-      <p style="margin:0;color:#fef3c7;font-size:13px;">En attente de confirmation par ${params.washerName}</p>
+      <p style="margin:0;color:#fef3c7;font-size:13px;">En attente de confirmation par ${escapeHtml(params.washerName)}</p>
     </div>
 
     <!-- Body -->
     <div style="padding:28px 40px;">
-      <p style="margin:0 0 6px;font-size:15px;color:#0f172a;">Bonjour <strong>${params.clientName}</strong>,</p>
+      <p style="margin:0 0 6px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
       <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre demande de réservation a bien été reçue. <strong>${params.washerName}</strong> va la confirmer dans les plus brefs délais.
+        Votre demande de réservation a bien été reçue. <strong>${escapeHtml(params.washerName)}</strong> va la confirmer dans les plus brefs délais.
         Vous recevrez un email avec votre reçu dès que c&apos;est accepté.
       </p>
 
@@ -92,7 +93,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
       <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;font-size:13px;">
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Prestation</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.serviceName}</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${escapeHtml(params.serviceName)}</td>
         </tr>
         ${vehicleRow1}
         ${addonsRow1}
@@ -106,7 +107,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Adresse</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.address}</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${escapeHtml(params.address)}</td>
         </tr>
         ${notesRow1}
         <tr>
@@ -183,14 +184,14 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   const notesBox2    = params.notes
     ? `<div style="margin:0 40px 20px;background:#fefce8;border-left:4px solid #fbbf24;padding:12px 16px;border-radius:0 6px 6px 0;">
         <p style="margin:0 0 2px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Notes du client</p>
-        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${params.notes}</p>
+        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${escapeHtml(params.notes)}</p>
       </div>`
     : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
-    subject: `Reçu de réservation #${ref} — ${params.washerName}`,
+    subject: `Reçu de réservation #${ref} — ${escapeHtml(params.washerName)}`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -211,9 +212,9 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
     <!-- En-tête prestataire -->
     <div style="padding:28px 40px 20px;display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
-        <h1 style="margin:0 0 3px;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">${params.washerName}</h1>
+        <h1 style="margin:0 0 3px;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">${escapeHtml(params.washerName)}</h1>
         <p style="margin:0;color:#64748b;font-size:13px;">Prestataire de lavage automobile à domicile</p>
-        ${params.washerPhone ? `<p style="margin:3px 0 0;color:#64748b;font-size:13px;">${params.washerPhone}</p>` : ''}
+        ${params.washerPhone ? `<p style="margin:3px 0 0;color:#64748b;font-size:13px;">${escapeHtml(params.washerPhone)}</p>` : ''}
       </div>
       <div style="text-align:right;">
         <p style="margin:0 0 2px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;">Date d'émission</p>
@@ -229,13 +230,13 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
       <tr>
         <td style="padding:20px 40px;width:50%;vertical-align:top;">
           <p style="margin:0 0 8px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:700;">Prestataire</p>
-          <p style="margin:0;font-size:14px;color:#0f172a;font-weight:700;">${params.washerName}</p>
-          ${params.washerPhone ? `<p style="margin:3px 0 0;font-size:13px;color:#64748b;">${params.washerPhone}</p>` : ''}
+          <p style="margin:0;font-size:14px;color:#0f172a;font-weight:700;">${escapeHtml(params.washerName)}</p>
+          ${params.washerPhone ? `<p style="margin:3px 0 0;font-size:13px;color:#64748b;">${escapeHtml(params.washerPhone)}</p>` : ''}
         </td>
         <td style="padding:20px 40px;width:50%;vertical-align:top;border-left:1px solid #f1f5f9;">
           <p style="margin:0 0 8px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:700;">Client</p>
-          <p style="margin:0;font-size:14px;color:#0f172a;font-weight:700;">${params.clientName}</p>
-          <p style="margin:3px 0 0;font-size:13px;color:#64748b;">${params.clientEmail}</p>
+          <p style="margin:0;font-size:14px;color:#0f172a;font-weight:700;">${escapeHtml(params.clientName)}</p>
+          <p style="margin:3px 0 0;font-size:13px;color:#64748b;">${escapeHtml(params.clientEmail)}</p>
         </td>
       </tr>
     </table>
@@ -256,9 +257,9 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
           <!-- Ligne prestation -->
           <tr>
             <td style="padding:16px;border-bottom:1px solid #f1f5f9;vertical-align:top;">
-              <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#0f172a;">${params.serviceName}${vehicleLabel}</p>
+              <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#0f172a;">${escapeHtml(params.serviceName)}${vehicleLabel}</p>
               <p style="margin:0 0 2px;font-size:12px;color:#64748b;">${formattedDate} à ${time}</p>
-              <p style="margin:0;font-size:12px;color:#64748b;">${params.address}</p>
+              <p style="margin:0;font-size:12px;color:#64748b;">${escapeHtml(params.address)}</p>
               ${params.isSmartSlot && discount > 0 ? `<p style="margin:6px 0 0;font-size:11px;color:#d97706;font-weight:600;">★ Créneau optimisé (-${discount}€)</p>` : ''}
             </td>
             <td style="padding:16px;border-bottom:1px solid #f1f5f9;text-align:right;vertical-align:top;white-space:nowrap;">
@@ -329,9 +330,9 @@ export async function sendFollowupEmail(params: SendFollowupEmailParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   return resend.emails.send({
-    from: `${params.washerName} via WashBoard <noreply@washboard.fr>`,
+    from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
     to: params.to,
-    subject: `Un message de ${params.washerName} 👋`,
+    subject: `Un message de ${escapeHtml(params.washerName)} 👋`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -340,13 +341,13 @@ export async function sendFollowupEmail(params: SendFollowupEmailParams) {
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
     <div style="background:#1651E8;padding:28px 40px;">
       <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Message de votre laveur</p>
-      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${params.washerName}</h1>
+      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
     </div>
     <div style="padding:32px 40px;">
-      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;line-height:1.7;white-space:pre-line;">${params.message}</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;line-height:1.7;white-space:pre-line;">${escapeHtml(params.message)}</p>
     </div>
     <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${params.washerName}</p>
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
     </div>
   </div>
 </body>
@@ -368,7 +369,7 @@ export async function sendReviewRequest(params: SendReviewRequestParams) {
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
-    subject: `Votre avis compte pour ${params.washerName} ⭐`,
+    subject: `Votre avis compte pour ${escapeHtml(params.washerName)} ⭐`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -377,23 +378,23 @@ export async function sendReviewRequest(params: SendReviewRequestParams) {
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
     <div style="background:#2563eb;padding:28px 40px;text-align:center;">
       <h1 style="margin:0 0 6px;color:#ffffff;font-size:21px;font-weight:800;">Merci pour votre confiance !</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Comment s'est passé votre lavage avec ${params.washerName} ?</p>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Comment s'est passé votre lavage avec ${escapeHtml(params.washerName)} ?</p>
     </div>
     <div style="padding:32px 40px;text-align:center;">
-      <p style="margin:0 0 8px;font-size:15px;color:#0f172a;">Bonjour <strong>${params.clientName}</strong>,</p>
+      <p style="margin:0 0 8px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
       <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
         Votre véhicule est tout propre ? On espère que vous êtes satisfait·e !
-        Un petit avis Google aiderait énormément <strong>${params.washerName}</strong> — ça prend moins d'une minute.
+        Un petit avis Google aiderait énormément <strong>${escapeHtml(params.washerName)}</strong> — ça prend moins d'une minute.
       </p>
       <div style="font-size:30px;letter-spacing:4px;margin-bottom:24px;">⭐⭐⭐⭐⭐</div>
-      <a href="${params.reviewUrl}" target="_blank"
+      <a href="${escapeHtml(params.reviewUrl)}" target="_blank"
          style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">
         Laisser un avis Google
       </a>
       <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;">Merci beaucoup pour votre soutien 🙏</p>
     </div>
     <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${params.washerName}</p>
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
     </div>
   </div>
 </body>
@@ -441,14 +442,14 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const notesBox3 = params.notes
     ? `<div style="margin-top:20px;background:#fefce8;border-left:4px solid #fbbf24;padding:14px 16px;border-radius:0 6px 6px 0;">
         <p style="margin:0 0 4px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Notes du client</p>
-        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${params.notes}</p>
+        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${escapeHtml(params.notes)}</p>
       </div>`
     : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
-    subject: `Nouvelle réservation — ${params.clientName} (Réf. ${ref})`,
+    subject: `Nouvelle réservation — ${escapeHtml(params.clientName)} (Réf. ${ref})`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -460,23 +461,23 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
       <p style="margin:0;color:#bfdbfe;font-size:13px;">Un client vient de faire une demande sur votre page WashBoard</p>
     </div>
     <div style="padding:28px 40px;">
-      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${params.washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.washerName)}</strong>,</p>
       <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;font-size:13px;">
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Client</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.clientName}</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${escapeHtml(params.clientName)}</td>
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Email</td>
-          <td style="padding:10px 16px;font-weight:600;"><a href="mailto:${params.clientEmail}" style="color:#2563eb;">${params.clientEmail}</a></td>
+          <td style="padding:10px 16px;font-weight:600;"><a href="mailto:${escapeHtml(params.clientEmail)}" style="color:#2563eb;">${escapeHtml(params.clientEmail)}</a></td>
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Téléphone</td>
-          <td style="padding:10px 16px;font-weight:600;"><a href="tel:${params.clientPhone}" style="color:#2563eb;">${params.clientPhone}</a></td>
+          <td style="padding:10px 16px;font-weight:600;"><a href="tel:${escapeHtml(params.clientPhone)}" style="color:#2563eb;">${escapeHtml(params.clientPhone)}</a></td>
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Prestation</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.serviceName}</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${escapeHtml(params.serviceName)}</td>
         </tr>
         ${vehicleRow3}
         ${addonsRow3}
@@ -486,7 +487,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Adresse</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.address}</td>
+          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${escapeHtml(params.address)}</td>
         </tr>
         <tr>
           <td style="padding:10px 16px;color:#64748b;">Montant</td>

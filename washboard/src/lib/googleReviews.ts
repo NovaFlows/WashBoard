@@ -10,10 +10,60 @@ export type GoogleReviewResult = {
   aggregate?: { value: number; count: number }
 }
 
-export async function scrapeWebsiteReviews(websiteUrl: string): Promise<GoogleReviewResult> {
+/** L'adresse est-elle un site public, et non une ressource interne ?
+ *
+ *  Ce champ est rempli librement par le laveur et récupéré par NOTRE serveur.
+ *  Sans ce contrôle, il pouvait y mettre `http://localhost:3000/api/...` ou une
+ *  adresse du réseau interne de l'hébergeur et s'en servir pour sonder ce qui
+ *  n'est pas accessible depuis l'extérieur. Signalé par un audit externe le
+ *  2026-09-05.
+ *
+ *  Exportee pour être testable : c'est une frontière de sécurité, elle mérite
+ *  d'être vérifiée cas par cas. */
+export function isPublicHttpUrl(brut: string): boolean {
+  let url: URL
   try {
+    url = new URL(brut)
+  } catch {
+    return false
+  }
+
+  // `file:`, `ftp:`, `data:`... n'ont aucune raison d'être ici.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+
+  const hote = url.hostname.toLowerCase()
+
+  // Boucle locale et noms internes.
+  if (hote === 'localhost' || hote.endsWith('.localhost') || hote.endsWith('.local')) return false
+  if (hote === '::1' || hote === '[::1]') return false
+  // Métadonnées des hébergeurs : la cible classique de ce type d'attaque.
+  if (hote === 'metadata.google.internal' || hote === '169.254.169.254') return false
+
+  // Plages privées IPv4 (RFC 1918), boucle locale et lien-local.
+  const ipv4 = hote.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])]
+    if (a === 10 || a === 127 || a === 0) return false
+    if (a === 172 && b >= 16 && b <= 31) return false
+    if (a === 192 && b === 168) return false
+    if (a === 169 && b === 254) return false
+  }
+
+  return true
+}
+
+export async function scrapeWebsiteReviews(websiteUrl: string): Promise<GoogleReviewResult> {
+  if (!isPublicHttpUrl(websiteUrl)) return { reviews: [] }
+
+  try {
+    // Délai maximal : une adresse qui ne répond jamais bloquait le rendu de la
+    // page de réservation du laveur, donc ses propres clients.
     const res = await fetch(websiteUrl, {
       next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(5_000),
+      // Une redirection peut mener vers une adresse interne : on ne la suit
+      // pas, la vérification ci-dessus ne porterait alors sur rien.
+      redirect: 'error',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'fr-FR,fr;q=0.9',
