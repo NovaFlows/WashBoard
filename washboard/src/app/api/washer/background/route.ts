@@ -11,12 +11,17 @@ export async function POST(request: NextRequest) {
   const file = formData.get('file') as File
   if (!file) return NextResponse.json({ error: 'Fichier manquant' }, { status: 400 })
 
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: 'Image trop lourde (max 5 Mo)' }, { status: 400 })
+  // 5 Mo etait bien trop large pour une image servie a chaque visiteur : le
+  // fond est desormais compresse dans le navigateur, 3 Mo suffisent largement
+  // comme garde-fou.
+  if (file.size > 3 * 1024 * 1024) {
+    return NextResponse.json({ error: 'Image trop lourde (3 Mo maximum)' }, { status: 413 })
   }
 
   const bytes = await file.arrayBuffer()
-  const ext   = file.type === 'image/png' ? 'png' : 'jpg'
+  // Le WebP manquait : un fond compresse dans ce format etait stocke en .jpg,
+  // avec un type qui ne correspondait pas au contenu.
+  const ext   = file.type === 'image/webp' ? 'webp' : file.type === 'image/png' ? 'png' : 'jpg'
   const fileName = `${user.id}.${ext}`
 
   const { error: uploadError } = await createAdminClient().storage

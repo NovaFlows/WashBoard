@@ -9,6 +9,7 @@ import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { BG_THEME_PRESETS, isCustomTheme } from '@/lib/themes'
 
 import type { BgThemePreset } from '@/lib/themes'
+import { compressImage, LOGO_OPTIONS, BACKGROUND_OPTIONS } from '@/lib/imageCompression'
 
 type LogoStatus = 'idle' | 'removing' | 'uploading' | 'done' | 'error'
 
@@ -178,8 +179,9 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
     setBgUploading(true)
     setBgError(null)
     try {
+      const compresse = await compressImage(file, BACKGROUND_OPTIONS)
       const form = new FormData()
-      form.append('file', file)
+      form.append('file', compresse, compresse.name)
       const res  = await fetch('/api/washer/background', { method: 'POST', body: form })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erreur upload')
@@ -201,8 +203,16 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       const { removeBackground } = await import('@imgly/background-removal')
       const blob = await removeBackground(file)
       setLogoStatus('uploading')
+      // Le détourage rend un PNG en pleine résolution : c'est ce qui produisait
+      // des logos de 4 Mo, ensuite servis à CHAQUE visiteur de la page de
+      // réservation. Un logo s'affiche sur 200 points — on le réduit avant
+      // l'envoi.
+      const compresse = await compressImage(
+        new File([blob], 'logo.png', { type: 'image/png' }),
+        LOGO_OPTIONS,
+      )
       const form = new FormData()
-      form.append('file', blob, 'logo.png')
+      form.append('file', compresse, compresse.name)
       const res = await fetch('/api/washer/logo', { method: 'POST', body: form })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erreur upload')
