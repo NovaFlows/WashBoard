@@ -1,14 +1,22 @@
 import { defineConfig, devices } from '@playwright/test'
 import fs from 'fs'
 
-// Charge .env.test.local si présent (credentials de test, jamais committé)
-try {
-  const lines = fs.readFileSync('.env.test.local', 'utf-8').split('\n')
-  for (const line of lines) {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '')
-  }
-} catch { /* fichier absent → variables à passer manuellement */ }
+// Charge les fichiers d'environnement locaux (jamais committés).
+//
+// `.env.local` en plus de `.env.test.local` : certains tests interrogent
+// directement Supabase avec la clé PUBLIQUE, pour vérifier qu'elle ne donne
+// pas accès à ce qu'elle ne devrait pas. Sans ces variables, ces tests se
+// contentaient de se sauter — et un test de sécurité qui ne s'exécute jamais
+// ne protège de rien.
+for (const fichier of ['.env.test.local', '.env.local']) {
+  try {
+    const lines = fs.readFileSync(fichier, 'utf-8').split('\n')
+    for (const line of lines) {
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^['"]|['"]$/g, '')
+    }
+  } catch { /* fichier absent → variables à passer manuellement */ }
+}
 
 const SESSION_FILE = 'e2e/.washer-session.json'
 

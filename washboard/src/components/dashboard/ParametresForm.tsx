@@ -188,12 +188,35 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     setEmailMsg(null)
     if (!EMAIL_RE.test(newEmail.trim())) { setEmailMsg({ ok: false, text: 'Adresse email invalide' }); return }
     setEmailLoading(true)
+    // Changer l'email revient à changer l'identifiant de connexion : même
+    // exigence de preuve que pour le mot de passe.
+    if (!await motDePasseActuelValide()) {
+      setEmailMsg({ ok: false, text: 'Saisissez votre mot de passe actuel dans la section ci-dessous pour confirmer' })
+      setEmailLoading(false)
+      return
+    }
     const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
     setEmailMsg(error
       ? { ok: false, text: 'Erreur : ' + error.message }
       : { ok: true, text: 'Un email de confirmation a été envoyé' }
     )
     setEmailLoading(false)
+  }
+
+  /** Vérifie que la personne devant l'écran connaît le mot de passe actuel.
+   *
+   *  Sans cela, quiconque tombe sur une session ouverte peut changer le mot de
+   *  passe et l'email, et verrouiller le véritable propriétaire hors de son
+   *  compte. Le champ existait dans le code mais n'était relié à rien —
+   *  signalé par un audit externe le 2026-09-05.
+   *
+   *  Le cas qui rend ce contrôle indispensable : l'accès support. Un laveur
+   *  qui nous ouvre son compte une heure ne nous autorise pas à en changer les
+   *  identifiants. */
+  async function motDePasseActuelValide(): Promise<boolean> {
+    if (!currentPwd) return false
+    const { error } = await supabase.auth.signInWithPassword({ email, password: currentPwd })
+    return !error
   }
 
   async function savePassword(e: React.FormEvent) {
@@ -208,6 +231,11 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     }
     setPwdLoading(true)
     setPwdMsg(null)
+    if (!await motDePasseActuelValide()) {
+      setPwdMsg({ ok: false, text: 'Mot de passe actuel incorrect' })
+      setPwdLoading(false)
+      return
+    }
     const { error } = await supabase.auth.updateUser({ password: newPwd })
     if (!error) { setCurrentPwd(''); setNewPwd(''); setConfirmPwd('') }
     setPwdMsg(error
@@ -569,6 +597,12 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       {/* Mot de passe */}
       <Card title="Mot de passe" icon={Lock}>
         <form onSubmit={savePassword} noValidate className="space-y-4">
+          <div>
+            {/* Ce champ manquait : le changement de mot de passe se faisait sans
+                aucune preuve d'identité. */}
+            <label className={labelClass}>Mot de passe actuel</label>
+            <input type="password" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} placeholder="Votre mot de passe actuel" required autoComplete="current-password" className={inputClass} />
+          </div>
           <div>
             <label className={labelClass}>Nouveau mot de passe</label>
             <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min. 6 caractères" required className={inputClass} />

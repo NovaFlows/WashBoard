@@ -114,25 +114,43 @@ export async function GET(request: NextRequest) {
   let ghostsFailed = 0
 
   try {
-    const { data: liste, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    if (listErr) throw listErr
+    // Les deux listes sont PAGINÉES, et c'est vital.
+    //
+    // Sans cela, un compte absent d'une page tronquée passait pour un fantôme
+    // et était DÉFINITIVEMENT supprimé, avec ses réservations en cascade.
+    // Invisible aujourd'hui (7 comptes), catastrophique au premier millier :
+    // PostgREST plafonne à 1000 lignes SANS erreur, et l'API d'authentification
+    // pagine elle aussi. Signalé par un audit externe le 2026-09-05.
+    const utilisateurs: { id: string; created_at: string }[] = []
+    for (let page = 1; page <= 100; page++) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 })
+      if (error) throw error
+      utilisateurs.push(...data.users.map(u => ({ id: u.id, created_at: u.created_at })))
+      if (data.users.length < 200) break
+    }
 
-    const { data: tousLesWashers, error: washersErr } = await admin.from('washers').select('user_id')
-    if (washersErr) throw washersErr
+    const rattaches: string[] = []
+    for (let debut = 0; ; debut += 1000) {
+      const { data, error } = await admin
+        .from('washers').select('user_id').range(debut, debut + 999)
+      if (error) throw error
+      rattaches.push(...(data ?? []).map(w => w.user_id).filter(Boolean))
+      if (!data || data.length < 1000) break
+    }
 
     // La sélection vit dans `lib/ghostAccounts` : elle décide de suppressions
     // définitives et mérite d'être vérifiable sans base de données.
     // Les erreurs de lecture ont déjà été relevées plus haut : sans cela une
     // liste vide ferait passer TOUS les utilisateurs pour des fantômes.
     const aSupprimer = selectionnerFantomes(
-      liste.users.map(u => ({ id: u.id, created_at: u.created_at })),
-      (tousLesWashers ?? []).map(w => w.user_id),
+      utilisateurs,
+      rattaches,
       new Date(),
       AGE_MIN_HEURES,
     )
 
     for (const id of aSupprimer) {
-      const u = { id, created_at: liste.users.find(x => x.id === id)?.created_at }
+      const u = { id, created_at: utilisateurs.find(x => x.id === id)?.created_at }
       const { error: delErr } = await admin.auth.admin.deleteUser(u.id)
       if (delErr) {
         logger.error('purge.ghost.delete_failed', { userId: u.id }, delErr)

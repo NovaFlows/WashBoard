@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -16,8 +15,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const supabase = await createClient()
-  const { data: washer } = await supabase
+  // Lecture côté serveur : la table `washers` n'est plus lisible par la clé
+  // publique, qui donnait accès aux jetons Google et identifiants Stripe de
+  // TOUS les laveurs à n'importe quel visiteur.
+  const admin = createAdminClient()
+  const { data: washer } = await admin
     .from('washers')
     .select('name, logo_url')
     .eq('slug', slug)
@@ -35,11 +37,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BookingPage({ params }: Props) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: washer } = await supabase
+  // Idem : lecture serveur, et colonnes énumérées plutôt que `select('*')`.
+  // Charger l'objet entier revenait à faire transiter des secrets par une page
+  // publique, en comptant sur le fait qu'on ne les transmettrait pas plus loin.
+  const { data: washer } = await admin
     .from('washers')
-    .select('*')
+    .select('id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan')
     .eq('slug', slug)
     .single()
 
@@ -71,18 +76,18 @@ export default async function BookingPage({ params }: Props) {
     )
   }
 
-  const { data: services } = await supabase
+  const { data: services } = await admin
     .from('services')
     .select('*')
     .eq('washer_id', washer.id)
 
-  const { data: categories } = await supabase
+  const { data: categories } = await admin
     .from('service_categories')
     .select('*')
     .eq('washer_id', washer.id)
     .order('display_order')
 
-  const { data: availabilities } = await supabase
+  const { data: availabilities } = await admin
     .from('availabilities')
     .select('*')
     .eq('washer_id', washer.id)
@@ -91,7 +96,6 @@ export default async function BookingPage({ params }: Props) {
   // créneaux occupés, mais la RLS interdit leur lecture au visiteur public (anon).
   // → lecture via le service-role, en se limitant à des données NON personnelles
   //   (horaire + durée), jamais de nom/email/téléphone côté client.
-  const admin = createAdminClient()
 
   const [
     { data: existingBookings, error: bookingsError },
@@ -179,7 +183,19 @@ export default async function BookingPage({ params }: Props) {
         )}
 
         <BookingForm
-          washer={washer}
+          // Champs énumérés un par un, jamais l'objet entier : tout ce qui
+          // franchit la frontière serveur→client est sérialisé dans le HTML
+          // public, utilisé ou non. Passer `washer` publiait le
+          // `stripe_customer_id` et le `google_refresh_token` du laveur dans le
+          // code source de sa page de réservation.
+          washer={{
+            id: washer.id,
+            name: washer.name,
+            base_address: washer.base_address ?? null,
+            team_size: washer.team_size ?? null,
+            travel_fee_mode: washer.travel_fee_mode ?? 'base',
+            travel_fee_tiers: washer.travel_fee_tiers ?? null,
+          }}
           services={services ?? []}
           categories={categories ?? []}
           availabilities={availabilities ?? []}

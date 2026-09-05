@@ -63,8 +63,9 @@ export function SupportAccessPanel() {
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Aide à la configuration</h3>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-        Ouvrez l&apos;accès à votre compte pour qu&apos;on vous aide à le configurer. Il se
-        referme tout seul au bout d&apos;une heure, et vous pouvez couper avant.
+        Ouvrez l&apos;accès à votre compte pour qu&apos;on vous aide à le configurer.
+        Plus aucun accès ne peut être ouvert au bout d&apos;une heure, et le bouton
+        ci-dessous coupe immédiatement toute connexion en cours.
       </p>
 
       {etat?.active ? (
@@ -73,7 +74,8 @@ export function SupportAccessPanel() {
             Accès ouvert — il reste {etat.minutesLeft} minute{etat.minutesLeft > 1 ? 's' : ''}
           </p>
           <p className="text-xs text-amber-700/90 dark:text-amber-500/90 mt-0.5">
-            Pendant ce temps, notre équipe peut se connecter à votre compte pour vous aider.
+            Pendant ce temps, notre équipe peut se connecter à votre compte. Pour
+            reprendre la main tout de suite, fermez l&apos;accès ci-dessous.
           </p>
         </div>
       ) : null}

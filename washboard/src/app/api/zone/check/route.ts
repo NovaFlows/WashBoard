@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { ZoneConfig } from '@/types'
 import { getDeptCodeFromPostal } from '@/lib/france-departments'
 import { haversineKm } from '@/lib/geo'
@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
 
   if (!washerId || !address) return NextResponse.json({ allowed: true })
 
-  const supabase = await createClient()
+  // Appelée depuis la page de réservation publique, sans session : lecture
+  // côté serveur, la table `washers` n'étant plus lisible par la clé publique.
+  const supabase = createAdminClient()
   const { data: washer } = await supabase
     .from('washers')
     .select('zone_config')

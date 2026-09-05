@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { addonsDuration } from '@/lib/pricing'
 
@@ -20,7 +19,9 @@ export async function GET(request: NextRequest) {
 
   if (!washerId || !address || !date) return NextResponse.json(empty)
 
-  const supabase = await createClient()
+  // Appelée depuis la page de réservation publique, sans session : lecture
+  // côté serveur, la table `washers` n'étant plus lisible par la clé publique.
+  const supabase = createAdminClient()
 
   const { data: washer } = await supabase
     .from('washers')

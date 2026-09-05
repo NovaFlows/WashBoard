@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
@@ -92,7 +91,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   const {
     vehicle_type, vehicle_count, is_smart_slot, smart_discount,
-    booked_price: bookedPriceInput, is_professional, company_name, siret, billing_address,
+    // Le prix envoyé par le client est extrait puis délibérément IGNORÉ : il
+    // reste accepté pour ne pas casser les clients existants, mais le montant
+    // enregistré est recalculé plus bas depuis le catalogue.
+    booked_price: _prixClientIgnore, is_professional, company_name, siret, billing_address,
     vehicles_detail, selected_addons, travel_fee,
     ...bookingData
   } = cleanData
@@ -113,7 +115,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     )
   }
 
-  const supabase = await createClient()
+  // Lecture côté serveur : cette route est appelée par un client anonyme et a
+  // besoin du jeton Google du laveur pour la synchronisation d'agenda — une
+  // donnée qui ne doit évidemment pas transiter par la clé publique.
+  const supabase = createAdminClient()
 
   // L'auteur est-il le laveur lui-même ? (réservation manuelle = autorisée à forcer)
   const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -121,8 +126,23 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
     supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered').eq('id', bookingData.washer_id).single(),
-    supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes').eq('id', bookingData.service_id).single(),
+    supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
+
+  // La prestation doit appartenir au laveur de la réservation.
+  //
+  // Sans cette vérification, un appel avec le `washer_id` de A et le
+  // `service_id` de B créait une réservation chez A portant le nom, le prix et
+  // la durée de la prestation de B — fuite de catalogue d'un laveur à l'autre,
+  // visible jusque dans l'email et le PDF. Signalé par un audit externe le
+  // 2026-09-05.
+  if (service && service.washer_id !== bookingData.washer_id) {
+    logger.warn('bookings.service_cross_tenant', {
+      washerId: bookingData.washer_id,
+      serviceId: bookingData.service_id,
+    })
+    return Response.json({ error: 'Prestation introuvable' }, { status: 404 })
+  }
 
   // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──
   const isOwner = !!authUser && washer?.user_id === authUser.id
@@ -201,10 +221,40 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at, admin)
     : (travel_fee ?? 0)
 
-  // Prix effectif : base (service + options) + frais de déplacement
-  const unit_price   = service ? vehiclePrice(service, vehicle_type) : 0
-  const count        = vehicle_count ?? 1
-  const base_price   = bookedPriceInput ?? (unit_price * count)
+  // ── Prix : recalculé intégralement côté serveur ────────────────────────
+  //
+  // Le montant envoyé par le navigateur REMPLAÇAIT le calcul serveur. Un
+  // simple appel avec `booked_price: 0.01` enregistrait une prestation à un
+  // centime, reçu PDF et comptabilité annuelle du laveur compris. Signalé par
+  // un audit externe le 2026-09-05.
+  //
+  // Tout est désormais dérivé du catalogue en base. Le champ reçu du client
+  // n'est plus lu du tout — il reste accepté par le schéma pour ne pas casser
+  // les clients existants, mais il est ignoré.
+  const count = vehicle_count ?? 1
+
+  // Plusieurs véhicules de types différents : on retarife chaque ligne au
+  // catalogue plutôt que de faire confiance au `unit_price` transmis.
+  const prix_vehicules = vehicles_detail?.length
+    ? vehicles_detail.reduce(
+        (total, v) => total + (service ? vehiclePrice(service, v.type) * v.count : 0),
+        0,
+      )
+    : (service ? vehiclePrice(service, vehicle_type) * count : 0)
+
+  // Options : seules celles réellement proposées par la prestation comptent,
+  // et à LEUR prix. Sans cette vérification, un client pouvait inventer une
+  // option à prix négatif pour faire chuter le total.
+  const cataloguePrix = new Map<string, number>(
+    ((service?.addons ?? []) as { id?: string; label?: string; price?: number }[])
+      .map(a => [String(a.id ?? a.label ?? ''), Number(a.price ?? 0)]),
+  )
+  const prix_options = (selected_addons ?? []).reduce((total, a) => {
+    const cle = String((a as { id?: string; label?: string }).id ?? (a as { label?: string }).label ?? '')
+    return total + (cataloguePrix.get(cle) ?? 0)
+  }, 0)
+
+  const base_price = prix_vehicules + prix_options
   const booked_price = base_price + computed_travel_fee
 
   // L'événement Google Agenda est créé uniquement à la confirmation du RDV

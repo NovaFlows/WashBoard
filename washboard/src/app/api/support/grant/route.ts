@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import {
   SUPPORT_ACCESS_DURATION_MS,
@@ -81,6 +82,33 @@ export async function DELETE() {
     .update({ revoked_at: new Date().toISOString() })
     .eq('washer_id', ctx.washerId)
     .is('revoked_at', null)
+
+  // Écrire la colonne ne suffisait pas : la session déjà ouverte du support
+  // continuait de fonctionner, et le rafraîchissement automatique la
+  // prolongeait indéfiniment. Le bouton « Fermer l'accès maintenant »
+  // affichait donc une promesse fausse — signalé par un audit externe le
+  // 2026-09-05.
+  //
+  // Portée « others » : toutes les autres sessions de ce compte sont
+  // invalidées, celle du laveur qui vient de cliquer est conservée. On ne
+  // peut pas distinguer la session du support de la sienne — elles portent le
+  // même utilisateur — donc on coupe tout le reste, ce qui inclut ses autres
+  // appareils. C'est le prix d'une promesse tenue.
+  const { data: { session } } = await ctx.supabase!.auth.getSession()
+  if (session?.access_token) {
+    const admin = createAdminClient()
+    const { error: coupureError } = await admin.auth.admin.signOut(session.access_token, 'others')
+    if (coupureError) {
+      // Le laveur doit savoir que la coupure a échoué : lui répondre « fermé »
+      // alors que l'accès reste ouvert serait exactement le mensonge qu'on
+      // corrige ici.
+      logger.error('support.grant.signout_failed', { washerId: ctx.washerId }, coupureError)
+      return NextResponse.json(
+        { error: 'L’accès n’a pas pu être coupé. Réessayez, ou changez votre mot de passe.' },
+        { status: 503 },
+      )
+    }
+  }
 
   if (error) {
     // Le laveur doit savoir que sa demande a échoué : lui répondre « fermé »

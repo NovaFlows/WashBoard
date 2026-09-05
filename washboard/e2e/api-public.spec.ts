@@ -182,3 +182,62 @@ test.describe('Accès support — protections', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 })
+
+test.describe('Isolation et contrôle serveur — findings d’audit', () => {
+  // Ces tests reproduisent des attaques réelles décrites par un audit externe
+  // le 2026-09-05. Ils échouent si l'une des protections est retirée.
+
+  test('les données sensibles des laveurs ne sont plus lisibles publiquement', async ({ request }) => {
+    // La policy « Lecture publique par slug » avait pour prédicat USING (true) :
+    // téléphones, identifiants Stripe et jetons Google de TOUS les laveurs
+    // étaient lisibles avec la seule clé publique.
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    test.skip(!url || !anon, 'Configuration Supabase absente')
+
+    const res = await request.get(`${url}/rest/v1/washers?select=google_refresh_token,stripe_customer_id&limit=1`, {
+      headers: { apikey: anon!, Authorization: `Bearer ${anon}` },
+    })
+    const body = await res.text()
+    // Soit l'accès est refusé, soit la liste est vide — jamais de données.
+    const lignes = res.ok() ? JSON.parse(body) : []
+    expect(lignes, `la table washers reste lisible : ${body.slice(0, 200)}`).toHaveLength(0)
+  })
+
+  test('la page de réservation ne publie aucun secret dans son code source', async ({ request }) => {
+    // Next.js sérialise toutes les props franchissant serveur→client. Passer
+    // l'objet washer entier publiait le stripe_customer_id en clair.
+    const res = await request.get(`/book/${TEST_WASHER_SLUG}`)
+    expect(res.status()).toBe(200)
+    const html = await res.text()
+    for (const champ of ['google_refresh_token', 'stripe_customer_id', 'stripe_subscription_id']) {
+      expect(html, `« ${champ} » présent dans le HTML public`).not.toContain(champ)
+    }
+  })
+
+  test('le prix d’une réservation ne peut pas être imposé par le client', async ({ request }) => {
+    // Un POST avec booked_price: 0.01 enregistrait une prestation à un centime.
+    const res = await request.post('/api/bookings', {
+      data: {
+        washer_id: '00000000-0000-0000-0000-000000000000',
+        service_id: '00000000-0000-0000-0000-000000000000',
+        client_name: '[E2E] Prix force',
+        client_email: 'e2e@example.test',
+        client_phone: '0600000000',
+        address: '1 rue de Test, Paris',
+        scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
+        booked_price: 0.01,
+      },
+    })
+    // Peu importe le motif du refus : ce qui compte est qu'aucune réservation
+    // à un centime ne soit créée.
+    expect(res.status()).not.toBe(201)
+  })
+
+  test('une dépense récurrente ne peut pas être réaffectée par un anonyme', async ({ request }) => {
+    const res = await request.patch('/api/expenses/recurring/00000000-0000-0000-0000-000000000000', {
+      data: { washer_id: '11111111-1111-1111-1111-111111111111' },
+    })
+    expect(res.status()).toBe(401)
+  })
+})

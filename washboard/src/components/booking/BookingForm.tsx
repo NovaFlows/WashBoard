@@ -24,13 +24,35 @@ type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; sel
 type Unavailability  = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
 
 type Props = {
-  washer: Washer
+  // Volontairement PAS le `Washer` complet.
+  //
+  // Next.js sérialise dans le HTML toutes les props qui franchissent la
+  // frontière serveur→client, utilisées ou non. Passer l'objet entier publiait
+  // donc `google_refresh_token`, `stripe_customer_id` et `user_id` dans le
+  // code source de chaque page de réservation — lisible par un simple
+  // « Afficher le code source » (constaté le 2026-09-05 : le
+  // `stripe_customer_id` y était en clair).
+  //
+  // Ce type liste ce dont le formulaire a réellement besoin, et rien d'autre.
+  // Y ajouter un champ doit rester un geste conscient.
+  washer: WasherPublic
   services: Service[]
   categories: ServiceCategory[]
   availabilities: Availability[]
   existingBookings: ExistingBooking[]
   unavailabilities: Unavailability[]
   accent?: string
+}
+
+/** Les seuls champs du laveur qui ont le droit d'atteindre le navigateur. */
+export type WasherPublic = {
+  id: string
+  name: string
+  base_address: string | null
+  team_size: number | null
+  travel_fee_mode: 'base' | 'previous'
+  travel_fee_tiers: { max_minutes: number; fee: number }[] | null
+  // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
 }
 
 export type FormState = Partial<BookingFormData>
