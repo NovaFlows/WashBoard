@@ -3,6 +3,7 @@ import { errorResponse } from '@/lib/apiError'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
 import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
@@ -83,9 +84,36 @@ export async function PATCH(request: NextRequest) {
     if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
       return NextResponse.json({ error: 'Lien invalide : 3 à 40 caractères, lettres minuscules, chiffres et tirets uniquement (sans tiret au début/fin).' }, { status: 400 })
     }
-    const { data: taken } = await supabase
-      .from('washers').select('id').eq('slug', s).neq('user_id', user.id).maybeSingle()
-    if (taken) {
+    // Unicité du lien.
+    //
+    // La lecture passe par le client admin, et non par la session du laveur.
+    // Depuis la fermeture de la lecture publique de `washers` (audit du
+    // 2026-09-05), un laveur connecté ne voit plus que sa propre fiche : la
+    // question « quelqu'un d'autre a-t-il déjà ce lien ? » ne pouvait donc
+    // plus rien trouver, et ce contrôle ne servait plus à rien.
+    //
+    // Les données, elles, n'ont jamais été en danger : la colonne est
+    // `slug text UNIQUE` en base, deux laveurs ne peuvent pas se retrouver
+    // avec le même lien. Mais celui qui tombait sur un lien déjà pris
+    // recevait une erreur 500 opaque au lieu d'une phrase claire.
+    //
+    // On compare le propriétaire en JavaScript plutôt qu'avec un `.neq()` :
+    // une fiche sans `user_id` (les toutes premières, créées à la main) ne
+    // serait jamais renvoyée par un `<>` SQL, NULL ne se comparant à rien.
+    const { data: proprietaire, error: erreurUnicite } = await createAdminClient()
+      .from('washers').select('id, user_id').eq('slug', s).maybeSingle()
+
+    if (erreurUnicite) {
+      // Une lecture en échec renverrait « personne », donc « lien libre ». La
+      // contrainte de base rattraperait le doublon, mais avec un message que
+      // personne ne comprend : on préfère demander de réessayer.
+      logger.error('washer.slug.unicite_illisible', { userId: user.id }, erreurUnicite)
+      return NextResponse.json(
+        { error: 'Impossible de vérifier la disponibilité de ce lien. Réessayez dans un instant.' },
+        { status: 503 },
+      )
+    }
+    if (proprietaire && proprietaire.user_id !== user.id) {
       return NextResponse.json({ error: 'Ce lien est déjà utilisé. Choisissez-en un autre.' }, { status: 409 })
     }
     updates.slug = s
@@ -148,6 +176,15 @@ export async function PATCH(request: NextRequest) {
     .update(updates)
     .eq('user_id', user.id)
 
-  if (error) return errorResponse('washer.patch.db', error)
+  if (error) {
+    // Deux laveurs qui réclament le même lien au même instant passent tous les
+    // deux le contrôle ci-dessus ; c'est la contrainte d'unicité de la base qui
+    // tranche. Le perdant mérite la même phrase claire que les autres, pas une
+    // erreur interne.
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'Ce lien est déjà utilisé. Choisissez-en un autre.' }, { status: 409 })
+    }
+    return errorResponse('washer.patch.db', error)
+  }
   return NextResponse.json({ success: true })
 }

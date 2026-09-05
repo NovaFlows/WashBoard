@@ -115,21 +115,31 @@ export async function POST(request: NextRequest) {
   }
 
   const baseSlug = generateSlug(name.trim())
-  const slug = `${baseSlug}-${randomUUID().slice(0, 4)}`
-
   const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { error: washerError } = await supabase
-    .from('washers')
-    .insert({
-      id: randomUUID(),
-      user_id: authData.user.id,
-      name: name.trim(),
-      slug,
-      phone: telephone,
-      trial_ends_at: trialEndsAt,
-      subscription_status: 'trial',
-    })
+  // Le lien public est formé du nom de l'entreprise et de quatre caractères
+  // tirés au hasard. La collision est improbable — il faut le même nom ET le
+  // même tirage — mais pas impossible, et `slug` est UNIQUE en base : elle se
+  // solderait par un échec d'inscription devant un vrai prospect, sans qu'il
+  // comprenne pourquoi. On retente simplement avec un autre suffixe.
+  let washerError: { code?: string; message?: string } | null = null
+  for (let essai = 0; essai < 3; essai++) {
+    const { error } = await supabase
+      .from('washers')
+      .insert({
+        id: randomUUID(),
+        user_id: authData.user.id,
+        name: name.trim(),
+        slug: `${baseSlug}-${randomUUID().slice(0, 4)}`,
+        phone: telephone,
+        trial_ends_at: trialEndsAt,
+        subscription_status: 'trial',
+      })
+
+    washerError = error
+    if (!error || error.code !== '23505') break
+    logger.warn('signup.slug_collision', { baseSlug, essai })
+  }
 
   if (washerError) {
     // L'utilisateur auth existe déjà à ce stade : sans rollback réussi, son

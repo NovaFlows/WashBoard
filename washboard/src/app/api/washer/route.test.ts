@@ -51,6 +51,9 @@ const fauxClient = {
 }
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => fauxClient }))
+// Le contrôle d'unicité du lien lit les fiches des AUTRES laveurs : il passe
+// donc par le client admin, la session ne voit que sa propre fiche.
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxClient }))
 vi.mock('@/lib/googleMaps', () => ({ getMapsApiKey: () => null }))
 
 const { PATCH } = await import('./route')
@@ -144,20 +147,58 @@ describe('PATCH /api/washer — options réservées au Pro (H6)', () => {
   })
 })
 
-describe('PATCH /api/washer — lien public', () => {
+describe('PATCH /api/washer — unicité du lien public', () => {
+  it('refuse un lien déjà pris par un autre laveur', async () => {
+    plan.slugPris = { data: { id: 'un-autre', user_id: 'user-2' }, error: null }
+    const { res, body } = await patch({ slug: 'kooki-clean' })
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/déjà utilisé/)
+    expect(updates).toHaveLength(0)
+  })
+
+  it('laisse un laveur reprendre son propre lien', async () => {
+    // Renvoyer 409 sur son propre lien bloquerait toute modification
+    // ultérieure de la fiche depuis le même formulaire.
+    plan.slugPris = { data: { id: 'w1', user_id: 'user-1' }, error: null }
+    const { res } = await patch({ slug: 'kooki-clean' })
+    expect(res.status).toBe(200)
+    expect(updates[0].slug).toBe('kooki-clean')
+  })
+
+  it('refuse un lien détenu par une fiche sans propriétaire', async () => {
+    // Les toutes premières fiches ont été créées à la main, sans `user_id`.
+    // Un `.neq()` SQL ne les aurait jamais vues : NULL ne se compare à rien.
+    plan.slugPris = { data: { id: 'fiche-orpheline', user_id: null }, error: null }
+    const { res } = await patch({ slug: 'kookiclean' })
+    expect(res.status).toBe(409)
+    expect(updates).toHaveLength(0)
+  })
+
+  it('refuse plutôt que de réserver un lien à l\'aveugle si la lecture échoue', async () => {
+    // Une lecture en échec renverrait « personne », donc « lien libre ».
+    plan.slugPris = { data: null, error: { message: 'RLS' } }
+    const { res } = await patch({ slug: 'kooki-clean' })
+    expect(res.status).toBe(503)
+    expect(updates).toHaveLength(0)
+  })
+
+  it('traduit un conflit d\'unicité de la base en message clair', async () => {
+    // Deux laveurs qui réclament le même lien au même instant passent tous les
+    // deux le contrôle : c'est la contrainte de base qui tranche.
+    plan.updateError = { code: '23505', message: 'duplicate key value violates unique constraint' }
+    const { res, body } = await patch({ slug: 'kooki-clean' })
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/déjà utilisé/)
+  })
+})
+
+describe('PATCH /api/washer — format du lien public', () => {
   it('refuse un lien au format invalide', async () => {
     // Les majuscules, elles, sont acceptées puis abaissées (voir plus bas).
     for (const slug of ['ab', '-tiret-devant', 'tiret-derriere-', 'avec espace', 'accentué', 'a'.repeat(41)]) {
       const { res } = await patch({ slug })
       expect(res.status, slug).toBe(400)
     }
-    expect(updates).toHaveLength(0)
-  })
-
-  it('refuse un lien déjà pris par un autre laveur', async () => {
-    plan.slugPris = { data: { id: 'un-autre' }, error: null }
-    const { res } = await patch({ slug: 'kooki-clean' })
-    expect(res.status).toBe(409)
     expect(updates).toHaveLength(0)
   })
 
