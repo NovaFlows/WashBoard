@@ -107,15 +107,15 @@ function AppBetaBanner() {
   }
 
   return (
-    <div className="bg-[#1651E8] text-white text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+    <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
       <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
         <span className="inline-flex items-center gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-wide bg-white/20 px-1.5 py-0.5 rounded">Bêta</span>
+          <span className="text-[10px] font-black uppercase tracking-wide bg-blue-600/10 dark:bg-blue-400/15 px-1.5 py-0.5 rounded">Bêta</span>
           Recevez vos réservations en notification sur votre téléphone.
         </span>
         <Link
           href="/dashboard/guide#guide-application"
-          className="underline font-bold whitespace-nowrap hover:opacity-80"
+          className="underline font-bold whitespace-nowrap hover:opacity-70"
         >
           En savoir plus →
         </Link>
