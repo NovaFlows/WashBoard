@@ -13,7 +13,7 @@ import BillingToggle from '@/components/ui/BillingToggle'
 
 // Slogans courts et uniformes — pas de saut de layout
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
-  { pre: 'Lave plus. ', hl: 'Roule moins.', post: '' },
+  { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
   { pre: 'Un quartier, un trajet, ', hl: 'trois lavages.', post: '' },
 ]
@@ -339,7 +339,7 @@ export default function LandingPage() {
                 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.5 } } }}
                 className="text-xs font-black text-[#1651E8] dark:text-[#00C4D4] uppercase tracking-[0.22em] mb-8"
               >
-                Lavage auto mobile
+                Nettoyage & entretien mobile
               </motion.p>
               <motion.h1
                 variants={{ hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
@@ -472,7 +472,7 @@ export default function LandingPage() {
             L&apos;essentiel. Sans le reste.
           </h2>
           <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Un seul outil pour le laveur auto mobile : la réservation, l&apos;agenda, les clients
+            Un seul outil pour le pro du nettoyage à domicile : la réservation, l&apos;agenda, les clients
             et les comptes. Pas dix logiciels qui ne se parlent pas.
           </p>
         </FadeUp>
@@ -489,7 +489,7 @@ export default function LandingPage() {
                 Créneaux groupés par zone
               </h3>
               <p className="text-white/75 leading-relaxed mb-6 text-sm sm:text-base">
-                Un client réserve rue des Acacias. WashBoard envoie une offre à ses voisins du même bloc. Tu arrives une fois, tu enchaînes 3 lavages. Tu ne bouges pas le van.
+                Un client réserve rue des Acacias. WashBoard envoie une offre à ses voisins du même bloc. Tu arrives une fois, tu enchaînes 3 prestations. Tu ne perds pas de temps sur la route.
               </p>
               <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold">
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -558,10 +558,10 @@ export default function LandingPage() {
             <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
               <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">En moyenne</p>
               <p className="text-7xl sm:text-8xl lg:text-[9rem] font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
-                +1 951€
+                +40
               </p>
-              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-2">de CA net par mois</p>
-              <p className="text-sm text-slate-400 dark:text-slate-600">+100€/jour · −49€/mois d&apos;abonnement · 22 jours ouvrés</p>
+              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-2">rendez-vous en plus par mois</p>
+              <p className="text-sm text-slate-400 dark:text-slate-600">+2 rendez-vous groupés en moyenne par jour · 22 jours ouvrés</p>
             </div>
           </FadeUp>
         </div>
@@ -683,11 +683,11 @@ export default function LandingPage() {
             >
               <div aria-hidden className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 bg-[#00C4D4]/8 blur-3xl rounded-full pointer-events-none" />
               <h2 className="relative text-4xl sm:text-5xl font-black tracking-tight mb-5 text-white leading-[1.05]">
-                Tu laves des voitures.<br />
+                Tu fais le service.<br />
                 <span className="text-[#00C4D4]">On gère le reste.</span>
               </h2>
               <p className="relative text-white/60 text-base mb-10 max-w-sm mx-auto">
-                Rejoins les laveurs auto mobiles qui ont optimisé leur tournée avec WashBoard.
+                Rejoins les pros du nettoyage et de l&apos;entretien mobile qui ont optimisé leur tournée avec WashBoard.
               </p>
               <Link href="/signup" className="relative inline-block px-9 py-4 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#1651E8]/30">
                 Lancer WashBoard
@@ -702,7 +702,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 text-center">
           <p className="text-xs text-slate-400 leading-relaxed">
-            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">laveurs auto mobiles</strong> et aux professionnels du <strong className="font-medium text-slate-500">detailing à domicile</strong>. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants du lavage automobile en France.
+            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien à domicile</strong> — lavage auto, detailing, ménage, entretien de piscine et bien d&apos;autres. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants du service à domicile en France.
           </p>
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">
@@ -722,7 +722,7 @@ export default function LandingPage() {
               <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
             </div>
-            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel lavage auto mobile · Tous droits réservés</p>
+            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel pour pros du nettoyage mobile · Tous droits réservés</p>
             <div className="flex gap-4 text-xs text-slate-400">
               <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
               <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
