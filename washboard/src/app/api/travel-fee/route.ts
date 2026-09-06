@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeTravelFee } from '@/lib/travelFee'
+import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
 
 export async function GET(req: Request) {
+  // Chaque appel de cette route coûte de l'argent chez Google : plafond partagé, voir publicApiGuard.
+  const refus = refusSiQuotaMapsDepasse(req)
+  if (refus) return refus
+
   const { searchParams } = new URL(req.url)
   const washer_id    = searchParams.get('washer_id')
   const address      = searchParams.get('address')

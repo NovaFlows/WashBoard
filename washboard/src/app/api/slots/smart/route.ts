@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { addonsDuration } from '@/lib/pricing'
+import { addonsDuration } from '@/lib/pricing'
+import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
 
 type DmResponse = {
   status: string
@@ -10,6 +11,10 @@ type DmResponse = {
 }
 
 export async function GET(request: NextRequest) {
+  // Chaque appel de cette route coûte de l'argent chez Google : plafond partagé, voir publicApiGuard.
+  const refus = refusSiQuotaMapsDepasse(request)
+  if (refus) return refus
+
   const { searchParams } = new URL(request.url)
   const washerId = searchParams.get('washer_id')
   const address  = searchParams.get('address')

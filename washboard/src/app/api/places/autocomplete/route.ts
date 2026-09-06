@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchGoogleMaps } from '@/lib/googleMaps'
+import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
 
 type Prediction = { description: string; place_id: string }
 type Reponse = { status?: string; error_message?: string; predictions?: Prediction[] }
 
 export async function GET(req: NextRequest) {
+  // Chaque appel de cette route coûte de l'argent chez Google : plafond partagé, voir publicApiGuard.
+  const refus = refusSiQuotaMapsDepasse(req)
+  if (refus) return refus
+
   const q = req.nextUrl.searchParams.get('q')
   if (!q || q.trim().length < 3) return NextResponse.json({ suggestions: [] })
 

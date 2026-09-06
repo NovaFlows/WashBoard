@@ -3,6 +3,7 @@ import { getMapsApiKey } from '@/lib/googleMaps'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verdictZone } from '@/lib/zone'
 import type { ZoneConfig } from '@/types'
+import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
 
 // Appelée pendant la saisie de l'adresse, pour prévenir le client avant qu'il
 // aille au bout du formulaire. La règle elle-même vit dans `@/lib/zone` et est
@@ -10,6 +11,10 @@ import type { ZoneConfig } from '@/types'
 // d'interface, pas un contrôle de sécurité.
 
 export async function GET(request: NextRequest) {
+  // Chaque appel de cette route coûte de l'argent chez Google : plafond partagé, voir publicApiGuard.
+  const refus = refusSiQuotaMapsDepasse(request)
+  if (refus) return refus
+
   const { searchParams } = new URL(request.url)
   const washerId = searchParams.get('washer_id')
   const address  = searchParams.get('address')
