@@ -587,6 +587,21 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟢 Polish / UX
 
+- [x] ~~**Bouton désactivé indistinguable d'un bouton actif en thème sombre.**~~
+      **Classé sans suite le 2026-09-06.** Relevé par `designer` en réunion d'équipe : le
+      bouton principal du parcours de réservation utilise `disabled:opacity-40` sur la
+      couleur d'accent du laveur. En thème clair, ça donne un bleu délavé qui se lit bien
+      comme « éteint » ; en thème sombre, 40 % de bleu sur un fond bleu nuit reste un bloc
+      plein qui ressemble à un bouton actif — le client tape dessus et rien ne se passe,
+      sur toutes les étapes du parcours. Captures clair/sombre prises à l'appui sur le
+      compte de test. **Alexandre a tranché : on ne change pas.** Ne plus faire remonter ce
+      point dans les rapports d'équipe.
+      Écartés dans le même lot, pour la même raison : l'anneau de focus clavier invisible
+      sur les écrans de connexion (`.wb-input { outline: none }` de `globals.css` écrase la
+      règle globale `*:focus-visible`, même spécificité, la dernière gagne), et le fond
+      photo de la page de réservation qui ne couvre pas toute la hauteur (le bloc « Avis
+      clients » se retrouve blanc sur blanc en thème clair).
+
 - [x] 2026-08-26 — **Refonte du hero** (inspiration peekly.app) : ciel étoilé en CSS
       (dark uniquement) + bande de nuages en **vraie photo générée**, la même dans les deux
       thèmes. Les tentatives en dégradés CSS purs étaient vouées à l'échec — inspection du

@@ -21,17 +21,50 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const admin = createAdminClient()
   const { data: washer } = await admin
     .from('washers')
-    .select('name, logo_url')
+    .select('name, logo_url, welcome_message')
     .eq('slug', slug)
     .single()
 
-  if (!washer) return { title: 'Réservation' }
+  // Page privée d'un laveur : elle ne doit pas se retrouver dans un moteur de
+  // recherche, même quand elle n'existe pas. `follow` reste vrai, les liens
+  // sortants n'ont pas à être pénalisés.
+  const robots = { index: false, follow: true }
+
+  if (!washer) return { title: 'Réservation', robots }
+
+  // Sans ces trois champs, la page héritait de ceux de la page d'accueil
+  // (`layout.tsx` définit un `openGraph` complet et `canonical: "/"`). Un
+  // laveur qui collait son lien dans WhatsApp ou en bio Instagram voyait donc
+  // s'afficher « WashBoard — L'outil de gestion pour laveurs auto mobiles » :
+  // notre argumentaire B2B, envoyé à SES clients, à la place de son nom.
+  // Relevé lors de la revue du 2026-09-06.
+  const description = washer.welcome_message?.trim()
+    || `Réservez votre lavage avec ${washer.name} en quelques clics.`
 
   return {
     title: `${washer.name} — Réservation`,
-    icons: washer.logo_url
-      ? { icon: washer.logo_url, shortcut: washer.logo_url, apple: washer.logo_url }
-      : undefined,
+    description,
+    robots,
+    // Neutralise le canonical global qui pointait toutes les pages de
+    // réservation vers la page d'accueil.
+    alternates: { canonical: `/book/${slug}` },
+    openGraph: {
+      type: 'website',
+      title: `${washer.name} — Réservation en ligne`,
+      description,
+      url: `/book/${slug}`,
+      siteName: washer.name,
+      locale: 'fr_FR',
+      // Le logo vaut mieux que rien : sans image, l'aperçu se réduit à deux
+      // lignes de texte et passe inaperçu dans un fil de discussion.
+      images: washer.logo_url ? [{ url: washer.logo_url }] : undefined,
+    },
+    twitter: {
+      card: 'summary',
+      title: `${washer.name} — Réservation en ligne`,
+      description,
+      images: washer.logo_url ? [washer.logo_url] : undefined,
+    },
   }
 }
 
