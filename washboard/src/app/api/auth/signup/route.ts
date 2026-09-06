@@ -70,29 +70,42 @@ export async function POST(request: NextRequest) {
   // Reste théoriquement possible : deux inscriptions au même instant avec le
   // même numéro passeraient toutes les deux. Sans conséquence autre que deux
   // comptes à rapprocher à la main, et hors de portée au volume actuel.
-  const { data: dejaPris, error: erreurRecherche } = await supabase
-    .from('washers')
-    .select('id')
-    .eq('phone', telephone)
-    .maybeSingle()
+  // L'exemption est évaluée AVANT la requête, et pas seulement après.
+  //
+  // Sinon : dès qu'un deuxième compte portait le numéro exempté, `maybeSingle()`
+  // renvoyait `PGRST116` (« Results contain 2 rows, requires 1 row »), la route
+  // y voyait une panne de lecture et refusait l'inscription avec « Impossible
+  // de vérifier vos informations » — exactement à la personne que l'exemption
+  // devait servir. Constaté le 2026-09-06, deux fiches portaient déjà ce numéro.
+  if (!isPhoneExemptFromUniqueness(telephone)) {
+    // `limit(1)` plutôt que `maybeSingle()` : si des doublons existent déjà en
+    // base, on veut simplement le constater. Les transformer en erreur de
+    // lecture ferait refuser une inscription légitime pour un défaut de données
+    // qui ne concerne pas le nouvel inscrit.
+    const { data: dejaPris, error: erreurRecherche } = await supabase
+      .from('washers')
+      .select('id')
+      .eq('phone', telephone)
+      .limit(1)
 
-  if (erreurRecherche) {
-    // Laisser passer en cas d'échec de lecture reviendrait à désactiver la
-    // protection en silence, exactement le motif qu'on traque ailleurs.
-    logger.error('signup.phone_check_failed', {}, erreurRecherche)
-    return NextResponse.json(
-      { error: 'Impossible de vérifier vos informations. Réessayez dans un instant.' },
-      { status: 503 },
-    )
-  }
+    if (erreurRecherche) {
+      // Laisser passer en cas d'échec de lecture reviendrait à désactiver la
+      // protection en silence, exactement le motif qu'on traque ailleurs.
+      logger.error('signup.phone_check_failed', {}, erreurRecherche)
+      return NextResponse.json(
+        { error: 'Impossible de vérifier vos informations. Réessayez dans un instant.' },
+        { status: 503 },
+      )
+    }
 
-  if (dejaPris && !isPhoneExemptFromUniqueness(telephone)) {
-    // Message volontairement identique en esprit à celui de l'email déjà
-    // utilisé : on ne révèle pas à qui appartient le numéro.
-    return NextResponse.json(
-      { error: 'Ce numéro de téléphone est déjà associé à un compte' },
-      { status: 400 },
-    )
+    if (dejaPris?.length) {
+      // Message volontairement identique en esprit à celui de l'email déjà
+      // utilisé : on ne révèle pas à qui appartient le numéro.
+      return NextResponse.json(
+        { error: 'Ce numéro de téléphone est déjà associé à un compte' },
+        { status: 400 },
+      )
+    }
   }
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
