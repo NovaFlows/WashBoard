@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
+import { notifierEquipe } from '@/lib/push'
 
 function generateSlug(name: string): string {
   return name
@@ -157,6 +158,30 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Erreur lors de la création du profil' }, { status: 500 })
   }
+
+  logger.info('signup.washer_created', { userId: authData.user.id })
+
+  // Une inscription est l'événement le plus important du produit, et rien ne le
+  // signalait : il fallait aller regarder la base pour s'en apercevoir. La
+  // notification part vers les appareils de l'équipe uniquement — jamais vers
+  // les laveurs (voir `notifierEquipe`).
+  //
+  // Attendue, pas lancée dans le vide : Vercel coupe la fonction dès la réponse
+  // renvoyée, et un envoi non attendu n'aurait pas le temps de partir. La
+  // fonction n'échoue jamais, l'inscription ne peut donc pas en pâtir.
+  const finEssai = new Date(trialEndsAt).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long',
+  })
+  await notifierEquipe({
+    title: '🎉 Nouveau client WashBoard',
+    body: [
+      `🏢 ${name.trim()}`,
+      `📧 ${email.trim()}`,
+      `⏳ Essai jusqu'au ${finEssai}`,
+    ].join('\n'),
+    url: '/dashboard',
+    tag: `signup-${authData.user.id}`,
+  })
 
   return NextResponse.json({ success: true })
 }
