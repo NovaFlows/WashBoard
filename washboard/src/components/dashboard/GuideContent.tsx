@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { searchGuide, type GuideEntry } from '@/lib/guide'
 
@@ -49,6 +49,23 @@ function EntryCard({ entry }: { entry: GuideEntry }) {
  */
 export default function GuideContent({ intro }: { intro?: React.ReactNode }) {
   const [query, setQuery] = useState('')
+
+  // Amener le lecteur sur la bonne section quand on arrive avec une ancre
+  // (« En savoir plus » du bandeau d'annonce, par exemple). Le navigateur ne le
+  // fait pas de lui-même ici : la page est rendue côté client, et l'ancre est
+  // cherchée avant que les sections n'existent.
+  useEffect(() => {
+    const ancre = window.location.hash.slice(1)
+    if (!ancre) return
+    // Deux images d'attente : la première laisse React poser le DOM, la
+    // seconde laisse la mise en page se stabiliser avant de mesurer.
+    const t = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        document.getElementById(ancre)?.scrollIntoView({ block: 'start' })
+      }),
+    )
+    return () => cancelAnimationFrame(t)
+  }, [])
 
   const sections = useMemo(() => searchGuide(query), [query])
 

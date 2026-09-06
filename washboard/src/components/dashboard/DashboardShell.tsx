@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -49,6 +49,79 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
       </svg>
     </button>
+  )
+}
+
+// Annonce de l'application mobile, en bêta.
+//
+// Trois règles pour qu'un bandeau d'annonce ne devienne pas un meuble qu'on ne
+// voit plus :
+//   1. il ne s'affiche pas à qui a DÉJÀ activé les notifications — annoncer une
+//      nouveauté à quelqu'un qui s'en sert est le meilleur moyen d'apprendre à
+//      ignorer les bandeaux ;
+//   2. il se ferme, et la fermeture est retenue d'une visite à l'autre ;
+//   3. il ne s'affiche pas non plus sur un ordinateur : l'application s'installe
+//      sur un téléphone, la proposer ailleurs n'apporte rien.
+const CLE_FERME = 'wb_annonce_app_beta_fermee'
+
+function AppBetaBanner() {
+  // On part de « masqué » : ce qui décide de l'affichage n'existe que dans le
+  // navigateur, et un rendu serveur différent provoquerait un clignotement.
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    let annule = false
+    ;(async () => {
+      try {
+        if (localStorage.getItem(CLE_FERME)) return
+      } catch {
+        // Stockage bloqué (navigation privée, réglage du navigateur) : on
+        // affiche quand même, quitte à le remontrer. Mieux vaut un bandeau de
+        // trop qu'une annonce que personne ne voit jamais.
+      }
+
+      const surMobile = window.matchMedia('(max-width: 767px)').matches
+        || /Android|iPhone|iPad|iPod/.test(navigator.userAgent)
+      if (!surMobile) return
+
+      // Déjà abonné aux notifications : il n'a rien à apprendre ici.
+      try {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const reg = await navigator.serviceWorker.getRegistration()
+          if (await reg?.pushManager.getSubscription()) return
+        }
+      } catch {
+        // Impossible de savoir : on affiche, le guide ne fera de mal à personne.
+      }
+
+      if (!annule) setVisible(true)
+    })()
+    return () => { annule = true }
+  }, [])
+
+  if (!visible) return null
+
+  function fermer() {
+    setVisible(false)
+    try { localStorage.setItem(CLE_FERME, '1') } catch { /* rien à faire */ }
+  }
+
+  return (
+    <div className="bg-[#1651E8] text-white text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-wide bg-white/20 px-1.5 py-0.5 rounded">Bêta</span>
+          Recevez vos réservations en notification sur votre téléphone.
+        </span>
+        <Link
+          href="/dashboard/guide#guide-application"
+          className="underline font-bold whitespace-nowrap hover:opacity-80"
+        >
+          En savoir plus →
+        </Link>
+      </div>
+      <DismissButton onDismiss={fermer} />
+    </div>
   )
 }
 
@@ -152,6 +225,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
+        <AppBetaBanner />
         <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button

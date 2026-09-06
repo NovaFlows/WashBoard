@@ -169,6 +169,48 @@ export const GUIDE: GuideSection[] = [
       },
     ],
   },
+  {
+    id: 'application',
+    title: 'Application mobile (bêta)',
+    summary: 'Recevoir ses réservations en notification sur son téléphone.',
+    entries: [
+      {
+        id: 'app-pourquoi',
+        question: 'À quoi sert l\'application ?',
+        answer:
+          "Elle vous prévient sur votre téléphone dès qu'un client réserve, sans que vous ayez à ouvrir vos emails. La notification affiche le nom du client, la prestation et l'horaire ; en la touchant, vous arrivez directement sur le rendez-vous. Sur Android, deux boutons permettent même de confirmer ou refuser sans ouvrir l'application. L'email continue de partir en parallèle : la notification s'ajoute, elle ne remplace rien.",
+        keywords: ['application', 'appli', 'mobile', 'notification', 'alerte', 'telephone', 'beta'],
+      },
+      {
+        id: 'app-installer',
+        question: 'Comment installer l\'application ?',
+        answer:
+          "Il n'y a rien à télécharger : WashBoard s'ajoute directement à l'écran d'accueil depuis votre navigateur. Sur iPhone, ouvrez washboard.fr dans Safari (et pas dans Chrome ni dans un navigateur intégré à Instagram), touchez le bouton Partager en bas de l'écran, puis « Sur l'écran d'accueil ». Sur Android, ouvrez washboard.fr dans Chrome, touchez le menu ⋮ en haut à droite, puis « Installer l'application » ou « Ajouter à l'écran d'accueil ». L'icône WashBoard apparaît ensuite parmi vos applications, et elle s'ouvre en plein écran, sans barre de navigateur.",
+        keywords: ['installer', 'installation', 'ecran accueil', 'telecharger', 'iphone', 'android', 'safari', 'chrome', 'pwa'],
+      },
+      {
+        id: 'app-notifications',
+        question: 'Comment activer les notifications ?',
+        answer:
+          "Une fois l'application ajoutée à l'écran d'accueil, ouvrez-la depuis son icône — pas depuis le navigateur — puis allez dans [Paramètres](/dashboard/parametres) et activez les notifications. Votre téléphone demandera l'autorisation : acceptez-la. Un essai vous confirme que tout fonctionne. Sur iPhone, l'ordre compte : Apple interdit les notifications tant que l'application n'a pas été ajoutée à l'écran d'accueil, donc installez d'abord, activez ensuite.",
+        keywords: ['notification', 'activer', 'autorisation', 'permission', 'alerte', 'push'],
+      },
+      {
+        id: 'app-rien-recu',
+        question: 'Je ne reçois aucune notification',
+        answer:
+          "Quatre causes, de la plus fréquente à la plus rare. D'abord, sur iPhone, l'application doit avoir été ouverte depuis son icône sur l'écran d'accueil : depuis Safari, Apple bloque les notifications. Ensuite, l'autorisation a peut-être été refusée au moment de la demande — dans ce cas le bouton ne suffit plus, il faut la réactiver dans les réglages du téléphone, à la ligne WashBoard. Vérifiez aussi que le mode concentration ou « Ne pas déranger » n'est pas actif. Enfin, si vous avez changé de téléphone ou désinstallé l'application, l'abonnement est perdu : réinstallez et réactivez. En cas de doute, l'email de réservation, lui, part toujours.",
+        keywords: ['pas de notification', 'rien recu', 'ne marche pas', 'probleme', 'bloque', 'refuse', 'iphone'],
+      },
+      {
+        id: 'app-beta',
+        question: 'Pourquoi « bêta » ?',
+        answer:
+          "L'application fonctionne, mais elle est récente et nous la surveillons de près. Deux limites connues : sur iPhone, les boutons « Confirmer » et « Refuser » n'apparaissent pas dans la notification — Apple ne les gère pas — la notification reste simplement cliquable. Et une notification peut arriver avec quelques minutes de retard si votre téléphone est en veille prolongée. Si quelque chose vous semble anormal, écrivez-nous : c'est exactement ce qu'on cherche à savoir pendant cette phase.",
+        keywords: ['beta', 'test', 'limite', 'bug', 'ios', 'iphone', 'retard'],
+      },
+    ],
+  },
 ]
 
 /** Texte brut d'une entrée, liens aplatis — sert à la recherche. */
