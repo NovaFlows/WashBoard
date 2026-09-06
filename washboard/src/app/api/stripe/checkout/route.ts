@@ -15,11 +15,13 @@ export const POST = withErrorHandling('stripe.checkout', async (req: NextRequest
   const priceId = STRIPE_PRICE_IDS[plan]
   if (!priceId) throw new AppError('plan inconnu', { status: 400, publicMessage: 'Plan invalide' })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at, grandfathered')
     .eq('user_id', user.id)
     .single()
+
+  if (errWasher) logger.error('stripe.checkout.washer.read_failed', {}, errWasher)
   if (!washer) throw new AppError('washer introuvable', { status: 404, publicMessage: 'Laveur introuvable' })
 
   // Les laveurs historiques (grandfathered) ont déjà tout débloqué → pas de paiement.

@@ -8,8 +8,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('id').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('unavailabilities.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const { data, error } = await supabase
@@ -39,8 +41,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('id').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('unavailabilities.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const { start_date, end_date, label, team_members_off } = await request.json()

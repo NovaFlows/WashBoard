@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { sanitizeTypes } from '@/lib/categoryTypes'
+import { sanitizeTypes } from '@/lib/categoryTypes'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('id').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('categories.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const { name, types, display_order } = await request.json()

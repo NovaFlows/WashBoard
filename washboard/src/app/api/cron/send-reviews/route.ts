@@ -51,11 +51,13 @@ export async function GET(request: NextRequest) {
       continue
     }
 
-    const { data: washer } = await admin
+    const { data: washer, error: errWasher } = await admin
       .from('washers')
       .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
       .eq('id', b.washer_id)
       .single()
+
+    if (errWasher) logger.error('cron.send-reviews.washer.read_failed', { washerId: b.washer_id }, errWasher)
 
     if (!washer?.review_enabled || !washer.google_review_url) {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
@@ -92,12 +94,14 @@ export async function GET(request: NextRequest) {
         monthStart.setDate(1)
         monthStart.setHours(0, 0, 0, 0)
 
-        const { count } = await admin
+        const { count, error: errCount } = await admin
           .from('bookings')
           .select('id', { count: 'exact', head: true })
           .eq('washer_id', b.washer_id)
           .not('review_sms_sent_at', 'is', null)
           .gte('review_sms_sent_at', monthStart.toISOString())
+
+        if (errCount) logger.error('cron.send-reviews.count.read_failed', { washerId: b.washer_id }, errCount)
 
         if ((count ?? 0) < quota) {
           try {

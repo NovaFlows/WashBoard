@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature } from '@/lib/plan'
+import { logger } from '@/lib/logger'
 
 // Endpoint de diagnostic : vérifie pourquoi les emails/SMS d'avis ne partent pas.
 // Accessible uniquement par le laveur connecté.
@@ -10,11 +11,13 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('id, name, review_enabled, google_review_url, review_delay_hours, review_channel, plan, grandfathered')
     .eq('user_id', user.id)
     .single()
+
+  if (errWasher) logger.error('debug.reviews.washer.read_failed', {}, errWasher)
 
   if (!washer) return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
 
@@ -26,22 +29,24 @@ export async function GET() {
   const nowIso = new Date().toISOString()
 
   // 10 derniers RDV terminés
-  const { data: recentDone } = await admin
+  const { data: recentDone, error: errRecentDone } = await admin
     .from('bookings')
     .select('id, client_name, client_email, client_phone, status, review_request_at, review_request_sent_at, created_at')
     .eq('washer_id', washer.id)
     .eq('status', 'done')
     .order('created_at', { ascending: false })
     .limit(10)
+  if (errRecentDone) logger.error('debug.reviews.recentDone.read_failed', {}, errRecentDone)
 
   // RDV en attente d'envoi (dûs mais pas encore traités)
-  const { data: pending } = await admin
+  const { data: pending, error: errPending } = await admin
     .from('bookings')
     .select('id, client_name, review_request_at')
     .eq('washer_id', washer.id)
     .lte('review_request_at', nowIso)
     .is('review_request_sent_at', null)
     .not('review_request_at', 'is', null)
+  if (errPending) logger.error('debug.reviews.pending.read_failed', {}, errPending)
 
   const diagWasher = {
     review_enabled: washer.review_enabled,

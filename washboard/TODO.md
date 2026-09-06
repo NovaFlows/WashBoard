@@ -440,10 +440,26 @@ rien à faire, mais que le projet reste globalement sain.
   - Laissés tels quels, à raison : `supabase/server.ts` (motif Next standard pour les
     cookies), `googleReviews` (décoratif), `purge-accounts` (nettoyage best-effort),
     `AddressAutocomplete` (la vraie cause est maintenant tracée côté serveur).
-  - [ ] Reste ~100 lectures Supabase dont l'`error` n'est pas récupéré. La plupart sont
-        des écrans du dashboard où un échec donne une liste vide : gênant, pas dangereux.
-        À traiter au fil de l'eau, en priorisant tout ce qui **conditionne une
-        autorisation**.
+  - [x] 2026-09-06 — **Les 32 lectures des routes API et cron sont tracées.** Le
+        « ~100 » annoncé ici était une estimation : le compte réel était de **55**.
+        Les 32 des routes `src/app/api/**` (dont 4 dans les cron, les plus
+        embêtantes puisque personne ne les regarde tourner) récupèrent désormais
+        l'`error` et la journalisent sous `<route>.<donnée>.read_failed`.
+        Le comportement n'a PAS été modifié : ces routes refusaient déjà
+        correctement quand la donnée manquait, le seul défaut était le silence.
+        Deux exceptions traitées à la main : le plafond quotidien de
+        `api/bookings` est le seul comptage dont l'échec laisse *passer* — on
+        continue quand même (bloquer un laveur parce qu'un comptage anti-abus a
+        échoué coûterait plus cher que le spam), mais plus en silence ; et
+        `zone/check` garde son repli permissif assumé, désormais tracé avec
+        l'identifiant du laveur.
+  - [ ] Restent **23 lectures** : 18 dans les pages du dashboard, 5 dans `lib/`
+        (`google-calendar.ts:48`, `materializeRecurring.ts:41,51`,
+        `travelFee.ts:39,67`). Celles des pages donnent un écran ou une liste vide,
+        visible immédiatement par le laveur, donc autocorrectif — contrairement aux
+        routes. Les cinq de `lib/` méritent d'être regardées en premier : c'est de
+        la logique métier appelée depuis plusieurs endroits, et `travelFee` a déjà
+        eu un repli muet à 0 € pendant la panne de facturation Google.
 
 - [x] 2026-08-26 — **Clé Maps renommée et centralisée.** `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
       devient `GOOGLE_MAPS_API_KEY`, lue à un seul endroit (`lib/googleMaps.ts`) au lieu de

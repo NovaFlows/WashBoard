@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getStripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
+import { logger } from '@/lib/logger'
 
 export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('stripe_customer_id')
     .eq('user_id', user.id)
     .single()
+
+  if (errWasher) logger.error('stripe.portal.washer.read_failed', {}, errWasher)
 
   if (!washer?.stripe_customer_id) {
     return NextResponse.json({ error: 'Aucun abonnement Stripe actif' }, { status: 400 })

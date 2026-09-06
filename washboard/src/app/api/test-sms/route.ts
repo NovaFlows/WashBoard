@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/sms'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature } from '@/lib/plan'
+import { logger } from '@/lib/logger'
 
 export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('name, phone, sms_sender, plan, grandfathered, google_review_url')
     .eq('user_id', user.id)
     .single()
+
+  if (errWasher) logger.error('test-sms.washer.read_failed', {}, errWasher)
 
   if (!washer) return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
   if (!hasFeature(washer, 'avis_sms')) {

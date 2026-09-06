@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
-import BookingPDF from '@/components/pdf/BookingPDF'
+import BookingPDF from '@/components/pdf/BookingPDF'
+import { logger } from '@/lib/logger'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -11,11 +12,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // l'id exact (UUID = jeton d'accès).
   const supabase = createAdminClient()
 
-  const { data: booking } = await supabase
+  const { data: booking, error: errBooking } = await supabase
     .from('bookings')
     .select('*, services(name), washers(name, phone)')
     .eq('id', id)
     .single()
+
+  if (errBooking) logger.error('bookings.id.pdf.booking.read_failed', {}, errBooking)
 
   if (!booking) return new Response('Not found', { status: 404 })
 

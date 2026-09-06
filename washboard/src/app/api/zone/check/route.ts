@@ -3,7 +3,8 @@ import { getMapsApiKey } from '@/lib/googleMaps'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verdictZone } from '@/lib/zone'
 import type { ZoneConfig } from '@/types'
-import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
+import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
+import { logger } from '@/lib/logger'
 
 // Appelée pendant la saisie de l'adresse, pour prévenir le client avant qu'il
 // aille au bout du formulaire. La règle elle-même vit dans `@/lib/zone` et est
@@ -24,11 +25,12 @@ export async function GET(request: NextRequest) {
   // Sans session : lecture côté serveur, la table `washers` n'étant plus
   // lisible par la clé publique.
   const supabase = createAdminClient()
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('zone_config')
     .eq('id', washerId)
     .single()
+  if (errWasher) logger.error('zone.check.washer.read_failed', { washerId }, errWasher)
 
   const verdict = await verdictZone(
     washer?.zone_config as ZoneConfig | null,

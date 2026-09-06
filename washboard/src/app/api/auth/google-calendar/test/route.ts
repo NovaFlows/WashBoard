@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { google } from 'googleapis'
+import { google } from 'googleapis'
+import { logger } from '@/lib/logger'
 
 /**
  * Diagnostic : tente de créer puis supprimer un événement de test dans
@@ -13,8 +14,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ ok: false, error: 'Non connecté à WashBoard' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('id, google_refresh_token').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('auth.google-calendar.test.washer.read_failed', {}, errWasher)
 
   if (!washer) return NextResponse.json({ ok: false, error: 'Profil laveur introuvable' }, { status: 404 })
   if (!washer.google_refresh_token)

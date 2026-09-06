@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { getGoogleAuthUrl } from '@/lib/google-calendar'
+import { getGoogleAuthUrl } from '@/lib/google-calendar'
+import { logger } from '@/lib/logger'
 
 // Départ de la connexion Google Agenda.
 //
@@ -22,8 +23,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL))
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('id').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('auth.google-calendar.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL))
 
   const state = randomBytes(32).toString('hex')

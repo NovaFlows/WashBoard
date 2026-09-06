@@ -28,11 +28,13 @@ export async function GET(request: NextRequest) {
   // côté serveur, la table `washers` n'étant plus lisible par la clé publique.
   const supabase = createAdminClient()
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value')
     .eq('id', washerId)
     .single()
+
+  if (errWasher) logger.error('slots.smart.washer.read_failed', {}, errWasher)
 
   const config = {
     discountType:  (washer?.smart_slot_discount_type  ?? 'fixed')  as 'fixed' | 'percent',
@@ -45,13 +47,14 @@ export async function GET(request: NextRequest) {
   // session ne verrait jamais ces lignes — ni créneaux optimisés, ni
   // contrainte de trajet ne se calculeraient, en silence.
   const admin = createAdminClient()
-  const { data: bookings } = await admin
+  const { data: bookings, error: errBookings } = await admin
     .from('bookings')
     .select('scheduled_at, address, vehicle_count, selected_addons, services(duration_minutes)')
     .eq('washer_id', washerId)
     .neq('status', 'cancelled')
     .gte('scheduled_at', new Date(`${date}T00:00:00`).toISOString())
     .lte('scheduled_at', new Date(`${date}T23:59:59`).toISOString())
+  if (errBookings) logger.error('slots.smart.bookings.read_failed', {}, errBookings)
 
   // Pas de RDV ce jour → aucune contrainte de trajet
   if (!bookings?.length) return NextResponse.json({ ...empty, ...config })

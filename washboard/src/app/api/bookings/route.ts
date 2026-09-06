@@ -106,11 +106,20 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // ── Anti-spam #3 : plafond de réservations par laveur et par jour ────────
   const admin = createAdminClient()
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0)
-  const { count: dailyCount } = await admin
+  const { count: dailyCount, error: errDailyCount } = await admin
     .from('bookings')
     .select('id', { count: 'exact', head: true })
     .eq('washer_id', bookingData.washer_id)
     .gte('created_at', startOfDay.toISOString())
+  // Ce comptage-ci est le seul du fichier dont l'échec laisse PASSER : sans
+  // valeur, le plafond ne s'applique plus. On continue quand même — refuser
+  // toutes les réservations d'un laveur parce qu'un comptage anti-abus a
+  // échoué coûterait plus cher que le spam qu'on cherche à éviter. Mais ça ne
+  // se fait plus en silence.
+  if (errDailyCount) {
+    logger.error('bookings.dailyCount.read_failed',
+      { washerId: bookingData.washer_id }, errDailyCount)
+  }
   if ((dailyCount ?? 0) >= WASHER_DAILY_CAP) {
     return Response.json(
       { error: 'Ce prestataire a atteint sa limite de réservations pour aujourd\'hui. Réessayez demain.' },

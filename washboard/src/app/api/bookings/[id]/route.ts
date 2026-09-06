@@ -16,8 +16,10 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('*').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('bookings.id.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const body = await request.json()
@@ -30,12 +32,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'Date invalide' }, { status: 400 })
 
   // Récupérer la réservation courante + service
-  const { data: booking } = await supabase
+  const { data: booking, error: errBooking } = await supabase
     .from('bookings')
     .select('*, services(name, price, duration_minutes)')
     .eq('id', id)
     .eq('washer_id', washer.id)
     .single()
+  if (errBooking) logger.error('bookings.id.booking.read_failed', {}, errBooking)
 
   if (!booking) return NextResponse.json({ error: 'Réservation introuvable' }, { status: 404 })
 

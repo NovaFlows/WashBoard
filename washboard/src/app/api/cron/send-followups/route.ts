@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     else delayCutoff.setDate(delayCutoff.getDate() - delay)
     const cutoffIso = delayCutoff.toISOString()
 
-    const { data: candidates } = await admin
+    const { data: candidates, error: errCandidates } = await admin
       .from('bookings')
       .select('id, client_name, client_email, client_phone, scheduled_at')
       .eq('washer_id', washer.id)
@@ -58,6 +58,8 @@ export async function GET(request: NextRequest) {
       .lte('scheduled_at', cutoffIso)
       .order('scheduled_at', { ascending: false })
       .limit(500)
+
+    if (errCandidates) logger.error('cron.send-followups.candidates.read_failed', { washerId: washer.id }, errCandidates)
 
     if (!candidates?.length) continue
 
@@ -69,13 +71,14 @@ export async function GET(request: NextRequest) {
     const channel = washer.review_channel ?? 'email'
 
     for (const [clientEmail, booking] of byClient) {
-      const { count } = await admin
+      const { count, error: errCount } = await admin
         .from('bookings')
         .select('id', { count: 'exact', head: true })
         .eq('washer_id', washer.id)
         .eq('client_email', clientEmail)
         .not('status', 'eq', 'cancelled')
         .gt('scheduled_at', booking.scheduled_at)
+      if (errCount) logger.error('cron.send-followups.count.read_failed', { washerId: washer.id }, errCount)
 
       if ((count ?? 0) > 0) continue
 

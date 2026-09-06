@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers').select('id').eq('user_id', user.id).single()
+
+  if (errWasher) logger.error('services.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id } = await request.json()
