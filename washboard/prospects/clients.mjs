@@ -26,11 +26,17 @@ const FICHIER = 'prospects.xlsx'
 const FEUILLE = 'Clients'
 const PRENOMS = ['Ryan', 'Yanis', 'Alexandre']
 
-/** Comptes internes : ils ne sont pas des clients et n'ont rien a faire ici. */
-const COMPTES_INTERNES = [
-  'novaflows.pro@gmail.com',     // Alexandre
+/** Comptes exclus du suivi client, avec la raison de chacun.
+ *
+ *  Exclure n'est PAS supprimer : ces comptes existent toujours en base et
+ *  continuent de fonctionner. Ils n'apparaissent simplement pas dans la
+ *  feuille, parce qu'on ne les demarche pas et qu'on ne suit pas leur essai. */
+const COMPTES_EXCLUS = [
+  'novaflows.pro@gmail.com',      // Alexandre
   'abouharirathelliez@gmail.com', // compte de test d'Alexandre
-  'spotifypren1234@gmail.com',   // compte de test
+  'spotifypren1234@gmail.com',    // compte de test
+  'yanis.zidiyy@gmail.com',       // ysclean — Yanis, membre de l'equipe, pas un client
+  'alimladjao.saandi@gmail.com',  // « kookiclean » (un seul i) — ecarte le 2026-09-07
 ]
 
 const COLONNES = [
@@ -112,7 +118,7 @@ async function lireClients() {
     .order('created_at', { ascending: false })
   if (e2) throw new Error('lecture des laveurs : ' + e2.message)
 
-  const internes = new Set(COMPTES_INTERNES.map(e => e.toLowerCase()))
+  const internes = new Set(COMPTES_EXCLUS.map(e => e.toLowerCase()))
   const clients = []
 
   for (const w of fiches ?? []) {
