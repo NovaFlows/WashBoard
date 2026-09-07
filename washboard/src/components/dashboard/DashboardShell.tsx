@@ -54,14 +54,19 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
 
 // Annonce de l'application mobile, en bêta.
 //
-// Trois règles pour qu'un bandeau d'annonce ne devienne pas un meuble qu'on ne
+// Deux règles pour qu'un bandeau d'annonce ne devienne pas un meuble qu'on ne
 // voit plus :
 //   1. il ne s'affiche pas à qui a DÉJÀ activé les notifications — annoncer une
 //      nouveauté à quelqu'un qui s'en sert est le meilleur moyen d'apprendre à
 //      ignorer les bandeaux ;
-//   2. il se ferme, et la fermeture est retenue d'une visite à l'autre ;
-//   3. il ne s'affiche pas non plus sur un ordinateur : l'application s'installe
-//      sur un téléphone, la proposer ailleurs n'apporte rien.
+//   2. il se ferme, et la fermeture est retenue d'une visite à l'autre.
+//
+// Il s'affiche en revanche AUSSI sur ordinateur, contrairement à un premier
+// réflexe. L'installation se fait certes sur un téléphone, mais le bandeau
+// informe, il ne demande pas d'agir sur-le-champ : un laveur qui gère son
+// activité depuis son PC n'apprendrait jamais que l'application existe, et
+// n'ouvrirait donc jamais le tableau de bord sur son mobile — précisément
+// parce qu'il ignore que c'est possible.
 const CLE_FERME = 'wb_annonce_app_beta_fermee'
 
 function AppBetaBanner() {
@@ -79,10 +84,6 @@ function AppBetaBanner() {
         // affiche quand même, quitte à le remontrer. Mieux vaut un bandeau de
         // trop qu'une annonce que personne ne voit jamais.
       }
-
-      const surMobile = window.matchMedia('(max-width: 767px)').matches
-        || /Android|iPhone|iPad|iPod/.test(navigator.userAgent)
-      if (!surMobile) return
 
       // Déjà abonné aux notifications : il n'a rien à apprendre ici.
       try {
