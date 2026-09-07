@@ -162,16 +162,17 @@
       seule l'investigation rétroactive est abandonnée. Ne plus faire remonter ce
       point dans les rapports d'équipe.
 
-- [ ] **La routine cloud "réunion d'équipe quotidienne" n'a pas les droits d'écriture
-      sur le dépôt GitHub.** Constaté le 2026-08-27 : sa première tentative de
-      `git push` a renvoyé un 403 (`Claude doesn't have GitHub access to
-      NovaFlows/WashBoard for your organization` — lecture OK, écriture refusée).
-      Le rapport du jour est resté local dans la session cloud jusqu'à ce qu'un autre
-      push (celui de l'agent `dev`, voir ligne suivante) l'embarque par accident.
-      Sans correction, la routine ne pourra plus publier son rapport tous les matins.
-      À corriger via https://github.com/apps/claude/installations/select_target ou
-      claude.ai/customize/connectors (droits d'écriture de l'app Claude GitHub sur
-      NovaFlows/WashBoard).
+- [x] ~~**La routine cloud "réunion d'équipe quotidienne" n'a pas les droits d'écriture
+      sur le dépôt GitHub.**~~ **Résolu — constaté le 2026-09-07.** Le problème datait
+      du tout premier jour (2026-08-27) : `git push` renvoyait un 403 et le rapport
+      était resté dans la session cloud. Les droits ont été accordés depuis, et la
+      preuve est dans l'historique : **12 rapports pour 12 jours, aucun manquant**, du
+      2026-08-27 au 2026-09-07, publiés chaque matin entre 9h05 et 9h12 (heure de
+      Paris). Seul le tout premier a dû être rattrapé à la main.
+      Ce qui reste, et qui n'est pas un défaut : quand on travaille en local sans avoir
+      récupéré le rapport du matin, `git push` est refusé. `pull.rebase` est passé à
+      `true` sur le poste d'Alexandre pour que `git pull` rejoue les commits locaux
+      par-dessus, sans commit de fusion parasite.
 
 - [x] 2026-08-27 — **Migration SQL de l'entonnoir de réservation appliquée** (table
       `booking_funnel_events`, `washboard/supabase/migrations/003_booking_funnel_events.sql`).
