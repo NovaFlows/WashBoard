@@ -14,3 +14,14 @@ prospects.xlsx
 
 node_modules/
 package-lock.json
+
+# Tout fichier de travail susceptible de contenir des données extraites du
+# fichier de prospects. Deux fois déjà, un script a produit un rapport .json
+# et un encodage .txt bourrés de noms et de numéros : ni l'un ni l'autre
+# n'était couvert par les règles ci-dessus, et le dépôt est PUBLIC.
+*.json
+*.txt
+*.b64
+
+# Scripts d'import ponctuels : sans données, mais inutiles au dépôt.
+import_*.mjs
