@@ -44,6 +44,7 @@ const FEUILLE = 'Prospects'
 
 const COLONNES = [
   { header: 'Statut',         key: 'statut',       width: 16 },
+  { header: 'Prénom',         key: 'prenom',       width: 12 },
   { header: 'Entreprise',     key: 'entreprise',   width: 26 },
   { header: 'Contact',        key: 'nom',          width: 20 },
   { header: 'Téléphone',      key: 'tel',          width: 18 },
@@ -57,6 +58,24 @@ const COLONNES = [
   { header: 'Ajouté le',      key: 'ajoute',       width: 12 },
   { header: 'Dernier contact', key: 'contact',     width: 14 },
 ]
+
+// Qui s'occupe du prospect. Liste fermée : une saisie libre finirait par
+// produire « ryan », « Ryan » et « RYAN » dans la même colonne, et plus aucun
+// filtre ne serait fiable.
+const PRENOMS = ['Ryan', 'Yanis', 'Alexandre']
+
+/** Pose la liste déroulante sur la cellule Prénom d'une ligne. */
+function listePrenoms(ligne) {
+  const i = COLONNES.findIndex(c => c.key === 'prenom') + 1
+  ligne.getCell(i).dataValidation = {
+    type: 'list',
+    allowBlank: true,
+    formulae: [`"${PRENOMS.join(',')}"`],
+    showErrorMessage: true,
+    errorTitle: 'Prénom invalide',
+    error: `Choisissez ${PRENOMS.join(', ')} — ou laissez vide.`,
+  }
+}
 
 const STATUTS = ['à appeler', 'appelé - à relancer', 'RDV pris', 'client', 'pas intéressé', 'injoignable']
 
@@ -177,8 +196,9 @@ async function commandeAdd(args) {
     process.exit(2)
   }
 
-  ws.addRow({
+  const nouvelle = ws.addRow({
     statut:     args.statut || 'à appeler',
+    prenom:     args.prenom || '',
     entreprise: args.entreprise || '',
     nom:        args.nom || '',
     tel:        args.tel ? formaterTel(args.tel) : '',
@@ -192,6 +212,7 @@ async function commandeAdd(args) {
     ajoute:     aujourdhui(),
     contact:    '',
   })
+  listePrenoms(nouvelle)
   await wb.xlsx.writeFile(FICHIER)
   const identifiant = args.tel ? formaterTel(args.tel) : `@${insta}`
   console.log(`Ajouté : ${args.entreprise || args.nom || identifiant} (${identifiant})`)
