@@ -94,15 +94,68 @@ const couleurDominante = async f => (await paletteLogo(f))[0] ?? null
 // un egaliseur — est sombre et calme : ce qui compte reste la carte par-dessus.
 // Le tirage est deterministe : relancer l'outil ne change pas la page.
 
+/** Efface le fond d'un logo pour pouvoir l'incruster dans une image.
+ *
+ *  On ne peut pas simplement rendre transparents « tous les pixels blancs » :
+ *  le lettrage de ScutNet est cerne de blanc, ca le trouerait. On part donc des
+ *  BORDS et on ne propage que de proche en proche — le blanc interieur, qui ne
+ *  touche pas le bord, est preserve.
+ *
+ *  Rend null si les quatre coins ne se ressemblent pas : le logo est alors sur
+ *  une photo ou un degrade, et un detourage aveugle l'abimerait. */
+async function detourer(fichier) {
+  const { data, info } = await sharp(fichier).ensureAlpha()
+    .resize(700, 700, { fit: 'inside' }).raw().toBuffer({ resolveWithObject: true })
+  const { width: W, height: H, channels: C } = info
+  const px = i => [data[i * C], data[i * C + 1], data[i * C + 2]]
+  const dist = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2])
+
+  const coins = [0, W - 1, (H - 1) * W, H * W - 1].map(px)
+  if (coins.some(c => dist(c, coins[0]) > 90)) return null
+
+  const TOL = 110                       // somme des ecarts R+G+B
+  const vu = new Uint8Array(W * H)
+  const file = []
+  for (let x = 0; x < W; x++) { file.push(x, (H - 1) * W + x) }
+  for (let y = 0; y < H; y++) { file.push(y * W, y * W + W - 1) }
+  for (const i of file) if (!vu[i] && dist(px(i), coins[0]) <= TOL) vu[i] = 1
+  let tete = 0
+  const pile = file.filter(i => vu[i])
+  while (tete < pile.length) {
+    const i = pile[tete++], x = i % W, y = (i - x) / W
+    for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1]) {
+      if (j >= 0 && !vu[j] && dist(px(j), coins[0]) <= TOL) { vu[j] = 1; pile.push(j) }
+    }
+  }
+  for (let i = 0; i < W * H; i++) if (vu[i]) data[i * C + 3] = 0
+
+  return sharp(data, { raw: { width: W, height: H, channels: C } }).png().toBuffer()
+}
+
 /** Bruit reproductible dans [0,1] : meme graine, meme fond. */
 function alea(graine) {
   let x = graine * 2654435761 % 2147483647
   return () => { x = (x * 48271) % 2147483647; return x / 2147483647 }
 }
 
-function fondSVG([r1, g1, b1], deuxieme, graine) {
+function fondSVG([r1, g1, b1], deuxieme, graine, logoPNG) {
   const [r2, g2, b2] = deuxieme ?? [r1, g1, b1]
   const W = 1920, H = 1080, axe = H / 2
+  // Le logo, en grand et efface, sous le motif.
+  //
+  // Il est volontairement DECENTRE et deborde du cadre. Centre, il se retrouve
+  // pile derriere la carte, qui en masque le milieu : d'un logo portant un mot
+  // — « YHMOTORS », « ACHAT · VENTE · LOCATION » — il ne restait que les deux
+  // bouts, et on lisait « Y…S » et « AC…ON ». Un fragment de graphisme sur le
+  // cote se lit comme un filigrane ; un mot coupe en deux se lit comme un
+  // defaut.
+  const emblemeH = H * 0.88
+  const embleme = logoPNG
+    ? `<image href="data:image/png;base64,${logoPNG.toString('base64')}"
+              x="${(W * 0.80 - emblemeH / 2).toFixed(0)}" y="${((H - emblemeH) / 2).toFixed(0)}"
+              width="${emblemeH.toFixed(0)}" height="${emblemeH.toFixed(0)}"
+              preserveAspectRatio="xMidYMid meet" opacity="0.30"/>`
+    : ''
   const tirage = alea(graine)
   // Une ligne brisee lissee plutot que du bruit pur : ca evoque un egaliseur,
   // pas de la neige.
@@ -139,6 +192,7 @@ function fondSVG([r1, g1, b1], deuxieme, graine) {
   <rect width="${W}" height="${H}" fill="#07080b"/>
   <rect width="${W}" height="${H}" fill="url(#g1)"/>
   <rect width="${W}" height="${H}" fill="url(#g2)"/>
+  ${embleme}
   ${barres}
   <circle cx="${W / 2}" cy="${axe}" r="${H * 0.42}" fill="none"
           stroke="rgb(${r1},${g1},${b1})" stroke-opacity="0.18" stroke-width="3"/>
@@ -216,9 +270,12 @@ if (fond === 'auto') {
   }
   // Graine tiree du slug : la meme page redonne toujours le meme fond.
   const graine = [...slug].reduce((a, c) => a + c.charCodeAt(0), 7)
-  const buf = await sharp(fondSVG(palette[0], palette[1], graine)).webp({ quality: 82 }).toBuffer()
+  const embleme = await detourer(logo)
+  const buf = await sharp(fondSVG(palette[0], palette[1], graine, embleme))
+    .webp({ quality: 82 }).toBuffer()
   maj.background_theme = await televerser(db, 'backgrounds', `${w.id}.webp`, buf)
-  console.log(`  fond   ${(buf.length / 1024).toFixed(0)} Ko  (généré depuis ${palette.map(hex).join(' + ')})`)
+  console.log(`  fond   ${(buf.length / 1024).toFixed(0)} Ko  (généré depuis ${palette.map(hex).join(' + ')}`
+    + `${embleme ? ', logo incrusté' : ', logo non détourable — motif seul'})`)
 } else if (fond) {
   if (!fs.existsSync(fond)) { console.error('fond introuvable :', fond); process.exit(1) }
   // 1920 px suffit pour un fond plein ecran, et le poids compte : ce fichier

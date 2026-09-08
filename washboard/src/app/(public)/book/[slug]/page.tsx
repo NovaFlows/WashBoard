@@ -113,6 +113,11 @@ export default async function BookingPage({ params }: Props) {
     .from('services')
     .select('*')
     .eq('washer_id', washer.id)
+    // Sans tri, PostgREST rend les lignes dans l'ordre du stockage : il change
+    // apres une modification et n'a aucune raison de suivre celui du laveur.
+    // Le tableau de bord trie deja par created_at — le laveur rangeait donc ses
+    // prestations dans un ordre que ses clients ne voyaient pas.
+    .order('created_at')
 
   const { data: categories } = await admin
     .from('service_categories')
