@@ -114,7 +114,12 @@ async function lireClients() {
 
   const { data: fiches, error: e2 } = await admin
     .from('washers')
-    .select('id, user_id, name, slug, phone, logo_url, trial_ends_at, subscription_status, created_at')
+    .select('id, user_id, name, slug, phone, logo_url, trial_ends_at, subscription_status, created_at, is_preview')
+    // Les pages « proposition » sont des vitrines construites pour des
+    // prospects qui n'ont pas de compte : elles vivent dans la meme table que
+    // les vrais laveurs (une seule base), mais ce ne sont pas des clients et
+    // elles n'ont rien a faire dans ce suivi.
+    .eq('is_preview', false)
     .order('created_at', { ascending: false })
   if (e2) throw new Error('lecture des laveurs : ' + e2.message)
 
