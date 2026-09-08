@@ -4,6 +4,9 @@
  *
  *   node habiller-page.mjs <slug> --logo logo.png [--fond visuel.jpg] [--couleur #RRGGBB]
  *
+ * « --fond auto » fabrique un fond aux couleurs du logo, pour les prospects qui
+ * n'ont aucun visuel utilisable.
+ *
  * Ce qui est automatise, parce que c'est mecanique :
  *   - compression et televersement du logo (600 px) et du fond (1920 px) ;
  *   - detection de la couleur de marque a partir du logo ;
@@ -42,10 +45,18 @@ function versLisible(rgb) {
   return { couleur: c, assombri: 80 }
 }
 
-/** Couleur dominante du logo, en ignorant les gris et les extremes.
- *  Un logo est fait de noir, de blanc et d'UNE couleur : c'est celle-la qu'on
- *  cherche, pas la plus frequente (qui serait le fond). */
-async function couleurDominante(fichier) {
+const teinte = ([r, g, b]) => {
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
+  if (!d) return 0
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return (h * 60 + 360) % 360
+}
+
+/** Couleurs vives du logo, les plus frequentes d'abord, en ignorant les gris et
+ *  les extremes. Un logo est fait de noir, de blanc et d'une ou deux couleurs :
+ *  ce sont celles-la qu'on cherche, pas la plus frequente (qui serait le fond).
+ *  Les teintes trop proches sont fusionnees : deux bleus voisins sont un bleu. */
+async function paletteLogo(fichier) {
   const { data, info } = await sharp(fichier).resize(120, 120, { fit: 'inside' })
     .raw().toBuffer({ resolveWithObject: true })
   const seaux = new Map()
@@ -57,9 +68,79 @@ async function couleurDominante(fichier) {
     const cle = [r, g, b].map(v => Math.round(v / 24) * 24).join(',')
     seaux.set(cle, (seaux.get(cle) ?? 0) + 1)
   }
-  if (!seaux.size) return null
-  const [cle] = [...seaux.entries()].sort((a, b) => b[1] - a[1])[0]
-  return cle.split(',').map(Number)
+  const classees = [...seaux.entries()].sort((a, b) => b[1] - a[1])
+    .map(([cle]) => cle.split(',').map(Number))
+  const gardees = []
+  for (const c of classees) {
+    if (gardees.every(g => Math.min(Math.abs(teinte(g) - teinte(c)), 360 - Math.abs(teinte(g) - teinte(c))) > 40)) {
+      gardees.push(c)
+    }
+    if (gardees.length === 3) break
+  }
+  return gardees
+}
+
+const couleurDominante = async f => (await paletteLogo(f))[0] ?? null
+
+// ── Fond genere ─────────────────────────────────────────────────────────────
+// Quand un prospect n'a aucun visuel exploitable, on lui fabrique un fond a
+// partir des couleurs de SON logo, plutot que de lui coller un theme generique
+// partage avec tout le monde. Le motif — des barres verticales en miroir, comme
+// un egaliseur — est sombre et calme : ce qui compte reste la carte par-dessus.
+// Le tirage est deterministe : relancer l'outil ne change pas la page.
+
+/** Bruit reproductible dans [0,1] : meme graine, meme fond. */
+function alea(graine) {
+  let x = graine * 2654435761 % 2147483647
+  return () => { x = (x * 48271) % 2147483647; return x / 2147483647 }
+}
+
+function fondSVG([r1, g1, b1], deuxieme, graine) {
+  const [r2, g2, b2] = deuxieme ?? [r1, g1, b1]
+  const W = 1920, H = 1080, axe = H / 2
+  const tirage = alea(graine)
+  // Une ligne brisee lissee plutot que du bruit pur : ca evoque un egaliseur,
+  // pas de la neige.
+  const pas = 26, n = Math.ceil(W / pas)
+  const brut = Array.from({ length: n + 2 }, () => tirage())
+  const lisse = brut.map((v, i) => (brut[i - 1] ?? v) * 0.25 + v * 0.5 + (brut[i + 1] ?? v) * 0.25)
+  const barres = lisse.map((v, i) => {
+    const x = i * pas
+    // Le motif court sur toute la largeur, sans creux au centre : sur un
+    // telephone l'image est recadree en colonne CENTRALE, et un centre vide
+    // donnerait un fond noir a tous les visiteurs mobiles.
+    const h = 70 + v * 360
+    const accent = i % 9 === 4
+    const c = accent ? `rgb(${r1},${g1},${b1})` : `rgb(${r2},${g2},${b2})`
+    return `<rect x="${x}" y="${(axe - h).toFixed(0)}" width="14" height="${(h * 2).toFixed(0)}" rx="7" `
+         + `fill="${c}" opacity="${(0.22 + v * 0.24).toFixed(3)}"/>`
+  }).join('')
+
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+  <defs>
+    <radialGradient id="g1" cx="30%" cy="32%" r="72%">
+      <stop offset="0%" stop-color="rgb(${r2},${g2},${b2})" stop-opacity="0.70"/>
+      <stop offset="100%" stop-color="rgb(${r2},${g2},${b2})" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="72%" cy="76%" r="66%">
+      <stop offset="0%" stop-color="rgb(${r1},${g1},${b1})" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="rgb(${r1},${g1},${b1})" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="78%">
+      <stop offset="68%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.45"/>
+    </radialGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="#07080b"/>
+  <rect width="${W}" height="${H}" fill="url(#g1)"/>
+  <rect width="${W}" height="${H}" fill="url(#g2)"/>
+  ${barres}
+  <circle cx="${W / 2}" cy="${axe}" r="${H * 0.42}" fill="none"
+          stroke="rgb(${r1},${g1},${b1})" stroke-opacity="0.18" stroke-width="3"/>
+  <circle cx="${W / 2}" cy="${axe}" r="${H * 0.47}" fill="none"
+          stroke="#ffffff" stroke-opacity="0.06" stroke-width="2"/>
+  <rect width="${W}" height="${H}" fill="url(#vignette)"/>
+</svg>`)
 }
 
 // ── Environnement ───────────────────────────────────────────────────────────
@@ -113,7 +194,27 @@ if (logo) {
 }
 
 const fond = opt('fond')
-if (fond) {
+if (fond === 'auto') {
+  if (!logo) { console.error('« --fond auto » a besoin de --logo : c\'est de lui que viennent les couleurs.'); process.exit(1) }
+  const palette = await paletteLogo(logo)
+  if (!palette.length) { console.error('aucune couleur vive dans ce logo : donne un fichier de fond.'); process.exit(1) }
+  const forceeIci = opt('couleur')
+  // La couleur imposee prime : c'est celle du prospect, pas celle qu'on devine.
+  // Mais elle ne doit pas ECRASER la seconde teinte : forcer l'orange d'un logo
+  // orange et bleu donnait un fond entierement brun, le bleu disparaissait.
+  if (forceeIci && /^#?[0-9a-f]{6}$/i.test(forceeIci)) {
+    const imposee = [0, 2, 4].map(i => parseInt(forceeIci.replace('#', '').slice(i, i + 2), 16))
+    const ecart = c => { const d = Math.abs(teinte(c) - teinte(imposee)); return Math.min(d, 360 - d) }
+    const contraste = palette.filter(c => ecart(c) > 40).sort((a, b) => ecart(b) - ecart(a))[0]
+    palette.length = 0
+    palette.push(imposee, ...(contraste ? [contraste] : []))
+  }
+  // Graine tiree du slug : la meme page redonne toujours le meme fond.
+  const graine = [...slug].reduce((a, c) => a + c.charCodeAt(0), 7)
+  const buf = await sharp(fondSVG(palette[0], palette[1], graine)).webp({ quality: 82 }).toBuffer()
+  maj.background_theme = await televerser(db, 'backgrounds', `${w.id}.webp`, buf)
+  console.log(`  fond   ${(buf.length / 1024).toFixed(0)} Ko  (généré depuis ${palette.map(hex).join(' + ')})`)
+} else if (fond) {
   if (!fs.existsSync(fond)) { console.error('fond introuvable :', fond); process.exit(1) }
   // 1920 px suffit pour un fond plein ecran, et le poids compte : ce fichier
   // part chez CHAQUE visiteur de la page.
