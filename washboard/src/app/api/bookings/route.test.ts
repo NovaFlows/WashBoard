@@ -178,6 +178,33 @@ describe('POST /api/bookings — le prix ne vient jamais du navigateur (H1)', ()
   })
 })
 
+describe('POST /api/bookings — page « proposition »', () => {
+  it('refuse toute réservation sur une page d\'aperçu', async () => {
+    // Ces pages sont construites avant que le laveur ait un compte. Accepter
+    // une réservation l'engagerait sur un rendez-vous qu'il n'a jamais accepté.
+    avecWasher({ is_preview: true })
+    const { res, body } = await poster()
+    expect(res.status).toBe(403)
+    expect(body.error).toMatch(/aperçu/)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('refuse même au laveur lui-même', async () => {
+    // Le bouton n'existe pas dans l'interface, mais la route reste appelable
+    // directement : le refus doit tenir sans dépendre du navigateur.
+    plan.utilisateur = { id: 'user-1' }
+    avecWasher({ is_preview: true })
+    const { res } = await poster()
+    expect(res.status).toBe(403)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('laisse passer une page normale', async () => {
+    avecWasher({ is_preview: false })
+    expect((await poster()).res.status).toBe(201)
+  })
+})
+
 describe('POST /api/bookings — cloisonnement entre laveurs (H2)', () => {
   it('refuse une prestation qui appartient à un autre laveur', async () => {
     plan.tables.services = { data: { ...SERVICE_DEFAUT, washer_id: 'un-autre-laveur' }, error: null }

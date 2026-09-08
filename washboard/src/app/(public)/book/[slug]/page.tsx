@@ -77,7 +77,7 @@ export default async function BookingPage({ params }: Props) {
   // publique, en comptant sur le fait qu'on ne les transmettrait pas plus loin.
   const { data: washer } = await admin
     .from('washers')
-    .select('id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan')
+    .select('id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview')
     .eq('slug', slug)
     .single()
 
@@ -228,6 +228,7 @@ export default async function BookingPage({ params }: Props) {
             team_size: washer.team_size ?? null,
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
+            is_preview: washer.is_preview ?? false,
           }}
           services={services ?? []}
           categories={categories ?? []}

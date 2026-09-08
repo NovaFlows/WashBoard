@@ -137,7 +137,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -154,6 +154,23 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       serviceId: bookingData.service_id,
     })
     return Response.json({ error: 'Prestation introuvable' }, { status: 404 })
+  }
+
+  // ── Page « proposition » : aucune réservation, pour personne ──────────────
+  //
+  // Ces pages sont construites AVANT que le laveur ait un compte, pour qu'il
+  // voie son outil pendant l'appel. Accepter une réservation dessus
+  // l'engagerait sur un rendez-vous qu'il n'a jamais accepté, à un créneau
+  // qu'il n'a jamais donné — quelqu'un se présenterait chez lui.
+  //
+  // Le refus est ici, et pas seulement dans l'interface : le bouton d'envoi
+  // n'existe pas côté navigateur, mais la route reste appelable directement.
+  if (washer?.is_preview) {
+    logger.info('bookings.rejected.page_proposition', { washerId: bookingData.washer_id })
+    return Response.json(
+      { error: 'Cette page est un aperçu : elle n\'accepte pas encore de réservation.' },
+      { status: 403 },
+    )
   }
 
   // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──

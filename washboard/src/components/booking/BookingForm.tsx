@@ -52,6 +52,12 @@ export type WasherPublic = {
   team_size: number | null
   travel_fee_mode: 'base' | 'previous'
   travel_fee_tiers: { max_minutes: number; fee: number }[] | null
+  /** Page « proposition » : construite pour un laveur qui n'a pas encore de
+   *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
+   *  entièrement mais ne prend aucune réservation — publier un lien réservable
+   *  au nom de quelqu'un qui n'a rien demandé l'engagerait sur des rendez-vous
+   *  qu'il n'a jamais acceptés. */
+  is_preview?: boolean
   // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
 }
 
@@ -122,8 +128,22 @@ export default function BookingForm({ washer, services, categories, availabiliti
     }
   }
 
+  const estProposition = washer.is_preview === true
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      {/* Annoncé d'emblée, et pas seulement à la dernière étape : un visiteur
+          qui parcourt trois écrans en croyant réserver, puis découvre que non,
+          est un client perdu pour le laveur. */}
+      {estProposition && (
+        <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 px-4 sm:px-6 py-3 text-sm">
+          <p className="font-bold">Aperçu — cette page n&apos;est pas encore active</p>
+          <p className="text-xs mt-0.5 leading-relaxed">
+            Elle montre à quoi ressemblerait la page de réservation de {washer.name}.
+            Aucune réservation ne peut être enregistrée pour l&apos;instant.
+          </p>
+        </div>
+      )}
       {step < 5 && (
         <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-start w-full">
@@ -206,7 +226,44 @@ export default function BookingForm({ washer, services, categories, availabiliti
             accent={accent}
           />
         )}
-        {step === 4 && (
+        {/* Sur une proposition, on s'arrête AVANT le formulaire de contact.
+            Le visiteur a vu les prestations, les tarifs et les créneaux —
+            c'est tout l'intérêt de la démonstration. Lui demander ensuite son
+            nom, son téléphone et son adresse collecterait des données
+            personnelles pour un laveur qui n'a rien accepté, et pour un
+            rendez-vous qui n'existera jamais. */}
+        {step === 4 && estProposition && (
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+              Voilà à quoi ressemblerait votre page
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
+              Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la
+              pour que vos clients puissent réserver et que les rendez-vous
+              tombent dans votre agenda.
+            </p>
+            <a
+              href="/signup"
+              className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
+              style={{ backgroundColor: accent }}
+            >
+              Activer ma page — 1 mois offert
+            </a>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Sans carte bancaire</p>
+            <button
+              onClick={() => setStep(3)}
+              className="block mx-auto mt-5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              ← Revenir aux créneaux
+            </button>
+          </div>
+        )}
+        {step === 4 && !estProposition && (
           <StepContact
             isProfessional={form.is_professional ?? false}
             loading={loading}
