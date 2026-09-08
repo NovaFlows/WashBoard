@@ -4,6 +4,7 @@
  * pour la lui montrer pendant l'appel.
  *
  *   node page-proposition.mjs fiches/clean-by-didi.json
+ *   node page-proposition.mjs --resync fiches/clean-by-didi.json
  *   node page-proposition.mjs --supprimer clean-by-didi
  *   node page-proposition.mjs --liste
  *
@@ -21,7 +22,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
@@ -47,6 +48,60 @@ const slugify = s => String(s).toLowerCase().normalize('NFD')
   .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '').slice(0, 40)
 
+/** Types de vehicule reconnus par le formulaire : ils ont une illustration.
+ *  Un id absent de cette liste reste valable, il s'affiche sans image. */
+const TYPES_STANDARD = {
+  citadine_2p: 'Citadine 2 portes', citadine: 'Citadine', berline: 'Berline',
+  SUV: 'SUV', monospace: 'Monospace', '7places': '7 places',
+  utilitaire: 'Utilitaire', velo: 'Vélo',
+}
+
+/** Le formulaire distingue les vehicules des autres objets a la FORME de l'id :
+ *  un slug lisible = un vehicule, et il reclame alors « Modèle du véhicule ».
+ *  Un canape n'a pas de modele : ses types recoivent donc un identifiant en
+ *  forme d'UUID, comme ceux que cree le tableau de bord. On le derive du nom
+ *  pour qu'il reste le meme d'une resynchronisation a l'autre. */
+function idNonVehicule(cle) {
+  const h = createHash('sha1').update('washboard:type:' + cle).digest('hex')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`
+}
+
+/** Types d'une categorie, ecrits au choix « "citadine" » ou « {id, nom} ».
+ *  Ajouter « "vehicule": false » pour un canape, un matelas, un tapis… */
+function typesDeCategorie(cat) {
+  return (cat.types ?? []).map(t => {
+    if (typeof t === 'string') return { id: t, name: TYPES_STANDARD[t] ?? t }
+    const cle = String(t.id ?? '')
+    return {
+      id: t.vehicule === false ? idNonVehicule(cle) : cle,
+      name: t.nom ?? t.name ?? TYPES_STANDARD[cle] ?? cle,
+    }
+  })
+}
+
+/** Les ids ecrits dans la fiche, tels que les prestations les designent,
+ *  vers les ids reellement poses en base. */
+function correspondanceTypes(cat) {
+  const m = new Map()
+  for (const t of cat.types ?? []) {
+    const cle = typeof t === 'string' ? t : String(t.id ?? '')
+    m.set(cle, typeof t !== 'string' && t.vehicule === false ? idNonVehicule(cle) : cle)
+  }
+  return m
+}
+
+/** Options d'une prestation, converties au format attendu par le formulaire.
+ *  L'id est derive du nom : il reste STABLE d'une resynchronisation a l'autre. */
+function optionsDePrestation(p) {
+  return (p.options ?? []).map(o => ({
+    id: slugify(o.nom),
+    label: o.nom.trim(),
+    price: Number(o.prix),
+    category: o.groupe ?? 'Options',
+    ...(Number(o.duree) > 0 ? { duration_minutes: Number(o.duree) } : {}),
+  }))
+}
+
 /** Le controle qu'on veut rater le moins possible : une fiche mal remplie
  *  produit une page fausse qu'on montre a un prospect. */
 function valider(f) {
@@ -57,6 +112,21 @@ function valider(f) {
 
   for (const c of f.categories ?? []) {
     if (!c.nom?.trim()) erreurs.push('une catégorie sans nom')
+
+    // Sans type, le formulaire n'affiche aucun element a ajouter au panier et
+    // « Continuer » reste grise : la page devient une impasse des la premiere
+    // etape. Constate en production sur /book/demo le 2026-09-08.
+    const types = typesDeCategorie(c)
+    if (!types.length) {
+      erreurs.push(`la catégorie « ${c.nom} » n'a aucun type : le visiteur resterait bloqué à la première étape`)
+    }
+    for (const t of types) {
+      if (!t.id) erreurs.push(`un type sans id dans « ${c.nom} »`)
+    }
+    // Les prestations designent les types par la cle ECRITE dans la fiche
+    // (« canape »), pas par l'id pose en base (un UUID pour les non-vehicules).
+    const idsTypes = new Set(correspondanceTypes(c).keys())
+
     for (const p of c.prestations ?? []) {
       if (!p.nom?.trim()) erreurs.push(`prestation sans nom dans « ${c.nom} »`)
       if (!(Number(p.prix) >= 0)) erreurs.push(`prix invalide pour « ${p.nom} »`)
@@ -64,6 +134,25 @@ function valider(f) {
       // une prestation de 90 min annoncee a 30 min ferait accepter trois
       // rendez-vous la ou il n'y en a qu'un. On la reclame explicitement.
       if (!(Number(p.duree) > 0)) erreurs.push(`durée manquante pour « ${p.nom} » — à demander au téléphone`)
+
+      // Une faute de frappe sur un id produit un type fantome, sans prix et
+      // sans nom lisible : on la refuse plutot que de l'afficher au prospect.
+      for (const t of p.types ?? []) {
+        if (!idsTypes.has(t)) erreurs.push(`« ${p.nom} » propose le type « ${t} », absent de la catégorie « ${c.nom} »`)
+      }
+      const proposes = new Set(p.types ?? [...idsTypes])
+      for (const [t, prix] of Object.entries(p.prix_par_type ?? {})) {
+        if (!proposes.has(t)) erreurs.push(`« ${p.nom} » fixe un prix pour « ${t} », qu'elle ne propose pas`)
+        if (!(Number(prix) >= 0)) erreurs.push(`prix invalide pour « ${p.nom} » / « ${t} »`)
+      }
+
+      const vus = new Set()
+      for (const o of p.options ?? []) {
+        if (!o.nom?.trim()) erreurs.push(`option sans nom dans « ${p.nom} »`)
+        else if (vus.has(slugify(o.nom))) erreurs.push(`deux options nommées « ${o.nom} » dans « ${p.nom} »`)
+        else vus.add(slugify(o.nom))
+        if (!(Number(o.prix) >= 0)) erreurs.push(`prix invalide pour l'option « ${o.nom} »`)
+      }
     }
   }
   for (const h of f.horaires ?? []) {
@@ -75,6 +164,48 @@ function valider(f) {
     }
   }
   return erreurs
+}
+
+/** Ecrit categories, prestations et horaires d'une fiche sur une page donnee.
+ *  Partage par la creation et la resynchronisation. Renvoie le nombre de
+ *  prestations posees. */
+async function poserCatalogue(db, washerId, fiche) {
+  let nbPrestations = 0
+  for (const [i, cat] of fiche.categories.entries()) {
+    const types = typesDeCategorie(cat)
+    const pose  = correspondanceTypes(cat)   // cle de la fiche → id en base
+    const { data: c, error: eC } = await db.from('service_categories').insert({
+      washer_id: washerId, name: cat.nom.trim(),
+      types, display_order: i,
+    }).select('id').single()
+    if (eC) { console.error('Catégorie impossible :', eC.message); process.exit(1) }
+
+    for (const p of cat.prestations ?? []) {
+      const { error: eS } = await db.from('services').insert({
+        washer_id: washerId, category_id: c.id,
+        name: p.nom.trim(), description: p.description ?? null,
+        price: Number(p.prix), duration_minutes: Number(p.duree),
+        // Sans type propose, la prestation ne peut pas etre ajoutee au panier.
+        // Par defaut elle accepte donc tous les types de sa categorie.
+        vehicle_types: (p.types ?? [...pose.keys()]).map(t => pose.get(t) ?? t),
+        vehicle_price_overrides: Object.fromEntries(
+          Object.entries(p.prix_par_type ?? {}).map(([t, v]) => [pose.get(t) ?? t, Number(v)]),
+        ),
+        addons: optionsDePrestation(p),
+      })
+      if (eS) { console.error('Prestation impossible :', eS.message); process.exit(1) }
+      nbPrestations++
+    }
+  }
+
+  for (const h of fiche.horaires) {
+    const { error: eH } = await db.from('availabilities').insert({
+      washer_id: washerId, day_of_week: h.jour,
+      start_time: h.debut, end_time: h.fin,
+    })
+    if (eH) { console.error('Horaire impossible :', eH.message); process.exit(1) }
+  }
+  return nbPrestations
 }
 
 async function creer(db, fiche) {
@@ -111,38 +242,63 @@ async function creer(db, fiche) {
   })
   if (eW) { console.error('Création impossible :', eW.message); process.exit(1) }
 
-  let nbPrestations = 0
-  for (const [i, cat] of fiche.categories.entries()) {
-    const { data: c, error: eC } = await db.from('service_categories').insert({
-      washer_id: washerId, name: cat.nom.trim(),
-      types: cat.types ?? [], display_order: i,
-    }).select('id').single()
-    if (eC) { console.error('Catégorie impossible :', eC.message); process.exit(1) }
-
-    for (const p of cat.prestations ?? []) {
-      const { error: eS } = await db.from('services').insert({
-        washer_id: washerId, category_id: c.id,
-        name: p.nom.trim(), description: p.description ?? null,
-        price: Number(p.prix), duration_minutes: Number(p.duree),
-        vehicle_types: [], vehicle_price_overrides: {}, addons: [],
-      })
-      if (eS) { console.error('Prestation impossible :', eS.message); process.exit(1) }
-      nbPrestations++
-    }
-  }
-
-  for (const h of fiche.horaires) {
-    const { error: eH } = await db.from('availabilities').insert({
-      washer_id: washerId, day_of_week: h.jour,
-      start_time: h.debut, end_time: h.fin,
-    })
-    if (eH) { console.error('Horaire impossible :', eH.message); process.exit(1) }
-  }
+  const nbPrestations = await poserCatalogue(db, washerId, fiche)
 
   console.log(`\n  ${fiche.nom}`)
   console.log(`  ${nbPrestations} prestation(s) · ${fiche.horaires.length} plage(s) horaire(s)\n`)
   console.log(`  https://www.washboard.fr/book/${slug}\n`)
   console.log('  Page en mode proposition : elle se parcourt, elle ne prend aucune réservation.')
+}
+
+/** Reecrit le catalogue d'une proposition existante depuis sa fiche corrigee —
+ *  typiquement apres un appel ou le prospect a donne ses vraies durees.
+ *  Ne touche NI le logo, NI le fond, NI la couleur : c'est le travail
+ *  d'habiller-page.mjs, et le refaire a chaque correction de prix serait absurde. */
+async function resync(db, fiche) {
+  const erreurs = valider(fiche)
+  if (erreurs.length) {
+    console.error('Fiche incomplète :')
+    for (const e of erreurs) console.error('  - ' + e)
+    process.exit(1)
+  }
+
+  const slug = slugify(fiche.slug || fiche.nom)
+  const { data: w, error } = await db
+    .from('washers').select('id, name, is_preview').eq('slug', slug).maybeSingle()
+  if (error) { console.error('Lecture impossible :', error.message); process.exit(1) }
+  if (!w) { console.error(`Aucune page « ${slug} » — utilise la création.`); process.exit(1) }
+  if (!w.is_preview) {
+    console.error(`« ${w.name} » est un VRAI compte : on ne réécrit pas ses prestations.`)
+    process.exit(1)
+  }
+
+  const { count } = await db.from('bookings')
+    .select('id', { count: 'exact', head: true }).eq('washer_id', w.id)
+  if (count) {
+    // Effacer des prestations reservees casserait les rendez-vous existants.
+    console.error(`${count} réservation(s) sur cette page : resynchronisation refusée.`)
+    process.exit(1)
+  }
+
+  for (const t of ['availabilities', 'services', 'service_categories']) {
+    const { error: e } = await db.from(t).delete().eq('washer_id', w.id)
+    if (e) { console.error(`Nettoyage ${t} :`, e.message); process.exit(1) }
+  }
+
+  const champs = { name: fiche.nom.trim() }
+  // Seuls les champs REELLEMENT presents dans la fiche sont ecrases : sinon une
+  // fiche sans « couleur » effacerait la couleur posee par habiller-page.mjs.
+  if (fiche.telephone !== undefined)       champs.phone           = fiche.telephone
+  if (fiche.message_accueil !== undefined) champs.welcome_message = fiche.message_accueil
+  if (fiche.adresse !== undefined)         champs.base_address    = fiche.adresse
+  if (fiche.couleur !== undefined)         champs.brand_color     = fiche.couleur
+  const { error: eW } = await db.from('washers').update(champs).eq('id', w.id)
+  if (eW) { console.error('Mise à jour :', eW.message); process.exit(1) }
+
+  const nb = await poserCatalogue(db, w.id, fiche)
+  console.log(`\n  ${fiche.nom} — resynchronisé`)
+  console.log(`  ${nb} prestation(s) · ${fiche.horaires.length} plage(s) horaire(s)\n`)
+  console.log(`  https://www.washboard.fr/book/${slug}\n`)
 }
 
 async function supprimer(db, slug) {
@@ -191,11 +347,15 @@ if (a === '--liste') await lister(db)
 else if (a === '--supprimer') {
   if (!b) { console.error('Usage : --supprimer <slug>'); process.exit(1) }
   await supprimer(db, b)
+} else if (a === '--resync') {
+  if (!b || !fs.existsSync(b)) { console.error('Usage : --resync fiches/<nom>.json'); process.exit(1) }
+  await resync(db, JSON.parse(fs.readFileSync(b, 'utf8')))
 } else if (a && fs.existsSync(a)) {
   await creer(db, JSON.parse(fs.readFileSync(a, 'utf8')))
 } else {
   console.error('Usage :')
-  console.error('  node page-proposition.mjs fiches/<nom>.json')
+  console.error('  node page-proposition.mjs fiches/<nom>.json          créer')
+  console.error('  node page-proposition.mjs --resync fiches/<nom>.json  corriger sans perdre l’habillage')
   console.error('  node page-proposition.mjs --supprimer <slug>')
   console.error('  node page-proposition.mjs --liste')
   process.exit(1)
