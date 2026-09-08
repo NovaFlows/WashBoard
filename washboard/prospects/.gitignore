@@ -25,3 +25,6 @@ package-lock.json
 
 # Scripts d'import ponctuels : sans données, mais inutiles au dépôt.
 import_*.mjs
+
+# Fiches de prospects : noms, telephones, tarifs — donnees personnelles.
+fiches/
