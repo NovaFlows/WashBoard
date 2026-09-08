@@ -69,15 +69,20 @@ async function paletteLogo(fichier) {
     seaux.set(cle, (seaux.get(cle) ?? 0) + 1)
   }
   const classees = [...seaux.entries()].sort((a, b) => b[1] - a[1])
-    .map(([cle]) => cle.split(',').map(Number))
+    .map(([cle, n]) => [cle.split(',').map(Number), n])
   const gardees = []
-  for (const c of classees) {
-    if (gardees.every(g => Math.min(Math.abs(teinte(g) - teinte(c)), 360 - Math.abs(teinte(g) - teinte(c))) > 40)) {
-      gardees.push(c)
+  for (const [c, n] of classees) {
+    if (gardees.every(([g]) => Math.min(Math.abs(teinte(g) - teinte(c)), 360 - Math.abs(teinte(g) - teinte(c))) > 40)) {
+      gardees.push([c, n])
     }
     if (gardees.length === 3) break
   }
-  return gardees
+  // Une teinte marginale n'est pas une couleur de marque : c'est un reflet, une
+  // etincelle, un lisere. L'orange de YH pese 56 % de son bleu — les deux
+  // comptent. Le jaune des etincelles de ScutNet pese 1 % : le retenir peignait
+  // son fond en olive alors que son logo est rouge et argent.
+  const seuil = (gardees[0]?.[1] ?? 0) * 0.25
+  return gardees.filter(([, n], i) => i === 0 || n >= seuil).map(([c]) => c)
 }
 
 const couleurDominante = async f => (await paletteLogo(f))[0] ?? null

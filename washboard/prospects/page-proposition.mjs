@@ -102,6 +102,11 @@ function optionsDePrestation(p) {
   }))
 }
 
+/** Un prix present et positif. `Number(null)` vaut 0 : sans ce controle, une
+ *  fiche laissee a remplir passait la validation et publiait des prestations
+ *  a 0 € au nom du prospect. Zero reste accepte, c'est un prix. */
+const estPrix = v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0
+
 /** Le controle qu'on veut rater le moins possible : une fiche mal remplie
  *  produit une page fausse qu'on montre a un prospect. */
 function valider(f) {
@@ -129,7 +134,7 @@ function valider(f) {
 
     for (const p of c.prestations ?? []) {
       if (!p.nom?.trim()) erreurs.push(`prestation sans nom dans « ${c.nom} »`)
-      if (!(Number(p.prix) >= 0)) erreurs.push(`prix invalide pour « ${p.nom} »`)
+      if (!estPrix(p.prix)) erreurs.push(`prix manquant ou invalide pour « ${p.nom} »`)
       // La duree n'est sur AUCUN flyer, et sans elle les creneaux sont faux :
       // une prestation de 90 min annoncee a 30 min ferait accepter trois
       // rendez-vous la ou il n'y en a qu'un. On la reclame explicitement.
@@ -143,7 +148,7 @@ function valider(f) {
       const proposes = new Set(p.types ?? [...idsTypes])
       for (const [t, prix] of Object.entries(p.prix_par_type ?? {})) {
         if (!proposes.has(t)) erreurs.push(`« ${p.nom} » fixe un prix pour « ${t} », qu'elle ne propose pas`)
-        if (!(Number(prix) >= 0)) erreurs.push(`prix invalide pour « ${p.nom} » / « ${t} »`)
+        if (!estPrix(prix)) erreurs.push(`prix manquant ou invalide pour « ${p.nom} » / « ${t} »`)
       }
 
       const vus = new Set()
@@ -151,7 +156,7 @@ function valider(f) {
         if (!o.nom?.trim()) erreurs.push(`option sans nom dans « ${p.nom} »`)
         else if (vus.has(slugify(o.nom))) erreurs.push(`deux options nommées « ${o.nom} » dans « ${p.nom} »`)
         else vus.add(slugify(o.nom))
-        if (!(Number(o.prix) >= 0)) erreurs.push(`prix invalide pour l'option « ${o.nom} »`)
+        if (!estPrix(o.prix)) erreurs.push(`prix manquant ou invalide pour l'option « ${o.nom} »`)
       }
     }
   }
