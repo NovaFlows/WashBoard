@@ -49,6 +49,23 @@ describe('surcharge orpheline (type non proposé) — bug prod', () => {
   })
 })
 
+// Bug prod : un type "sur devis" (0€, ex. tapis à chiffrer au cas par cas)
+// faisait afficher « à partir de 0€ » alors que les autres types ont un vrai prix.
+describe('type "sur devis" à 0€ (pas encore de tarif fixe)', () => {
+  const withDevis = {
+    price: 60,
+    vehicle_types: ['2_places', '3_4_places', 'tapis_devis'],
+    vehicle_price_overrides: { '2_places': 80, '3_4_places': 100, tapis_devis: 0 },
+  }
+  it('ignore le type à 0€ pour le minimum affiché', () => {
+    expect(minVehiclePrice(withDevis)).toBe(80) // pas 0
+  })
+  it('retombe sur 0 si vraiment tous les types sont à 0€', () => {
+    const toutDevis = { price: 60, vehicle_types: ['a', 'b'], vehicle_price_overrides: { a: 0, b: 0 } }
+    expect(minVehiclePrice(toutDevis)).toBe(0)
+  })
+})
+
 describe('addonsDuration', () => {
   it('retourne 0 sans options', () => {
     expect(addonsDuration([])).toBe(0)

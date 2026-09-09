@@ -27,9 +27,14 @@ export function hasPriceOverrides(service: PricedService): boolean {
   return offeredTypePrices(service).some(p => p !== service.price)
 }
 
-/** Prix le plus bas parmi les types proposés (affichage « à partir de »). */
+/** Prix le plus bas parmi les types proposés (affichage « à partir de »).
+ *  Un type à 0€ sert de repère « sur devis » (pas encore de tarif fixe,
+ *  ex. un tapis à chiffrer au cas par cas) — l'ignorer pour ne pas afficher
+ *  « à partir de 0€ » alors que les autres types ont un vrai prix. */
 export function minVehiclePrice(service: PricedService): number {
-  return Math.min(...offeredTypePrices(service))
+  const prices = offeredTypePrices(service)
+  const withRealPrice = prices.filter(p => p > 0)
+  return Math.min(...(withRealPrice.length > 0 ? withRealPrice : prices))
 }
 
 /** Durée supplémentaire totale apportée par les options sélectionnées. */
