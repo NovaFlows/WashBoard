@@ -90,7 +90,7 @@ export const PLAN_CARDS: PlanCard[] = [
     features: [
       'Page de réservation personnalisée',
       'Agenda + créneaux intelligents',
-      'Frais de déplacement, multi-véhicules',
+      'Frais de déplacement',
       'CRM analytique',
       'Avis Google par email',
     ],
