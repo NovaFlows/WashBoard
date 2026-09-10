@@ -296,7 +296,12 @@ async function resync(db, fiche) {
   if (fiche.telephone !== undefined)       champs.phone           = fiche.telephone
   if (fiche.message_accueil !== undefined) champs.welcome_message = fiche.message_accueil
   if (fiche.adresse !== undefined)         champs.base_address    = fiche.adresse
-  if (fiche.couleur !== undefined)         champs.brand_color     = fiche.couleur
+  // La COULEUR n'est volontairement pas reecrite ici. La fiche porte la couleur
+  // BRUTE du prospect ; habiller-page.mjs, lui, stocke la version assombrie
+  // jusqu'a etre lisible en blanc. Reecrire la brute a chaque resynchronisation
+  // annulait silencieusement cette correction — le bleu de CLEAN STORMING
+  // serait repasse de 4,51 a 3,36 de contraste sans que rien ne le signale.
+  // Pour changer sa couleur : node habiller-page.mjs <slug> --couleur #RRGGBB
   const { error: eW } = await db.from('washers').update(champs).eq('id', w.id)
   if (eW) { console.error('Mise à jour :', eW.message); process.exit(1) }
 
