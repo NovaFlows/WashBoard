@@ -4,8 +4,18 @@
  *
  *   node habiller-page.mjs <slug> --logo logo.png [--fond visuel.jpg] [--couleur #RRGGBB]
  *
- * « --fond auto » fabrique un fond aux couleurs du logo, pour les prospects qui
- * n'ont aucun visuel utilisable.
+ * LE FOND PAR DEFAUT EST UN MUR D'ATELIER. « --fond auto » fabrique une scene —
+ * beton brut, caisson lumineux portant SON logo, lampe tungstene, plante en
+ * contre-jour — aux couleurs du prospect. C'est ce rendu qui a ete retenu : une
+ * vraie photo d'atelier bat tout le reste, et quand le prospect n'en a pas, une
+ * scene reconstituee s'en approche bien plus qu'un motif abstrait.
+ *
+ * Ordre de preference pour le fond d'un prospect :
+ *   1. SA photo, s'il en a une d'exploitable  → --fond sa-photo.jpg
+ *   2. la scene d'atelier, sinon              → --fond auto
+ *   3. le motif geometrique, en dernier       → --fond motif
+ *
+ * Le motif ne sert que si Python/numpy/scipy manquent sur la machine.
  *
  * Ce qui est automatise, parce que c'est mecanique :
  *   - compression et televersement du logo (600 px) et du fond (1920 px) ;
@@ -19,6 +29,8 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
+import { spawnSync } from 'node:child_process'
 import sharp from 'sharp'
 import { createClient } from '@supabase/supabase-js'
 
@@ -130,6 +142,23 @@ async function detourer(fichier) {
   for (let i = 0; i < W * H; i++) if (vu[i]) data[i * C + 3] = 0
 
   return sharp(data, { raw: { width: W, height: H, channels: C } }).png().toBuffer()
+}
+
+/** Lance fond-atelier.py, qui peint la scene. Le calcul d'image vit en Python
+ *  parce qu'il tient a du bruit fractal et a des filtres gaussiens sur toute
+ *  l'image — numpy et scipy font ca en une ligne. Rend null si Python ou ses
+ *  paquets manquent : l'appelant retombe alors sur le motif geometrique. */
+function genererAtelier(logo, accent, second, sortie, graine) {
+  const script = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), 'fond-atelier.py')
+  for (const python of ['python', 'py', 'python3']) {
+    const r = spawnSync(python, [script, logo, accent, second, sortie, String(graine)],
+      { encoding: 'utf8' })
+    if (r.error) continue                       // cet interpreteur n'existe pas
+    if (r.status === 0 && fs.existsSync(sortie)) return true
+    // Python repond mais echoue : c'est une vraie erreur, on la montre.
+    if (r.status !== 0) { console.error((r.stderr || '').trim().split('\n').slice(-3).join('\n')); return false }
+  }
+  return false
 }
 
 /** Bruit reproductible dans [0,1] : meme graine, meme fond. */
@@ -253,8 +282,8 @@ if (logo) {
 }
 
 const fond = opt('fond')
-if (fond === 'auto') {
-  if (!logo) { console.error('« --fond auto » a besoin de --logo : c\'est de lui que viennent les couleurs.'); process.exit(1) }
+if (fond === 'auto' || fond === 'motif') {
+  if (!logo) { console.error(`« --fond ${fond} » a besoin de --logo : c'est de lui que viennent les couleurs.`); process.exit(1) }
   const palette = await paletteLogo(logo)
   if (!palette.length) { console.error('aucune couleur vive dans ce logo : donne un fichier de fond.'); process.exit(1) }
   const forceeIci = opt('couleur')
@@ -270,12 +299,26 @@ if (fond === 'auto') {
   }
   // Graine tiree du slug : la meme page redonne toujours le meme fond.
   const graine = [...slug].reduce((a, c) => a + c.charCodeAt(0), 7)
-  const embleme = await detourer(logo)
-  const buf = await sharp(fondSVG(palette[0], palette[1], graine, embleme))
-    .webp({ quality: 82 }).toBuffer()
+
+  let buf = null, quoi = ''
+  if (fond === 'auto') {
+    const png = path.join(os.tmpdir(), `atelier-${slug}-${Date.now()}.png`)
+    if (genererAtelier(logo, hex(palette[0]), palette[1] ? hex(palette[1]) : '-', png, graine)) {
+      buf = await sharp(png).resize(1920, null, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 }).toBuffer()
+      fs.rmSync(png, { force: true })
+      quoi = 'atelier'
+    } else {
+      console.error('  (scène d’atelier impossible — Python, numpy ou scipy manquent. Repli sur le motif.)')
+    }
+  }
+  if (!buf) {
+    const embleme = await detourer(logo)
+    buf = await sharp(fondSVG(palette[0], palette[1], graine, embleme)).webp({ quality: 82 }).toBuffer()
+    quoi = embleme ? 'motif, logo incrusté' : 'motif seul, logo non détourable'
+  }
   maj.background_theme = await televerser(db, 'backgrounds', `${w.id}.webp`, buf)
-  console.log(`  fond   ${(buf.length / 1024).toFixed(0)} Ko  (généré depuis ${palette.map(hex).join(' + ')}`
-    + `${embleme ? ', logo incrusté' : ', logo non détourable — motif seul'})`)
+  console.log(`  fond   ${(buf.length / 1024).toFixed(0)} Ko  (${quoi} · ${palette.map(hex).join(' + ')})`)
 } else if (fond) {
   if (!fs.existsSync(fond)) { console.error('fond introuvable :', fond); process.exit(1) }
   // 1920 px suffit pour un fond plein ecran, et le poids compte : ce fichier
