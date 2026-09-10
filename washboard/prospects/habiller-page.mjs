@@ -276,9 +276,28 @@ console.log(`\n${w.name}\n`)
 const logo = opt('logo')
 if (logo) {
   if (!fs.existsSync(logo)) { console.error('logo introuvable :', logo); process.exit(1) }
-  const buf = await sharp(logo).resize(600, 600, { fit: 'inside' }).webp({ quality: 90 }).toBuffer()
+  // L'entete affiche le logo dans un carre de 48 px, en « object-cover » : il
+  // recadre donc au CENTRE. Un logo en bandeau — un mot-symbole large, comme
+  // « CLEAN STORMING » — s'y reduisait a une tranche de trois lettres
+  // illisibles. On le complete en carre pour qu'il rentre entier.
+  const meta = await sharp(logo).metadata()
+  const cote = Math.max(meta.width, meta.height)
+  const carre = Math.abs(meta.width / meta.height - 1) < 0.15
+  // Le fond des bandes reprend un coin du logo : sur un logo sombre, une bande
+  // blanche se verrait plus que le recadrage qu'on repare.
+  const coin = await sharp(logo).extract({ left: 0, top: 0, width: 4, height: 4 })
+    .resize(1, 1).raw().toBuffer()
+  // Deux passes, et pas deux .resize() enchaines : sharp ne garde que le
+  // dernier, le carre etait donc silencieusement annule.
+  const carreBuf = await sharp(logo).resize(cote, cote, {
+    fit: 'contain',
+    background: { r: coin[0], g: coin[1], b: coin[2], alpha: meta.hasAlpha ? 0 : 1 },
+  }).png().toBuffer()
+  const buf = await sharp(carreBuf).resize(600, 600, { fit: 'inside' })
+    .webp({ quality: 90 }).toBuffer()
   maj.logo_url = await televerser(db, 'logos', `${w.id}.webp`, buf)
-  console.log(`  logo   ${(buf.length / 1024).toFixed(0)} Ko`)
+  console.log(`  logo   ${(buf.length / 1024).toFixed(0)} Ko`
+    + (carre ? '' : `  (bandeau ${meta.width}×${meta.height} complété en carré)`))
 }
 
 const fond = opt('fond')
