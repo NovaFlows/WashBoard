@@ -87,6 +87,14 @@ export async function POST(request: NextRequest) {
       .from('washers')
       .select('id')
       .eq('phone', telephone)
+      // Une page « proposition » porte le numéro du prospect qu'on démarche :
+      // c'est ainsi qu'on la construit avant de l'appeler. Sans ce filtre, le
+      // jour où il s'inscrit — souvent pendant le rendez-vous —, son propre
+      // numéro lui était refusé comme « déjà associé à un compte » (URHUS AUTO,
+      // 2026-09-11). `not is true` plutôt que `eq false` : une fiche où la
+      // colonne serait NULL reste comptée, la protection des vrais comptes ne
+      // se desserre pas.
+      .not('is_preview', 'is', true)
       .limit(1)
 
     if (erreurRecherche) {

@@ -15,12 +15,15 @@ let plan: {
 }
 
 const inserts: Record<string, unknown>[] = []
+// Filtres posés sur la requête d'unicité, pour vérifier CE QUI est compté.
+const filtres: unknown[][] = []
 
 function nouveauBuilder() {
   const b: Record<string, unknown> = {}
   Object.assign(b, {
     select: () => b,
-    eq: () => b,
+    eq: (...a: unknown[]) => { filtres.push(['eq', ...a]); return b },
+    not: (...a: unknown[]) => { filtres.push(['not', ...a]); return b },
     limit: () => Promise.resolve(plan.fichesAvecCeNumero),
     maybeSingle: () => Promise.resolve(plan.fichesAvecCeNumero),
     insert: (valeurs: Record<string, unknown>) => {
@@ -73,6 +76,7 @@ async function inscrire(extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.stubEnv('PHONE_UNIQUENESS_EXEMPT', NUMERO_EXEMPTE)
   inserts.length = 0
+  filtres.length = 0
   plan = {
     fichesAvecCeNumero: { data: [], error: null },
     insertErreurs: [],
@@ -94,6 +98,14 @@ describe('POST /api/auth/signup — unicité du téléphone', () => {
     expect(res.status).toBe(400)
     expect(body.error).toMatch(/téléphone/)
     expect(inserts).toHaveLength(0)
+  })
+
+  it('ne compte pas les pages « proposition » : le prospect s’inscrit avec son numéro', async () => {
+    // La page construite avant l'appel porte déjà son numéro. Le 2026-09-11,
+    // URHUS AUTO allait se voir refuser son inscription pendant le rendez-vous.
+    await inscrire()
+    expect(filtres).toContainEqual(['eq', 'phone', NUMERO_NORMAL])
+    expect(filtres).toContainEqual(['not', 'is_preview', 'is', true])
   })
 
   it('accepte le numéro exempté MÊME quand plusieurs comptes le portent déjà', async () => {

@@ -20,6 +20,25 @@ node page-proposition.mjs --resync fiches/<slug>.json
 
 `--liste` montre toutes les propositions en ligne, `--supprimer <slug>` en retire une.
 
+## Quand le prospect s'inscrit
+
+L'inscription crée un compte **neuf et vide**, avec un lien du type
+`urhus-auto-3fa1` : elle ne sait rien de la page montrée pendant l'appel. Juste
+après son inscription, on reprend l'aperçu dans son compte :
+
+```bash
+node reprendre-apercu.mjs <slug-apercu> <email-du-compte>        # montre le plan
+node reprendre-apercu.mjs <slug-apercu> <email-du-compte> --go   # exécute
+```
+
+Prestations, horaires, logo, fond et couleur passent dans son compte ; son nom,
+son téléphone et son essai sont conservés. L'aperçu est supprimé et son lien —
+celui qu'on lui a montré — devient le sien. Le script refuse un compte qui a
+déjà des prestations : on ne recouvre jamais ce qu'un laveur a configuré.
+
+Il peut s'inscrire avec son propre numéro même si l'aperçu le porte déjà :
+l'inscription ne compte pas les aperçus dans sa vérification du téléphone.
+
 ---
 
 ## La règle du fond
