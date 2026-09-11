@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import type { VehicleItem } from '@/types'
 import { escapeHtml } from '@/lib/escapeHtml'
+import { FUSEAU } from '@/lib/dateUtils'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -45,8 +46,8 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   const date         = new Date(params.scheduledAt)
-  const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const discount      = Number(params.smartDiscount ?? 0)
   const finalPrice    = params.isSmartSlot && discount > 0 ? Math.max(0, params.servicePrice - discount) : params.servicePrice
@@ -157,11 +158,11 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   const date = new Date(params.scheduledAt)
-  const formattedDate = date.toLocaleDateString('fr-FR', {
+  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU,
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
-  const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const time = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const today = new Date().toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
 
   const ref       = params.bookingId.slice(0, 8).toUpperCase()
   const discount  = Number(params.smartDiscount ?? 0)
@@ -425,8 +426,8 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   const date          = new Date(params.scheduledAt)
-  const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
   const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'}/dashboard`
@@ -516,7 +517,7 @@ export async function sendTrialReminder({ to, washerName, trialEndsAt, appUrl }:
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
-  const date = new Date(trialEndsAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const date = new Date(trialEndsAt).toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
@@ -608,7 +609,7 @@ export async function sendSubReminder({ to, washerName, endsAt, appUrl }: {
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
-  const date = new Date(endsAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const date = new Date(endsAt).toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
@@ -700,7 +701,7 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
-  const date = new Date(cutoffDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const date = new Date(cutoffDate).toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',

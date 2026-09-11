@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { notifierEquipe } from '@/lib/push'
+import { FUSEAU } from '@/lib/dateUtils'
 
 function generateSlug(name: string): string {
   return name
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
   // Attendue, pas lancée dans le vide : Vercel coupe la fonction dès la réponse
   // renvoyée, et un envoi non attendu n'aurait pas le temps de partir. La
   // fonction n'échoue jamais, l'inscription ne peut donc pas en pâtir.
-  const finEssai = new Date(trialEndsAt).toLocaleDateString('fr-FR', {
+  const finEssai = new Date(trialEndsAt).toLocaleDateString('fr-FR', { timeZone: FUSEAU,
     day: 'numeric', month: 'long',
   })
   await notifierEquipe({

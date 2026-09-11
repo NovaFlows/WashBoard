@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendTrialReminder, sendTrialExpired, sendSubReminder, sendSubExpired, sendGraceEndingWarning } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { logger } from '@/lib/logger'
+import { FUSEAU } from '@/lib/dateUtils'
 
 // Tourne chaque matin à 8h (cron-job.org : 0 8 * * *)
 export async function GET(request: NextRequest) {
@@ -169,7 +170,7 @@ export async function GET(request: NextRequest) {
       await sendGraceEndingWarning({ to: user.email, washerName: washer.name, cutoffDate: cutoff.toISOString() })
       await notifierLaveur(washer.id, {
         title: '⚠️ Vos réservations vont s’arrêter',
-        body: `Sans abonnement, votre page ne prendra plus de rendez-vous à partir du ${cutoff.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`,
+        body: `Sans abonnement, votre page ne prendra plus de rendez-vous à partir du ${cutoff.toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long' })}.`,
         url: '/dashboard/abonnement',
         tag: `grace-ending-${washer.id}`,
       })

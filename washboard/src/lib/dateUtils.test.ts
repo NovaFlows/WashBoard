@@ -37,18 +37,25 @@ describe('getMondayOf', () => {
 describe('formatHeureCompacte', () => {
   // Ce format existe pour tenir dans une case du calendrier sur téléphone,
   // où « 08:00 » se coupait en « 08:… ».
+  //
+  // Les heures sont écrites avec leur décalage (+02:00, heure d'été de Paris)
+  // et non via `new Date(2026, 8, 4, 8, 0)`. Ce constructeur lit l'heure de la
+  // MACHINE : sur la CI, en UTC, il fabriquait 8 h UTC — soit 10 h à Paris.
+  // Les anciens tests passaient seulement parce que le formateur lisait, lui
+  // aussi, l'heure de la machine : les deux erreurs s'annulaient et masquaient
+  // le bug de fuseau pendant quatre mois.
   it('retire le zéro de tête et les minutes rondes', () => {
-    expect(formatHeureCompacte(new Date(2026, 8, 4, 8, 0))).toBe('8h')
-    expect(formatHeureCompacte(new Date(2026, 8, 4, 14, 0))).toBe('14h')
+    expect(formatHeureCompacte(new Date('2026-09-04T08:00:00+02:00'))).toBe('8h')
+    expect(formatHeureCompacte(new Date('2026-09-04T14:00:00+02:00'))).toBe('14h')
   })
 
   it('garde les minutes quand il y en a, sur deux chiffres', () => {
-    expect(formatHeureCompacte(new Date(2026, 8, 4, 8, 30))).toBe('8h30')
-    expect(formatHeureCompacte(new Date(2026, 8, 4, 9, 5))).toBe('9h05')
+    expect(formatHeureCompacte(new Date('2026-09-04T08:30:00+02:00'))).toBe('8h30')
+    expect(formatHeureCompacte(new Date('2026-09-04T09:05:00+02:00'))).toBe('9h05')
   })
 
   it('reste plus court que le format long, ce qui est toute sa raison d’être', () => {
-    const d = new Date(2026, 8, 4, 8, 0)
+    const d = new Date('2026-09-04T08:00:00+02:00')
     expect(formatHeureCompacte(d).length).toBeLessThan(formatHeure(d).length)
   })
 })

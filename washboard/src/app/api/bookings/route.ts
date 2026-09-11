@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
-import { formatHeure } from '@/lib/dateUtils'
+import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { effectiveTeamSize } from '@/lib/slots'
@@ -457,7 +457,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         body: [
           `👤 ${bookingData.client_name}`,
           `✨ ${service.name}`,
-          `📅 ${quand.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
+          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
         ].join('\n'),
         url: '/dashboard/calendrier',
         tag: `booking-${id}`,

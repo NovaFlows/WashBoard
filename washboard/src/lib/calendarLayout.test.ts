@@ -173,9 +173,9 @@ describe('dayKey', () => {
 
 describe('formatHeure', () => {
   it('affiche l’heure sur deux chiffres', () => {
-    expect(formatHeure(new Date(2026, 8, 7, 9, 5))).toBe('09:05')
+    expect(formatHeure(new Date('2026-09-07T09:05:00+02:00'))).toBe('09:05')
   })
   it('utilise le format 24 h', () => {
-    expect(formatHeure(new Date(2026, 8, 7, 14, 30))).toBe('14:30')
+    expect(formatHeure(new Date('2026-09-07T14:30:00+02:00'))).toBe('14:30')
   })
 })
