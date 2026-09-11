@@ -518,6 +518,23 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟡 Roadmap produit
 
+- [ ] **Reprise automatique de l'aperçu à l'inscription.** Aujourd'hui manuelle, via
+      `prospects/reprendre-apercu.mjs` — éprouvée le 2026-09-11 en répétition du rendez-vous
+      URHUS : inscription avec le numéro de l'aperçu, puis reprise en dix secondes. À brancher
+      dans `api/auth/signup` : si le numéro saisi correspond à un aperçu, son contenu et son
+      lien passent dans le nouveau compte, sans intervention.
+  - Le numéro n'est **pas vérifié** (aucun code SMS) et ceux des prospects sont publics :
+    se déclencher sur lui seul permettrait à n'importe qui de récupérer la page, le logo
+    et le lien d'un prospect. Parade retenue : reprise automatique + notification immédiate
+    à l'équipe (« X a repris l'aperçu Y »), pour qu'un détournement saute aux yeux.
+  - Ne **jamais** faire échouer l'inscription : reprise après création du compte, en
+    best-effort, erreur journalisée et signalée.
+  - Normaliser le téléphone à la création de l'aperçu : `page-proposition.mjs` le stocke
+    aujourd'hui tel qu'écrit dans la fiche.
+  - Tests : numéro d'un aperçu → reprise ; numéro inconnu → compte vide ; reprise en
+    échec → inscription réussie quand même.
+  - Reporté volontairement : pas de modification de l'inscription juste avant un rendez-vous.
+
 - [x] 2026-08-26 — **Blog SEO** : section `/blog` + 4 articles formant un cluster
       (trouver des clients, tarifs, se lancer, organiser ses tournées). Index des articles
       centralisé dans `lib/blog.ts`, dont le sitemap est dérivé — publier un article suffit
