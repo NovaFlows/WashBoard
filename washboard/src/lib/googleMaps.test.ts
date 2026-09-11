@@ -37,6 +37,25 @@ describe('getMapsApiKey', () => {
   })
 })
 
+const { etatCleMaps } = await import('./googleMaps')
+
+describe('etatCleMaps', () => {
+  it('« presente » dès que le nouveau nom est posé, même si l’ancien subsiste', () => {
+    vi.stubEnv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY', 'ancienne')
+    expect(etatCleMaps()).toBe('presente')
+  })
+  it('« ancien-nom-seulement » : le repli ne peut pas encore être retiré', () => {
+    vi.stubEnv('GOOGLE_MAPS_API_KEY', '')
+    vi.stubEnv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY', 'ancienne')
+    expect(etatCleMaps()).toBe('ancien-nom-seulement')
+  })
+  it('« absente » quand aucun des deux noms n’est posé', () => {
+    vi.stubEnv('GOOGLE_MAPS_API_KEY', '')
+    vi.stubEnv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY', '')
+    expect(etatCleMaps()).toBe('absente')
+  })
+})
+
 describe('fetchGoogleMaps', () => {
   it('renvoie les données quand Google répond OK', async () => {
     repond({ status: 'OK', predictions: [1, 2] })

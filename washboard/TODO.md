@@ -30,7 +30,9 @@
       par `designer` et `ideas`. Si le problème est réel, il touche **tous** les nouveaux
       inscrits, pas seulement lui.
 
-- [ ] **⚠️ ACTION REQUISE D'ALEXANDRE : créer les 7 secrets GitHub** pour que le job e2e
+- [x] 2026-09-11 — **7 secrets GitHub créés**, vérifié sur la CI de `b8f6402` : le job e2e
+      va jusqu'au bout (navigateur, build, tests de bout en bout, nettoyage). Historique —
+      ils étaient requis pour que le job e2e
       de la CI tourne réellement. Sans eux, le job s'arrête proprement avec un
       avertissement (il ne casse pas le build, mais ne teste rien).
       Dans *Settings → Secrets and variables → Actions* du dépôt :

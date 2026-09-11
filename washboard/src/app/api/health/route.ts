@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
+import { etatCleMaps } from '@/lib/googleMaps'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,10 @@ export async function GET() {
       // Nommer les tables en défaut évite de partir à la pêche : le message
       // dit directement quel GRANT manque.
       ...(dbOk ? {} : { unreachableTables: inaccessibles }),
+      // Le NOM sous lequel la clé est présente, jamais sa valeur. Informatif :
+      // il ne change pas le code de réponse, pour ne pas déclencher d'alerte
+      // de disponibilité sur une clé présente mais simplement renommée.
+      mapsKey: etatCleMaps(),
     },
     latencyMs: Date.now() - started,
     ts: new Date().toISOString(),

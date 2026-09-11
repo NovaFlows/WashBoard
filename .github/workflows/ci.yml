@@ -37,7 +37,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
-          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: dummy-maps-key
+          GOOGLE_MAPS_API_KEY: dummy-maps-key
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
   # Tests de bout en bout (Playwright) : ils lancent l'application réelle et la

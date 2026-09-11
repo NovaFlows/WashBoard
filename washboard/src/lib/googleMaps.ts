@@ -24,6 +24,24 @@ export function getMapsApiKey(): string | undefined {
   return process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 }
 
+/**
+ * Sous quel nom la clé est-elle présente — sans jamais révéler sa valeur.
+ *
+ * Exposé par `/api/health`. C'est la seule façon, de l'extérieur, de savoir si
+ * le renommage côté Vercel a bien été déployé : une variable renommée ne sert
+ * qu'après un redéploiement. Retirer le repli sur l'ancien nom sans cette
+ * preuve pouvait couper l'autocomplétion, les zones et les frais de
+ * déplacement d'un coup.
+ *
+ * Utile au-delà de la migration : une clé absente est la cause la plus directe
+ * d'une autocomplétion muette, et elle se lit ici en une requête.
+ */
+export function etatCleMaps(): 'presente' | 'ancien-nom-seulement' | 'absente' {
+  if (process.env.GOOGLE_MAPS_API_KEY) return 'presente'
+  if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return 'ancien-nom-seulement'
+  return 'absente'
+}
+
 /** Statuts Google qui signalent un résultat vide, pas une panne. */
 const STATUTS_NORMAUX = new Set(['OK', 'ZERO_RESULTS'])
 
