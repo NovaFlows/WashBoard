@@ -26,14 +26,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('getMapsApiKey', () => {
-  it('préfère le nouveau nom', () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY', 'ancienne')
+  it('lit GOOGLE_MAPS_API_KEY', () => {
     expect(getMapsApiKey()).toBe('cle-test')
   })
-  it('retombe sur l’ancien nom, pour survivre au renommage côté Vercel', () => {
+  it('n’utilise plus l’ancien nom : le repli a été retiré le 2026-09-11', () => {
     vi.stubEnv('GOOGLE_MAPS_API_KEY', '')
     vi.stubEnv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY', 'ancienne')
-    expect(getMapsApiKey()).toBe('ancienne')
+    expect(getMapsApiKey()).toBeUndefined()
   })
 })
 

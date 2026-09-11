@@ -16,25 +16,26 @@ import { logger } from '@/lib/logger'
 //    frais de déplacement à 0, zones acceptées par défaut. Aucune trace.
 
 /**
- * Clé Maps. On lit d'abord le nouveau nom, puis l'ancien : le renommage peut
- * ainsi être déployé avant que la variable soit renommée côté Vercel, sans
- * casser la production entre les deux.
+ * Clé Maps, sous son seul nom : `GOOGLE_MAPS_API_KEY`.
+ *
+ * Le repli sur l'ancien `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` a servi le temps du
+ * renommage côté Vercel. Il a été retiré le 2026-09-11, une fois que
+ * `/api/health` a confirmé en production la présence du nouveau nom.
  */
 export function getMapsApiKey(): string | undefined {
-  return process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  return process.env.GOOGLE_MAPS_API_KEY || undefined
 }
 
 /**
  * Sous quel nom la clé est-elle présente — sans jamais révéler sa valeur.
  *
- * Exposé par `/api/health`. C'est la seule façon, de l'extérieur, de savoir si
- * le renommage côté Vercel a bien été déployé : une variable renommée ne sert
- * qu'après un redéploiement. Retirer le repli sur l'ancien nom sans cette
- * preuve pouvait couper l'autocomplétion, les zones et les frais de
- * déplacement d'un coup.
+ * Exposé par `/api/health`. C'est ce contrôle qui a permis de retirer sans
+ * risque le repli sur l'ancien nom : une variable renommée ne sert qu'après un
+ * redéploiement, et rien d'autre ne le prouvait de l'extérieur.
  *
- * Utile au-delà de la migration : une clé absente est la cause la plus directe
- * d'une autocomplétion muette, et elle se lit ici en une requête.
+ * Depuis ce retrait, « ancien-nom-seulement » signifie que la clé n'est PAS
+ * utilisée : elle existe, mais sous un nom que le code ne lit plus. C'est la
+ * cause la plus directe d'une autocomplétion muette, lisible ici en une requête.
  */
 export function etatCleMaps(): 'presente' | 'ancien-nom-seulement' | 'absente' {
   if (process.env.GOOGLE_MAPS_API_KEY) return 'presente'

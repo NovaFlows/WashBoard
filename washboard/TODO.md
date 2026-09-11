@@ -468,7 +468,9 @@ rien à faire, mais que le projet reste globalement sain.
       devient `GOOGLE_MAPS_API_KEY`, lue à un seul endroit (`lib/googleMaps.ts`) au lieu de
       six. Le helper lit le nouveau nom **avec repli sur l'ancien**, pour que le déploiement
       ne casse rien tant que Vercel n'est pas à jour.
-  - [ ] **Renommer la variable dans Vercel**, puis supprimer le repli sur l'ancien nom.
+  - [x] 2026-09-11 — **Variable renommée dans Vercel, repli retiré.** Vérifié avant le
+        retrait : `/api/health` renvoyait `mapsKey: "presente"` en production. La CI
+        construisait encore avec l'ancien nom — corrigé dans le même mouvement.
 
 - [x] 2026-08-26 — **Les routes `api/places/*` remontent les erreurs Google.** Le helper
       `fetchGoogleMaps` distingue une absence de résultat (`ZERO_RESULTS`, normal) d'une
