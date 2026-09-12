@@ -59,6 +59,51 @@ export function getCrmPeriodBounds(p: CrmPeriodState): { start: Date; end: Date 
   }
 }
 
+/** La période précédente, de même nature : le mois d'avant, l'année d'avant,
+ *  la semaine d'avant, la veille. Sert à comparer les indicateurs.
+ *
+ *  Le mois précédent est le mois CALENDAIRE d'avant, pas « 30 jours plus
+ *  tôt » : comparer septembre à août est ce qu'attend un laveur, même si les
+ *  deux mois n'ont pas la même durée.
+ *
+ *  `null` pour « Tout », qui n'a pas d'avant. */
+export function previousCrmPeriod(p: CrmPeriodState): CrmPeriodState | null {
+  switch (p.type) {
+    case 'all':
+      return null
+    case 'year':
+      return { ...p, year: p.year - 1 }
+    case 'month':
+      return p.month === 0 ? { ...p, year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 }
+    case 'week': {
+      const lundi = new Date(p.weekStart)
+      lundi.setDate(lundi.getDate() - 7)
+      return { ...p, weekStart: lundi }
+    }
+    case 'day': {
+      const [a, m, j] = p.day.split('-').map(Number)
+      if (!a || !m || !j) return null
+      const veille = new Date(a, m - 1, j - 1)
+      const iso = `${veille.getFullYear()}-${String(veille.getMonth() + 1).padStart(2, '0')}-${String(veille.getDate()).padStart(2, '0')}`
+      return { ...p, day: iso }
+    }
+  }
+}
+
+/** La période contient-elle l'instant `maintenant` ?
+ *
+ *  Une période en cours n'est pas terminée : ses chiffres vont encore bouger,
+ *  et les comparer tels quels à une période complète trompe — septembre au 12
+ *  contre tout août donne des « −100 % » qui ne veulent rien dire.
+ *
+ *  Fonction pure : l'appelant fournit l'instant, pour que le rendu d'un
+ *  composant ne dépende pas de l'heure à laquelle il s'exécute. `false` pour
+ *  « Tout », qui n'est jamais « en cours ». */
+export function isCrmPeriodInProgress(p: CrmPeriodState, maintenant: number): boolean {
+  const bornes = getCrmPeriodBounds(p)
+  return !!bornes && maintenant >= bornes.start.getTime() && maintenant < bornes.end.getTime()
+}
+
 /** La date tombe-t-elle dans la période ? */
 export function isInCrmPeriod(date: Date, p: CrmPeriodState): boolean {
   const bornes = getCrmPeriodBounds(p)

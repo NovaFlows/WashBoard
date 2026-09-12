@@ -48,3 +48,43 @@ export function getLast6Months(now: Date = new Date()): { year: number; month: n
   }
   return resultat
 }
+
+/** Les indicateurs de tête du CRM, calculés une seule fois pour une période.
+ *
+ *  - `ca` : réservations confirmées ou terminées (voir `comptePourLeCA`) ;
+ *  - `panierMoyen` : ce CA divisé par ces mêmes réservations — pas par le
+ *    total, qui mêlerait des annulations à zéro euro ;
+ *  - `tauxConfirmation` : part des réservations confirmées ou terminées.
+ *    Il s'appelait « taux de succès », sans que rien ne dise ce qu'il
+ *    mesurait. */
+export type ResumeCrm = {
+  total: number
+  enAttente: number
+  ca: number
+  comptees: number
+  panierMoyen: number
+  tauxConfirmation: number
+}
+
+export function resumeCrm(bookings: RevenueBooking[]): ResumeCrm {
+  const comptees = bookings.filter(comptePourLeCA)
+  const ca = comptees.reduce((somme, b) => somme + effectivePrice(b), 0)
+  return {
+    total: bookings.length,
+    enAttente: bookings.filter(b => b.status === 'pending').length,
+    ca,
+    comptees: comptees.length,
+    panierMoyen: comptees.length ? ca / comptees.length : 0,
+    tauxConfirmation: bookings.length ? Math.round((comptees.length / bookings.length) * 100) : 0,
+  }
+}
+
+/** Écart relatif en pourcentage, arrondi.
+ *
+ *  `null` quand la période de référence est à zéro : un « +∞ % » ou un
+ *  « +100 % » calculé sur rien n'apprend rien au laveur, mieux vaut ne rien
+ *  afficher. */
+export function ecartRelatif(actuel: number, reference: number): number | null {
+  if (!reference) return null
+  return Math.round(((actuel - reference) / reference) * 100)
+}
