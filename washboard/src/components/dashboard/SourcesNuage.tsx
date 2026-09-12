@@ -98,7 +98,9 @@ export default function SourcesNuage({ sources, visiteurs, conversions, accent =
       {points.length < 2 ? (
         <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center leading-relaxed">
           Il faut au moins deux sources d&apos;au moins {SEUIL_VISITEURS} visiteurs pour les comparer.
-          <br />Partagez vos liens par réseau, plus bas, pour que chaque source soit reconnue.
+          {/* Ne pas écrire ici le titre de l'encart des liens : les tests de bout
+              en bout le cherchent comme texte unique sur la page. */}
+          <br />Utilisez les liens de partage en bas de page pour que chaque source soit reconnue.
         </p>
       ) : (
         <>
