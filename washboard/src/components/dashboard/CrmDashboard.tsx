@@ -10,9 +10,12 @@ import {
   getStatusKey, comptePourLeCA, effectivePrice, getLast6Months, resumeCrm, ecartRelatif,
 } from '@/lib/crmStats'
 import {
-  isInCrmPeriod, isCrmPeriodInProgress, previousCrmPeriod, crmPeriodLabel, type CrmPeriodState,
+  isInCrmPeriod, isCrmPeriodInProgress, getCrmPeriodBounds, previousCrmPeriod, crmPeriodLabel, type CrmPeriodState,
 } from '@/lib/crmPeriod'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
+import { caCumule, delaisDeReservation } from '@/lib/graphiquesCrm'
+import CaCumule from '@/components/dashboard/CaCumule'
+import DelaiReservation from '@/components/dashboard/DelaiReservation'
 
 // Tableau de bord des réservations.
 //
@@ -264,6 +267,23 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       return d.getFullYear() === year && d.getMonth() === month
     })))
   })()
+
+  // Chiffre d'affaires cumulé face à la période précédente : seulement quand
+  // les deux périodes sont bornées et se comparent jour à jour.
+  const bornesCumul = getCrmPeriodBounds(period)
+  const bornesPrecedentes = precedente ? getCrmPeriodBounds(precedente) : null
+  const cumul = bornesCumul && bornesPrecedentes && period.type !== 'day'
+    ? caCumule(
+        bookings.filter(correspondAuClient),
+        { debut: bornesCumul.start, fin: bornesCumul.end },
+        { debut: bornesPrecedentes.start, fin: bornesPrecedentes.end },
+        maintenant,
+        (rang, jour) => period.type === 'month' ? String(rang)
+          : period.type === 'week' ? JOURS_COURTS[rang - 1]
+          : dateCourte(jour),
+      )
+    : null
+  const delais = delaisDeReservation(displayBookings)
 
   // Par prestation : volume, part du volume et chiffre d'affaires réalisé.
   const parPrestation = Object.values(
@@ -529,6 +549,16 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
           </details>
         </div>
       )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cumul && precedente && (
+          <CaCumule points={cumul} teinte={TEINTE_CA}
+            libelleActuel={`${crmPeriodLabel(period)}${enCours ? ' (en cours)' : ''}`}
+            libellePrecedent={crmPeriodLabel(precedente)} />
+        )}
+        <DelaiReservation points={delais.points} mediane={delais.mediane} teinte={TEINTE_VOLUME}
+          className={cumul ? '' : 'md:col-span-2'} />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Par prestation */}

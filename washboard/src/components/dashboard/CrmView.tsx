@@ -19,6 +19,9 @@ import { CrmPeriodFilter } from '@/components/dashboard/CrmPeriodFilter'
 import FunnelInsights from '@/components/dashboard/FunnelInsights'
 import VisitFunnel from '@/components/dashboard/VisitFunnel'
 import CrmDashboard from '@/components/dashboard/CrmDashboard'
+import TraficTemps from '@/components/dashboard/TraficTemps'
+import SourcesNuage from '@/components/dashboard/SourcesNuage'
+import { traficDansLeTemps, sourcesVolumeConversion } from '@/lib/graphiquesCrm'
 
 // Orchestre l'écran CRM autour d'UNE période commune.
 //
@@ -71,6 +74,10 @@ export default function CrmView({ events, bookings, websiteHost, accent }: Props
     }
   })
 
+  // L'instant présent, lu une fois au montage : le lire à chaque rendu rendrait
+  // le composant impur.
+  const [maintenant] = useState(() => Date.now())
+
   // Années présentes dans les données, pour ne pas proposer de période vide.
   const availableYears = useMemo(() => {
     const ans = new Set<number>()
@@ -108,7 +115,18 @@ export default function CrmView({ events, bookings, websiteHost, accent }: Props
         })
       : []
 
+    // Frise des visites : bornée par la période, sans les jours à venir ; sur
+    // « Tout », du premier événement jusqu'à aujourd'hui.
+    const demain = new Date(maintenant)
+    demain.setHours(24, 0, 0, 0)
+    const premier = retenus.reduce((min, e) => Math.min(min, new Date(e.created_at).getTime()), maintenant)
+    const jourPremier = new Date(premier)
+    const debutFrise = bornes ? bornes.start : new Date(jourPremier.getFullYear(), jourPremier.getMonth(), jourPremier.getDate())
+    const finFrise = bornes ? new Date(Math.min(bornes.end.getTime(), demain.getTime())) : demain
+
     return {
+      trafic: traficDansLeTemps(retenus, debutFrise, finFrise),
+      sources: sourcesVolumeConversion(retenus, websiteHost),
       funnelStats,
       visitorCount: funnelStats.find(s => s.step === 'prestation')?.sessions ?? 0,
       conversionCount: funnelStats.find(s => s.step === 'confirmation')?.sessions ?? 0,
@@ -122,7 +140,7 @@ export default function CrmView({ events, bookings, websiteHost, accent }: Props
       referrerConversionBreakdown: buildReferrerConversionBreakdown(retenus),
       visitTimingBreakdown: buildVisitTimingBreakdown(retenus),
     }
-  }, [events, periode])
+  }, [events, periode, maintenant, websiteHost])
 
   return (
     <>
@@ -145,6 +163,8 @@ export default function CrmView({ events, bookings, websiteHost, accent }: Props
           periodLabel={crmPeriodLabel(periode)}
         />
         <VisitFunnel stats={stats.funnelStats} accent={accent} periodLabel={crmPeriodLabel(periode)} />
+        <TraficTemps points={stats.trafic.points} granularite={stats.trafic.granularite} visiteurs={stats.visitorCount} reservations={stats.conversionCount} accent={accent} periodLabel={crmPeriodLabel(periode)} />
+        <SourcesNuage sources={stats.sources} visiteurs={stats.visitorCount} conversions={stats.conversionCount} accent={accent} periodLabel={crmPeriodLabel(periode)} />
       </div>
 
       <CrmDashboard bookings={bookings} period={periode} />
