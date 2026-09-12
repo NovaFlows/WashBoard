@@ -91,7 +91,7 @@ export default function BookingPDF({ booking }: Props) {
         <View style={s.header}>
           <View>
             <Text style={s.washerName}>{washer?.name ?? ''}</Text>
-            <Text style={s.subText}>Prestataire de lavage automobile à domicile</Text>
+            <Text style={s.subText}>Prestataire de nettoyage et d&apos;entretien à domicile</Text>
             {washer?.phone && <Text style={s.subText}>{washer.phone}</Text>}
           </View>
           <View>
@@ -203,7 +203,7 @@ export default function BookingPDF({ booking }: Props) {
         {/* Pied de page */}
         <View style={s.footer}>
           <Text style={s.footerText}>
-            Ce reçu a été généré automatiquement par WashBoard · Plateforme de réservation de lavage automobile à domicile
+            Ce reçu a été généré automatiquement par WashBoard · Plateforme de réservation de prestations à domicile
           </Text>
         </View>
 

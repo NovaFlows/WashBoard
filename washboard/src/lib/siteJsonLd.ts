@@ -23,7 +23,7 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
     url: siteUrl,
     logo: { '@type': 'ImageObject', url: `${siteUrl}/LogoWashBoard.png` },
     description:
-      'Logiciel de gestion pour laveurs auto mobiles : page de réservation en ligne, agenda, suivi clients et comptabilité.',
+      "Logiciel de gestion pour les pros du nettoyage et de l'entretien à domicile (lavage auto, detailing, ménage, entretien de piscine...) : page de réservation en ligne, agenda, suivi clients et comptabilité.",
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',
@@ -43,7 +43,7 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
     operatingSystem: 'Web',
     inLanguage: 'fr-FR',
     description:
-      "L'outil de gestion des laveurs auto mobiles : réservation en ligne sans compte client, créneaux groupés par quartier, relances et avis automatiques, comptabilité.",
+      "L'outil de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne sans compte client, créneaux groupés par quartier, relances et avis automatiques, comptabilité.",
     publisher: { '@id': `${siteUrl}/#organization` },
     offers: {
       '@type': 'AggregateOffer',

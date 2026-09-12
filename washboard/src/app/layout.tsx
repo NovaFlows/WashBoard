@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
+  title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
   manifest: "/manifest.webmanifest",
   applicationName: "WashBoard",
   icons: {
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
     title: "WashBoard",
     statusBarStyle: "default",
   },
-  description: "Le logiciel tout-en-un des laveurs auto mobiles : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
-  keywords: ["outil laveur auto mobile", "outil gestion lavage auto", "logiciel laveur auto", "lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "logiciel detailing"],
+  description: "Le logiciel tout-en-un des pros du nettoyage et de l'entretien à domicile (lavage auto, detailing, ménage, entretien de piscine...) : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
+  keywords: ["outil laveur auto mobile", "outil gestion lavage auto", "logiciel laveur auto", "lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "logiciel detailing", "logiciel nettoyage à domicile", "outil pro du nettoyage mobile", "logiciel entretien à domicile"],
   authors: [{ name: "WashBoard" }],
   creator: "WashBoard",
   metadataBase: new URL("https://www.washboard.fr"),
@@ -57,13 +57,13 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://www.washboard.fr",
     siteName: "WashBoard",
-    title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
-    description: "L'outil de gestion des laveurs auto mobiles : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
+    title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
+    description: "L'outil de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "WashBoard — L'outil de gestion pour laveurs auto mobiles",
-    description: "L'outil de gestion des laveurs auto mobiles : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
+    title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
+    description: "L'outil de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
   },
   robots: {
     index: true,

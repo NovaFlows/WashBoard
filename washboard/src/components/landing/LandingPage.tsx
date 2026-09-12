@@ -702,7 +702,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 text-center">
           <p className="text-xs text-slate-400 leading-relaxed">
-            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien à domicile</strong> — lavage auto, detailing, ménage, entretien de piscine et bien d&apos;autres. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants du service à domicile en France.
+            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien à domicile</strong> — lavage de véhicules, detailing, ménage, entretien de piscine et bien d&apos;autres. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants du service à domicile en France.
           </p>
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">

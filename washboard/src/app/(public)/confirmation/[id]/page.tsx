@@ -78,7 +78,7 @@ export default async function ConfirmationPage({ params }: Props) {
                 <img src={washer.logo_url} alt={washer.name} className="w-14 h-14 rounded-xl object-cover mb-3" />
               )}
               <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{washer.name}</h1>
-              <p className="text-sm text-slate-500 mt-0.5">Prestataire de lavage automobile à domicile</p>
+              <p className="text-sm text-slate-500 mt-0.5">Prestataire de nettoyage et d&apos;entretien à domicile</p>
               {washer.phone && <p className="text-sm text-slate-500 mt-0.5">{washer.phone}</p>}
             </div>
             <div className="text-right">
@@ -168,7 +168,7 @@ export default async function ConfirmationPage({ params }: Props) {
           {/* Pied de page */}
           <div className="bg-slate-50 border-t border-slate-200 px-10 py-4 text-center">
             <p className="text-xs text-slate-400">
-              Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Plateforme de réservation de lavage automobile à domicile
+              Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Plateforme de réservation de prestations à domicile
             </p>
           </div>
         </div>

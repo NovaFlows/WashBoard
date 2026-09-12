@@ -25,8 +25,8 @@ export default function CGV() {
 
       <Section title="2. Description du service">
         <p>
-          WashBoard est un logiciel SaaS (Software as a Service) de gestion destiné aux laveurs automobiles mobiles et
-          prestataires de detailing à domicile. Il comprend notamment :
+          WashBoard est un logiciel SaaS (Software as a Service) de gestion destiné aux professionnels du nettoyage
+          et de l&apos;entretien à domicile (lavage de véhicules, detailing, ménage, entretien de piscine, etc.). Il comprend notamment :
         </p>
         <ul>
           <li>Une page de réservation en ligne personnalisée par client</li>

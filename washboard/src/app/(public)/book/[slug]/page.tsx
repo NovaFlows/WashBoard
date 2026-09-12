@@ -34,8 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Sans ces trois champs, la page héritait de ceux de la page d'accueil
   // (`layout.tsx` définit un `openGraph` complet et `canonical: "/"`). Un
-  // laveur qui collait son lien dans WhatsApp ou en bio Instagram voyait donc
-  // s'afficher « WashBoard — L'outil de gestion pour laveurs auto mobiles » :
+  // professionnel qui collait son lien dans WhatsApp ou en bio Instagram
+  // voyait donc s'afficher le titre marketing générique de la page d'accueil :
   // notre argumentaire B2B, envoyé à SES clients, à la place de son nom.
   // Relevé lors de la revue du 2026-09-06.
   const description = washer.welcome_message?.trim()

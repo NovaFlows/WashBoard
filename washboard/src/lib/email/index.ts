@@ -214,7 +214,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
     <div style="padding:28px 40px 20px;display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
         <h1 style="margin:0 0 3px;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">${escapeHtml(params.washerName)}</h1>
-        <p style="margin:0;color:#64748b;font-size:13px;">Prestataire de lavage automobile à domicile</p>
+        <p style="margin:0;color:#64748b;font-size:13px;">Prestataire de nettoyage et d'entretien à domicile</p>
         ${params.washerPhone ? `<p style="margin:3px 0 0;color:#64748b;font-size:13px;">${escapeHtml(params.washerPhone)}</p>` : ''}
       </div>
       <div style="text-align:right;">
@@ -310,7 +310,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
 
     <!-- Pied de page -->
     <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Réservation de lavage automobile à domicile</p>
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Réservation de prestations à domicile</p>
     </div>
 
   </div>
