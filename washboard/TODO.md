@@ -7,8 +7,8 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-08-26 (blog SEO, centre d'aide, fiche client, hero + nav ;
-> et plus tôt : plan Business retiré, forfaits annuels, mode test des crons, 2 bugs prod)
+> Dernière mise à jour : 2026-09-12 (compte d'essai EssaiAuto à supprimer ; et plus tôt :
+> blog SEO, centre d'aide, fiche client, hero + nav, plan Business retiré, forfaits annuels)
 
 ---
 
@@ -716,6 +716,15 @@ rien à faire, mais que le projet reste globalement sain.
 ## 📌 SQL / config en attente (à exécuter en prod si pas déjà fait)
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
+
+- [ ] **Supprimer le compte d'essai `EssaiAuto` (slug `essai-demo`).** Créé le 2026-09-11
+      pour répéter le rendez-vous URHUS (inscription sur un aperçu, puis reprise). Il ne sert
+      plus. En attente : Alexandre n'a pas accès à Supabase au 2026-09-12.
+      Même procédure que la purge RGPD (`api/cron/purge-accounts`) : dépenses → logo dans le
+      storage → utilisateur auth, la cascade emporte `washers`, réservations et prestations.
+      Avant : vérifier que le slug pointe bien sur ce compte d'essai (email de l'inscription,
+      connu d'Alexandre, pas écrit ici : dépôt public). Après : recompter les laveurs
+      restants et vérifier que Kookii Clean est intact.
 
 - [x] 2026-08-26 — **Audit complet des droits `service_role`, sur TOUTES les tables.**
       Le point « vérifier que tout le SQL est passé » traînait depuis juin, et un `GRANT`
