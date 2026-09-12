@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BookingList from '@/components/dashboard/BookingList'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { logger } from '@/lib/logger'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -9,11 +10,22 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
+  const { data: washer, error: washerError } = await supabase
     .from('washers')
     .select('*')
     .eq('user_id', user.id)
     .single()
+
+  // Une lecture qui échoue n'est pas un profil absent. Avant, les deux menaient
+  // à la déconnexion : un simple raté réseau au réveil de l'application
+  // installée fermait la session pour de bon. C'est la page d'ouverture de
+  // l'application, la plus exposée. Une erreur affiche désormais l'écran
+  // « Réessayer » et la session reste intacte.
+  // PGRST116 = aucune ligne : c'est le seul cas où le profil manque vraiment.
+  if (washerError && washerError.code !== 'PGRST116') {
+    logger.error('dashboard.washer.read_failed', { userId: user.id }, washerError)
+    throw new Error('Lecture du profil laveur impossible')
+  }
 
   // Session orpheline (ligne washer supprimée mais session auth encore active) :
   // on déconnecte pour éviter la boucle "profil non trouvé".

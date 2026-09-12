@@ -16,9 +16,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 // cookies dans la réponse, sinon le navigateur garde les anciens et
 // l'opération recommence à chaque page.
 //
-// Ce fichier ne redirige personne : chaque page du tableau de bord vérifie
+// Ce fichier ne sert pas de garde : chaque page du tableau de bord vérifie
 // déjà l'accès de son côté. Y ajouter une garde ferait deux endroits à tenir
-// d'accord, et le premier oubli ouvrirait une page privée.
+// d'accord, et le premier oubli ouvrirait une page privée. Sa seule
+// redirection va dans l'autre sens : un laveur déjà connecté qui arrive sur
+// /login est renvoyé au tableau de bord (voir plus bas).
 //
 // ⚠️ En Next.js 16, `middleware.ts` est déprécié et renommé `proxy.ts`
 // (même comportement, autre nom de fichier et de fonction exportée).
@@ -57,10 +59,26 @@ export async function proxy(request: NextRequest) {
   // Un échec ici ne doit jamais empêcher la page de s'afficher : sans réseau
   // vers Supabase, mieux vaut servir la page et laisser la garde de la page
   // décider, plutôt que de renvoyer une erreur sur tout le site.
+  let connecte = false
   try {
-    await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
+    connecte = !!user
   } catch {
     // Session non rafraîchie : la page appliquera sa propre règle.
+  }
+
+  // Déjà connecté sur /login : retour au tableau de bord. Une page qui renvoie
+  // vers la connexion sur un simple raté de lecture se rattrape ainsi toute
+  // seule, au lieu de faire croire au laveur qu'il a été déconnecté et de lui
+  // faire retaper son mot de passe. Les cookies qui viennent d'être
+  // renouvelés suivent la redirection, sinon ils seraient perdus.
+  if (connecte && request.nextUrl.pathname === '/login') {
+    const cible = request.nextUrl.clone()
+    cible.pathname = '/dashboard'
+    cible.search = ''
+    const redirection = NextResponse.redirect(cible)
+    response.cookies.getAll().forEach(c => redirection.cookies.set(c))
+    return redirection
   }
 
   return response
