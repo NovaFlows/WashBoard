@@ -6,6 +6,7 @@ import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { normalizeHost } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -22,20 +23,36 @@ export default async function CrmPage() {
     .from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
 
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('*, services(name, price, duration_minutes)')
-    .eq('washer_id', washer.id)
-    .order('created_at', { ascending: false })
+  // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
+  // erreur. Voir `toutesLesLignes`.
+  const { data: bookings, error: bookingsError } = await toutesLesLignes(
+    (debut, fin) => supabase
+      .from('bookings')
+      .select('*, services(name, price, duration_minutes)')
+      .eq('washer_id', washer.id)
+      .order('created_at', { ascending: false })
+      .order('id')
+      .range(debut, fin),
+  )
+  if (bookingsError) logger.warn('crm.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
 
   const since = new Date()
   since.setDate(since.getDate() - FUNNEL_HISTORY_DAYS)
 
-  const { data: funnelEvents, error: funnelError } = await supabase
-    .from('booking_funnel_events')
-    .select('step, session_id, created_at, referrer_host, device')
-    .eq('washer_id', washer.id)
-    .gte('created_at', since.toISOString())
+  // Sans pagination, on ne recevait que les 1 000 premiers événements : chez
+  // Kookii Clean, 1 000 sur 5 659, et des statistiques de visite figées au
+  // 1er septembre (constaté le 2026-09-12). Ordre stable sur une clé unique,
+  // sinon deux pages successives peuvent se chevaucher.
+  const { data: funnelEvents, error: funnelError } = await toutesLesLignes(
+    (debut, fin) => supabase
+      .from('booking_funnel_events')
+      .select('step, session_id, created_at, referrer_host, device')
+      .eq('washer_id', washer.id)
+      .gte('created_at', since.toISOString())
+      .order('created_at')
+      .order('id')
+      .range(debut, fin),
+  )
 
   // Sans trace ici, un `?? []` silencieux ferait apparaître un entonnoir vide
   // sans que personne ne remarque que la lecture a échoué (RLS, GRANT...).
