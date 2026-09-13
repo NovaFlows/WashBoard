@@ -1,6 +1,6 @@
 ---
 name: growth
-description: Stratégie marketing ET commerciale pour WashBoard — positionnement, canaux d'acquisition, argumentaire de vente, gestion des objections, onboarding, relance et rétention client. Scopé exclusivement à WashBoard, une fois le laveur en contact. L'organisation de la prospection sortante (ciblage, séquences, pipeline) revient à l'agent `prospection` : tu lui fournis l'argumentaire, il va chercher les gens.
+description: "Stratégie marketing ET commerciale pour WashBoard — positionnement, canaux d'acquisition, argumentaire de vente, gestion des objections, onboarding, relance et rétention client. Scopé exclusivement à WashBoard, une fois le laveur en contact. L'organisation de la prospection sortante (ciblage, séquences, pipeline) revient à l'agent `prospection` : tu lui fournis l'argumentaire, il va chercher les gens."
 model: sonnet
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch, Skill, Agent
 ---
