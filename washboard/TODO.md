@@ -7,8 +7,8 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-12 (compte d'essai EssaiAuto à supprimer ; et plus tôt :
-> blog SEO, centre d'aide, fiche client, hero + nav, plan Business retiré, forfaits annuels)
+> Dernière mise à jour : 2026-09-13 (landing : liste du contenu à ajouter ; et plus tôt :
+> compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide, fiche client, forfaits annuels)
 
 ---
 
@@ -535,6 +535,35 @@ rien à faire, mais que le projet reste globalement sain.
       + exception `.gitignore` pour le rendre traçable.
 
 ## 🟡 Roadmap produit
+
+- [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
+      2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,
+      9 blocs. Le problème n'est pas la taille mais ce qui manque pour qu'un pro paie
+      49 €/mois. Par ordre d'impact :
+  - [ ] **À corriger d'abord : le « +40 rendez-vous en plus par mois — En moyenne ».**
+        Ce n'est pas une moyenne mesurée mais un calcul (+2/jour × 22 jours), comme le
+        « +2 lavages/jour en moyenne » de la fonctionnalité phare. Présenté comme un
+        constat avec si peu de clients : peu crédible, et un chiffre non vérifié peut
+        passer pour trompeur. Soit le présenter comme un exemple, soit le remplacer par
+        de vrais chiffres (Kookii Clean).
+  - [ ] **Vraies captures du produit** : page de réservation, calendrier, CRM avec ses
+        graphiques. Aujourd'hui les seuls visuels sont deux plannings inventés. Captures
+        à prendre sur le compte de test Kooki Clean, jamais sur Kookii Clean.
+  - [ ] **Témoignage de Kookii Clean** : aucune preuve sociale sur la page (ni avis, ni
+        client cité), alors qu'un vrai client paie. **Bloqué côté Alexandre** : il faut
+        sa phrase et son accord pour publier son nom.
+  - [ ] **Grille de toutes les fonctionnalités** : la page n'en montre qu'une phare et
+        3 cartes. Manquent CRM et graphiques, compta avec export Excel, avis Google et
+        relances automatiques, notifications sur téléphone et app installable, frais de
+        déplacement, synchronisation Google Agenda.
+  - [ ] **Section « Pour qui ? »** avec les métiers visés (voiture, ménage, vitres,
+        piscine…). Le hero annonce « Nettoyage & entretien mobile » mais tous les
+        exemples parlent de lavage auto ; seul le pied de page cite les autres métiers.
+        Aide aussi le référencement.
+  - [ ] **« Comment ça marche » en 3 étapes** : inscription, lien partagé, réservations
+        reçues.
+  - [ ] **FAQ de 5 à une dizaine de questions.**
+  - Méthode : montrer le rendu à Alexandre avant de pousser, comme pour le CRM.
 
 - [ ] **Reprise automatique de l'aperçu à l'inscription.** Aujourd'hui manuelle, via
       `prospects/reprendre-apercu.mjs` — éprouvée le 2026-09-11 en répétition du rendez-vous
