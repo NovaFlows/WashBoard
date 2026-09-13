@@ -69,6 +69,41 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
   )
 }
 
+// Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
+// PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans l'Essentiel ce qui est Pro.
+const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
+  { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
+  { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
+  { titre: 'Créneaux intelligents', desc: 'Une remise proposée au client qui réserve juste à côté d’un rendez-vous déjà prévu.' },
+  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
+  { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
+  { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
+  { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
+  { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
+  { titre: 'Avis Google automatiques', desc: 'Une demande d’avis par email après chaque prestation terminée. Par SMS en formule Pro (150 par mois).' },
+  { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', pro: true },
+  { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
+  { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', pro: true },
+]
+
+// Les trois étapes de « Comment ça marche ».
+const ETAPES = [
+  { titre: 'Crée ton compte', desc: 'Un mois offert, sans carte bancaire.' },
+  { titre: 'Configure ta page', desc: 'Tes prestations, tes prix, tes horaires et ta zone. Compte une dizaine de minutes.' },
+  { titre: 'Partage ton lien', desc: 'Instagram, TikTok, Google, ton site : les réservations arrivent dans ton agenda.' },
+]
+
+// Métiers de la section « Pour qui ? ». WashBoard n'en impose aucun : le
+// laveur crée ses catégories et prestations, la liste sert d'exemples.
+const METIERS = [
+  { titre: 'Lavage auto & detailing', desc: 'Intérieur, extérieur, rénovation, par véhicule ou en pack.' },
+  { titre: 'Canapés & textiles', desc: 'Canapés, matelas, tapis et moquettes, chez le client.' },
+  { titre: 'Ménage à domicile', desc: 'Ménage régulier ou ponctuel, remise en état.' },
+  { titre: 'Vitres', desc: 'Chez les particuliers comme sur les vitrines des commerces.' },
+  { titre: 'Piscines', desc: 'Entretien régulier, mise en route et hivernage.' },
+  { titre: 'Et ton métier', desc: 'Catégories, prestations, durées et prix : tout se configure.' },
+]
+
 // Sections reprises dans la nav, dans l'ordre de la page. Les `id` sont ceux
 // des <section> plus bas.
 const SECTIONS_NAV = [
@@ -77,6 +112,25 @@ const SECTIONS_NAV = [
   { id: 'tarifs', label: 'Tarifs' },
   { id: 'faq', label: 'FAQ' },
 ] as const
+
+// Capture du produit, en clair et en sombre selon le thème du visiteur. Les
+// images sont prises sur des bancs locaux avec des données de démonstration :
+// jamais sur un vrai compte (noms de clients, données d'un laveur).
+function Capture({ clair, sombre, largeur, hauteur, alt, legende, className = '', sizes }: {
+  clair: string; sombre: string; largeur: number; hauteur: number; alt: string; legende: string; className?: string; sizes: string
+}) {
+  return (
+    <FadeUp className={className}>
+      <figure>
+        <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+          <Image src={clair} alt={alt} width={largeur} height={hauteur} sizes={sizes} className="w-full h-auto dark:hidden" />
+          <Image src={sombre} alt={alt} width={largeur} height={hauteur} sizes={sizes} className="w-full h-auto hidden dark:block" />
+        </div>
+        <figcaption className="mt-3 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{legende}</figcaption>
+      </figure>
+    </FadeUp>
+  )
+}
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -554,6 +608,27 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Pour qui ── */}
+      <section id="pour-qui" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 py-24">
+        <FadeUp className="mb-12">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Pour qui ?</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Tous les pros qui se déplacent chez leurs clients.
+          </h2>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+            Tu crées tes propres catégories et prestations : WashBoard s&apos;adapte à ton métier, pas l&apos;inverse.
+          </p>
+        </FadeUp>
+        <FadeGroup className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+          {METIERS.map((m) => (
+            <FadeItem key={m.titre} className="bg-white dark:bg-slate-950 p-5 sm:p-6">
+              <p className="font-bold text-slate-900 dark:text-white">{m.titre}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</p>
+            </FadeItem>
+          ))}
+        </FadeGroup>
+      </section>
+
       {/* ── Features ── */}
       <section id="fonctionnalites" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24 border-t border-slate-100 dark:border-slate-800/50 pt-24">
         <FadeUp className="mb-14">
@@ -585,7 +660,7 @@ export default function LandingPage() {
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                +2 lavages/jour en moyenne
+                Plusieurs prestations dans la même rue, un seul trajet
               </div>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-4 space-y-1.5">
@@ -639,6 +714,85 @@ export default function LandingPage() {
             </FadeItem>
           ))}
         </FadeGroup>
+
+        {/* Tout le reste, sans hiérarchie : la liste complète du produit. */}
+        <FadeUp className="mt-16 mb-8">
+          <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            Et tout le reste, dans le même outil.
+          </h3>
+        </FadeUp>
+        <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+          {FONCTIONNALITES.map((f) => (
+            <FadeItem key={f.titre}>
+              <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                {f.titre}
+                {f.pro && (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1651E8] dark:text-[#6A9FFF] border border-[#1651E8]/30 dark:border-[#6A9FFF]/30 rounded-md px-1.5 py-0.5">
+                    Pro
+                  </span>
+                )}
+              </p>
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+            </FadeItem>
+          ))}
+        </FadeGroup>
+      </section>
+
+      {/* ── Le produit en vrai ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-12">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le produit en vrai</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Ce que voient tes clients. Ce que tu vois, toi.
+          </h2>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+            Captures de WashBoard, avec des données de démonstration.
+          </p>
+        </FadeUp>
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_280px] gap-10 items-start">
+          <div className="space-y-10 min-w-0">
+            <Capture
+              clair="/landing/calendrier-clair.webp" sombre="/landing/calendrier-sombre.webp" largeur={1600} hauteur={1240}
+              alt="Le calendrier WashBoard : les rendez-vous du mois, les créneaux groupés et les congés"
+              legende="Ton agenda : les réservations du mois, les créneaux groupés (★) et tes congés."
+              sizes="(min-width: 1024px) 760px, 100vw"
+            />
+            <Capture
+              clair="/landing/crm-clair.webp" sombre="/landing/crm-sombre.webp" largeur={1600} hauteur={498}
+              alt="Le CRM WashBoard : visiteurs et réservations de la page, jour après jour"
+              legende="Ton CRM : les visiteurs de ta page et les réservations, jour après jour."
+              sizes="(min-width: 1024px) 760px, 100vw"
+            />
+          </div>
+          <Capture
+            clair="/landing/reservation-clair.webp" sombre="/landing/reservation-sombre.webp" largeur={600} hauteur={1000}
+            alt="La page de réservation WashBoard sur téléphone, côté client"
+            legende="Ta page de réservation, côté client : prestation, créneau, coordonnées. Sans compte à créer."
+            className="max-w-[280px] mx-auto lg:mx-0 w-full"
+            sizes="280px"
+          />
+        </div>
+      </section>
+
+      {/* ── Comment ça marche ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-12">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Comment ça marche</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+            Ta page en ligne en 10 minutes.
+          </h2>
+        </FadeUp>
+        <FadeGroup className="grid sm:grid-cols-3 gap-8 sm:gap-10">
+          {ETAPES.map((e, i) => (
+            <FadeItem key={e.titre}>
+              <span className="text-4xl sm:text-5xl font-black text-[#1651E8]/25 leading-none">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <p className="mt-3 font-bold text-slate-900 dark:text-white">{e.titre}</p>
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{e.desc}</p>
+            </FadeItem>
+          ))}
+        </FadeGroup>
       </section>
 
       {/* ── ROI ── */}
@@ -646,12 +800,18 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <FadeUp>
             <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
-              <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">En moyenne</p>
+              {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
+                  assez de clients pour en publier une, et l'afficher comme un
+                  constat serait trompeur. */}
+              <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">Exemple de calcul</p>
               <p className="text-7xl sm:text-8xl lg:text-[9rem] font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
                 +40
               </p>
               <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-2">rendez-vous en plus par mois</p>
-              <p className="text-sm text-slate-400 dark:text-slate-600">+2 rendez-vous groupés en moyenne par jour · 22 jours ouvrés</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
+                Si les créneaux groupés te font caser 2 rendez-vous de plus par jour, sur 22 jours ouvrés.
+                Un ordre de grandeur, pas une promesse : tout dépend de ta zone et de ta demande.
+              </p>
             </div>
           </FadeUp>
         </div>
@@ -751,9 +911,14 @@ export default function LandingPage() {
           {[
             { q: 'Mes clients doivent créer un compte ?', a: 'Non. Ils réservent directement sur ta page, sans compte, sans appli. Juste leur nom, email et téléphone.' },
             { q: 'C\'est long à configurer ?', a: 'Non. En 10 minutes tu as ta page de réservation avec tes services, tes horaires et ta zone.' },
+            { q: 'Ça marche pour d\'autres métiers que le lavage auto ?', a: 'Oui. Tu crées tes propres catégories et prestations, avec leurs durées et leurs prix : ménage, canapés, vitres, piscines… WashBoard n\'impose aucun métier.' },
+            { q: 'Comment mes clients trouvent ma page ?', a: 'Tu partages ton lien partout : bio Instagram, TikTok, fiche Google, ton site, WhatsApp. Des liens dédiés à chaque réseau te montrent ensuite d\'où viennent tes réservations.' },
+            { q: 'Je suis prévenu quand un client réserve ?', a: 'Oui, par email à chaque réservation. Et si tu installes WashBoard sur ton téléphone, aussi en notification (en bêta).' },
             { q: 'Que se passe-t-il après le mois gratuit ?', a: 'Tu choisis de continuer à 49€/mois ou non. Ton compte est suspendu sans frais si tu arrêtes. Aucune carte n\'est demandée pendant l\'essai.' },
-            { q: 'Ça marche avec une équipe ?', a: 'Oui. Tu configures la taille de ton équipe et les absences. WashBoard adapte la capacité automatiquement.' },
+            { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, en échange de 2 mois offerts.' },
+            { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Pro. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
             { q: 'Les clients peuvent payer en ligne ?', a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.' },
+            { q: 'Et mes données ?', a: 'Elles restent les tiennes. Tu peux supprimer ton compte à tout moment depuis tes paramètres : tout est effacé sous 30 jours.' },
           ].map((item) => (
             <FadeUp key={item.q} className="py-6 sm:py-7">
               <p className="font-bold text-slate-900 dark:text-white mb-2">{item.q}</p>
@@ -777,7 +942,7 @@ export default function LandingPage() {
                 <span className="text-[#00C4D4]">On gère le reste.</span>
               </h2>
               <p className="relative text-white/60 text-base mb-10 max-w-sm mx-auto">
-                Rejoins les pros du nettoyage et de l&apos;entretien mobile qui ont optimisé leur tournée avec WashBoard.
+                Ta page de réservation en ligne en 10 minutes, et ton premier mois offert.
               </p>
               <Link href="/signup" className="relative inline-block px-9 py-4 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#1651E8]/30">
                 Lancer WashBoard
