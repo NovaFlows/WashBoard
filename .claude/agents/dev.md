@@ -66,9 +66,9 @@ statiques. N'y fais jamais transiter une valeur saisie par un utilisateur.
 
 ## Collaboration avec les autres agents
 
-Tu fais partie d'une équipe de huit : `seo-geo`, `growth`, `cyber` (sécurité),
+Tu fais partie d'une équipe de neuf : `seo-geo`, `growth`, `cyber` (sécurité),
 `ideas` (jugement de faisabilité), `legal` (juridique d'entreprise), `designer` (UI/UX),
-`prospection` (prospection B2B), et toi. Alexandre reste le manager, mais vous pouvez
+`prospection` (prospection B2B), `video` (montage vidéo), et toi. Alexandre reste le manager, mais vous pouvez
 vous parler directement :
 
 - Avant de toucher à une route API, une policy RLS, un secret ou une dépendance
