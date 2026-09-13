@@ -470,7 +470,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               <span className="text-sm text-slate-500 dark:text-slate-400">heures après « terminé »</span>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-              Conseillé : 3h (le temps que le client profite de sa voiture propre).
+              Conseillé : 3h (le temps que le client profite du résultat).
             </p>
           </div>
 

@@ -129,7 +129,7 @@ export const GUIDE: GuideSection[] = [
         id: 'avis',
         question: 'Comment demander des avis Google automatiquement ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Avis Google ». Collez le lien vers votre fiche, choisissez le canal (email ou SMS) et le délai après le rendez-vous. La demande part ensuite toute seule dès que vous marquez un rendez-vous terminé. Le jour même fonctionne mieux : l'effet « voiture propre » est encore frais.",
+          "Dans [Paramètres](/dashboard/parametres), carte « Avis Google ». Collez le lien vers votre fiche, choisissez le canal (email ou SMS) et le délai après le rendez-vous. La demande part ensuite toute seule dès que vous marquez un rendez-vous terminé. Le jour même fonctionne mieux : l'effet « tout propre » est encore frais.",
         keywords: ['avis', 'google', 'etoiles', 'note', 'reputation', 'sms'],
       },
       {
