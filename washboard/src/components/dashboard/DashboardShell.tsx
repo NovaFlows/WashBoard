@@ -241,7 +241,9 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
               </svg>
             </button>
 
-            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-9 h-9 sm:w-14 sm:h-14 object-contain shrink-0" />
+            {/* Même taille que sur la landing (36 px, 40 px dès sm) : la tuile
+                noire remplit tout son carré, 56 px la rendaient écrasante. */}
+            <img src="/LogoWashBoard.png" alt="WashBoard" className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0" />
             <div className="min-w-0">
               <p className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight truncate">WashBoard</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-none truncate hidden sm:block">{washerName}</p>
