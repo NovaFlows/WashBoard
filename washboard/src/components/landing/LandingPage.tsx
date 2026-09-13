@@ -69,6 +69,15 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
   )
 }
 
+// Sections reprises dans la nav, dans l'ordre de la page. Les `id` sont ceux
+// des <section> plus bas.
+const SECTIONS_NAV = [
+  { id: 'fonctionnalites', label: 'Fonctionnalités' },
+  { id: 'tutoriel', label: 'Tutoriel' },
+  { id: 'tarifs', label: 'Tarifs' },
+  { id: 'faq', label: 'FAQ' },
+] as const
+
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -117,6 +126,47 @@ export default function LandingPage() {
     obs.observe(cible)
     return () => obs.disconnect()
   }, [])
+
+  // Section en cours de lecture, surlignée dans la nav : la dernière dont le
+  // haut est passé au-dessus du milieu de l'écran (aucune au-dessus des
+  // fonctionnalités). Calculée d'après la position de défilement, et non par
+  // entrée/sortie de l'écran : un saut rapide ne peut pas la faire rater.
+  // Un calcul au plus par image affichée.
+  const [sectionActive, setSectionActive] = useState<string | null>(null)
+  useEffect(() => {
+    let image = 0
+    const calculer = () => {
+      image = 0
+      const repere = window.innerHeight * 0.45
+      let active: string | null = null
+      for (const { id } of SECTIONS_NAV) {
+        const el = document.getElementById(id)
+        if (el && el.getBoundingClientRect().top <= repere) active = id
+      }
+      setSectionActive(active)
+    }
+    const planifier = () => { if (!image) image = requestAnimationFrame(calculer) }
+    planifier()
+    window.addEventListener('scroll', planifier, { passive: true })
+    window.addEventListener('resize', planifier)
+    return () => {
+      window.removeEventListener('scroll', planifier)
+      window.removeEventListener('resize', planifier)
+      if (image) cancelAnimationFrame(image)
+    }
+  }, [])
+
+  // Défilement doux vers la section (instantané si l'utilisateur réduit les
+  // animations). `scroll-mt-20` sur les sections évite qu'elles passent sous
+  // la nav collante. L'adresse prend l'ancre sans ajouter d'entrée d'historique.
+  function allerA(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
+    const el = document.getElementById(id)
+    if (!el) return
+    e.preventDefault()
+    const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' })
+    history.replaceState(null, '', `#${id}`)
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 overflow-x-clip">
@@ -313,6 +363,34 @@ export default function LandingPage() {
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={40} height={40} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg shrink-0 object-contain" />
             <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">WashBoard</span>
           </div>
+          {/* Sections de la page, la section en cours surlignée. Ordinateur
+              seulement : sur mobile, la place manque à côté des actions. */}
+          <div className="hidden lg:flex flex-1 justify-center items-center gap-1">
+            {SECTIONS_NAV.map(({ id, label }) => {
+              const actif = sectionActive === id
+              return (
+                <a
+                  key={id}
+                  href={`#${id}`}
+                  onClick={e => allerA(e, id)}
+                  aria-current={actif ? 'true' : undefined}
+                  className={`relative px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                    actif
+                      ? 'text-[#1651E8] dark:text-white'
+                      : 'text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {label}
+                  <span
+                    aria-hidden
+                    className={`absolute left-3 right-3 -bottom-0.5 h-0.5 rounded-sm bg-[#1651E8] dark:bg-[#00C4D4] transition-opacity ${
+                      actif ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                </a>
+              )
+            })}
+          </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
             <Link href="/login" className="text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors px-2 sm:px-3 py-2 whitespace-nowrap">
@@ -477,7 +555,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-24 border-t border-slate-100 dark:border-slate-800/50 pt-24">
+      <section id="fonctionnalites" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24 border-t border-slate-100 dark:border-slate-800/50 pt-24">
         <FadeUp className="mb-14">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Ce qu&apos;on a mis dedans</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-xl">
@@ -580,7 +658,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Tutoriel ── */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section id="tutoriel" className="scroll-mt-20 max-w-4xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-10 text-center">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Tutoriel</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -604,7 +682,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pricing ── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section id="tarifs" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-8">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Les formules</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -665,7 +743,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section id="faq" className="scroll-mt-20 max-w-3xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp>
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-12">Questions</p>
         </FadeUp>
