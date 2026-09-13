@@ -294,7 +294,9 @@ export default function LandingPage() {
 
       {/* ── Nav ── */}
       <nav className={`wb-nav ${pastHero ? 'wb-nav-solid' : ''} sticky top-0 z-50 backdrop-blur-md transition-colors`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+        {/* Pleine largeur : logo au bord gauche, actions au bord droit. Le
+            contenu de la page reste, lui, centré dans son conteneur. */}
+        <div className="px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={40} height={40} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg shrink-0 object-contain" />
             <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">WashBoard</span>
