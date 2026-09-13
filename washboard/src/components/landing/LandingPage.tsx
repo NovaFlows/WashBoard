@@ -94,14 +94,26 @@ export default function LandingPage() {
   const [billing, setBilling] = useState<BillingCycle>('yearly')
 
   // La nav reprend le bleu ciel du hero ; passé le hero il n'y a plus de
-  // dégradé derrière elle, elle doit donc devenir opaque. Un observateur sur
-  // une sentinelle placée en fin de hero évite d'écouter le scroll en continu.
-  const heroEnd = useRef<HTMLDivElement>(null)
+  // dégradé derrière elle, elle doit donc devenir opaque. Un observateur évite
+  // d'écouter le scroll en continu.
+  //
+  // On observe le hero entier, et non une sentinelle d'un pixel en fin de hero.
+  // Sur un écran de moins de ~770 px de haut, la sentinelle démarrait sous
+  // l'écran : la nav s'affichait opaque dès l'ouverture, et un défilement
+  // rapide la faisait passer au-dessus sans jamais la rendre visible, donc sans
+  // aucun signal. Le hero, lui, est toujours visible à l'ouverture (il commence
+  // en haut de page) : le quitter, même d'un coup, est toujours signalé.
+  const hero = useRef<HTMLElement>(null)
   const [pastHero, setPastHero] = useState(false)
   useEffect(() => {
-    const cible = heroEnd.current
+    const cible = hero.current
     if (!cible) return
-    const obs = new IntersectionObserver(([e]) => setPastHero(!e.isIntersecting), { rootMargin: '-64px 0px 0px 0px' })
+    // Marge haute = hauteur de la nav : « dépassé » quand le bas du hero est
+    // remonté sous la nav.
+    const obs = new IntersectionObserver(
+      ([e]) => setPastHero(!e.isIntersecting),
+      { rootMargin: '-64px 0px 0px 0px' },
+    )
     obs.observe(cible)
     return () => obs.disconnect()
   }, [])
@@ -314,7 +326,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="wb-hero relative px-4 sm:px-6 pt-16 pb-20 sm:pt-20 sm:pb-28">
+      <section ref={hero} className="wb-hero relative px-4 sm:px-6 pt-16 pb-20 sm:pt-20 sm:pb-28">
         {/* Halo aqua — fond clair seulement */}
         <div aria-hidden className="absolute inset-x-0 top-0 h-[500px] pointer-events-none overflow-hidden">
           <div className="wb-hero-glow absolute inset-0" />
@@ -420,11 +432,6 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Repère de fin du hero pour la nav. Fond blanc obligatoire : sans lui,
-          ce pixel laissait voir le fond de la page, invisible en clair mais
-          un trait noir en sombre entre le fondu blanc et la bande blanche. */}
-      <div ref={heroEnd} aria-hidden className="h-px bg-white" />
 
       {/* ── Pain points — bande toujours blanche, meme en dark mode ── */}
       <section className="relative bg-white">
