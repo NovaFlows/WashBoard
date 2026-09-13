@@ -67,6 +67,37 @@ les scènes, pas une copie du fichier (voir `FolyoFilmV2Vertical` pour l'exemple
   dans ton compte rendu, pour que la session principale le lui envoie ; si tu disposes
   toi-même de l'outil d'envoi de fichiers, envoie-le directement.
 
+## Incruster sur une vidéo filmée (face caméra)
+
+Leçons du premier montage TikTok d'Alexandre (2026-09-13) :
+
+- **ffmpeg plutôt que Remotion** pour ajouter des éléments sur une vidéo déjà filmée :
+  Remotion repasse chaque image par du JPEG et dégrade. Un seul encodage
+  (`libx264 -crf 16 -preset slow`), son recopié (`-c:a copy`), cadence d'origine
+  (`-fps_mode passthrough`). Les textes et cartes sont rendus à 3x dans Chromium
+  (Playwright) en PNG transparent, puis réduits : bords nets.
+- **Script de référence** : `H:\Desktop\Automatisation\Remotion_NovaFlows\montages\tiktok-notification\montage_final.py`.
+  Positions en proportion de la taille de la vidéo, rotation des vidéos d'iPhone gérée :
+  il se relance tel quel sur les fichiers originaux. Les vidéos personnelles restent
+  dans `public/marketing/` du projet vidéo, qui n'est **pas** un dépôt git (visage
+  d'Alexandre : jamais dans un dépôt public).
+- **Mesurer avant de placer** : le débit (énergie audio par tranches de 25-50 ms, pour
+  caler chaque apparition sur le mot) et la position de la tête (peau et cheveux
+  contre ciel, pour ne jamais poser un élément sur le visage ni sur la main).
+- **Vérifier avant d'envoyer** : une planche d'images autour de chaque effet. Quand le
+  style est nouveau, montrer d'abord une image fixe, puis rendre la vidéo.
+- Pièges déjà rencontrés : une découpe de dimensions impaires en yuv420p est arrondie
+  (passer en `format=rgba` avant `crop` / `alphamerge`) ; les fichiers reçus par
+  WhatsApp sont compressés (480×848) : réclamer les originaux avant la version finale.
+
+**Goûts d'Alexandre, à respecter** :
+- Pas d'émojis, même les 3D de Microsoft : « trop téléphone, grossier ».
+- Pas de look « promo » (tampon, secousse, reflet) : « trop low budget ».
+- Oui au **sobre et minimaliste** : verre dépoli qui floute le fond, typographie Geist,
+  cartes blanches ou bleu WashBoard, animations discrètes (fondu, légère montée, petit
+  rebond), éléments qui descendent du haut ou s'empilent un peu en désordre.
+- Pas d'arrêt sur image ; pas de sous-titres pendant les passages déjà animés.
+
 ## Règles
 
 - **Jamais de données réelles à l'écran.** Pas de nom de client, de numéro, d'adresse,
