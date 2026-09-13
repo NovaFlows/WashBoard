@@ -419,7 +419,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <div ref={heroEnd} aria-hidden className="h-px" />
+      {/* Repère de fin du hero pour la nav. Fond blanc obligatoire : sans lui,
+          ce pixel laissait voir le fond de la page, invisible en clair mais
+          un trait noir en sombre entre le fondu blanc et la bande blanche. */}
+      <div ref={heroEnd} aria-hidden className="h-px bg-white" />
 
       {/* ── Pain points — bande toujours blanche, meme en dark mode ── */}
       <section className="relative bg-white">
