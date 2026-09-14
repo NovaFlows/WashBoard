@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createCalendarEvent, patchCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar'
-import { sendBookingConfirmation } from '@/lib/email'
+import { sendBookingConfirmation, sendFacture } from '@/lib/email'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { emettreFacture } from '@/lib/emettreFacture'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -153,6 +155,30 @@ export async function PATCH(
     }
   }
 
-  return NextResponse.json(updated)
+  // ── Facture : émise dès que la prestation est terminée ──────────────────
+  //
+  // Seulement si le laveur a rempli ses informations de facturation. Jamais
+  // bloquant pour le changement de statut : sans facture, il l'émet plus tard
+  // depuis le détail du rendez-vous (POST /api/bookings/[id]/facture).
+  let factureNumero: string | null = null
+  if (status === 'done' && booking.status !== 'done') {
+    const facture = await emettreFacture(createAdminClient(), id)
+    if (facture.ok) {
+      factureNumero = facture.numero
+      // Le client professionnel a besoin de la facture pour sa comptabilité ;
+      // le particulier la retrouve sur le lien de sa confirmation.
+      if (facture.nouvelle && booking.is_professional && booking.client_email) {
+        await sendFacture({
+          to: booking.client_email,
+          clientName: booking.client_name,
+          washerName: washer.name,
+          numero: facture.numero,
+          bookingId: id,
+        }).catch(e => logger.error('facture.email_failed', { bookingId: id }, e))
+      }
+    }
+  }
+
+  return NextResponse.json({ ...updated, ...(factureNumero ? { facture_numero: factureNumero } : {}) })
 }
 

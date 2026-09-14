@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
 import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
+import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -20,6 +21,7 @@ export async function PATCH(request: NextRequest) {
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
     followup_enabled, followup_delay_days, followup_message,
     zone_config,
+    facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva,
   } = await request.json()
 
   // ── Validations ──────────────────────────────────────────────────────────
@@ -149,6 +151,43 @@ export async function PATCH(request: NextRequest) {
   if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
   if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))
   if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
+
+  // ── Informations de facturation (portées sur les factures aux clients) ──
+  if (facture_nom_legal !== undefined) updates.facture_nom_legal = String(facture_nom_legal ?? '').trim().slice(0, 120) || null
+  if (facture_adresse !== undefined) updates.facture_adresse = String(facture_adresse ?? '').trim().slice(0, 300) || null
+  if (facture_siret !== undefined) {
+    const siret = normaliserSiret(String(facture_siret ?? ''))
+    if (siret && !siretValide(siret)) {
+      return NextResponse.json(
+        { error: 'SIRET invalide : vérifiez les 14 chiffres, tels qu\'indiqués sur votre avis de situation Insee.' },
+        { status: 400 },
+      )
+    }
+    updates.facture_siret = siret || null
+  }
+  if (facture_regime_tva !== undefined) {
+    if (!['franchise', 'assujetti'].includes(facture_regime_tva)) {
+      return NextResponse.json({ error: 'Régime de TVA invalide.' }, { status: 400 })
+    }
+    updates.facture_regime_tva = facture_regime_tva
+  }
+  if (facture_taux_tva !== undefined) {
+    const taux = Number(facture_taux_tva)
+    if (!(TAUX_TVA as readonly number[]).includes(taux)) {
+      return NextResponse.json({ error: 'Taux de TVA invalide.' }, { status: 400 })
+    }
+    updates.facture_taux_tva = taux
+  }
+  if (facture_numero_tva !== undefined) {
+    const numero = normaliserNumeroTva(String(facture_numero_tva ?? ''))
+    if (numero && !numeroTvaValide(numero)) {
+      return NextResponse.json(
+        { error: 'Numéro de TVA invalide : FR suivi de 11 caractères, par exemple FR40123456789.' },
+        { status: 400 },
+      )
+    }
+    updates.facture_numero_tva = numero || null
+  }
 
   if (zone_config !== undefined) {
     let config = zone_config as ZoneConfig

@@ -8,6 +8,7 @@ import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded } from '@/lib/plan'
 import { estReservable } from '@/lib/prestation'
+import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 
 type Props = {
@@ -109,6 +110,17 @@ export default async function BookingPage({ params }: Props) {
       </div>
     )
   }
+
+  // Informations de facturation : lues à part, pour que cette page publique
+  // reste debout même si leurs colonnes n'existent pas encore en base. Seul un
+  // booléen en sort vers le navigateur.
+  const { data: facturation, error: errFacturation } = await admin
+    .from('washers')
+    .select('facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva')
+    .eq('id', washer.id)
+    .maybeSingle()
+  if (errFacturation) logger.warn('book.facturation.read_failed', { washerId: washer.id }, errFacturation)
+  const facturationPrete = !!facturation && infosFacturationManquantes(facturation).length === 0
 
   const { data: services } = await admin
     .from('services')
@@ -235,6 +247,7 @@ export default async function BookingPage({ params }: Props) {
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             is_preview: washer.is_preview ?? false,
+            facturation_prete: facturationPrete,
           }}
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à

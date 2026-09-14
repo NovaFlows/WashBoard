@@ -10,6 +10,10 @@ type Props = {
   services: Service[]
   categories: ServiceCategory[]
   selected: { service_id?: string; vehicle_type?: string }
+  /** Le laveur a rempli ses informations de facturation : une vraie facture
+   *  sera émise après la prestation. Sinon, le client pro ne recevra qu'un
+   *  récapitulatif — on ne lui promet pas une facture qui ne viendra pas. */
+  factureApresPrestation?: boolean
   onNext: (data: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number; is_professional: boolean; vehicles_detail?: VehicleItem[] }) => void
   accent?: string
 }
@@ -28,7 +32,7 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, onNext, accent = '#2563eb' }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, onNext, accent = '#2563eb' }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   // Panier : un compteur par type (permet de mélanger les types)
@@ -164,7 +168,9 @@ export default function StepService({ services, categories, selected, onNext, ac
 
       {isPro && (
         <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-400">
-          Une facture avec vos informations société vous sera envoyée à la confirmation.
+          {factureApresPrestation
+            ? 'Une facture à vos informations société vous sera envoyée une fois la prestation réalisée.'
+            : 'Vos informations société figureront sur le récapitulatif de votre réservation.'}
         </div>
       )}
 

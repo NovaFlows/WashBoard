@@ -11,6 +11,7 @@ import { hasFeature } from '@/lib/plan'
 import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
 import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
+import { FacturationCard } from '@/components/dashboard/FacturationCard'
 
 type Props = {
   washer: Washer
@@ -395,6 +396,9 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={profileLoading} />
         </form>
       </Card>
+
+      {/* Facturation — informations portées sur les factures aux clients */}
+      <FacturationCard washer={washer} />
 
       {/* Avis Google — suivi client */}
       <Card id="avis" title="Avis Google" icon={Star}>

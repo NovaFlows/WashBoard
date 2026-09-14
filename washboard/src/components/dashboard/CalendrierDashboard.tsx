@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
@@ -35,6 +36,7 @@ type Booking = {
   // Catégorie jointe : « Lavage complet » ne dit pas si c'est une voiture ou
   // un canapé, alors que ça change le matériel à emporter.
   services: (Service & { service_categories?: { name: string } | null }) | null
+  facture_numero?: string | null
 }
 
 const STATUS = {
@@ -489,11 +491,38 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
         body: JSON.stringify({ status }),
       })
       if (res.ok) {
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: status as Booking['status'] } : b))
-        setSelected(prev => prev?.id === id ? { ...prev, status: status as Booking['status'] } : prev)
+        // Passer en « Terminé » émet la facture : on récupère son numéro pour
+        // proposer le téléchargement sans recharger la page.
+        const maj = await res.json().catch(() => null) as { facture_numero?: string | null } | null
+        const facture = maj?.facture_numero ? { facture_numero: maj.facture_numero } : {}
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: status as Booking['status'], ...facture } : b))
+        setSelected(prev => prev?.id === id ? { ...prev, status: status as Booking['status'], ...facture } : prev)
       }
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const [factureEnCours, setFactureEnCours] = useState(false)
+  const [factureMsg, setFactureMsg] = useState<{ id: string; texte: string; completer: boolean } | null>(null)
+
+  /** Émission à la demande, pour un rendez-vous terminé avant que les
+   *  informations de facturation soient remplies. */
+  async function emettreFactureManuelle(id: string) {
+    setFactureEnCours(true)
+    setFactureMsg(null)
+    try {
+      const res = await fetch(`/api/bookings/${id}/facture`, { method: 'POST' })
+      const json = await res.json().catch(() => ({})) as { numero?: string; error?: string }
+      if (res.ok && json.numero) {
+        const facture = { facture_numero: json.numero }
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, ...facture } : b))
+        setSelected(prev => prev?.id === id ? { ...prev, ...facture } : prev)
+      } else {
+        setFactureMsg({ id, texte: json.error ?? 'L\'émission de la facture a échoué.', completer: res.status === 422 })
+      }
+    } finally {
+      setFactureEnCours(false)
     }
   }
 
@@ -1508,6 +1537,38 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                 >
                   Annuler
                 </button>
+              </div>
+            )}
+
+            {/* Facture : émise au passage en « Terminé », ou à la demande */}
+            {selected.status === 'done' && (
+              <div className="mb-3">
+                {selected.facture_numero ? (
+                  <a
+                    href={`/api/bookings/${selected.id}/pdf`}
+                    className="flex items-center justify-center gap-1.5 w-full py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Télécharger la facture {selected.facture_numero}
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => emettreFactureManuelle(selected.id)}
+                    disabled={factureEnCours}
+                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {factureEnCours ? 'Émission...' : 'Émettre la facture'}
+                  </button>
+                )}
+                {factureMsg?.id === selected.id && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+                    {factureMsg.texte}{' '}
+                    {factureMsg.completer && (
+                      <Link href="/dashboard/parametres#facturation" className="font-semibold underline">
+                        Compléter mes informations
+                      </Link>
+                    )}
+                  </p>
+                )}
               </div>
             )}
 

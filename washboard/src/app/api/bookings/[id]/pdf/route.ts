@@ -1,7 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
-import BookingPDF from '@/components/pdf/BookingPDF'
+import BookingPDF from '@/components/pdf/BookingPDF'
+import FacturePDF from '@/components/pdf/FacturePDF'
+import type { FactureContenu } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,13 +24,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   if (!booking) return new Response('Not found', { status: 404 })
 
+  // Une fois la facture émise (prestation terminée), le même lien sert la
+  // facture ; avant, un récapitulatif qui ne se présente pas comme une facture.
+  const facture = booking.facture_numero && booking.facture_contenu
+    ? {
+        numero: booking.facture_numero as string,
+        emiseLe: booking.facture_emise_le as string,
+        contenu: booking.facture_contenu as FactureContenu,
+      }
+    : null
+
+  const document = facture
+    ? createElement(FacturePDF, facture)
+    : createElement(BookingPDF, { booking })
+  const nomFichier = facture
+    ? `facture-${facture.numero}.pdf`
+    : `recapitulatif-${booking.id.slice(0, 8).toUpperCase()}.pdf`
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buffer = await renderToBuffer(createElement(BookingPDF, { booking }) as any)
+  const buffer = await renderToBuffer(document as any)
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="confirmation-${booking.id.slice(0, 8).toUpperCase()}.pdf"`,
+      'Content-Disposition': `attachment; filename="${nomFichier}"`,
       'Cache-Control': 'no-store',
     },
   })

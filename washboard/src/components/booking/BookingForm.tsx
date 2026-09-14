@@ -58,6 +58,9 @@ export type WasherPublic = {
    *  au nom de quelqu'un qui n'a rien demandé l'engagerait sur des rendez-vous
    *  qu'il n'a jamais acceptés. */
   is_preview?: boolean
+  /** Informations de facturation complètes : un booléen, jamais le SIRET ni
+   *  l'adresse eux-mêmes, qui n'ont rien à faire dans la page publique. */
+  facturation_prete?: boolean
   // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
 }
 
@@ -189,6 +192,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
           <StepService
             services={services}
             categories={categories}
+            factureApresPrestation={washer.facturation_prete === true}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
               updateForm(data)

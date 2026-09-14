@@ -83,7 +83,7 @@ export default function BookingPDF({ booking }: Props) {
 
         {/* Barre supérieure */}
         <View style={s.topBar}>
-          <Text style={s.topBarLeft}>Reçu de prestation de service</Text>
+          <Text style={s.topBarLeft}>Récapitulatif de réservation</Text>
           <Text style={s.topBarRight}>Réf. {ref}</Text>
         </View>
 
@@ -179,10 +179,6 @@ export default function BookingPDF({ booking }: Props) {
             )
           })}
 
-          <View style={s.tableMeta}>
-            <Text style={{ fontSize: 8, color: '#94a3b8', fontStyle: 'italic' }}>TVA non applicable — art. 293 B du CGI</Text>
-          </View>
-
           <View style={s.tableFooter}>
             <Text style={s.totalLabel}>TOTAL À RÉGLER SUR PLACE</Text>
             <Text style={s.totalPrice}>{finalStr}€</Text>
@@ -191,11 +187,15 @@ export default function BookingPDF({ booking }: Props) {
 
         <Text style={s.payNote}>Mode de règlement : paiement comptant sur place</Text>
 
-        {/* Encart facture */}
+        {/* Ce document n'est PAS une facture : il se présentait comme tel sans
+            porter les mentions obligatoires du laveur (SIRET, adresse,
+            numérotation continue) et affichait « TVA non applicable » même
+            pour un laveur qui la facture. La facture est émise après la
+            prestation (voir `FacturePDF`). */}
         <View style={s.badge}>
-          <Text style={s.badgeTitle}>Justificatif de prestation — facture</Text>
+          <Text style={s.badgeTitle}>Récapitulatif — ce document n&apos;est pas une facture</Text>
           <Text style={s.badgeText}>
-            Ce document fait office de reçu de prestation de service et peut être utilisé pour une facture.{'\n'}
+            La facture est émise par votre prestataire une fois la prestation réalisée.{'\n'}
             Référence : {ref} · Émis le {today}
           </Text>
         </View>
@@ -203,7 +203,7 @@ export default function BookingPDF({ booking }: Props) {
         {/* Pied de page */}
         <View style={s.footer}>
           <Text style={s.footerText}>
-            Ce reçu a été généré automatiquement par WashBoard · Plateforme de réservation de prestations à domicile
+            Ce récapitulatif a été généré automatiquement par WashBoard · Plateforme de réservation de prestations à domicile
           </Text>
         </View>
 

@@ -403,6 +403,55 @@ export async function sendReviewRequest(params: SendReviewRequestParams) {
   })
 }
 
+// ── Email 5 : facture au client professionnel ─────────────────────────────
+type SendFactureParams = {
+  to: string
+  clientName: string
+  washerName: string
+  numero: string
+  bookingId: string
+  appUrl?: string
+}
+
+export async function sendFacture(params: SendFactureParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const appUrl = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const url = `${appUrl}/api/bookings/${params.bookingId}/pdf`
+
+  return resend.emails.send({
+    from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
+    to: params.to,
+    subject: `Facture ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651E8;padding:28px 40px;">
+      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Facture ${escapeHtml(params.numero)}</p>
+      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+        Merci pour votre confiance. Vous trouverez ci-dessous la facture de la prestation réalisée par
+        <strong>${escapeHtml(params.washerName)}</strong>.
+      </p>
+      <a href="${escapeHtml(url)}"
+         style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
+        Télécharger la facture (PDF)
+      </a>
+    </div>
+    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 // ── Email 3 : notification nouvelle réservation au laveur ─────────────────
 type SendWasherNotificationParams = {
   to: string
