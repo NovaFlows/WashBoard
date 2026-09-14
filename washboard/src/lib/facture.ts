@@ -15,14 +15,22 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 
 export type RegimeTva = 'franchise' | 'assujetti'
 
+/** Entrepreneur individuel (micro-entreprise comprise) ou société : les
+ *  mentions obligatoires ne sont pas les mêmes. */
+export type StatutJuridique = 'ei' | 'societe'
+
 /** Taux proposés au laveur qui facture la TVA : 20 % (taux normal, le cas du
  *  lavage), 10 % et 5,5 % pour les cas particuliers. */
 export const TAUX_TVA = [20, 10, 5.5] as const
 
 export type InfosFacturation = {
+  facture_statut?: StatutJuridique | null
   facture_nom_legal?: string | null
   facture_siret?: string | null
   facture_adresse?: string | null
+  facture_forme_juridique?: string | null
+  facture_capital?: string | null
+  facture_immatriculation?: string | null
   facture_regime_tva?: RegimeTva | null
   facture_taux_tva?: number | null
   facture_numero_tva?: string | null
@@ -64,14 +72,29 @@ export function numeroTvaValide(brut: string): boolean {
   return /^FR[0-9A-Z]{2}\d{9}$/.test(normaliserNumeroTva(brut))
 }
 
+/** Un entrepreneur individuel doit faire figurer « EI » (ou « entrepreneur
+ *  individuel ») à côté de son nom sur ses factures. On l'ajoute s'il ne l'a
+ *  pas écrit lui-même, plutôt que de compter sur lui pour y penser. */
+export function nomLegalAffiche(nom: string, statut: StatutJuridique): string {
+  const n = nom.trim()
+  if (statut !== 'ei' || !n || /\bEI\b|entrepreneur individuel/i.test(n)) return n
+  return `${n} EI`
+}
+
 // ── Complétude ─────────────────────────────────────────────────────────────
 
 /** Ce qui manque pour émettre une facture valable, formulé pour le laveur. */
 export function infosFacturationManquantes(w: InfosFacturation): string[] {
+  const societe = w.facture_statut === 'societe'
   const manques: string[] = []
-  if (!w.facture_nom_legal?.trim()) manques.push('votre nom légal')
+  if (!w.facture_nom_legal?.trim()) manques.push(societe ? 'votre raison sociale' : 'votre nom légal')
   if (!w.facture_siret || !siretValide(w.facture_siret)) manques.push('votre SIRET')
   if (!w.facture_adresse?.trim()) manques.push('votre adresse professionnelle')
+  if (societe) {
+    if (!w.facture_forme_juridique?.trim()) manques.push('votre forme juridique')
+    if (!w.facture_capital?.trim()) manques.push('votre capital social')
+    if (!w.facture_immatriculation?.trim()) manques.push('votre immatriculation (RCS)')
+  }
   if (w.facture_regime_tva === 'assujetti'
       && (!w.facture_numero_tva || !numeroTvaValide(w.facture_numero_tva))) {
     manques.push('votre numéro de TVA')
@@ -97,7 +120,9 @@ export type LigneFacture = {
 }
 
 /** Tout ce qu'affiche la facture, figé au moment de l'émission : si le laveur
- *  change d'adresse ou de prix plus tard, ses factures passées ne bougent pas. */
+ *  change d'adresse ou de prix plus tard, ses factures passées ne bougent pas.
+ *  Les champs optionnels ont été ajoutés après les premières factures : une
+ *  facture déjà émise ne les porte pas, et doit toujours s'afficher. */
 export type FactureContenu = {
   version: 1
   vendeur: {
@@ -109,6 +134,12 @@ export type FactureContenu = {
     regimeTva: RegimeTva
     tauxTva: number
     numeroTva: string | null
+    statut?: StatutJuridique
+    formeJuridique?: string | null
+    capital?: string | null
+    immatriculation?: string | null
+    logoUrl?: string | null
+    couleur?: string | null
   }
   client: {
     nom: string
@@ -143,7 +174,12 @@ export type ReservationFacturable = {
   services: { name: string } | null
 }
 
-export type VendeurFacturable = InfosFacturation & { name: string; phone: string | null }
+export type VendeurFacturable = InfosFacturation & {
+  name: string
+  phone: string | null
+  logo_url?: string | null
+  brand_color?: string | null
+}
 
 const ligne = (designation: string, quantite: number, prixUnitaireTtc: number): LigneFacture => ({
   designation,
@@ -213,13 +249,15 @@ export function construireFacture(r: ReservationFacturable, v: VendeurFacturable
     : 0
   const regime: RegimeTva = v.facture_regime_tva === 'assujetti' ? 'assujetti' : 'franchise'
   const taux = regime === 'assujetti' ? Number(v.facture_taux_tva ?? 20) : 0
+  const statut: StatutJuridique = v.facture_statut === 'societe' ? 'societe' : 'ei'
+  const societe = statut === 'societe'
   const pro = !!r.is_professional
   const sirenClient = pro && r.siret ? normaliserSiret(r.siret).slice(0, 9) : ''
 
   return {
     version: 1,
     vendeur: {
-      nomLegal: v.facture_nom_legal?.trim() ?? '',
+      nomLegal: nomLegalAffiche(v.facture_nom_legal ?? '', statut),
       nomCommercial: v.name,
       siret: normaliserSiret(v.facture_siret ?? ''),
       adresse: v.facture_adresse?.trim() ?? '',
@@ -229,6 +267,12 @@ export function construireFacture(r: ReservationFacturable, v: VendeurFacturable
       numeroTva: regime === 'assujetti' && v.facture_numero_tva
         ? normaliserNumeroTva(v.facture_numero_tva)
         : null,
+      statut,
+      formeJuridique: societe ? v.facture_forme_juridique?.trim() || null : null,
+      capital: societe ? v.facture_capital?.trim() || null : null,
+      immatriculation: societe ? v.facture_immatriculation?.trim() || null : null,
+      logoUrl: v.logo_url ?? null,
+      couleur: v.brand_color ?? null,
     },
     client: {
       nom: r.client_name,

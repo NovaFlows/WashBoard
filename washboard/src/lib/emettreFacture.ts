@@ -10,8 +10,10 @@ export type ResultatEmission =
   | { ok: false; raison: 'infos_incompletes'; manques: string[] }
   | { ok: false; raison: 'erreur' }
 
+// Chaîne écrite telle quelle, et non assemblée : le client Supabase analyse la
+// sélection au niveau des types, et une chaîne calculée le fait échouer.
 const COLONNES_VENDEUR =
-  'name, phone, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva'
+  'name, phone, logo_url, brand_color, facture_statut, facture_nom_legal, facture_siret, facture_adresse, facture_forme_juridique, facture_capital, facture_immatriculation, facture_regime_tva, facture_taux_tva, facture_numero_tva'
 
 /** Émet la facture d'une réservation terminée, une seule fois.
  *

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   siretValide, numeroTvaValide, infosFacturationManquantes, phraseManques,
-  lignesFacture, totauxFacture, construireFacture,
+  lignesFacture, totauxFacture, construireFacture, nomLegalAffiche,
   type ReservationFacturable, type VendeurFacturable,
 } from './facture'
 
@@ -156,5 +156,40 @@ describe('construireFacture', () => {
   it('une remise ne peut pas dépasser le montant facturé', () => {
     const f = construireFacture(reservation({ is_smart_slot: true, smart_discount: 500 }), vendeur())
     expect(f.totaux.ttc).toBe(0)
+  })
+
+  it('porte le logo et la couleur du laveur', () => {
+    const f = construireFacture(reservation(), vendeur({ logo_url: 'https://exemple.supabase.co/logo.webp', brand_color: '#1651E8' }))
+    expect(f.vendeur).toMatchObject({ logoUrl: 'https://exemple.supabase.co/logo.webp', couleur: '#1651E8' })
+  })
+})
+
+describe('entrepreneur individuel ou société', () => {
+  it('ajoute « EI » au nom d’un entrepreneur individuel qui ne l’a pas écrit', () => {
+    expect(nomLegalAffiche('Jean Démo', 'ei')).toBe('Jean Démo EI')
+    expect(nomLegalAffiche('Jean Démo EI', 'ei')).toBe('Jean Démo EI')
+    expect(nomLegalAffiche('Jean Démo, entrepreneur individuel', 'ei')).toBe('Jean Démo, entrepreneur individuel')
+    expect(construireFacture(reservation(), vendeur({ facture_nom_legal: 'Jean Démo' })).vendeur.nomLegal).toBe('Jean Démo EI')
+  })
+
+  it('ne touche pas au nom d’une société', () => {
+    expect(nomLegalAffiche('Démo Lavage', 'societe')).toBe('Démo Lavage')
+  })
+
+  it('une société doit indiquer sa forme juridique, son capital et son RCS', () => {
+    expect(infosFacturationManquantes(vendeur({ facture_statut: 'societe' }))).toEqual([
+      'votre forme juridique', 'votre capital social', 'votre immatriculation (RCS)',
+    ])
+  })
+
+  it('ces mentions de société sont figées sur la facture', () => {
+    const f = construireFacture(reservation(), vendeur({
+      facture_statut: 'societe', facture_nom_legal: 'Démo Lavage',
+      facture_forme_juridique: 'SASU', facture_capital: '1 000 €', facture_immatriculation: 'RCS Pontoise 123 456 789',
+    }))
+    expect(f.vendeur).toMatchObject({
+      statut: 'societe', nomLegal: 'Démo Lavage', formeJuridique: 'SASU',
+      capital: '1 000 €', immatriculation: 'RCS Pontoise 123 456 789',
+    })
   })
 })

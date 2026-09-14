@@ -22,6 +22,7 @@ export async function PATCH(request: NextRequest) {
     followup_enabled, followup_delay_days, followup_message,
     zone_config,
     facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva,
+    facture_statut, facture_forme_juridique, facture_capital, facture_immatriculation,
   } = await request.json()
 
   // ── Validations ──────────────────────────────────────────────────────────
@@ -153,6 +154,15 @@ export async function PATCH(request: NextRequest) {
   if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
 
   // ── Informations de facturation (portées sur les factures aux clients) ──
+  if (facture_statut !== undefined) {
+    if (!['ei', 'societe'].includes(facture_statut)) {
+      return NextResponse.json({ error: 'Statut juridique invalide.' }, { status: 400 })
+    }
+    updates.facture_statut = facture_statut
+  }
+  if (facture_forme_juridique !== undefined) updates.facture_forme_juridique = String(facture_forme_juridique ?? '').trim().slice(0, 60) || null
+  if (facture_capital !== undefined) updates.facture_capital = String(facture_capital ?? '').trim().slice(0, 40) || null
+  if (facture_immatriculation !== undefined) updates.facture_immatriculation = String(facture_immatriculation ?? '').trim().slice(0, 80) || null
   if (facture_nom_legal !== undefined) updates.facture_nom_legal = String(facture_nom_legal ?? '').trim().slice(0, 120) || null
   if (facture_adresse !== undefined) updates.facture_adresse = String(facture_adresse ?? '').trim().slice(0, 300) || null
   if (facture_siret !== undefined) {

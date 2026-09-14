@@ -4,6 +4,8 @@ import { createElement } from 'react'
 import BookingPDF from '@/components/pdf/BookingPDF'
 import FacturePDF from '@/components/pdf/FacturePDF'
 import type { FactureContenu } from '@/lib/facture'
+import { logoPourPdf } from '@/lib/logoFacture'
+import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -35,10 +37,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     : null
 
   const document = facture
-    ? createElement(FacturePDF, facture)
+    ? createElement(FacturePDF, { ...facture, logo: await logoPourPdf(facture.contenu.vendeur.logoUrl) })
     : createElement(BookingPDF, { booking })
+
+  // La date du rendez-vous dans le nom du fichier : c'est elle que le laveur
+  // et son client cherchent en retrouvant une facture dans leurs téléchargements.
+  const dateRdv = new Date(booking.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })
   const nomFichier = facture
-    ? `facture-${facture.numero}.pdf`
+    ? `facture-${facture.numero}-${dateRdv}.pdf`
     : `recapitulatif-${booking.id.slice(0, 8).toUpperCase()}.pdf`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

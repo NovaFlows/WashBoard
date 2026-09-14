@@ -41,9 +41,13 @@ export type Washer = {
   created_at: string
   // Facturation aux clients (voir lib/facture.ts). Optionnels : absents tant
   // que les colonnes n'existent pas en base.
+  facture_statut?: 'ei' | 'societe'
   facture_nom_legal?: string | null
   facture_siret?: string | null
   facture_adresse?: string | null
+  facture_forme_juridique?: string | null
+  facture_capital?: string | null
+  facture_immatriculation?: string | null
   facture_regime_tva?: 'franchise' | 'assujetti'
   facture_taux_tva?: number
   facture_numero_tva?: string | null

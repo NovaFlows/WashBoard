@@ -5,30 +5,79 @@ import { useRouter } from 'next/navigation'
 import { FileText } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { Washer } from '@/types'
-import { TAUX_TVA, infosFacturationManquantes, phraseManques, siretValide, type RegimeTva } from '@/lib/facture'
+import {
+  TAUX_TVA, infosFacturationManquantes, phraseManques, siretValide,
+  type RegimeTva, type StatutJuridique,
+} from '@/lib/facture'
 
 const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
 const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
 const aideClass = "text-xs text-slate-400 dark:text-slate-500 mt-1"
+
+const FORMES_JURIDIQUES = ['SASU', 'SAS', 'EURL', 'SARL', 'SA', 'SNC']
+
+function Choix<T extends string>({ nom, valeur, options, onChange }: {
+  nom: string
+  valeur: T
+  options: readonly { value: T; label: string; desc: string }[]
+  onChange: (v: T) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {options.map(opt => (
+        <label
+          key={opt.value}
+          className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+            valeur === opt.value
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+          }`}
+        >
+          <input
+            type="radio"
+            name={nom}
+            value={opt.value}
+            checked={valeur === opt.value}
+            onChange={() => onChange(opt.value)}
+            className="mt-0.5 accent-blue-600"
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{opt.label}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{opt.desc}</p>
+          </div>
+        </label>
+      ))}
+    </div>
+  )
+}
 
 /** Informations portées sur les factures du laveur à ses clients. Tant
  *  qu'elles sont incomplètes, aucune facture n'est émise : le client reçoit
  *  un récapitulatif, qui ne se présente pas comme une facture. */
 export function FacturationCard({ washer }: { washer: Washer }) {
   const router = useRouter()
+  const [statut, setStatut] = useState<StatutJuridique>(washer.facture_statut ?? 'ei')
   const [nomLegal, setNomLegal] = useState(washer.facture_nom_legal ?? '')
   const [siret, setSiret] = useState(washer.facture_siret ?? '')
   const [adresse, setAdresse] = useState(washer.facture_adresse ?? '')
+  const [forme, setForme] = useState(washer.facture_forme_juridique ?? '')
+  const [capital, setCapital] = useState(washer.facture_capital ?? '')
+  const [immatriculation, setImmatriculation] = useState(washer.facture_immatriculation ?? '')
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
   const [taux, setTaux] = useState(String(washer.facture_taux_tva ?? 20))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const societe = statut === 'societe'
   const manques = infosFacturationManquantes({
+    facture_statut: statut,
     facture_nom_legal: nomLegal,
     facture_siret: siret,
     facture_adresse: adresse,
+    facture_forme_juridique: forme,
+    facture_capital: capital,
+    facture_immatriculation: immatriculation,
     facture_regime_tva: regime,
     facture_numero_tva: numeroTva,
   })
@@ -45,9 +94,13 @@ export function FacturationCard({ washer }: { washer: Washer }) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        facture_statut: statut,
         facture_nom_legal: nomLegal,
         facture_siret: siret,
         facture_adresse: adresse,
+        facture_forme_juridique: societe ? forme : '',
+        facture_capital: societe ? capital : '',
+        facture_immatriculation: societe ? immatriculation : '',
         facture_regime_tva: regime,
         facture_taux_tva: Number(taux),
         facture_numero_tva: regime === 'assujetti' ? numeroTva : '',
@@ -68,8 +121,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
       </h2>
       <form onSubmit={save} noValidate className="space-y-4">
         <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
-          Quand vous marquez un rendez-vous « Terminé », sa facture est émise avec ces informations.
-          Vos clients professionnels la reçoivent par email.
+          Quand vous marquez un rendez-vous « Terminé », sa facture est émise avec ces informations et
+          rangée dans l&apos;onglet Factures. Vos clients professionnels la reçoivent par email.
         </p>
 
         {manques.length === 0 ? (
@@ -81,9 +134,33 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         )}
 
         <div>
-          <label htmlFor="facture-nom-legal" className={labelClass}>Nom légal</label>
-          <input id="facture-nom-legal" type="text" value={nomLegal} onChange={e => setNomLegal(e.target.value)} placeholder="Jean Dupont EI" className={inputClass} />
-          <p className={aideClass}>Votre prénom et nom suivis de « EI » si vous êtes entrepreneur individuel (micro-entreprise), ou la raison sociale de votre société.</p>
+          <p className={labelClass}>Votre statut</p>
+          <Choix
+            nom="facture_statut"
+            valeur={statut}
+            onChange={setStatut}
+            options={[
+              { value: 'ei', label: 'Micro-entreprise ou entrepreneur individuel', desc: 'La mention « EI » est ajoutée à votre nom sur vos factures.' },
+              { value: 'societe', label: 'Société (SASU, SAS, EURL, SARL…)', desc: 'Vos factures portent votre forme juridique, votre capital et votre RCS.' },
+            ] as const}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="facture-nom-legal" className={labelClass}>{societe ? 'Raison sociale' : 'Nom légal'}</label>
+          <input
+            id="facture-nom-legal"
+            type="text"
+            value={nomLegal}
+            onChange={e => setNomLegal(e.target.value)}
+            placeholder={societe ? 'Dupont Nettoyage' : 'Jean Dupont'}
+            className={inputClass}
+          />
+          <p className={aideClass}>
+            {societe
+              ? 'Le nom officiel de votre société, tel qu’inscrit au registre.'
+              : 'Votre prénom et votre nom, tels qu’inscrits à l’Insee.'}
+          </p>
         </div>
 
         <div>
@@ -93,40 +170,42 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         </div>
 
         <div>
-          <label className={labelClass}>Adresse professionnelle</label>
+          <label className={labelClass}>{societe ? 'Adresse du siège' : 'Adresse professionnelle'}</label>
           <AddressAutocomplete value={adresse} onChange={setAdresse} placeholder="12 rue de la Paix, 75001 Paris" className={inputClass} />
         </div>
 
+        {societe && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="facture-forme" className={labelClass}>Forme juridique</label>
+              <input id="facture-forme" list="formes-juridiques" value={forme} onChange={e => setForme(e.target.value)} placeholder="SASU" className={inputClass} />
+              <datalist id="formes-juridiques">
+                {FORMES_JURIDIQUES.map(f => <option key={f} value={f} />)}
+              </datalist>
+            </div>
+            <div>
+              <label htmlFor="facture-capital" className={labelClass}>Capital social</label>
+              <input id="facture-capital" type="text" value={capital} onChange={e => setCapital(e.target.value)} placeholder="1 000 €" className={inputClass} />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="facture-immatriculation" className={labelClass}>Immatriculation</label>
+              <input id="facture-immatriculation" type="text" value={immatriculation} onChange={e => setImmatriculation(e.target.value)} placeholder="RCS Pontoise 123 456 789" className={inputClass} />
+              <p className={aideClass}>« RCS », la ville de votre greffe, puis votre SIREN (les 9 premiers chiffres du SIRET).</p>
+            </div>
+          </div>
+        )}
+
         <div>
           <p className={labelClass}>TVA</p>
-          <div className="flex flex-col gap-2">
-            {([
-              { value: 'franchise', label: 'Je ne facture pas la TVA (micro-entreprise)', desc: 'Vos factures portent la mention « TVA non applicable, art. 293 B du CGI ».' },
+          <Choix
+            nom="facture_regime_tva"
+            valeur={regime}
+            onChange={setRegime}
+            options={[
+              { value: 'franchise', label: 'Je ne facture pas la TVA', desc: 'Franchise en base (le cas des micro-entreprises) : mention « TVA non applicable, art. 293 B du CGI ».' },
               { value: 'assujetti', label: 'Je facture la TVA', desc: 'Vos prix restent affichés TTC ; la facture détaille le HT et la TVA.' },
-            ] as const).map(opt => (
-              <label
-                key={opt.value}
-                className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  regime === opt.value
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="facture_regime_tva"
-                  value={opt.value}
-                  checked={regime === opt.value}
-                  onChange={() => setRegime(opt.value)}
-                  className="mt-0.5 accent-blue-600"
-                />
-                <div>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{opt.label}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{opt.desc}</p>
-                </div>
-              </label>
-            ))}
-          </div>
+            ] as const}
+          />
         </div>
 
         {regime === 'assujetti' && (
