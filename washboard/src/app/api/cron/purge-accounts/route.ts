@@ -83,6 +83,17 @@ export async function GET(request: NextRequest) {
       } catch { /* non bloquant */ }
     }
 
+    // 2 bis. Factures importées : les lignes partent en cascade avec la fiche,
+    // mais pas les fichiers du stockage privé, qui portent les noms et adresses
+    // des clients du laveur. Best-effort comme le logo : un échec est tracé.
+    try {
+      const { data: fichiers } = await admin.storage.from('factures-importees').list(w.id, { limit: 1000 })
+      const chemins = (fichiers ?? []).map(f => `${w.id}/${f.name}`)
+      if (chemins.length > 0) await admin.storage.from('factures-importees').remove(chemins)
+    } catch (e) {
+      logger.error('purge.factures_importees.remove_failed', { washerId: w.id }, e)
+    }
+
     // 3. Utilisateur auth → cascade sur washers + services/bookings/dispos/catégories
     if (w.user_id) {
       const { error: delErr } = await admin.auth.admin.deleteUser(w.user_id)

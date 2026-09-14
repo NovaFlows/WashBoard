@@ -51,6 +51,7 @@ export type Washer = {
   facture_regime_tva?: 'franchise' | 'assujetti'
   facture_taux_tva?: number
   facture_numero_tva?: string | null
+  facture_prochain_numero?: number
 }
 
 export type ServiceAddon = {

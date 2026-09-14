@@ -23,6 +23,7 @@ export async function PATCH(request: NextRequest) {
     zone_config,
     facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva,
     facture_statut, facture_forme_juridique, facture_capital, facture_immatriculation,
+    facture_prochain_numero,
   } = await request.json()
 
   // ── Validations ──────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ export async function PATCH(request: NextRequest) {
   // consommait des SMS facturés à WashBoard sans jamais passer au plan Pro.
   // Signalé par un audit externe le 2026-09-05.
   const { data: profil, error: profilError } = await supabase
-    .from('washers').select('plan, grandfathered').eq('user_id', user.id).single()
+    .from('washers').select('plan, grandfathered, facture_prochain_numero').eq('user_id', user.id).single()
 
   if (profilError || !profil) {
     // Sans certitude sur le plan, on ne débloque rien : laisser passer
@@ -154,6 +155,24 @@ export async function PATCH(request: NextRequest) {
   if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
 
   // ── Informations de facturation (portées sur les factures aux clients) ──
+  // Numéro de la prochaine facture : permet à un laveur qui facturait déjà
+  // ailleurs de CONTINUER sa suite (la loi veut une numérotation continue).
+  // Jamais en arrière : un numéro déjà utilisé produirait un doublon, que la
+  // base refuserait au moment d'émettre — la facture ne sortirait pas.
+  if (facture_prochain_numero !== undefined) {
+    const suivant = Number(facture_prochain_numero)
+    const actuel = Number(profil.facture_prochain_numero ?? 1)
+    if (!Number.isInteger(suivant) || suivant < 1 || suivant > 999_999) {
+      return NextResponse.json({ error: 'Numéro de facture invalide (entre 1 et 999 999).' }, { status: 400 })
+    }
+    if (suivant < actuel) {
+      return NextResponse.json(
+        { error: `Le numéro ne peut pas revenir en arrière : la prochaine facture est déjà la n° ${actuel}.` },
+        { status: 400 },
+      )
+    }
+    updates.facture_prochain_numero = suivant
+  }
   if (facture_statut !== undefined) {
     if (!['ei', 'societe'].includes(facture_statut)) {
       return NextResponse.json({ error: 'Statut juridique invalide.' }, { status: 400 })

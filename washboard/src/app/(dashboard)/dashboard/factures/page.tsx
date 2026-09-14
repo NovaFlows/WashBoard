@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { ImportFactures } from '@/components/dashboard/ImportFactures'
+import { SupprimerFactureImportee } from '@/components/dashboard/SupprimerFactureImportee'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { infosFacturationManquantes, phraseManques } from '@/lib/facture'
 import {
@@ -12,7 +14,7 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-type FactureListee = {
+type FactureEmise = {
   id: string
   facture_numero: string
   facture_emise_le: string
@@ -21,6 +23,28 @@ type FactureListee = {
   company_name: string | null
   is_professional: boolean | null
   montant: string | number | null
+}
+
+type FactureImportee = {
+  id: string
+  nom_fichier: string
+  date_facture: string
+  montant: string | number | null
+  numero: string | null
+}
+
+/** Une ligne de la liste, qu'elle vienne de WashBoard ou d'un import. */
+type Ligne = {
+  cle: string
+  genre: 'emise' | 'importee'
+  id: string
+  numero: string | null
+  /** Date qui range la facture : émission, ou date de la facture importée. */
+  facture_emise_le: string
+  titre: string
+  detail: string
+  montant: number | null
+  lien: string
 }
 
 const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
@@ -32,7 +56,11 @@ const quand = (iso: string) => {
   return `${jour} à ${heure}`
 }
 
-const total = (liste: FactureListee[]) => liste.reduce((t, f) => t + Number(f.montant ?? 0), 0)
+const jourSeul = (date: string) =>
+  new Date(`${date}T12:00:00Z`).toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
+
+const total = (liste: Ligne[]) => liste.reduce((t, f) => t + (f.montant ?? 0), 0)
+const nombre = (v: string | number | null) => (v === null || v === '' ? null : Number(v))
 
 function Filtre({ href, actif, children }: { href: string; actif: boolean; children: React.ReactNode }) {
   return (
@@ -50,10 +78,10 @@ function Filtre({ href, actif, children }: { href: string; actif: boolean; child
   )
 }
 
-// Toutes les factures émises par le laveur, filtrables par année et par mois
-// d'émission — le mois qui compte pour sa comptabilité et ses déclarations.
-// Les filtres sont de simples liens : l'adresse (?annee=2026&mois=09) se
-// partage et se met en favori, sans rien exécuter dans le navigateur.
+// Toutes les factures du laveur : celles émises par WashBoard et celles qu'il
+// a importées (faites avant), filtrables par année et par mois — le mois qui
+// compte pour sa comptabilité. Les filtres sont de simples liens : l'adresse
+// (?annee=2026&mois=09) se partage et se met en favori.
 export default async function FacturesPage({
   searchParams,
 }: {
@@ -73,19 +101,49 @@ export default async function FacturesPage({
 
   if (!washer) redirect('/login')
 
-  // Lecture paginée : au-delà de 1 000 factures, une lecture simple serait
+  // Lectures paginées : au-delà de 1 000 lignes, une lecture simple serait
   // coupée sans prévenir (voir `toutesLesLignes`).
-  const { data: toutes, error, tronque } = await toutesLesLignes<FactureListee>((debut, fin) =>
-    supabase
-      .from('bookings')
-      .select('id, facture_numero, facture_emise_le, scheduled_at, client_name, company_name, is_professional, montant:facture_contenu->totaux->>ttc')
-      .eq('washer_id', washer.id)
-      .not('facture_numero', 'is', null)
-      .order('facture_emise_le', { ascending: false })
-      .order('id')
-      .range(debut, fin),
-  )
-  if (error) logger.error('factures.read_failed', { washerId: washer.id }, error)
+  const [emises, importees] = await Promise.all([
+    toutesLesLignes<FactureEmise>((debut, fin) =>
+      supabase
+        .from('bookings')
+        .select('id, facture_numero, facture_emise_le, scheduled_at, client_name, company_name, is_professional, montant:facture_contenu->totaux->>ttc')
+        .eq('washer_id', washer.id)
+        .not('facture_numero', 'is', null)
+        .order('facture_emise_le', { ascending: false })
+        .order('id')
+        .range(debut, fin)),
+    toutesLesLignes<FactureImportee>((debut, fin) =>
+      supabase
+        .from('factures_importees')
+        .select('id, nom_fichier, date_facture, montant, numero')
+        .eq('washer_id', washer.id)
+        .order('date_facture', { ascending: false })
+        .order('id')
+        .range(debut, fin)),
+  ])
+  if (emises.error) logger.error('factures.read_failed', { washerId: washer.id }, emises.error)
+  if (importees.error) logger.error('factures_importees.read_failed', { washerId: washer.id }, importees.error)
+
+  const toutes: Ligne[] = [
+    ...emises.data.map(f => ({
+      cle: `e-${f.id}`, genre: 'emise' as const, id: f.id, numero: f.facture_numero,
+      facture_emise_le: f.facture_emise_le,
+      titre: f.is_professional && f.company_name ? f.company_name : f.client_name,
+      detail: `Rendez-vous du ${quand(f.scheduled_at)}`,
+      montant: nombre(f.montant),
+      lien: `/api/bookings/${f.id}/pdf`,
+    })),
+    ...importees.data.map(f => ({
+      cle: `i-${f.id}`, genre: 'importee' as const, id: f.id, numero: f.numero,
+      // Midi UTC : la date d'une facture importée reste le même jour à Paris.
+      facture_emise_le: `${f.date_facture}T12:00:00.000Z`,
+      titre: f.nom_fichier,
+      detail: `Facture du ${jourSeul(f.date_facture)}`,
+      montant: nombre(f.montant),
+      lien: `/api/factures/importees/${f.id}`,
+    })),
+  ].sort((a, b) => b.facture_emise_le.localeCompare(a.facture_emise_le))
 
   const factures = filtrerFactures(toutes, filtre)
   const annees = anneesDisponibles(toutes)
@@ -93,8 +151,9 @@ export default async function FacturesPage({
   const selection = filtre.mois
     ? `${libelleMois(filtre.mois)} ${filtre.annee}`
     : filtre.annee ?? 'Toutes les factures'
+  const erreur = (emises.error && emises.data.length === 0) ? true : false
 
-  const parMois = new Map<string, FactureListee[]>()
+  const parMois = new Map<string, Ligne[]>()
   for (const f of factures) {
     const { annee, mois: m } = anneeMois(f.facture_emise_le)
     const cle = `${libelleMois(m)} ${annee}`
@@ -104,11 +163,16 @@ export default async function FacturesPage({
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Factures</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Émises automatiquement quand un rendez-vous est marqué « Terminé ».
+          Émises automatiquement quand un rendez-vous est marqué « Terminé ». Vous pouvez aussi y ranger
+          les factures faites avant WashBoard.
         </p>
+      </div>
+
+      <div className="mb-5">
+        <ImportFactures />
       </div>
 
       {manques.length > 0 && (
@@ -144,7 +208,7 @@ export default async function FacturesPage({
         </nav>
       )}
 
-      {error && toutes.length === 0 ? (
+      {erreur ? (
         <p className="text-sm text-red-600 dark:text-red-400">
           Impossible de charger vos factures pour le moment. Rechargez la page dans un instant.
         </p>
@@ -172,29 +236,34 @@ export default async function FacturesPage({
               </div>
               <ul className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
                 {liste.map(f => (
-                  <li key={f.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-                    <span className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100 w-20 shrink-0">{f.facture_numero}</span>
+                  <li key={f.cle} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
+                    <span className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100 w-20 shrink-0 truncate">
+                      {f.numero ?? '—'}
+                    </span>
                     <div className="flex-1 min-w-[10rem]">
-                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                        {f.is_professional && f.company_name ? f.company_name : f.client_name}
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">
+                        {f.titre}
+                        {f.genre === 'importee' && (
+                          <span className="ml-2 align-middle px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            importée
+                          </span>
+                        )}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Rendez-vous du {quand(f.scheduled_at)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{f.detail}</p>
                     </div>
                     <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-                      {f.montant != null ? euros.format(Number(f.montant)) : '—'}
+                      {f.montant != null ? euros.format(f.montant) : '—'}
                     </span>
-                    <a
-                      href={`/api/bookings/${f.id}/pdf`}
-                      className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                    >
+                    <a href={f.lien} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                       Télécharger
                     </a>
+                    {f.genre === 'importee' && <SupprimerFactureImportee id={f.id} nom={f.titre} />}
                   </li>
                 ))}
               </ul>
             </section>
           ))}
-          {tronque && (
+          {(emises.tronque || importees.tronque) && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               Une partie de vos factures n&apos;a pas pu être chargée. Rechargez la page pour les voir toutes.
             </p>

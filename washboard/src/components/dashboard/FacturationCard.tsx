@@ -66,6 +66,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
   const [taux, setTaux] = useState(String(washer.facture_taux_tva ?? 20))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
+  const numeroActuel = washer.facture_prochain_numero ?? 1
+  const [prochainNumero, setProchainNumero] = useState(String(numeroActuel))
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -104,6 +106,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         facture_regime_tva: regime,
         facture_taux_tva: Number(taux),
         facture_numero_tva: regime === 'assujetti' ? numeroTva : '',
+        // Envoyé seulement s'il a changé : le serveur refuse de revenir en arrière.
+        ...(Number(prochainNumero) !== numeroActuel ? { facture_prochain_numero: Number(prochainNumero) } : {}),
       }),
     })
     const json = await res.json().catch(() => ({})) as { error?: string }
@@ -206,6 +210,25 @@ export function FacturationCard({ washer }: { washer: Washer }) {
               { value: 'assujetti', label: 'Je facture la TVA', desc: 'Vos prix restent affichés TTC ; la facture détaille le HT et la TVA.' },
             ] as const}
           />
+        </div>
+
+        <div>
+          <label htmlFor="facture-prochain-numero" className={labelClass}>Numéro de la prochaine facture</label>
+          <input
+            id="facture-prochain-numero"
+            type="number"
+            inputMode="numeric"
+            min={numeroActuel}
+            max={999999}
+            value={prochainNumero}
+            onChange={e => setProchainNumero(e.target.value)}
+            className={`${inputClass} w-40`}
+          />
+          <p className={aideClass}>
+            Vous facturiez déjà avant WashBoard ? Indiquez le numéro qui suit votre dernière facture, pour que la suite
+            reste continue (par exemple 46 si vous étiez à la n° 45). La prochaine facture sera la
+            F-{String(Math.max(1, Number(prochainNumero) || numeroActuel)).padStart(5, '0')}. Ce numéro ne peut qu&apos;augmenter.
+          </p>
         </div>
 
         {regime === 'assujetti' && (
