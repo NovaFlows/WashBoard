@@ -538,6 +538,12 @@ rien à faire, mais que le projet reste globalement sain.
       `confidentialite/page.tsx`. Remplacer `[NOM LÉGAL]`, `[FORME JURIDIQUE]`, `[SIRET]`,
       `[ADRESSE COMPLÈTE]`.
 
+- [ ] **Obligation légale de WashBoard lui-même, le jour de la création** : choisir une
+      plateforme agréée pour **recevoir** les factures électroniques (obligatoire pour
+      toute entreprise depuis le 1er septembre 2026), puis **émettre** ses factures
+      d'abonnement par elle au 1er septembre 2027 (vérifier si Stripe le fait via un
+      partenaire). Démarche administrative, pas de code.
+
 - [ ] **Passage de Stripe en live** (voir la mémoire `project-stripe-activation.md` pour la
       procédure complète). Deux points à ne pas oublier ce jour-là :
   - [ ] **Les forfaits annuels n'existent pas côté Stripe.** L'engagement annuel ajouté le
@@ -584,19 +590,31 @@ rien à faire, mais que le projet reste globalement sain.
     pousser.
   - À fournir par Alexandre : la liste des comptes et leurs liens.
 
-- [ ] **Facturation électronique** (réforme française, via une plateforme agréée).
-      Calendrier à confirmer avec l'agent `legal` au moment de s'y mettre : réception
-      obligatoire pour toutes les entreprises depuis le 1er septembre 2026 ; émission
-      obligatoire pour les PME et micro-entreprises au 1er septembre 2027. Deux sujets
-      distincts :
-  - **WashBoard comme entreprise** : recevoir (et plus tard émettre) ses propres factures
-    au format électronique via une plateforme agréée — à choisir en même temps que la
-    création de l'entreprise et le passage de Stripe en live.
-  - **Fonctionnalité pour les laveurs** : leurs clients professionnels (flottes,
-    concessions, entreprises) devront recevoir des factures électroniques (Factur-X,
-    UBL ou CII) ; les ventes aux particuliers relèvent du e-reporting. Juger avec `ideas`
-    si WashBoard émet ces factures lui-même (via une plateforme agréée partenaire) ou
-    exporte simplement les données vers l'outil de facturation du laveur.
+- [ ] **Facturation des laveurs à leurs clients** (réforme de la facturation
+      électronique). Le sujet, ce sont les factures **des laveurs**, pas celles de
+      WashBoard (précisé par Alexandre le 2026-09-14).
+  - **Calendrier vérifié sur impots.gouv.fr** le 2026-09-14 : réception obligatoire pour
+    toutes les entreprises depuis le 1er septembre 2026 ; émission obligatoire pour les
+    petites et micro-entreprises au **1er septembre 2027**. Les micro-entrepreneurs en
+    franchise de TVA sont concernés. Client pro établi en France : facture structurée
+    (UBL, CII ou Factur-X) via une plateforme agréée. Client particulier : pas de
+    facture électronique, mais transmission des ventes aux impôts (e-reporting, tous les
+    deux mois pour un franchisé d'après la FAQ).
+  - **Problème dès aujourd'hui** : la réservation promet aux clients pros « une facture
+    avec vos informations société », mais `components/pdf/BookingPDF.tsx` n'est qu'un
+    justificatif — ni SIRET ni adresse du laveur, pas de numérotation continue, et
+    « TVA non applicable — art. 293 B » écrit pour tous les laveurs, même ceux qui
+    facturent la TVA.
+  - **Option C, recommandée d'abord** : faire de ce PDF une vraie facture (SIRET, adresse,
+    mention EI, régime de TVA et taux, numéro qui se suit par laveur, date de la
+    prestation, conditions de paiement et mentions pros). Nouvelles colonnes sur
+    `washers` + numérotation atomique : SQL dans la conversation, `GRANT` explicites.
+    Faire valider la liste des mentions par `legal`.
+  - **À trancher début 2027, A ou B** : A = exporter les données vers l'outil du laveur
+    (effort faible, aucun avantage commercial) ; B = WashBoard émet les factures des
+    clients pros et fait l'e-reporting via une plateforme agréée partenaire (lourd, mais
+    argument fort pour la formule Pro). Signal à récolter avant : la part de clients
+    professionnels chez les laveurs (Kookii Clean en premier).
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,
