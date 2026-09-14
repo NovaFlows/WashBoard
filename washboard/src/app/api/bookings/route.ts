@@ -63,6 +63,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   const ip = clientIp(req)
   const rl = rateLimit(`book:${ip}`, IP_LIMIT, IP_WINDOW_MS)
   if (!rl.ok) {
+    // Tracé comme les autres refus anti-abus : sans trace, un robot qui
+    // s'acharne sur une page de réservation passait totalement inaperçu.
+    logger.warn('bookings.rate_limited', { ip })
     return Response.json(
       { error: 'Trop de réservations en peu de temps. Réessayez dans quelques minutes.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
@@ -85,9 +88,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // On renvoie un succès factice pour ne pas révéler le piège au bot. Comme
     // rien n'est enregistré, on trace le rejet : un autofill navigateur qui
     // remplirait ce champ ferait perdre de vraies réservations en silence.
+    // Pas d'email client dans les journaux : le laveur visé et l'IP suffisent
+    // à repérer un robot, sans conserver une donnée personnelle inutile.
     logger.warn('bookings.honeypot_triggered', {
       washerId: cleanData.washer_id,
-      clientEmail: cleanData.client_email,
+      ip,
     })
     return Response.json({ data: { id: randomUUID() } }, { status: 201 })
   }
@@ -121,6 +126,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       { washerId: bookingData.washer_id }, errDailyCount)
   }
   if ((dailyCount ?? 0) >= WASHER_DAILY_CAP) {
+    logger.warn('bookings.daily_cap_reached', { washerId: bookingData.washer_id, ip })
     return Response.json(
       { error: 'Ce prestataire a atteint sa limite de réservations pour aujourd\'hui. Réessayez demain.' },
       { status: 429 },

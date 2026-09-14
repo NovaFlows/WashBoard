@@ -34,10 +34,13 @@
   À faire : `designer` sur l'enchaînement catégorie → prestation (état vide explicite,
   garde-fou quand aucun type n'est coché), puis `dev`. Montrer le rendu avant de pousser.
 
-- [ ] **Donner à `cyber` un accès en lecture aux journaux de production** (Supabase).
-      Demandé en réunion d'équipe le 2026-09-14 : sans lui, impossible de voir si la page
-      de réservation publique subit des abus (robots, spam). En attente de l'accès
-      Supabase d'Alexandre.
+- [x] 2026-09-14 — **Refus anti-abus de la réservation tous tracés.** Demandé en réunion
+      d'équipe (« donner à `cyber` un accès aux journaux »). Constat : les journaux Supabase
+      ne servent à rien ici (les réservations publiques passent par notre serveur, Supabase
+      ne voit jamais l'attaquant), et deux des trois protections de `api/bookings` ne
+      laissaient aucune trace. Ajoutés : `bookings.rate_limited` et
+      `bookings.daily_cap_reached` ; l'email client retiré de `bookings.honeypot_triggered`
+      (remplacé par l'IP). La vraie surveillance est repoussée, voir « Infra & environnements ».
 
 - [x] 2026-09-11 — **7 secrets GitHub créés**, vérifié sur la CI de `b8f6402` : le job e2e
       va jusqu'au bout (navigateur, build, tests de bout en bout, nettoyage). Historique —
@@ -699,6 +702,19 @@ rien à faire, mais que le projet reste globalement sain.
       données, et une manip SQL touche directement la prod. À faire dès qu'il y a des
       utilisateurs réels : projet Supabase dédié au dev (ou Supabase Branching), avec
       des variables d'env distinctes local/prod.
+- [ ] **Surveillance des abus pour `cyber`** (décidé le 2026-09-14 : pas urgent avec
+      quelques laveurs, les protections bloquent déjà). Les journaux Vercel s'effacent vite
+      (quelques heures à un jour selon l'offre) : une lecture à la réunion du matin
+      manquerait la nuit. Plan retenu :
+  - table Supabase des refus (type, route, laveur visé, IP brouillée avec un sel, date),
+    purgée à 30 jours ; SQL dans la conversation, `GRANT` explicites ;
+  - route de consultation en lecture seule, protégée par un secret dédié, qui ne rend
+    que des totaux (aucune IP, aucun email) ;
+  - notification sur le téléphone d'Alexandre en cas de pic (`notifierEquipe`) ;
+  - à trancher : la routine cloud reçoit-elle ce secret (règle actuelle : aucun accès
+    autonome aux routines cloud) ; faire valider la conservation des IP par `legal` et
+    l'ajouter à la politique de confidentialité.
+
 - [ ] **Workflow branches + Preview (optionnel)** : pour les features risquées, créer
       une branche → Vercel génère une URL de preview → valider → merger sur master.
       Évite de pousser direct en prod sur du code chaud. (Pas obligatoire en solo.)
