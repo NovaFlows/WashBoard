@@ -7,28 +7,13 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-13 (landing : liste du contenu à ajouter ; et plus tôt :
-> compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide, fiche client, forfaits annuels)
+> Dernière mise à jour : 2026-09-14 (réseaux sociaux, facturation électronique ; légal et
+> Stripe live repoussés vers mi-novembre ; landing livrée ; et plus tôt : compte d'essai
+> EssaiAuto à supprimer, blog SEO, centre d'aide, fiche client, forfaits annuels)
 
 ---
 
 ## 🔴 Priorité haute
-
-- [ ] **Signal produit : un inscrit a tout configuré SAUF ses prestations, et s'est
-      arrêté là.** Constaté le 2026-08-31 sur le compte **BellAuto89** (inscrit le
-      2026-08-20, essai jusqu'au 2026-09-19). Il a fait le plus fastidieux — logo
-      téléversé, adresse de base, **28 créneaux de disponibilité**, 2 catégories — puis
-      **0 prestation**, donc 0 réservation possible : sa page publique ne peut rien
-      proposer, il n'a jamais vu le produit fonctionner. Il avait convenu d'un rendez-vous
-      avec Alexandre et n'est pas venu.
-      Deux lectures possibles, à départager : soit il a simplement été interrompu, soit
-      **l'écran Prestations coince** (c'est le seul formulaire qui exige de choisir une
-      catégorie *puis* de cocher des types avant de pouvoir enregistrer — le bouton reste
-      désactivé sans message expliquant ce qui manque). Quelqu'un qui investit autant de
-      temps puis bloque à la dernière étape mérite qu'on regarde.
-      À faire : l'appeler (fiche prospect créée avec l'accroche), puis faire juger l'écran
-      par `designer` et `ideas`. Si le problème est réel, il touche **tous** les nouveaux
-      inscrits, pas seulement lui.
 
 - [x] 2026-09-11 — **7 secrets GitHub créés**, vérifié sur la CI de `b8f6402` : le job e2e
       va jusqu'au bout (navigateur, build, tests de bout en bout, nettoyage). Historique —
@@ -224,24 +209,6 @@
 
 - [x] 2026-08-26 — Réservation de test `dbd2b4f2` supprimée chez Kooki Clean. Kookii Clean
       (le vrai client) vérifié intact : 41 réservations.
-
-- [ ] **[PLANIFIÉ DÉBUT SEPTEMBRE 2026] Remplir les placeholders légaux** dès que l'entité
-      est créée (micro-entreprise ou autre) : fichiers `src/app/(legal)/mentions-legales/page.tsx`,
-      `cgv/page.tsx`, `confidentialite/page.tsx`. Remplacer `[NOM LÉGAL]`,
-      `[FORME JURIDIQUE]`, `[SIRET]`, `[ADRESSE COMPLÈTE]`.
-
-- [ ] **[PLANIFIÉ DÉBUT SEPTEMBRE 2026] Passage de Stripe en live** (voir la mémoire
-      `project-stripe-activation.md` pour la procédure complète). Deux points à ne pas
-      oublier ce jour-là :
-  - [ ] **Les forfaits annuels n'existent pas côté Stripe.** L'engagement annuel ajouté le
-        2026-08-26 (2 mois offerts) ne concerne que le paiement manuel PayPal/virement :
-        `STRIPE_PRICE_IDS` associe **un seul prix par plan**, sans notion de cycle, et
-        `POST /api/stripe/checkout` ne reçoit pas le cycle choisi. Il faudra créer les prix
-        annuels dans Stripe, étendre `STRIPE_PRICE_IDS` en `Record<Plan, Record<BillingCycle,
-        string>>`, et transmettre le cycle depuis le `BillingToggle`. Sans ça, un client qui
-        choisit l'annuel serait facturé au mois.
-  - [ ] Supprimer `STRIPE_PRICE_ID_BUSINESS` de Vercel : le plan Business a été retiré le
-        2026-08-26, la variable ne sert plus.
 
 - [x] 2026-08-26 — **Plan Business supprimé + forfaits annuels** (remplace l'entrée du
       2026-07-01 ci-dessous, devenue caduque) :
@@ -534,7 +501,56 @@ rien à faire, mais que le projet reste globalement sain.
 - [x] 2026-06-29 — **`.env.example`** documentant les 11 variables d'env (sans valeurs)
       + exception `.gitignore` pour le rendre traçable.
 
+## 🔵 Plus tard — vers mi-novembre 2026
+
+> Repoussé le 2026-09-14 par Alexandre (prévu à l'origine début septembre) : les deux
+> dépendent de la création de l'entreprise.
+
+- [ ] **Remplir les placeholders légaux** dès que l'entité est créée (micro-entreprise ou
+      autre) : fichiers `src/app/(legal)/mentions-legales/page.tsx`, `cgv/page.tsx`,
+      `confidentialite/page.tsx`. Remplacer `[NOM LÉGAL]`, `[FORME JURIDIQUE]`, `[SIRET]`,
+      `[ADRESSE COMPLÈTE]`.
+
+- [ ] **Passage de Stripe en live** (voir la mémoire `project-stripe-activation.md` pour la
+      procédure complète). Deux points à ne pas oublier ce jour-là :
+  - [ ] **Les forfaits annuels n'existent pas côté Stripe.** L'engagement annuel ajouté le
+        2026-08-26 (2 mois offerts) ne concerne que le paiement manuel PayPal/virement :
+        `STRIPE_PRICE_IDS` associe **un seul prix par plan**, sans notion de cycle, et
+        `POST /api/stripe/checkout` ne reçoit pas le cycle choisi. Il faudra créer les prix
+        annuels dans Stripe, étendre `STRIPE_PRICE_IDS` en `Record<Plan, Record<BillingCycle,
+        string>>`, et transmettre le cycle depuis le `BillingToggle`. Sans ça, un client qui
+        choisit l'annuel serait facturé au mois.
+  - [ ] Supprimer `STRIPE_PRICE_ID_BUSINESS` de Vercel : le plan Business a été retiré le
+        2026-08-26, la variable ne sert plus.
+
 ## 🟡 Roadmap produit
+
+- [ ] **Nos réseaux sociaux, sur la landing et dans l'espace des laveurs.** Aucun lien
+      vers les comptes WashBoard (TikTok, Instagram…) n'existe aujourd'hui sur le site.
+  - **Landing** : icônes des réseaux dans le pied de page (et éventuellement une ligne
+    « Suis-nous » près du CTA final). Liens directs, ouverts dans un nouvel onglet, avec
+    un libellé accessible (« WashBoard sur TikTok »).
+  - **Espace connecté** : visible sans gêner, **surtout sur téléphone où rien ne doit
+    prendre de place**. Pas de bandeau, pas de fenêtre, pas de bloc en haut du tableau de
+    bord. Pistes : une rangée de petites icônes tout en bas du menu latéral sur
+    ordinateur ; sur téléphone, uniquement dans le menu (ou en bas de Paramètres / du
+    centre d'aide), jamais sur l'écran principal. Montrer le rendu à Alexandre avant de
+    pousser.
+  - À fournir par Alexandre : la liste des comptes et leurs liens.
+
+- [ ] **Facturation électronique** (réforme française, via une plateforme agréée).
+      Calendrier à confirmer avec l'agent `legal` au moment de s'y mettre : réception
+      obligatoire pour toutes les entreprises depuis le 1er septembre 2026 ; émission
+      obligatoire pour les PME et micro-entreprises au 1er septembre 2027. Deux sujets
+      distincts :
+  - **WashBoard comme entreprise** : recevoir (et plus tard émettre) ses propres factures
+    au format électronique via une plateforme agréée — à choisir en même temps que la
+    création de l'entreprise et le passage de Stripe en live.
+  - **Fonctionnalité pour les laveurs** : leurs clients professionnels (flottes,
+    concessions, entreprises) devront recevoir des factures électroniques (Factur-X,
+    UBL ou CII) ; les ventes aux particuliers relèvent du e-reporting. Juger avec `ideas`
+    si WashBoard émet ces factures lui-même (via une plateforme agréée partenaire) ou
+    exporte simplement les données vers l'outil de facturation du laveur.
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,
