@@ -15,6 +15,23 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **L'écran Prestations piège les nouveaux inscrits.** Relevé par `ideas` en réunion
+      d'équipe le 2026-09-14, après lecture de `PrestationsManager.tsx` (le bouton
+      Enregistrer n'est pas en cause : `canSave` ne dépend que du nom, du prix et de la
+      durée). Deux vrais pièges :
+  - une prestation n'existe qu'après avoir créé une catégorie, sur un autre écran, et
+    rien ne l'explique clairement ;
+  - choisir « — Sans catégorie — » **vide sans prévenir les types déjà cochés**, ce qui
+    rend la prestation impossible à réserver.
+  Symptôme constaté chez un inscrit : tout configuré, page publique sans rien à réserver.
+  À faire : `designer` sur l'enchaînement catégorie → prestation (état vide explicite,
+  garde-fou quand aucun type n'est coché), puis `dev`. Montrer le rendu avant de pousser.
+
+- [ ] **Donner à `cyber` un accès en lecture aux journaux de production** (Supabase).
+      Demandé en réunion d'équipe le 2026-09-14 : sans lui, impossible de voir si la page
+      de réservation publique subit des abus (robots, spam). En attente de l'accès
+      Supabase d'Alexandre.
+
 - [x] 2026-09-11 — **7 secrets GitHub créés**, vérifié sur la CI de `b8f6402` : le job e2e
       va jusqu'au bout (navigateur, build, tests de bout en bout, nettoyage). Historique —
       ils étaient requis pour que le job e2e
@@ -524,6 +541,24 @@ rien à faire, mais que le projet reste globalement sain.
         2026-08-26, la variable ne sert plus.
 
 ## 🟡 Roadmap produit
+
+- [ ] **Poser une question depuis le centre d'aide, répondre depuis le compte NovaFlows.**
+      Demandé par Alexandre le 2026-09-14. Aujourd'hui le centre d'aide
+      (`/dashboard/guide`) n'a que des réponses toutes faites : un laveur bloqué n'a aucun
+      moyen d'écrire à l'équipe depuis l'app.
+  - **Côté laveur** : un bouton « Poser une question » dans le centre d'aide (et quand la
+    recherche ne trouve rien), un champ de texte, puis l'historique de ses échanges avec
+    les réponses. Discret sur téléphone, comme le reste de l'espace connecté.
+  - **Côté équipe** : une interface d'administration accessible depuis le compte
+    NovaFlows, réservée à `SUPPORT_ADMIN_EMAILS` comme la page `/dashboard/support`
+    existante (qu'elle peut prolonger). Liste des questions avec le laveur concerné,
+    non lues en premier, réponse directe, statut ouvert / résolu.
+  - **Notification sur le téléphone d'Alexandre** à chaque nouvelle question :
+    `notifierEquipe` (`lib/push.ts`) le fait déjà pour les inscriptions, à réutiliser. Le
+    laveur est notifié à son tour quand l'équipe répond (même mécanique, ses appareils).
+  - Nouvelle table Supabase : SQL donné dans la conversation, avec les `GRANT` explicites
+    par rôle et des RLS qui limitent chaque laveur à ses propres questions.
+  - Montrer le rendu (laveur et administration) avant de pousser.
 
 - [ ] **Nos réseaux sociaux, sur la landing et dans l'espace des laveurs.** Aucun lien
       vers les comptes WashBoard (TikTok, Instagram…) n'existe aujourd'hui sur le site.
