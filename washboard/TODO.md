@@ -15,7 +15,14 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **L'écran Prestations piège les nouveaux inscrits.** Relevé par `ideas` en réunion
+- [x] 2026-09-14 — **Corrigé** : enregistrement refusé sans type (écran et serveur, règle
+      commune `lib/prestation.ts`, 11 tests), message qui dit ce qui manque, « Sans
+      catégorie » réservé aux anciennes prestations qui n'en ont pas (et leurs types ne sont
+      plus effacés), étape « Créer ma première catégorie » sur un compte neuf, prestations
+      sans type cachées de la page publique et signalées en rouge au laveur. Au passage :
+      la ligne « Options & suppléments » ne s'écrase plus sur téléphone. Test e2e du cas
+      « tout décoché ». Constat d'origine :
+- [x] **L'écran Prestations piège les nouveaux inscrits.** Relevé par `ideas` en réunion
       d'équipe le 2026-09-14, après lecture de `PrestationsManager.tsx` (le bouton
       Enregistrer n'est pas en cause : `canSave` ne dépend que du nom, du prix et de la
       durée). Deux vrais pièges :

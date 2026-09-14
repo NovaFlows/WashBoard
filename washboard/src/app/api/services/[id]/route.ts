@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
+import { estReservable, ERREUR_SANS_TYPE } from '@/lib/prestation'
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -9,6 +10,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { supabase, washerId } = auth.ctx
 
   const body = await request.json()
+  if (body.vehicle_types !== undefined && !estReservable(body)) {
+    return NextResponse.json({ error: ERREUR_SANS_TYPE }, { status: 400 })
+  }
   const updates: Record<string, unknown> = {}
   if (body.name !== undefined) updates.name = body.name.trim()
   if (body.category_id !== undefined) updates.category_id = body.category_id ?? null

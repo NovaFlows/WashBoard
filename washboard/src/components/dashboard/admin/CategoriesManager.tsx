@@ -303,12 +303,23 @@ export default function CategoriesManager({ categories, setCategories }: Props) 
       )}
 
       {!showAdd && editId === null && (
-        <button
-          onClick={startAdd}
-          className="w-full py-2.5 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-medium transition-colors"
-        >
-          + Ajouter une catégorie
-        </button>
+        categories.length === 0 ? (
+          // Premier passage : c'est l'étape obligatoire avant toute prestation,
+          // elle doit se voir comme le bouton à presser.
+          <button
+            onClick={startAdd}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors"
+          >
+            + Créer ma première catégorie
+          </button>
+        ) : (
+          <button
+            onClick={startAdd}
+            className="w-full py-2.5 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-medium transition-colors"
+          >
+            + Ajouter une catégorie
+          </button>
+        )
       )}
     </div>
   )

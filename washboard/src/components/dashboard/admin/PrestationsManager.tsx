@@ -3,13 +3,22 @@
 import { useState } from 'react'
 import type { Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
+import { champsManquants, estReservable, messageManques } from '@/lib/prestation'
 
 type FormData = { category_id: string; name: string; description: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
 const EMPTY: FormData = { category_id: '', name: '', description: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
 
+const NOTE_BLOQUANTE = 'text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2'
+
+/** Types d'une prestation d'avant les catégories (ou dont la catégorie a été
+ *  supprimée). Ils fonctionnent encore côté client : on les garde tels quels
+ *  et on peut y revenir, au lieu de les effacer au changement de catégorie. */
+type SansCategorie = { vehicle_types: string[]; vehicle_price_overrides: Record<string, number> }
+
 type ServiceFormProps = {
   form: FormData
   categories: ServiceCategory[]
+  sansCategorie: SansCategorie | null
   onChange: (f: FormData) => void
   onSave: () => void
   onCancel: () => void
@@ -17,7 +26,7 @@ type ServiceFormProps = {
   error: string | null
 }
 
-function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
+function ServiceForm({ form, categories, sansCategorie, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
   const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '', duration_minutes: '' })
 
@@ -56,6 +65,14 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
     //
     // Les tarifs par type sont remis à zéro : ils portent sur les types de
     // l'ancienne catégorie et n'ont aucun sens dans la nouvelle.
+    //
+    // Revenir sur « Sans catégorie » (proposé seulement aux prestations qui
+    // n'en avaient pas) rend leurs types d'origine : les vider sans prévenir
+    // laissait une prestation impossible à réserver.
+    if (!catId) {
+      onChange({ ...form, category_id: '', ...(sansCategorie ?? { vehicle_types: [], vehicle_price_overrides: {} }) })
+      return
+    }
     const categorie = categories.find(c => c.id === catId)
     onChange({
       ...form,
@@ -80,7 +97,8 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
     })
   }
 
-  const canSave = form.name.trim() && form.price && form.duration_minutes && !loading
+  const manques = champsManquants(form)
+  const canSave = manques.length === 0 && !loading
 
   return (
     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
@@ -97,7 +115,7 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
               onChange={e => changeCategory(e.target.value)}
               className={inputClass}
             >
-              <option value="">— Sans catégorie —</option>
+              {sansCategorie && <option value="">— Sans catégorie —</option>}
               {categories.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -159,15 +177,22 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
           {selectedCategory && <span className="ml-1 text-slate-400 font-normal">de « {selectedCategory.name} »</span>}
         </label>
         {!selectedCategory ? (
-          <p className="text-xs text-slate-400">Sélectionnez une catégorie pour choisir ses types.</p>
+          form.vehicle_types.length > 0 ? (
+            <p className="text-xs text-slate-400">Cette prestation garde ses types actuels. Choisissez une catégorie pour les modifier.</p>
+          ) : (
+            <p className={NOTE_BLOQUANTE}>Choisissez une catégorie puis cochez au moins un type : sans type, vos clients ne peuvent pas réserver cette prestation.</p>
+          )
         ) : availableTypes.length === 0 ? (
-          <p className="text-xs text-slate-400">Cette catégorie n&apos;a aucun type. Ajoutez-en dans la catégorie.</p>
+          <p className={NOTE_BLOQUANTE}>Cette catégorie n&apos;a aucun type : vos clients n&apos;auraient rien à choisir. Ajoutez-en en modifiant la catégorie ci-dessus.</p>
         ) : (
+          <div className="space-y-2">
           <div className="flex gap-2 flex-wrap">
             {availableTypes.map(t => (
               <button
                 key={t.id}
                 type="button"
+                data-testid="type-prestation"
+                aria-pressed={form.vehicle_types.includes(t.id)}
                 onClick={() => toggleVehicle(t.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors ${
                   form.vehicle_types.includes(t.id)
@@ -178,6 +203,10 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
                 {t.name}
               </button>
             ))}
+          </div>
+          {form.vehicle_types.length === 0 && (
+            <p className={NOTE_BLOQUANTE}>Cochez au moins un type : sans type, vos clients ne peuvent pas réserver cette prestation.</p>
+          )}
           </div>
         )}
       </div>
@@ -247,22 +276,24 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
           <option value="Traitements spéciaux" />
         </datalist>
 
-        <div className="grid grid-cols-[1fr_1fr_5rem_5rem_auto] gap-2 items-end">
+        {/* Sur téléphone, cinq éléments sur une ligne écrasaient la catégorie et
+            le nom en deux cases vides : ils passent en pleine rangée au-dessus. */}
+        <div className="grid grid-cols-6 sm:grid-cols-[1fr_1fr_5rem_5rem_auto] gap-2 items-end">
           <input
             list="addon-categories"
             value={draft.category}
             onChange={e => setDraft(d => ({ ...d, category: e.target.value }))}
             placeholder="Catégorie"
-            className={inputClass}
+            className={inputClass + ' col-span-3 sm:col-span-1'}
           />
           <input
             value={draft.label}
             onChange={e => setDraft(d => ({ ...d, label: e.target.value }))}
             placeholder="Ex : Poils d'animaux"
-            className={inputClass}
+            className={inputClass + ' col-span-3 sm:col-span-1'}
             onKeyDown={e => e.key === 'Enter' && addAddon()}
           />
-          <div className="relative">
+          <div className="relative col-span-2 sm:col-span-1">
             <input
               type="number"
               min="0"
@@ -273,7 +304,7 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
               onKeyDown={e => e.key === 'Enter' && addAddon()}
             />
           </div>
-          <div className="relative">
+          <div className="relative col-span-2 sm:col-span-1">
             <input
               type="number"
               min="5"
@@ -289,7 +320,7 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
             type="button"
             onClick={addAddon}
             disabled={!draft.label.trim() || !draft.price}
-            className="px-3 py-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-semibold rounded-xl disabled:opacity-40 transition-colors whitespace-nowrap"
+            className="col-span-2 sm:col-span-1 px-3 py-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-semibold rounded-xl disabled:opacity-40 transition-colors whitespace-nowrap"
           >
             + Ajouter
           </button>
@@ -315,6 +346,9 @@ function ServiceForm({ form, categories, onChange, onSave, onCancel, loading, er
           Annuler
         </button>
       </div>
+      {!loading && manques.length > 0 && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">{messageManques(manques)}</p>
+      )}
     </div>
   )
 }
@@ -448,7 +482,7 @@ export default function PrestationsManager({ services: initialServices, categori
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Les lavages proposés à vos clients, rattachés à une catégorie.</p>
         </div>
 
-        {services.length === 0 && !showAdd && (
+        {services.length === 0 && !showAdd && categories.length > 0 && (
           <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
             Aucune prestation — ajoutez-en une ci-dessous
           </div>
@@ -460,6 +494,9 @@ export default function PrestationsManager({ services: initialServices, categori
               <ServiceForm
                 form={form}
                 categories={categories}
+                sansCategorie={categories.some(c => c.id === svc.category_id)
+                  ? null
+                  : { vehicle_types: [...svc.vehicle_types], vehicle_price_overrides: { ...(svc.vehicle_price_overrides ?? {}) } }}
                 onChange={setForm}
                 onSave={update}
                 onCancel={cancelForm}
@@ -481,6 +518,11 @@ export default function PrestationsManager({ services: initialServices, categori
                     {svc.price}€ · {svc.duration_minutes} min
                     {svc.vehicle_types.length > 0 && ` · ${svc.vehicle_types.map(t => typeLabel(svc, t)).join(', ')}`}
                   </p>
+                  {!estReservable(svc) && (
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400 mt-1">
+                      Invisible pour vos clients : aucun type coché. Modifiez-la pour en choisir un.
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button
@@ -505,6 +547,7 @@ export default function PrestationsManager({ services: initialServices, categori
           <ServiceForm
             form={form}
             categories={categories}
+            sansCategorie={null}
             onChange={setForm}
             onSave={add}
             onCancel={cancelForm}
@@ -513,7 +556,20 @@ export default function PrestationsManager({ services: initialServices, categori
           />
         )}
 
-        {!showAdd && editId === null && (
+        {/* Sans catégorie, une prestation n'aurait aucun type à proposer : on
+            ne montre pas un formulaire qui mène à une impasse, on dit par où
+            commencer. */}
+        {!showAdd && editId === null && categories.length === 0 && (
+          <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 px-4 py-6 text-center">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Commencez par créer une catégorie, juste au-dessus</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              Elle liste ce que vos clients peuvent choisir, par exemple Voiture avec Citadine, Berline, SUV.
+              Vos prestations s&apos;ajoutent ensuite ici.
+            </p>
+          </div>
+        )}
+
+        {!showAdd && editId === null && categories.length > 0 && (
           <button
             onClick={startAdd}
             className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-sm font-medium transition-colors"

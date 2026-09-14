@@ -132,6 +132,29 @@ test.describe('Prestations — cycle de vie complet', () => {
     await expect(save).toBeDisabled()
   })
 
+  test('une prestation sans type ne peut pas être enregistrée', async ({ page }) => {
+    await page.goto('/dashboard/admin')
+    await page.getByTestId('admin-tab-prestations').click()
+    await page.locator('text=+ Ajouter une prestation').click()
+
+    await page.locator('input[placeholder="Lavage intérieur + extérieur"]').fill(e2eLabel('SansType'))
+    await page.locator('input[placeholder="80"]').fill('42')
+    await page.locator('input[placeholder="90"]').fill('30')
+
+    // « Sans catégorie » vidait les types sans prévenir : il n'est plus
+    // proposé pour une nouvelle prestation.
+    await expect(page.locator('select').first().locator('option', { hasText: 'Sans catégorie' })).toHaveCount(0)
+
+    // Tout décocher : la prestation deviendrait impossible à réserver.
+    const coches = page.locator('[data-testid="type-prestation"][aria-pressed="true"]')
+    const n = await coches.count()
+    test.skip(n === 0, 'aucune catégorie avec des types sur le compte de test')
+    for (let i = 0; i < n; i++) await coches.first().click()
+
+    await expect(page.locator('button', { hasText: 'Enregistrer' }).first()).toBeDisabled()
+    await expect(page.locator('text=il manque au moins un type')).toBeVisible()
+  })
+
   test('annuler referme le formulaire sans rien créer', async ({ page }) => {
     await page.goto('/dashboard/admin')
     await page.getByTestId('admin-tab-prestations').click()

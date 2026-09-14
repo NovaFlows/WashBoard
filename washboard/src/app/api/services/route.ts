@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import { estReservable, ERREUR_SANS_TYPE } from '@/lib/prestation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
   const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id } = await request.json()
   if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
+  }
+  if (!estReservable({ vehicle_types })) {
+    return NextResponse.json({ error: ERREUR_SANS_TYPE }, { status: 400 })
   }
 
   const { data, error } = await supabase

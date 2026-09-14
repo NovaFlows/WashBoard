@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded } from '@/lib/plan'
+import { estReservable } from '@/lib/prestation'
 import { logger } from '@/lib/logger'
 
 type Props = {
@@ -235,7 +236,10 @@ export default async function BookingPage({ params }: Props) {
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             is_preview: washer.is_preview ?? false,
           }}
-          services={services ?? []}
+          // Une prestation sans type s'affichait, se sélectionnait, puis
+          // laissait le client devant un bouton Continuer grisé sans rien à
+          // choisir. Le tableau de bord la signale au laveur en rouge.
+          services={(services ?? []).filter(estReservable)}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
           existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; selected_addons: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }[]}
