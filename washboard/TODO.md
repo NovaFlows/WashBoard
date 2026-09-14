@@ -544,8 +544,9 @@ rien à faire, mais que le projet reste globalement sain.
         annuels dans Stripe, étendre `STRIPE_PRICE_IDS` en `Record<Plan, Record<BillingCycle,
         string>>`, et transmettre le cycle depuis le `BillingToggle`. Sans ça, un client qui
         choisit l'annuel serait facturé au mois.
-  - [ ] Supprimer `STRIPE_PRICE_ID_BUSINESS` de Vercel : le plan Business a été retiré le
-        2026-08-26, la variable ne sert plus.
+  - [x] 2026-09-14 — Variables Vercel nettoyées par Alexandre : `STRIPE_PRICE_ID_BUSINESS`
+        (plan Business retiré le 2026-08-26) et ancien nom de la clé Maps supprimés, clés
+        VAPID et `SUPPORT_ADMIN_EMAILS` vérifiées, `E2E_CLEANUP_ENABLED` absente.
 
 ## 🟡 Roadmap produit
 
