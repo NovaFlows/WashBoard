@@ -621,16 +621,30 @@ rien à faire, mais que le projet reste globalement sain.
     justificatif — ni SIRET ni adresse du laveur, pas de numérotation continue, et
     « TVA non applicable — art. 293 B » écrit pour tous les laveurs, même ceux qui
     facturent la TVA.
-  - **Option C, recommandée d'abord** : faire de ce PDF une vraie facture (SIRET, adresse,
-    mention EI, régime de TVA et taux, numéro qui se suit par laveur, date de la
-    prestation, conditions de paiement et mentions pros). Nouvelles colonnes sur
-    `washers` + numérotation atomique : SQL dans la conversation, `GRANT` explicites.
-    Faire valider la liste des mentions par `legal`.
-  - **À trancher début 2027, A ou B** : A = exporter les données vers l'outil du laveur
-    (effort faible, aucun avantage commercial) ; B = WashBoard émet les factures des
-    clients pros et fait l'e-reporting via une plateforme agréée partenaire (lourd, mais
-    argument fort pour la formule Pro). Signal à récolter avant : la part de clients
-    professionnels chez les laveurs (Kookii Clean en premier).
+  - [x] 2026-09-14 — **Étape 1 : une vraie facture valable** (branche locale
+    `feat/facture-laveur`, commits `71f3103`, `93ff431`, en attente de la validation
+    d'Alexandre pour la mise en ligne ; les deux SQL sont passés). SIRET et adresse du
+    laveur, « EI » ajouté ou forme juridique / capital / RCS pour une société, régime et
+    taux de TVA, numéro continu par laveur attribué en base (`emettre_facture`), contenu
+    figé, logo, mise en page sobre, onglet Factures, envoi par email aux clients pros.
+    Testée en local (F-00001 sur le compte test).
+  - [ ] Faire relire la liste des mentions de la facture par `legal`.
+  - **Calendrier retenu par Alexandre le 2026-09-15** (au lieu d'une décision « début
+    2027 », jugée trop tardive : les laveurs chercheront une solution dès début 2027) :
+    - [ ] **D'ici fin 2026 : choisir la plateforme agréée partenaire.** Comparer 3 ou 4
+          offres : prix (par facture ou par mois), raccordement technique (API),
+          services pour les petites entreprises et micro-entrepreneurs, prise en charge
+          de l'e-reporting des ventes aux particuliers. Ne coûte rien, fait gagner des mois.
+    - [ ] **En parallèle, dès maintenant : le format Factur-X.** Un PDF qui embarque les
+          données de la facture (XML CII), lisibles par les logiciels comptables : l'un
+          des formats officiels de la réforme. Les clients pros des laveurs peuvent déjà
+          importer leurs factures, et la landing peut annoncer « prêt pour la facture
+          électronique ». Demande une bibliothèque spécialisée (PDF/A-3 + XML) :
+          quelques jours de travail, à partir du contenu figé `facture_contenu`.
+    - [ ] **Début 2027 : se raccorder à la plateforme choisie**, pour que WashBoard émette
+          les factures électroniques de ses laveurs et fasse l'e-reporting, bien avant le
+          1er septembre 2027. Argument fort pour la formule Pro : Alexandre indique que ses
+          laveurs ont souvent des clients pros.
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,
