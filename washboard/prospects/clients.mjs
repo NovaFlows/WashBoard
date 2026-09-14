@@ -132,8 +132,13 @@ async function lireClients() {
     if (internes.has(email)) continue
 
     const compte = async (table) => {
-      const { count, error } = await admin
+      let requete = admin
         .from(table).select('id', { count: 'exact', head: true }).eq('washer_id', w.id)
+      // Une réservation annulée n'en est pas une : comptée, elle faisait
+      // afficher « ça tourne » à un inscrit dont la seule réservation était
+      // son propre test, annulé aussitôt (PistaClean, 2026-09-15).
+      if (table === 'bookings') requete = requete.neq('status', 'cancelled')
+      const { count, error } = await requete
       // Un comptage en echec renverrait 0, donc « rien de configure », donc un
       // appel a quelqu'un qui a tout fait. On prefere le dire.
       if (error) { console.error(`  ! comptage ${table} impossible pour ${w.name} : ${error.message}`); return null }
