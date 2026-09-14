@@ -837,14 +837,22 @@ rien à faire, mais que le projet reste globalement sain.
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
 
-- [ ] **Supprimer le compte d'essai `EssaiAuto` (slug `essai-demo`).** Créé le 2026-09-11
-      pour répéter le rendez-vous URHUS (inscription sur un aperçu, puis reprise). Il ne sert
-      plus. En attente : Alexandre n'a pas accès à Supabase au 2026-09-12.
-      Même procédure que la purge RGPD (`api/cron/purge-accounts`) : dépenses → logo dans le
-      storage → utilisateur auth, la cascade emporte `washers`, réservations et prestations.
-      Avant : vérifier que le slug pointe bien sur ce compte d'essai (email de l'inscription,
-      connu d'Alexandre, pas écrit ici : dépôt public). Après : recompter les laveurs
-      restants et vérifier que Kookii Clean est intact.
+- [ ] **`GRANT DELETE ON public.booking_funnel_events TO service_role;` manquant.**
+      Constaté le 2026-09-14 en supprimant trois comptes de test : « permission denied for
+      table booking_funnel_events ». Conséquence : la purge RGPD quotidienne
+      (`api/cron/purge-accounts`, statistiques de visite de plus de 13 mois) échoue à chaque
+      passage — elle le journalise (`purge.funnel_events.delete_failed`) mais ne supprime
+      rien. Aucune donnée n'a encore 13 mois (table créée le 2026-08-27) : sans urgence
+      avant l'été 2027, mais à passer au prochain accès SQL. 5e occurrence du motif « droit
+      service_role oublié ».
+
+- [x] 2026-09-14 — **Comptes de test supprimés à la demande d'Alexandre** : `EssaiAuto`
+      (`essai-demo`), `fg` (`fg-d57b`) et `Spotifypren` (`spotifypren-3ca3`), tous en essai,
+      0 réservation, vérifiés un par un avant suppression. Même procédure que la purge RGPD
+      (dépenses → logo et fond dans le storage → utilisateur auth, cascade sur la fiche, les
+      prestations, les réservations et les horaires). Vérifié après : aucune ligne restante,
+      aucun fichier, 0 compte fantôme (9 comptes de connexion), Kookii Clean intact
+      (78 réservations). Les adresses email sont libres pour de nouvelles inscriptions.
 
 - [x] 2026-08-26 — **Audit complet des droits `service_role`, sur TOUTES les tables.**
       Le point « vérifier que tout le SQL est passé » traînait depuis juin, et un `GRANT`
