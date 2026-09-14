@@ -64,6 +64,14 @@ function rempli(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.trim().length > 0
 }
 
+/** Prochaine étape indispensable, pour l'accueil du tableau de bord : tant
+ *  qu'il en reste une, la page de réservation ne peut pas prendre de
+ *  rendez-vous. `null` quand tout l'indispensable est fait — l'accueil n'a
+ *  alors plus rien à réclamer. */
+export function etapeDemarrage(progress: SetupProgress): SetupItem | null {
+  return progress.missing.find(i => i.blocking) ?? null
+}
+
 export function computeSetupProgress(input: SetupInput): SetupProgress {
   const essentiels: SetupItem[] = [
     {

@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import BookingList from '@/components/dashboard/BookingList'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { logger } from '@/lib/logger'
+import { computeSetupProgress } from '@/lib/setupProgress'
+import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -31,11 +33,36 @@ export default async function DashboardPage() {
   // on déconnecte pour éviter la boucle "profil non trouvé".
   if (!washer) redirect('/api/auth/logout')
 
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('*, services(name, price, duration_minutes, service_categories(name))')
-    .eq('washer_id', washer.id)
-    .order('scheduled_at', { ascending: true })
+  // Deux comptages seulement, en tête : on ne rapatrie pas les lignes elles-mêmes.
+  const [{ data: bookings }, services, availabilities] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select('*, services(name, price, duration_minutes, service_categories(name))')
+      .eq('washer_id', washer.id)
+      .order('scheduled_at', { ascending: true }),
+    supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
+    supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
+  ])
+
+  // Même règle que dans les Paramètres : un comptage en échec ne doit pas
+  // faire croire à un compte vide. On compte l'élément comme présent — la
+  // carte de démarrage ne s'affiche pas plutôt que de réclamer à tort.
+  if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
+  if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
+
+  const progress = computeSetupProgress({
+    servicesCount: services.error ? 1 : (services.count ?? 0),
+    availabilitiesCount: availabilities.error ? 1 : (availabilities.count ?? 0),
+    baseAddress: washer.base_address ?? null,
+    phone: washer.phone ?? null,
+    logoUrl: washer.logo_url ?? null,
+    googleCalendarConnected: !!washer.google_refresh_token,
+    reviewsEnabled: !!washer.review_enabled,
+    followupEnabled: !!washer.followup_enabled,
+    zoneEnabled: !!washer.zone_config?.enabled,
+    smartSlotEnabled: !!washer.smart_slot_enabled,
+    welcomeMessage: washer.welcome_message ?? null,
+  })
 
   const all = bookings ?? []
   const pending = all.filter(b => b.status === 'pending').length
@@ -44,6 +71,8 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <DemarrageCard progress={progress} />
+
       <div className="grid grid-cols-3 gap-3 mb-8">
         <StatCard label="En attente" value={pending} color="amber" />
         <StatCard label="Confirmés" value={confirmed} color="emerald" />
