@@ -15,6 +15,22 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
+      le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
+      cycle. Projects will be restricted from 05 Oct, 2026 if your organization remains over
+      quota. » Une restriction couperait les pages de réservation de tous les laveurs.
+  - Mesuré le 2026-09-14 (lecture seule) : base **14 Mo**, fichiers stockés **2,1 Mo**
+    (fonds 1,6 Mo dont un de 510 Ko, logos 0,5 Mo). Loin des limites : le dépassement est
+    très probablement la **bande passante sortante** (egress).
+  - Cause probable : les fonds et logos téléversés sont servis **directement depuis
+    Supabase** (`getBgStyle` met l'URL publique dans un `background-image`), à chaque visite
+    d'une page de réservation, sans cache Vercel. La vidéo TikTok virale du 2026-09-04 a
+    multiplié les visites.
+  - À faire : (1) confirmer le poste en cause sur la page Usage de l'organisation Supabase ;
+    (2) servir fonds et logos via l'optimisation d'images de Next (`/_next/image`, mise en
+    cache par Vercel, ~5× plus légers) ; (3) vérifier que l'organisation n'a pas d'autre
+    projet qui consomme ; (4) si besoin, passer en offre Pro Supabase avant le 5 octobre.
+
 - [x] 2026-09-14 — **Corrigé** : enregistrement refusé sans type (écran et serveur, règle
       commune `lib/prestation.ts`, 11 tests), message qui dit ce qui manque, « Sans
       catégorie » réservé aux anciennes prestations qui n'en ont pas (et leurs types ne sont
