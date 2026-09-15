@@ -670,6 +670,21 @@ rien à faire, mais que le projet reste globalement sain.
     confirmation. Pour une prestation de plus de 25 €, le laveur doit la remettre au
     client : l'email le ferait pour lui. Option envisagée : un réglage « toujours /
     seulement les pros ». Alexandre demande à Kookii Clean si c'est utile.
+  - [ ] **Question ouverte (Alexandre, 2026-09-15) : demander un acompte à la
+    réservation ?** But : limiter les rendez-vous où le client n'est pas là et le laveur
+    s'est déplacé pour rien. Rien à construire avant décision. Points à trancher :
+    - **Hors V1 aujourd'hui** : le CLAUDE.md exclut le paiement en ligne. Deux voies :
+      (a) paiement dans WashBoard via Stripe Connect (l'argent va au laveur, frais Stripe
+      par paiement, vérification d'identité de chaque laveur) ; (b) plus simple : le
+      laveur affiche son propre moyen de paiement (lien PayPal/Lydia, virement) et
+      WashBoard ne fait que le demander et noter « acompte reçu ».
+    - **Juridique** : sans mention contraire, une somme versée d'avance par un
+      particulier vaut **arrhes** (Code de la consommation, art. L214-1) — le client peut
+      renoncer en les perdant, le laveur en rendant le double. Choisir et écrire le mot
+      dans la confirmation. Recevoir un acompte oblige en principe à émettre une
+      **facture d'acompte**, puis une facture finale qui le déduit : impact sur la
+      facturation déjà en place. À faire relire par l'agent legal.
+    - Demander à Kookii Clean si les absences de clients arrivent vraiment, et combien.
   - [x] 2026-09-15 — **Rappel du soir « marquez vos rendez-vous Terminé »**
     (`api/cron/rappel-terminer`, `lib/rappelTerminer.ts`, 7 tests). Notification aux
     laveurs qui avaient des rendez-vous dans la journée (confirmés OU restés en attente :
@@ -685,6 +700,9 @@ rien à faire, mais que le projet reste globalement sain.
     valait « Terminé » d'office, donc une facture pour un lavage peut-être jamais fait.
     Oui → Terminé + facture (envoyée au client si pro ; si la facturation est incomplète,
     la fenêtre le dit). Non → annulé, sans facture, sans compta, sans message au client.
+    **Testé en production le 2026-09-15** sur AutoNettoyage avec 2 rendez-vous d'essai :
+    Oui → Terminé + F-00004 ; Non → annulé sans facture. Rendez-vous supprimés ensuite
+    et compteur remis à 4 (suite de numéros sans trou).
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,
