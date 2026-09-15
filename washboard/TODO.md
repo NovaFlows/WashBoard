@@ -386,6 +386,81 @@
 
 ## 🟠 Robustesse / dette technique
 
+- [ ] **QUESTION POUR ALEXANDRE — la question « Avez-vous fait ce rendez-vous ? » ne
+      protège qu'une des deux vues. Est-ce voulu ?** Relevé par Ryan le 2026-09-15 en
+      documentant le centre d'aide. Rien n'a été modifié : c'est ta fonctionnalité,
+      livrée le matin même, et tu as peut-être tranché sciemment. Constat et pistes
+      ci-dessous, à toi de dire ce qu'on en fait.
+  - `ConfirmerCloture` n'est importé que par `BookingList.tsx`, donc la protection
+    n'existe que sur la page d'accueil `/dashboard`. Dans `CalendrierDashboard.tsx`
+    (ligne ~1529), « Marquer terminé » appelle directement `updateStatus(id, 'done')`
+    pour tout rendez-vous `pending`/`confirmed`, **passé ou non, sans poser la question**.
+  - Ce qui rend la chose gênante : le rappel du soir pointe vers `/dashboard/calendrier`
+    (`lib/rappelTerminer.ts` ligne 54), c'est-à-dire vers la vue **non protégée**. Le
+    laveur reçoit à 22 h « N rendez-vous à marquer Terminé pour vos factures », tape la
+    notification, et peut tout clôturer d'un clic — en émettant les factures — sans
+    qu'on lui demande si les rendez-vous ont eu lieu. C'est exactement le cas que
+    `9646bc0` visait à empêcher.
+  - Chronologie, qui ne tranche pas : `0fc718a` (rappel, 10h38) précède `9646bc0`
+    (clôture, 11h26), mais `87bdcae` (11h51) a retouché la notification **après** la
+    protection — sur son titre et son texte, pas sur sa destination.
+  - **Piste A, une ligne** : faire pointer le rappel du soir vers `/dashboard`. Écrit
+    puis **annulé volontairement** le 2026-09-15 — après vérification, ce n'est pas une
+    correction mais un arbitrage produit, donc ton appel. Le pour : l'accueil est la vue
+    protégée, et sa liste est même plus large (`BookingList.tsx` ligne 82 ne filtre que
+    sur le statut, sans plafond de date ni pagination : tous les rendez-vous du jour non
+    terminés, **plus** ceux restés ouverts les jours d'avant). Le contre : l'accueil n'a
+    aucun filtre « aujourd'hui », le laveur doit lire la date sur chaque carte, là où le
+    calendrier montre la journée d'un coup d'œil. On échange de la lisibilité contre de
+    la sécurité — à toi de dire si le change en vaut la peine.
+  - **Piste B, le vrai correctif** : porter `ConfirmerCloture` dans le calendrier.
+    Analysé le 2026-09-15, **non implémenté délibérément** : le fichier fait 1 544 lignes,
+    il est signalé plus bas comme le plus risqué du projet, et **aucun test ne couvre
+    cette zone** (aucun test de composant React dans le projet ; `e2e/dashboard-calendrier.spec.ts`
+    n'ouvre jamais un rendez-vous et ne clique jamais « Terminé »). Ce qu'on a trouvé,
+    si tu décides de t'y mettre :
+    - **Le piège principal** : le calendrier n'a **aucune notion d'expiration** — pas de
+      `isExpired` dans tout le fichier. Le bouton « Terminé » (ligne 1529) s'affiche pour
+      tout rendez-vous `pending`/`confirmed`, passé **ou à venir**. Brancher
+      `ConfirmerCloture` dessus sans condition ajouterait une confirmation aux clôtures
+      faites à l'heure, ce qui n'est pas le comportement de l'accueil. Il faut d'abord
+      recréer l'équivalent de `isExpiredPending`/`isExpiredConfirmed`
+      (`BookingList.tsx` lignes 146-147) en comparant `scheduled_at` à maintenant.
+    - Sur les **trois** appels à `updateStatus` du fichier, **seul celui de la ligne 1529
+      est concerné**. Ceux des lignes 1517 (« Confirmer ») et 1537 (« Annuler ») doivent
+      rester strictement inchangés. Aucune action groupée n'existe.
+    - `updateStatus` (ligne 485) doit accepter `closedLate`, comme `BookingList` lignes
+      56-75. La route API l'accepte déjà sans contrainte (`api/bookings/[id]/route.ts`
+      lignes 28 et 51) et aucun effet de bord n'en dépend — tous testent `status` seul.
+    - `facturationPrete` : aucun coût, la page calendrier charge déjà `washer` en
+      `select('*')`, il suffit de calculer `infosFacturationManquantes(washer).length === 0`
+      et de passer la prop, comme `dashboard/page.tsx` ligne 89.
+    - Le type `Booking` du calendrier (lignes 18-40) ignore `closed_late` et
+      `is_professional`, que `BookingList` et `clientProfile` ont tous les deux.
+    - Prévoir un test e2e : un rendez-vous passé ouvre bien la boîte, un rendez-vous à
+      venir se clôture toujours d'un clic sans elle.
+
+- [ ] **QUESTION POUR ALEXANDRE — « Délai dépassé » n'apparaît pas dans le calendrier.
+      Volontaire ?** Relevé par Ryan le 2026-09-15 pendant l'analyse ci-dessus, sans
+      rapport avec elle. Rien n'a été modifié. Un rendez-vous clôturé en retard (`closed_late = true`) s'affiche « Délai
+      dépassé » en orange sur l'accueil, dans le CRM, dans la fiche client et dans
+      l'onglet Clients — mais « Terminé » en bleu dans le calendrier, dont le `STATUS`
+      (lignes 42-47) n'a pas d'entrée `closed_late`. La colonne est pourtant bien chargée
+      (`select('*')`), seulement ignorée à l'affichage. **Purement cosmétique** : rien
+      n'en dépend côté argent (compta et `clientProfile` filtrent sur `status` seul), ni
+      côté facture. À traiter séparément, plutôt avec `designer` puisque c'est un badge.
+
+- [ ] **QUESTION POUR ALEXANDRE — le rappel du soir est muet pour qui n'a pas activé les
+      notifications.** Relevé par Ryan le 2026-09-15, même passe. Rien n'a été modifié. Il part uniquement en push (`lib/push.ts`,
+      `notifierLaveur`), sans repli par email. Or `notifierLaveur` sort en silence quand
+      le laveur n'a aucun appareil abonné (`push.ts` ligne 59) : rien n'est journalisé,
+      rien n'est affiché. Un laveur qui n'a jamais activé les notifications — ou sur
+      iPhone sans avoir ajouté WashBoard à l'écran d'accueil — ne sera **jamais** relancé
+      et ne peut pas le deviner. Même motif que les lectures muettes auditées le
+      2026-08-26 : l'absence d'effet ne laisse aucune trace. À trancher : journaliser
+      a minima, et/ou signaler dans l'interface que le rappel du soir suppose les
+      notifications actives. En attendant, le centre d'aide le dit explicitement.
+
 - [x] 2026-09-15 — **Lectures tronquées à 1 000 lignes.** L'API Supabase plafonne chaque
       réponse à 1 000 lignes, sans erreur. Corrigé le 2026-09-12 pour le CRM (visites et
       réservations) via `lib/supabase/toutesLesLignes.ts` : chez Kookii Clean, 5 659
