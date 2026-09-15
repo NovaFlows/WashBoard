@@ -680,6 +680,11 @@ rien à faire, mais que le projet reste globalement sain.
     Europe/Paris** (pas UTC : le rappel glisserait d'une heure au changement d'heure),
     URL `https://www.washboard.fr/api/cron/rappel-terminer`, en-tête
     `Authorization: Bearer <CRON_SECRET>` — même réglage que les autres tâches.
+  - [x] 2026-09-15 — **« Clôturer » un créneau passé demande d'abord « Avez-vous fait ce
+    rendez-vous ? »** (`ConfirmerCloture.tsx`, accueil du dashboard). Avant, « Clôturer »
+    valait « Terminé » d'office, donc une facture pour un lavage peut-être jamais fait.
+    Oui → Terminé + facture (envoyée au client si pro ; si la facturation est incomplète,
+    la fenêtre le dit). Non → annulé, sans facture, sans compta, sans message au client.
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,

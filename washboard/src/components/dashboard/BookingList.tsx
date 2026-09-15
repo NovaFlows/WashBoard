@@ -5,6 +5,7 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { openGmail, openWhatsapp } from '@/lib/contact'
 import { formatPrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { formatHeure } from '@/lib/dateUtils'
+import ConfirmerCloture from './ConfirmerCloture'
 
 type ServiceAddon = { id: string; label: string; price: number; category: string; duration_minutes?: number }
 type Service = { name: string; price: number; duration_minutes: number }
@@ -19,6 +20,7 @@ type Booking = {
   is_smart_slot: boolean
   smart_discount: number
   closed_late: boolean
+  is_professional: boolean | null
   booked_price: number | null
   notes: string | null
   selected_addons: ServiceAddon[] | null
@@ -35,6 +37,8 @@ type Booking = {
 type Props = {
   bookings: Booking[]
   washerId: string
+  /** Infos de facturation complètes : « Terminé » émet bien une facture. */
+  facturationPrete: boolean
 }
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
@@ -45,7 +49,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   closed_late: { label: 'Délai dépassé', dot: 'bg-orange-400',  badge: 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800' },
 }
 
-export default function BookingList({ bookings }: Props) {
+export default function BookingList({ bookings, facturationPrete }: Props) {
   const [list, setList]       = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
 
@@ -106,7 +110,7 @@ export default function BookingList({ bookings }: Props) {
           </div>
           <div className="space-y-2.5">
             {upcoming.map(b => (
-              <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} />
+              <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
             ))}
           </div>
         </section>
@@ -117,7 +121,7 @@ export default function BookingList({ bookings }: Props) {
           <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Historique</h2>
           <div className="space-y-2.5">
             {past.map(b => (
-              <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} />
+              <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
             ))}
           </div>
         </section>
@@ -126,10 +130,11 @@ export default function BookingList({ bookings }: Props) {
   )
 }
 
-function BookingCard({ booking, loading, onUpdate }: {
+function BookingCard({ booking, loading, onUpdate, facturationPrete }: {
   booking: Booking
   loading: string | null
   onUpdate: (id: string, status: string, closedLate?: boolean) => void
+  facturationPrete: boolean
 }) {
   const date               = new Date(booking.scheduled_at)
   const dayLabel           = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -147,6 +152,7 @@ function BookingCard({ booking, loading, onUpdate }: {
   const finalPrice         = isSmart ? basePrice - Number(booking.smart_discount) : basePrice
 
   const [open, setOpen]           = useState(false)
+  const [cloture, setCloture]     = useState(false)
   const [notesText, setNotesText] = useState(booking.notes ?? '')
   const [notesSaving, setNotesSaving] = useState(false)
 
@@ -236,7 +242,7 @@ function BookingCard({ booking, loading, onUpdate }: {
                   Créneau passé
                 </span>
                 <button
-                  onClick={() => onUpdate(booking.id, 'done', true)}
+                  onClick={() => setCloture(true)}
                   disabled={isLoading}
                   className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors border border-slate-200 dark:border-slate-700"
                 >
@@ -264,7 +270,7 @@ function BookingCard({ booking, loading, onUpdate }: {
             )}
             {booking.status === 'confirmed' && isExpiredConfirmed && (
               <button
-                onClick={() => onUpdate(booking.id, 'done', true)}
+                onClick={() => setCloture(true)}
                 disabled={isLoading}
                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors border border-slate-200 dark:border-slate-700"
               >
@@ -376,7 +382,7 @@ function BookingCard({ booking, loading, onUpdate }: {
               {booking.status === 'pending' && (
                 isExpiredPending ? (
                   <button
-                    onClick={() => onUpdate(booking.id, 'done', true)}
+                    onClick={() => setCloture(true)}
                     disabled={isLoading}
                     className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-sm font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors border border-slate-200 dark:border-slate-700"
                   >
@@ -395,7 +401,7 @@ function BookingCard({ booking, loading, onUpdate }: {
               {booking.status === 'confirmed' && (
                 isExpiredConfirmed ? (
                   <button
-                    onClick={() => onUpdate(booking.id, 'done', true)}
+                    onClick={() => setCloture(true)}
                     disabled={isLoading}
                     className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-sm font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors border border-slate-200 dark:border-slate-700"
                   >
@@ -444,6 +450,18 @@ function BookingCard({ booking, loading, onUpdate }: {
             </button>
           </div>
         </div>
+      )}
+
+      {cloture && (
+        <ConfirmerCloture
+          clientName={booking.client_name}
+          quand={`${dayLabel} à ${timeLabel}`}
+          professionnel={!!booking.is_professional}
+          facturationPrete={facturationPrete}
+          onFait={() => { setCloture(false); onUpdate(booking.id, 'done', true) }}
+          onPasFait={() => { setCloture(false); onUpdate(booking.id, 'cancelled') }}
+          onClose={() => setCloture(false)}
+        />
       )}
     </div>
   )

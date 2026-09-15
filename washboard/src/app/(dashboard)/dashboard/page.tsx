@@ -5,6 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { logger } from '@/lib/logger'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
+import { infosFacturationManquantes } from '@/lib/facture'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -79,7 +80,7 @@ export default async function DashboardPage() {
         <StatCard label="Terminés" value={done} color="slate" />
       </div>
 
-      <BookingList bookings={all} washerId={washer.id} />
+      <BookingList bookings={all} washerId={washer.id} facturationPrete={infosFacturationManquantes(washer).length === 0} />
     </DashboardShell>
   )
 }
