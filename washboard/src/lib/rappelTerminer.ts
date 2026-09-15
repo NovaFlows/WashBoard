@@ -46,10 +46,11 @@ export function rendezVousNonTermines(reservations: { washer_id: string; status:
 
 export function messageRappel(nombre: number, jour: string) {
   return {
-    title: 'Vos rendez-vous du jour',
-    body: nombre === 1
-      ? 'Un rendez-vous n’est pas encore marqué « Terminé ». Pensez-y pour mettre à jour vos factures et votre compta.'
-      : `${nombre} rendez-vous ne sont pas encore marqués « Terminé ». Pensez-y pour mettre à jour vos factures et votre compta.`,
+    // L'emoji donne un repère visuel : sur iPhone la notification est un bloc
+    // sombre avec l'icône de l'app, rien d'autre ne se règle. Texte court : au
+    // repos, iOS coupe le corps après une ou deux lignes.
+    title: '🧽 Vos rendez-vous du jour',
+    body: `${nombre} rendez-vous à marquer « Terminé » pour vos factures.`,
     url: '/dashboard/calendrier',
     // Un seul rappel par jour et par appareil, même si la tâche était relancée.
     tag: `rappel-terminer-${jour}`,

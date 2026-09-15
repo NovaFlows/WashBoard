@@ -43,9 +43,12 @@ describe('rendezVousNonTermines', () => {
 
 describe('messageRappel', () => {
   it('singulier et pluriel, un seul rappel par jour', () => {
-    expect(messageRappel(1, '2026-09-15').body).toMatch(/^Un rendez-vous n’est pas encore/)
+    expect(messageRappel(1, '2026-09-15').body).toBe('1 rendez-vous à marquer « Terminé » pour vos factures.')
+    expect(messageRappel(1, '2026-09-15').title).toContain('🧽')
+    // Lisible sans ouvrir la notification : iOS coupe un corps plus long.
+    expect(messageRappel(12, '2026-09-15').body.length).toBeLessThanOrEqual(60)
     expect(messageRappel(3, '2026-09-15')).toMatchObject({
-      body: expect.stringMatching(/^3 rendez-vous ne sont pas encore/),
+      body: expect.stringMatching(/^3 rendez-vous à marquer « Terminé »/),
       url: '/dashboard/calendrier',
       tag: 'rappel-terminer-2026-09-15',
     })
