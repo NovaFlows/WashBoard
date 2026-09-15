@@ -4,6 +4,8 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ComptaDashboard from '@/components/dashboard/ComptaDashboard'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
+import { logger } from '@/lib/logger'
 
 export default async function ComptaPage() {
   const supabase = await createClient()
@@ -38,13 +40,19 @@ export default async function ComptaPage() {
   const start = `${year}-${String(month).padStart(2, '0')}-01T00:00:00`
   const end   = new Date(year, month, 1).toISOString().slice(0, 10) + 'T00:00:00'
 
-  const { data: bookings } = await supabase
+  // Page par page : l'API coupe à 1 000 lignes sans erreur (voir `toutesLesLignes`).
+  const { data: bookings, error: bookingsError } = await toutesLesLignes((debut, fin) => supabase
     .from('bookings')
     .select('booked_price, smart_discount, is_smart_slot')
     .eq('washer_id', washer.id)
     .eq('status', 'done')
     .gte('scheduled_at', start)
     .lt('scheduled_at', end)
+    .order('scheduled_at')
+    .order('id')
+    .range(debut, fin))
+  // Sans trace, un chiffre d'affaires à 0 € ne se distinguerait pas d'un mois sans activité.
+  if (bookingsError) logger.error('compta.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
 
   const initialRevenue = (bookings ?? []).reduce((sum, b) => {
     const price    = Number(b.booked_price ?? 0)

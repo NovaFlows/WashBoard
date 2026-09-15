@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { addonsDuration } from '@/lib/pricing'
+import { addonsDuration } from '@/lib/pricing'
 import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 type DmResponse = {
   status: string
@@ -47,13 +48,18 @@ export async function GET(request: NextRequest) {
   // session ne verrait jamais ces lignes — ni créneaux optimisés, ni
   // contrainte de trajet ne se calculeraient, en silence.
   const admin = createAdminClient()
-  const { data: bookings, error: errBookings } = await admin
+  // Page par page, comme toute lecture de réservations : l'API coupe à 1 000
+  // lignes sans erreur (voir `toutesLesLignes`).
+  const { data: bookings, error: errBookings } = await toutesLesLignes((debut, fin) => admin
     .from('bookings')
     .select('scheduled_at, address, vehicle_count, selected_addons, services(duration_minutes)')
     .eq('washer_id', washerId)
     .neq('status', 'cancelled')
     .gte('scheduled_at', new Date(`${date}T00:00:00`).toISOString())
     .lte('scheduled_at', new Date(`${date}T23:59:59`).toISOString())
+    .order('scheduled_at')
+    .order('id')
+    .range(debut, fin))
   if (errBookings) logger.error('slots.smart.bookings.read_failed', {}, errBookings)
 
   // Pas de RDV ce jour → aucune contrainte de trajet

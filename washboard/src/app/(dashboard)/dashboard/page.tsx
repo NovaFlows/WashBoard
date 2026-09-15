@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -35,12 +36,16 @@ export default async function DashboardPage() {
   if (!washer) redirect('/api/auth/logout')
 
   // Deux comptages seulement, en tête : on ne rapatrie pas les lignes elles-mêmes.
-  const [{ data: bookings }, services, availabilities] = await Promise.all([
-    supabase
+  const [{ data: bookings, error: bookingsError }, services, availabilities] = await Promise.all([
+    // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
+    // erreur. Voir `toutesLesLignes`.
+    toutesLesLignes((debut, fin) => supabase
       .from('bookings')
       .select('*, services(name, price, duration_minutes, service_categories(name))')
       .eq('washer_id', washer.id)
-      .order('scheduled_at', { ascending: true }),
+      .order('scheduled_at', { ascending: true })
+      .order('id')
+      .range(debut, fin)),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
     supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
   ])
@@ -48,6 +53,7 @@ export default async function DashboardPage() {
   // Même règle que dans les Paramètres : un comptage en échec ne doit pas
   // faire croire à un compte vide. On compte l'élément comme présent — la
   // carte de démarrage ne s'affiche pas plutôt que de réclamer à tort.
+  if (bookingsError) logger.error('dashboard.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
 

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature } from '@/lib/plan'
 import { logger } from '@/lib/logger'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 // Endpoint de diagnostic : vérifie pourquoi les emails/SMS d'avis ne partent pas.
 // Accessible uniquement par le laveur connecté.
@@ -39,13 +40,17 @@ export async function GET() {
   if (errRecentDone) logger.error('debug.reviews.recentDone.read_failed', {}, errRecentDone)
 
   // RDV en attente d'envoi (dûs mais pas encore traités)
-  const { data: pending, error: errPending } = await admin
+  // Page par page : l'API coupe à 1 000 lignes sans erreur (voir `toutesLesLignes`).
+  const { data: pending, error: errPending } = await toutesLesLignes((debut, fin) => admin
     .from('bookings')
     .select('id, client_name, review_request_at')
     .eq('washer_id', washer.id)
     .lte('review_request_at', nowIso)
     .is('review_request_sent_at', null)
     .not('review_request_at', 'is', null)
+    .order('review_request_at')
+    .order('id')
+    .range(debut, fin))
   if (errPending) logger.error('debug.reviews.pending.read_failed', {}, errPending)
 
   const diagWasher = {

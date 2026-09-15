@@ -10,6 +10,7 @@ import { graceEnded } from '@/lib/plan'
 import { estReservable } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -152,12 +153,18 @@ export default async function BookingPage({ params }: Props) {
     { data: existingBookings, error: bookingsError },
     { data: unavailabilities, error: unavailError },
   ] = await Promise.all([
-    admin
+    // Page par page : au-delà de 1 000 rendez-vous à venir, l'API couperait sans
+    // erreur, et les créneaux des rendez-vous manquants s'afficheraient libres —
+    // une double réservation. Voir `toutesLesLignes`.
+    toutesLesLignes((debut, fin) => admin
       .from('bookings')
       .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
       .eq('washer_id', washer.id)
       .neq('status', 'cancelled')
-      .gte('scheduled_at', new Date().toISOString()),
+      .gte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at')
+      .order('id')
+      .range(debut, fin)),
     admin
       .from('unavailabilities')
       .select('id, start_date, end_date, team_members_off')

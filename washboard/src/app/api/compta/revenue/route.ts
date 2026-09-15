@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -17,13 +18,18 @@ export async function GET(req: NextRequest) {
   const end   = req.nextUrl.searchParams.get('end')
   if (!start || !end) return NextResponse.json({ revenue: 0 })
 
-  const { data, error } = await supabase
+  // Page par page : au-delà de 1 000 rendez-vous sur la période, l'API aurait
+  // coupé sans erreur et le chiffre d'affaires affiché aurait été faux.
+  const { data, error } = await toutesLesLignes((debut, fin) => supabase
     .from('bookings')
     .select('booked_price, smart_discount, is_smart_slot')
     .eq('washer_id', washer.id)
     .eq('status', 'done')
     .gte('scheduled_at', start + 'T00:00:00')
     .lte('scheduled_at', end + 'T23:59:59')
+    .order('scheduled_at')
+    .order('id')
+    .range(debut, fin))
 
   if (error) return errorResponse('compta.revenue.get.db', error)
 

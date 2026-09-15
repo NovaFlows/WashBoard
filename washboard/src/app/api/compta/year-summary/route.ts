@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { materializeRecurring } from '@/lib/materializeRecurring'
 import { logger } from '@/lib/logger'
+import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -18,13 +19,18 @@ export async function GET(req: NextRequest) {
   await materializeRecurring(supabase, washer.id, `${year}-01-01`, `${year}-12-31`)
 
   const [bookingsRes, expensesRes] = await Promise.all([
-    supabase
+    // Lues page par page : au-delà de 1 000 rendez-vous terminés dans l'année,
+    // l'API aurait coupé sans erreur et le bilan aurait été faux.
+    toutesLesLignes((debut, fin) => supabase
       .from('bookings')
       .select('scheduled_at, booked_price, smart_discount, is_smart_slot')
       .eq('washer_id', washer.id)
       .eq('status', 'done')
       .gte('scheduled_at', `${year}-01-01T00:00:00`)
-      .lte('scheduled_at', `${year}-12-31T23:59:59`),
+      .lte('scheduled_at', `${year}-12-31T23:59:59`)
+      .order('scheduled_at')
+      .order('id')
+      .range(debut, fin)),
     supabase
       .from('washer_expenses')
       .select('date, amount')

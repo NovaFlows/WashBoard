@@ -386,16 +386,19 @@
 
 ## 🟠 Robustesse / dette technique
 
-- [ ] **Lectures tronquées à 1 000 lignes.** L'API Supabase plafonne chaque réponse à
-      1 000 lignes, sans erreur. Corrigé le 2026-09-12 pour le CRM (visites et réservations)
-      via `lib/supabase/toutesLesLignes.ts` : chez Kookii Clean, 5 659 événements de visite
-      en base, 1 000 transmis, et des statistiques figées au 1er septembre sans que rien ne
-      le signale.
-  - Restent **8 lectures non paginées sur `bookings`** : calendrier, compta (page et routes
-    `revenue` / `year-summary`), tableau de bord, page de réservation, créneaux malins,
-    route debug. Aucune ne tronque aujourd'hui (74 réservations au plus sur un compte),
-    toutes le feront au-delà de 1 000. Même correctif : `toutesLesLignes` + tri sur une
-    clé unique.
+- [x] 2026-09-15 — **Lectures tronquées à 1 000 lignes.** L'API Supabase plafonne chaque
+      réponse à 1 000 lignes, sans erreur. Corrigé le 2026-09-12 pour le CRM (visites et
+      réservations) via `lib/supabase/toutesLesLignes.ts` : chez Kookii Clean, 5 659
+      événements de visite en base, 1 000 transmis, et des statistiques figées au
+      1er septembre sans que rien ne le signale.
+  - [x] 2026-09-15 — **Les 8 lectures restantes sur `bookings` passent par
+    `toutesLesLignes`**, triées sur `scheduled_at` (ou `review_request_at`) puis `id` :
+    calendrier, tableau de bord, compta (page, routes `revenue` et `year-summary`), page de
+    réservation publique (la plus sensible : une liste coupée affichait des créneaux
+    occupés comme libres), créneaux malins, route debug. Journal d'erreur ajouté là où il
+    manquait (calendrier, tableau de bord, page compta). Écartées volontairement :
+    `travelFee` (`limit(1)`), `send-followups` (lots de 500), `send-reviews` (lots de 200),
+    debug « 10 derniers » — ce sont des plafonds voulus, pas des coupures.
   - Le CRM envoie désormais au navigateur TOUS les événements d'un an. À surveiller quand
     un laveur dépassera quelques dizaines de milliers de visites : passer alors à des
     agrégats calculés côté serveur.
