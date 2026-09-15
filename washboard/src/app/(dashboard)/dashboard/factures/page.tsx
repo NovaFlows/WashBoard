@@ -59,6 +59,10 @@ const quand = (iso: string) => {
 const jourSeul = (date: string) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
 
+// Majuscule à la première lettre seulement. La classe CSS `capitalize` en
+// mettait une à chaque mot : « Toutes Les Factures », « Toute L'année ».
+const majuscule = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 const total = (liste: Ligne[]) => liste.reduce((t, f) => t + (f.montant ?? 0), 0)
 const nombre = (v: string | number | null) => (v === null || v === '' ? null : Number(v))
 
@@ -81,7 +85,7 @@ function Filtre({ href, actif, children }: { href: string; actif: boolean; child
     <Link
       href={href}
       aria-current={actif ? 'page' : undefined}
-      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors capitalize ${
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
         actif
           ? 'bg-[#1651E8] border-[#1651E8] text-white'
           : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
@@ -239,13 +243,13 @@ export default async function FacturesPage({
               <Filtre href={`/dashboard/factures?annee=${filtre.annee}`} actif={!filtre.mois}>Toute l&apos;année</Filtre>
               {mois.map(m => (
                 <Filtre key={m} href={`/dashboard/factures?annee=${filtre.annee}&mois=${m}`} actif={filtre.mois === m}>
-                  {libelleMois(m)}
+                  {majuscule(libelleMois(m))}
                 </Filtre>
               ))}
             </div>
           )}
           <p className="text-sm text-slate-600 dark:text-slate-300 pt-1">
-            <span className="font-semibold text-slate-900 dark:text-slate-100 capitalize">{selection}</span>
+            <span className="font-semibold text-slate-900 dark:text-slate-100">{majuscule(selection)}</span>
             {' · '}{factures.length} facture{factures.length > 1 ? 's' : ''}
             {' · '}<span className="font-semibold tabular-nums">{euros.format(total(factures))}</span>
           </p>
