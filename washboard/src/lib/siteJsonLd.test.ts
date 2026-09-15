@@ -45,9 +45,33 @@ describe('buildSiteJsonLd', () => {
     expect(soft.publisher['@id']).toBe(org['@id'])
   })
 
-  it('construit toutes les URL sur le domaine fourni', () => {
-    const brut = JSON.stringify(graphe)
-    expect(brut).toContain('https://exemple.test/LogoWashBoard.png')
-    expect(brut).not.toContain('washboard.fr')
+  it('construit les URL propres au site sur le domaine fourni', () => {
+    const org = noeud('Organization') as { url: string; logo: { url: string } }
+    expect(org.url).toBe('https://exemple.test')
+    expect(org.logo.url).toBe('https://exemple.test/LogoWashBoard.png')
+  })
+
+  it('ne code en dur le domaine de production nulle part ailleurs', () => {
+    // Le filet d'origine : en preview/staging, aucune URL du graphe ne doit
+    // retomber sur washboard.fr. Seul `sameAs` y échappe légitimement (profils
+    // externes fixes) — on l'écarte, et on vérifie tout le reste du graphe.
+    const sansSocial = JSON.parse(JSON.stringify(graphe)) as {
+      '@graph': Array<Record<string, unknown>>
+    }
+    for (const n of sansSocial['@graph']) delete n.sameAs
+    expect(JSON.stringify(sansSocial)).not.toContain('washboard.fr')
+  })
+
+  it('déclare les comptes sociaux sans les reconstruire depuis le domaine du site', () => {
+    // `sameAs` pointe vers des profils externes fixes (Instagram, TikTok...) :
+    // contrairement au logo ou à `url`, ils ne dépendent jamais du siteUrl
+    // passé en paramètre (utile en preview/staging).
+    const org = noeud('Organization') as { sameAs?: string[] }
+    expect(org.sameAs).toBeDefined()
+    expect(org.sameAs!.length).toBeGreaterThan(0)
+    for (const url of org.sameAs!) {
+      expect(url).not.toContain('exemple.test')
+      expect(url).toMatch(/^https:\/\//)
+    }
   })
 })
