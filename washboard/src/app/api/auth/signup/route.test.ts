@@ -48,7 +48,16 @@ vi.mock('@supabase/supabase-js', () => ({
 
 vi.mock('@/lib/push', () => ({ notifierEquipe: vi.fn(async () => {}) }))
 
+// La reprise elle-même est testée dans lib/repriseApercu.test.ts ; ici, on
+// vérifie seulement comment l'inscription s'en sert.
+const { reprendreApercu } = vi.hoisted(() => ({ reprendreApercu: vi.fn() }))
+vi.mock('@/lib/repriseApercu', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/repriseApercu')>()),
+  reprendreApercu,
+}))
+
 const { POST } = await import('./route')
+const { notifierEquipe } = await import('@/lib/push')
 
 const NUMERO_EXEMPTE = '0684140438'
 const NUMERO_NORMAL = '0611223344'
@@ -83,6 +92,9 @@ beforeEach(() => {
     creerUtilisateur: { data: { user: { id: 'u-1' } }, error: null },
     suppressionErreur: null,
   }
+  reprendreApercu.mockReset()
+  reprendreApercu.mockResolvedValue({ statut: 'aucun' })
+  vi.mocked(notifierEquipe).mockClear()
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -189,5 +201,38 @@ describe('POST /api/auth/signup — création du compte', () => {
     expect((await inscrire({ email: 'pas-un-email' })).res.status).toBe(400)
     expect((await inscrire({ password: '123' })).res.status).toBe(400)
     expect(inserts).toHaveLength(0)
+  })
+})
+
+describe('POST /api/auth/signup — reprise de l’aperçu', () => {
+  const notification = () => vi.mocked(notifierEquipe).mock.calls[0][0]
+
+  it('reprend l’aperçu du numéro dans la fiche qui vient d’être créée, et le dit à l’équipe', async () => {
+    reprendreApercu.mockResolvedValue({ statut: 'reprise', apercu: { name: 'URHUS AUTO', slug: 'urhus-auto' } })
+    const { res } = await inscrire()
+    expect(res.status).toBe(200)
+    expect(reprendreApercu).toHaveBeenCalledWith(expect.anything(), { id: inserts[0].id, phone: NUMERO_NORMAL })
+    expect(notification().title).toMatch(/aperçu repris/)
+    expect(notification().body).toMatch(/URHUS AUTO/)
+  })
+
+  it('numéro sans aperçu : compte vide et notification habituelle', async () => {
+    const { res } = await inscrire()
+    expect(res.status).toBe(200)
+    expect(notification().title).toBe('🎉 Nouveau client WashBoard')
+  })
+
+  it('une reprise qui plante ne fait JAMAIS échouer l’inscription', async () => {
+    reprendreApercu.mockRejectedValue(new Error('base indisponible'))
+    const { res, body } = await inscrire()
+    expect(res.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(notification().title).toMatch(/échouée/)
+  })
+
+  it('pas de reprise quand la fiche n’a pas pu être créée', async () => {
+    plan.insertErreurs = [{ code: '23505' }, { code: '23505' }, { code: '23505' }]
+    await inscrire()
+    expect(reprendreApercu).not.toHaveBeenCalled()
   })
 })

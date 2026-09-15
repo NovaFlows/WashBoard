@@ -48,6 +48,19 @@ const slugify = s => String(s).toLowerCase().normalize('NFD')
   .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '').slice(0, 40)
 
+/** Meme forme que l'inscription (src/lib/phone.ts) : 10 chiffres, sans espace.
+ *  La reprise automatique compare deja les formes normalisees, mais une page
+ *  stockee proprement se retrouve aussi a la main. Un numero qui n'est pas
+ *  francais reste tel qu'ecrit : on ne devine pas. */
+function telephone(brut) {
+  if (!brut) return brut ?? null
+  let n = String(brut).trim().replace(/[\s.\-()]/g, '')
+  if (n.startsWith('+33')) n = '0' + n.slice(3)
+  else if (n.startsWith('0033')) n = '0' + n.slice(4)
+  else if (n.startsWith('33') && n.length === 11) n = '0' + n.slice(2)
+  return /^0[1-9]\d{8}$/.test(n) ? n : String(brut).trim()
+}
+
 /** Types de vehicule reconnus par le formulaire : ils ont une illustration.
  *  Un id absent de cette liste reste valable, il s'affiche sans image. */
 const TYPES_STANDARD = {
@@ -240,7 +253,7 @@ async function creer(db, fiche) {
     is_preview: true,              // et elle n'accepte aucune reservation
     name: fiche.nom.trim(),
     slug,
-    phone: fiche.telephone ?? null,
+    phone: telephone(fiche.telephone),
     welcome_message: fiche.message_accueil ?? null,
     base_address: fiche.adresse ?? null,
     brand_color: fiche.couleur ?? null,
@@ -293,7 +306,7 @@ async function resync(db, fiche) {
   const champs = { name: fiche.nom.trim() }
   // Seuls les champs REELLEMENT presents dans la fiche sont ecrases : sinon une
   // fiche sans « couleur » effacerait la couleur posee par habiller-page.mjs.
-  if (fiche.telephone !== undefined)       champs.phone           = fiche.telephone
+  if (fiche.telephone !== undefined)       champs.phone           = telephone(fiche.telephone)
   if (fiche.message_accueil !== undefined) champs.welcome_message = fiche.message_accueil
   if (fiche.adresse !== undefined)         champs.base_address    = fiche.adresse
   // La COULEUR n'est volontairement pas reecrite ici. La fiche porte la couleur
