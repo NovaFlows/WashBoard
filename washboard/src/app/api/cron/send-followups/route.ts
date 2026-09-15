@@ -5,6 +5,12 @@ import { sendSms } from '@/lib/sms'
 import { graceEnded } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
+import { repartirParClient, decisionPlusRecents } from '@/lib/relances'
+
+// `followup_sent_at` = relance TRAITÉE : envoyée, ou devenue inutile (voir
+// lib/relances.ts). Sans cette marque sur les rendez-vous écartés, ils restaient
+// candidats pour toujours et encombraient le lot de 500.
+const LOT_CLOTURE = 100
 
 export async function GET(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
@@ -36,6 +42,7 @@ export async function GET(request: NextRequest) {
   // quota dépassé) laissait le job répondre « ok » avec 0 envoi, donc passer
   // totalement inaperçue.
   let failed = 0
+  let clos = 0
 
   for (const washer of washers ?? []) {
     // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
@@ -63,24 +70,34 @@ export async function GET(request: NextRequest) {
 
     if (!candidates?.length) continue
 
-    const byClient = new Map<string, typeof candidates[0]>()
-    for (const b of candidates) {
-      if (!byClient.has(b.client_email)) byClient.set(b.client_email, b)
-    }
+    // Un seul message par client ; ses rendez-vous plus anciens sont clos.
+    const { porteurs, aClore } = repartirParClient(candidates)
 
     const channel = washer.review_channel ?? 'email'
 
-    for (const [clientEmail, booking] of byClient) {
-      const { count, error: errCount } = await admin
+    for (const booking of porteurs) {
+      const clientEmail = booking.client_email
+      // Les plus proches d'abord : s'il existe un rendez-vous passé, il est dans
+      // les premiers lus.
+      const { data: plusRecents, error: errRecents } = await admin
         .from('bookings')
-        .select('id', { count: 'exact', head: true })
+        .select('status, scheduled_at')
         .eq('washer_id', washer.id)
         .eq('client_email', clientEmail)
         .not('status', 'eq', 'cancelled')
         .gt('scheduled_at', booking.scheduled_at)
-      if (errCount) logger.error('cron.send-followups.count.read_failed', { washerId: washer.id }, errCount)
+        .order('scheduled_at')
+        .limit(20)
+      if (errRecents) {
+        // Dans le doute, on ne relance pas aujourd'hui : relancer un client déjà
+        // revenu est pire qu'une relance décalée d'un jour.
+        logger.error('cron.send-followups.recents.read_failed', { washerId: washer.id }, errRecents)
+        continue
+      }
 
-      if ((count ?? 0) > 0) continue
+      const decision = decisionPlusRecents(plusRecents ?? [], new Date())
+      if (decision === 'clore') { aClore.push(booking.id); continue }
+      if (decision === 'attendre') continue
 
       const firstName = booking.client_name.split(' ')[0] ?? booking.client_name
       const message = washer.followup_message!.replace(/\{\{nom\}\}/gi, firstName)
@@ -109,7 +126,21 @@ export async function GET(request: NextRequest) {
         logger.error('cron.followups.send_failed', { bookingId: booking.id }, e)
       }
     }
+
+    // Les rendez-vous devenus inutiles sortent du lot pour de bon. Par paquets :
+    // le filtre part dans l'adresse de la requête, 500 identifiants la
+    // rendraient trop longue.
+    for (let i = 0; i < aClore.length; i += LOT_CLOTURE) {
+      const paquet = aClore.slice(i, i + LOT_CLOTURE)
+      const { error: errClore } = await admin
+        .from('bookings')
+        .update({ followup_sent_at: nowIso })
+        .in('id', paquet)
+        .eq('washer_id', washer.id)
+      if (errClore) logger.error('cron.send-followups.close_failed', { washerId: washer.id, nombre: paquet.length }, errClore)
+      else clos += paquet.length
+    }
   }
 
-  return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, test: test.enabled })
+  return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, clos, test: test.enabled })
 }

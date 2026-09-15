@@ -399,6 +399,15 @@
     manquait (calendrier, tableau de bord, page compta). Écartées volontairement :
     `travelFee` (`limit(1)`), `send-followups` (lots de 500), `send-reviews` (lots de 200),
     debug « 10 derniers » — ce sont des plafonds voulus, pas des coupures.
+  - [x] 2026-09-15 — **Relances : les rendez-vous écartés sont marqués** (`lib/relances.ts`,
+    6 tests). Un rendez-vous qu'on décidait de ne pas relancer (client revenu, ou ancien
+    rendez-vous d'un client déjà relancé) ne recevait aucune marque : candidat pour
+    toujours, relu chaque jour, il pouvait occuper le lot de 500 et empêcher d'atteindre
+    les clients les plus anciens. `followup_sent_at` veut désormais dire « relance
+    traitée » (envoyée ou devenue inutile) — la colonne n'est lue nulle part ailleurs.
+    Clos seulement si le client est VRAIMENT revenu (rendez-vous plus récent passé,
+    confirmé ou terminé) : un rendez-vous seulement à venir peut être annulé, le client
+    doit rester relançable. Lecture en échec → pas de relance ce jour-là (avant : envoi).
   - Le CRM envoie désormais au navigateur TOUS les événements d'un an. À surveiller quand
     un laveur dépassera quelques dizaines de milliers de visites : passer alors à des
     agrégats calculés côté serveur.
