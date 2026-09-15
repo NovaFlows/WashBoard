@@ -645,6 +645,22 @@ rien à faire, mais que le projet reste globalement sain.
           les factures électroniques de ses laveurs et fasse l'e-reporting, bien avant le
           1er septembre 2027. Argument fort pour la formule Pro : Alexandre indique que ses
           laveurs ont souvent des clients pros.
+  - [x] 2026-09-15 — **Onglet Factures : tri et import** (en ligne, `5e80663` puis
+    `8538350`). Filtres « Tout » / année / mois avec total. Import des factures **de
+    vente** faites avant WashBoard, une par une ou en ZIP (PDF, JPG, PNG) : le ZIP est
+    ouvert dans le navigateur (limite Vercel de 4,5 Mo par requête), chaque fichier va
+    dans le stockage privé `factures-importees` par un lien d'envoi à usage unique ;
+    date, montant et numéro d'origine lus automatiquement (français et anglais),
+    vérifiés par le laveur avant enregistrement. Carte Facturation : « Numéro de la
+    prochaine facture » (ne peut qu'augmenter). SQL passé le 2026-09-15 (table
+    `factures_importees`, RLS, droits resserrés, bucket privé) ; il a fallu
+    `notify pgrst, 'reload schema'` pour que l'API voie la nouvelle table.
+  - [ ] **Factures d'ACHAT : les joindre aux dépenses** (Comptabilité → Dépenses),
+    annoncé « en développement » dans l'app depuis le 2026-09-15. Les achats (matériel,
+    produits, abonnements) ne vont PAS dans l'onglet Factures, réservé aux ventes : ils
+    y fausseraient le total encaissé. Lié à la réforme : depuis le 1er septembre 2026,
+    toute entreprise doit pouvoir **recevoir** ses factures d'achat en électronique —
+    à rattacher au choix de la plateforme agréée.
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,
