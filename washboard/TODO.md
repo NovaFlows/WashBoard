@@ -715,8 +715,15 @@ rien à faire, mais que le projet reste globalement sain.
         client cité), alors qu'un vrai client paie. **Bloqué côté Alexandre** : il faut
         sa phrase et son accord pour publier son nom.
 
-- [ ] **Reprise automatique de l'aperçu à l'inscription.** Aujourd'hui manuelle, via
-      `prospects/reprendre-apercu.mjs` — éprouvée le 2026-09-11 en répétition du rendez-vous
+- [x] 2026-09-15 — **Reprise automatique de l'aperçu à l'inscription** (`lib/repriseApercu.ts`,
+      branchée dans `api/auth/signup`, commit 6a555a3, 15 tests). Répétée en production le
+      2026-09-15 avec l'aperçu d'essai « Essai Reprise » (numéro fictif, fiche écrite avec des
+      espaces) : catégorie, prestations, horaires et lien repris, aperçu supprimé ; compte
+      d'essai supprimé ensuite. Numéros comparés normalisés ; deux aperçus au même numéro ou
+      aperçu avec réservations → rien repris, l'équipe tranche ; chaque reprise est annoncée
+      dans la notification d'inscription. `page-proposition.mjs` normalise le téléphone.
+      Le script manuel `prospects/reprendre-apercu.mjs` reste en secours. Historique de la
+      décision : la reprise manuelle avait été éprouvée le 2026-09-11 en répétition du rendez-vous
       URHUS : inscription avec le numéro de l'aperçu, puis reprise en dix secondes. À brancher
       dans `api/auth/signup` : si le numéro saisi correspond à un aperçu, son contenu et son
       lien passent dans le nouveau compte, sans intervention.
