@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { extraireZip, extension, TYPES_ACCEPTES, LIMITES } from '@/lib/zipFactures'
@@ -29,6 +30,8 @@ type Ligne = {
   date: string
   source: SourceDate | null
   montant: string
+  /** Numéro d'origine : une facture importée garde le sien, jamais un F-000xx. */
+  numero: string
 }
 
 type Entree = { nom: string; type: string; donnees: Blob; modifieLe: number }
@@ -76,12 +79,13 @@ export function ImportFactures() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chemin: p.chemin, nomFichier: ligne.nom, modifieLe: ligne.modifieLe }),
       })
-      const a = await an.json().catch(() => ({})) as { date?: string | null; source?: SourceDate | null; montant?: number | null }
+      const a = await an.json().catch(() => ({})) as { date?: string | null; source?: SourceDate | null; montant?: number | null; numero?: string | null }
       maj(ligne.id, {
         etat: 'pret',
         date: a.date ?? '',
         source: a.source ?? null,
         montant: a.montant != null ? String(a.montant).replace('.', ',') : '',
+        numero: a.numero ?? '',
       })
     } catch (e) {
       maj(ligne.id, { etat: 'erreur', erreur: e instanceof Error ? e.message : 'Envoi impossible.' })
@@ -122,7 +126,7 @@ export function ImportFactures() {
     const nouvelles = entrees.map(e => ({
       ligne: {
         id: crypto.randomUUID(), nom: e.nom, type: e.type, taille: e.donnees.size, modifieLe: e.modifieLe,
-        etat: 'envoi' as Etat, date: '', source: null, montant: '',
+        etat: 'envoi' as Etat, date: '', source: null, montant: '', numero: '',
       },
       donnees: e.donnees,
     }))
@@ -170,6 +174,7 @@ export function ImportFactures() {
         factures: prets.map(l => ({
           chemin: l.chemin, nomFichier: l.nom, typeFichier: l.type, taille: l.taille,
           dateFacture: l.date, montant: l.montant.trim() ? l.montant.replace(/\s/g, '').replace(',', '.') : null,
+          numero: l.numero.trim() || null,
         })),
       }),
     })
@@ -200,8 +205,16 @@ export function ImportFactures() {
     <section aria-labelledby="import-titre" className="w-full mb-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
       <h2 id="import-titre" className="text-base font-bold text-slate-900 dark:text-white">Ajouter mes factures existantes</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        Les factures faites avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant
-        de l&apos;enregistrer, et elle se range au bon mois.
+        Vos factures <strong className="font-semibold text-slate-700 dark:text-slate-200">de vente</strong>, envoyées à vos
+        clients avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant de
+        l&apos;enregistrer, elle se range au bon mois et garde son numéro d&apos;origine.
+      </p>
+      {/* Les achats n'ont rien à faire ici : ils fausseraient le total des
+          ventes du mois. Leur place est dans les Dépenses de la Comptabilité. */}
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2">
+        Factures d&apos;achat (matériel, produits, abonnements) : notez-les dans{' '}
+        <Link href="/dashboard/compta" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Comptabilité → Dépenses</Link>.
+        Y joindre le PDF de la facture est <span className="font-semibold">en développement</span>.
       </p>
 
       <label
@@ -246,6 +259,13 @@ export function ImportFactures() {
                 </div>
                 {l.etat === 'pret' && (
                   <>
+                    <label className="w-32">
+                      <span className="sr-only">Numéro d&apos;origine de la facture {l.nom} (facultatif)</span>
+                      <input
+                        type="text" placeholder="N° facture" maxLength={40}
+                        value={l.numero} onChange={e => maj(l.id, { numero: e.target.value })} className={saisie}
+                      />
+                    </label>
                     <label className="w-36">
                       <span className="sr-only">Date de la facture {l.nom}</span>
                       <input type="date" required value={l.date} onChange={e => maj(l.id, { date: e.target.value })} className={saisie} />

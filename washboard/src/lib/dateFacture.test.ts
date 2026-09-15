@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { devinerDate, dateDansTexte, dateMetadonnees, montantDansTexte } from './dateFacture'
+import { devinerDate, dateDansTexte, dateMetadonnees, montantDansTexte, numeroDansTexte } from './dateFacture'
 
 const maintenant = new Date('2026-09-15T12:00:00Z')
 
@@ -67,6 +67,20 @@ describe('factures en anglais (premier essai réel, 2026-09-15)', () => {
     expect(dateDansTexte('Invoice date: 6th April 2026', maintenant)).toBe('2026-04-06')
     expect(dateDansTexte('Issue date Sep 1, 2026', maintenant)).toBe('2026-09-01')
     expect(montantDansTexte('Total due: 1,250.50 EUR')).toBe(1250.5)
+  })
+})
+
+describe('numeroDansTexte', () => {
+  it('lit le numéro d’origine, en français comme en anglais', () => {
+    expect(numeroDansTexte('Invoice Invoice number RIBBOLOQ-0002 Date of issue April 6, 2026')).toBe('RIBBOLOQ-0002')
+    expect(numeroDansTexte('Facture n° 45 — émise le 3 août 2026')).toBe('45')
+    expect(numeroDansTexte('N° de facture : F-2026-045.')).toBe('F-2026-045')
+    expect(numeroDansTexte('Numéro de facture 2026/118')).toBe('2026/118')
+  })
+
+  it('sans libellé net ou sans chiffre, ne devine rien', () => {
+    expect(numeroDansTexte('Lavage complet 65 €')).toBeNull()
+    expect(numeroDansTexte('Invoice number: pending')).toBeNull()
   })
 })
 

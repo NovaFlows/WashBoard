@@ -3,7 +3,7 @@ import { getDocumentProxy, extractText, getMeta } from 'unpdf'
 import { requireWasher } from '@/lib/requireWasher'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BUCKET_FACTURES_IMPORTEES, cheminAppartient } from '@/lib/importFactures'
-import { devinerDate, montantDansTexte } from '@/lib/dateFacture'
+import { devinerDate, montantDansTexte, numeroDansTexte } from '@/lib/dateFacture'
 import { logger } from '@/lib/logger'
 
 // Devine la date (et, s'il est clairement écrit, le montant) d'une facture
@@ -55,5 +55,6 @@ export async function POST(req: Request) {
     date: devinee?.date ?? null,
     source: devinee?.source ?? null,
     montant: texte ? montantDansTexte(texte) : null,
+    numero: texte ? numeroDansTexte(texte) : null,
   })
 }

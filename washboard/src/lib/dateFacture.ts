@@ -106,6 +106,20 @@ export function devinerDate(entree: {
   return null
 }
 
+// ── Numéro d'origine ───────────────────────────────────────────────────────
+
+/** Numéro que la facture portait dans le logiciel qui l'a faite (« Facture
+ *  n° 45 », « Invoice number RIBBOLOQ-0002 »). Une facture importée garde son
+ *  numéro d'origine : la renuméroter en F-000xx serait faux. Seulement s'il
+ *  est clairement libellé et contient au moins un chiffre. */
+export function numeroDansTexte(texte: string): string | null {
+  const t = texte.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const m = /(?:invoice\s*(?:number|no\.?|n°|#)|n[°o]\.?\s*(?:de\s+)?facture|numero\s+de\s+facture|facture\s*(?:n[°o]\.?|numero|#))\s*:?\s*([A-Z0-9][A-Z0-9\-_/.]{1,39})/i.exec(t)
+  if (!m) return null
+  const numero = m[1].replace(/[.\-_/]+$/, '')
+  return /\d/.test(numero) ? numero : null
+}
+
 // ── Montant ────────────────────────────────────────────────────────────────
 
 const NOMBRE = String.raw`(\d{1,3}(?:[ .,  ]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)`

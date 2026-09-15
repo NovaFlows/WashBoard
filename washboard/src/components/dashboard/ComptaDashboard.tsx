@@ -300,6 +300,12 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                   <input type="number" min={0} step={0.01} value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" className={`${inputClass} w-full`} />
                 </div>
               </div>
+              {/* Annoncé pour que le laveur ne cherche pas à ranger ses factures
+                  d'achat dans l'onglet Factures, réservé aux ventes : elles
+                  y fausseraient le total de ce qu'il a encaissé. */}
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Joindre la facture d&apos;achat (PDF) à une dépense : <span className="font-semibold text-slate-500 dark:text-slate-400">en développement</span>.
+              </p>
               {formErr && <p className="text-xs text-red-500">{formErr}</p>}
               <button type="submit" disabled={saving} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
                 {saving ? 'Ajout...' : '+ Ajouter'}
