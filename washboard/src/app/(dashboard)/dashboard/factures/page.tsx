@@ -62,6 +62,20 @@ const jourSeul = (date: string) =>
 const total = (liste: Ligne[]) => liste.reduce((t, f) => t + (f.montant ?? 0), 0)
 const nombre = (v: string | number | null) => (v === null || v === '' ? null : Number(v))
 
+/** Côté Achats, annoncé avant d'exister : sans lui, le laveur rangerait ses
+ *  factures d'achat parmi ses ventes (constaté au premier essai, le 15/09). */
+function AchatsEnDeveloppement() {
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 px-5 py-10 text-center">
+      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Factures d&apos;achat : en développement</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto leading-relaxed">
+        Bientôt, vos factures d&apos;achat (matériel, produits, carburant, abonnements) seront rangées ici, mois par
+        mois, séparément de vos ventes. Vous les ajouterez comme vos anciennes factures : une par une ou en ZIP.
+      </p>
+    </div>
+  )
+}
+
 function Filtre({ href, actif, children }: { href: string; actif: boolean; children: React.ReactNode }) {
   return (
     <Link
@@ -87,7 +101,9 @@ export default async function FacturesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const filtre = lireFiltre(await searchParams)
+  const parametres = await searchParams
+  const filtre = lireFiltre(parametres)
+  const cote: 'ventes' | 'achats' = parametres.cote === 'achats' ? 'achats' : 'ventes'
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -171,6 +187,34 @@ export default async function FacturesPage({
         </p>
       </div>
 
+      {/* Deux côtés : ce que le laveur a vendu, et ce qu'il a acheté. Mélangés,
+          le total du mois additionnerait ses ventes et ses achats. */}
+      <nav aria-label="Ventes ou achats" className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-5 w-full sm:w-fit">
+        {([
+          { valeur: 'ventes', libelle: 'Ventes', href: '/dashboard/factures' },
+          { valeur: 'achats', libelle: 'Achats', href: '/dashboard/factures?cote=achats' },
+        ] as const).map(o => (
+          <Link
+            key={o.valeur}
+            href={o.href}
+            aria-current={cote === o.valeur ? 'page' : undefined}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold text-center transition-all ${
+              cote === o.valeur
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            {o.libelle}
+            {o.valeur === 'achats' && (
+              <span className="ml-1.5 align-middle px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                bientôt
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+
+      {cote === 'achats' ? <AchatsEnDeveloppement /> : (<>
       <div className="mb-5">
         <ImportFactures />
       </div>
@@ -270,6 +314,7 @@ export default async function FacturesPage({
           )}
         </div>
       )}
+      </>)}
     </DashboardShell>
   )
 }

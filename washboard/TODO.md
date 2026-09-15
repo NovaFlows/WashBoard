@@ -655,12 +655,15 @@ rien à faire, mais que le projet reste globalement sain.
     prochaine facture » (ne peut qu'augmenter). SQL passé le 2026-09-15 (table
     `factures_importees`, RLS, droits resserrés, bucket privé) ; il a fallu
     `notify pgrst, 'reload schema'` pour que l'API voie la nouvelle table.
-  - [ ] **Factures d'ACHAT : les joindre aux dépenses** (Comptabilité → Dépenses),
-    annoncé « en développement » dans l'app depuis le 2026-09-15. Les achats (matériel,
-    produits, abonnements) ne vont PAS dans l'onglet Factures, réservé aux ventes : ils
-    y fausseraient le total encaissé. Lié à la réforme : depuis le 1er septembre 2026,
-    toute entreprise doit pouvoir **recevoir** ses factures d'achat en électronique —
-    à rattacher au choix de la plateforme agréée.
+  - [ ] **Factures d'ACHAT : côté « Achats » de l'onglet Factures** (décision
+    d'Alexandre le 2026-09-15 : un côté Ventes et un côté Achats dans le même onglet).
+    Le sélecteur « Ventes | Achats » existe déjà, le côté Achats affiche « en
+    développement ». À construire : même import (une par une ou en ZIP, date, montant,
+    fournisseur lus automatiquement), totaux séparés des ventes — mélangés, le total du
+    mois additionnerait ce qui est encaissé et ce qui est payé. À relier ensuite aux
+    Dépenses de la Comptabilité pour ne rien saisir deux fois. Lié à la réforme : depuis
+    le 1er septembre 2026, toute entreprise doit pouvoir **recevoir** ses factures
+    d'achat en électronique — à rattacher au choix de la plateforme agréée.
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,

@@ -3,16 +3,21 @@
 import { useTheme } from './ThemeProvider'
 import { useEffect, useState } from 'react'
 
-export function ThemeToggle({ large, nav }: { large?: boolean; nav?: boolean }) {
+export function ThemeToggle({ large, nav, header }: { large?: boolean; nav?: boolean; header?: boolean }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
-  if (!mounted) return <div className={large ? 'w-12 h-12' : 'w-9 h-9'} />
+  if (!mounted) return <div className={header ? 'w-9 h-9 sm:w-10 sm:h-10' : large ? 'w-12 h-12' : 'w-9 h-9'} />
 
   const isDark = theme === 'dark'
   const size = large ? 22 : 18
-  const btnClass = nav
+  const btnClass = header
+    // En-tête du tableau de bord : même carré que la couronne et la
+    // déconnexion (36 px, 40 px dès sm), sans ombre. La version « large »
+    // (48 px, ombrée) y paraissait nettement plus grosse que ses voisines.
+    ? 'w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors'
+    : nav
     ? 'w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors'
     : large
     ? 'w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm'

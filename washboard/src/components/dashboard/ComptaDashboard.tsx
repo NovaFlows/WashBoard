@@ -50,6 +50,18 @@ const CAT_COLORS: Record<string, string> = {
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 
+/** Montant des trois cartes de résumé : à la française (« 148,50 € »), et
+ *  sans centimes au-delà de 1 000 € pour tenir dans une carte étroite sur
+ *  téléphone, même en vue Année. */
+function montantCarte(n: number): string {
+  const entier = Math.abs(n) >= 1000
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency', currency: 'EUR',
+    minimumFractionDigits: entier ? 0 : 2,
+    maximumFractionDigits: entier ? 0 : 2,
+  }).format(n)
+}
+
 
 type Props = { initialRevenue: number; washerId: string }
 
@@ -202,20 +214,24 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
         </button>
       </div>
 
-      {/* Résumé */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4">
+      {/* Résumé.
+          Trois cartes côte à côte sur un téléphone ne laissent qu'environ
+          90 px par chiffre : en text-xl, « +148.50€ » sortait de sa carte.
+          Chiffre plus petit sur téléphone, écrit à la française, et sans
+          centimes au-delà de 1 000 € — un résultat annuel doit aussi tenir. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="min-w-0 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3 sm:p-4">
           <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">CA</p>
-          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(totalRevenue)}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums whitespace-nowrap text-emerald-700 dark:text-emerald-300">{montantCarte(totalRevenue)}</p>
         </div>
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-4">
+        <div className="min-w-0 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-3 sm:p-4">
           <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Dépenses</p>
-          <p className="text-xl font-bold text-red-700 dark:text-red-300">{formatPrice(totalExpenses)}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums whitespace-nowrap text-red-700 dark:text-red-300">{montantCarte(totalExpenses)}</p>
         </div>
-        <div className={`border rounded-2xl p-4 ${result >= 0 ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'}`}>
+        <div className={`min-w-0 border rounded-2xl p-3 sm:p-4 ${result >= 0 ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'}`}>
           <p className={`text-xs font-medium mb-1 ${result >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>Résultat</p>
-          <p className={`text-xl font-bold ${result >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>
-            {result >= 0 ? '+' : ''}{formatPrice(result)}
+          <p className={`text-base sm:text-xl font-bold tabular-nums whitespace-nowrap ${result >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>
+            {result > 0 ? '+' : ''}{montantCarte(result)}
           </p>
         </div>
       </div>
@@ -300,12 +316,6 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                   <input type="number" min={0} step={0.01} value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" className={`${inputClass} w-full`} />
                 </div>
               </div>
-              {/* Annoncé pour que le laveur ne cherche pas à ranger ses factures
-                  d'achat dans l'onglet Factures, réservé aux ventes : elles
-                  y fausseraient le total de ce qu'il a encaissé. */}
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Joindre la facture d&apos;achat (PDF) à une dépense : <span className="font-semibold text-slate-500 dark:text-slate-400">en développement</span>.
-              </p>
               {formErr && <p className="text-xs text-red-500">{formErr}</p>}
               <button type="submit" disabled={saving} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
                 {saving ? 'Ajout...' : '+ Ajouter'}

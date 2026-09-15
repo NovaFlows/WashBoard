@@ -209,12 +209,12 @@ export function ImportFactures() {
         clients avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant de
         l&apos;enregistrer, elle se range au bon mois et garde son numéro d&apos;origine.
       </p>
-      {/* Les achats n'ont rien à faire ici : ils fausseraient le total des
-          ventes du mois. Leur place est dans les Dépenses de la Comptabilité. */}
-      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2">
-        Factures d&apos;achat (matériel, produits, abonnements) : notez-les dans{' '}
-        <Link href="/dashboard/compta" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Comptabilité → Dépenses</Link>.
-        Y joindre le PDF de la facture est <span className="font-semibold">en développement</span>.
+      {/* Les achats n'ont rien à faire du côté Ventes : ils fausseraient le
+          total encaissé du mois. Ils auront leur propre côté dans cet onglet. */}
+      <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+        Factures d&apos;achat (matériel, produits, abonnements) : ne les ajoutez pas ici. Elles auront leur place dans le côté{' '}
+        <Link href="/dashboard/factures?cote=achats" className="font-semibold underline">Achats</Link> de cet onglet,{' '}
+        <span className="font-semibold">en développement</span>.
       </p>
 
       <label
