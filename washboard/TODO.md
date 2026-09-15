@@ -691,7 +691,9 @@ rien à faire, mais que le projet reste globalement sain.
     Kookii Clean va parfois chez le client sans confirmer) et ne les ont pas tous
     terminés. Sans « Terminé », pas de facture ni de compta à jour. Le calendrier permet
     désormais de terminer directement un rendez-vous en attente.
-  - [ ] **Créer la tâche sur cron-job.org** (Alexandre) : tous les jours à **22 h, fuseau
+  - [x] 2026-09-15 — **Tâche cron-job.org créée, fait par Alexandre** (« WashBoard – rappel
+    du soir »). Reste à vérifier la première exécution le 2026-09-16 (réponse 200 dans
+    l'historique HIST ; rappel posé dans l'agenda à 9 h). Réglages : tous les jours à **22 h, fuseau
     Europe/Paris** (pas UTC : le rappel glisserait d'une heure au changement d'heure),
     URL `https://www.washboard.fr/api/cron/rappel-terminer`, en-tête
     `Authorization: Bearer <CRON_SECRET>` — même réglage que les autres tâches.
@@ -700,7 +702,7 @@ rien à faire, mais que le projet reste globalement sain.
     valait « Terminé » d'office, donc une facture pour un lavage peut-être jamais fait.
     Oui → Terminé + facture (envoyée au client si pro ; si la facturation est incomplète,
     la fenêtre le dit). Non → annulé, sans facture, sans compta, sans message au client.
-    **Testé en production le 2026-09-15** sur AutoNettoyage avec 2 rendez-vous d'essai :
+    **Testé en production par Alexandre le 2026-09-15** sur AutoNettoyage avec 2 rendez-vous d'essai :
     Oui → Terminé + F-00004 ; Non → annulé sans facture. Rendez-vous supprimés ensuite
     et compteur remis à 4 (suite de numéros sans trou).
 
@@ -716,9 +718,10 @@ rien à faire, mais que le projet reste globalement sain.
         sa phrase et son accord pour publier son nom.
 
 - [x] 2026-09-15 — **Reprise automatique de l'aperçu à l'inscription** (`lib/repriseApercu.ts`,
-      branchée dans `api/auth/signup`, commit 6a555a3, 15 tests). Répétée en production le
-      2026-09-15 avec l'aperçu d'essai « Essai Reprise » (numéro fictif, fiche écrite avec des
-      espaces) : catégorie, prestations, horaires et lien repris, aperçu supprimé ; compte
+      branchée dans `api/auth/signup`, commit 6a555a3, 15 tests). **Répétition en production
+      faite par Alexandre** le 2026-09-15 avec l'aperçu d'essai « Essai Reprise » (numéro
+      fictif, fiche écrite avec des espaces) : catégorie, prestations, horaires et lien repris,
+      aperçu supprimé, notification « 🔁 Nouveau client — aperçu repris » reçue ; compte
       d'essai supprimé ensuite. Numéros comparés normalisés ; deux aperçus au même numéro ou
       aperçu avec réservations → rien repris, l'équipe tranche ; chaque reprise est annoncée
       dans la notification d'inscription. `page-proposition.mjs` normalise le téléphone.
