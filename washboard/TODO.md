@@ -588,7 +588,7 @@ rien à faire, mais que le projet reste globalement sain.
 ## 🟡 Roadmap produit
 
 - [ ] **Poser une question depuis le centre d'aide, répondre depuis le compte NovaFlows.**
-      Demandé par Alexandre le 2026-09-14. Aujourd'hui le centre d'aide
+      Demandé par Alexandre le 2026-09-14. **Attribué à Ryan** le 2026-09-15. Aujourd'hui le centre d'aide
       (`/dashboard/guide`) n'a que des réponses toutes faites : un laveur bloqué n'a aucun
       moyen d'écrire à l'équipe depuis l'app.
   - **Côté laveur** : un bouton « Poser une question » dans le centre d'aide (et quand la
@@ -605,7 +605,19 @@ rien à faire, mais que le projet reste globalement sain.
     par rôle et des RLS qui limitent chaque laveur à ses propres questions.
   - Montrer le rendu (laveur et administration) avant de pousser.
 
-- [ ] **Nos réseaux sociaux, sur la landing et dans l'espace des laveurs.** Aucun lien
+- [ ] **Mettre à jour le guide (centre d'aide, `lib/guide.ts`).** **Attribué à Ryan** le
+      2026-09-15. Le guide ne couvre rien de ce qui est sorti mi-septembre :
+  - **Factures** : infos de facturation dans les Paramètres, facture émise au passage en
+    « Terminé », envoyée aux clients pros, onglet Factures, import des anciennes factures,
+    numéro de départ.
+  - **Onglet Clients** : recherche, dernière prestation. La réponse « Où retrouver
+    l'historique d'un client ? » renvoie encore au CRM.
+  - **« Clôturer » un créneau passé** : la question « Avez-vous fait ce rendez-vous ? ».
+  - **Rappel du soir** à 22 h (rendez-vous du jour pas encore « Terminé »).
+  - Revoir « Que se passe-t-il quand je marque un RDV terminé ? » : parler de la facture.
+
+- [ ] **Nos réseaux sociaux, sur la landing et dans l'espace des laveurs.** **Partie landing
+      attribuée à Ryan** le 2026-09-15 (l'espace des laveurs reste à faire par dev). Aucun lien
       vers les comptes WashBoard (TikTok, Instagram…) n'existe aujourd'hui sur le site.
   - **Landing** : icônes des réseaux dans le pied de page (et éventuellement une ligne
     « Suis-nous » près du CTA final). Liens directs, ouverts dans un nouvel onglet, avec
