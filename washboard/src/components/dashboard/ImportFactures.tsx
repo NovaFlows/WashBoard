@@ -33,11 +33,12 @@ type Ligne = {
 
 type Entree = { nom: string; type: string; donnees: Blob; modifieLe: number }
 
+// Phrase complète affichée sous le nom du fichier.
 const SOURCES: Record<SourceDate, string> = {
-  nom: 'trouvée dans le nom du fichier',
-  texte: 'lue dans la facture',
-  metadonnees: 'date de création du PDF — à vérifier',
-  fichier: 'date du fichier — à vérifier',
+  nom: 'Date trouvée dans le nom du fichier',
+  texte: 'Date lue dans la facture',
+  metadonnees: 'Date de création du PDF — à vérifier',
+  fichier: 'Date du fichier — à vérifier',
 }
 
 const EN_PARALLELE = 3
@@ -240,7 +241,7 @@ export function ImportFactures() {
                     {l.etat === 'envoi' && 'Envoi…'}
                     {l.etat === 'analyse' && 'Lecture de la date…'}
                     {l.etat === 'erreur' && l.erreur}
-                    {l.etat === 'pret' && (l.source ? `Date ${SOURCES[l.source]}` : 'Date introuvable : à saisir')}
+                    {l.etat === 'pret' && (l.source ? SOURCES[l.source] : 'Date introuvable : à saisir')}
                   </p>
                 </div>
                 {l.etat === 'pret' && (

@@ -48,6 +48,28 @@ describe('dateMetadonnees', () => {
   })
 })
 
+describe('factures en anglais (premier essai réel, 2026-09-15)', () => {
+  // Texte tel qu'extrait d'une vraie facture d'abonnement en anglais.
+  const texte = 'Invoice Invoice number RIBBOLOQ-0002 Date of issue April 6, 2026 Date due April 6, 2026 '
+    + '€21.60 due April 6, 2026 Description Qty Unit price Tax Amount Claude Pro Apr 6–May 6, 2026 1 €18.00 20% €18.00 '
+    + 'Subtotal €18.00 Total excluding tax €18.00 VAT - France (20% on €18.00) €3.60 Total €21.60 Amount due €21.60'
+
+  it('lit la date d’émission, pas la période ni l’échéance', () => {
+    expect(devinerDate({ nomFichier: 'ClaudeAvrilFacture (1).pdf', texte, metadonnees: 'D:20260407101500Z' }, maintenant))
+      .toEqual({ date: '2026-04-06', source: 'texte' })
+  })
+
+  it('lit le montant à payer, pas le total hors taxes', () => {
+    expect(montantDansTexte(texte)).toBe(21.6)
+  })
+
+  it('autres écritures anglaises', () => {
+    expect(dateDansTexte('Invoice date: 6th April 2026', maintenant)).toBe('2026-04-06')
+    expect(dateDansTexte('Issue date Sep 1, 2026', maintenant)).toBe('2026-09-01')
+    expect(montantDansTexte('Total due: 1,250.50 EUR')).toBe(1250.5)
+  })
+})
+
 describe('montantDansTexte', () => {
   it('lit un total clairement libellé', () => {
     expect(montantDansTexte('Total TTC : 1 250,50 €')).toBe(1250.5)
