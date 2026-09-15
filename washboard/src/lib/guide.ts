@@ -31,8 +31,8 @@ export const GUIDE: GuideSection[] = [
         id: 'premiers-pas',
         question: 'Par où commencer ?',
         answer:
-          "Trois étapes, dans cet ordre. D'abord renseignez votre identité et votre logo dans [Réglages de la page](/dashboard/admin). Ensuite créez vos prestations et vos tarifs, toujours au même endroit, onglet Prestations. Enfin définissez vos horaires de travail dans l'onglet Disponibilités. Une fois ces trois points faits, votre page de réservation est prête à être partagée.",
-        keywords: ['debuter', 'commencer', 'configuration', 'installation'],
+          "Trois points bloquent la mise en ligne tant qu'ils ne sont pas faits, et la carte « Démarrage » de votre [tableau de bord](/dashboard) suit votre avancement. D'abord vos prestations et vos tarifs dans [Réglages de la page](/dashboard/admin), onglet Prestations — une prestation se range toujours dans une catégorie, donc créez la catégorie d'abord, sinon vous ne pourrez rien enregistrer. Ensuite vos horaires de travail, onglet Disponibilités. Enfin votre adresse de départ dans [Paramètres](/dashboard/parametres), carte « Mon profil » : elle sert à calculer vos trajets et votre zone, et sans elle un client trop éloigné peut réserver un créneau que vous ne pourrez pas honorer. Votre téléphone et votre logo comptent aussi, mais ils ne bloquent pas la page.",
+        keywords: ['debuter', 'commencer', 'configuration', 'installation', 'demarrage', 'etape'],
       },
       {
         id: 'lien-reservation',
@@ -59,8 +59,8 @@ export const GUIDE: GuideSection[] = [
         id: 'prestations',
         question: 'Comment créer mes prestations et mes tarifs ?',
         answer:
-          "Dans [Réglages de la page](/dashboard/admin), onglet Prestations. Chaque prestation a un nom, une durée et un prix. Vous pouvez définir un prix différent selon le type de véhicule : une citadine et un SUV ne demandent pas le même temps, le tarif doit le refléter. Les options supplémentaires se paramètrent au même endroit.",
-        keywords: ['prix', 'tarif', 'service', 'prestation', 'duree', 'option', 'vehicule'],
+          "Dans [Réglages de la page](/dashboard/admin), onglet Prestations. Commencez par créer une catégorie — ce que vous traitez : Voiture, Canapé, Piscine, ce que vous voulez. Une prestation appartient toujours à une catégorie, donc sans catégorie vous ne pourrez pas l'enregistrer. Chaque catégorie a ensuite ses types, et c'est là que se joue le tarif : pour Voiture ce sera citadine, berline, SUV ; pour Canapé, le nombre de places. Vous pouvez donner un prix différent à chaque type, puisqu'ils ne demandent pas le même temps. Enfin la prestation elle-même a un nom, une durée et un prix. Les options supplémentaires se paramètrent au même endroit.",
+        keywords: ['prix', 'tarif', 'service', 'prestation', 'duree', 'option', 'categorie', 'type'],
       },
       {
         id: 'personnalisation',
@@ -73,7 +73,7 @@ export const GUIDE: GuideSection[] = [
         id: 'zones',
         question: 'Comment limiter ma zone d’intervention ?',
         answer:
-          "Dans [Réglages de la page](/dashboard/admin), onglet Identité, indiquez votre adresse de départ et le rayon que vous acceptez. Une adresse hors zone est refusée automatiquement, avant même que le client ne choisisse un créneau. Vous pouvez aussi facturer des frais de déplacement au-delà d'une certaine distance.",
+          "Cela se règle à deux endroits. Votre adresse de départ et vos frais de déplacement sont dans [Paramètres](/dashboard/parametres), carte « Mon profil ». Le rayon que vous acceptez est dans [Réglages de la page](/dashboard/admin), onglet Identité, section Zone d'intervention — vous pouvez le définir à vol d'oiseau, par la route, ou par départements. Une adresse hors zone est refusée automatiquement, avant même que le client ne choisisse un créneau.",
         keywords: ['zone', 'rayon', 'perimetre', 'distance', 'deplacement', 'frais', 'km'],
       },
     ],
@@ -94,8 +94,22 @@ export const GUIDE: GuideSection[] = [
         id: 'terminer',
         question: 'Que se passe-t-il quand je marque un RDV « terminé » ?',
         answer:
-          "C'est l'action qui déclenche tout le suivi. Le chiffre d'affaires est comptabilisé dans la [Comptabilité](/dashboard/compta), et la demande d'avis Google part automatiquement après le délai que vous avez choisi. Si vous oubliez de marquer vos rendez-vous terminés, vous n'aurez ni chiffres justes ni demandes d'avis.",
-        keywords: ['termine', 'fini', 'cloturer', 'avis'],
+          "C'est l'action qui déclenche tout le suivi. Le chiffre d'affaires est comptabilisé dans la [Comptabilité](/dashboard/compta), la demande d'avis Google part automatiquement après le délai que vous avez choisi, et votre facture est créée — envoyée par email si le client a réservé en tant que professionnel. Si vous oubliez de marquer vos rendez-vous terminés, vous n'aurez ni chiffres justes, ni demandes d'avis, ni factures.",
+        keywords: ['termine', 'fini', 'avis', 'facture'],
+      },
+      {
+        id: 'cloturer',
+        question: 'J’ai oublié de marquer un rendez-vous, que faire ?',
+        answer:
+          "Sur votre [tableau de bord](/dashboard), un rendez-vous dont l'heure est passée mais qui n'a jamais été terminé affiche un bouton « Clôturer ». WashBoard vous demande alors si le rendez-vous a réellement eu lieu. Si vous répondez oui, il passe en terminé et la facture suit normalement ; si vous répondez non, il est annulé, sans facture, sans effet sur votre comptabilité, et votre client ne reçoit aucun message. Un rendez-vous clôturé ainsi porte ensuite l'étiquette orange « Délai dépassé » plutôt que « Terminé » : c'est normal, cela indique simplement que la clôture a été tardive. Il est bien compté et bien facturé.",
+        keywords: ['cloturer', 'oubli', 'oublie', 'retard', 'passe', 'delai depasse', 'rattraper'],
+      },
+      {
+        id: 'rappel-soir',
+        question: 'À quoi sert la notification de 22 h ?',
+        answer:
+          "Chaque soir à 22 h, si des rendez-vous du jour ne sont toujours pas marqués « Terminé », WashBoard vous envoie une notification sur votre téléphone pour vous éviter de les oublier — donc d'oublier les factures qui vont avec. Attention : ce rappel passe uniquement par les notifications de l'application, il n'existe ni en email ni en SMS. Si vous ne les avez jamais activées, vous ne recevrez jamais ce rappel et rien ne vous le signalera. Voir la section Application mobile pour les activer.",
+        keywords: ['rappel', 'notification', '22h', 'soir', 'oubli', 'relance'],
       },
       {
         id: 'conges',
@@ -108,7 +122,7 @@ export const GUIDE: GuideSection[] = [
         id: 'creneaux-groupes',
         question: 'À quoi servent les créneaux groupés ?',
         answer:
-          "Quand un client réserve dans un secteur où vous avez déjà un rendez-vous, WashBoard lui propose en priorité les horaires qui vous évitent un trajet. Vous pouvez accorder une petite remise sur ces créneaux pour encourager le regroupement : vous roulez moins et vous casez plus de lavages dans la journée.",
+          "Quand un client réserve dans un secteur où vous avez déjà un rendez-vous, WashBoard lui propose en priorité les horaires qui vous évitent un trajet. Vous pouvez accorder une petite remise sur ces créneaux pour encourager le regroupement : vous roulez moins et vous casez plus de rendez-vous dans la journée.",
         keywords: ['creneau', 'groupe', 'zone', 'tournee', 'trajet', 'optimisation', 'remise'],
       },
     ],
@@ -122,8 +136,15 @@ export const GUIDE: GuideSection[] = [
         id: 'crm',
         question: 'Où retrouver l’historique d’un client ?',
         answer:
-          "Dans le [CRM](/dashboard/crm), cliquez sur la pastille ronde avec l'initiale du client, à gauche de son nom. Sa fiche s'ouvre : coordonnées, adresses utilisées, nombre de lavages, chiffre d'affaires, panier moyen et historique complet de ses rendez-vous. Si le client n'est pas revenu depuis plus de trois mois, la fiche vous le signale.",
-        keywords: ['client', 'historique', 'fiche', 'contact', 'pastille', 'initiale', 'profil'],
+          "Le plus simple est l'onglet [Clients](/dashboard/clients) : c'est votre fichier complet, avec une recherche par nom, téléphone, email ou même adresse déjà utilisée. Tapez les premiers chiffres d'un numéro et vous retrouvez la personne en une seconde — pratique quand un client vous appelle. Cliquez sur sa ligne pour ouvrir sa fiche : coordonnées, adresses, nombre de prestations, chiffre d'affaires, panier moyen et historique complet. Si le client n'est pas revenu depuis plus de trois mois, la fiche vous le signale.",
+        keywords: ['client', 'historique', 'fiche', 'contact', 'profil', 'rechercher', 'annuaire', 'telephone'],
+      },
+      {
+        id: 'clients-vs-crm',
+        question: 'Quelle différence entre l’onglet Clients et le CRM ?',
+        answer:
+          "Ils ne servent pas à la même chose. L'onglet [Clients](/dashboard/clients) est votre annuaire : tous vos clients, sans limite de date, avec une vraie recherche. C'est là qu'il faut aller pour retrouver quelqu'un. Le [CRM](/dashboard/crm) est un tableau de bord de statistiques sur une période que vous choisissez — d'où viennent vos visiteurs, combien se transforment en réservation, quels appareils ils utilisent. Il n'affiche que les dernières réservations de la période et n'a pas de recherche, donc un client ancien y est souvent introuvable. Les deux ouvrent la même fiche client.",
+        keywords: ['crm', 'clients', 'difference', 'statistiques', 'annuaire', 'entonnoir'],
       },
       {
         id: 'avis',
@@ -136,8 +157,50 @@ export const GUIDE: GuideSection[] = [
         id: 'relances',
         question: 'Comment relancer mes anciens clients ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Relances clients ». Vous définissez un délai (90 jours par exemple) et un message. Tout client qui n'est pas revenu depuis ce délai reçoit automatiquement votre message. C'est le canal le plus rentable : ces gens vous connaissent déjà.",
-        keywords: ['relance', 'fidelisation', 'revenir', 'inactif', 'reactivation'],
+          "Dans [Paramètres](/dashboard/parametres), carte « Relances clients », disponible avec la formule Pro. Vous activez l'interrupteur, choisissez un délai — 90 jours par exemple — et écrivez votre message une seule fois. Écrivez {{nom}} dedans et le prénom du client s'y met automatiquement. Ensuite tout se fait seul : chaque client qui n'est pas revenu depuis ce délai reçoit votre message, par email ou par SMS selon le canal choisi dans la carte « Avis Google », et toujours à votre nom. Deux sécurités : un client qui a déjà repris rendez-vous ne reçoit rien, et personne n'est relancé deux fois. Pensez à mettre votre lien de réservation dans le message, sinon le client n'a nulle part où cliquer.",
+        keywords: ['relance', 'fidelisation', 'revenir', 'inactif', 'reactivation', 'pro', 'sms'],
+      },
+    ],
+  },
+  {
+    id: 'factures',
+    title: 'Factures',
+    summary: 'Facturer vos clients et récupérer vos anciennes factures.',
+    entries: [
+      {
+        id: 'facturation-infos',
+        question: 'Que dois-je remplir pour pouvoir facturer ?',
+        answer:
+          "Dans [Paramètres](/dashboard/parametres), carte « Facturation ». Indiquez d'abord votre statut : micro-entreprise ou entreprise individuelle d'un côté, société de l'autre. Il faut ensuite votre nom légal ou votre raison sociale, votre SIRET, votre adresse professionnelle, et votre régime de TVA. Une société ajoute sa forme juridique, son capital et son immatriculation RCS ; si vous facturez la TVA, votre numéro de TVA intracommunautaire est également demandé. Tant qu'il manque quelque chose, l'onglet [Factures](/dashboard/factures) affiche un bandeau qui vous dit précisément quoi.",
+        keywords: ['facture', 'facturation', 'siret', 'tva', 'statut', 'societe', 'micro', 'auto entrepreneur'],
+      },
+      {
+        id: 'facture-quand',
+        question: 'Quand mes factures sont-elles créées ?',
+        answer:
+          "Automatiquement, au moment où vous marquez un rendez-vous « Terminé ». Vous n'avez rien à faire de plus. Si vos informations de facturation sont incomplètes, le rendez-vous passe quand même en terminé mais aucune facture n'est créée : le client reçoit un simple récapitulatif. Une fois les informations complétées, vous pourrez émettre la facture manquante depuis la fiche du rendez-vous, avec le bouton « Émettre la facture ». Toutes vos factures se retrouvent dans l'onglet [Factures](/dashboard/factures).",
+        keywords: ['facture', 'quand', 'automatique', 'emettre', 'termine', 'recapitulatif'],
+      },
+      {
+        id: 'facture-qui-recoit',
+        question: 'Mon client reçoit-il sa facture par email ?',
+        answer:
+          "Uniquement s'il a réservé en tant que professionnel. C'est le client qui choisit « Particulier » ou « Professionnel » au début de la réservation — vous n'avez rien à cocher. S'il choisit professionnel, il doit donner sa raison sociale et son SIRET, et sa facture lui est envoyée par email dès que vous marquez le rendez-vous terminé. Un particulier ne reçoit pas d'envoi séparé : sa facture existe bien, vous la retrouvez dans votre onglet Factures, et lui y accède depuis son lien de confirmation.",
+        keywords: ['facture', 'email', 'client', 'professionnel', 'particulier', 'envoi', 'pro'],
+      },
+      {
+        id: 'facture-numero',
+        question: 'Comment fonctionne la numérotation des factures ?',
+        answer:
+          "WashBoard s'en charge : vos factures sont numérotées à la suite, au format F-00001, et le numéro est attribué au moment de l'émission. Si vous facturiez déjà avant d'arriver, vous pouvez reprendre votre propre numérotation : dans [Paramètres](/dashboard/parametres), carte « Facturation », renseignez le numéro de la prochaine facture. Attention, ce numéro ne peut jamais reculer — c'est une obligation comptable, et WashBoard refusera une valeur inférieure à une facture déjà émise. Réglez-le donc avant votre première facture.",
+        keywords: ['numero', 'numerotation', 'suite', 'continu', 'depart', 'reprendre'],
+      },
+      {
+        id: 'factures-import',
+        question: 'Puis-je récupérer mes anciennes factures ?',
+        answer:
+          "Oui, dans l'onglet [Factures](/dashboard/factures). Vous pouvez les déposer une par une, en PDF, JPG ou PNG, ou tout envoyer d'un coup dans un fichier ZIP — jusqu'à 200 factures. WashBoard tente de lire la date de chaque facture, mais vérifiez-la : une facture sans date ne peut pas être enregistrée. Le montant et le numéro d'origine sont facultatifs, et une facture importée garde son numéro d'origine, elle ne prend pas de numéro WashBoard. Un point important : cet import est réservé à vos factures de vente, celles que vous avez émises. Les factures d'achat auront leur propre espace, encore en développement.",
+        keywords: ['import', 'importer', 'anciennes', 'zip', 'reprise', 'pdf', 'achat', 'vente'],
       },
     ],
   },
