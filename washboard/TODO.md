@@ -664,6 +664,22 @@ rien à faire, mais que le projet reste globalement sain.
     Dépenses de la Comptabilité pour ne rien saisir deux fois. Lié à la réforme : depuis
     le 1er septembre 2026, toute entreprise doit pouvoir **recevoir** ses factures
     d'achat en électronique — à rattacher au choix de la plateforme agréée.
+  - [ ] **À voir avec Kookii Clean : envoyer aussi la facture par email aux
+    particuliers ?** Aujourd'hui, au passage en « Terminé », seuls les clients pros la
+    reçoivent automatiquement ; le particulier la télécharge par le lien de son email de
+    confirmation. Pour une prestation de plus de 25 €, le laveur doit la remettre au
+    client : l'email le ferait pour lui. Option envisagée : un réglage « toujours /
+    seulement les pros ». Alexandre demande à Kookii Clean si c'est utile.
+  - [x] 2026-09-15 — **Rappel du soir « marquez vos rendez-vous Terminé »**
+    (`api/cron/rappel-terminer`, `lib/rappelTerminer.ts`, 7 tests). Notification aux
+    laveurs qui avaient des rendez-vous dans la journée (confirmés OU restés en attente :
+    Kookii Clean va parfois chez le client sans confirmer) et ne les ont pas tous
+    terminés. Sans « Terminé », pas de facture ni de compta à jour. Le calendrier permet
+    désormais de terminer directement un rendez-vous en attente.
+  - [ ] **Créer la tâche sur cron-job.org** (Alexandre) : tous les jours à **22 h, fuseau
+    Europe/Paris** (pas UTC : le rappel glisserait d'une heure au changement d'heure),
+    URL `https://www.washboard.fr/api/cron/rappel-terminer`, en-tête
+    `Authorization: Bearer <CRON_SECRET>` — même réglage que les autres tâches.
 
 - [ ] **Landing : étoffer le contenu qui convainc, pas la longueur.** Constat du
       2026-09-13 : ~7 écrans sur ordinateur (6 187 px), 9 sur mobile, **731 mots**,

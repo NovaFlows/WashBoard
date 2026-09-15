@@ -1521,13 +1521,16 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     Confirmer
                   </button>
                 )}
-                {selected.status === 'confirmed' && (
+                {/* Aussi sur un rendez-vous resté « en attente » : certains
+                    laveurs vont chez le client sans avoir confirmé dans l'app,
+                    et devaient confirmer puis terminer — deux gestes pour un. */}
+                {(selected.status === 'confirmed' || selected.status === 'pending') && (
                   <button
                     onClick={() => updateStatus(selected.id, 'done')}
                     disabled={updating}
                     className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
                   >
-                    Marquer terminé
+                    {selected.status === 'pending' ? 'Terminé' : 'Marquer terminé'}
                   </button>
                 )}
                 <button
