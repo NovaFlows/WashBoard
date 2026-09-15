@@ -790,6 +790,19 @@ rien à faire, mais que le projet reste globalement sain.
       non le nom ; les annulations ne comptent ni dans le CA ni comme visite.
   - [ ] Vérifier les chiffres sur un vrai client : c'est là qu'une erreur d'agrégation
         se verrait.
+- [x] 2026-09-15 — **Onglet « Clients » : le fichier clients du laveur** (commit 533b299,
+      `app/(dashboard)/dashboard/clients`, `lib/listeClients.ts`, 11 tests). Demande
+      d'Alexandre. Entrée « Clients » dans le menu après CRM, pour toutes les formules. Un
+      client par email (même regroupement que la fiche client), du plus récemment actif au
+      plus ancien : nom ou entreprise + badge PRO, téléphone, email, **dernière prestation**
+      (terminée, ou confirmée et passée — un rendez-vous à venir n'en est pas une) avec sa
+      date en premier, prochain rendez-vous, nombre de lavages. Un appui ouvre la fiche
+      client existante. **Recherche** par nom, entreprise, email, adresse ou téléphone,
+      sans accents ni majuscules ; un numéro se retrouve quelle que soit son écriture
+      (« 06 12 », « +33 6 12 »). Réservations lues avec `toutesLesLignes`, seules les
+      colonnes utiles envoyées au navigateur (ni notes internes, ni factures).
+  - [ ] Plus tard, si un laveur dépasse quelques milliers de clients : paginer la liste
+        à l'écran (aujourd'hui tout s'affiche d'un coup, 3 à 60 clients par compte).
 
 - [x] 2026-07-02 — **Stripe** : abonnement automatisé (checkout + portail + webhook),
       essai avec facturation différée, résiliation programmée, bandeaux d'état.
