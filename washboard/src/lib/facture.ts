@@ -102,6 +102,24 @@ export function infosFacturationManquantes(w: InfosFacturation): string[] {
   return manques
 }
 
+/** La facture part par email au client PROFESSIONNEL, qui en a besoin pour sa
+ *  comptabilité ; le particulier la retrouve sur le lien de sa confirmation.
+ *
+ *  Une seule règle pour les DEUX chemins d'émission — au passage en « Terminé »
+ *  et à la demande depuis le rendez-vous. Elle n'existait que sur le premier :
+ *  un laveur qui complétait ses informations de facturation après coup émettait
+ *  la facture à la main, et son client professionnel ne recevait jamais rien
+ *  (constaté le 2026-09-16).
+ *
+ *  `nouvelle` distingue une facture qui vient d'être émise d'une facture déjà
+ *  existante : on ne renvoie pas deux fois le même document. */
+export function doitEnvoyerFactureAuClient(
+  reservation: { is_professional?: boolean | null; client_email?: string | null },
+  facture: { nouvelle: boolean },
+): boolean {
+  return facture.nouvelle && !!reservation.is_professional && !!reservation.client_email?.trim()
+}
+
 export function phraseManques(manques: string[]): string | null {
   if (manques.length === 0) return null
   const texte = manques.length === 1

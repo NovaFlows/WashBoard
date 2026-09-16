@@ -483,6 +483,26 @@
     Clos seulement si le client est VRAIMENT revenu (rendez-vous plus récent passé,
     confirmé ou terminé) : un rendez-vous seulement à venir peut être annulé, le client
     doit rester relançable. Lecture en échec → pas de relance ce jour-là (avant : envoi).
+  - [x] 2026-09-16 — **Facture émise à la main : le client professionnel la reçoit enfin.**
+    Trouvé en auditant la veille, dans la foulée des questions de Ryan. `POST
+    /api/bookings/[id]/facture` créait la facture sans envoyer aucun email, alors que le
+    passage en « Terminé » l'envoie — or ce bouton sert justement au laveur qui complète
+    ses informations de facturation APRÈS coup : son client pro n'a jamais rien reçu. La
+    règle vit désormais dans `doitEnvoyerFactureAuClient` (`lib/facture.ts`, 4 tests) et
+    les DEUX routes l'utilisent, pour qu'elles ne puissent plus diverger.
+  - [ ] **Audit du 2026-09-16 — ce qui reste, par ordre d'importance** (rien n'a été
+    modifié, à décider par Alexandre) :
+    - **La question « Avez-vous fait ce rendez-vous ? » ne protège que l'accueil** : voir
+      la question de Ryan plus bas — quatre chemins mènent à « Terminé », un seul la pose,
+      et le rappel du soir renvoie vers le calendrier, non protégé.
+    - **`reprendreApercu` lit tous les aperçus sans pagination** (`lib/repriseApercu.ts`,
+      `select('*')` sans `.range`) : coupé à 1 000 sans erreur, exactement ce qu'on a
+      corrigé partout ailleurs le 2026-09-15. Sans effet aujourd'hui (6 aperçus).
+    - **Lien PDF public** : depuis le 2026-09-15, il sert la FACTURE (SIRET, adresses) à
+      qui détient l'UUID du rendez-vous, et plus seulement un récapitulatif. Voulu (le
+      client télécharge sans compte), à confirmer.
+    - **`ConfirmerCloture` n'enferme pas le focus** : la touche Tab sort de la fenêtre.
+      Sans conséquence à la souris ou au doigt.
   - Le CRM envoie désormais au navigateur TOUS les événements d'un an. À surveiller quand
     un laveur dépassera quelques dizaines de milliers de visites : passer alors à des
     agrégats calculés côté serveur.

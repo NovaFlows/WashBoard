@@ -5,6 +5,7 @@ import { sendBookingConfirmation, sendFacture } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { emettreFacture } from '@/lib/emettreFacture'
+import { doitEnvoyerFactureAuClient } from '@/lib/facture'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -165,9 +166,10 @@ export async function PATCH(
     const facture = await emettreFacture(createAdminClient(), id)
     if (facture.ok) {
       factureNumero = facture.numero
-      // Le client professionnel a besoin de la facture pour sa comptabilité ;
-      // le particulier la retrouve sur le lien de sa confirmation.
-      if (facture.nouvelle && booking.is_professional && booking.client_email) {
+      // Même règle que l'émission à la demande (POST .../facture) : elle vit
+      // dans `doitEnvoyerFactureAuClient`, pour que les deux chemins ne
+      // puissent plus diverger.
+      if (doitEnvoyerFactureAuClient(booking, facture)) {
         await sendFacture({
           to: booking.client_email,
           clientName: booking.client_name,

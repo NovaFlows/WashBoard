@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   siretValide, numeroTvaValide, infosFacturationManquantes, phraseManques,
   lignesFacture, totauxFacture, construireFacture, nomLegalAffiche,
+  doitEnvoyerFactureAuClient,
   type ReservationFacturable, type VendeurFacturable,
 } from './facture'
 
@@ -38,6 +39,29 @@ const vendeur = (surcharge: Partial<VendeurFacturable> = {}): VendeurFacturable 
   facture_taux_tva: 20,
   facture_numero_tva: null,
   ...surcharge,
+})
+
+describe('doitEnvoyerFactureAuClient', () => {
+  const pro = { is_professional: true, client_email: 'compta@garage.fr' }
+  const neuve = { nouvelle: true }
+
+  it('envoie au client professionnel dont la facture vient d’être émise', () => {
+    expect(doitEnvoyerFactureAuClient(pro, neuve)).toBe(true)
+  })
+
+  it('n’envoie rien à un particulier : il l’a sur le lien de sa confirmation', () => {
+    expect(doitEnvoyerFactureAuClient({ ...pro, is_professional: false }, neuve)).toBe(false)
+    expect(doitEnvoyerFactureAuClient({ client_email: 'julie@exemple.fr' }, neuve)).toBe(false)
+  })
+
+  it('ne renvoie pas une facture déjà émise', () => {
+    expect(doitEnvoyerFactureAuClient(pro, { nouvelle: false })).toBe(false)
+  })
+
+  it('sans email, rien à envoyer', () => {
+    expect(doitEnvoyerFactureAuClient({ is_professional: true, client_email: '  ' }, neuve)).toBe(false)
+    expect(doitEnvoyerFactureAuClient({ is_professional: true, client_email: null }, neuve)).toBe(false)
+  })
 })
 
 describe('siretValide', () => {

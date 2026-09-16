@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireWasher } from '@/lib/requireWasher'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { emettreFacture } from '@/lib/emettreFacture'
-import { phraseManques } from '@/lib/facture'
+import { phraseManques, doitEnvoyerFactureAuClient } from '@/lib/facture'
+import { sendFacture } from '@/lib/email'
 import { logger } from '@/lib/logger'
 
 // Émission à la demande du laveur : pour un rendez-vous terminé avant qu'il
@@ -16,7 +17,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { data: reservation, error } = await supabase
     .from('bookings')
-    .select('id, status')
+    .select('id, status, client_name, client_email, is_professional')
     .eq('id', id)
     .eq('washer_id', washerId)
     .maybeSingle()
@@ -31,7 +32,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   const resultat = await emettreFacture(createAdminClient(), id)
-  if (resultat.ok) return NextResponse.json({ numero: resultat.numero })
+  if (resultat.ok) {
+    // Même envoi qu'au passage en « Terminé » : sans lui, le client
+    // professionnel d'un laveur qui complète ses informations de facturation
+    // après coup ne recevait jamais sa facture.
+    if (doitEnvoyerFactureAuClient(reservation, resultat)) {
+      const { data: washer } = await supabase
+        .from('washers').select('name').eq('id', washerId).single()
+      await sendFacture({
+        to: reservation.client_email as string,
+        clientName: reservation.client_name as string,
+        washerName: washer?.name ?? '',
+        numero: resultat.numero,
+        bookingId: id,
+      }).catch(e => logger.error('facture.demande.email_failed', { bookingId: id }, e))
+    }
+    return NextResponse.json({ numero: resultat.numero })
+  }
   if (resultat.raison === 'infos_incompletes') {
     return NextResponse.json({ error: phraseManques(resultat.manques) }, { status: 422 })
   }
