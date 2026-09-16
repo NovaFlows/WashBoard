@@ -46,11 +46,20 @@ type Booking = {
 }
 
 const STATUS = {
-  pending:   { label: 'En attente', bg: 'bg-amber-100 dark:bg-amber-900/40',     text: 'text-amber-700 dark:text-amber-300',   pill: 'bg-amber-400' },
-  confirmed: { label: 'Confirmé',   bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300', pill: 'bg-emerald-400' },
-  done:      { label: 'Terminé',    bg: 'bg-blue-100 dark:bg-blue-900/40',       text: 'text-blue-700 dark:text-blue-300',     pill: 'bg-blue-400' },
-  cancelled: { label: 'Annulé',     bg: 'bg-red-100 dark:bg-red-900/40',         text: 'text-red-700 dark:text-red-300',       pill: 'bg-red-400' },
+  pending:     { label: 'En attente',    bg: 'bg-amber-100 dark:bg-amber-900/40',     text: 'text-amber-700 dark:text-amber-300',   pill: 'bg-amber-400' },
+  confirmed:   { label: 'Confirmé',      bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300', pill: 'bg-emerald-400' },
+  done:        { label: 'Terminé',       bg: 'bg-blue-100 dark:bg-blue-900/40',       text: 'text-blue-700 dark:text-blue-300',     pill: 'bg-blue-400' },
+  closed_late: { label: 'Délai dépassé', bg: 'bg-orange-100 dark:bg-orange-900/40',   text: 'text-orange-600 dark:text-orange-400', pill: 'bg-orange-400' },
+  cancelled:   { label: 'Annulé',        bg: 'bg-red-100 dark:bg-red-900/40',         text: 'text-red-700 dark:text-red-300',       pill: 'bg-red-400' },
 }
+
+/** Ce que le rendez-vous AFFICHE, qui n'est pas toujours son statut en base :
+ *  clôturé en retard, il porte « Délai dépassé » plutôt que « Terminé ». Le
+ *  calendrier était le seul écran à l'ignorer — l'accueil, le CRM, la fiche
+ *  client et l'onglet Clients le montrent tous (relevé par Ryan le 2026-09-15).
+ *  Purement visuel : la compta et les factures ne regardent que `status`. */
+const cleStatut = (b: { status: Booking['status']; closed_late?: boolean | null }): keyof typeof STATUS =>
+  b.closed_late && b.status === 'done' ? 'closed_late' : b.status
 
 const DAYS   = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -503,8 +512,15 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
         // proposer le téléchargement sans recharger la page.
         const maj = await res.json().catch(() => null) as { facture_numero?: string | null } | null
         const facture = maj?.facture_numero ? { facture_numero: maj.facture_numero } : {}
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: status as Booking['status'], ...facture } : b))
-        setSelected(prev => prev?.id === id ? { ...prev, status: status as Booking['status'], ...facture } : prev)
+        // `closed_late` suit le statut en mémoire : sans lui, le badge
+        // « Délai dépassé » n'apparaissait qu'après rechargement de la page.
+        const champs = {
+          status: status as Booking['status'],
+          ...facture,
+          ...(closedLate !== undefined ? { closed_late: closedLate } : {}),
+        }
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, ...champs } : b))
+        setSelected(prev => prev?.id === id ? { ...prev, ...champs } : prev)
       }
     } finally {
       setUpdating(false)
@@ -701,7 +717,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                         <button
                           key={b.id}
                           onClick={e => { e.stopPropagation(); openBooking(b) }}
-                          className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
+                          className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate transition-opacity hover:opacity-75 ${STATUS[cleStatut(b)].bg} ${STATUS[cleStatut(b)].text}`}
                         >
                           {b.is_smart_slot && '★ '}
                           {/* Sur téléphone la case est trop étroite pour « 08:00 Prénom » :
@@ -821,7 +837,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                         <button
                           key={b.id}
                           onClick={() => openBooking(b)}
-                          className={`absolute rounded-md px-1.5 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
+                          className={`absolute rounded-md px-1.5 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[cleStatut(b)].bg} ${STATUS[cleStatut(b)].text}`}
                           style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 2px)` }}
                         >
                           <p className="text-[10px] font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{formatHeure(d)}</p>
@@ -921,7 +937,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     <button
                       key={b.id}
                       onClick={() => openBooking(b)}
-                      className={`absolute rounded-md px-2 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[b.status].bg} ${STATUS[b.status].text}`}
+                      className={`absolute rounded-md px-2 py-1 text-left overflow-hidden hover:opacity-80 transition-opacity ${STATUS[cleStatut(b)].bg} ${STATUS[cleStatut(b)].text}`}
                       style={{ top, height, left: `${leftPct}%`, width: `calc(${widthPct}% - 3px)` }}
                     >
                       <p className="text-xs font-bold leading-tight truncate">{b.is_smart_slot && '★ '}{formatHeure(d)} — {b.client_name}</p>
@@ -974,7 +990,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                 <button
                   key={b.id}
                   onClick={() => { openBooking(b); setDayList(null) }}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 ${STATUS[b.status].bg} ${STATUS[b.status].text} hover:opacity-80 transition-opacity`}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 ${STATUS[cleStatut(b)].bg} ${STATUS[cleStatut(b)].text} hover:opacity-80 transition-opacity`}
                 >
                   <span className="text-sm font-semibold">{b.client_name}</span>
                   <span className="text-xs opacity-80">{formatHeure(new Date(b.scheduled_at))}</span>
@@ -1379,8 +1395,8 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS[selected.status].bg} ${STATUS[selected.status].text}`}>
-                {STATUS[selected.status].label}
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS[cleStatut(selected)].bg} ${STATUS[cleStatut(selected)].text}`}>
+                {STATUS[cleStatut(selected)].label}
               </span>
               <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

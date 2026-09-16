@@ -440,9 +440,18 @@
     - Prévoir un test e2e : un rendez-vous passé ouvre bien la boîte, un rendez-vous à
       venir se clôture toujours d'un clic sans elle.
 
-- [ ] **QUESTION POUR ALEXANDRE — « Délai dépassé » n'apparaît pas dans le calendrier.
-      Volontaire ?** Relevé par Ryan le 2026-09-15 pendant l'analyse ci-dessus, sans
-      rapport avec elle. Rien n'a été modifié. Un rendez-vous clôturé en retard (`closed_late = true`) s'affiche « Délai
+- [x] 2026-09-16 — **« Délai dépassé » s'affiche enfin dans le calendrier** (réponse à la
+      question de Ryan : ce n'était pas volontaire, Alexandre a demandé la correction).
+      `STATUS` a désormais une entrée `closed_late`, et une règle d'affichage `cleStatut`
+      choisit l'étiquette : clôturé en retard → « Délai dépassé » en orange, comme sur
+      l'accueil, dans le CRM et dans l'onglet Clients. Appliquée aux CINQ endroits qui
+      affichaient un statut (mois, semaine, jour, liste d'une journée, détail) ; la légende
+      la reprend d'elle-même. `updateStatus` garde aussi `closed_late` en mémoire : sans
+      ça, le badge n'apparaissait qu'après rechargement. Vérifié sur le banc `/banc-landing`
+      (aucune donnée touchée). Purement visuel : compta et factures ne lisent que `status`.
+      Constat d'origine ci-dessous.
+  - Relevé par Ryan le 2026-09-15 pendant l'analyse ci-dessus, sans
+      rapport avec elle. Un rendez-vous clôturé en retard (`closed_late = true`) s'affiche « Délai
       dépassé » en orange sur l'accueil, dans le CRM, dans la fiche client et dans
       l'onglet Clients — mais « Terminé » en bleu dans le calendrier, dont le `STATUS`
       (lignes 42-47) n'a pas d'entrée `closed_late`. La colonne est pourtant bien chargée
