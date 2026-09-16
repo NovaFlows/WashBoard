@@ -680,8 +680,12 @@ rien à faire, mais que le projet reste globalement sain.
     par rôle et des RLS qui limitent chaque laveur à ses propres questions.
   - Montrer le rendu (laveur et administration) avant de pousser.
 
-- [ ] **Mettre à jour le guide (centre d'aide, `lib/guide.ts`).** **Attribué à Ryan** le
-      2026-09-15. Le guide ne couvre rien de ce qui est sorti mi-septembre :
+- [x] 2026-09-15 — **Guide (centre d'aide) mis à jour, fait par Ryan** (`lib/guide.ts`,
+      commit 661ce5f). Nouvelle section « Factures » (infos à remplir, création au
+      « Terminé », envoi au client pro, numérotation, import des anciennes factures) et
+      trois entrées : « J'ai oublié de marquer un rendez-vous », « À quoi sert la
+      notification de 22 h ? », « Quelle différence entre l'onglet Clients et le CRM ? ».
+      Réponses recoupées avec le code, exactes. Ce qui était demandé :
   - **Factures** : infos de facturation dans les Paramètres, facture émise au passage en
     « Terminé », envoyée aux clients pros, onglet Factures, import des anciennes factures,
     numéro de départ.
@@ -691,8 +695,14 @@ rien à faire, mais que le projet reste globalement sain.
   - **Rappel du soir** à 22 h (rendez-vous du jour pas encore « Terminé »).
   - Revoir « Que se passe-t-il quand je marque un RDV terminé ? » : parler de la facture.
 
-- [ ] **Nos réseaux sociaux, sur la landing et dans l'espace des laveurs.** **Partie landing
-      attribuée à Ryan** le 2026-09-15 (l'espace des laveurs reste à faire par dev). Aucun lien
+- [x] 2026-09-15 — **Réseaux sociaux sur la LANDING, fait par Ryan** (commits 58126bf et
+      9604de0) : rangée d'icônes Instagram (`washboard.fr`) et TikTok (`wash_board.fr`)
+      dans le pied de page, cibles de 44 px, ouverture dans un nouvel onglet, étiquettes
+      pour les lecteurs d'écran ; comptes aussi déclarés en `sameAs` dans le JSON-LD, pour
+      que Google et les IA les rattachent à WashBoard. Les deux identifiants diffèrent
+      volontairement, ne pas les uniformiser.
+- [ ] **Réseaux sociaux dans l'ESPACE DES LAVEURS** (reste à faire ; la landing est faite
+      ci-dessus). Aucun lien
       vers les comptes WashBoard (TikTok, Instagram…) n'existe aujourd'hui sur le site.
   - **Landing** : icônes des réseaux dans le pied de page (et éventuellement une ligne
     « Suis-nous » près du CTA final). Liens directs, ouverts dans un nouvel onglet, avec
