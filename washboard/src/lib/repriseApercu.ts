@@ -16,6 +16,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizePhone } from './phone'
+import { toutesLesLignes } from './supabase/toutesLesLignes'
 
 /** Présentation de la page : ce qui a été construit avec soin avant l'appel.
  *  Le nom et le téléphone restent ceux que le laveur a saisis en s'inscrivant. */
@@ -54,12 +55,18 @@ export async function reprendreApercu(
 ): Promise<ResultatReprise> {
   // Le numéro d'un aperçu est parfois stocké tel qu'écrit dans la fiche
   // (« 06 12 34 56 78 ») : on compare les formes normalisées, pas les chaînes.
-  // Les aperçus se comptent en dizaines, on peut tous les lire.
-  const { data: apercus, error } = await db
-    .from('washers').select('*').eq('is_preview', true).is('user_id', null)
+  // Il faut donc tous les lire — page par page, car l'API coupe à 1 000 lignes
+  // sans erreur : passé ce seuil, un prospect se serait inscrit sans que sa page
+  // soit reprise, et rien ne l'aurait signalé. Tri sur `id`, clé unique, sinon
+  // deux pages peuvent se chevaucher.
+  const { data: apercus, error } = await toutesLesLignes<Ligne>(
+    (debut, fin) => db
+      .from('washers').select('*').eq('is_preview', true).is('user_id', null)
+      .order('id').range(debut, fin),
+  )
   if (error) return { statut: 'echec', etape: 'lecture des aperçus', fait: [] }
 
-  const trouves = ((apercus ?? []) as Ligne[])
+  const trouves = apercus
     .filter(a => normalizePhone(a.phone as string | null) === compte.phone)
   if (trouves.length === 0) return { statut: 'aucun' }
   // Deux pages au même numéro : impossible de savoir laquelle est la bonne.

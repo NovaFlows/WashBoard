@@ -51,6 +51,9 @@ function fausseBase(tables: Tables, pannes: string[] = []) {
       eq: (k: string, v: unknown) => { conds.push(l => l[k] === v); return b },
       is: (k: string, v: unknown) => { conds.push(l => (l[k] ?? null) === v); return b },
       order: (k: string) => { tri = k; return b },
+      // Lecture par paquets : la fausse base rend tout d'un coup, ce qui suffit
+      // — `toutesLesLignes` s'arrête dès qu'une page est incomplète.
+      range: () => b,
       insert: (v: Ligne | Ligne[]) => { op = 'insert'; valeurs = v; return b },
       update: (v: Ligne) => { op = 'update'; valeurs = v; return b },
       delete: () => { op = 'delete'; return b },

@@ -514,9 +514,11 @@
       Le rappel du soir peut donc continuer de pointer vers le calendrier.
     - [ ] Reste, comme Ryan le proposait : un test de bout en bout sur ces deux cas
       (`e2e/dashboard-calendrier.spec.ts` n'ouvre aujourd'hui aucun rendez-vous).
-    - **`reprendreApercu` lit tous les aperçus sans pagination** (`lib/repriseApercu.ts`,
-      `select('*')` sans `.range`) : coupé à 1 000 sans erreur, exactement ce qu'on a
-      corrigé partout ailleurs le 2026-09-15. Sans effet aujourd'hui (6 aperçus).
+    - [x] 2026-09-16 — **`reprendreApercu` lit désormais les aperçus page par page**
+      (`toutesLesLignes` + tri sur `id`). Avant : `select('*')` sans `.range`, donc coupé à
+      1 000 sans erreur — au-delà, un prospect se serait inscrit sans que sa page soit
+      reprise, en silence. Sans effet aujourd'hui (6 aperçus). La fausse base des tests
+      sait maintenant lire par paquets.
     - **Lien PDF public** : depuis le 2026-09-15, il sert la FACTURE (SIRET, adresses) à
       qui détient l'UUID du rendez-vous, et plus seulement un récapitulatif. Voulu (le
       client télécharge sans compte), à confirmer.
@@ -740,6 +742,19 @@ rien à faire, mais que le projet reste globalement sain.
       pour les lecteurs d'écran ; comptes aussi déclarés en `sameAs` dans le JSON-LD, pour
       que Google et les IA les rattachent à WashBoard. Les deux identifiants diffèrent
       volontairement, ne pas les uniformiser.
+- [ ] **Le prix dans la notification de réservation.** Demandé par Alexandre le 2026-09-16.
+      Aujourd'hui la notification envoyée au laveur (`api/bookings/route.ts`, `notifierLaveur`)
+      donne le client, la prestation et la date, mais pas le montant : le laveur doit ouvrir
+      l'application pour savoir combien rapporte le rendez-vous qu'on vient de lui prendre.
+  - Afficher le prix réellement facturé, pas le tarif de la prestation : `booked_price`
+    inclut les options, le nombre de véhicules et les frais de déplacement, et le créneau
+    malin porte une remise (voir `effectivePrice` côté CRM). Un montant faux serait pire
+    que pas de montant.
+  - Garder une ligne par information et un seul emoji, comme les autres (💶). Le corps de
+    la notification est déjà coupé au bout de deux lignes sur iPhone au repos : vérifier
+    ce qui reste visible sans l'ouvrir.
+  - Même question pour la notification de l'équipe à l'inscription ? À trancher.
+
 - [ ] **Réseaux sociaux dans l'ESPACE DES LAVEURS** (reste à faire ; la landing est faite
       ci-dessus). Aucun lien
       vers les comptes WashBoard (TikTok, Instagram…) n'existe aujourd'hui sur le site.
