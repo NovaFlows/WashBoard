@@ -762,6 +762,11 @@ rien à faire, mais que le projet reste globalement sain.
       encaissé, via `finalDisplayPrice(booked_price, is_smart_slot, smart_discount)` déjà
       testé dans `lib/pricing` — donc options, véhicules multiples et frais de déplacement
       compris, remise d'un créneau groupé déduite, et aucune règle de prix dupliquée.
+      **Vérifié en vrai** le 2026-09-16 : réservation d'essai passée par la route publique
+      sur AutoNettoyage, notification reçue par Alexandre avec « ✨ Lavage complet · 75€ »
+      — soit 65 € de prestation + 10 € de frais de déplacement calculés par le serveur, ce
+      qui prouve que c'est bien le montant encaissé et non le tarif affiché. Réservation
+      d'essai supprimée ensuite.
       Constat d'origine :
   - Afficher le prix réellement facturé, pas le tarif de la prestation : `booked_price`
     inclut les options, le nombre de véhicules et les frais de déplacement, et le créneau
