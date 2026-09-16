@@ -4,6 +4,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CalendrierDashboard from '@/components/dashboard/CalendrierDashboard'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
+import { infosFacturationManquantes } from '@/lib/facture'
 
 export default async function CalendrierPage() {
   const supabase = await createClient()
@@ -59,6 +60,7 @@ export default async function CalendrierPage() {
         services={services ?? []}
         categories={categories ?? []}
         washerId={washer.id}
+        facturationPrete={infosFacturationManquantes(washer).length === 0}
       />
     </DashboardShell>
   )

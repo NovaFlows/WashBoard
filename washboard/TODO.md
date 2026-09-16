@@ -492,9 +492,19 @@
     les DEUX routes l'utilisent, pour qu'elles ne puissent plus diverger.
   - [ ] **Audit du 2026-09-16 — ce qui reste, par ordre d'importance** (rien n'a été
     modifié, à décider par Alexandre) :
-    - **La question « Avez-vous fait ce rendez-vous ? » ne protège que l'accueil** : voir
-      la question de Ryan plus bas — quatre chemins mènent à « Terminé », un seul la pose,
-      et le rappel du soir renvoie vers le calendrier, non protégé.
+    - [x] 2026-09-16 — **La question protège désormais AUSSI le calendrier** (réponse à la
+      question de Ryan, décision d'Alexandre : faire le vrai correctif, pas le contournement).
+      `ConfirmerCloture` est branché sur le seul bouton « Marquer terminé » de
+      `CalendrierDashboard` ; « Confirmer » et « Annuler » sont inchangés. La règle « faut-il
+      demander ? » vit dans `lib/cloture.ts` (7 tests) plutôt que dupliquée : un créneau
+      PASSÉ resté en attente ou confirmé pose la question, un rendez-vous à venir se
+      clôture d'un clic comme avant. `updateStatus` accepte `closedLate`, le type `Booking`
+      du calendrier porte enfin `closed_late` et `is_professional`, et la page passe
+      `facturationPrete` comme l'accueil. Vérifié en vrai sur le banc `/banc-landing`
+      (aucune donnée touchée) : créneau du 15 → question affichée ; créneau du 17 → aucune.
+      Le rappel du soir peut donc continuer de pointer vers le calendrier.
+    - [ ] Reste, comme Ryan le proposait : un test de bout en bout sur ces deux cas
+      (`e2e/dashboard-calendrier.spec.ts` n'ouvre aujourd'hui aucun rendez-vous).
     - **`reprendreApercu` lit tous les aperçus sans pagination** (`lib/repriseApercu.ts`,
       `select('*')` sans `.range`) : coupé à 1 000 sans erreur, exactement ce qu'on a
       corrigé partout ailleurs le 2026-09-15. Sans effet aujourd'hui (6 aperçus).

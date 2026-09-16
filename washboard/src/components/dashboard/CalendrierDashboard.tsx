@@ -11,6 +11,8 @@ import { openGmail, openWhatsapp } from '@/lib/contact'
 import {
   getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure, formatHeureCompacte,
 } from '@/lib/calendarLayout'
+import ConfirmerCloture from '@/components/dashboard/ConfirmerCloture'
+import { doitDemanderConfirmation } from '@/lib/cloture'
 
 type Service = { name: string; price: number; duration_minutes: number }
 type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number>; category_id: string | null; vehicle_types: string[] }
@@ -37,6 +39,10 @@ type Booking = {
   // un canapé, alors que ça change le matériel à emporter.
   services: (Service & { service_categories?: { name: string } | null }) | null
   facture_numero?: string | null
+  // Clôture tardive et type de client : la fenêtre de confirmation en a besoin
+  // pour dire ce qui va se passer, et le badge « Délai dépassé » pour s'afficher.
+  closed_late?: boolean | null
+  is_professional?: boolean | null
 }
 
 const STATUS = {
@@ -89,9 +95,9 @@ type ManualBooking = {
   status: 'pending' | 'confirmed'
 }
 
-type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string }
+type Props = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string; facturationPrete: boolean }
 
-export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId }: Props) {
+export default function CalendrierDashboard({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId, facturationPrete }: Props) {
   // Types disponibles pour une prestation = types de sa catégorie qu'elle propose
   function serviceTypes(serviceId: string): { id: string; name: string }[] {
     const svc = services.find(s => s.id === serviceId)
@@ -482,13 +488,15 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     }
   }
 
-  async function updateStatus(id: string, status: string) {
+  // `closedLate` : clôturé après coup, comme sur l'accueil — le rendez-vous
+  // porte alors « Délai dépassé » plutôt que « Terminé ».
+  async function updateStatus(id: string, status: string, closedLate?: boolean) {
     setUpdating(true)
     try {
       const res = await fetch(`/api/bookings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(closedLate !== undefined ? { closed_late: closedLate } : {}) }),
       })
       if (res.ok) {
         // Passer en « Terminé » émet la facture : on récupère son numéro pour
@@ -503,6 +511,8 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     }
   }
 
+  // Fenêtre « Avez-vous fait ce rendez-vous ? », pour un créneau déjà passé.
+  const [clotureDemandee, setClotureDemandee] = useState(false)
   const [factureEnCours, setFactureEnCours] = useState(false)
   const [factureMsg, setFactureMsg] = useState<{ id: string; texte: string; completer: boolean } | null>(null)
 
@@ -1526,7 +1536,12 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                     et devaient confirmer puis terminer — deux gestes pour un. */}
                 {(selected.status === 'confirmed' || selected.status === 'pending') && (
                   <button
-                    onClick={() => updateStatus(selected.id, 'done')}
+                    // Créneau déjà passé : on demande d'abord si le rendez-vous a
+                    // eu lieu — « Terminé » émet la facture. À l'heure ou en
+                    // avance, la clôture reste d'un seul clic.
+                    onClick={() => doitDemanderConfirmation(selected, new Date())
+                      ? setClotureDemandee(true)
+                      : updateStatus(selected.id, 'done')}
                     disabled={updating}
                     className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
                   >
@@ -1541,6 +1556,18 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                   Annuler
                 </button>
               </div>
+            )}
+
+            {clotureDemandee && (
+              <ConfirmerCloture
+                clientName={selected.client_name}
+                quand={`${new Date(selected.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(selected.scheduled_at))}`}
+                professionnel={!!selected.is_professional}
+                facturationPrete={facturationPrete}
+                onFait={() => { setClotureDemandee(false); updateStatus(selected.id, 'done', true) }}
+                onPasFait={() => { setClotureDemandee(false); updateStatus(selected.id, 'cancelled') }}
+                onClose={() => setClotureDemandee(false)}
+              />
             )}
 
             {/* Facture : émise au passage en « Terminé », ou à la demande */}
