@@ -155,6 +155,17 @@ export function NotificationsToggle() {
         </p>
       )}
 
+      {/* Le rappel du soir ne part QUE par notification : ni email, ni SMS. Un
+          laveur qui ne les a jamais activées ne le recevait jamais et ne
+          pouvait pas le deviner (relevé par Ryan le 2026-09-15). */}
+      {etat !== 'actif' && (
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+          Sans notifications actives, vous ne recevrez pas le <strong>rappel de 22 h</strong> sur
+          les rendez-vous du jour qui ne sont pas encore marqués « Terminé » — il n&apos;existe
+          ni par email, ni par SMS. Les réservations, elles, vous arrivent toujours par email.
+        </p>
+      )}
+
       {erreur && <p className="text-sm text-red-600 dark:text-red-400 mt-3">{erreur}</p>}
     </div>
   )

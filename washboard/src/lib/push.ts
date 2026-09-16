@@ -56,7 +56,14 @@ export async function notifierLaveur(washerId: string, payload: PushPayload): Pr
     logger.error('push.read_subscriptions_failed', { washerId }, error)
     return
   }
-  if (!abonnements?.length) return
+  // Aucun appareil abonné : le laveur n'a jamais activé les notifications, ou
+  // les a coupées. Rien ne partait, et rien ne le disait — un laveur pouvait
+  // ne jamais recevoir le rappel du soir sans pouvoir le deviner (relevé par
+  // Ryan le 2026-09-15). L'absence d'effet laisse désormais une trace.
+  if (!abonnements?.length) {
+    logger.info('push.aucun_appareil', { washerId, titre: payload.title })
+    return
+  }
 
   const corps = JSON.stringify(payload)
 

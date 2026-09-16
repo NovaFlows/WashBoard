@@ -3,7 +3,7 @@ import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
-import { vehiclePrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
+import { vehiclePrice, effectiveDuration, addonsDuration, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { effectiveTeamSize } from '@/lib/slots'
 import { verdictDate, creneauDansOuverture } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
@@ -462,7 +462,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         title: '🚗 Nouvelle réservation',
         body: [
           `👤 ${bookingData.client_name}`,
-          `✨ ${service.name}`,
+          // Le montant sur la MÊME ligne que la prestation, et pas sur une
+          // quatrième : au repos, un iPhone ne montre que les deux premières
+          // lignes du corps. C'est le prix réellement encaissé — options,
+          // véhicules et frais de déplacement compris (`booked_price` est
+          // calculé par le serveur), moins la remise d'un créneau groupé.
+          `✨ ${service.name} · ${formatPrice(finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0))}`,
           `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
         ].join('\n'),
         url: '/dashboard/calendrier',

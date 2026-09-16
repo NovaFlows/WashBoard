@@ -459,7 +459,14 @@
       n'en dépend côté argent (compta et `clientProfile` filtrent sur `status` seul), ni
       côté facture. À traiter séparément, plutôt avec `designer` puisque c'est un badge.
 
-- [ ] **QUESTION POUR ALEXANDRE — le rappel du soir est muet pour qui n'a pas activé les
+- [x] 2026-09-16 — **Le rappel du soir ne part plus en silence** (réponse à la question de
+      Ryan ; Alexandre a demandé les deux). 1) `notifierLaveur` journalise désormais
+      `push.aucun_appareil` quand un laveur n'a aucun appareil abonné : l'absence d'effet
+      laisse une trace, et le cron du soir devient mesurable. 2) L'écran « Notifications »
+      (Paramètres) dit explicitement, tant qu'elles ne sont pas actives, que le rappel de
+      22 h n'existe ni par email ni par SMS, et qu'il ne sera donc jamais reçu. Le centre
+      d'aide le disait déjà (Ryan). Constat d'origine :
+  - **QUESTION POUR ALEXANDRE — le rappel du soir est muet pour qui n'a pas activé les
       notifications.** Relevé par Ryan le 2026-09-15, même passe. Rien n'a été modifié. Il part uniquement en push (`lib/push.ts`,
       `notifierLaveur`), sans repli par email. Or `notifierLaveur` sort en silence quand
       le laveur n'a aucun appareil abonné (`push.ts` ligne 59) : rien n'est journalisé,
@@ -512,8 +519,14 @@
       `facturationPrete` comme l'accueil. Vérifié en vrai sur le banc `/banc-landing`
       (aucune donnée touchée) : créneau du 15 → question affichée ; créneau du 17 → aucune.
       Le rappel du soir peut donc continuer de pointer vers le calendrier.
-    - [ ] Reste, comme Ryan le proposait : un test de bout en bout sur ces deux cas
-      (`e2e/dashboard-calendrier.spec.ts` n'ouvre aujourd'hui aucun rendez-vous).
+    - [x] 2026-09-16 — **Test de bout en bout écrit** (`e2e/dashboard-cloture.spec.ts`,
+      2 cas) : la question s'ouvre avec ses deux réponses, « Revenir » et la touche Échap
+      la ferment sans rien clôturer. Deux limites assumées, écrites dans le fichier plutôt
+      que masquées : il ne CRÉE pas son créneau passé (la route de réservation refuse une
+      date passée, et il n'y a pas de base de test séparée) — il se déclare ignoré s'il n'en
+      trouve aucun ; et le cas « rendez-vous à venir clôturé d'un clic » n'est pas testé là,
+      car le vérifier clôturerait un vrai rendez-vous et émettrait une facture sur le compte
+      de test — il est couvert par `lib/cloture.test.ts`.
     - [x] 2026-09-16 — **`reprendreApercu` lit désormais les aperçus page par page**
       (`toutesLesLignes` + tri sur `id`). Avant : `select('*')` sans `.range`, donc coupé à
       1 000 sans erreur — au-delà, un prospect se serait inscrit sans que sa page soit
@@ -742,10 +755,14 @@ rien à faire, mais que le projet reste globalement sain.
       pour les lecteurs d'écran ; comptes aussi déclarés en `sameAs` dans le JSON-LD, pour
       que Google et les IA les rattachent à WashBoard. Les deux identifiants diffèrent
       volontairement, ne pas les uniformiser.
-- [ ] **Le prix dans la notification de réservation.** Demandé par Alexandre le 2026-09-16.
-      Aujourd'hui la notification envoyée au laveur (`api/bookings/route.ts`, `notifierLaveur`)
-      donne le client, la prestation et la date, mais pas le montant : le laveur doit ouvrir
-      l'application pour savoir combien rapporte le rendez-vous qu'on vient de lui prendre.
+- [x] 2026-09-16 — **Le prix dans la notification de réservation.** Demandé par Alexandre,
+      fait le jour même. La notification donne désormais `✨ Prestation · 45€`, le montant
+      **sur la même ligne que la prestation** : au repos, un iPhone ne montre que les deux
+      premières lignes du corps, une quatrième ligne aurait été invisible. Montant réellement
+      encaissé, via `finalDisplayPrice(booked_price, is_smart_slot, smart_discount)` déjà
+      testé dans `lib/pricing` — donc options, véhicules multiples et frais de déplacement
+      compris, remise d'un créneau groupé déduite, et aucune règle de prix dupliquée.
+      Constat d'origine :
   - Afficher le prix réellement facturé, pas le tarif de la prestation : `booked_price`
     inclut les options, le nombre de véhicules et les frais de déplacement, et le créneau
     malin porte une remise (voir `effectivePrice` côté CRM). Un montant faux serait pire
