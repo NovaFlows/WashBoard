@@ -780,7 +780,31 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟡 Roadmap produit
 
-- [ ] **Poser une question depuis le centre d'aide, répondre depuis le compte NovaFlows.**
+- [x] 2026-09-17 — **Livré par Ryan** (`56836f2`). Tables `support_questions` /
+      `support_messages` **créées à la main dans Supabase** ce jour-là, SQL donné dans la
+      conversation (pas de fichier de migration). Testé de bout en bout en local contre la
+      base réelle : question posée côté laveur, reçue et résolue côté équipe.
+  - En plus du cahier des charges : une section **Assistance** sous Guide, pour retrouver
+    ses conversations sans repasser par le Guide, avec pastille de non-lu sur l'entrée de
+    menu **et sur le bouton ☰** (sur téléphone le menu est replié, sinon la pastille est
+    invisible). Lien direct `?fil=<id>`, utilisé par la notification et l'email.
+  - **Email au laveur** quand l'équipe répond, en plus du push : le push suppose les
+    notifications activées, ce que beaucoup de laveurs n'ont pas fait. L'email ne contient
+    jamais le texte de la réponse (il circule en clair et se transfère), seulement le titre
+    et un lien.
+  - Plafond de **10 fils ouverts par laveur** : chaque création notifie l'équipe, c'était
+    un vecteur de spam. Relevé par `cyber`.
+  - Relu trois fois par `cyber` (schéma, implémentation, email). Deux pièges signalés par
+    lui ont été corrigés : un `\r` isolé survivait dans le titre (inoffensif aujourd'hui,
+    dangereux le jour où un titre finirait dans un en-tête d'email), et le test qui
+    vérifiait l'absence de la réponse dans l'email ne pouvait pas échouer. Remplacé par
+    trois verrous, **vérifiés par sabotage volontaire** : ajouter un paramètre `reponse` à
+    `sendSupportReply` casse la vérification de types et deux tests.
+  - [ ] Reste à faire : vérifier la **réception réelle** de l'email (Resend, rendu dans une
+    vraie boîte) — aucun test ne l'envoie vraiment. Et supprimer le fil de test dont le
+    titre commence par `[TEST` sur le compte Kooki Clean.
+
+- [x] ~~**Poser une question depuis le centre d'aide, répondre depuis le compte NovaFlows.**~~
       Demandé par Alexandre le 2026-09-14. **Attribué à Ryan** le 2026-09-15. Aujourd'hui le centre d'aide
       (`/dashboard/guide`) n'a que des réponses toutes faites : un laveur bloqué n'a aucun
       moyen d'écrire à l'équipe depuis l'app.
