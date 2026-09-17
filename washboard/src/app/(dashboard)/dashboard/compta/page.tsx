@@ -6,14 +6,14 @@ import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 export default async function ComptaPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'compta')
 
   // La comptabilité fait partie du plan Pro (et au-dessus)
   if (!hasFeature(washer, 'compta')) {

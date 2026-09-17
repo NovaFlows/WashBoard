@@ -4,6 +4,8 @@ import { getStripe, planFromPriceId } from '@/lib/stripe'
 import { mapStripeStatus, stripeCancelToIso, stripePeriodEndToIso } from '@/lib/subscription'
 import { withErrorHandling } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
+import { notifierEquipe } from '@/lib/push'
+import { formatEuros } from '@/lib/plan'
 import type Stripe from 'stripe'
 
 export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest) => {
@@ -60,15 +62,34 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
       // On écrit toujours 'active' ici ; si le checkout était en période d'essai
       // (facturation différée), Stripe envoie ensuite un customer.subscription.updated
       // avec status 'trialing' qui corrige le statut en 'trial' via mapStripeStatus.
-      const { error } = await admin.from('washers').update({
+      const { data: laveur, error } = await admin.from('washers').update({
         stripe_customer_id:     session.customer as string,
         stripe_subscription_id: session.subscription as string,
         plan,
         subscription_status:    'active',
         cancels_at:             null,
-      }).eq('id', washerId)
+      }).eq('id', washerId).select('name').maybeSingle()
       if (error) { logger.error('stripe.webhook.checkout_completed.db', { washerId }, error); dbError = error }
-      else logger.info('stripe.webhook.checkout_completed', { washerId, plan })
+      else {
+        logger.info('stripe.webhook.checkout_completed', { washerId, plan })
+        // Un client qui paie est l'événement que l'équipe veut voir passer.
+        // Attendue, et non lancée dans le vide : Vercel coupe la fonction dès la
+        // réponse renvoyée. `notifierEquipe` ne lève jamais — un raté de
+        // notification ne doit pas faire rejouer le webhook par Stripe.
+        const montant = session.amount_total != null
+          ? `${formatEuros(session.amount_total / 100)} ${(session.currency ?? 'eur').toUpperCase()}`
+          : null
+        await notifierEquipe({
+          title: '💶 Paiement reçu',
+          body: [
+            `🏢 ${laveur?.name ?? 'Laveur inconnu'}`,
+            `📦 Formule ${plan}`,
+            montant ? `💳 ${montant}` : null,
+          ].filter(Boolean).join('\n'),
+          url: '/dashboard/abonnement',
+          tag: `paiement-${washerId}`,
+        })
+      }
       break
     }
 
@@ -128,10 +149,25 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
       const sub = invoice.parent?.subscription_details?.subscription
       const subId = typeof sub === 'string' ? sub : (sub?.id ?? null)
       if (!subId) break
-      const { error } = await admin.from('washers').update({
+      const { data: laveur, error } = await admin.from('washers').update({
         subscription_status: 'past_due',
-      }).eq('stripe_subscription_id', subId)
+      }).eq('stripe_subscription_id', subId).select('name').maybeSingle()
       if (error) { logger.error('stripe.webhook.invoice_payment_failed.db', { subId }, error); dbError = error }
+      else {
+        // Le miroir du paiement reçu : sans ce signal, un prélèvement refusé ne
+        // se découvrait qu'en regardant la base, et le laveur basculait en
+        // « paiement en retard » sans que personne ne puisse le rattraper.
+        await notifierEquipe({
+          title: '⚠️ Prélèvement refusé',
+          body: [
+            `🏢 ${laveur?.name ?? 'Laveur inconnu'}`,
+            '💳 Le paiement a échoué — le compte passe en « paiement en retard »',
+            '📞 À rattraper avant la fin de la grâce de 30 jours',
+          ].join('\n'),
+          url: '/dashboard/abonnement',
+          tag: `prelevement-refuse-${subId}`,
+        })
+      }
       break
     }
   }

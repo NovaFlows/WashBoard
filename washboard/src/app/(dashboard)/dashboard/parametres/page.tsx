@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresForm from '@/components/dashboard/ParametresForm'
@@ -12,13 +13,7 @@ export default async function ParametresPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
-    .from('washers')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'parametres')
 
   // Deux comptages seulement, en tête : on ne rapatrie pas les lignes elles-mêmes.
   const [services, availabilities] = await Promise.all([

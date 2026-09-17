@@ -5,6 +5,7 @@ import ClientsView from '@/components/dashboard/ClientsView'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking } from '@/lib/clientProfile'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -16,9 +17,7 @@ export default async function ClientsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
-    .from('washers').select('*').eq('user_id', user.id).single()
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'clients')
 
   // Page par page : l'API coupe à 1 000 lignes sans erreur (voir `toutesLesLignes`).
   const { data: bookings, error } = await toutesLesLignes(

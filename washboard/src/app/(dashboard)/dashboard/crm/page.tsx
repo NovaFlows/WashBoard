@@ -7,6 +7,7 @@ import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { normalizeHost } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -19,9 +20,7 @@ export default async function CrmPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
-    .from('washers').select('*').eq('user_id', user.id).single()
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'crm')
 
   // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
   // erreur. Voir `toutesLesLignes`.

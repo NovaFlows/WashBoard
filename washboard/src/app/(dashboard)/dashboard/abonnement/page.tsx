@@ -2,15 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AbonnementPanel from '@/components/dashboard/AbonnementPanel'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 export default async function AbonnementPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
-    .from('washers').select('*').eq('user_id', user.id).single()
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'abonnement')
 
   return (
     <DashboardShell

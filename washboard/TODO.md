@@ -562,6 +562,13 @@
       avec l'interface d'administration déjà prévue pour le centre d'aide), ou (c) un vrai
       webhook PayPal. Risque actuel : un laveur qui paie un vendredi soir reste bloqué tout
       le week-end, et rien ne rappelle à Alexandre qu'un paiement attend.
+  - [x] 2026-09-17 — **Notification « 💶 Paiement reçu » branchée côté Stripe** (demandée
+    par Alexandre). `checkout.session.completed` prévient l'équipe avec le nom du laveur,
+    la formule et le montant ; `invoice.payment_failed` envoie son miroir, « ⚠️ Prélèvement
+    refusé », pour rattraper un client avant la fin de la grâce de 30 jours. Attendue avant
+    la réponse (Vercel coupe la fonction sinon) et jamais bloquante : `notifierEquipe` ne
+    lève pas, un raté de notification ne doit pas faire rejouer le webhook. **Ne partira
+    qu'une fois Stripe en service** — un paiement PayPal reste invisible pour WashBoard.
     - **`ConfirmerCloture` n'enferme pas le focus** : la touche Tab sort de la fenêtre.
       Sans conséquence à la souris ou au doigt.
     - ~~Garde-fou « client historique »~~ — **écarté le 2026-09-17 par Alexandre.** Le
@@ -672,9 +679,19 @@ rien à faire, mais que le projet reste globalement sain.
       restent (adresse de départ, 0 €) — refuser une réservation serait pire — mais ils
       se voient. C'est le repli muet qui avait fait tomber les frais de déplacement à
       zéro pendant la panne de facturation Google du 2026-08-26.
-  - [ ] Restent **18 lectures**, toutes dans les pages du dashboard. Elles donnent un
-        écran ou une liste vide, visible immédiatement par le laveur, donc autocorrectif —
-        contrairement aux routes et à `lib/`. À faire quand le reste sera calme.
+  - [x] 2026-09-17 — **Les lectures des pages du dashboard sont traitées** (16 en réalité,
+        pas 18 : l'audit comptait aussi des `auth.getUser()`, qui ont leur propre chemin).
+        Deux familles, deux remèdes :
+    - **9 lectures de la fiche laveur** (abonnement, admin, calendrier, clients, compta,
+      crm, factures, guide, parametres). Ce n'était pas qu'un silence : `if (!washer)
+      redirect('/login')` confondait « compte supprimé » et « lecture en échec », donc un
+      raté réseau **déconnectait le laveur**. Le remède existait déjà sur la page d'accueil
+      mais vivait là-bas seul : il est désormais dans `lib/washerCourant.ts`
+      (`washerDuUtilisateur`), utilisé par les neuf pages — erreur réelle tracée puis
+      écran « Réessayer », session intacte ; seul le code PGRST116 (aucune ligne) déconnecte.
+    - **7 lectures secondaires** (prestations, catégories, horaires, congés) dans Réglages
+      et Calendrier : tracées. Un échec y affichait « aucune prestation » ou une journée
+      libre — donc un rendez-vous acceptable pendant des congés, sans aucun signal.
 
 - [x] 2026-08-26 — **Clé Maps renommée et centralisée.** `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
       devient `GOOGLE_MAPS_API_KEY`, lue à un seul endroit (`lib/googleMaps.ts`) au lieu de

@@ -5,21 +5,20 @@ import CalendrierDashboard from '@/components/dashboard/CalendrierDashboard'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { infosFacturationManquantes } from '@/lib/facture'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 export default async function CalendrierPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
-    .from('washers').select('*').eq('user_id', user.id).single()
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'calendrier')
 
   const [
     { data: bookings, error: bookingsError },
-    { data: unavailabilities },
-    { data: services },
-    { data: categories },
+    { data: unavailabilities, error: errConges },
+    { data: services, error: errServices },
+    { data: categories, error: errCategories },
   ] = await Promise.all([
     // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
     // erreur. Voir `toutesLesLignes`. Tri complété par `id` : une clé unique,
@@ -50,6 +49,14 @@ export default async function CalendrierPage() {
   // Sans trace, un calendrier vide ou incomplet ne se distinguerait pas d'un
   // calendrier sans rendez-vous.
   if (bookingsError) logger.error('calendrier.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
+  // Congés, prestations et catégories : en échec, le calendrier affiche une
+  // journée libre et des listes vides — donc un laveur qui pourrait accepter un
+  // rendez-vous pendant ses congés, sans qu'aucune trace n'existe.
+  for (const [table, erreur] of [
+    ['unavailabilities', errConges], ['services', errServices], ['service_categories', errCategories],
+  ] as const) {
+    if (erreur) logger.error('calendrier.read_failed', { washerId: washer.id, table }, erreur)
+  }
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { ImportFactures } from '@/components/dashboard/ImportFactures'
 import { SupprimerFactureImportee } from '@/components/dashboard/SupprimerFactureImportee'
@@ -113,13 +114,7 @@ export default async function FacturesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase
-    .from('washers')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'factures')
 
   // Lectures paginées : au-delà de 1 000 lignes, une lecture simple serait
   // coupée sans prévenir (voir `toutesLesLignes`).

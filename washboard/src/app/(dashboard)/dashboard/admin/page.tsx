@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AdminTabs from '@/components/dashboard/admin/AdminTabs'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { logger } from '@/lib/logger'
 import Link from 'next/link'
 
 export default async function AdminPage() {
@@ -9,20 +11,29 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
-  if (!washer) redirect('/login')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'admin')
 
   const [
-    { data: services },
-    { data: categories },
-    { data: availabilities },
-    { data: unavailabilities },
+    { data: services, error: errServices },
+    { data: categories, error: errCategories },
+    { data: availabilities, error: errDispos },
+    { data: unavailabilities, error: errConges },
   ] = await Promise.all([
     supabase.from('services').select('*').eq('washer_id', washer.id).order('created_at'),
     supabase.from('service_categories').select('*').eq('washer_id', washer.id).order('display_order'),
     supabase.from('availabilities').select('*').eq('washer_id', washer.id).order('day_of_week'),
     supabase.from('unavailabilities').select('*').eq('washer_id', washer.id).order('start_date'),
   ])
+
+  // Sans trace, une lecture en échec s'affiche comme « aucune prestation » ou
+  // « aucun horaire » : le laveur croit son écran vide et refait sa
+  // configuration, nous ne savons rien.
+  for (const [table, erreur] of [
+    ['services', errServices], ['service_categories', errCategories],
+    ['availabilities', errDispos], ['unavailabilities', errConges],
+  ] as const) {
+    if (erreur) logger.error('admin.read_failed', { washerId: washer.id, table }, erreur)
+  }
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
