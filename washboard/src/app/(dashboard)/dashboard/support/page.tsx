@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isSupportMember } from '@/lib/supportAccess'
 import { logger } from '@/lib/logger'
 import SupportAccessForm from '@/components/dashboard/SupportAccessForm'
+import SupportInbox from '@/components/dashboard/SupportInbox'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,9 +40,15 @@ export default async function SupportPage() {
     redirect('/dashboard')
   }
 
+  // La liste des conversations est chargée par SupportInbox lui-même, via
+  // /api/support/team-questions : cette route répond 503 (et trace l'échec)
+  // plutôt qu'une liste vide en cas de souci de lecture — un comportement
+  // qu'un rendu serveur qui se contenterait de passer `[]` en cas d'erreur ne
+  // pourrait pas distinguer d'un « aucune question ».
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 px-4 py-10">
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors mb-6"
@@ -59,6 +66,14 @@ export default async function SupportPage() {
         </p>
 
         <SupportAccessForm />
+
+        <h2 className="text-lg font-black text-slate-900 dark:text-white mt-10 mb-1">Questions des laveurs</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Les non lues en premier.
+        </p>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4">
+          <SupportInbox />
+        </div>
       </div>
     </div>
   )

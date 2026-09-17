@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
+import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 
 type Props = {
   washerName: string
@@ -221,10 +222,16 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 
 export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
+  // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
+  // (Sidebar) et le bouton ☰ juste en dessous, qui doivent montrer le même
+  // point — sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
+  // jamais la pastille.
+  const hasUnreadSupport = useSupportUnreadBadge()
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} hasUnreadSupport={hasUnreadSupport} />
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
@@ -233,14 +240,23 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Ouvrir le menu"
+              className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label={hasUnreadSupport ? 'Ouvrir le menu — une réponse de l’équipe n’a pas été lue' : 'Ouvrir le menu'}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
+              {/* Filet pour qui n'a pas activé les notifications : le menu est
+                  replié derrière ce bouton sur mobile, la pastille doit donc
+                  être visible ICI, pas seulement dans le menu ouvert. */}
+              {hasUnreadSupport && (
+                <span
+                  className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] border-2 border-white dark:border-slate-900"
+                  aria-hidden
+                />
+              )}
             </button>
 
             {/* Pas de logo ici : il est déjà dans le menu (trois barres). Dans
@@ -290,11 +306,14 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </p>
       </footer>
 
-      {/* Bouton WhatsApp flottant */}
+      {/* Bouton WhatsApp flottant. data-wb-whatsapp-fab : accroche pour le
+          masquer (globals.css) pendant qu'un panneau de question est ouvert —
+          les deux se disputent le coin bas-droit au même z-index. */}
       <a
         href="https://wa.me/33684140438"
         target="_blank"
         rel="noopener noreferrer"
+        data-wb-whatsapp-fab
         className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold p-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105"
         aria-label="Contacter le support WhatsApp"
       >

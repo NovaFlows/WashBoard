@@ -126,3 +126,16 @@ body {
     font-size: 16px;
   }
 }
+
+/* ── Bouton WhatsApp flottant : masqué pendant qu'un panneau de question
+   est ouvert ─────────────────────────────────────────────────────────────
+   Les deux sont fixés en bas à droite, au même z-index : sans cette règle,
+   la bulle WhatsApp — plus bas dans le DOM — reste visible AU-DESSUS du
+   panneau et peut même capter le clic destiné à « Envoyer ». On la masque
+   plutôt que de la décaler ou de monter le panneau au-dessus : elle
+   resterait sinon flottante par-dessus le contenu de la conversation, ce
+   qui n'est pas plus propre, et proposer WhatsApp par-dessus un message en
+   train d'être écrit à la même équipe est redondant. */
+body.wb-hide-fab [data-wb-whatsapp-fab] {
+  display: none;
+}

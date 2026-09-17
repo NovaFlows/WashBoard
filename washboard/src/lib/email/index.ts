@@ -2,6 +2,8 @@ import { Resend } from 'resend'
 import type { VehicleItem } from '@/types'
 import { escapeHtml } from '@/lib/escapeHtml'
 import { FUSEAU } from '@/lib/dateUtils'
+import { trustedOrigin } from '@/lib/appOrigin'
+import { assistanceThreadUrl } from '@/lib/supportMapping'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -737,6 +739,55 @@ export async function sendSubExpired({ to, washerName, appUrl }: {
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
       <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : réponse de l'équipe à une question support ───────────────────
+//
+// Ne contient JAMAIS le texte de la réponse : un email circule en clair, peut
+// être transféré, et la réponse peut mentionner des détails de compte. Le
+// laveur la lit une fois connecté, via le bouton ci-dessous — voir
+// `src/app/api/support/team-questions/[id]/route.ts`.
+// Volontairement SANS paramètre pour le texte de la réponse : un email circule
+// en clair et se transfère, la réponse peut contenir des détails de compte.
+// Le laveur la lit une fois connecté. Et le titre de la question n'entre
+// jamais dans l'objet (fixe) : il est écrit par le laveur. Le test
+// `support.test.ts` fige le contenu de cet email pour que toute évolution de
+// l'un ou l'autre point soit un choix conscient.
+export async function sendSupportReply({ to, titreQuestion, questionId, appUrl }: {
+  to: string; titreQuestion: string; questionId: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = `${appUrl ?? trustedOrigin(null)}${assistanceThreadUrl(questionId)}`
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Réponse de l'équipe WashBoard`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réponse 💬</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">L&apos;équipe WashBoard a répondu à votre question</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        À propos de : <strong style="color:#0f172a;">${escapeHtml(titreQuestion)}</strong>
+      </p>
+      <div style="text-align:center;">
+        <a href="${url}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Voir la réponse →
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Connectez-vous à votre tableau de bord pour la lire.</p>
     </div>
   </div>
 </body>

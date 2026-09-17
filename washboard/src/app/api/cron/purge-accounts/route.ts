@@ -75,6 +75,17 @@ export async function GET(request: NextRequest) {
       continue
     }
 
+    // 1 bis. Questions support : la cascade FK (washer_id → support_questions
+    // → support_messages) devrait suivre la suppression du washer, mais cyber
+    // n'a pas pu vérifier qu'elle traverse bien la RLS sous service_role.
+    // Même prudence que pour les dépenses : on ne parie pas dessus.
+    const { error: supportError } = await admin.from('support_questions').delete().eq('washer_id', w.id)
+    if (supportError) {
+      logger.error('purge.support_questions.delete_failed', { washerId: w.id }, supportError)
+      failed++
+      continue
+    }
+
     // 2. Logo dans le storage (best-effort)
     if (w.logo_url) {
       try {

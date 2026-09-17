@@ -2,10 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { LifeBuoy } from 'lucide-react'
 
 type Props = {
   isOpen: boolean
   onClose: () => void
+  /** L'équipe a répondu à une question et le laveur ne l'a pas encore ouverte. */
+  hasUnreadSupport?: boolean
 }
 
 const NAV = [
@@ -72,9 +75,16 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    // Distincte du Guide : le Guide, c'est chercher seul ; l'Assistance,
+    // c'est parler à l'équipe et retrouver ce qui a déjà été échangé.
+    href: '/dashboard/assistance',
+    label: 'Assistance',
+    icon: <LifeBuoy size={18} strokeWidth={2} />,
+  },
 ]
 
-export function Sidebar({ isOpen, onClose }: Props) {
+export function Sidebar({ isOpen, onClose, hasUnreadSupport }: Props) {
   const pathname = usePathname()
 
   const isActive = (href: string) =>
@@ -121,6 +131,15 @@ export function Sidebar({ isOpen, onClose }: Props) {
             <Link key={item.href} href={item.href} onClick={onClose} className={navClass(item.href)}>
               <span className={iconClass(item.href)}>{item.icon}</span>
               {item.label}
+              {item.href === '/dashboard/assistance' && hasUnreadSupport && (
+                <span
+                  className="ml-auto w-2 h-2 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] shrink-0"
+                  aria-hidden
+                />
+              )}
+              {item.href === '/dashboard/assistance' && hasUnreadSupport && (
+                <span className="sr-only"> — une réponse de l&apos;équipe n&apos;a pas été lue</span>
+              )}
             </Link>
           ))}
         </nav>
