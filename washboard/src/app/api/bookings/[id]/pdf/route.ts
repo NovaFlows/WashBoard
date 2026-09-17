@@ -55,6 +55,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${nomFichier}"`,
       'Cache-Control': 'no-store',
+      // Le lien est public (le client télécharge sans compte) et l'identifiant
+      // du rendez-vous sert de jeton. Un robot ne devine pas cette adresse,
+      // mais il suffit qu'un client colle son lien sur un forum pour qu'un
+      // moteur la suive : la facture — SIRET, adresses, montant — deviendrait
+      // alors trouvable par une recherche. Cette consigne l'interdit. Elle ne
+      // restreint aucun accès : qui a le lien ouvre le document comme avant.
+      'X-Robots-Tag': 'noindex, nofollow, noarchive',
     },
   })
 }

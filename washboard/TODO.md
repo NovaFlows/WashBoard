@@ -532,9 +532,23 @@
       1 000 sans erreur — au-delà, un prospect se serait inscrit sans que sa page soit
       reprise, en silence. Sans effet aujourd'hui (6 aperçus). La fausse base des tests
       sait maintenant lire par paquets.
-    - **Lien PDF public** : depuis le 2026-09-15, il sert la FACTURE (SIRET, adresses) à
-      qui détient l'UUID du rendez-vous, et plus seulement un récapitulatif. Voulu (le
-      client télécharge sans compte), à confirmer.
+    - [x] 2026-09-17 — **Lien PDF public : confirmé public, avec « ne pas indexer ».**
+      Décision d'Alexandre : on garde le lien ouvert (le client télécharge sans compte ;
+      le fermer casserait la remise des factures et tous les emails déjà envoyés), et on
+      ajoute `X-Robots-Tag: noindex, nofollow, noarchive` sur la route. Un robot ne devine
+      pas l'UUID, mais un lien collé une fois sur un forum suffirait à rendre la facture
+      — SIRET, adresses, montant — trouvable par recherche. Aucun accès n'est restreint.
+    - [ ] **Activer un abonnement payé par PayPal : aucun automatisme, et aucun outil.**
+      Constaté le 2026-09-17. Le paiement est un simple lien `paypal.me/WashBoardSAAS/<montant>`
+      (`AbonnementPanel`) : PayPal ne prévient pas WashBoard, il n'existe aucune route
+      PayPal, et le seul code qui écrit `subscription_status: 'active'` est le webhook
+      Stripe (pas encore en service). L'app le dit au laveur : « activé manuellement sous
+      24h ouvrées ». Aujourd'hui Alexandre ne peut le faire QUE par SQL — l'API refuse
+      d'écrire ce champ (protection voulue, testée). À trancher : (a) laisser ainsi tant que
+      Stripe n'est pas live, (b) un bouton d'activation dans l'espace NovaFlows (à faire
+      avec l'interface d'administration déjà prévue pour le centre d'aide), ou (c) un vrai
+      webhook PayPal. Risque actuel : un laveur qui paie un vendredi soir reste bloqué tout
+      le week-end, et rien ne rappelle à Alexandre qu'un paiement attend.
     - **`ConfirmerCloture` n'enferme pas le focus** : la touche Tab sort de la fenêtre.
       Sans conséquence à la souris ou au doigt.
   - Le CRM envoie désormais au navigateur TOUS les événements d'un an. À surveiller quand
