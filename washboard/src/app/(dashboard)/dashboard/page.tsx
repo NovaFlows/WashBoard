@@ -8,6 +8,15 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
+/**
+ * Rendez-vous passés affichés sur l'accueil.
+ *
+ * L'accueil sert à voir ce qui arrive, pas à consulter des archives : le
+ * calendrier montre l'historique complet, et la page Clients le regroupe par
+ * personne. Vingt suffisent à vérifier ce qu'on vient de terminer.
+ */
+const HISTORIQUE_AFFICHE = 20
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -35,17 +44,50 @@ export default async function DashboardPage() {
   // on déconnecte pour éviter la boucle "profil non trouvé".
   if (!washer) redirect('/api/auth/logout')
 
-  // Deux comptages seulement, en tête : on ne rapatrie pas les lignes elles-mêmes.
-  const [{ data: bookings, error: bookingsError }, services, availabilities] = await Promise.all([
-    // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
-    // erreur. Voir `toutesLesLignes`.
+  // Tout part en même temps : une seule attente réseau au lieu d'une file.
+  //
+  // Cette page chargeait TOUT l'historique du laveur, lignes complètes et
+  // prestations jointes, pour en tirer trois compteurs et une liste qui
+  // affichait le tout. Après deux ans d'activité, c'était des milliers de
+  // rendez-vous transférés puis dessinés à chaque ouverture du tableau de bord
+  // — la page la plus consultée du produit, et la première ouverte le matin.
+  //
+  // Désormais : les rendez-vous à venir (ce qu'on vient voir), les derniers
+  // terminés (ce qu'on vérifie), et les compteurs comptés par la base, qui
+  // restent donc exacts sur tout l'historique sans en rapatrier une ligne.
+  const [
+    { data: aVenir, error: erreurAVenir },
+    historique,
+    enAttente,
+    confirmes,
+    termines,
+    services,
+    availabilities,
+  ] = await Promise.all([
+    // Les rendez-vous à venir restent lus en entier : c'est le travail des
+    // jours qui viennent, et leur nombre est borné par la nature des choses.
+    // `toutesLesLignes` ne coûte rien tant qu'il y en a moins de 1 000.
     toutesLesLignes((debut, fin) => supabase
       .from('bookings')
       .select('*, services(name, price, duration_minutes, service_categories(name))')
       .eq('washer_id', washer.id)
+      .not('status', 'in', '(done,cancelled)')
       .order('scheduled_at', { ascending: true })
       .order('id')
       .range(debut, fin)),
+    // Les plus récents d'abord : l'historique commençait jusqu'ici par le tout
+    // premier rendez-vous du laveur, celui qui l'intéresse le moins.
+    supabase
+      .from('bookings')
+      .select('*, services(name, price, duration_minutes, service_categories(name))')
+      .eq('washer_id', washer.id)
+      .in('status', ['done', 'cancelled'])
+      .order('scheduled_at', { ascending: false })
+      .order('id')
+      .limit(HISTORIQUE_AFFICHE),
+    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'pending'),
+    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'confirmed'),
+    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'done'),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
     supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
   ])
@@ -53,7 +95,15 @@ export default async function DashboardPage() {
   // Même règle que dans les Paramètres : un comptage en échec ne doit pas
   // faire croire à un compte vide. On compte l'élément comme présent — la
   // carte de démarrage ne s'affiche pas plutôt que de réclamer à tort.
-  if (bookingsError) logger.error('dashboard.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
+  if (erreurAVenir) logger.error('dashboard.bookings.fetch_failed', { washerId: washer.id }, erreurAVenir)
+  if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
+  // Sans trace ici, un compteur à zéro se lirait « aucun rendez-vous » alors
+  // que c'est la lecture qui a échoué.
+  for (const [quoi, erreur] of [
+    ['pending', enAttente.error], ['confirmed', confirmes.error], ['done', termines.error],
+  ] as const) {
+    if (erreur) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: quoi }, erreur)
+  }
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
 
@@ -71,10 +121,11 @@ export default async function DashboardPage() {
     welcomeMessage: washer.welcome_message ?? null,
   })
 
-  const all = bookings ?? []
-  const pending = all.filter(b => b.status === 'pending').length
-  const confirmed = all.filter(b => b.status === 'confirmed').length
-  const done = all.filter(b => b.status === 'done').length
+  const passes = historique.data ?? []
+  const all = [...(aVenir ?? []), ...passes]
+  const pending = enAttente.count ?? 0
+  const confirmed = confirmes.count ?? 0
+  const done = termines.count ?? 0
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
@@ -86,7 +137,12 @@ export default async function DashboardPage() {
         <StatCard label="Terminés" value={done} color="slate" />
       </div>
 
-      <BookingList bookings={all} washerId={washer.id} facturationPrete={infosFacturationManquantes(washer).length === 0} />
+      <BookingList
+        bookings={all}
+        washerId={washer.id}
+        facturationPrete={infosFacturationManquantes(washer).length === 0}
+        historiqueTronque={passes.length === HISTORIQUE_AFFICHE}
+      />
     </DashboardShell>
   )
 }

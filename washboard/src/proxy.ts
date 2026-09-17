@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { jetonEncoreFrais } from '@/lib/sessionSupabase'
 
 // Rafraîchissement de la session à chaque requête.
 //
@@ -32,8 +33,25 @@ export async function proxy(request: NextRequest) {
   // réservation client ou un appel d'API public n'en portent aucun. Cela évite
   // un aller-retour vers Supabase qui, mesuré sur la suite de tests, rendait
   // l'ensemble du site environ cinq fois plus lent.
-  const aUneSession = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+  const cookies = request.cookies.getAll()
+  const aUneSession = cookies.some(c => c.name.startsWith('sb-'))
   if (!aUneSession) return response
+
+  // Jeton encore valable un bon moment : il n'y a rien à renouveler, donc rien
+  // à demander à Supabase. `getUser()` part sur le réseau à chaque appel, même
+  // pour un jeton qui expire dans cinquante minutes — un aller-retour de 300 à
+  // 900 ms depuis les fonctions Vercel, ajouté à chaque page du tableau de
+  // bord. L'échéance est déjà dans le cookie : voir `lib/sessionSupabase`, qui
+  // renvoie `false` au moindre doute et nous ramène alors ici.
+  //
+  // /login est volontairement exclu : c'est la seule page dont le comportement
+  // dépend du RÉSULTAT de l'appel, pas seulement du renouvellement. Un jeton
+  // d'apparence fraîche mais révoqué entre-temps (déconnexion depuis un autre
+  // appareil) y renverrait vers /dashboard, qui renverrait vers /login : une
+  // boucle. Le coût est nul, on ne s'y connecte qu'une fois.
+  if (request.nextUrl.pathname !== '/login' && jetonEncoreFrais(cookies, Date.now())) {
+    return response
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { openGmail, openWhatsapp } from '@/lib/contact'
 import { formatPrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
@@ -39,6 +40,12 @@ type Props = {
   washerId: string
   /** Infos de facturation complètes : « Terminé » émet bien une facture. */
   facturationPrete: boolean
+  /**
+   * L'accueil ne charge que les rendez-vous passés les plus récents. Quand il
+   * y en a davantage en base, on le dit et on indique où les trouver : une
+   * liste tronquée en silence ferait croire à un historique perdu.
+   */
+  historiqueTronque?: boolean
 }
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
@@ -49,7 +56,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   closed_late: { label: 'Délai dépassé', dot: 'bg-orange-400',  badge: 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800' },
 }
 
-export default function BookingList({ bookings, facturationPrete }: Props) {
+export default function BookingList({ bookings, facturationPrete, historiqueTronque }: Props) {
   const [list, setList]       = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
 
@@ -124,6 +131,14 @@ export default function BookingList({ bookings, facturationPrete }: Props) {
               <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
             ))}
           </div>
+          {historiqueTronque && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 text-center">
+              Seuls les plus récents sont affichés ici.{' '}
+              <Link href="/dashboard/calendrier" className="underline font-medium hover:text-slate-600 dark:hover:text-slate-300">
+                Voir tout l&apos;historique
+              </Link>
+            </p>
+          )}
         </section>
       )}
     </div>
