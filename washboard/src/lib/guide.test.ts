@@ -49,6 +49,39 @@ describe('searchGuide', () => {
   })
 })
 
+describe('pertinence du classement', () => {
+  it('la section qui porte le sujet passe devant celles qui le mentionnent', () => {
+    // Cas réel remonté le 2026-09-17 : « factures » remontait d'abord
+    // « Agenda et rendez-vous », qui parle de facture sans être sur le sujet.
+    const sections = searchGuide('factures')
+    expect(sections.length).toBeGreaterThan(1)
+    expect(sections[0].id).toBe('factures')
+  })
+
+  it('une question qui porte le mot passe devant une réponse qui le cite', () => {
+    const premiere = searchGuide('facture')[0].entries[0]
+    expect(normalize(premiere.question)).toContain('factur')
+  })
+
+  it('le classement ne change pas ce qui remonte, seulement l’ordre', () => {
+    for (const requete of ['facture', 'client', 'avis', 'rappel']) {
+      const ids = searchGuide(requete).flatMap(s => s.entries).map(e => e.id)
+      expect(new Set(ids).size).toBe(ids.length)
+      // Toutes les entrées retenues contiennent bien le mot cherché.
+      const mot = normalize(requete)
+      for (const id of ids) {
+        const entry = allEntries.find(e => e.id === id)!
+        const section = GUIDE.find(s => s.entries.some(x => x.id === id))!
+        expect(normalize(`${section.title} ${entryText(entry)}`)).toContain(mot.slice(0, -1))
+      }
+    }
+  })
+
+  it('une recherche vide garde l’ordre pédagogique d’origine', () => {
+    expect(searchGuide('').map(s => s.id)).toEqual(GUIDE.map(s => s.id))
+  })
+})
+
 describe('intégrité du contenu', () => {
   it('les identifiants sont uniques', () => {
     const ids = allEntries.map(e => e.id)

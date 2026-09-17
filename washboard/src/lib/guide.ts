@@ -87,7 +87,7 @@ export const GUIDE: GuideSection[] = [
         id: 'confirmer',
         question: 'Comment confirmer un rendez-vous ?',
         answer:
-          "Une nouvelle réservation arrive en « en attente ». Ouvrez-la dans le [Calendrier](/dashboard/calendrier) et confirmez-la : votre client reçoit alors un email de confirmation. C'est aussi à ce moment que le rendez-vous est ajouté à votre Google Agenda, si vous l'avez connecté.",
+          "Une nouvelle réservation arrive en « en attente ». Confirmez-la depuis votre [tableau de bord](/dashboard), où elle apparaît dès votre connexion, ou en l'ouvrant dans le [Calendrier](/dashboard/calendrier). Votre client reçoit alors un email de confirmation, et c'est à ce moment que le rendez-vous est ajouté à votre Google Agenda, si vous l'avez connecté.",
         keywords: ['confirmer', 'valider', 'en attente', 'accepter', 'agenda google'],
       },
       {
@@ -101,14 +101,14 @@ export const GUIDE: GuideSection[] = [
         id: 'cloturer',
         question: 'J’ai oublié de marquer un rendez-vous, que faire ?',
         answer:
-          "Sur votre [tableau de bord](/dashboard), un rendez-vous dont l'heure est passée mais qui n'a jamais été terminé affiche un bouton « Clôturer ». WashBoard vous demande alors si le rendez-vous a réellement eu lieu. Si vous répondez oui, il passe en terminé et la facture suit normalement ; si vous répondez non, il est annulé, sans facture, sans effet sur votre comptabilité, et votre client ne reçoit aucun message. Un rendez-vous clôturé ainsi porte ensuite l'étiquette orange « Délai dépassé » plutôt que « Terminé » : c'est normal, cela indique simplement que la clôture a été tardive. Il est bien compté et bien facturé.",
+          "Dès qu'un rendez-vous dont l'heure est passée n'a jamais été terminé, WashBoard vous demande s'il a réellement eu lieu avant de le clôturer — que vous passiez par le bouton « Clôturer » de votre [tableau de bord](/dashboard) ou par « Marquer terminé » dans le [Calendrier](/dashboard/calendrier). Si vous répondez oui, il passe en terminé et la facture suit normalement ; si vous répondez non, il est annulé, sans facture, sans effet sur votre comptabilité, et votre client ne reçoit aucun message. Cette question n'apparaît que pour un créneau déjà passé : un rendez-vous que vous terminez en avance se clôture d'un seul clic. Un rendez-vous clôturé tardivement porte ensuite l'étiquette orange « Délai dépassé » plutôt que « Terminé » : c'est normal, cela indique seulement que la clôture a été faite après coup. Il est bien compté et bien facturé.",
         keywords: ['cloturer', 'oubli', 'oublie', 'retard', 'passe', 'delai depasse', 'rattraper'],
       },
       {
         id: 'rappel-soir',
         question: 'À quoi sert la notification de 22 h ?',
         answer:
-          "Chaque soir à 22 h, si des rendez-vous du jour ne sont toujours pas marqués « Terminé », WashBoard vous envoie une notification sur votre téléphone pour vous éviter de les oublier — donc d'oublier les factures qui vont avec. Attention : ce rappel passe uniquement par les notifications de l'application, il n'existe ni en email ni en SMS. Si vous ne les avez jamais activées, vous ne recevrez jamais ce rappel et rien ne vous le signalera. Voir la section Application mobile pour les activer.",
+          "Chaque soir à 22 h, si des rendez-vous du jour ne sont toujours pas marqués « Terminé », WashBoard vous envoie une notification sur votre téléphone pour vous éviter de les oublier — donc d'oublier les factures qui vont avec. Attention : ce rappel passe uniquement par les notifications de l'application, il n'existe ni en email ni en SMS. Si vous ne les avez jamais activées, vous ne le recevrez pas ; la carte Notifications de vos [Paramètres](/dashboard/parametres) vous le rappelle tant qu'elles sont inactives. Voir la section Application mobile pour les activer. Vos réservations, elles, continuent de vous arriver par email quoi qu'il arrive.",
         keywords: ['rappel', 'notification', '22h', 'soir', 'oubli', 'relance'],
       },
       {
@@ -241,7 +241,7 @@ export const GUIDE: GuideSection[] = [
         id: 'app-pourquoi',
         question: 'À quoi sert l\'application ?',
         answer:
-          "Elle vous prévient sur votre téléphone dès qu'un client réserve, sans que vous ayez à ouvrir vos emails. La notification affiche le nom du client, la prestation et l'horaire ; en la touchant, vous arrivez directement sur le rendez-vous. Sur Android, deux boutons permettent même de confirmer ou refuser sans ouvrir l'application. L'email continue de partir en parallèle : la notification s'ajoute, elle ne remplace rien.",
+          "Elle vous prévient sur votre téléphone dès qu'un client réserve, sans que vous ayez à ouvrir vos emails. La notification affiche le nom du client, la prestation avec le montant que vous allez encaisser — options, véhicules et frais de déplacement compris — et l'horaire ; en la touchant, vous arrivez directement sur le rendez-vous. Sur Android, deux boutons permettent même de confirmer ou refuser sans ouvrir l'application. L'email continue de partir en parallèle : la notification s'ajoute, elle ne remplace rien.",
         keywords: ['application', 'appli', 'mobile', 'notification', 'alerte', 'telephone', 'beta'],
       },
       {
@@ -300,17 +300,52 @@ function contient(haystack: string, mot: string): boolean {
   return mot.length > 3 && mot.endsWith('s') && haystack.includes(mot.slice(0, -1))
 }
 
+/** Pertinence : où le mot cherché a-t-il été trouvé ?
+ *
+ *  Une question qui porte sur le mot vaut mieux qu'une réponse qui le mentionne
+ *  en passant. Sans ce classement, chercher « factures » remontait d'abord les
+ *  entrées de l'agenda — elles parlent de facture sans être sur le sujet — et
+ *  la section Factures arrivait après, parce que l'ordre était celui de
+ *  déclaration des sections et rien d'autre. */
+const POIDS = { question: 8, motsCles: 4, titreSection: 2, reponse: 1 }
+
+function scoreEntree(entry: GuideEntry, titreSection: string, mots: string[]): number {
+  const question = normalize(entry.question)
+  const motsCles = normalize((entry.keywords ?? []).join(' '))
+  const titre = normalize(titreSection)
+  const reponse = normalize(entry.answer.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))
+  let score = 0
+  for (const mot of mots) {
+    if (contient(question, mot)) score += POIDS.question
+    if (contient(motsCles, mot)) score += POIDS.motsCles
+    if (contient(titre, mot)) score += POIDS.titreSection
+    if (contient(reponse, mot)) score += POIDS.reponse
+  }
+  return score
+}
+
 export function searchGuide(query: string): GuideSection[] {
   const q = normalize(query.trim())
   if (!q) return GUIDE
   const mots = q.split(/\s+/)
   return GUIDE
-    .map(section => ({
-      ...section,
-      entries: section.entries.filter(entry => {
-        const haystack = normalize(`${section.title} ${entryText(entry)}`)
-        return mots.every(mot => contient(haystack, mot))
-      }),
-    }))
-    .filter(section => section.entries.length > 0)
+    .map(section => {
+      // Filtrage inchangé : ce qui remonte ne change pas, seul l'ordre change.
+      const retenues = section.entries
+        .filter(entry => {
+          const haystack = normalize(`${section.title} ${entryText(entry)}`)
+          return mots.every(mot => contient(haystack, mot))
+        })
+        .map(entry => ({ entry, score: scoreEntree(entry, section.title, mots) }))
+        // Le tri est stable : à score égal, l'ordre de rédaction est conservé.
+        .sort((a, b) => b.score - a.score)
+      return {
+        section: { ...section, entries: retenues.map(r => r.entry) },
+        // Une section vaut ce que vaut sa meilleure réponse.
+        score: retenues[0]?.score ?? 0,
+      }
+    })
+    .filter(s => s.section.entries.length > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(s => s.section)
 }
