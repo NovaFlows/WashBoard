@@ -551,6 +551,13 @@
       le week-end, et rien ne rappelle à Alexandre qu'un paiement attend.
     - **`ConfirmerCloture` n'enferme pas le focus** : la touche Tab sort de la fenêtre.
       Sans conséquence à la souris ou au doigt.
+    - ~~Garde-fou « client historique »~~ — **écarté le 2026-09-17 par Alexandre.** Le
+      constat, pour mémoire : `grandfathered = true` seul ne suffit pas. Le bandeau ne lit
+      que `subscription_status`, donc l'essai continue de s'afficher, et surtout la page de
+      réservation publique se coupe 30 jours après `trial_ends_at` — le drapeau n'exempte
+      pas du paiement (`book/[slug]`), et les rappels de fin d'essai excluent justement les
+      comptes historiques. La parade tient en une requête au moment où on pose le drapeau :
+      `update washers set grandfathered = true, subscription_status = 'active' where ...`.
   - Le CRM envoie désormais au navigateur TOUS les événements d'un an. À surveiller quand
     un laveur dépassera quelques dizaines de milliers de visites : passer alors à des
     agrégats calculés côté serveur.
