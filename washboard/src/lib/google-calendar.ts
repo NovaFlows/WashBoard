@@ -23,8 +23,13 @@ async function clearWasherToken(washerId: string) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
-    await admin.from('washers').update({ google_refresh_token: null }).eq('id', washerId)
-    logger.warn('gcal.token.cleared', { washerId })
+    // Supabase ne LÈVE pas sur un échec d'écriture : il le rend dans `error`.
+    // Le `catch` ci-dessous ne pouvait donc rien attraper, et la trace annonçait
+    // « jeton effacé » même quand il ne l'était pas — le laveur gardait un bouton
+    // « Connecté » alors que Google refusait son accès, sans que rien ne le dise.
+    const { error } = await admin.from('washers').update({ google_refresh_token: null }).eq('id', washerId)
+    if (error) logger.error('gcal.token.clear_failed', { washerId }, error)
+    else logger.warn('gcal.token.cleared', { washerId })
   } catch (e) {
     logger.error('gcal.token.clear_failed', { washerId }, e)
   }

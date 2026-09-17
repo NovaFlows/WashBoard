@@ -642,13 +642,26 @@ rien à faire, mais que le projet reste globalement sain.
         échoué coûterait plus cher que le spam), mais plus en silence ; et
         `zone/check` garde son repli permissif assumé, désormais tracé avec
         l'identifiant du laveur.
-  - [ ] Restent **23 lectures** : 18 dans les pages du dashboard, 5 dans `lib/`
-        (`google-calendar.ts:48`, `materializeRecurring.ts:41,51`,
-        `travelFee.ts:39,67`). Celles des pages donnent un écran ou une liste vide,
-        visible immédiatement par le laveur, donc autocorrectif — contrairement aux
-        routes. Les cinq de `lib/` méritent d'être regardées en premier : c'est de
-        la logique métier appelée depuis plusieurs endroits, et `travelFee` a déjà
-        eu un repli muet à 0 € pendant la panne de facturation Google.
+  - [x] 2026-09-17 — **Les 5 lectures de `lib/` sont tracées.** Deux d'entre elles
+        cachaient plus qu'un silence :
+    - `google-calendar.ts` : l'effacement d'un jeton Google révoqué était suivi d'un
+      `logger.warn('gcal.token.cleared')` **inconditionnel**. Or Supabase ne lève pas sur
+      un échec d'écriture, il le rend dans `error` : le `try/catch` ne pouvait rien
+      attraper et la trace **affirmait le contraire de la réalité**. Le laveur gardait un
+      bouton « Connecté » alors que Google refusait l'accès, agenda muet. Corrigé :
+      `clear_failed` en erreur, `cleared` seulement en cas de succès.
+    - `materializeRecurring.ts` : la lecture « cette dépense récurrente est-elle déjà
+      posée ce mois-ci ? » en échec renvoyait `null`, donc le code concluait « non » et
+      **créait un doublon** dans la compta. Corrigé : tracé ET on saute le mois — une
+      ligne manquante se voit et se corrige, une ligne en double fausse les comptes
+      longtemps. L'insertion elle-même est tracée aussi.
+    - `travelFee.ts` (×2) : le rendez-vous précédent et la fiche du laveur. Les replis
+      restent (adresse de départ, 0 €) — refuser une réservation serait pire — mais ils
+      se voient. C'est le repli muet qui avait fait tomber les frais de déplacement à
+      zéro pendant la panne de facturation Google du 2026-08-26.
+  - [ ] Restent **18 lectures**, toutes dans les pages du dashboard. Elles donnent un
+        écran ou une liste vide, visible immédiatement par le laveur, donc autocorrectif —
+        contrairement aux routes et à `lib/`. À faire quand le reste sera calme.
 
 - [x] 2026-08-26 — **Clé Maps renommée et centralisée.** `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
       devient `GOOGLE_MAPS_API_KEY`, lue à un seul endroit (`lib/googleMaps.ts`) au lieu de

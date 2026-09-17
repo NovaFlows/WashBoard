@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from './logger'
 
 export type RecurringOccurrence = {
   date: string        // date effective de la dépense (jour clampé au dernier jour du mois)
@@ -38,17 +39,24 @@ export function recurringDatesInRange(dayOfMonth: number, start: string, end: st
 }
 
 export async function materializeRecurring(supabase: SupabaseClient, washerId: string, start: string, end: string) {
-  const { data: templates } = await supabase
+  const { data: templates, error: errTemplates } = await supabase
     .from('washer_recurring_expenses')
     .select('*')
     .eq('washer_id', washerId)
     .eq('active', true)
 
+  // Sans trace, une lecture en échec ressemblait à « ce laveur n'a aucune
+  // dépense récurrente » : ses charges fixes disparaissaient de la compta sans
+  // que rien ne le signale.
+  if (errTemplates) {
+    logger.error('compta.recurring.templates_read_failed', { washerId }, errTemplates)
+    return
+  }
   if (!templates?.length) return
 
   for (const template of templates) {
     for (const { date, monthStart, monthEnd } of recurringDatesInRange(template.day_of_month, start, end)) {
-      const { data: existing } = await supabase
+      const { data: existing, error: errExisting } = await supabase
         .from('washer_expenses')
         .select('id')
         .eq('washer_id', washerId)
@@ -57,8 +65,18 @@ export async function materializeRecurring(supabase: SupabaseClient, washerId: s
         .lte('date', monthEnd)
         .maybeSingle()
 
+      // Cette lecture répond « cette dépense est-elle déjà posée ce mois-ci ? ».
+      // En échec, `existing` vaut null et le code concluait « non » : il créait
+      // un DOUBLON, qui fausse la compta sans rien signaler. On saute plutôt ce
+      // mois-ci — une ligne manquante se voit et se corrige, une ligne en double
+      // se remarque beaucoup plus tard.
+      if (errExisting) {
+        logger.error('compta.recurring.existing_read_failed', { washerId, templateId: template.id, date }, errExisting)
+        continue
+      }
+
       if (!existing) {
-        await supabase.from('washer_expenses').insert({
+        const { error: errInsert } = await supabase.from('washer_expenses').insert({
           washer_id:            washerId,
           date,
           category:             template.category,
@@ -66,6 +84,7 @@ export async function materializeRecurring(supabase: SupabaseClient, washerId: s
           amount:               template.amount,
           recurring_expense_id: template.id,
         })
+        if (errInsert) logger.error('compta.recurring.insert_failed', { washerId, templateId: template.id, date }, errInsert)
       }
     }
   }

@@ -36,7 +36,7 @@ async function resolveOrigin(
 
   // Chercher le dernier RDV confirmé/en attente du jour qui se termine avant scheduled_at
   const dayStart = scheduledAt.slice(0, 10) + 'T00:00:00.000Z'
-  const { data: prevBookings } = await bookingsReader
+  const { data: prevBookings, error: errPrev } = await bookingsReader
     .from('bookings')
     .select('address, scheduled_at, services(duration_minutes)')
     .eq('washer_id', washerId)
@@ -45,6 +45,12 @@ async function resolveOrigin(
     .lt('scheduled_at', scheduledAt)
     .order('scheduled_at', { ascending: false })
     .limit(1)
+
+  // En échec, on retombe sur l'adresse de départ : le trajet est alors calculé
+  // depuis le mauvais point, donc le frais de déplacement est faux — sans que
+  // rien ne le dise. Le repli reste (mieux vaut un frais imparfait qu'une
+  // réservation refusée), mais il se voit désormais.
+  if (errPrev) logger.error('travelFee.previous_booking.read_failed', { washerId }, errPrev)
 
   const prev = prevBookings?.[0]
   if (prev?.address) return prev.address
@@ -64,11 +70,16 @@ export async function computeTravelFee(
   // casser un appelant qui passe déjà un client admin unique.
   bookingsReader: SupabaseClient = supabase,
 ): Promise<number> {
-  const { data: washer } = await supabase
+  const { data: washer, error: errWasher } = await supabase
     .from('washers')
     .select('base_address, travel_fee_tiers, travel_fee_mode')
     .eq('id', washerId)
     .single()
+
+  // Sans paliers ni adresse de départ, la fonction renvoie 0 € plus bas. C'est
+  // exactement le repli muet qui a fait tomber les frais de déplacement à zéro
+  // sur chaque réservation pendant la panne de facturation Google (2026-08-26).
+  if (errWasher) logger.error('travelFee.washer.read_failed', { washerId }, errWasher)
 
   const tiers: Tier[] = washer?.travel_fee_tiers ?? []
   const baseAddr: string | null = washer?.base_address ?? null
