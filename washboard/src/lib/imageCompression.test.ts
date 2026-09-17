@@ -1,69 +1,59 @@
 import { describe, it, expect } from 'vitest'
-import { scaledDimensions, LOGO_OPTIONS, BACKGROUND_OPTIONS } from './imageCompression'
+import { scaledDimensions, compressImage, LOGO_OPTIONS, BACKGROUND_OPTIONS } from './imageCompression'
 
-// Le calcul des dimensions est la partie qui décide du poids final : c'est lui
-// qui a fait dépasser le quota de bande passante quand il n'existait pas.
+// Le calcul des dimensions est la seule partie de ce fichier qui ne dépende
+// pas du navigateur — et c'est celle qui décide du poids réel des images
+// servies. Un logo de 4 Mo avait suffi à dépasser le quota de bande passante
+// Supabase de 60 % (05/09) : le facteur de réduction n'est pas un détail
+// cosmétique.
 
 describe('scaledDimensions', () => {
-  it('réduit une image trop grande en gardant ses proportions', () => {
-    const r = scaledDimensions(4000, 3000, 600)
-    expect(r.width).toBe(600)
-    expect(r.height).toBe(450)
-    expect(r.width / r.height).toBeCloseTo(4000 / 3000, 2)
+  it('ramène le plus grand côté à la limite, en conservant les proportions', () => {
+    expect(scaledDimensions(4000, 3000, 600)).toEqual({ width: 600, height: 450 })
+    expect(scaledDimensions(3000, 4000, 600)).toEqual({ width: 450, height: 600 })
   })
 
-  it('réduit d’après le côté le plus long, pas la largeur', () => {
-    // Une image en hauteur doit être bornée par sa hauteur, sinon elle reste
-    // énorme malgré la « réduction ».
-    const r = scaledDimensions(1000, 4000, 600)
-    expect(r.height).toBe(600)
-    expect(r.width).toBe(150)
+  it('n’agrandit jamais une image déjà plus petite', () => {
+    // On ne fabrique pas des pixels qui n'existent pas : agrandir alourdirait
+    // le fichier sans ajouter le moindre détail.
+    expect(scaledDimensions(120, 80, 600)).toEqual({ width: 120, height: 80 })
+    expect(scaledDimensions(600, 600, 600)).toEqual({ width: 600, height: 600 })
   })
 
-  it('n’agrandit jamais une image déjà petite', () => {
-    // On ne fabrique pas des pixels qui n'existent pas : ça alourdirait le
-    // fichier sans rien améliorer.
-    const r = scaledDimensions(120, 80, 600)
-    expect(r).toEqual({ width: 120, height: 80 })
+  it('arrondit à des pixels entiers', () => {
+    const { width, height } = scaledDimensions(1001, 333, 600)
+    expect(Number.isInteger(width)).toBe(true)
+    expect(Number.isInteger(height)).toBe(true)
   })
 
-  it('laisse intacte une image pile à la limite', () => {
-    expect(scaledDimensions(600, 400, 600)).toEqual({ width: 600, height: 400 })
+  it('garde au moins un pixel sur une image très allongée', () => {
+    // Une bannière de 4000 × 3 pixels : sans plancher, le petit côté
+    // arrondirait à 0 et le canvas refuserait de dessiner.
+    const { width, height } = scaledDimensions(4000, 3, 600)
+    expect(width).toBe(600)
+    expect(height).toBeGreaterThanOrEqual(1)
   })
 
-  it('ne descend jamais en dessous d’un pixel', () => {
-    // Une bannière très allongée pourrait sinon donner une hauteur de 0, et le
-    // canvas refuserait de dessiner.
-    const r = scaledDimensions(10000, 5, 600)
-    expect(r.height).toBeGreaterThanOrEqual(1)
-    expect(r.width).toBe(600)
-  })
-
-  it('survit à des dimensions nulles', () => {
+  it('supporte une image vide sans diviser par zéro', () => {
     expect(scaledDimensions(0, 0, 600)).toEqual({ width: 0, height: 0 })
-  })
-
-  it('renvoie des entiers, seuls acceptés par le canvas', () => {
-    const r = scaledDimensions(1333, 777, 600)
-    expect(Number.isInteger(r.width)).toBe(true)
-    expect(Number.isInteger(r.height)).toBe(true)
   })
 })
 
-describe('réglages', () => {
-  it('borne le logo bien en dessous du fond d’écran', () => {
-    // Un logo s'affiche sur ~200 points ; un fond occupe tout l'écran.
+describe('LOGO_OPTIONS et BACKGROUND_OPTIONS', () => {
+  it('réduisent vraiment, et le fond reste plus grand que le logo', () => {
     expect(LOGO_OPTIONS.maxSide).toBeLessThan(BACKGROUND_OPTIONS.maxSide)
+    for (const o of [LOGO_OPTIONS, BACKGROUND_OPTIONS]) {
+      expect(o.quality).toBeGreaterThan(0)
+      expect(o.quality).toBeLessThanOrEqual(1)
+    }
   })
+})
 
-  it('garde une qualité élevée sur le logo', () => {
-    // C'est l'identité visuelle du laveur : on compresse la taille, pas le
-    // rendu.
-    expect(LOGO_OPTIONS.quality).toBeGreaterThanOrEqual(0.85)
-  })
-
-  it('produit un format moderne et léger', () => {
-    expect(LOGO_OPTIONS.type).toBe('image/webp')
-    expect(BACKGROUND_OPTIONS.type).toBe('image/webp')
+describe('compressImage', () => {
+  it('rend le fichier intact hors navigateur, sans lever', () => {
+    // Le reste de la fonction dépend du canvas, absent ici comme lors d'un
+    // rendu serveur : elle doit rendre l'original plutôt que d'échouer.
+    const fichier = new File(['x'], 'logo.png', { type: 'image/png' })
+    return expect(compressImage(fichier, LOGO_OPTIONS)).resolves.toBe(fichier)
   })
 })

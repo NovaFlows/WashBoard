@@ -24,7 +24,8 @@ export default defineConfig({
       // Il ne peut plus que monter, le seuil ci-dessous servant de cliquet.
       //
       // Restent hors mesure, faute d'outillage adapté dans cette configuration
-      // (environnement `node`, pas de DOM) : les composants React, les pages,
+      // (environnement `node`, pas de DOM) : les composants React et les hooks
+      // qu'ils appellent (`use*`), les pages,
       // la génération de PDF et les gabarits d'emails. Ils sont couverts par
       // les tests de bout en bout Playwright, dont le résultat ne s'exprime
       // pas en pourcentage de lignes.
@@ -37,6 +38,21 @@ export default defineConfig({
         'src/lib/googleReviews.ts',   // scraping HTTP
         'src/lib/supabase/**',        // wrappers client Supabase
         'src/lib/contact.ts',         // utilise window.open (browser uniquement)
+        // Hooks React : `useState`/`useEffect` n'existent que pendant le rendu
+        // d'un composant, impossible à provoquer ici (environnement `node`,
+        // sans DOM ni testing-library). Même motif que `contact.ts` ci-dessus.
+        //
+        // La ligne à ne pas franchir : on écarte ce qui n'est pas mesurable
+        // dans cette configuration, jamais ce qui est seulement fastidieux à
+        // tester. `imageCompression.ts` dépend lui aussi du navigateur, mais sa
+        // partie calculatoire est testable : elle reste donc dans la mesure.
+        //
+        // Dette assumée, pas résolue : la logique d'envoi optimiste de
+        // `useSupportThreads` (retrait du message en cas d'échec, refus serveur
+        // distingué d'une panne réseau) mériterait des tests. Les rendre
+        // possibles demande d'installer jsdom + @testing-library/react.
+        'src/lib/useSupportThreads.ts',
+        'src/lib/useSupportUnreadBadge.ts',
       ],
 
       // Un seuil par couche. Les fichiers couverts par un motif sortent du
