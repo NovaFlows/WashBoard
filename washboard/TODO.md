@@ -754,6 +754,29 @@ rien à faire, mais que le projet reste globalement sain.
 > Repoussé le 2026-09-14 par Alexandre (prévu à l'origine début septembre) : les deux
 > dépendent de la création de l'entreprise.
 
+- [ ] **Passer Vercel en Pro (20 $/mois)** le jour de la création de l'entreprise. Demandé
+      par Alexandre le 2026-09-17, après le dépassement de stockage.
+  - **Pourquoi, et ce n'est pas le stockage** : les comptes Hobby sont réservés à un usage
+    **personnel non commercial**. Vercel définit l'usage commercial comme tout site qui
+    demande ou traite un paiement, vend un produit ou un service, ou dont quelqu'un tire un
+    revenu. WashBoard vend un abonnement à 49 €/mois, affiche ses tarifs, encaisse par
+    PayPal et bientôt par Stripe : c'est frontalement commercial. Et « utilisation
+    commerciale sur un plan Hobby » figure explicitement dans la liste des causes de mise
+    en pause d'un compte.
+  - **Ce que coûte une pause, si elle tombe** : le site passe **entièrement hors ligne**
+    (erreur 503 `DEPLOYMENT_PAUSED`), pas seulement les nouveaux déploiements — donc la
+    page de réservation de CHAQUE laveur. La reprise n'est **jamais automatique** :
+    « Paused projects resume one at a time, never automatically », il faut relancer chaque
+    projet à la main. Et pour une pause liée à l'usage commercial, **l'upgrade seul ne
+    suffit pas** : Vercel envoie un email avec les étapes, et il faut passer par le support.
+    Autrement dit, payer après coup ne remet pas le site en ligne d'un clic.
+  - **Ce que Pro règle au passage** : le plafond de stockage des déploiements (10 Go en
+    Hobby, dépassé le 2026-09-17 — 265 déploiements purgés à 20 ce jour-là), une rétention
+    configurable plus longue, et la Skew Protection, aujourd'hui grisée « Pro » dans les
+    réglages.
+  - À faire en même temps que l'activation de Stripe en production : même déclencheur,
+    la création de l'entité.
+
 - [ ] **Remplir les placeholders légaux** dès que l'entité est créée (micro-entreprise ou
       autre) : fichiers `src/app/(legal)/mentions-legales/page.tsx`, `cgv/page.tsx`,
       `confidentialite/page.tsx`. Remplacer `[NOM LÉGAL]`, `[FORME JURIDIQUE]`, `[SIRET]`,
