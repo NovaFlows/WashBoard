@@ -527,6 +527,19 @@
       trouve aucun ; et le cas « rendez-vous à venir clôturé d'un clic » n'est pas testé là,
       car le vérifier clôturerait un vrai rendez-vous et émettrait une facture sur le compte
       de test — il est couvert par `lib/cloture.test.ts`.
+    - [ ] **`BookingList` n'utilise pas `lib/cloture.ts` : la règle existe toujours en
+      deux exemplaires.** Relevé par Ryan le 2026-09-17 en relisant le correctif.
+      `lib/cloture.ts` dit en commentaire que la règle « vit donc ici, testée, plutôt que
+      dupliquée dans deux écrans » — c'est vrai du calendrier, qui l'importe, mais pas de
+      l'accueil : `BookingList.tsx` lignes 146-147 garde ses `isExpiredPending` /
+      `isExpiredConfirmed` calculés sur place. Les deux peuvent donc redivergerr, ce qui
+      est exactement le mécanisme qui avait laissé le calendrier sans protection.
+      Nuance qui explique peut-être le choix : l'accueil ne s'en sert pas seulement pour
+      décider s'il faut poser la question, mais aussi pour choisir QUEL bouton afficher
+      (Confirmer / Clôturer / Terminé) — ce n'est donc pas un remplacement direct par
+      `doitDemanderConfirmation`. Le minimum serait de lui faire au moins partager
+      `estCreneauPasse`, qui est exactement le même calcul des deux côtés. Rien n'a été
+      modifié : c'est ton fichier et ton correctif, à toi de dire si ça vaut le coup.
     - [x] 2026-09-16 — **`reprendreApercu` lit désormais les aperçus page par page**
       (`toutesLesLignes` + tri sur `id`). Avant : `select('*')` sans `.range`, donc coupé à
       1 000 sans erreur — au-delà, un prospect se serait inscrit sans que sa page soit
