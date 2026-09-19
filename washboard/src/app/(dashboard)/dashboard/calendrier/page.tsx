@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
@@ -60,15 +61,19 @@ export default async function CalendrierPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
-      <CalendrierDashboard
-        bookings={bookings ?? []}
-        unavailabilities={unavailabilities ?? []}
-        teamSize={washer.team_size ?? 1}
-        services={services ?? []}
-        categories={categories ?? []}
-        washerId={washer.id}
-        facturationPrete={infosFacturationManquantes(washer).length === 0}
-      />
+      {/* useSearchParams (lecture de ?rdv=, quand on arrive depuis une
+          notification) exige une limite Suspense, sinon le build échoue. */}
+      <Suspense fallback={null}>
+        <CalendrierDashboard
+          bookings={bookings ?? []}
+          unavailabilities={unavailabilities ?? []}
+          teamSize={washer.team_size ?? 1}
+          services={services ?? []}
+          categories={categories ?? []}
+          washerId={washer.id}
+          facturationPrete={infosFacturationManquantes(washer).length === 0}
+        />
+      </Suspense>
     </DashboardShell>
   )
 }

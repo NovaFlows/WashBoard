@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
@@ -127,6 +128,32 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   const [bookings,    setBookings]    = useState(initial)
   const [selected,    setSelected]    = useState<Booking | null>(null)
   const [dayList,     setDayList]     = useState<Booking[] | null>(null)
+
+  // Arrivée depuis une notification : `?rdv=<id>` ouvre la fiche tout de suite.
+  //
+  // Sans ça, le laveur qui touchait « 🚗 Nouvelle réservation » atterrissait
+  // sur le mois en cours et devait retrouver le rendez-vous lui-même — souvent
+  // le téléphone à la main, entre deux voitures.
+  //
+  // Le mois, la semaine et le jour se calent aussi sur la date du rendez-vous :
+  // en refermant la fiche, on doit retomber là où il se trouve, pas sur
+  // aujourd'hui. `applique` garantit qu'on ne le fait qu'une fois : sinon,
+  // refermer la fiche la rouvrirait aussitôt.
+  const searchParams = useSearchParams()
+  const rdvParam = searchParams.get('rdv')
+  const rdvApplique = useRef(false)
+
+  useEffect(() => {
+    if (rdvApplique.current || !rdvParam) return
+    const rdv = bookings.find(b => b.id === rdvParam)
+    if (!rdv) return
+    rdvApplique.current = true
+    const d = new Date(rdv.scheduled_at)
+    setCurrent(new Date(d.getFullYear(), d.getMonth(), 1))
+    setWeekStart(getWeekStart(d))
+    setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
+    setSelected(rdv)
+  }, [rdvParam, bookings])
   const [updating,    setUpdating]    = useState(false)
   const [editNotes,   setEditNotes]   = useState('')
   const [notesSaving, setNotesSaving] = useState(false)

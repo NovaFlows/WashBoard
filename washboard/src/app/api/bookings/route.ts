@@ -493,7 +493,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           `✨ ${service.name} · ${formatPrice(finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0))}`,
           `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
         ].join('\n'),
-        url: '/dashboard/calendrier',
+        // Directement SUR la fiche, pas sur le mois en cours : le laveur qui
+        // touche la notification veut voir ce rendez-vous-là, pas le chercher
+        // dans une grille entre deux voitures.
+        url: `/dashboard/calendrier?rdv=${id}`,
         tag: `booking-${id}`,
         bookingId: id,
       }).catch(err => logger.error('bookings.push.failed', { bookingId: id }, err))
