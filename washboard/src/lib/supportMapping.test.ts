@@ -7,6 +7,7 @@ import {
   mapThreadRow,
   mapConversationRow,
   assistanceThreadUrl,
+  countUnreadMessages,
 } from './supportMapping'
 
 describe('dbStatusToUi / uiStatusToDb', () => {
@@ -40,6 +41,41 @@ describe('mapMessageRow', () => {
   })
 })
 
+describe('countUnreadMessages', () => {
+  const messages = [
+    { author_type: 'washer' as const, created_at: '2026-09-17T09:00:00.000Z' },
+    { author_type: 'team' as const, created_at: '2026-09-17T09:05:00.000Z' },
+    { author_type: 'team' as const, created_at: '2026-09-17T10:00:00.000Z' },
+  ]
+
+  it('ne compte que les messages du camp demandé, postérieurs au curseur', () => {
+    expect(countUnreadMessages(messages, 'team', '2026-09-17T09:05:00.000Z')).toBe(1)
+    expect(countUnreadMessages(messages, 'washer', '2026-09-17T08:00:00.000Z')).toBe(1)
+  })
+
+  it('curseur null : LE PIÈGE — compte tout le camp au lieu de ne rien renvoyer', () => {
+    // Le motif des quatre bugs de prod : `created_at > null` ne matche jamais
+    // rien en SQL. Un curseur jamais posé (fil jamais lu) doit faire compter
+    // TOUS les messages de l'autre camp, pas 0.
+    expect(countUnreadMessages(messages, 'team', null)).toBe(2)
+    expect(countUnreadMessages(messages, 'washer', null)).toBe(1)
+  })
+
+  it('traite undefined comme null (sélection qui ne demande pas la colonne)', () => {
+    expect(countUnreadMessages(messages, 'team', undefined)).toBe(2)
+  })
+
+  it('un curseur illisible ne fait jamais disparaître de messages', () => {
+    expect(countUnreadMessages(messages, 'team', 'pas-une-date')).toBe(2)
+  })
+
+  it('renvoie 0 sur une liste vide, null ou undefined', () => {
+    expect(countUnreadMessages([], 'team', null)).toBe(0)
+    expect(countUnreadMessages(null, 'team', null)).toBe(0)
+    expect(countUnreadMessages(undefined, 'team', null)).toBe(0)
+  })
+})
+
 describe('mapThreadRow', () => {
   const base = {
     id: 'q1',
@@ -61,6 +97,11 @@ describe('mapThreadRow', () => {
     expect(mapThreadRow({ ...base, is_read_by_washer: false, support_messages: [] }).nonLue).toBe(true)
   })
 
+  it('déduit vuParEquipe de is_read_by_team, pas de is_read_by_washer', () => {
+    expect(mapThreadRow({ ...base, is_read_by_team: true, support_messages: [] }).vuParEquipe).toBe(true)
+    expect(mapThreadRow({ ...base, is_read_by_team: false, support_messages: [] }).vuParEquipe).toBe(false)
+  })
+
   it('convertit chaque message imbriqué', () => {
     const thread = mapThreadRow({
       ...base,
@@ -79,6 +120,17 @@ describe('mapThreadRow', () => {
     // Défense de typage sur un résultat déjà validé (pas d'erreur de lecture
     // masquée ici) : une relation vide peut arriver sous forme de null.
     expect(mapThreadRow({ ...base, support_messages: null }).messages).toEqual([])
+  })
+
+  it('nonLuesCount compte les messages de l’équipe postérieurs au curseur du laveur', () => {
+    const messages = [
+      { id: 'm1', author_type: 'washer' as const, body: 'Bonjour', created_at: '2026-09-17T09:00:00.000Z' },
+      { id: 'm2', author_type: 'team' as const, body: 'On regarde', created_at: '2026-09-17T09:05:00.000Z' },
+      { id: 'm3', author_type: 'team' as const, body: 'C’est corrigé', created_at: '2026-09-17T10:00:00.000Z' },
+    ]
+    expect(mapThreadRow({ ...base, support_messages: messages, last_read_by_washer_at: '2026-09-17T09:05:00.000Z' }).nonLuesCount).toBe(1)
+    // Jamais lu (curseur null) : les deux réponses de l'équipe comptent, pas 0.
+    expect(mapThreadRow({ ...base, support_messages: messages, last_read_by_washer_at: null }).nonLuesCount).toBe(2)
   })
 })
 
@@ -102,6 +154,21 @@ describe('mapConversationRow', () => {
   it('déduit nonLue de is_read_by_team, pas de is_read_by_washer', () => {
     expect(mapConversationRow({ ...base, is_read_by_team: true }, { name: 'X', slug: 'x' }).nonLue).toBe(false)
     expect(mapConversationRow({ ...base, is_read_by_team: false }, { name: 'X', slug: 'x' }).nonLue).toBe(true)
+  })
+
+  it('déduit vuParLaveur de is_read_by_washer, pas de is_read_by_team', () => {
+    expect(mapConversationRow({ ...base, is_read_by_washer: true }, { name: 'X', slug: 'x' }).vuParLaveur).toBe(true)
+    expect(mapConversationRow({ ...base, is_read_by_washer: false }, { name: 'X', slug: 'x' }).vuParLaveur).toBe(false)
+  })
+
+  it('nonLuesCount compte les messages du laveur postérieurs au curseur de l’équipe', () => {
+    const messages = [
+      { id: 'm1', author_type: 'team' as const, body: 'Bonjour', created_at: '2026-09-17T09:00:00.000Z' },
+      { id: 'm2', author_type: 'washer' as const, body: 'Toujours bloqué', created_at: '2026-09-17T09:05:00.000Z' },
+    ]
+    expect(mapConversationRow({ ...base, support_messages: messages, last_read_by_team_at: '2026-09-17T09:05:00.000Z' }, { name: 'X', slug: 'x' }).nonLuesCount).toBe(0)
+    // Jamais lu par l'équipe (curseur null) : le message du laveur compte, pas 0.
+    expect(mapConversationRow({ ...base, support_messages: messages, last_read_by_team_at: null }, { name: 'X', slug: 'x' }).nonLuesCount).toBe(1)
   })
 })
 

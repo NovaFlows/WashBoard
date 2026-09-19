@@ -2,13 +2,24 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LifeBuoy } from 'lucide-react'
+import { LifeBuoy, Shield } from 'lucide-react'
+import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 
 type Props = {
   isOpen: boolean
   onClose: () => void
-  /** L'équipe a répondu à une question et le laveur ne l'a pas encore ouverte. */
-  hasUnreadSupport?: boolean
+  /** Nombre de messages de l'équipe non lus par le laveur, tous fils
+   *  confondus (voir /api/support/non-lues) — `null`/`0` : rien ne s'affiche. */
+  unreadSupportCount?: number | null
+  /** Compte connecté = membre de l'équipe (confirmé par le serveur, voir
+   *  useEstEquipeSupport) : affiche l'entrée interne « Support ». */
+  estEquipeSupport?: boolean
+  /** Nombre de messages de laveurs non lus par l'équipe (voir
+   *  /api/support/non-lues-equipe) — `null`/`0` : rien ne s'affiche. Sans
+   *  rapport avec `unreadSupportCount` ci-dessus : ce sont deux publics et
+   *  deux sens de lecture différents (voir le commentaire sur l'entrée
+   *  « Support » plus bas). */
+  unreadTeamCount?: number | null
 }
 
 const NAV = [
@@ -84,7 +95,7 @@ const NAV = [
   },
 ]
 
-export function Sidebar({ isOpen, onClose, hasUnreadSupport }: Props) {
+export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport, unreadTeamCount }: Props) {
   const pathname = usePathname()
 
   const isActive = (href: string) =>
@@ -131,14 +142,10 @@ export function Sidebar({ isOpen, onClose, hasUnreadSupport }: Props) {
             <Link key={item.href} href={item.href} onClick={onClose} className={navClass(item.href)}>
               <span className={iconClass(item.href)}>{item.icon}</span>
               {item.label}
-              {item.href === '/dashboard/assistance' && hasUnreadSupport && (
-                <span
-                  className="ml-auto w-2 h-2 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] shrink-0"
-                  aria-hidden
-                />
-              )}
-              {item.href === '/dashboard/assistance' && hasUnreadSupport && (
-                <span className="sr-only"> — une réponse de l&apos;équipe n&apos;a pas été lue</span>
+              {item.href === '/dashboard/assistance' && (
+                <span className="ml-auto flex items-center">
+                  <UnreadCountBadge count={unreadSupportCount} label={unreadLabel(unreadSupportCount ?? 0)} />
+                </span>
               )}
             </Link>
           ))}
@@ -173,6 +180,36 @@ export function Sidebar({ isOpen, onClose, hasUnreadSupport }: Props) {
           </Link>
           <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-3">WashBoard · Espace laveur</p>
         </div>
+
+        {/* Réservé à l'équipe, jamais deviné côté client (voir
+            useEstEquipeSupport) : rendu à part et sobrement — bordure en
+            pointillés, étiquette « Outil interne », pas de mise en avant
+            bleue au survol/actif comme les entrées métier au-dessus — pour
+            qu'on comprenne d'un coup d'œil que ce n'est pas une fonctionnalité
+            du produit. */}
+        {estEquipeSupport && (
+          <div className="px-3 pb-4 pt-3 border-t border-dashed border-slate-200 dark:border-slate-800">
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600">
+              Outil interne
+            </p>
+            <Link
+              href="/dashboard/support"
+              onClick={onClose}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition-all"
+            >
+              <Shield size={18} strokeWidth={2} />
+              Support (équipe)
+              {/* Compteur de l'équipe : des laveurs qui attendent une réponse,
+                  jamais à confondre avec le compteur « Assistance » au-dessus
+                  (les réponses REÇUES par CE compte en tant que laveur) — un
+                  compte qui cumule les deux rôles (Ryan en local) voit les deux
+                  nombres, chacun sur sa propre entrée. */}
+              <span className="ml-auto flex items-center">
+                <UnreadCountBadge count={unreadTeamCount} label={unreadLabel(unreadTeamCount ?? 0)} />
+              </span>
+            </Link>
+          </div>
+        )}
       </aside>
     </>
   )

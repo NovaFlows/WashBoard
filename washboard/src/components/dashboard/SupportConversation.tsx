@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { X, Send, CheckCircle2, MessageCircle, ChevronLeft, Plus, AlertCircle } from 'lucide-react'
 import { formatSupportDate, type SupportThread } from '@/lib/support'
 import type { SupportSendError } from '@/lib/useSupportThreads'
+import { shouldSendOnEnter, estClavierTactile } from '@/lib/composerKeyboard'
+import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 
 export type SupportVue = { type: 'liste' } | { type: 'nouvelle' } | { type: 'fil'; id: string }
 
@@ -49,6 +51,12 @@ function ListeFils({ threads, onOuvrir, onNouvelle }: {
       <div className="divide-y divide-slate-100 dark:divide-slate-800">
         {triParRecence(threads).map(t => {
           const dernier = t.messages.at(-1)
+          // Nombre plutôt que pastille (demande de Ryan, 2026-09-19) : le
+          // gras du fil suit désormais directement ce nombre, pour qu'un fil
+          // affiché en gras et un fil affichant un chiffre soient TOUJOURS le
+          // même — jamais l'un sans l'autre.
+          const nonLuesCount = t.nonLuesCount ?? 0
+          const estNonLu = nonLuesCount > 0
           return (
             <button
               key={t.id}
@@ -56,19 +64,26 @@ function ListeFils({ threads, onOuvrir, onNouvelle }: {
               onClick={() => onOuvrir(t.id)}
               className="w-full flex items-center gap-3 py-3 text-left min-h-11 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-1.5 -mx-1.5 transition-colors"
             >
-              {t.nonLue && (
-                <span className="w-2 h-2 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] shrink-0" aria-label="Réponse non lue" title="Réponse non lue" />
-              )}
+              <UnreadCountBadge count={t.nonLuesCount} label={unreadLabel(nonLuesCount)} />
               <div className="flex-1 min-w-0">
-                <p className={`truncate ${t.nonLue ? 'font-bold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-200'}`}>
+                {/* Le titre reste le sujet (déduit du premier message) : c'est
+                    l'aperçu en dessous, lui, qui doit refléter le DERNIER
+                    message — sinon une réponse de l'équipe reste invisible ici
+                    tant qu'on n'a pas ouvert le fil. */}
+                <p className={`truncate ${estNonLu ? 'font-bold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-200'}`}>
                   {t.title}
                 </p>
                 {dernier && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                    {formatSupportDate(dernier.createdAt)}
+                  <p className={`text-xs truncate mt-0.5 ${estNonLu ? 'font-bold text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {dernier.from === 'laveur' ? 'Vous : ' : 'Support WashBoard : '}{dernier.text}
                   </p>
                 )}
               </div>
+              {dernier && (
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0 hidden sm:inline">
+                  {formatSupportDate(dernier.createdAt)}
+                </span>
+              )}
               <StatutBadge statut={t.status} />
             </button>
           )
@@ -95,12 +110,25 @@ function Composer({ onEnvoyer, placeholder, erreur, onDismissErreur }: {
     if (erreur) setTexte(erreur.texte)
   }, [erreur])
 
-  function envoyer(e: React.FormEvent) {
-    e.preventDefault()
+  function envoyerTexte() {
     const t = texte.trim()
     if (!t) return
     onEnvoyer(t)
     setTexte('')
+  }
+
+  function envoyer(e: React.FormEvent) {
+    e.preventDefault()
+    envoyerTexte()
+  }
+
+  // Entrée envoie, Maj+Entrée saute une ligne — sauf sur clavier tactile, où
+  // Entrée doit rester un saut de ligne (pas de Maj utilisable pour ça sur un
+  // écran). Voir lib/composerKeyboard.ts pour le détail de la distinction.
+  function surTouche(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!shouldSendOnEnter(e, estClavierTactile())) return
+    e.preventDefault()
+    envoyerTexte()
   }
 
   return (
@@ -128,6 +156,7 @@ function Composer({ onEnvoyer, placeholder, erreur, onDismissErreur }: {
           setTexte(e.target.value)
           if (erreur) onDismissErreur?.()
         }}
+        onKeyDown={surTouche}
         placeholder={placeholder}
         rows={2}
         className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1651E8] resize-none"
@@ -167,6 +196,7 @@ export default function SupportConversation({
   onVueChange,
   titleId,
   headerEnd,
+  banniere,
 }: {
   threads: SupportThread[]
   /** threadId à null pour une nouvelle question. Retourne l'id du fil (créé ou existant). */
@@ -180,6 +210,10 @@ export default function SupportConversation({
   titleId?: string
   /** Élément affiché à droite de l'en-tête (ex. le bouton fermer de la modale) — inexistant en pleine page. */
   headerEnd?: React.ReactNode
+  /** Contenu éphémère affiché sous l'en-tête (ex. rappel où retrouver la
+   *  conversation, propre au panneau du Guide) — absent par défaut, jamais
+   *  écrit en dur ici : chaque hôte décide s'il en a besoin. */
+  banniere?: React.ReactNode
 }) {
   // Cas particulier d'une nouvelle question qui échoue : le fil optimiste a
   // déjà été retiré de `threads` côté appelant, mais on avait déjà basculé
@@ -251,6 +285,8 @@ export default function SupportConversation({
         {headerEnd}
       </div>
 
+      {banniere}
+
       {vue.type === 'liste' && (
         <div className="overflow-y-auto flex-1">
           <ListeFils
@@ -283,21 +319,30 @@ export default function SupportConversation({
       {vue.type === 'fil' && filActif && (
         <>
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
-            {filActif.messages.map(m => (
-              <div key={m.id} className={`flex ${m.from === 'laveur' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                  m.from === 'laveur'
-                    ? 'bg-[#1651E8] text-white rounded-br-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-sm'
-                }`}>
-                  <span className="sr-only">{m.from === 'laveur' ? 'Vous' : 'Équipe NovaFlows'} : </span>
-                  <p className="text-sm leading-[1.5] whitespace-pre-wrap">{m.text}</p>
-                  <p className={`text-[10px] mt-1 ${m.from === 'laveur' ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {formatSupportDate(m.createdAt)}
-                  </p>
+            {filActif.messages.map((m, i) => {
+              const estDernier = i === filActif.messages.length - 1
+              return (
+                <div key={m.id} className={`flex flex-col ${m.from === 'laveur' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
+                    m.from === 'laveur'
+                      ? 'bg-[#1651E8] text-white rounded-br-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-sm'
+                  }`}>
+                    <span className="sr-only">{m.from === 'laveur' ? 'Vous' : 'Support WashBoard'} : </span>
+                    <p className="text-sm leading-[1.5] whitespace-pre-wrap">{m.text}</p>
+                    <p className={`text-[10px] mt-1 ${m.from === 'laveur' ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {formatSupportDate(m.createdAt)}
+                    </p>
+                  </div>
+                  {/* « Vu » : uniquement sous le tout dernier message, s'il est
+                      de vous et que l'équipe l'a lu. Facile à retirer d'ici
+                      seul (ce bloc), sans toucher à la vue équipe (SupportInbox). */}
+                  {estDernier && m.from === 'laveur' && filActif.vuParEquipe && (
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 mr-1">Vu</p>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
           <Composer
             onEnvoyer={envoyerDepuisComposer}

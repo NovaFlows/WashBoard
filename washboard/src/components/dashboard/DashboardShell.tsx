@@ -7,6 +7,9 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
+import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
+import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
+import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 
 type Props = {
   washerName: string
@@ -43,6 +46,34 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
       <span className="hidden sm:inline">{label}</span>
     </Link>
   )
+}
+
+// Description du bouton ☰ quand il porte les deux compteurs à la fois
+// (compte à la fois laveur et membre de l'équipe — le cas de Ryan en local,
+// ce sera peut-être celui d'Alexandre demain).
+//
+// Choix : le CHIFFRE affiché sur le bouton est la SOMME des deux compteurs,
+// pas seulement celui qu'on jugerait prioritaire. Deux raisons :
+//  1. Le bouton ☰ n'a jamais eu la prétention de tout détailler — c'est un
+//     simple signal « quelque chose t'attend », le détail (qui, combien de
+//     chaque côté) est à un clic, dans le menu déjà déplié où « Assistance »
+//     et « Support » portent chacun leur propre nombre.
+//  2. Un choix de priorité masquerait carrément un des deux compteurs dès que
+//     l'autre est non nul — un laveur-équipe qui voit « 3 » sur le bouton ne
+//     doit jamais se demander si ce sont 3 laveurs qui attendent ou 3
+//     réponses de l'équipe qu'il n'a pas lues : avec la somme, la question ne
+//     se pose plus, il sait juste qu'il a des choses à regarder et va les
+//     trouver en ouvrant le menu.
+// L'aria-label, lui, reste détaillé (voir `libelleBoutonMenu`) : ce que la
+// pastille visuelle ne peut pas dire en un chiffre, la description vocale le
+// peut en une phrase.
+function libelleBoutonMenu(unreadSupportCount: number | null, unreadTeamCount: number | null): string {
+  const assistance = unreadSupportCount ?? 0
+  const equipe = unreadTeamCount ?? 0
+  const parties: string[] = []
+  if (assistance > 0) parties.push(`${unreadLabel(assistance)} de l’équipe`)
+  if (equipe > 0) parties.push(`${equipe > 1 ? `${equipe} messages` : '1 message'} de laveurs en attente de réponse`)
+  return parties.length > 0 ? `Ouvrir le menu — ${parties.join(', ')}` : 'Ouvrir le menu'
 }
 
 function DismissButton({ onDismiss }: { onDismiss: () => void }) {
@@ -225,13 +256,29 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
   // (Sidebar) et le bouton ☰ juste en dessous, qui doivent montrer le même
-  // point — sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
-  // jamais la pastille.
-  const hasUnreadSupport = useSupportUnreadBadge()
+  // nombre — sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
+  // jamais le compteur.
+  const unreadSupportCount = useSupportUnreadBadge()
+  // Pendant équipe : nombre de messages de laveurs non lus par l'équipe.
+  // Appelé pour tout compte (voir useSupportUnreadTeamBadge) — silencieux et
+  // toujours `null` pour un laveur qui n'est pas de l'équipe.
+  const unreadTeamCount = useSupportUnreadTeamBadge()
+  // Idem : un seul appel à /api/support/est-equipe par page, partagé avec le
+  // menu qui seul en a besoin ici.
+  const estEquipeSupport = useEstEquipeSupport()
+  // Chiffre unique affiché sur le bouton ☰ : la somme des deux compteurs,
+  // voir `libelleBoutonMenu` juste au-dessus pour le pourquoi.
+  const menuBadgeCount = (unreadSupportCount ?? 0) + (unreadTeamCount ?? 0)
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} hasUnreadSupport={hasUnreadSupport} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        unreadSupportCount={unreadSupportCount}
+        estEquipeSupport={estEquipeSupport}
+        unreadTeamCount={unreadTeamCount}
+      />
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
@@ -241,7 +288,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
             <button
               onClick={() => setSidebarOpen(true)}
               className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label={hasUnreadSupport ? 'Ouvrir le menu — une réponse de l’équipe n’a pas été lue' : 'Ouvrir le menu'}
+              aria-label={libelleBoutonMenu(unreadSupportCount, unreadTeamCount)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/>
@@ -249,14 +296,19 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
                 <line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
               {/* Filet pour qui n'a pas activé les notifications : le menu est
-                  replié derrière ce bouton sur mobile, la pastille doit donc
-                  être visible ICI, pas seulement dans le menu ouvert. */}
-              {hasUnreadSupport && (
-                <span
-                  className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] border-2 border-white dark:border-slate-900"
-                  aria-hidden
+                  replié derrière ce bouton sur mobile, le compteur doit donc
+                  être visible ICI, pas seulement dans le menu ouvert. Le
+                  libellé est déjà porté par l'aria-label du bouton
+                  (announce=false) pour ne pas l'annoncer deux fois. */}
+              <span className="absolute -top-1 -right-1">
+                <UnreadCountBadge
+                  count={menuBadgeCount}
+                  label=""
+                  announce={false}
+                  variant="solid"
+                  className="border-2 border-white dark:border-slate-900"
                 />
-              )}
+              </span>
             </button>
 
             {/* Pas de logo ici : il est déjà dans le menu (trois barres). Dans

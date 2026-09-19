@@ -29,6 +29,14 @@ export type SupportThread = SupportConversation & {
   title: string
   /** L'équipe a répondu et le laveur n'a pas encore ouvert le fil depuis. */
   nonLue?: boolean
+  /** L'équipe a lu ce fil dans son état actuel — affiché en « Vu » sous le
+   *  dernier message du laveur. Absent sur un fil tout juste créé en local
+   *  (avant confirmation du serveur) : traité comme pas encore vu. */
+  vuParEquipe?: boolean
+  /** Nombre de messages de l'équipe postérieurs au dernier passage du laveur
+   *  sur ce fil — remplace à terme `nonLue` (booléen) pour afficher un
+   *  nombre plutôt qu'une pastille. */
+  nonLuesCount?: number
 }
 
 /** Vue équipe : une conversation par laveur, avec de quoi l'identifier et
@@ -39,6 +47,12 @@ export type SupportConversationEquipe = SupportConversation & {
   washerSlug: string
   /** Un message du laveur n'a pas encore été vu par l'équipe. */
   nonLue: boolean
+  /** Le laveur a lu cette conversation dans son état actuel — affiché en
+   *  « Vu » sous le dernier message de l'équipe. */
+  vuParLaveur?: boolean
+  /** Nombre de messages du laveur postérieurs au dernier passage de l'équipe
+   *  sur cette conversation — remplace à terme `nonLue` (booléen). */
+  nonLuesCount?: number
 }
 
 export function formatSupportDate(iso: string): string {

@@ -24,6 +24,12 @@ export type SupportQuestionRow = {
   status: SupportQuestionStatusDb
   is_read_by_washer: boolean
   is_read_by_team: boolean
+  // Curseurs de lecture par camp (colonnes ajoutées par cyber, nullable tant
+  // qu'un camp n'a jamais lu ce fil). Optionnels ici aussi : une sélection qui
+  // ne les demande pas (routes qui n'en ont pas besoin) ne doit pas casser le
+  // typage, `countUnreadMessages` traite `undefined` comme `null`.
+  last_read_by_washer_at?: string | null
+  last_read_by_team_at?: string | null
   support_messages?: SupportMessageRow[] | null
 }
 
@@ -50,19 +56,49 @@ export function mapMessageRow(row: SupportMessageRow): SupportMessage {
   }
 }
 
-/** Vue laveur d'un fil : `nonLue` reflète son propre indicateur de lecture. */
+/** Nombre de messages écrits par `from` et postérieurs à `lastReadAt`.
+ *
+ *  Piège identifié par cyber : en SQL, `created_at > NULL` ne vaut jamais
+ *  vrai, donc un curseur `null` (camp qui n'a jamais lu ce fil) ne doit
+ *  JAMAIS être transformé en filtre — il doit être omis, pour compter tous
+ *  les messages de l'autre camp. Même règle si le curseur est illisible
+ *  (chaîne invalide) : mieux vaut sur-compter que faire disparaître des
+ *  messages en silence. */
+export function countUnreadMessages(
+  messages: Pick<SupportMessageRow, 'author_type' | 'created_at'>[] | null | undefined,
+  from: SupportAuthorTypeDb,
+  lastReadAt: string | null | undefined,
+): number {
+  const seuilBrut = lastReadAt ? new Date(lastReadAt).getTime() : null
+  const seuil = seuilBrut !== null && Number.isFinite(seuilBrut) ? seuilBrut : null
+
+  return (messages ?? []).filter(m => {
+    if (m.author_type !== from) return false
+    if (seuil === null) return true
+    return new Date(m.created_at).getTime() > seuil
+  }).length
+}
+
+/** Vue laveur d'un fil : `nonLue` reflète son propre indicateur de lecture,
+ *  `vuParEquipe` celui de l'équipe — utilisé pour afficher « Vu ».
+ *  `nonLuesCount` est le nombre de messages de l'équipe postérieurs à son
+ *  dernier passage sur ce fil (voir `countUnreadMessages`). */
 export function mapThreadRow(row: SupportQuestionRow): SupportThread {
   return {
     id: row.id,
     title: row.subject,
     status: dbStatusToUi(row.status),
     nonLue: !row.is_read_by_washer,
+    vuParEquipe: row.is_read_by_team,
+    nonLuesCount: countUnreadMessages(row.support_messages, 'team', row.last_read_by_washer_at),
     messages: (row.support_messages ?? []).map(mapMessageRow),
   }
 }
 
 /** Vue équipe d'une conversation : `nonLue` reflète l'indicateur de lecture
- *  de l'équipe, pas celui du laveur — les deux évoluent indépendamment. */
+ *  de l'équipe, `vuParLaveur` celui du laveur (pour « Vu ») — les deux
+ *  évoluent indépendamment. `nonLuesCount` est le nombre de messages du
+ *  laveur postérieurs au dernier passage de l'équipe sur ce fil. */
 export function mapConversationRow(row: SupportQuestionRow, washer: SupportWasherInfo): SupportConversationEquipe {
   return {
     id: row.id,
@@ -70,6 +106,8 @@ export function mapConversationRow(row: SupportQuestionRow, washer: SupportWashe
     washerSlug: washer.slug,
     status: dbStatusToUi(row.status),
     nonLue: !row.is_read_by_team,
+    vuParLaveur: row.is_read_by_washer,
+    nonLuesCount: countUnreadMessages(row.support_messages, 'washer', row.last_read_by_team_at),
     messages: (row.support_messages ?? []).map(mapMessageRow),
   }
 }

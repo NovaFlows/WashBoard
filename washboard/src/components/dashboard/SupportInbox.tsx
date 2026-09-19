@@ -1,9 +1,40 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, CheckCircle2, RotateCcw, Send, AlertCircle, X } from 'lucide-react'
 import { formatSupportDate, type SupportConversationEquipe } from '@/lib/support'
 import { logger } from '@/lib/logger'
+import { shouldSendOnEnter, estClavierTactile } from '@/lib/composerKeyboard'
+import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
+
+/**
+ * Même précaution que `fusionnerFilsAvecServeur` côté laveur
+ * (`lib/useSupportThreads.ts`) : recale la liste locale sur la réponse d'un
+ * GET /api/support/team-questions sans perdre une réponse tout juste
+ * envoyée (`repondre`, pas encore confirmée) ni un « vu » posé localement
+ * (`toggle`) pendant que le PATCH is_read correspondant n'est pas encore
+ * revenu.
+ */
+export function fusionnerConversationsAvecServeur(
+  locales: SupportConversationEquipe[],
+  serveur: SupportConversationEquipe[],
+  enCoursDeLecture: ReadonlySet<string> = new Set(),
+): SupportConversationEquipe[] {
+  const idsServeur = new Set(serveur.map(c => c.id))
+  const enAttente = locales.filter(c => !idsServeur.has(c.id))
+  const connues = serveur.map(c => {
+    const locale = locales.find(l => l.id === c.id)
+    let conv = c
+    if (locale) {
+      const idsMessages = new Set(c.messages.map(m => m.id))
+      const messagesEnAttente = locale.messages.filter(m => !idsMessages.has(m.id))
+      if (messagesEnAttente.length > 0) conv = { ...conv, messages: [...conv.messages, ...messagesEnAttente] }
+    }
+    if (enCoursDeLecture.has(c.id)) conv = { ...conv, nonLue: false, nonLuesCount: 0 }
+    return conv
+  })
+  return [...enAttente, ...connues]
+}
 
 // Boîte de réception de l'équipe support : une conversation par laveur, les
 // non lues d'abord. Lue et écrite via /api/support/team-questions* — accès
@@ -43,18 +74,36 @@ function ConversationRow({
 }) {
   const [texte, setTexte] = useState('')
   const dernier = conv.messages.at(-1)
+  // Nombre plutôt que pastille (demande de Ryan, 2026-09-19) : le gras et la
+  // teinte de l'avatar suivent désormais ce nombre, jamais l'inverse — un
+  // fil affiché en gras et un fil affichant un chiffre sont TOUJOURS le même.
+  const nonLuesCount = conv.nonLuesCount ?? 0
+  const estNonLu = nonLuesCount > 0
 
   // Une réponse qui échoue ne doit pas faire perdre ce qui a été écrit.
   useEffect(() => {
     if (erreur) setTexte(erreur.texte)
   }, [erreur])
 
-  function envoyer(e: React.FormEvent) {
-    e.preventDefault()
+  function envoyerTexte() {
     const t = texte.trim()
     if (!t) return
     onReply(t)
     setTexte('')
+  }
+
+  function envoyer(e: React.FormEvent) {
+    e.preventDefault()
+    envoyerTexte()
+  }
+
+  // Même règle que côté laveur (voir lib/composerKeyboard.ts) : Entrée envoie,
+  // Maj+Entrée saute une ligne, sauf sur clavier tactile où Entrée reste un
+  // saut de ligne.
+  function surTouche(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!shouldSendOnEnter(e, estClavierTactile())) return
+    e.preventDefault()
+    envoyerTexte()
   }
 
   return (
@@ -65,15 +114,9 @@ function ConversationRow({
         aria-expanded={ouverte}
         className="w-full flex items-center gap-3 py-3.5 px-1 text-left min-h-11 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
       >
-        {conv.nonLue && (
-          <span
-            className="w-2 h-2 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] shrink-0"
-            aria-label="Non lue"
-            title="Non lue"
-          />
-        )}
+        <UnreadCountBadge count={conv.nonLuesCount} label={unreadLabel(nonLuesCount)} />
         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-          conv.nonLue
+          estNonLu
             ? 'bg-[#1651E8]/10 text-[#1651E8] dark:bg-[#6A9FFF]/15 dark:text-[#6A9FFF]'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
         }`}>
@@ -82,7 +125,7 @@ function ConversationRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className={`truncate ${conv.nonLue ? 'font-bold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-300'}`}>
+            <p className={`truncate ${estNonLu ? 'font-bold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-300'}`}>
               {conv.washerName}
             </p>
             <span className={`shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -93,8 +136,16 @@ function ConversationRow({
               {conv.status === 'resolue' ? 'Résolue' : 'Ouverte'}
             </span>
           </div>
-          {dernier && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+          {/* Cet aperçu ne sert qu'à résumer une conversation FERMÉE — une fois
+              dépliée, le même dernier message est déjà visible dans le cadre de
+              conversation juste en dessous (voir plus bas) : l'afficher ici en
+              plus faisait lire deux fois la même phrase à quelques centimètres
+              d'écart (relevé par Ryan, 2026-09-19). */}
+          {dernier && !ouverte && (
+            // Non lu : l'aperçu passe en gras comme le nom, exactement comme
+            // côté laveur (SupportConversation, ListeFils). Sans ça, seul le
+            // nom ressortait et le message lui-même restait en gris clair.
+            <p className={`text-xs truncate mt-0.5 ${estNonLu ? 'font-bold text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
               {dernier.from === 'equipe' ? 'Vous : ' : ''}{dernier.text}
             </p>
           )}
@@ -109,20 +160,30 @@ function ConversationRow({
       {ouverte && (
         <div className="pb-4 px-1 sm:pl-12">
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3 space-y-2.5 max-h-72 overflow-y-auto">
-            {conv.messages.map(m => (
-              <div key={m.id} className={`flex ${m.from === 'equipe' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3 py-2 ${
-                  m.from === 'equipe'
-                    ? 'bg-[#1651E8] text-white rounded-br-sm'
-                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm'
-                }`}>
-                  <p className="text-sm leading-[1.5] whitespace-pre-wrap">{m.text}</p>
-                  <p className={`text-[10px] mt-1 ${m.from === 'equipe' ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {formatSupportDate(m.createdAt)}
-                  </p>
+            {conv.messages.map((m, i) => {
+              const estDernier = i === conv.messages.length - 1
+              return (
+                <div key={m.id} className={`flex flex-col ${m.from === 'equipe' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 ${
+                    m.from === 'equipe'
+                      ? 'bg-[#1651E8] text-white rounded-br-sm'
+                      : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm'
+                  }`}>
+                    <p className="text-sm leading-[1.5] whitespace-pre-wrap">{m.text}</p>
+                    <p className={`text-[10px] mt-1 ${m.from === 'equipe' ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {formatSupportDate(m.createdAt)}
+                    </p>
+                  </div>
+                  {/* « Vu » : uniquement sous le tout dernier message, s'il
+                      est de l'équipe et que le laveur l'a lu. Facile à retirer
+                      d'ici seul (ce bloc), sans toucher à la vue laveur
+                      (SupportConversation). */}
+                  {estDernier && m.from === 'equipe' && conv.vuParLaveur && (
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 mr-1">Vu</p>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {erreur && (
@@ -151,6 +212,7 @@ function ConversationRow({
                 setTexte(e.target.value)
                 if (erreur) onDismissErreur()
               }}
+              onKeyDown={surTouche}
               placeholder={`Répondre à ${conv.washerName}…`}
               rows={2}
               className="flex-1 text-sm border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1651E8] resize-none"
@@ -188,25 +250,57 @@ export default function SupportInbox({ initialConversations = [] }: { initialCon
   // en même temps sur deux laveurs différents.
   const [erreurs, setErreurs] = useState<Record<string, { message: string; texte: string } | undefined>>({})
 
-  useEffect(() => {
-    let annule = false
-    fetch('/api/support/team-questions')
+  // true après démontage : le premier chargement et un refetch déclenché par
+  // le focus peuvent tous deux répondre après coup.
+  const demonte = useRef(false)
+  // Conversations ouvertes localement dont le PATCH is_read n'a pas encore
+  // répondu — voir `fusionnerConversationsAvecServeur`.
+  const enCoursDeLecture = useRef<Set<string>>(new Set())
+
+  const chargerConversations = useCallback(() => {
+    return fetch('/api/support/team-questions')
       .then(async res => {
         const json = await res.json().catch(() => null)
         if (!res.ok || !json) throw new Error(json?.error ?? 'Lecture impossible')
-        if (!annule) setConversations(json.conversations)
+        if (!demonte.current) {
+          setConversations(cs => fusionnerConversationsAvecServeur(cs, json.conversations, enCoursDeLecture.current))
+        }
       })
       .catch(e => logger.error('support.inbox.load_failed', {}, e))
-    return () => { annule = true }
   }, [])
+
+  useEffect(() => {
+    // Même correctif que lib/useSupportThreads.ts : sans cette remise à zéro,
+    // le cycle monte→démonte→remonte simulé de React Strict Mode (dev) laisse
+    // `demonte.current` bloqué à true et toute réponse après le remontage
+    // réel est ignorée, la liste restant vide indéfiniment.
+    demonte.current = false
+    chargerConversations()
+    // Une nouvelle question pendant que la boîte de l'équipe est déjà
+    // ouverte, ou le laveur qui vient de lire une réponse (« Vu »), ne doit
+    // pas attendre un rechargement de page — le focus couvre le cas réel de
+    // deux fenêtres côte à côte. Pas de polling périodique : même raison que
+    // côté laveur (lib/useSupportThreads.ts), coût inutile sur un quota
+    // Supabase déjà tendu.
+    window.addEventListener('focus', chargerConversations)
+    return () => {
+      demonte.current = true
+      window.removeEventListener('focus', chargerConversations)
+    }
+  }, [chargerConversations])
 
   function toggle(id: string) {
     const conv = conversations.find(c => c.id === id)
     setExpandedId(cur => (cur === id ? null : id))
-    // Ouvrir une conversation vaut l'avoir vue.
-    setConversations(cs => cs.map(c => (c.id === id ? { ...c, nonLue: false } : c)))
+    // Ouvrir une conversation vaut l'avoir vue. Le gras et le badge
+    // (ConversationRow) suivent `nonLuesCount`, jamais `nonLue` seul — oublier
+    // ce nombre ici laissait la ligne en gras avec son chiffre jusqu'au
+    // prochain focus/rechargement (même bug déjà corrigé côté laveur, voir
+    // `ouvrirFil` dans lib/useSupportThreads.ts).
+    setConversations(cs => cs.map(c => (c.id === id ? { ...c, nonLue: false, nonLuesCount: 0 } : c)))
 
     if (!conv?.nonLue) return // déjà vue : rien à écrire côté serveur
+    enCoursDeLecture.current.add(id)
     fetch(`/api/support/team-questions/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -216,6 +310,7 @@ export default function SupportInbox({ initialConversations = [] }: { initialCon
         if (!res.ok) logger.error('support.inbox.mark_read_failed', { questionId: id, status: res.status })
       })
       .catch(e => logger.error('support.inbox.mark_read_failed', { questionId: id }, e))
+      .finally(() => enCoursDeLecture.current.delete(id))
   }
 
   function repondre(id: string, texte: string) {

@@ -10,7 +10,7 @@ import { notifierEquipe } from '@/lib/push'
 // qu'une erreur Postgres brute en cas d'id qui n'appartient pas au laveur.
 
 const THREAD_QUERY =
-  'id, subject, status, is_read_by_washer, is_read_by_team, support_messages(id, author_type, body, created_at)'
+  'id, subject, status, is_read_by_washer, is_read_by_team, last_read_by_washer_at, support_messages(id, author_type, body, created_at)'
 
 const MAX_MESSAGE_LENGTH = 8000
 
@@ -102,9 +102,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })
   }
 
+  // Curseur écrit dans le MÊME appel que le booléen, pour qu'ils ne puissent
+  // jamais diverger — calculé côté serveur, jamais accepté depuis le corps de
+  // la requête. `last_read_by_team_at` n'apparaît jamais ici : le laveur n'a
+  // le droit d'écrire que sa propre colonne (RLS, 42501 sinon).
   const { error } = await supabase
     .from('support_questions')
-    .update({ is_read_by_washer: true })
+    .update({ is_read_by_washer: true, last_read_by_washer_at: new Date().toISOString() })
     .eq('id', id)
     .eq('washer_id', washerId)
 

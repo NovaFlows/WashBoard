@@ -27,7 +27,7 @@ export async function GET() {
   const { data, error } = await admin
     .from('support_questions')
     .select(
-      'id, subject, status, is_read_by_washer, is_read_by_team, washers(name, slug), support_messages(id, author_type, body, created_at)',
+      'id, subject, status, is_read_by_washer, is_read_by_team, last_read_by_team_at, washers(name, slug), support_messages(id, author_type, body, created_at)',
     )
     .order('last_message_at', { ascending: false })
     .order('created_at', { foreignTable: 'support_messages', ascending: true })

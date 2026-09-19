@@ -53,6 +53,8 @@ export default defineConfig({
         // possibles demande d'installer jsdom + @testing-library/react.
         'src/lib/useSupportThreads.ts',
         'src/lib/useSupportUnreadBadge.ts',
+        'src/lib/useEstEquipeSupport.ts',
+        'src/lib/useSupportUnreadTeamBadge.ts',
       ],
 
       // Un seuil par couche. Les fichiers couverts par un motif sortent du

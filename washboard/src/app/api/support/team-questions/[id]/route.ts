@@ -19,7 +19,7 @@ import { sendSupportReply } from '@/lib/email'
 // `mapConversationRow` ne lit que `name`/`slug` : ce champ ne fuite jamais
 // dans la réponse JSON envoyée à l'équipe.
 const CONVERSATION_QUERY =
-  'id, subject, status, is_read_by_washer, is_read_by_team, washer_id, washers(name, slug, user_id), support_messages(id, author_type, body, created_at)'
+  'id, subject, status, is_read_by_washer, is_read_by_team, last_read_by_team_at, washer_id, washers(name, slug, user_id), support_messages(id, author_type, body, created_at)'
 
 const MAX_MESSAGE_LENGTH = 8000
 
@@ -130,7 +130,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json().catch(() => null)
   const updates: Record<string, unknown> = {}
   if (body?.status === 'ouverte' || body?.status === 'resolue') updates.status = uiStatusToDb(body.status)
-  if (body?.is_read === true) updates.is_read_by_team = true
+  // Curseur dans le même appel que le booléen (jamais accepté du corps de la
+  // requête, calculé ici) : `last_read_by_washer_at` n'apparaît jamais dans
+  // cette route, l'équipe n'a le droit d'écrire que sa propre colonne.
+  if (body?.is_read === true) {
+    updates.is_read_by_team = true
+    updates.last_read_by_team_at = new Date().toISOString()
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })

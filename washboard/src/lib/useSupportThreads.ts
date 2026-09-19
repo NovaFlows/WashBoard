@@ -7,13 +7,47 @@
 // comporterait différemment selon l'endroit d'où on l'appelle serait
 // exactement le genre de divergence qui a déjà posé problème sur ce projet.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { logger } from '@/lib/logger'
 import { deriveSupportSubject } from '@/lib/supportSubject'
 import { notifySupportThreadRead } from '@/lib/supportUnread'
 import type { SupportThread } from '@/lib/support'
 
 export type SupportSendError = { threadId: string; texte: string; message: string }
+
+/**
+ * Recale la liste locale sur la réponse d'un GET /api/support/questions sans
+ * perdre ce que le serveur ne sait pas encore :
+ *  - un fil tout juste créé par `envoyerQuestion` (id généré côté client),
+ *    absent de la réponse tant que le POST correspondant n'a pas abouti ;
+ *  - un message ajouté de façon optimiste à un fil existant, même raison ;
+ *  - un fil que le laveur vient d'ouvrir localement (`enCoursDeLecture`)
+ *    alors que le PATCH qui enregistre la lecture n'est pas encore revenu —
+ *    sans ça, un refetch déclenché par le focus juste après le clic
+ *    ramènerait le fil en gras avec l'ancien compteur.
+ *
+ * Exportée pour être testée isolément : aucun DOM ni `fetch` n'est nécessaire ici.
+ */
+export function fusionnerFilsAvecServeur(
+  locaux: SupportThread[],
+  serveur: SupportThread[],
+  enCoursDeLecture: ReadonlySet<string> = new Set(),
+): SupportThread[] {
+  const idsServeur = new Set(serveur.map(t => t.id))
+  const enAttente = locaux.filter(t => !idsServeur.has(t.id))
+  const connus = serveur.map(t => {
+    const local = locaux.find(l => l.id === t.id)
+    let fil = t
+    if (local) {
+      const idsMessages = new Set(t.messages.map(m => m.id))
+      const messagesEnAttente = local.messages.filter(m => !idsMessages.has(m.id))
+      if (messagesEnAttente.length > 0) fil = { ...fil, messages: [...fil.messages, ...messagesEnAttente] }
+    }
+    if (enCoursDeLecture.has(t.id)) fil = { ...fil, nonLue: false, nonLuesCount: 0 }
+    return fil
+  })
+  return [...enAttente, ...connus]
+}
 
 export function useSupportThreads() {
   const [threads, setThreads] = useState<SupportThread[]>([])
@@ -26,18 +60,43 @@ export function useSupportThreads() {
   // pas à le retaper.
   const [sendError, setSendError] = useState<SupportSendError | null>(null)
 
-  useEffect(() => {
-    let annule = false
-    fetch('/api/support/questions')
+  // true après démontage : le premier chargement et un refetch déclenché par
+  // le focus peuvent tous deux répondre après coup.
+  const demonte = useRef(false)
+  // Fils ouverts localement dont le PATCH is_read n'a pas encore répondu —
+  // voir `fusionnerFilsAvecServeur`.
+  const enCoursDeLecture = useRef<Set<string>>(new Set())
+
+  const chargerFils = useCallback(() => {
+    return fetch('/api/support/questions')
       .then(async res => {
         const json = await res.json().catch(() => null)
         if (!res.ok || !json) throw new Error(json?.error ?? 'Lecture impossible')
-        if (!annule) setThreads(json.threads)
+        if (!demonte.current) {
+          setThreads(ts => fusionnerFilsAvecServeur(ts, json.threads, enCoursDeLecture.current))
+        }
       })
       .catch(e => logger.error('support.threads_load_failed', {}, e))
-      .finally(() => { if (!annule) setLoaded(true) })
-    return () => { annule = true }
   }, [])
+
+  useEffect(() => {
+    // En React Strict Mode (dev), le cycle monte→démonte→remonte simulé met
+    // `demonte.current` à true sans jamais le remettre à false : sans cette
+    // ligne, tout fetch lancé après le remontage réel est ignoré et la liste
+    // reste vide indéfiniment en local.
+    demonte.current = false
+    chargerFils().finally(() => { if (!demonte.current) setLoaded(true) })
+    // Une deuxième réponse de l'équipe pendant que la page laveur est déjà
+    // ouverte ne doit pas attendre un rechargement de page pour apparaître —
+    // le focus couvre le cas réel de deux fenêtres/onglets côte à côte. Pas
+    // de polling périodique : coût inutile sur un quota Supabase déjà tendu,
+    // exclu volontairement (voir useSupportUnreadBadge, même pattern).
+    window.addEventListener('focus', chargerFils)
+    return () => {
+      demonte.current = true
+      window.removeEventListener('focus', chargerFils)
+    }
+  }, [chargerFils])
 
   // Écrit tout de suite dans l'état local (l'appelant peut naviguer vers le
   // fil avec l'id retourné ICI, avant toute réponse réseau), puis confirme en
@@ -102,19 +161,31 @@ export function useSupportThreads() {
   }, [])
 
   const ouvrirFil = useCallback((id: string) => {
-    setThreads(ts => ts.map(t => (t.id === id ? { ...t, nonLue: false } : t)))
-    // Décoratif (pastilles du menu) : on ne bloque pas sur la confirmation
-    // serveur pour retirer le point tout de suite là où le laveur regarde.
-    notifySupportThreadRead()
+    // Le gras et le badge (ListeFils, SupportInbox) suivent désormais
+    // `nonLuesCount`, jamais `nonLue` seul (2026-09-19) : oublier de remettre
+    // ce nombre à zéro ici laissait le fil en gras avec son chiffre jusqu'au
+    // prochain chargement de page.
+    enCoursDeLecture.current.add(id)
+    setThreads(ts => ts.map(t => (t.id === id ? { ...t, nonLue: false, nonLuesCount: 0 } : t)))
     fetch(`/api/support/questions/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_read: true }),
     })
       .then(res => {
-        if (!res.ok) logger.error('support.mark_read_failed', { threadId: id, status: res.status })
+        if (!res.ok) {
+          logger.error('support.mark_read_failed', { threadId: id, status: res.status })
+          return
+        }
+        // Déclenchée seulement APRÈS la confirmation serveur : appelée avant
+        // (comme précédemment), le GET /api/support/non-lues qu'elle
+        // provoque gagnait systématiquement la course contre ce PATCH et
+        // relisait l'ancien chiffre — la pastille du menu ne bougeait jamais
+        // tout de suite.
+        notifySupportThreadRead()
       })
       .catch(e => logger.error('support.mark_read_failed', { threadId: id }, e))
+      .finally(() => enCoursDeLecture.current.delete(id))
   }, [])
 
   const dismissSendError = useCallback(() => setSendError(null), [])

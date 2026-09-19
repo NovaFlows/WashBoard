@@ -15,7 +15,7 @@ import { peutOuvrirNouvelleQuestion, MESSAGE_LIMITE_QUESTIONS_ATTEINTE } from '@
 // serveur, de la première ligne de son message (`deriveSupportSubject`).
 
 const THREAD_QUERY =
-  'id, subject, status, is_read_by_washer, is_read_by_team, support_messages(id, author_type, body, created_at)'
+  'id, subject, status, is_read_by_washer, is_read_by_team, last_read_by_washer_at, support_messages(id, author_type, body, created_at)'
 
 const MAX_MESSAGE_LENGTH = 8000
 

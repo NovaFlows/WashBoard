@@ -1,10 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Info } from 'lucide-react'
 import type { SupportThread } from '@/lib/support'
 import type { SupportSendError } from '@/lib/useSupportThreads'
 import SupportConversation, { type SupportVue } from './SupportConversation'
+
+// Combien de temps le rappel « retrouvez ça dans Assistance » (voir plus bas)
+// reste affiché avant de s'effacer tout seul — assez pour être lu, pas assez
+// pour devenir un bandeau permanent que Ryan ne voulait pas.
+const DUREE_RAPPEL_ASSISTANCE_MS = 6000
 
 /**
  * Panneau « Une question pour l'équipe », ouvert depuis le bouton du Guide.
@@ -39,11 +44,31 @@ export default function SupportPanel({
   const [vue, setVue] = useState<SupportVue>(threads.length === 0 ? { type: 'nouvelle' } : { type: 'liste' })
   const closeRef = useRef<HTMLButtonElement>(null)
 
+  // Depuis le Guide, rien n'indique où retrouver la conversation une fois le
+  // panneau refermé : ce rappel s'affiche juste après un envoi (nouvelle
+  // question ou relance), le temps de le lire, puis disparaît de lui-même.
+  const [vientDenvoyer, setVientDenvoyer] = useState(false)
+
+  function envoyerEtSignaler(texte: string, threadId: string | null): string {
+    const id = onSend(texte, threadId)
+    setVientDenvoyer(true)
+    return id
+  }
+
   // À chaque ouverture, on repart de l'écran adapté à l'état courant.
   useEffect(() => {
-    if (open) setVue(threads.length === 0 ? { type: 'nouvelle' } : { type: 'liste' })
+    if (open) {
+      setVue(threads.length === 0 ? { type: 'nouvelle' } : { type: 'liste' })
+      setVientDenvoyer(false)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  useEffect(() => {
+    if (!vientDenvoyer) return
+    const t = setTimeout(() => setVientDenvoyer(false), DUREE_RAPPEL_ASSISTANCE_MS)
+    return () => clearTimeout(t)
+  }, [vientDenvoyer])
 
   useEffect(() => {
     if (!open) return
@@ -91,12 +116,28 @@ export default function SupportPanel({
       <div className="relative w-full sm:max-w-md max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
         <SupportConversation
           threads={threads}
-          onSend={onSend}
+          onSend={envoyerEtSignaler}
           onOpenThread={onOpenThread}
           sendError={sendError}
           onDismissSendError={onDismissSendError}
           vue={vue}
           onVueChange={setVue}
+          banniere={vientDenvoyer && (
+            <div role="status" className="flex items-start gap-2 mx-5 mt-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60">
+              <Info size={16} className="text-[#1651E8] dark:text-[#6A9FFF] shrink-0 mt-0.5" aria-hidden />
+              <p className="flex-1 text-xs text-blue-800 dark:text-blue-300 leading-snug">
+                Vous retrouverez cette conversation dans <strong>Assistance</strong>, depuis le menu.
+              </p>
+              <button
+                type="button"
+                onClick={() => setVientDenvoyer(false)}
+                aria-label="Masquer ce message"
+                className="shrink-0 -m-1 w-7 h-7 flex items-center justify-center rounded-lg text-blue-600/70 dark:text-blue-400/70 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
           titleId="support-panel-titre"
           headerEnd={
             <button
