@@ -386,6 +386,33 @@
 
 ## 🟠 Robustesse / dette technique
 
+- [ ] **QUESTION POUR ALEXANDRE — faut-il ajouter `jsdom` + `@testing-library/react`
+      pour pouvoir tester les composants ?** Posée par Ryan le 2026-09-19. Rien n'a été
+      installé : ajouter deux dépendances engage le projet sur la durée, ce n'est pas une
+      décision d'un seul côté.
+  - **Ce qui a motivé la question, un cas réel.** En corrigeant les compteurs du canal
+    d'assistance, une régression a été introduite : un `useRef` de garde jamais remis à
+    `false` au remontage laissait la liste des fils **définitivement vide** en mode
+    développement (React Strict Mode monte, démonte et remonte chaque composant). Pire que
+    le défaut d'origine, et précisément dans le contexte où l'on teste. Elle n'a été
+    attrapée que par un essai manuel au navigateur, avec Playwright et des appels réseau
+    simulés. **Aucun test automatique du dépôt ne pouvait la voir**, et elle serait passée
+    en production si personne n'avait regardé l'écran.
+  - **Pourquoi c'est structurel, pas accidentel.** Il n'existe aujourd'hui aucun test de
+    composant React dans `src/components` — la configuration Vitest écarte d'ailleurs
+    explicitement quatre hooks de la mesure de couverture au motif qu'ils sont
+    « untestables sans DOM » (`vitest.config.ts`, la note y est déjà écrite). La règle du
+    projet dit qu'on n'écarte que ce qui n'est pas mesurable, jamais ce qui est seulement
+    fastidieux — mais ici la liste des exclusions s'allonge à chaque fonctionnalité, et
+    c'est exactement la zone où la dernière régression est née.
+  - **Le coût.** Deux dépendances de développement, une configuration Vitest à passer en
+    environnement `jsdom` pour ces fichiers, et des tests à écrire. Le gain : pouvoir
+    tester un cycle monte / démonte / remonte, les effets, et le comportement réel des
+    hooks — au lieu de les exclure de la mesure.
+  - **À trancher par toi**, c'est ton projet autant que le sien. Si tu dis non, il faudra
+    au moins assumer que cette zone reste vérifiée à la main, et le dire clairement dans
+    la configuration plutôt que sous l'étiquette « non mesurable ».
+
 - [ ] **QUESTION POUR ALEXANDRE — la question « Avez-vous fait ce rendez-vous ? » ne
       protège qu'une des deux vues. Est-ce voulu ?** Relevé par Ryan le 2026-09-15 en
       documentant le centre d'aide. Rien n'a été modifié : c'est ta fonctionnalité,
