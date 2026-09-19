@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   vehiclePrice, hasPriceOverrides, minVehiclePrice, addonsDuration, effectiveDuration,
   smartDiscountAmount, smartPrice, finalDisplayPrice, formatPrice,
+  optionsParVehicule, dureeTotale, prixOptions,
 } from './pricing'
 
 const svc = { price: 100, vehicle_price_overrides: { SUV: 130, citadine: 80 }, vehicle_types: ['SUV', 'citadine', 'berline'] }
@@ -140,5 +141,87 @@ describe('formatPrice', () => {
   })
   it('inclut toujours le signe €', () => {
     expect(formatPrice(0)).toBe('0€')
+  })
+})
+
+// ── Options par véhicule ───────────────────────────────────────────────────
+//
+// Ces tests protègent surtout une chose : une réservation enregistrée AVANT ce
+// changement doit continuer à donner exactement les mêmes chiffres. Des
+// factures déjà émises en dépendent.
+
+describe('optionsParVehicule', () => {
+  it('reconnaît une réservation à l’ancien format', () => {
+    expect(optionsParVehicule(null)).toBe(false)
+    expect(optionsParVehicule([])).toBe(false)
+    expect(optionsParVehicule([{ count: 2 }])).toBe(false)
+  })
+
+  it('une liste d’options vide est un choix explicite, pas une absence', () => {
+    // Le client a vu les options de cette voiture et n'en a coché aucune :
+    // c'est du nouveau format, et sa durée ne doit pas repasser par l'ancien
+    // calcul qui multiplierait les options des autres véhicules.
+    expect(optionsParVehicule([{ count: 1, addons: [] }])).toBe(true)
+  })
+
+  it('un seul véhicule porteur d’options suffit', () => {
+    expect(optionsParVehicule([{ count: 1 }, { count: 1, addons: [{ price: 20 }] }])).toBe(true)
+  })
+})
+
+describe('dureeTotale', () => {
+  it('ancien format : options communes, multipliées par le nombre de véhicules', () => {
+    // Comportement historique, préservé tel quel.
+    expect(dureeTotale(180, null, [{ duration_minutes: 30 }], 2)).toBe(420)
+    expect(dureeTotale(180, null, null, 1)).toBe(180)
+    expect(dureeTotale(180, null, null, null)).toBe(180)
+  })
+
+  it('nouveau format : chaque voiture ne compte que ses propres options', () => {
+    // Le cas qui a motivé le changement : nettoyage de vomi sur UNE des deux
+    // voitures. Avant : (180+30)×2 = 420 min bloquées. Maintenant : 390.
+    const vehicules = [
+      { count: 1, addons: [{ duration_minutes: 30 }] },
+      { count: 1, addons: [] },
+    ]
+    expect(dureeTotale(180, vehicules, null, 2)).toBe(390)
+  })
+
+  it('nouveau format : un même véhicule en plusieurs exemplaires multiplie ses options', () => {
+    // Deux citadines identiques avec la même option : là, ça se multiplie bien.
+    expect(dureeTotale(180, [{ count: 2, addons: [{ duration_minutes: 30 }] }], null, 2)).toBe(420)
+  })
+
+  it('nouveau format : aucune option cochée nulle part', () => {
+    expect(dureeTotale(180, [{ count: 1, addons: [] }, { count: 1, addons: [] }], null, 2)).toBe(360)
+  })
+
+  it('ignore les options communes dès que le détail par véhicule existe', () => {
+    // Sinon on compterait deux fois : une fois par véhicule, une fois en commun.
+    const vehicules = [{ count: 1, addons: [{ duration_minutes: 30 }] }]
+    expect(dureeTotale(180, vehicules, [{ duration_minutes: 999 }], 1)).toBe(210)
+  })
+})
+
+describe('prixOptions', () => {
+  it('ancien format : comptées une seule fois, quel que soit le nombre de voitures', () => {
+    // On ne réécrit pas le prix qu'un client a vu et payé.
+    expect(prixOptions(null, [{ price: 40 }, { price: 20 }], 3)).toBe(60)
+  })
+
+  it('nouveau format : seules les voitures concernées paient', () => {
+    const vehicules = [
+      { count: 1, addons: [{ price: 40 }] },
+      { count: 1, addons: [] },
+    ]
+    expect(prixOptions(vehicules, null, 2)).toBe(40)
+  })
+
+  it('nouveau format : la même option sur deux exemplaires se paie deux fois', () => {
+    expect(prixOptions([{ count: 2, addons: [{ price: 40 }] }], null, 2)).toBe(80)
+  })
+
+  it('tolère une option sans prix', () => {
+    expect(prixOptions([{ count: 1, addons: [{ duration_minutes: 30 }] }], null, 1)).toBe(0)
   })
 })

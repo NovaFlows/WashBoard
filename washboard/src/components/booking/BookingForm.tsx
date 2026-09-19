@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Washer, Service, ServiceCategory, Availability, BookingFormData } from '@/types'
-import { addonsDuration } from '@/lib/pricing'
+import { dureeTotale } from '@/lib/pricing'
 import { trackFunnelStep, type FunnelStep } from '@/lib/funnelTracking'
 import StepService from './StepService'
 import StepOptions from './StepOptions'
@@ -205,10 +205,9 @@ export default function BookingForm({ washer, services, categories, availabiliti
         {step === 2 && selectedService && (
           <StepOptions
             service={selectedService}
-            selectedAddons={form.selected_addons ?? []}
+            vehicules={form.vehicles_detail ?? []}
             basePrice={form.booked_price ?? selectedService.price}
             baseDuration={selectedService.duration_minutes}
-            vehicleCount={form.vehicle_count ?? 1}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
             accent={accent}
@@ -220,7 +219,14 @@ export default function BookingForm({ washer, services, categories, availabiliti
             existingBookings={existingBookings}
             unavailabilities={unavailabilities}
             teamSize={washer.team_size ?? 1}
-            serviceDuration={((services.find(s => s.id === form.service_id)?.duration_minutes ?? 60) + addonsDuration(form.selected_addons)) * Math.max(1, form.vehicle_count ?? 1)}
+            // Règle unique, qui sait lire les deux formes : options rattachées
+            // à chaque véhicule, ou liste commune des anciennes réservations.
+            serviceDuration={dureeTotale(
+              services.find(s => s.id === form.service_id)?.duration_minutes ?? 60,
+              form.vehicles_detail,
+              form.selected_addons,
+              form.vehicle_count,
+            )}
             servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
             washerId={washer.id}
             hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}

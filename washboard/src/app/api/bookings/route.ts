@@ -3,7 +3,7 @@ import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
-import { vehiclePrice, effectiveDuration, addonsDuration, finalDisplayPrice, formatPrice } from '@/lib/pricing'
+import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { effectiveTeamSize } from '@/lib/slots'
 import { verdictDate, creneauDansOuverture } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
@@ -46,6 +46,16 @@ const BookingSchema = z.object({
     unit_price: z.number().min(0),
     label:      z.string().optional(),
     models:     z.array(z.string()).optional(),
+    // Options propres à CE véhicule. Sans cette ligne, le schéma les écarterait
+    // en silence — le client choisirait ses options voiture par voiture et
+    // elles n'arriveraient jamais en base.
+    addons:     z.array(z.object({
+      id:               z.string(),
+      label:            z.string(),
+      price:            z.number(),
+      category:         z.string(),
+      duration_minutes: z.number().optional(),
+    })).optional(),
   })).optional(),
   selected_addons: z.array(z.object({
     id:               z.string(),
@@ -188,8 +198,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Durée réellement bloquée par ce rendez-vous. Calculée ici parce qu'elle
   // sert deux fois : au contrôle des horaires, puis à l'enregistrement de la
   // fin du créneau en base (colonne `ends_at`, cf. réservation atomique).
-  const dureeMinutes = effectiveDuration(
-    (service?.duration_minutes ?? 60) + addonsDuration(selected_addons),
+  // Règle unique, qui lit les deux formes : options rattachées à chaque
+  // véhicule (depuis le 20/09/2026) ou liste commune à toute la commande.
+  const dureeMinutes = dureeTotale(
+    service?.duration_minutes ?? 60,
+    vehicles_detail,
+    selected_addons,
     vehicle_count ?? 1,
   )
   const debutMs = new Date(bookingData.scheduled_at).getTime()
@@ -342,10 +356,19 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     ((service?.addons ?? []) as { id?: string; label?: string; price?: number }[])
       .map(a => [String(a.id ?? a.label ?? ''), Number(a.price ?? 0)]),
   )
-  const prix_options = (selected_addons ?? []).reduce((total, a) => {
-    const cle = String((a as { id?: string; label?: string }).id ?? (a as { label?: string }).label ?? '')
-    return total + (cataloguePrix.get(cle) ?? 0)
-  }, 0)
+  const prixAuCatalogue = (a: { id?: string; label?: string }) =>
+    cataloguePrix.get(String(a.id ?? a.label ?? '')) ?? 0
+
+  // Quand les options sont rattachées aux véhicules, c'est cette liste qui fait
+  // foi : s'appuyer sur la liste commune laisserait passer une réservation où
+  // les deux ne concordent pas — plus de temps bloqué que de temps facturé.
+  const prix_options = optionsParVehicule(vehicles_detail)
+    ? (vehicles_detail ?? []).reduce(
+        (total, v) =>
+          total + (v.addons ?? []).reduce((s, a) => s + prixAuCatalogue(a), 0) * Math.max(1, v.count),
+        0,
+      )
+    : (selected_addons ?? []).reduce((total, a) => total + prixAuCatalogue(a), 0)
 
   const base_price = prix_vehicules + prix_options
   const booked_price = base_price + computed_travel_fee

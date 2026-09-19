@@ -141,6 +141,13 @@ export type VehicleItem = {
   unit_price: number
   label?: string
   models?: string[]
+  /** Options choisies pour CE véhicule précis.
+   *
+   *  Absent sur les réservations enregistrées avant le 20/09/2026 : leurs
+   *  options étaient communes à toute la commande (`selected_addons`). Les
+   *  deux formes cohabitent, `lib/pricing` les distingue — voir `dureeTotale`
+   *  et `prixOptions`. */
+  addons?: ServiceAddon[]
 }
 
 export type BookingFormData = {

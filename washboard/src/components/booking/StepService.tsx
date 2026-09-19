@@ -121,15 +121,23 @@ export default function StepService({ services, categories, selected, factureApr
 
   function handleNext() {
     if (!canContinue || !selectedService) return
+    // Un exemplaire par véhicule, et non une ligne par type.
+    //
+    // Deux citadines deviennent deux entrées distinctes, chacune avec son
+    // modèle (« Clio grise », « 208 noire »). C'est ce qui permet, à l'étape
+    // suivante, de cocher le nettoyage de vomi sur une seule des deux — avant,
+    // une option choisie s'appliquait d'office à toutes les voitures.
     const vehicles_detail: VehicleItem[] = Object.entries(basket)
       .filter(([, c]) => c > 0)
-      .map(([type, count]) => ({
-        type,
-        count,
-        unit_price: vehiclePrice(selectedService, type),
-        label: typeInfo(selectedService, type).name,
-        models: (models[type] ?? []).slice(0, count).map(m => m.trim()),
-      }))
+      .flatMap(([type, count]) =>
+        Array.from({ length: count }, (_, i) => ({
+          type,
+          count: 1,
+          unit_price: vehiclePrice(selectedService, type),
+          label: typeInfo(selectedService, type).name,
+          models: [(models[type]?.[i] ?? '').trim()],
+        })),
+      )
     onNext({
       service_id:      serviceId,
       vehicle_type:    vehicles_detail[0].type,
