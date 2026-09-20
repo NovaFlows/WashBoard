@@ -91,8 +91,10 @@ export default function Page() {
           réserver maintenant, pas se divertir.
         </P>
         <P>
-          Créer une fiche d&apos;établissement Google est gratuit. Trois points font la différence
-          entre une fiche qui dort et une fiche qui amène des appels :
+          Créer une fiche d&apos;établissement Google est gratuit, même sans local — nous avons
+          détaillé{' '}
+          <A href="/blog/fiche-google-laveur-auto-mobile">chaque réglage de la fiche Google dans un guide dédié</A>.
+          Trois points font la différence entre une fiche qui dort et une fiche qui amène des appels :
         </P>
         <UL>
           <li>
@@ -268,6 +270,7 @@ export default function Page() {
 
         <AlsoRead
           items={[
+            { href: '/blog/fiche-google-laveur-auto-mobile', label: 'Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
             { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
             { href: '/blog/devenir-laveur-auto-mobile', label: 'Devenir laveur auto mobile : par où commencer' },

@@ -20,6 +20,42 @@ export { SITE_URL_FALLBACK as SITE_URL } from '@/lib/plan'
 
 export const ARTICLES: Article[] = [
   {
+    slug: 'lavage-auto-sans-eau',
+    title: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi',
+    description:
+      'Le lavage sans eau règle la question des eaux usées et permet d’intervenir partout. Principe, produits, limites (véhicule très sale, jantes), temps par voiture et argumentaire client.',
+    publishedAt: '2026-09-20',
+    updatedAt: '2026-09-20',
+    readingMinutes: 8,
+  },
+  {
+    slug: 'combien-gagne-un-laveur-auto-mobile',
+    title: 'Combien gagne un laveur auto mobile ? Revenus réels et simulation',
+    description:
+      'Chiffre d’affaires, charges, cotisations, revenu net : une simulation honnête sur 3 profils (débutant, installé, avec clients pros) et les trois leviers qui font vraiment monter le revenu.',
+    publishedAt: '2026-09-20',
+    updatedAt: '2026-09-20',
+    readingMinutes: 9,
+  },
+  {
+    slug: 'fiche-google-laveur-auto-mobile',
+    title: 'Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels',
+    description:
+      'Zone de service au lieu d’une adresse, catégorie, photos, avis, réponses : le guide pas à pas pour qu’une fiche d’établissement Google amène des réservations de lavage à domicile.',
+    publishedAt: '2026-09-20',
+    updatedAt: '2026-09-20',
+    readingMinutes: 8,
+  },
+  {
+    slug: 'assurance-laveur-auto-mobile',
+    title: 'Quelle assurance pour un laveur auto mobile',
+    description:
+      'RC pro, garantie biens confiés, véhicule à usage professionnel, matériel : ce qu’il faut vraiment couvrir quand on lave des voitures à domicile, les exclusions à vérifier et les bons réflexes en cas de dommage.',
+    publishedAt: '2026-09-20',
+    updatedAt: '2026-09-20',
+    readingMinutes: 7,
+  },
+  {
     slug: 'trouver-des-clients-laveur-auto-mobile',
     title: 'Comment trouver des clients quand on est laveur auto mobile',
     description:

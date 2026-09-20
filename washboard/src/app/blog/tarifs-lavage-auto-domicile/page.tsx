@@ -100,7 +100,10 @@ export default function Page() {
         </UL>
         <P>
           Ce dernier point est celui qu&apos;on oublie systématiquement. Vous ne facturez jamais
-          huit heures sur une journée de huit heures. Si vous facturez cinq heures sur huit, votre
+          huit heures sur une journée de huit heures — nous avons chiffré ce que ça donne en
+          revenu réel dans{' '}
+          <A href="/blog/combien-gagne-un-laveur-auto-mobile">combien gagne un laveur auto mobile</A>.
+           Si vous facturez cinq heures sur huit, votre
           taux horaire facturé doit être calculé sur cette base — pas sur un planning idéal.
         </P>
 
@@ -208,6 +211,7 @@ export default function Page() {
 
         <AlsoRead
           items={[
+            { href: '/blog/combien-gagne-un-laveur-auto-mobile', label: 'Combien gagne un laveur auto mobile ? Revenus réels et simulation' },
             { href: '/blog/trouver-des-clients-laveur-auto-mobile', label: 'Comment trouver des clients quand on est laveur auto mobile' },
             { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
             { href: '/blog/devenir-laveur-auto-mobile', label: 'Devenir laveur auto mobile : par où commencer' },

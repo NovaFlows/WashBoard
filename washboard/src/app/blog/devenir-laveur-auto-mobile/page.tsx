@@ -109,7 +109,8 @@ export default function Page() {
           explicitement les <strong>biens confiés</strong>. C&apos;est cette clause qui prend en
           charge les dommages causés au véhicule lui-même. Une RC pro standard sans cette extension
           ne couvrira pas la voiture que vous êtes en train de laver — vérifiez-le noir sur blanc
-          avant de signer.
+          avant de signer. Les autres garanties et les exclusions à repérer sont détaillées dans{' '}
+          <A href="/blog/assurance-laveur-auto-mobile">quelle assurance pour un laveur auto mobile</A>.
         </P>
 
         <H2>3. L&apos;eau : la contrainte que la plupart découvrent trop tard</H2>
@@ -138,8 +139,9 @@ export default function Page() {
         </UL>
         <P>
           Les règles précises dépendent de votre commune : renseignez-vous en mairie. Beaucoup de
-          laveurs mobiles font le choix du sans-eau justement pour s&apos;affranchir de cette
-          question, et en font un argument écologique auprès des clients.
+          laveurs mobiles font le choix du{' '}
+          <A href="/blog/lavage-auto-sans-eau">lavage sans eau</A>{' '}justement pour
+          s&apos;affranchir de cette question, et en font un argument écologique auprès des clients.
         </P>
 
         <H2>4. Le matériel : commencer léger</H2>
@@ -219,9 +221,10 @@ export default function Page() {
 
         <AlsoRead
           items={[
+            { href: '/blog/assurance-laveur-auto-mobile', label: 'Quelle assurance pour un laveur auto mobile' },
+            { href: '/blog/lavage-auto-sans-eau', label: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi' },
+            { href: '/blog/combien-gagne-un-laveur-auto-mobile', label: 'Combien gagne un laveur auto mobile ? Revenus réels et simulation' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
-            { href: '/blog/trouver-des-clients-laveur-auto-mobile', label: 'Comment trouver des clients quand on est laveur auto mobile' },
-            { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
           ]}
         />
       </article>
