@@ -18,7 +18,7 @@ import { FUSEAU } from '@/lib/dateUtils'
 import { AujourdhuiWidget } from '@/components/dashboard/widgets/AujourdhuiWidget'
 import { StatsWidget } from '@/components/dashboard/widgets/StatsWidget'
 import { ClientsWidget } from '@/components/dashboard/widgets/ClientsWidget'
-import { FacturesWidget } from '@/components/dashboard/widgets/FacturesWidget'
+import { ProchainsRdvWidget } from '@/components/dashboard/widgets/ProchainsRdvWidget'
 import { WidgetsConfigurator } from '@/components/dashboard/widgets/WidgetsConfigurator'
 import Link from 'next/link'
 
@@ -87,7 +87,6 @@ export default async function DashboardPage() {
     statsMois,
     clientsLite,
     visitesLite,
-    facturesMois,
     services,
     availabilities,
   ] = await Promise.all([
@@ -155,18 +154,6 @@ export default async function DashboardPage() {
           .lte('created_at', `${mois.end}T23:59:59`)
           .range(debut, fin))
       : aucuneLigne<{ session_id: string }>(),
-    // Widget Factures : uniquement celles ÉMISES par WashBoard ce mois-ci (les
-    // imports de factures d'achat ne sont pas comptés ici, voir FacturesWidget).
-    visibles.has('invoices')
-      ? toutesLesLignes((debut, fin) => supabase
-          .from('bookings')
-          .select('booked_price, facture_emise_le')
-          .eq('washer_id', washer.id)
-          .not('facture_numero', 'is', null)
-          .gte('facture_emise_le', `${mois.start}T00:00:00`)
-          .lte('facture_emise_le', `${mois.end}T23:59:59`)
-          .range(debut, fin))
-      : aucuneLigne<{ booked_price: number | null; facture_emise_le: string | null }>(),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
     supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
   ])
@@ -178,7 +165,6 @@ export default async function DashboardPage() {
   if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
   if (clientsLite.error) logger.warn('dashboard.clients_widget.fetch_failed', { washerId: washer.id }, clientsLite.error)
   if (visitesLite.error) logger.warn('dashboard.visiteurs_widget.fetch_failed', { washerId: washer.id }, visitesLite.error)
-  if (facturesMois.error) logger.warn('dashboard.factures_widget.fetch_failed', { washerId: washer.id }, facturesMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
 
@@ -221,11 +207,14 @@ export default async function DashboardPage() {
   const rdvAujourdhui = (aVenir ?? []).filter(
     b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
+  // Après aujourd'hui, pour ne pas doublonner le widget ci-dessus : les trois
+  // prochains, dans l'ordre où `aVenir` est déjà trié.
+  const rdvProchains = (aVenir ?? [])
+    .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
+    .slice(0, 3)
 
   const resumeClientsWidget = resumeClients(clientsLite.data ?? [], mois.start)
   const visiteursCeMois = countDistinctSessions(visitesLite.data ?? [])
-  const nombreFactures = facturesMois.data?.length ?? 0
-  const montantFactures = (facturesMois.data ?? []).reduce((s, f) => s + Number(f.booked_price ?? 0), 0)
 
   // Un widget par clé, prêt à afficher — construits une fois, puis piochés
   // dans l'ORDRE choisi par le laveur (voir WidgetsConfigurator : l'ordre du
@@ -247,8 +236,10 @@ export default async function DashboardPage() {
         visiteursCeMois={visiteursCeMois}
       />
     ),
-    invoices: <FacturesWidget nombre={nombreFactures} montant={montantFactures} />,
+    upcoming: <ProchainsRdvWidget bookings={rdvProchains} />,
   }
+
+  const widgetsAffiches = [...visibles]
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
@@ -267,9 +258,18 @@ export default async function DashboardPage() {
         <WidgetsConfigurator visibles={[...visibles]} />
       </div>
 
-      {visibles.size > 0 && (
+      {widgetsAffiches.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-          {[...visibles].map(cle => <div key={cle}>{widgetsParCle[cle]}</div>)}
+          {widgetsAffiches.map((cle, i) => {
+            // Un nombre impair de widgets laisserait le dernier seul sur sa
+            // ligne, avec un trou à côté : il prend alors toute la largeur.
+            const dernierSeul = i === widgetsAffiches.length - 1 && widgetsAffiches.length % 2 === 1
+            return (
+              <div key={cle} className={dernierSeul ? 'sm:col-span-2' : ''}>
+                {widgetsParCle[cle]}
+              </div>
+            )
+          })}
         </div>
       )}
 

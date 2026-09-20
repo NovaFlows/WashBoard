@@ -108,7 +108,7 @@ export function WidgetsConfigurator({ visibles }: { visibles: WidgetKey[] }) {
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
       >
         <Settings size={14} />
-        Configurer
+        Configurer mes widgets
       </button>
 
       {ouvert && (
