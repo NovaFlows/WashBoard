@@ -331,7 +331,23 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Colore les boutons et éléments sélectionnés sur votre page client</p>
+        {/* L'échantillon est ici, au contact de la palette : on choisit une
+            couleur et on voit aussitôt ce qu'elle donne sur un bouton. Il était
+            auparavant glissé dans l'aperçu de l'en-tête, où il encombrait — et
+            où il montrait surtout un bouton qui n'existe pas sur la vraie page
+            client. */}
+        <div className="flex items-center gap-3 mt-3">
+          <div
+            className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold shrink-0"
+            style={{ backgroundColor: color }}
+            aria-hidden="true"
+          >
+            Continuer →
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Colore les boutons et éléments sélectionnés sur votre page client
+          </p>
+        </div>
       </div>
 
       {/* Thème de fond */}
@@ -457,14 +473,9 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
               : <span className="font-bold text-slate-500">{washer.name.charAt(0).toUpperCase()}</span>
             }
           </div>
-          <div>
-            <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">{washer.name}</p>
-            <p className="text-xs text-slate-400">{message || 'Réservation en ligne'}</p>
-          </div>
-          <div className="ml-auto">
-            <div className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold" style={{ backgroundColor: color }}>
-              Continuer →
-            </div>
+          <div className="min-w-0">
+            <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate">{washer.name}</p>
+            <p className="text-xs text-slate-400 truncate">{message || 'Réservation en ligne'}</p>
           </div>
         </div>
       </div>
