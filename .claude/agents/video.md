@@ -98,6 +98,67 @@ Leçons du premier montage TikTok d'Alexandre (2026-09-13) :
   rebond), éléments qui descendent du haut ou s'empilent un peu en désordre.
 - Pas d'arrêt sur image ; pas de sous-titres pendant les passages déjà animés.
 
+## Faux téléphone incrusté — la chaîne qui a servi aux vidéos 2 à 4
+
+Complété par Ryan le 2026-09-20, après trois montages TikTok face caméra. Chaîne
+**ffmpeg + Playwright**, pas Remotion — même raison que la section ci-dessus.
+
+**L'atelier** vit dans `H:\Desktop\CLAUDECODE\WashBoard\video\scratch_video`. ffmpeg
+n'est PAS dans le PATH de ce poste : passer par `node ff.js <args ffmpeg>`, qui
+appelle le binaire du paquet `ffmpeg-static`. Idem `ffprobe-static` pour sonder un
+fichier. Les deux vivent dans `H:\Desktop\CLAUDECODE\node_modules` — ne pas déplacer.
+
+**Fabrication des éléments** : une page HTML rendue par Playwright en PNG transparent
+(`omitBackground: true`), jamais un dessin à la main.
+- `phone.html` → `phone_frame.png` (châssis 372×722 en CSS, rendu ×2) → `phone_260.png`
+  (260×505, la taille utilisée à l'écran).
+- `splash.html` → l'écran d'accueil WashBoard ; `overlays.html` → la carte de marque et
+  le CTA « 1 mois gratuit », réduits de moitié au montage.
+- `capture_scroll.js` et `capture_laveur_full.js` capturent le produit **en pleine
+  page**, pas à la taille de l'écran : sans cette hauteur supplémentaire, rien ne peut
+  défiler dans le téléphone et le montage paraît mort.
+
+**La géométrie, à ne pas recalculer à chaque fois** : dans un châssis de 260×505, la
+dalle fait **211×456 à l'offset (24, 24)**. Elle se déduit du CSS (`inset: 24px` +
+`border: 11px` = 35, puis 35 × 260/372 ≈ 24) — mais autant la reprendre telle quelle.
+
+### Les trois règles payées cher
+
+1. **Une fois posé, le téléphone ne bouge plus.** Un léger flottement sinusoïdal avait
+   été ajouté sur la v2 « pour faire vivant » : Ryan l'a vu immédiatement et l'a trouvé
+   parasite. L'animation d'entrée et de sortie suffit.
+2. **Les transitions se composent SUR LA DALLE, puis la dalle est posée dans le
+   châssis.** Le pourtour du châssis est transparent au-delà de sa bordure : un écran
+   qui glisse par-dessus déborde donc à côté du téléphone et paraît le traverser. En
+   composant d'abord sur un canevas de 211×456, tout ce qui dépasse est découpé net et
+   la navigation se passe bien « à l'intérieur ».
+3. **Aucune ombre portée**, sur aucun élément incrusté. Ryan les a toutes fait retirer :
+   elles trahissent l'incrustation au lieu de l'intégrer.
+
+### Rythme et vérification
+
+- Environ **2,6 secondes par écran**. À 1,7 s, Ryan a trouvé que ça allait trop vite ;
+  sept écrans pour dix-neuf secondes est un bon repère.
+- `crop` évalue `x`/`y` à chaque image (il n'a pas d'option `eval`) : les expressions
+  temporelles y fonctionnent directement. `overlay`, lui, lit le temps du flux
+  principal.
+- Une entrée bouclée (`-loop 1 -t N`) doit durer **jusqu'à la fin du clip** : avec
+  `eof_action=pass`, une couche qui se termine plus tôt disparaît d'un coup.
+- **Relever le minutage sur les sous-titres incrustés** quand il n'y a pas de
+  transcription : une planche `fps=2,crop=<bande basse>,tile=2x20` donne le texte et
+  l'horodatage. Astuce découverte en route : quand Ryan retire le mot « WashBoard » de
+  ses sous-titres, le blanc laissé marque **exactement** l'endroit où poser la marque.
+- Toujours vérifier par l'image : une planche aux instants clés, et un agrandissement
+  (`crop` puis `scale` en `neighbor`) pour juger un glyphe. Un logo en contour fin se
+  lit mal — un TikTok vidé de son remplissage passe pour une note de musique.
+
+### Encodage final
+
+`-c:a copy` (ne jamais ré-encoder le son : les trois premiers montages l'ont dégradé
+inutilement en AAC), `-c:v libx264 -crf 16 -preset slow`, `-pix_fmt yuv420p`,
+`-movflags +faststart`. Sortir en 30 i/s même si la source est en 60 : invisible sur un
+plan parlé, deux fois plus rapide à calculer.
+
 ## Règles
 
 - **Jamais de données réelles à l'écran.** Pas de nom de client, de numéro, d'adresse,
