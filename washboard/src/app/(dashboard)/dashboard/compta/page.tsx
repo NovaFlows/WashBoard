@@ -7,6 +7,7 @@ import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { revenuNet } from '@/lib/pricing'
 
 export default async function ComptaPage() {
   const supabase = await createClient()
@@ -54,11 +55,7 @@ export default async function ComptaPage() {
   // Sans trace, un chiffre d'affaires à 0 € ne se distinguerait pas d'un mois sans activité.
   if (bookingsError) logger.error('compta.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
 
-  const initialRevenue = (bookings ?? []).reduce((sum, b) => {
-    const price    = Number(b.booked_price ?? 0)
-    const discount = b.is_smart_slot ? Number(b.smart_discount ?? 0) : 0
-    return sum + price - discount
-  }, 0)
+  const initialRevenue = revenuNet(bookings ?? [])
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>

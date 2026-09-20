@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   vehiclePrice, hasPriceOverrides, minVehiclePrice, addonsDuration, effectiveDuration,
   smartDiscountAmount, smartPrice, finalDisplayPrice, formatPrice,
-  optionsParVehicule, dureeTotale, prixOptions,
+  optionsParVehicule, dureeTotale, prixOptions, revenuNet,
 } from './pricing'
 
 const svc = { price: 100, vehicle_price_overrides: { SUV: 130, citadine: 80 }, vehicle_types: ['SUV', 'citadine', 'berline'] }
@@ -223,5 +223,31 @@ describe('prixOptions', () => {
 
   it('tolère une option sans prix', () => {
     expect(prixOptions([{ count: 1, addons: [{ duration_minutes: 30 }] }], null, 1)).toBe(0)
+  })
+})
+
+describe('revenuNet', () => {
+  it('somme le prix encaissé, sans remise quand le créneau n’est pas optimisé', () => {
+    expect(revenuNet([
+      { booked_price: 65, smart_discount: 0, is_smart_slot: false },
+      { booked_price: 40, smart_discount: 0, is_smart_slot: false },
+    ])).toBe(105)
+  })
+
+  it('retire la remise « créneau optimisé », et seulement pour les créneaux concernés', () => {
+    expect(revenuNet([
+      { booked_price: 65, smart_discount: 10, is_smart_slot: true },
+      // Une remise renseignée mais is_smart_slot=false ne doit rien retirer :
+      // c'est exactement ce qui distingue les deux réservations.
+      { booked_price: 40, smart_discount: 10, is_smart_slot: false },
+    ])).toBe(65 - 10 + 40)
+  })
+
+  it('tolère des valeurs manquantes, sans lever', () => {
+    expect(revenuNet([{ booked_price: null, smart_discount: null, is_smart_slot: null }])).toBe(0)
+  })
+
+  it('une liste vide vaut zéro', () => {
+    expect(revenuNet([])).toBe(0)
   })
 })

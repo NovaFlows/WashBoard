@@ -7,15 +7,33 @@ import { computeSetupProgress } from '@/lib/setupProgress'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
+import { revenuNet } from '@/lib/pricing'
+import { hasFeature } from '@/lib/plan'
+import { getPeriodRange } from '@/lib/comptaPeriod'
+import { resumeClients } from '@/lib/dashboardClients'
+import { widgetsVisibles } from '@/lib/dashboardWidgets'
+import { FUSEAU } from '@/lib/dateUtils'
+import { AujourdhuiWidget } from '@/components/dashboard/widgets/AujourdhuiWidget'
+import { StatsWidget } from '@/components/dashboard/widgets/StatsWidget'
+import { ClientsWidget } from '@/components/dashboard/widgets/ClientsWidget'
+import { FacturesWidget } from '@/components/dashboard/widgets/FacturesWidget'
+import { WidgetsConfigurator } from '@/components/dashboard/widgets/WidgetsConfigurator'
 
 /**
- * Rendez-vous passés affichés sur l'accueil.
+ * Rendez-vous passés affichés sur l'accueil au premier chargement.
  *
  * L'accueil sert à voir ce qui arrive, pas à consulter des archives : le
  * calendrier montre l'historique complet, et la page Clients le regroupe par
- * personne. Vingt suffisent à vérifier ce qu'on vient de terminer.
+ * personne. Au-delà, un bouton « Charger plus » va chercher la suite à la
+ * demande (voir `api/bookings/historique`) plutôt que de tout envoyer d'un coup.
  */
-const HISTORIQUE_AFFICHE = 20
+const HISTORIQUE_AFFICHE = 5
+
+/** Requête vide, pour les widgets masqués : ne rien demander à la base plutôt
+ *  que de calculer un chiffre qui ne sera affiché nulle part. */
+function aucuneLigne<T>(): Promise<{ data: T[]; error: null }> {
+  return Promise.resolve({ data: [], error: null })
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -44,6 +62,9 @@ export default async function DashboardPage() {
   // on déconnecte pour éviter la boucle "profil non trouvé".
   if (!washer) redirect('/api/auth/logout')
 
+  const visibles = widgetsVisibles(washer.dashboard_widgets)
+  const mois = getPeriodRange('mois', new Date())
+
   // Tout part en même temps : une seule attente réseau au lieu d'une file.
   //
   // Cette page chargeait TOUT l'historique du laveur, lignes complètes et
@@ -53,14 +74,16 @@ export default async function DashboardPage() {
   // — la page la plus consultée du produit, et la première ouverte le matin.
   //
   // Désormais : les rendez-vous à venir (ce qu'on vient voir), les derniers
-  // terminés (ce qu'on vérifie), et les compteurs comptés par la base, qui
-  // restent donc exacts sur tout l'historique sans en rapatrier une ligne.
+  // terminés (ce qu'on vérifie), les compteurs comptés par la base, et les
+  // widgets — mais SEULEMENT ceux que le laveur a choisi de garder visibles
+  // (voir `dashboardWidgets.ts`) : un widget masqué ne coûte plus rien, ni en
+  // affichage ni en requête.
   const [
     { data: aVenir, error: erreurAVenir },
     historique,
-    enAttente,
-    confirmes,
-    termines,
+    statsMois,
+    clientsLite,
+    facturesMois,
     services,
     availabilities,
   ] = await Promise.all([
@@ -85,9 +108,49 @@ export default async function DashboardPage() {
       .order('scheduled_at', { ascending: false })
       .order('id')
       .limit(HISTORIQUE_AFFICHE),
-    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'pending'),
-    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'confirmed'),
-    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'done'),
+    // Widget Statistiques : « en attente »/« confirmés » d'un côté (état
+    // actuel, sans borne de temps), le nombre de rendez-vous terminés CE MOIS
+    // et le chiffre d'affaires de l'autre — cette seconde requête rend les deux
+    // à la fois, pas besoin d'un comptage séparé.
+    visibles.has('stats')
+      ? Promise.all([
+          supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'pending'),
+          supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'confirmed'),
+          toutesLesLignes((debut, fin) => supabase
+            .from('bookings')
+            .select('booked_price, smart_discount, is_smart_slot')
+            .eq('washer_id', washer.id)
+            .eq('status', 'done')
+            .gte('scheduled_at', `${mois.start}T00:00:00`)
+            .lte('scheduled_at', `${mois.end}T23:59:59`)
+            .order('scheduled_at')
+            .order('id')
+            .range(debut, fin)),
+        ])
+      : Promise.resolve(null),
+    // Widget Clients : seulement email + date de création, aucune jointure —
+    // juste assez pour compter, pas pour réafficher une liste (voir la leçon
+    // du 18/09 sur cette même page : ne pas rapatrier des lignes complètes
+    // pour un simple chiffre).
+    visibles.has('clients')
+      ? toutesLesLignes((debut, fin) => supabase
+          .from('bookings')
+          .select('client_email, created_at')
+          .eq('washer_id', washer.id)
+          .range(debut, fin))
+      : aucuneLigne<{ client_email: string | null; created_at: string }>(),
+    // Widget Factures : uniquement celles ÉMISES par WashBoard ce mois-ci (les
+    // imports de factures d'achat ne sont pas comptés ici, voir FacturesWidget).
+    visibles.has('invoices')
+      ? toutesLesLignes((debut, fin) => supabase
+          .from('bookings')
+          .select('booked_price, facture_emise_le')
+          .eq('washer_id', washer.id)
+          .not('facture_numero', 'is', null)
+          .gte('facture_emise_le', `${mois.start}T00:00:00`)
+          .lte('facture_emise_le', `${mois.end}T23:59:59`)
+          .range(debut, fin))
+      : aucuneLigne<{ booked_price: number | null; facture_emise_le: string | null }>(),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
     supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
   ])
@@ -97,15 +160,25 @@ export default async function DashboardPage() {
   // carte de démarrage ne s'affiche pas plutôt que de réclamer à tort.
   if (erreurAVenir) logger.error('dashboard.bookings.fetch_failed', { washerId: washer.id }, erreurAVenir)
   if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
-  // Sans trace ici, un compteur à zéro se lirait « aucun rendez-vous » alors
-  // que c'est la lecture qui a échoué.
-  for (const [quoi, erreur] of [
-    ['pending', enAttente.error], ['confirmed', confirmes.error], ['done', termines.error],
-  ] as const) {
-    if (erreur) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: quoi }, erreur)
-  }
+  if (clientsLite.error) logger.warn('dashboard.clients_widget.fetch_failed', { washerId: washer.id }, clientsLite.error)
+  if (facturesMois.error) logger.warn('dashboard.factures_widget.fetch_failed', { washerId: washer.id }, facturesMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
+
+  let pending = 0
+  let confirmed = 0
+  let terminesCeMois = 0
+  let caCeMois = 0
+  if (statsMois) {
+    const [enAttente, confirmes, doneMois] = statsMois
+    if (enAttente.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'pending' }, enAttente.error)
+    if (confirmes.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'confirmed' }, confirmes.error)
+    if (doneMois.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'done_mois' }, doneMois.error)
+    pending = enAttente.count ?? 0
+    confirmed = confirmes.count ?? 0
+    terminesCeMois = doneMois.data.length
+    caCeMois = revenuNet(doneMois.data)
+  }
 
   const progress = computeSetupProgress({
     servicesCount: services.error ? 1 : (services.count ?? 0),
@@ -123,19 +196,44 @@ export default async function DashboardPage() {
 
   const passes = historique.data ?? []
   const all = [...(aVenir ?? []), ...passes]
-  const pending = enAttente.count ?? 0
-  const confirmed = confirmes.count ?? 0
-  const done = termines.count ?? 0
+
+  // Aujourd'hui, à l'heure de Paris — calculé sur `aVenir` (déjà en main, déjà
+  // trié par heure croissante), sans requête de plus. Ne montre que ce qui
+  // reste à faire : un rendez-vous déjà clôturé n'a plus rien à demander.
+  const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
+  const rdvAujourdhui = (aVenir ?? []).filter(
+    b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
+  )
+
+  const resumeClientsWidget = resumeClients(clientsLite.data ?? [], mois.start)
+  const nombreFactures = facturesMois.data?.length ?? 0
+  const montantFactures = (facturesMois.data ?? []).reduce((s, f) => s + Number(f.booked_price ?? 0), 0)
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <DemarrageCard progress={progress} />
 
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <StatCard label="En attente" value={pending} color="amber" />
-        <StatCard label="Confirmés" value={confirmed} color="emerald" />
-        <StatCard label="Terminés" value={done} color="slate" />
+      <div className="flex items-center justify-end mb-3">
+        <WidgetsConfigurator visibles={[...visibles]} />
       </div>
+
+      {visibles.size > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+          {visibles.has('today') && <AujourdhuiWidget bookings={rdvAujourdhui} />}
+          {visibles.has('stats') && (
+            <StatsWidget
+              pending={pending}
+              confirmed={confirmed}
+              terminesCeMois={terminesCeMois}
+              caCeMois={hasFeature(washer, 'compta') ? caCeMois : null}
+            />
+          )}
+          {visibles.has('clients') && (
+            <ClientsWidget total={resumeClientsWidget.total} nouveauxCeMois={resumeClientsWidget.nouveauxCeMois} />
+          )}
+          {visibles.has('invoices') && <FacturesWidget nombre={nombreFactures} montant={montantFactures} />}
+        </div>
+      )}
 
       <BookingList
         bookings={all}
@@ -144,19 +242,5 @@ export default async function DashboardPage() {
         historiqueTronque={passes.length === HISTORIQUE_AFFICHE}
       />
     </DashboardShell>
-  )
-}
-
-function StatCard({ label, value, color }: { label: string; value: number; color: 'amber' | 'emerald' | 'slate' }) {
-  const colors = {
-    amber:   'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
-    emerald: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400',
-    slate:   'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400',
-  }
-  return (
-    <div className={`rounded-xl border p-3 text-center ${colors[color]}`}>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium mt-0.5 opacity-80">{label}</p>
-    </div>
   )
 }

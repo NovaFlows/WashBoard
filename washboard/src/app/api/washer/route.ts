@@ -8,6 +8,7 @@ import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
 import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
 import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
+import { widgetsValides } from '@/lib/dashboardWidgets'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -20,7 +21,7 @@ export async function PATCH(request: NextRequest) {
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
     followup_enabled, followup_delay_days, followup_message,
-    zone_config,
+    zone_config, dashboard_widgets,
     facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva,
     facture_statut, facture_forme_juridique, facture_capital, facture_immatriculation,
     facture_prochain_numero,
@@ -81,6 +82,13 @@ export async function PATCH(request: NextRequest) {
   }
 
   const updates: Record<string, unknown> = {}
+
+  // Widgets affichés sur l'accueil. Les clés inconnues sont silencieusement
+  // écartées (voir widgetsValides) plutôt que de faire échouer tout
+  // l'enregistrement pour une checkbox mal nommée.
+  if (dashboard_widgets !== undefined) {
+    updates.dashboard_widgets = dashboard_widgets === null ? null : widgetsValides(dashboard_widgets)
+  }
 
   // Slug personnalisé : format strict + unicité
   if (slug !== undefined) {

@@ -60,6 +60,34 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
   const [list, setList]       = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
 
+  // « Charger plus » sur l'historique : la page n'en envoie plus que les 5 plus
+  // récents. `decalage` compte les lignes déjà en main (celles de départ, puis
+  // celles ajoutées), pour demander la suite sans redemander ce qu'on a déjà.
+  const [decalage, setDecalage] = useState(bookings.filter(b => b.status === 'done' || b.status === 'cancelled').length)
+  const [encorePlus, setEncorePlus] = useState(!!historiqueTronque)
+  const [chargeEnCours, setChargeEnCours] = useState(false)
+
+  async function chargerPlus() {
+    setChargeEnCours(true)
+    try {
+      const res = await fetch(`/api/bookings/historique?decalage=${decalage}&limite=10`)
+      if (!res.ok) return
+      const { data, hasMore } = await res.json()
+      const nouvelles: Booking[] = data ?? []
+      setList(prev => {
+        // Écarte les doublons plutôt que de supposer que rien n'a changé
+        // entre-temps : un rendez-vous tout juste clôturé pourrait apparaître
+        // à la fois dans la page initiale et dans ce lot.
+        const connus = new Set(prev.map(b => b.id))
+        return [...prev, ...nouvelles.filter(b => !connus.has(b.id))]
+      })
+      setDecalage(d => d + nouvelles.length)
+      setEncorePlus(hasMore)
+    } finally {
+      setChargeEnCours(false)
+    }
+  }
+
   async function updateStatus(bookingId: string, status: string, closedLate?: boolean) {
     setLoading(bookingId)
     const body: Record<string, unknown> = { status }
@@ -131,11 +159,19 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
               <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
             ))}
           </div>
-          {historiqueTronque && (
+          {encorePlus && (
+            <button
+              onClick={chargerPlus}
+              disabled={chargeEnCours}
+              className="w-full mt-3 py-2.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-60 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+            >
+              {chargeEnCours ? 'Chargement...' : 'Charger plus'}
+            </button>
+          )}
+          {!encorePlus && historiqueTronque !== undefined && past.length > 5 && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 text-center">
-              Seuls les plus récents sont affichés ici.{' '}
               <Link href="/dashboard/calendrier" className="underline font-medium hover:text-slate-600 dark:hover:text-slate-300">
-                Voir tout l&apos;historique
+                Voir tout l&apos;historique dans le calendrier
               </Link>
             </p>
           )}

@@ -3,6 +3,7 @@ import { errorResponse } from '@/lib/apiError'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
+import { revenuNet } from '@/lib/pricing'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -33,11 +34,5 @@ export async function GET(req: NextRequest) {
 
   if (error) return errorResponse('compta.revenue.get.db', error)
 
-  const revenue = (data ?? []).reduce((sum, b) => {
-    const price    = Number(b.booked_price ?? 0)
-    const discount = b.is_smart_slot ? Number(b.smart_discount ?? 0) : 0
-    return sum + price - discount
-  }, 0)
-
-  return NextResponse.json({ revenue })
+  return NextResponse.json({ revenue: revenuNet(data ?? []) })
 }

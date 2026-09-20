@@ -134,3 +134,27 @@ export function finalDisplayPrice(basePrice: number, isSmartSlot: boolean, smart
 export function formatPrice(n: number): string {
   return n.toFixed(2).replace(/\.00$/, '') + '€'
 }
+
+/** Réservation « terminée », telle que renvoyée par une lecture ciblée
+ *  (`booked_price, smart_discount, is_smart_slot`) — pas la ligne complète. */
+export type BookingFacture = {
+  booked_price: number | null
+  smart_discount: number | null
+  is_smart_slot: boolean | null
+}
+
+/** Chiffre d'affaires réel d'un lot de réservations terminées : le prix
+ *  encaissé, diminué de la remise « créneau optimisé » quand elle s'applique.
+ *
+ *  Formule unique, reprise telle quelle de la Comptabilité (page et route
+ *  `/api/compta/revenue`, qui la dupliquaient chacune) : le chiffre affiché
+ *  sur l'accueil et celui de la Comptabilité ne doivent jamais pouvoir
+ *  diverger pour la même période. L'appelant filtre déjà sur `status='done'`
+ *  et la période voulue — cette fonction ne fait que sommer. */
+export function revenuNet(bookings: BookingFacture[]): number {
+  return bookings.reduce((sum, b) => {
+    const prix = Number(b.booked_price ?? 0)
+    const remise = b.is_smart_slot ? Number(b.smart_discount ?? 0) : 0
+    return sum + prix - remise
+  }, 0)
+}

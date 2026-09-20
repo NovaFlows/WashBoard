@@ -39,6 +39,10 @@ export type Washer = {
   followup_delay_days: number
   followup_message: string | null
   created_at: string
+  // Widgets affichés sur l'accueil (voir lib/dashboardWidgets.ts). `undefined`
+  // tant que la colonne n'existe pas en base, `null` tant que le laveur n'a
+  // jamais ouvert le réglage — les deux valent « tout afficher ».
+  dashboard_widgets?: string[] | null
   // Facturation aux clients (voir lib/facture.ts). Optionnels : absents tant
   // que les colonnes n'existent pas en base.
   facture_statut?: 'ei' | 'societe'
