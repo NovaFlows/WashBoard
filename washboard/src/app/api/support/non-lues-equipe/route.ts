@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { isSupportMember } from '@/lib/supportAccess'
-import { countUnreadMessages } from '@/lib/supportMapping'
+import { countUnreadMessages, isThreadHiddenForTeam } from '@/lib/supportMapping'
 
 // Pendant de `support/non-lues/route.ts`, côté équipe cette fois : appelée sur
 // CHAQUE page du dashboard par un membre de l'équipe, pour la pastille du menu
@@ -29,7 +29,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('support_questions')
-    .select('last_read_by_team_at, support_messages(author_type, created_at)')
+    .select('last_read_by_team_at, hidden_for_team_at, last_message_at, support_messages(author_type, created_at)')
 
   if (error) {
     // Même motif que les quatre bugs récents : un `count: 0` de repli ferait
@@ -39,10 +39,13 @@ export async function GET() {
     return NextResponse.json({ error: 'Impossible de charger vos notifications.' }, { status: 503 })
   }
 
-  const count = (data ?? []).reduce(
-    (total, row) => total + countUnreadMessages(row.support_messages, 'washer', row.last_read_by_team_at),
-    0,
-  )
+  // Même filtre, même fonction que la liste (`team-questions/route.ts`) : un
+  // fil masqué ne doit pas non plus faire monter la pastille, sinon
+  // l'équipe voit un badge qui ne correspond à rien de visible dans sa boîte.
+  const count = (data ?? []).reduce((total, row) => {
+    if (isThreadHiddenForTeam(row.hidden_for_team_at, row.last_message_at)) return total
+    return total + countUnreadMessages(row.support_messages, 'washer', row.last_read_by_team_at)
+  }, 0)
 
   return NextResponse.json({ count })
 }

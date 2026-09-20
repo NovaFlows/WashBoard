@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LifeBuoy, Shield } from 'lucide-react'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
+import { SOCIAL_LINKS } from '@/components/ui/socialLinks'
 
 type Props = {
   isOpen: boolean
@@ -136,8 +137,14 @@ export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport,
           </button>
         </div>
 
-        {/* Navigation principale */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        {/* Navigation principale. `overflow-y-auto` + `min-h-0` (indispensable
+            pour qu'un enfant flex accepte de rétrécir sous sa taille de
+            contenu) : sur un petit téléphone en hauteur réduite, c'est cette
+            zone qui défile, jamais Paramètres ni le pied de menu juste en
+            dessous — repéré en auditant le rendu à hauteur réduite, où
+            « Support (équipe) » sortait déjà de l'écran sans aucun moyen d'y
+            accéder. */}
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1">
           {NAV.map(item => (
             <Link key={item.href} href={item.href} onClick={onClose} className={navClass(item.href)}>
               <span className={iconClass(item.href)}>{item.icon}</span>
@@ -178,7 +185,28 @@ export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport,
             </span>
             Paramètres
           </Link>
-          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-3">WashBoard · Espace laveur</p>
+
+          {/* Discret à dessein : c'est un menu de travail, pas une vitrine.
+              Icônes seules (pas de libellé « Instagram »/« TikTok »), taille
+              visuelle réduite (18/17px) dans une zone cliquable de 44x44 —
+              assez pour un pouce, sans peser sur la hauteur du menu ni
+              concurrencer les entrées de navigation au-dessus. */}
+          <div className="flex items-center justify-center gap-1">
+            {SOCIAL_LINKS.map(social => (
+              <a
+                key={social.name}
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`WashBoard sur ${social.name}`}
+                className="flex items-center justify-center w-11 h-11 rounded-full text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                {social.icon}
+              </a>
+            ))}
+          </div>
+
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center">WashBoard · Espace laveur</p>
         </div>
 
         {/* Réservé à l'équipe, jamais deviné côté client (voir
@@ -195,7 +223,14 @@ export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport,
             <Link
               href="/dashboard/support"
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition-all"
+              // Actif : un fond gris sobre (pas le bleu des entrées métier au-dessus,
+              // volontairement — voir le commentaire juste au-dessus) suffit à montrer
+              // qu'on y est déjà.
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive('/dashboard/support')
+                  ? 'bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                  : 'text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
             >
               <Shield size={18} strokeWidth={2} />
               Support (équipe)

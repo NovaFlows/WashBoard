@@ -96,6 +96,38 @@ describe('GET /api/support/non-lues-equipe', () => {
     expect(body).toEqual({ count: 2 })
   })
 
+  it('ne compte pas un fil masqué par l\'équipe (même filtre que la liste)', async () => {
+    plan.questions = {
+      data: [
+        {
+          // Masqué après le dernier message : ne doit rien ajouter au badge,
+          // même si le laveur a un message non lu par l'équipe dessus.
+          last_read_by_team_at: null,
+          hidden_for_team_at: '2026-09-03T00:00:00.000Z',
+          last_message_at: '2026-09-02T00:00:00.000Z',
+          support_messages: [
+            { author_type: 'washer', created_at: '2026-09-02T00:00:00.000Z' },
+          ],
+        },
+        {
+          // Masqué puis le laveur relance : `last_message_at` avance,
+          // redevient visible et doit recompter normalement.
+          last_read_by_team_at: null,
+          hidden_for_team_at: '2026-09-03T00:00:00.000Z',
+          last_message_at: '2026-09-04T00:00:00.000Z',
+          support_messages: [
+            { author_type: 'washer', created_at: '2026-09-04T00:00:00.000Z' },
+          ],
+        },
+      ],
+      error: null,
+    }
+    const res = await GET()
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body).toEqual({ count: 1 })
+  })
+
   it('répond 503 sans compter 0 si la lecture échoue vraiment', async () => {
     plan.questions = { data: null, error: { message: 'base indisponible' } }
     const res = await GET()

@@ -12,7 +12,12 @@ import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 
 type Props = {
-  washerName: string
+  // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
+  // support sans compte laveur associé, voir `/dashboard/support`) : dans ce
+  // cas, ni le nom ni le badge d'abonnement ne peuvent être affichés — voir
+  // plus bas où `washerName` conditionne leur rendu. Le menu (Sidebar), lui,
+  // reste toujours affiché : il ne dépend d'aucune donnée laveur.
+  washerName?: string
   children: React.ReactNode
   trialEndsAt?: string | null
   subscriptionStatus?: string | null
@@ -316,12 +321,20 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
                 sur téléphone — retiré à la demande d'Alexandre le 2026-09-15. */}
             <div className="min-w-0">
               <p className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight truncate">WashBoard</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-none truncate hidden sm:block">{washerName}</p>
+              {/* Pas de fiche laveur (ex. compte support) : rien à afficher ici
+                  plutôt qu'un texte inventé — le contenu de la page se charge
+                  déjà de dire à qui appartient le compte connecté. */}
+              {washerName && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-none truncate hidden sm:block">{washerName}</p>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <PlanBadge plan={plan} grandfathered={grandfathered} />
+            {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
+                sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
+                ce qui laisserait croire à un abonnement qui n'existe pas. */}
+            {washerName && <PlanBadge plan={plan} grandfathered={grandfathered} />}
             <form action="/api/auth/logout" method="POST">
               <button
                 aria-label="Se déconnecter"

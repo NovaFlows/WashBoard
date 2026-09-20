@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isSupportMember } from '@/lib/supportAccess'
 import { logger } from '@/lib/logger'
+import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import SupportAccessForm from '@/components/dashboard/SupportAccessForm'
 import SupportInbox from '@/components/dashboard/SupportInbox'
 
@@ -15,12 +15,17 @@ export const dynamic = 'force-dynamic'
 // n'est pas dans SUPPORT_ADMIN_EMAILS — un laveur qui devinerait l'adresse ne
 // doit pas même savoir qu'elle existe.
 //
-// Volontairement sans la coque du tableau de bord : celle-ci suppose une fiche
-// laveur, alors qu'un membre du support n'en a pas forcément. Aujourd'hui
-// l'adresse support est aussi celle d'un compte laveur, mais lier les deux
-// interdirait de créer un jour un compte support dédié — et l'erreur se
-// serait manifestée par une redirection vers la connexion, impossible à
-// comprendre.
+// Coque du tableau de bord (DashboardShell, avec son menu) : affichée, mais
+// SANS supposer de fiche laveur. DashboardShell attend `washerName`,
+// `trialEndsAt`, `plan`… des informations qui n'existent que pour un compte
+// laveur. Aujourd'hui l'adresse support est aussi celle d'un compte laveur,
+// la fiche existe donc par coïncidence — mais le jour où un compte support
+// dédié sera créé, elle n'existera plus. On lit donc la fiche directement,
+// PAS via `washerDuUtilisateur` (celle-ci déconnecte un compte sans fiche :
+// exactement le piège à éviter ici), et on la passe à DashboardShell si elle
+// existe. Si elle n'existe pas, DashboardShell bascule dans un mode dégradé
+// (pas de nom de laveur, pas de badge d'abonnement) plutôt que de planter ou
+// rediriger — voir le commentaire dans DashboardShell.tsx.
 export default async function SupportPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,35 +51,44 @@ export default async function SupportPage() {
   // qu'un rendu serveur qui se contenterait de passer `[]` en cas d'erreur ne
   // pourrait pas distinguer d'un « aucune question ».
 
+  // Fiche laveur du compte connecté, si elle existe — lecture directe (pas
+  // `washerDuUtilisateur`, voir le commentaire en tête de fichier). Un échec
+  // de lecture n'est pas plus grave ici qu'une fiche absente : dans les deux
+  // cas, DashboardShell passe simplement en mode dégradé.
+  const { data: washer, error: washerError } = await supabase
+    .from('washers')
+    .select('name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (washerError) {
+    logger.warn('support.page.washer_read_failed', { userId: user.id }, washerError)
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 px-4 py-10">
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors mb-6"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 5l-7 7 7 7" />
-          </svg>
-          Retour au tableau de bord
-        </Link>
+    <DashboardShell
+      washerName={washer?.name}
+      trialEndsAt={washer?.trial_ends_at ?? null}
+      subscriptionStatus={washer?.subscription_status ?? null}
+      plan={washer?.plan}
+      grandfathered={washer?.grandfathered ?? false}
+      stripeSubscriptionId={washer?.stripe_subscription_id ?? null}
+      cancelsAt={washer?.cancels_at ?? null}
+    >
+      <h1 className="text-2xl font-black text-slate-900 dark:text-white">Support</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-6">
+        Accéder au compte d&apos;un laveur qui a ouvert l&apos;accès depuis ses réglages.
+        Connecté en tant que {user.email}.
+      </p>
 
-        <h1 className="text-2xl font-black text-slate-900 dark:text-white">Support</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-6">
-          Accéder au compte d&apos;un laveur qui a ouvert l&apos;accès depuis ses réglages.
-          Connecté en tant que {user.email}.
-        </p>
+      <SupportAccessForm />
 
-        <SupportAccessForm />
-
-        <h2 className="text-lg font-black text-slate-900 dark:text-white mt-10 mb-1">Questions des laveurs</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Les non lues en premier.
-        </p>
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4">
-          <SupportInbox />
-        </div>
+      <h2 className="text-lg font-black text-slate-900 dark:text-white mt-10 mb-1">Questions des laveurs</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        Les non lues en premier.
+      </p>
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4">
+        <SupportInbox />
       </div>
-    </div>
+    </DashboardShell>
   )
 }

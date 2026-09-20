@@ -30,6 +30,12 @@ export type SupportQuestionRow = {
   // typage, `countUnreadMessages` traite `undefined` comme `null`.
   last_read_by_washer_at?: string | null
   last_read_by_team_at?: string | null
+  // Masquage réversible côté équipe (colonne ajoutée par cyber) : voir
+  // `isThreadHiddenForTeam`. Optionnels tous les deux pour la même raison que
+  // les curseurs de lecture ci-dessus — une sélection qui ne les demande pas
+  // ne doit pas casser le typage.
+  hidden_for_team_at?: string | null
+  last_message_at?: string
   support_messages?: SupportMessageRow[] | null
 }
 
@@ -77,6 +83,29 @@ export function countUnreadMessages(
     if (seuil === null) return true
     return new Date(m.created_at).getTime() > seuil
   }).length
+}
+
+/** Un fil masqué par l'équipe (bouton/glissement sur la boîte de réception,
+ *  jamais une suppression : `hidden_for_team_at` seul ne suffit pas, sinon un
+ *  nouveau message du laveur resterait masqué indéfiniment) redevient visible
+ *  dès qu'il avance `last_message_at` — sans qu'aucune route n'ait besoin de
+ *  « démasquer » explicitement. D'où la comparaison stricte : un masquage et
+ *  un message posés à la même horodate (ordre de résolution improbable mais
+ *  pas impossible) doivent laisser le fil visible, jamais l'inverse.
+ *
+ *  Comparaison strictement `>`, et tout doute (date absente ou illisible)
+ *  penche vers VISIBLE : contrairement au reste du projet (refuser par
+ *  défaut), masquer à tort un fil client coûte plus cher qu'un fil qui
+ *  réapparaît à tort. */
+export function isThreadHiddenForTeam(
+  hiddenAt: string | null | undefined,
+  lastMessageAt: string,
+): boolean {
+  if (!hiddenAt) return false
+  const h = new Date(hiddenAt).getTime()
+  const m = new Date(lastMessageAt).getTime()
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return false
+  return h > m
 }
 
 /** Vue laveur d'un fil : `nonLue` reflète son propre indicateur de lecture,

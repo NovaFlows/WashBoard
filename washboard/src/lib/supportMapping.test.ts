@@ -8,6 +8,7 @@ import {
   mapConversationRow,
   assistanceThreadUrl,
   countUnreadMessages,
+  isThreadHiddenForTeam,
 } from './supportMapping'
 
 describe('dbStatusToUi / uiStatusToDb', () => {
@@ -73,6 +74,35 @@ describe('countUnreadMessages', () => {
     expect(countUnreadMessages([], 'team', null)).toBe(0)
     expect(countUnreadMessages(null, 'team', null)).toBe(0)
     expect(countUnreadMessages(undefined, 'team', null)).toBe(0)
+  })
+})
+
+describe('isThreadHiddenForTeam', () => {
+  it('non masqué (hiddenAt absent) : visible', () => {
+    expect(isThreadHiddenForTeam(null, '2026-09-17T10:00:00.000Z')).toBe(false)
+    expect(isThreadHiddenForTeam(undefined, '2026-09-17T10:00:00.000Z')).toBe(false)
+  })
+
+  it('masqué après le dernier message : masqué', () => {
+    expect(isThreadHiddenForTeam('2026-09-17T11:00:00.000Z', '2026-09-17T10:00:00.000Z')).toBe(true)
+  })
+
+  it('nouveau message du laveur après le masquage : redevient visible, sans action explicite', () => {
+    // Le cœur de la règle 3 du besoin : `last_message_at` avance tout seul
+    // quand le laveur écrit, la condition devient fausse d'elle-même.
+    expect(isThreadHiddenForTeam('2026-09-17T10:00:00.000Z', '2026-09-17T11:00:00.000Z')).toBe(false)
+  })
+
+  it('égalité stricte : masquage et dernier message à la même horodate → visible', () => {
+    expect(isThreadHiddenForTeam('2026-09-17T10:00:00.000Z', '2026-09-17T10:00:00.000Z')).toBe(false)
+  })
+
+  it('date de masquage illisible : doute → visible, jamais masqué à tort', () => {
+    expect(isThreadHiddenForTeam('pas-une-date', '2026-09-17T10:00:00.000Z')).toBe(false)
+  })
+
+  it('last_message_at illisible : doute → visible', () => {
+    expect(isThreadHiddenForTeam('2026-09-17T11:00:00.000Z', 'pas-une-date')).toBe(false)
   })
 })
 

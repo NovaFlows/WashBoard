@@ -125,7 +125,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params
   const ctx = await equipeConnectee()
   if ('erreur' in ctx) return ctx.erreur
-  const { admin } = ctx
+  const { user, admin } = ctx
 
   const body = await request.json().catch(() => null)
   const updates: Record<string, unknown> = {}
@@ -137,6 +137,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     updates.is_read_by_team = true
     updates.last_read_by_team_at = new Date().toISOString()
   }
+  // Masquage réversible de la boîte de réception équipe (bouton/glissement,
+  // voir isThreadHiddenForTeam) : le client dit seulement s'il veut masquer
+  // ou démasquer, jamais la date — calculée ici. Démasquer remet à NULL,
+  // jamais à une date passée : NULL est le seul état « visible » sans
+  // ambiguïté (une date passée serait encore antérieure à un futur
+  // `last_message_at`, donc visible aussi, mais par accident). Le laveur n'a
+  // aucun accès à cette route (isSupportMember ci-dessus, RLS en plus).
+  if (body?.hidden === true) {
+    updates.hidden_for_team_at = new Date().toISOString()
+  } else if (body?.hidden === false) {
+    updates.hidden_for_team_at = null
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })
@@ -147,6 +159,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (error) {
     logger.error('support.team-questions.id.update_failed', { questionId: id, updates }, error)
     return NextResponse.json({ error: 'Impossible de mettre à jour la question. Réessayez.' }, { status: 503 })
+  }
+
+  if (typeof body?.hidden === 'boolean') {
+    logger.info('support.team-questions.id.hidden_toggled', {
+      questionId: id, hidden: body.hidden, teamEmail: user.email ?? null,
+    })
   }
 
   return NextResponse.json({ success: true })
