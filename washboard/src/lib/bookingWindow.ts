@@ -13,8 +13,14 @@
 
 import { SLOT_STEP } from './slots'
 
-/** Nombre de jours proposés par le formulaire, à partir de demain. */
-export const BOOKING_HORIZON_DAYS = 14
+/** Nombre de jours proposés par le formulaire, à partir de demain.
+ *
+ *  Passé de 14 à 60 le 20/09/2026, en même temps que le calendrier mensuel de
+ *  la page de réservation : une grille qui montre le mois entier n'a de sens
+ *  que si l'on peut aussi réserver dedans. Cette limite est vérifiée ICI, côté
+ *  serveur — l'augmenter seulement dans l'affichage proposerait des jours que
+ *  la réservation refuserait ensuite. */
+export const BOOKING_HORIZON_DAYS = 60
 
 export type VerdictDate = 'ok' | 'invalide' | 'passe' | 'trop_loin'
 

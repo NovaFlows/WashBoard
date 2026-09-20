@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
+import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize } from '@/lib/slots'
@@ -36,17 +37,35 @@ type Props = {
 const DAY_NAMES   = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTH_NAMES = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc']
 
-function getNextDays(count: number): Date[] {
-  const days: Date[] = []
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  for (let i = 1; i <= count; i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    days.push(d)
-  }
-  return days
+/** En-têtes de la grille, semaine commençant le lundi (usage français). */
+const ENTETES_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const MOIS_LONGS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+]
+
+/** Minuit, pour comparer des jours sans se soucier de l'heure. */
+function aMinuit(d: Date): Date {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
 }
+
+/** Les cases d'un mois : d'abord les vides qui décalent le 1er sur son jour de
+ *  semaine, puis chaque jour. Une grille de calendrier, pas une liste. */
+function grilleDuMois(mois: Date): (Date | null)[] {
+  const premier = new Date(mois.getFullYear(), mois.getMonth(), 1)
+  // getDay() rend 0 pour dimanche ; on décale pour que lundi vaille 0.
+  const decalage = (premier.getDay() + 6) % 7
+  const nbJours = new Date(mois.getFullYear(), mois.getMonth() + 1, 0).getDate()
+  const cases: (Date | null)[] = Array.from({ length: decalage }, () => null)
+  for (let j = 1; j <= nbJours; j++) {
+    cases.push(new Date(mois.getFullYear(), mois.getMonth(), j))
+  }
+  return cases
+}
+
+const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
@@ -69,9 +88,24 @@ export default function StepSlot({
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
   const [morningVisible,     setMorningVisible]     = useState(6)
   const [afternoonVisible,   setAfternoonVisible]   = useState(6)
-  const dayScrollerRef = useRef<HTMLDivElement>(null)
-  const [dayScrollLeft,  setDayScrollLeft]  = useState(false)
-  const [dayScrollRight, setDayScrollRight] = useState(false)
+  // Fenêtre réservable : de demain à l'horizon que le serveur accepte.
+  const [premierJour] = useState(() => {
+    const d = aMinuit(new Date())
+    d.setDate(d.getDate() + 1)
+    return d
+  })
+  const [dernierJour] = useState(() => {
+    const d = aMinuit(new Date())
+    d.setDate(d.getDate() + BOOKING_HORIZON_DAYS)
+    return d
+  })
+  const [moisAffiche, setMoisAffiche] = useState(
+    () => new Date(premierJour.getFullYear(), premierJour.getMonth(), 1),
+  )
+  // Le calendrier s'efface dès qu'un jour est choisi, pour laisser la place
+  // aux horaires. « Changer de date » le rouvre : sauter à la semaine suivante
+  // ne doit pas demander sept clics sur la flèche.
+  const [choixDateOuvert, setChoixDateOuvert] = useState(false)
 
   const SLOTS_PER_PAGE = 6
 
@@ -80,25 +114,6 @@ export default function StepSlot({
     const t = setTimeout(() => setDebouncedAddress(address), 800)
     return () => clearTimeout(t)
   }, [address])
-
-  const updateDayScrollHints = useCallback(() => {
-    const el = dayScrollerRef.current
-    if (!el) return
-    setDayScrollLeft(el.scrollLeft > 4)
-    setDayScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4)
-  }, [])
-
-  useEffect(() => {
-    updateDayScrollHints()
-    const el = dayScrollerRef.current
-    if (!el) return
-    el.addEventListener('scroll', updateDayScrollHints, { passive: true })
-    window.addEventListener('resize', updateDayScrollHints)
-    return () => {
-      el.removeEventListener('scroll', updateDayScrollHints)
-      window.removeEventListener('resize', updateDayScrollHints)
-    }
-  }, [updateDayScrollHints])
 
   // Vérification de zone dès que l'adresse change (sans attendre la date)
   useEffect(() => {
@@ -172,7 +187,6 @@ export default function StepSlot({
       .finally(() => setFetchingSmarts(false))
   }, [selectedDate, debouncedAddress, washerId])
 
-  const days = getNextDays(14)
   const availableDaysOfWeek = availabilities.map(a => a.day_of_week)
 
   function getEffectiveTeamSize(date: Date): number {
@@ -182,6 +196,43 @@ export default function StepSlot({
   function isDateUnavailable(date: Date): boolean {
     return getEffectiveTeamSize(date) === 0
   }
+
+  /** Réservable = dans la fenêtre autorisée, un jour où le laveur travaille,
+   *  et pas entièrement en congé. */
+  function estReservable(d: Date): boolean {
+    if (d < premierJour || d > dernierJour) return false
+    return availableDaysOfWeek.includes(d.getDay()) && !isDateUnavailable(d)
+  }
+
+  /** Jour réservable suivant (1) ou précédent (-1), en sautant les jours
+   *  fermés : une flèche doit faire avancer, pas tomber sur « aucun créneau ». */
+  function jourVoisin(sens: 1 | -1): Date | null {
+    if (!selectedDate) return null
+    const d = new Date(selectedDate)
+    for (let i = 0; i <= BOOKING_HORIZON_DAYS; i++) {
+      d.setDate(d.getDate() + sens)
+      if (d < premierJour || d > dernierJour) return null
+      if (estReservable(d)) return new Date(d)
+    }
+    return null
+  }
+
+  function choisirJour(d: Date) {
+    setSelectedDate(d)
+    setSelectedTime(null)
+    setMorningVisible(6)
+    setAfternoonVisible(6)
+    setChoixDateOuvert(false)
+  }
+
+  const moisMin = new Date(premierJour.getFullYear(), premierJour.getMonth(), 1)
+  const moisMax = new Date(dernierJour.getFullYear(), dernierJour.getMonth(), 1)
+  const moisPrecedentPossible = moisAffiche > moisMin
+  const moisSuivantPossible   = moisAffiche < moisMax
+  const montrerCalendrier = !selectedDate || choixDateOuvert
+  // Calculés une fois : `jourVoisin` parcourt le calendrier jour par jour.
+  const jourPrecedent = montrerCalendrier ? null : jourVoisin(-1)
+  const jourSuivant   = montrerCalendrier ? null : jourVoisin(1)
 
   const effectiveTeamSize = selectedDate ? getEffectiveTeamSize(selectedDate) : teamSize
 
@@ -272,49 +323,126 @@ export default function StepSlot({
         </div>
       )}
 
-      <div className="mb-4">
-        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Sélectionnez un jour</p>
-        {/* Le voile en dégradé à droite est le seul indice qu'il reste des jours
-            hors écran : sans lui, la liste paraît finir au dernier jour visible
-            et un client peut croire qu'il n'y a plus de créneaux après. Pas de
-            défilement automatique ici (contrairement aux avis) : c'est une
-            sélection active, un déplacement subi serait pénible. */}
-        <div className="relative">
-          {dayScrollRight && (
-            <div className="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white dark:from-slate-900 to-transparent pointer-events-none z-[5]" />
-          )}
-          {dayScrollLeft && (
-            <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white dark:from-slate-900 to-transparent pointer-events-none z-[5]" />
-          )}
-          <div ref={dayScrollerRef} className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {days.map(day => {
-            const isAvailable   = availableDaysOfWeek.includes(day.getDay()) && !isDateUnavailable(day)
-            const isUnavailable = isDateUnavailable(day)
-            const isSelected    = selectedDate?.toDateString() === day.toDateString()
-            return (
-              <button
-                key={day.toISOString()}
-                onClick={() => { if (isAvailable) { setSelectedDate(day); setSelectedTime(null); setMorningVisible(6); setAfternoonVisible(6) } }}
-                disabled={!isAvailable}
-                className={`flex-shrink-0 flex flex-col items-center py-2.5 px-3 rounded-xl border-2 text-xs transition-all min-w-[52px] ${
-                  isSelected    ? 'text-white shadow-md' :
-                  isUnavailable ? 'border-orange-100 dark:border-orange-900/30 text-orange-300 dark:text-orange-700 cursor-not-allowed bg-orange-50/50 dark:bg-orange-950/10' :
-                  isAvailable   ? 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800' :
-                  'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-900'
-                }`}
-                style={isSelected ? { backgroundColor: accent, borderColor: accent } : undefined}
-              >
-                <span className="font-medium">{DAY_NAMES[day.getDay()]}</span>
-                <span className="text-base font-bold mt-0.5">{day.getDate()}</span>
-                <span className={`text-[10px] mt-0.5 ${isSelected ? 'opacity-80' : 'text-slate-400 dark:text-slate-500'}`}>
-                  {MONTH_NAMES[day.getMonth()]}
-                </span>
-              </button>
-            )
-          })}
+      {/* Le calendrier occupe toute la largeur tant qu'aucun jour n'est choisi,
+          puis s'efface au profit des horaires — ce sont deux moments distincts,
+          pas deux listes à faire tenir ensemble sur un téléphone. */}
+      {montrerCalendrier ? (
+        <div className="mb-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Sélectionnez un jour</p>
+
+          <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+              disabled={!moisPrecedentPossible}
+              aria-label="Mois précédent"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              {MOIS_LONGS[moisAffiche.getMonth()]} {moisAffiche.getFullYear()}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+              disabled={!moisSuivantPossible}
+              aria-label="Mois suivant"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
           </div>
+
+          <div className="grid grid-cols-7 gap-1 mb-1" aria-hidden="true">
+            {ENTETES_SEMAINE.map((jour, i) => (
+              <span key={i} className="text-center text-[11px] font-bold text-slate-400 dark:text-slate-500 py-1">{jour}</span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {grilleDuMois(moisAffiche).map((jour, i) => {
+              if (!jour) return <span key={`vide-${i}`} aria-hidden="true" />
+              const libre  = estReservable(jour)
+              const choisi = !!selectedDate && memeJour(selectedDate, jour)
+              // Un congé se distingue d'un jour de fermeture habituel : le
+              // client voit que le laveur travaille ce jour-là d'ordinaire.
+              const conge  = jour >= premierJour && jour <= dernierJour
+                && availableDaysOfWeek.includes(jour.getDay()) && isDateUnavailable(jour)
+              return (
+                <button
+                  key={jour.toISOString()}
+                  type="button"
+                  onClick={() => choisirJour(jour)}
+                  disabled={!libre}
+                  aria-label={`${jour.getDate()} ${MOIS_LONGS[jour.getMonth()]}${libre ? '' : ' — indisponible'}`}
+                  aria-current={choisi ? 'date' : undefined}
+                  className={`aspect-square flex items-center justify-center rounded-lg text-sm font-semibold border-2 transition-all ${
+                    choisi ? 'text-white shadow-md' :
+                    conge  ? 'border-transparent bg-orange-50/60 dark:bg-orange-950/20 text-orange-300 dark:text-orange-700 cursor-not-allowed' :
+                    libre  ? 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800' :
+                    'border-transparent text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                  }`}
+                  style={choisi ? { backgroundColor: accent, borderColor: accent } : undefined}
+                >
+                  {jour.getDate()}
+                </button>
+              )
+            })}
+          </div>
+
+          {selectedDate && (
+            <button
+              type="button"
+              onClick={() => setChoixDateOuvert(false)}
+              className="mt-3 text-xs font-bold hover:opacity-70 transition-opacity"
+              style={{ color: accent }}
+            >
+              ← Revenir aux horaires du {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
+            </button>
+          )}
         </div>
-      </div>
+      ) : selectedDate && (
+        /* Date choisie : une barre compacte suffit. Les flèches sautent au jour
+           OUVERT suivant ou précédent — avancer d'un jour fermé ne servirait
+           qu'à afficher « aucun créneau ». Le libellé central rouvre le
+           calendrier, pour changer de semaine sans enchaîner les flèches. */
+        <div className="mb-4 flex items-center gap-1 p-1 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <button
+            type="button"
+            onClick={() => jourPrecedent && choisirJour(jourPrecedent)}
+            disabled={!jourPrecedent}
+            aria-label="Jour disponible précédent"
+            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMoisAffiche(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1))
+              setChoixDateOuvert(true)
+            }}
+            className="flex-1 min-w-0 py-1 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+          >
+            <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+              {DAY_NAMES[selectedDate.getDay()]} {selectedDate.getDate()} {MOIS_LONGS[selectedDate.getMonth()]}
+            </span>
+            <span className="block text-[11px] font-medium" style={{ color: accent }}>Changer de date</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => jourSuivant && choisirJour(jourSuivant)}
+            disabled={!jourSuivant}
+            aria-label="Jour disponible suivant"
+            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+      )}
 
       {selectedDate && (
         <div className="mb-6">
