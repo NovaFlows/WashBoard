@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { Clock, Check, User, Building2 } from 'lucide-react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
@@ -60,6 +60,30 @@ export default function StepService({ services, categories, selected, factureApr
   }, [services, categories, activeTab])
 
   const selectedService = services.find(s => s.id === serviceId)
+
+  // Sur téléphone, la liste des prestations remplit l'écran : le choix du
+  // véhicule se trouve dessous, hors de vue. Rien n'indique qu'il faut faire
+  // défiler, et le client peut croire qu'il a terminé. On l'y amène donc.
+  //
+  // Seulement sur téléphone : sur un écran large, les deux blocs sont déjà
+  // visibles ensemble, et un déplacement serait gratuit — donc désagréable.
+  //
+  // Et seulement sur un CHANGEMENT de prestation : à l'arrivée sur l'étape,
+  // notamment en revenant depuis la barre d'étapes, la page ne doit pas sauter
+  // toute seule.
+  const sectionTypes = useRef<HTMLDivElement>(null)
+  const premierRendu = useRef(true)
+
+  useEffect(() => {
+    if (premierRendu.current) {
+      premierRendu.current = false
+      return
+    }
+    if (!serviceId || !sectionTypes.current) return
+    if (!window.matchMedia('(max-width: 639px)').matches) return
+    const doux = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    sectionTypes.current.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' })
+  }, [serviceId])
 
   // Résout le nom (et l'image éventuelle) d'un type pour la prestation sélectionnée.
   function typeInfo(service: Service, typeId: string): { name: string; img?: string } {
@@ -271,7 +295,7 @@ export default function StepService({ services, categories, selected, factureApr
 
       {/* Sélection des types — panier multi-types (1 SUV + 1 monospace, etc.) */}
       {selectedService && (
-        <div className="mb-6">
+        <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs éléments, de types différents si besoin.</p>
           <div className="space-y-2">
