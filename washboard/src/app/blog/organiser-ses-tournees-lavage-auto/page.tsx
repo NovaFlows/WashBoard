@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
-import { H2, P, UL, Callout, Table, ArticleHeader, Cta, AlsoRead, ArticleJsonLd } from '@/components/blog/Prose'
+import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('organiser-ses-tournees-lavage-auto')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -16,18 +16,53 @@ export const metadata: Metadata = {
     description: article.description,
     publishedTime: article.publishedAt,
     modifiedTime: article.updatedAt,
+    authors: ['WashBoard'],
+    section: 'Organisation',
   },
   twitter: { card: 'summary_large_image', title: article.title, description: article.description },
 }
 
+const faq: FaqItem[] = [
+  {
+    question: 'Combien de voitures un laveur auto mobile peut-il laver par jour ?',
+    answer:
+      'Entre trois et six selon les prestations et surtout selon la route. Un laveur qui enchaîne des lavages extérieurs dans un même quartier peut en faire six ; un laveur qui traverse la ville entre chaque rendez-vous plafonne à trois ou quatre, même en travaillant plus vite.',
+  },
+  {
+    question: 'Comment organiser ses tournées de lavage auto à domicile ?',
+    answer:
+      'Réservez des journées ou des demi-journées par secteur (le lundi l’ouest, le mardi le centre…) et ne proposez à chaque client que les créneaux où vous êtes déjà dans sa zone. Prévoyez une marge de 15 à 45 minutes entre deux prestations selon leur durée, confirmez la veille, et gardez une liste d’attente par secteur pour combler les annulations.',
+  },
+  {
+    question: 'Combien de temps prévoir pour un lavage auto ?',
+    answer:
+      '40 à 60 minutes pour un extérieur, 1 h 30 à 2 h 30 pour un lavage complet, 3 heures et plus pour un intérieur très encrassé. Ajoutez 30 à 50 % pour un SUV, un monospace ou un utilitaire, et une marge de 15 à 45 minutes pour absorber les imprévus.',
+  },
+  {
+    question: 'Comment limiter les annulations de dernière minute ?',
+    answer:
+      'Envoyez un message de rappel la veille : il réduit nettement les oublis et vous laisse le temps de replacer le créneau. Tenez une liste d’attente par secteur, et gardez un client professionnel (garage, concession) dans chaque zone, qui accepte souvent de vous prendre au pied levé.',
+  },
+]
+
 export default function Page() {
   return (
     <>
-      <ArticleJsonLd article={article} siteUrl={SITE_URL} />
+      <ArticleJsonLd article={article} siteUrl={SITE_URL} faq={faq} />
       <article>
         <ArticleHeader
           article={article}
           intro="À prestations égales, deux laveurs peuvent avoir des revenus qui varient du simple au double. La différence ne vient presque jamais de la vitesse d'exécution : elle vient de la route."
+        />
+
+        <Summary
+          items={[
+            'Un laveur mal organisé passe deux heures par jour au volant : une à deux prestations perdues, sans travailler une minute de moins.',
+            'Réservez des journées ou demi-journées par secteur, et proposez au client uniquement les créneaux où vous êtes déjà dans sa zone.',
+            'Prévoyez des durées réalistes avec 15 à 45 minutes de marge : une journée sans marge déraille au premier imprévu.',
+            'Confirmez la veille, tenez une liste d’attente par secteur, gardez un client pro par zone pour absorber les annulations.',
+            'C’est le seul levier qui augmente le revenu sans toucher ni aux prix, ni au temps de travail.',
+          ]}
         />
 
         <P>
@@ -41,7 +76,9 @@ export default function Page() {
           Prenons un exemple simple. Bordeaux Nord à 9 h, Bordeaux Sud à 10 h 30 : environ
           quarante-cinq minutes de route entre les deux, hors circulation. Si vous facturez 60 € une
           prestation d&apos;une heure trente, ces quarante-cinq minutes vous coûtent 30 € de manque
-          à gagner. Deux fois par semaine, cela représente près de 260 € par mois.
+          à gagner. Deux fois par semaine, cela représente près de 260 € par mois — l&apos;équivalent
+          d&apos;une hausse de tarif que vous n&apos;avez pas eu à négocier (voir{' '}
+          <A href="/blog/tarifs-lavage-auto-domicile">comment fixer ses tarifs</A>).
         </P>
         <P>
           Et ce calcul ne compte que le temps. S&apos;y ajoutent le carburant, l&apos;usure du
@@ -126,9 +163,9 @@ export default function Page() {
         </P>
         <P>
           C&apos;est pendant les périodes chargées qu&apos;il faut préparer les creuses : c&apos;est
-          là que vous rencontrez le plus de monde, donc le meilleur moment pour récolter des avis et
-          démarcher des clients professionnels. Ceux-ci lisseront votre activité quand les
-          particuliers se feront rares.
+          là que vous rencontrez le plus de monde, donc le meilleur moment pour récolter des avis et{' '}
+          <A href="/blog/trouver-des-clients-laveur-auto-mobile">démarcher des clients professionnels</A>.
+          Ceux-ci lisseront votre activité quand les particuliers se feront rares.
         </P>
 
         <H2>Ce qui se joue vraiment</H2>
@@ -138,6 +175,8 @@ export default function Page() {
           Sur la plupart des activités de lavage à domicile, c&apos;est aussi le plus gros gisement
           disponible — et le plus ignoré, parce qu&apos;il ne se voit pas sur une facture.
         </P>
+
+        <Faq items={faq} />
 
         <Cta title="Des tournées groupées, sans y penser">
           WashBoard regroupe automatiquement les rendez-vous par quartier, calcule les temps de

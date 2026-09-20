@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getArticle, SITE_URL } from '@/lib/blog'
-import { H2, P, UL, Callout, ArticleHeader, Cta, AlsoRead, ArticleJsonLd } from '@/components/blog/Prose'
+import { H2, P, UL, A, Callout, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('trouver-des-clients-laveur-auto-mobile')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -17,6 +17,8 @@ export const metadata: Metadata = {
     description: article.description,
     publishedTime: article.publishedAt,
     modifiedTime: article.updatedAt,
+    authors: ['WashBoard'],
+    section: 'Trouver des clients',
   },
   twitter: {
     card: 'summary_large_image',
@@ -25,14 +27,47 @@ export const metadata: Metadata = {
   },
 }
 
+const faq: FaqItem[] = [
+  {
+    question: 'Comment trouver ses premiers clients en lavage auto à domicile ?',
+    answer:
+      'Créez une fiche d’établissement Google avec une zone de service et vos propres photos avant/après, demandez un avis après chaque prestation dès la première, et proposez un premier véhicule à prix réduit aux garages et concessions de votre secteur. Ces trois actions ne coûtent rien et amènent des clients qui cherchent activement un laveur.',
+  },
+  {
+    question: 'Faut-il faire de la publicité payante pour un lavage auto mobile ?',
+    answer:
+      'Pas au démarrage. Tant que votre fiche Google n’a pas d’avis ni de photos, la publicité amène des visiteurs qui ne réservent pas. Construisez d’abord la crédibilité (avis, photos, zone claire), puis la publicité locale pourra l’amplifier.',
+  },
+  {
+    question: 'Quels clients professionnels démarcher quand on est laveur auto mobile ?',
+    answer:
+      'Les garages et carrossiers, les concessions et vendeurs de véhicules d’occasion, les auto-écoles et les entreprises avec une flotte. Ils ont plusieurs véhicules au même endroit, un besoin récurrent et un budget prévisible — l’inverse du particulier qui fait laver sa voiture deux à quatre fois par an.',
+  },
+  {
+    question: 'Comment obtenir des avis Google quand on est laveur auto ?',
+    answer:
+      'Envoyez un message avec le lien direct vers votre fiche quelques heures après la prestation, le jour même, plutôt que de le demander de vive voix. Le taux de réponse est bien plus élevé, et vous évitez la gêne du face-à-face.',
+  },
+]
+
 export default function Page() {
   return (
     <>
-      <ArticleJsonLd article={article} siteUrl={SITE_URL} />
+      <ArticleJsonLd article={article} siteUrl={SITE_URL} faq={faq} />
       <article>
         <ArticleHeader
           article={article}
           intro="Le nerf de la guerre en lavage auto à domicile, ce n'est pas le matériel ni la technique. C'est de remplir l'agenda toutes les semaines, pas seulement les bonnes. Voici les canaux qui marchent vraiment, classés par rapport effort/résultat."
+        />
+
+        <Summary
+          items={[
+            'Le lavage auto à domicile est une activité locale et récurrente : la fiche Google compte plus que les réseaux sociaux, et un client fidélisé vaut plus qu’une prestation.',
+            'Les avis clients sont le levier le plus sous-exploité : demandez-les le jour même, par message, avec le lien direct.',
+            'Grouper ses rendez-vous par quartier libère un à deux créneaux par jour — donc de la place pour de nouveaux clients.',
+            'Les clients professionnels (garages, concessions, flottes) sont moins nombreux mais bien plus rentables.',
+            'Flyers et publicité payante déçoivent presque toujours au démarrage.',
+          ]}
         />
 
         <P>
@@ -103,6 +138,8 @@ export default function Page() {
           agit directement sur votre capacité à prendre des clients. Un laveur qui fait Bordeaux Nord
           à 9h puis Bordeaux Sud à 10h30 perd 45 minutes de route entre deux prestations. Sur une
           journée, ce sont deux lavages en moins — donc deux clients refusés faute de créneau.
+          Nous avons détaillé la méthode dans{' '}
+          <A href="/blog/organiser-ses-tournees-lavage-auto">notre guide pour organiser ses tournées</A>.
         </P>
         <P>
           Concentrer les rendez-vous d&apos;une même journée sur une même zone augmente le nombre de
@@ -165,7 +202,9 @@ export default function Page() {
         <P>
           L&apos;approche qui fonctionne est directe : passer sur place, proposer un premier véhicule
           à prix réduit, et laisser le résultat parler. C&apos;est un métier où le travail se voit
-          immédiatement — servez-vous-en.
+          immédiatement — servez-vous-en. Attention toutefois à ne pas brader la suite : le prix
+          d&apos;appel sert à ouvrir la porte, pas à fixer la grille. Voir{' '}
+          <A href="/blog/tarifs-lavage-auto-domicile">comment calculer un tarif qui tient</A>.
         </P>
 
         <H2>6. Relancer vos anciens clients</H2>
@@ -218,6 +257,8 @@ export default function Page() {
           chaque client, chaque semaine. C&apos;est la raison pour laquelle la plupart des laveurs
           finissent par les automatiser.
         </P>
+
+        <Faq items={faq} />
 
         <Cta title="Lave plus. Roule moins.">
           WashBoard s&apos;occupe des réservations, groupe vos rendez-vous par quartier, demande

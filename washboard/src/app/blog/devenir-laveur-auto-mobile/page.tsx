@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
-import { H2, P, UL, Callout, Table, ArticleHeader, Cta, AlsoRead, ArticleJsonLd } from '@/components/blog/Prose'
+import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devenir-laveur-auto-mobile')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -16,18 +16,58 @@ export const metadata: Metadata = {
     description: article.description,
     publishedTime: article.publishedAt,
     modifiedTime: article.updatedAt,
+    authors: ['WashBoard'],
+    section: 'Se lancer',
   },
   twitter: { card: 'summary_large_image', title: article.title, description: article.description },
 }
 
+const faq: FaqItem[] = [
+  {
+    question: 'Quel statut pour devenir laveur auto mobile ?',
+    answer:
+      'La micro-entreprise (auto-entrepreneur) dans la quasi-totalité des cas : création gratuite en ligne, comptabilité réduite à un livre de recettes, et aucune cotisation tant que vous ne facturez rien. Le lavage de véhicules relève de la prestation de services, ce qui détermine le taux de cotisations et le plafond de chiffre d’affaires.',
+  },
+  {
+    question: 'Faut-il un diplôme pour laver des voitures à domicile ?',
+    answer:
+      'Non. Aucun diplôme ni autorisation particulière n’est exigé pour exercer le lavage auto à domicile. En revanche, une assurance responsabilité civile professionnelle couvrant les biens confiés est indispensable, et les règles sur les eaux de lavage s’appliquent dès la première prestation.',
+  },
+  {
+    question: 'Quel budget pour se lancer en lavage auto mobile ?',
+    answer:
+      'Comptez entre 650 et 2 500 € de matériel selon que vous travaillez avec ou sans eau : aspirateur eau et poussière (150–400 €), nettoyeur haute pression ou pulvérisateurs (150–600 €), cuve à eau (100–400 €), produits de départ (150–300 €), microfibres et brosses (100–200 €), plus un groupe électrogène en option (200–600 €). Démarrez léger et réinvestissez ce que vous gagnez.',
+  },
+  {
+    question: 'A-t-on le droit de laver une voiture dans la rue ?',
+    answer:
+      'Dans la plupart des communes, non : le lavage sur la voie publique est interdit, et les eaux chargées en détergents ne doivent pas partir au caniveau. Trois solutions en règle : le lavage sans eau ou à faible consommation, le lavage sur terrain privé avec l’accord du propriétaire, ou un système de récupération des eaux usées. Renseignez-vous en mairie.',
+  },
+  {
+    question: 'Quelle assurance pour un laveur auto mobile ?',
+    answer:
+      'Une responsabilité civile professionnelle incluant explicitement la garantie « biens confiés ». C’est cette clause qui couvre les dommages causés au véhicule lui-même (rayure, produit qui marque un cuir, élément de finition abîmé). Une RC pro standard sans cette extension ne couvre pas la voiture que vous êtes en train de laver.',
+  },
+]
+
 export default function Page() {
   return (
     <>
-      <ArticleJsonLd article={article} siteUrl={SITE_URL} />
+      <ArticleJsonLd article={article} siteUrl={SITE_URL} faq={faq} />
       <article>
         <ArticleHeader
           article={article}
           intro="Le lavage auto à domicile est l'une des activités les plus accessibles à lancer : peu de capital, pas de local, une demande réelle. Ce qui fait la différence, ce sont quelques décisions prises au départ."
+        />
+
+        <Summary
+          items={[
+            'Aucun diplôme requis : la micro-entreprise suffit pour démarrer seul, sans cotisation tant qu’on ne facture rien.',
+            'Une RC pro avec la garantie « biens confiés » est indispensable — c’est elle qui couvre la voiture du client.',
+            'Laver dans la rue est interdit dans la plupart des communes : sans eau, terrain privé ou récupération des eaux.',
+            'Budget matériel de départ : 650 à 2 500 € selon la méthode. Commencez léger, réinvestissez.',
+            'Créez votre fiche Google avant la première prestation, et demandez un avis dès la première.',
+          ]}
         />
 
         <P>
@@ -134,7 +174,9 @@ export default function Page() {
           Avant même votre première prestation, créez votre <strong>fiche d&apos;établissement
           Google</strong>. C&apos;est gratuit, et c&apos;est ce que consultent les gens qui
           cherchent un laveur près de chez eux. Une fiche prend quelques semaines à gagner en
-          visibilité : plus tôt elle existe, mieux c&apos;est.
+          visibilité : plus tôt elle existe, mieux c&apos;est. Les autres canaux qui marchent sont
+          détaillés dans{' '}
+          <A href="/blog/trouver-des-clients-laveur-auto-mobile">notre guide pour trouver des clients</A>.
         </P>
         <P>
           Ensuite, demandez un avis après <strong>chaque</strong>{' '}prestation, dès la première.
@@ -148,11 +190,13 @@ export default function Page() {
           <li>
             <strong>Casser les prix pour démarrer.</strong>{' '}Vous attirez des clients qui partiront
             au premier concurrent moins cher, et vous vous enfermez dans une grille que vous
-            n&apos;oserez plus augmenter.
+            n&apos;oserez plus augmenter. Calculez plutôt{' '}
+            <A href="/blog/tarifs-lavage-auto-domicile">un tarif qui couvre vraiment vos coûts</A>.
           </li>
           <li>
             <strong>Accepter toutes les distances.</strong>{' '}Aller à quarante minutes pour une
-            prestation à 40 € vous fait travailler pour rien. Définissez une zone, tenez-la.
+            prestation à 40 € vous fait travailler pour rien. Définissez une zone, tenez-la, et{' '}
+            <A href="/blog/organiser-ses-tournees-lavage-auto">groupez vos rendez-vous par secteur</A>.
           </li>
           <li>
             <strong>Sous-estimer les durées.</strong>{' '}Un intérieur très sale peut demander le
@@ -164,6 +208,8 @@ export default function Page() {
             par jour, répondre à WhatsApp entre deux voitures devient un deuxième métier.
           </li>
         </UL>
+
+        <Faq items={faq} />
 
         <Cta title="Être organisé dès le premier client">
           Une page de réservation à votre nom, un agenda qui se remplit seul, les demandes

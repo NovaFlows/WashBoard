@@ -25,8 +25,8 @@ export const ARTICLES: Article[] = [
     description:
       'Les canaux qui remplissent vraiment un agenda de lavage auto à domicile : fiche Google, avis clients, zones groupées, clients pros et relance des anciens clients. Sans budget publicitaire.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-08-26',
-    readingMinutes: 9,
+    updatedAt: '2026-09-20',
+    readingMinutes: 10,
   },
   {
     slug: 'tarifs-lavage-auto-domicile',
@@ -34,8 +34,8 @@ export const ARTICLES: Article[] = [
     description:
       'Comment calculer un prix qui tient : temps réel par prestation, frais de déplacement, charges et cotisations. Avec une grille indicative et les erreurs qui plombent une marge.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-08-26',
-    readingMinutes: 8,
+    updatedAt: '2026-09-20',
+    readingMinutes: 9,
   },
   {
     slug: 'devenir-laveur-auto-mobile',
@@ -43,8 +43,8 @@ export const ARTICLES: Article[] = [
     description:
       'Statut, assurance, matériel, réglementation sur l’eau, budget de départ : les étapes concrètes pour lancer une activité de lavage auto à domicile sans se tromper.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-08-26',
-    readingMinutes: 10,
+    updatedAt: '2026-09-20',
+    readingMinutes: 11,
   },
   {
     slug: 'organiser-ses-tournees-lavage-auto',
@@ -52,8 +52,8 @@ export const ARTICLES: Article[] = [
     description:
       'Les trajets entre deux rendez-vous mangent une à deux prestations par jour. Comment grouper ses créneaux par secteur, prévoir des durées réalistes et absorber les annulations.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-08-26',
-    readingMinutes: 7,
+    updatedAt: '2026-09-20',
+    readingMinutes: 8,
   },
 ]
 

@@ -486,6 +486,15 @@ export default function LandingPage() {
                 </a>
               )
             })}
+            {/* Seul lien vers une autre page dans cette nav : sans lui, le blog
+                n'est relié au site que par le sitemap, et Google le traite
+                comme une page secondaire. */}
+            <Link
+              href="/blog"
+              className="px-3 py-2 text-sm font-medium whitespace-nowrap text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              Blog
+            </Link>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
@@ -1037,6 +1046,7 @@ export default function LandingPage() {
             <div className="flex gap-4 text-xs text-slate-400">
               <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
               <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
+              <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
               <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
               <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
               <Link href="/confidentialite" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>

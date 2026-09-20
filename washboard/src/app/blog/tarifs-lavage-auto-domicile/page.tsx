@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
-import { H2, P, UL, Callout, Table, ArticleHeader, Cta, AlsoRead, ArticleJsonLd } from '@/components/blog/Prose'
+import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('tarifs-lavage-auto-domicile')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -16,18 +16,53 @@ export const metadata: Metadata = {
     description: article.description,
     publishedTime: article.publishedAt,
     modifiedTime: article.updatedAt,
+    authors: ['WashBoard'],
+    section: 'Tarifs',
   },
   twitter: { card: 'summary_large_image', title: article.title, description: article.description },
 }
 
+const faq: FaqItem[] = [
+  {
+    question: 'Quel est le prix moyen d’un lavage auto à domicile ?',
+    answer:
+      'En France, un lavage extérieur à domicile se facture généralement entre 25 et 45 €, un intérieur entre 35 et 60 €, et un lavage complet entre 55 et 95 € pour une citadine ou une berline. Un nettoyage en profondeur (plusieurs heures) va de 120 à 250 €. Comptez 30 à 50 % de plus pour un SUV, un monospace ou un utilitaire.',
+  },
+  {
+    question: 'Combien facturer de l’heure en lavage auto mobile ?',
+    answer:
+      'Partez du revenu mensuel visé, ajoutez vos charges et vos cotisations (environ 21 à 22 % du chiffre d’affaires en micro-entreprise pour une prestation de services), puis divisez par le nombre d’heures réellement facturées dans le mois — pas par les heures travaillées. Le résultat est votre taux horaire plancher ; en pratique il se situe rarement en dessous de 35 à 45 € de l’heure.',
+  },
+  {
+    question: 'Faut-il facturer les frais de déplacement pour un lavage à domicile ?',
+    answer:
+      'Oui, d’une manière ou d’une autre. Soit vous définissez une zone dans laquelle le déplacement est inclus dans le prix, soit vous ajoutez un supplément fixe ou au kilomètre au-delà. La seule erreur est de ne rien prévoir : ce qui coûte cher n’est pas le carburant mais le temps de route, qui remplace une prestation.',
+  },
+  {
+    question: 'Quand augmenter ses tarifs de lavage auto ?',
+    answer:
+      'Quand votre agenda est plein trois semaines à l’avance et que vous refusez des clients : la demande dépasse votre capacité. Une révision annuelle de l’ordre de 5 % est par ailleurs normale pour suivre le coût des produits, du carburant et des cotisations ; vos clients fidèles ne partiront pas pour ça.',
+  },
+]
+
 export default function Page() {
   return (
     <>
-      <ArticleJsonLd article={article} siteUrl={SITE_URL} />
+      <ArticleJsonLd article={article} siteUrl={SITE_URL} faq={faq} />
       <article>
         <ArticleHeader
           article={article}
           intro="La plupart des laveurs qui démarrent fixent leurs prix en regardant ceux du voisin, puis retirent cinq euros. C'est le meilleur moyen de travailler beaucoup pour gagner peu. Voici comment calculer un tarif qui tient."
+        />
+
+        <Summary
+          items={[
+            'Raisonnez à l’heure facturée, pas à la prestation : chronométrez-vous trajet compris sur dix prestations.',
+            'Votre prix couvre votre temps, les consommables, l’amortissement du matériel, vos cotisations (≈ 21–22 % en micro-entreprise) et le temps non facturé.',
+            'Fourchettes courantes en France : 25–45 € l’extérieur, 35–60 € l’intérieur, 55–95 € le complet, +30 à 50 % pour SUV et utilitaires.',
+            'Prévoyez le déplacement : zone incluse ou supplément au-delà, mais jamais rien.',
+            'Agenda plein trois semaines à l’avance = le moment d’augmenter.',
+          ]}
         />
 
         <P>
@@ -122,8 +157,9 @@ export default function Page() {
         <P>
           Ce qui coûte cher, ce n&apos;est pas le carburant, c&apos;est le temps. Quarante-cinq
           minutes de route, c&apos;est une prestation en moins dans la journée. C&apos;est aussi
-          pour ça que grouper ses rendez-vous par secteur pèse davantage sur votre revenu que
-          n&apos;importe quel ajustement de prix.
+          pour ça que{' '}
+          <A href="/blog/organiser-ses-tournees-lavage-auto">grouper ses rendez-vous par secteur</A>{' '}
+          pèse davantage sur votre revenu que n&apos;importe quel ajustement de prix.
         </P>
 
         <H2>Les erreurs qui plombent une marge</H2>
@@ -157,10 +193,12 @@ export default function Page() {
         </P>
         <P>
           À l&apos;inverse, un agenda vide n&apos;est pas forcément un problème de prix. Avant de
-          baisser, vérifiez d&apos;où viennent vos clients : bien souvent le vrai frein est la
-          visibilité, pas le tarif. Baisser ses prix pour compenser un manque de clients revient à
+          baisser, vérifiez d&apos;où viennent vos clients : bien souvent le vrai frein est la{' '}
+          <A href="/blog/trouver-des-clients-laveur-auto-mobile">visibilité</A>, pas le tarif. Baisser ses prix pour compenser un manque de clients revient à
           travailler plus pour gagner autant.
         </P>
+
+        <Faq items={faq} />
 
         <Cta title="Savoir ce que vous gagnez vraiment">
           WashBoard suit votre chiffre d&apos;affaires par prestation, calcule automatiquement les
