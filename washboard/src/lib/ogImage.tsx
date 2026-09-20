@@ -11,7 +11,7 @@ import { ImageResponse } from 'next/og'
 export const OG_SIZE = { width: 1200, height: 630 }
 export const OG_CONTENT_TYPE = 'image/png'
 
-export function renderOgImage({ title, eyebrow = 'Le blog WashBoard' }: { title: string; eyebrow?: string }) {
+export function renderOgImage({ title, eyebrow = 'Le blog' }: { title: string; eyebrow?: string }) {
   // Titre long : on réduit la taille plutôt que de le couper.
   const fontSize = title.length > 70 ? 52 : title.length > 45 ? 60 : 68
 
@@ -68,7 +68,7 @@ export function renderOgImage({ title, eyebrow = 'Le blog WashBoard' }: { title:
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 24, color: '#C7D4FF' }}>
-          <div style={{ display: 'flex' }}>Conseils pour laveurs auto mobiles</div>
+          <div style={{ display: 'flex' }}>Conseils pour les pros du nettoyage à domicile</div>
           <div style={{ display: 'flex' }}>washboard.fr</div>
         </div>
       </div>

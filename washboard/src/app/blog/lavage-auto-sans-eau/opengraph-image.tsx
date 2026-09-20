@@ -1,10 +1,12 @@
-import { getArticle } from '@/lib/blog'
+import { getArticle, THEME_LABEL } from '@/lib/blog'
 import { renderOgImage, OG_SIZE, OG_CONTENT_TYPE } from '@/lib/ogImage'
+
+const article = getArticle('lavage-auto-sans-eau')!
 
 export const size = OG_SIZE
 export const contentType = OG_CONTENT_TYPE
-export const alt = getArticle('lavage-auto-sans-eau')!.title
+export const alt = article.title
 
 export default function Image() {
-  return renderOgImage({ title: getArticle('lavage-auto-sans-eau')!.title })
+  return renderOgImage({ title: article.title, eyebrow: THEME_LABEL[article.theme] })
 }

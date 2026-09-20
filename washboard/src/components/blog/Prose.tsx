@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { Article } from '@/lib/blog'
+import { THEME_LABEL, type Article } from '@/lib/blog'
 
 // Primitives de mise en forme partagées par tous les articles.
 // Le plugin Tailwind `typography` n'est pas installé : les classes `prose` ne
@@ -244,6 +244,7 @@ export function ArticleJsonLd({
       headline: article.title,
       description: article.description,
       inLanguage: 'fr-FR',
+      articleSection: THEME_LABEL[article.theme],
       datePublished: article.publishedAt,
       dateModified: article.updatedAt,
       image: `${url}/opengraph-image`,
