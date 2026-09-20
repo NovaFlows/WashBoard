@@ -10,13 +10,16 @@
 // afficher » : un compte neuf ne doit pas paraître amputé avant d'avoir touché
 // au réglage.
 
-export type WidgetKey = 'today' | 'stats' | 'clients' | 'upcoming'
+export type WidgetKey = 'today' | 'stats' | 'clients' | 'upcoming' | 'traffic' | 'services' | 'zone'
 
 export const WIDGETS: { key: WidgetKey; label: string; description: string }[] = [
   { key: 'today',    label: 'Aujourd’hui',           description: 'Vos rendez-vous du jour, en un coup d’œil' },
   { key: 'stats',    label: 'Statistiques',          description: 'Réservations et chiffre d’affaires' },
   { key: 'clients',  label: 'Clients',               description: 'Combien, les nouveaux ce mois-ci, et les visiteurs' },
   { key: 'upcoming', label: 'Prochains rendez-vous', description: 'Ce qui arrive après aujourd’hui' },
+  { key: 'traffic',  label: 'Trafic & conversion',   description: 'D’où viennent vos visiteurs, et combien réservent' },
+  { key: 'services', label: 'Prestations',           description: 'La plus demandée ce mois-ci' },
+  { key: 'zone',     label: 'Zone d’intervention',   description: 'Votre rayon d’action actuel' },
 ]
 
 const CLES_VALIDES = new Set<string>(WIDGETS.map(w => w.key))

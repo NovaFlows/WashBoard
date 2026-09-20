@@ -13,12 +13,15 @@ import { hasFeature } from '@/lib/plan'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { resumeClients } from '@/lib/dashboardClients'
 import { widgetsVisibles, type WidgetKey } from '@/lib/dashboardWidgets'
-import { countDistinctSessions } from '@/lib/funnelStats'
+import { countDistinctSessions, buildReferrerBreakdown } from '@/lib/funnelStats'
 import { FUSEAU } from '@/lib/dateUtils'
 import { AujourdhuiWidget } from '@/components/dashboard/widgets/AujourdhuiWidget'
 import { StatsWidget } from '@/components/dashboard/widgets/StatsWidget'
 import { ClientsWidget } from '@/components/dashboard/widgets/ClientsWidget'
 import { ProchainsRdvWidget } from '@/components/dashboard/widgets/ProchainsRdvWidget'
+import { TraficWidget } from '@/components/dashboard/widgets/TraficWidget'
+import { PrestationsWidget, type PrestationComptee } from '@/components/dashboard/widgets/PrestationsWidget'
+import { ZoneWidget } from '@/components/dashboard/widgets/ZoneWidget'
 import { WidgetsConfigurator } from '@/components/dashboard/widgets/WidgetsConfigurator'
 import Link from 'next/link'
 
@@ -87,6 +90,7 @@ export default async function DashboardPage() {
     statsMois,
     clientsLite,
     visitesLite,
+    prestationsMois,
     services,
     availabilities,
   ] = await Promise.all([
@@ -142,18 +146,33 @@ export default async function DashboardPage() {
           .eq('washer_id', washer.id)
           .range(debut, fin))
       : aucuneLigne<{ client_email: string | null; created_at: string }>(),
-    // Visiteurs du mois pour ce même widget : SESSIONS distinctes, comme sur
-    // la page CRM (`countDistinctSessions`) — même définition partout, sinon
-    // les deux pages se contrediraient sur le nombre de visiteurs.
-    visibles.has('clients')
+    // Une seule lecture des événements de visite pour DEUX widgets (Clients ET
+    // Trafic), tant que l'un des deux est affiché : même donnée, même mois, pas
+    // de raison de la demander deux fois. `step` et `referrer_host` ne servent
+    // qu'à Trafic, mais les redemander séparément coûterait un aller-retour de
+    // plus pour rien.
+    visibles.has('clients') || visibles.has('traffic')
       ? toutesLesLignes((debut, fin) => supabase
           .from('booking_funnel_events')
-          .select('session_id')
+          .select('session_id, step, referrer_host')
           .eq('washer_id', washer.id)
           .gte('created_at', `${mois.start}T00:00:00`)
           .lte('created_at', `${mois.end}T23:59:59`)
           .range(debut, fin))
-      : aucuneLigne<{ session_id: string }>(),
+      : aucuneLigne<{ session_id: string; step: string; referrer_host: string | null }>(),
+    // Widget Prestations : quelle prestation a été la plus demandée ce mois-ci.
+    // Compte tout rendez-vous ayant existé (hors annulés) : c'est la demande
+    // qu'on mesure, pas seulement ce qui a été facturé.
+    visibles.has('services')
+      ? toutesLesLignes((debut, fin) => supabase
+          .from('bookings')
+          .select('services(name)')
+          .eq('washer_id', washer.id)
+          .neq('status', 'cancelled')
+          .gte('scheduled_at', `${mois.start}T00:00:00`)
+          .lte('scheduled_at', `${mois.end}T23:59:59`)
+          .range(debut, fin))
+      : aucuneLigne<{ services: { name: string } | { name: string }[] | null }>(),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
     supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
   ])
@@ -165,6 +184,7 @@ export default async function DashboardPage() {
   if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
   if (clientsLite.error) logger.warn('dashboard.clients_widget.fetch_failed', { washerId: washer.id }, clientsLite.error)
   if (visitesLite.error) logger.warn('dashboard.visiteurs_widget.fetch_failed', { washerId: washer.id }, visitesLite.error)
+  if (prestationsMois.error) logger.warn('dashboard.prestations_widget.fetch_failed', { washerId: washer.id }, prestationsMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
 
@@ -216,6 +236,28 @@ export default async function DashboardPage() {
   const resumeClientsWidget = resumeClients(clientsLite.data ?? [], mois.start)
   const visiteursCeMois = countDistinctSessions(visitesLite.data ?? [])
 
+  // Widget Trafic : sessions ayant atteint « confirmation » (une réservation
+  // vraiment déposée), rapportées aux visiteurs — exactement le calcul de la
+  // page CRM (voir FunnelInsights/CrmView), aux deux premières sources.
+  const conversionsCeMois = new Set(
+    (visitesLite.data ?? []).filter(e => e.step === 'confirmation').map(e => e.session_id),
+  ).size
+  const sourcesCeMois = buildReferrerBreakdown(visitesLite.data ?? []).slice(0, 2)
+
+  // Widget Prestations : un décompte par nom, le plus demandé en tête. La
+  // jointure `services` est parfois un objet, parfois un tableau selon ce que
+  // déduit le typage généré — les deux formes sont acceptées (même motif que
+  // sur la page Clients).
+  const comptePrestations = new Map<string, number>()
+  for (const b of prestationsMois.data ?? []) {
+    const svc = Array.isArray(b.services) ? b.services[0] : b.services
+    const nom = svc?.name ?? 'Prestation'
+    comptePrestations.set(nom, (comptePrestations.get(nom) ?? 0) + 1)
+  }
+  const prestationsComptees: PrestationComptee[] = [...comptePrestations.entries()]
+    .map(([nom, nombre]) => ({ nom, nombre }))
+    .sort((a, b) => b.nombre - a.nombre)
+
   // Un widget par clé, prêt à afficher — construits une fois, puis piochés
   // dans l'ORDRE choisi par le laveur (voir WidgetsConfigurator : l'ordre du
   // tableau `dashboard_widgets` EST l'ordre d'affichage).
@@ -237,6 +279,9 @@ export default async function DashboardPage() {
       />
     ),
     upcoming: <ProchainsRdvWidget bookings={rdvProchains} />,
+    traffic: <TraficWidget visiteurs={visiteursCeMois} conversions={conversionsCeMois} sources={sourcesCeMois} />,
+    services: <PrestationsWidget prestations={prestationsComptees} />,
+    zone: <ZoneWidget zone={washer.zone_config} />,
   }
 
   const widgetsAffiches = [...visibles]

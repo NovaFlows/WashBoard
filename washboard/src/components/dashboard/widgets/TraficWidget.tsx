@@ -1,0 +1,49 @@
+import Link from 'next/link'
+import { formatConversionRate } from '@/lib/funnelStats'
+
+// Même définition que la page CRM, au chiffre près : la conversion rapporte
+// les sessions ayant atteint l'étape « confirmation » à celles ayant atteint
+// « prestation » (la toute première étape suivie). Un chiffre qui contredirait
+// celui du CRM serait pire qu'aucun chiffre.
+
+export function TraficWidget({
+  visiteurs, conversions, sources,
+}: {
+  visiteurs: number
+  conversions: number
+  /** Deux premières sources, déjà triées — voir buildReferrerBreakdown. */
+  sources: { host: string; pct: number }[]
+}) {
+  return (
+    <Link
+      href="/dashboard/crm"
+      className="block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100 hover:border-slate-300 dark:hover:border-slate-700"
+    >
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Trafic &amp; conversion</h2>
+
+      {visiteurs === 0 ? (
+        <p className="text-sm text-slate-400 dark:text-slate-500">Aucun visiteur ce mois-ci.</p>
+      ) : (
+        <>
+          <div className="flex items-baseline gap-1.5 mb-3">
+            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatConversionRate(conversions, visiteurs)}</span>
+            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              de conversion · {conversions} sur {visiteurs} visiteurs
+            </span>
+          </div>
+
+          {sources.length > 0 && (
+            <div className="space-y-1">
+              {sources.map(s => (
+                <div key={s.host} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 truncate">{s.host === 'direct' ? 'Accès direct' : s.host}</span>
+                  <span className="text-slate-400 dark:text-slate-500 tabular-nums shrink-0 ml-2">{s.pct}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </Link>
+  )
+}

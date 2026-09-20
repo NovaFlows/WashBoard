@@ -1,11 +1,12 @@
 import { formatPrice } from '@/lib/pricing'
 
-// Quatre chiffres, sans une couleur par case : « en attente » n'est pas un
-// avertissement et « confirmés » n'est pas un succès, ce ne sont que des
-// catégories — leur donner une couleur chacune n'aurait rien annoncé de réel
-// (c'est le motif "quatre pavés aux bordures arc-en-ciel" qui a fait dire que
-// cette section « faisait trop IA »). La seule couleur qui reste est celle du
-// chiffre d'affaires : lui seul est le résultat qu'on regarde en premier.
+// Une seule couleur pour les quatre chiffres, pas une par case : « en
+// attente » n'est pas un avertissement et « confirmés » n'est pas un succès,
+// ce ne sont que des catégories — leur donner CHACUNE sa couleur n'annoncerait
+// rien de réel (c'est le motif "quatre pavés aux bordures arc-en-ciel" qui a
+// fait dire que cette section « faisait trop IA »). La même teinte que le
+// chiffre d'affaires, reprise pour tous, lit la carte comme une famille
+// cohérente plutôt que comme un feu tricolore.
 //
 // Chaque libellé annonce sa propre portée dans le temps, pour qu'aucun ne se
 // lise comme un autre : « en attente »/« confirmés » sont un instantané de
@@ -38,7 +39,7 @@ export function StatsWidget({
             key={c.label}
             className={i > 0 ? 'pl-5 border-l border-slate-100 dark:border-slate-800' : ''}
           >
-            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 tabular-nums leading-none">{c.value}</p>
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums leading-none">{c.value}</p>
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">{c.label}</p>
           </div>
         ))}

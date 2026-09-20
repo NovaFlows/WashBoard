@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
@@ -127,7 +127,11 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   const [dayDate,     setDayDate]     = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings,    setBookings]    = useState(initial)
   const [selected,    setSelected]    = useState<Booking | null>(null)
-  const [dayList,     setDayList]     = useState<Booking[] | null>(null)
+  // La liste du jour se retient par sa DATE, pas par un instantané de ses
+  // réservations : dérivée de `byDate` à chaque rendu, elle reste à jour si
+  // une réservation change pendant qu'elle est ouverte, et permet de
+  // naviguer vers un jour voisin même vide (voir les flèches du modal).
+  const [dayListDate, setDayListDate] = useState<Date | null>(null)
 
   // Arrivée depuis une notification : `?rdv=<id>` ouvre la fiche tout de suite.
   //
@@ -139,6 +143,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
   // en refermant la fiche, on doit retomber là où il se trouve, pas sur
   // aujourd'hui. `applique` garantit qu'on ne le fait qu'une fois : sinon,
   // refermer la fiche la rouvrirait aussitôt.
+  const router = useRouter()
   const searchParams = useSearchParams()
   const rdvParam = searchParams.get('rdv')
   const rdvApplique = useRef(false)
@@ -445,6 +450,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
     if (!byDate.has(k)) byDate.set(k, [])
     byDate.get(k)!.push(b)
   })
+  const dayList = dayListDate ? (byDate.get(dayKey(dayListDate)) ?? []) : null
 
   const monthBookings = bookings.filter(b => {
     const d = new Date(b.scheduled_at)
@@ -548,6 +554,11 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
         }
         setBookings(prev => prev.map(b => b.id === id ? { ...b, ...champs } : b))
         setSelected(prev => prev?.id === id ? { ...prev, ...champs } : prev)
+        // Idem que sur l'accueil : la grille de CETTE page est déjà à jour via
+        // `setBookings`, mais sans ceci l'accueil, lui, resterait périmé tant
+        // qu'on ne le rechargerait pas — les deux pages ont chacune leur
+        // propre état, `router.refresh()` invalide le cache pour la suite.
+        router.refresh()
       }
     } finally {
       setUpdating(false)
@@ -756,7 +767,7 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
                       ))}
                       {overflow > 0 && (
                         <button
-                          onClick={e => { e.stopPropagation(); setDayList(dayBkgs) }}
+                          onClick={e => { e.stopPropagation(); setDayListDate(day) }}
                           className="w-full text-left px-1.5 py-0.5 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                         >
                           +{overflow} autre{overflow > 1 ? 's' : ''}
@@ -995,35 +1006,57 @@ export default function CalendrierDashboard({ bookings: initial, unavailabilitie
       </div>
 
       {/* Modal liste du jour */}
-      {dayList && !selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDayList(null)}>
+      {dayList && dayListDate && !selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDayListDate(null)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div
             className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-xs border border-slate-200 dark:border-slate-700 p-5"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {new Date(dayList[0].scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            <div className="flex items-center justify-between mb-4 gap-2">
+              {/* Flèches vers le jour voisin : avant, il fallait refermer la
+                  fenêtre et recliquer sur le jour suivant dans la grille du
+                  mois. Elles marchent même si le jour voisin n'a aucun
+                  rendez-vous — la liste dérivée de `dayListDate` gère ce cas. */}
+              <button
+                onClick={() => setDayListDate(d => { const n = new Date(d!); n.setDate(n.getDate() - 1); return n })}
+                aria-label="Jour précédent"
+                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 text-center flex-1 truncate">
+                {dayListDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </h3>
-              <button onClick={() => setDayList(null)} className="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setDayListDate(d => { const n = new Date(d!); n.setDate(n.getDate() + 1); return n })}
+                aria-label="Jour suivant"
+                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </button>
+              <button onClick={() => setDayListDate(null)} className="shrink-0 text-slate-400 hover:text-slate-600 ml-1">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="space-y-2">
-              {dayList.map(b => (
-                <button
-                  key={b.id}
-                  onClick={() => { openBooking(b); setDayList(null) }}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 ${STATUS[cleStatut(b)].bg} ${STATUS[cleStatut(b)].text} hover:opacity-80 transition-opacity`}
-                >
-                  <span className="text-sm font-semibold">{b.client_name}</span>
-                  <span className="text-xs opacity-80">{formatHeure(new Date(b.scheduled_at))}</span>
-                </button>
-              ))}
-            </div>
+            {dayList.length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Aucun rendez-vous ce jour.</p>
+            ) : (
+              <div className="space-y-2">
+                {dayList.map(b => (
+                  <button
+                    key={b.id}
+                    onClick={() => { openBooking(b); setDayListDate(null) }}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 ${STATUS[cleStatut(b)].bg} ${STATUS[cleStatut(b)].text} hover:opacity-80 transition-opacity`}
+                  >
+                    <span className="text-sm font-semibold">{b.client_name}</span>
+                    <span className="text-xs opacity-80">{formatHeure(new Date(b.scheduled_at))}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

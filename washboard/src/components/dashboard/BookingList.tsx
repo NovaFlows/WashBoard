@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { openGmail, openWhatsapp } from '@/lib/contact'
 import { formatPrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
@@ -57,6 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
 }
 
 export default function BookingList({ bookings, facturationPrete, historiqueTronque }: Props) {
+  const router = useRouter()
   const [list, setList]       = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
 
@@ -110,6 +112,13 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
           ? { ...b, status, ...(closedLate !== undefined ? { closed_late: closedLate } : {}) }
           : b
       ))
+      // L'écran reste à jour tout de suite grâce à `setList` ci-dessus, mais
+      // sans ceci, la page Calendrier — un composant totalement différent,
+      // avec son propre état — continuait d'afficher l'ancien statut tant
+      // qu'on ne rechargeait pas. `router.refresh()` invalide les données mises
+      // en cache par Next.js pour que la prochaine page visitée reparte d'une
+      // lecture fraîche, sans effacer ce qui vient d'être affiché ici.
+      router.refresh()
     }
     setLoading(null)
   }
