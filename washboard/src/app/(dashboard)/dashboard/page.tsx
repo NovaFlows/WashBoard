@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BookingList from '@/components/dashboard/BookingList'
@@ -11,13 +12,15 @@ import { revenuNet } from '@/lib/pricing'
 import { hasFeature } from '@/lib/plan'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { resumeClients } from '@/lib/dashboardClients'
-import { widgetsVisibles } from '@/lib/dashboardWidgets'
+import { widgetsVisibles, type WidgetKey } from '@/lib/dashboardWidgets'
+import { countDistinctSessions } from '@/lib/funnelStats'
 import { FUSEAU } from '@/lib/dateUtils'
 import { AujourdhuiWidget } from '@/components/dashboard/widgets/AujourdhuiWidget'
 import { StatsWidget } from '@/components/dashboard/widgets/StatsWidget'
 import { ClientsWidget } from '@/components/dashboard/widgets/ClientsWidget'
 import { FacturesWidget } from '@/components/dashboard/widgets/FacturesWidget'
 import { WidgetsConfigurator } from '@/components/dashboard/widgets/WidgetsConfigurator'
+import Link from 'next/link'
 
 /**
  * Rendez-vous passés affichés sur l'accueil au premier chargement.
@@ -83,6 +86,7 @@ export default async function DashboardPage() {
     historique,
     statsMois,
     clientsLite,
+    visitesLite,
     facturesMois,
     services,
     availabilities,
@@ -139,6 +143,18 @@ export default async function DashboardPage() {
           .eq('washer_id', washer.id)
           .range(debut, fin))
       : aucuneLigne<{ client_email: string | null; created_at: string }>(),
+    // Visiteurs du mois pour ce même widget : SESSIONS distinctes, comme sur
+    // la page CRM (`countDistinctSessions`) — même définition partout, sinon
+    // les deux pages se contrediraient sur le nombre de visiteurs.
+    visibles.has('clients')
+      ? toutesLesLignes((debut, fin) => supabase
+          .from('booking_funnel_events')
+          .select('session_id')
+          .eq('washer_id', washer.id)
+          .gte('created_at', `${mois.start}T00:00:00`)
+          .lte('created_at', `${mois.end}T23:59:59`)
+          .range(debut, fin))
+      : aucuneLigne<{ session_id: string }>(),
     // Widget Factures : uniquement celles ÉMISES par WashBoard ce mois-ci (les
     // imports de factures d'achat ne sont pas comptés ici, voir FacturesWidget).
     visibles.has('invoices')
@@ -161,6 +177,7 @@ export default async function DashboardPage() {
   if (erreurAVenir) logger.error('dashboard.bookings.fetch_failed', { washerId: washer.id }, erreurAVenir)
   if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
   if (clientsLite.error) logger.warn('dashboard.clients_widget.fetch_failed', { washerId: washer.id }, clientsLite.error)
+  if (visitesLite.error) logger.warn('dashboard.visiteurs_widget.fetch_failed', { washerId: washer.id }, visitesLite.error)
   if (facturesMois.error) logger.warn('dashboard.factures_widget.fetch_failed', { washerId: washer.id }, facturesMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
@@ -206,32 +223,53 @@ export default async function DashboardPage() {
   )
 
   const resumeClientsWidget = resumeClients(clientsLite.data ?? [], mois.start)
+  const visiteursCeMois = countDistinctSessions(visitesLite.data ?? [])
   const nombreFactures = facturesMois.data?.length ?? 0
   const montantFactures = (facturesMois.data ?? []).reduce((s, f) => s + Number(f.booked_price ?? 0), 0)
+
+  // Un widget par clé, prêt à afficher — construits une fois, puis piochés
+  // dans l'ORDRE choisi par le laveur (voir WidgetsConfigurator : l'ordre du
+  // tableau `dashboard_widgets` EST l'ordre d'affichage).
+  const widgetsParCle: Record<WidgetKey, ReactNode> = {
+    today: <AujourdhuiWidget bookings={rdvAujourdhui} />,
+    stats: (
+      <StatsWidget
+        pending={pending}
+        confirmed={confirmed}
+        terminesCeMois={terminesCeMois}
+        caCeMois={hasFeature(washer, 'compta') ? caCeMois : null}
+      />
+    ),
+    clients: (
+      <ClientsWidget
+        total={resumeClientsWidget.total}
+        nouveauxCeMois={resumeClientsWidget.nouveauxCeMois}
+        visiteursCeMois={visiteursCeMois}
+      />
+    ),
+    invoices: <FacturesWidget nombre={nombreFactures} montant={montantFactures} />,
+  }
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <DemarrageCard progress={progress} />
 
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        {/* Personnaliser la page de réservation vit dans Admin, pas dans les
+            widgets — mais y aller à chaque fois n'a rien d'intuitif. Un accès
+            direct depuis l'accueil, à côté du réglage des widgets. */}
+        <Link
+          href="/dashboard/admin#identite"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          Personnaliser ma page
+        </Link>
         <WidgetsConfigurator visibles={[...visibles]} />
       </div>
 
       {visibles.size > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-          {visibles.has('today') && <AujourdhuiWidget bookings={rdvAujourdhui} />}
-          {visibles.has('stats') && (
-            <StatsWidget
-              pending={pending}
-              confirmed={confirmed}
-              terminesCeMois={terminesCeMois}
-              caCeMois={hasFeature(washer, 'compta') ? caCeMois : null}
-            />
-          )}
-          {visibles.has('clients') && (
-            <ClientsWidget total={resumeClientsWidget.total} nouveauxCeMois={resumeClientsWidget.nouveauxCeMois} />
-          )}
-          {visibles.has('invoices') && <FacturesWidget nombre={nombreFactures} montant={montantFactures} />}
+          {[...visibles].map(cle => <div key={cle}>{widgetsParCle[cle]}</div>)}
         </div>
       )}
 

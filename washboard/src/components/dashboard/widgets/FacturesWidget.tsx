@@ -10,7 +10,7 @@ export function FacturesWidget({ nombre, montant }: { nombre: number; montant: n
   return (
     <Link
       href="/dashboard/factures"
-      className="block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+      className="block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100 hover:border-slate-300 dark:hover:border-slate-700"
     >
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Factures</h2>
       {nombre === 0 ? (

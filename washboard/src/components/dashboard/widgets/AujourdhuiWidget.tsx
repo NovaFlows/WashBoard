@@ -24,7 +24,7 @@ const STATUT_DOT: Record<string, string> = {
 
 export function AujourdhuiWidget({ bookings }: { bookings: RdvDuJour[] }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Aujourd’hui</h2>
 
       {bookings.length === 0 ? (
