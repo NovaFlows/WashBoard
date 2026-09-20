@@ -99,6 +99,15 @@ export default function BookingForm({ washer, services, categories, availabiliti
 
   const sp = stepperPos(step)
 
+  /** L'inverse de `stepperPos` : d'une position affichée vers l'étape réelle.
+   *  Sert aux libellés cliquables de la barre d'étapes. */
+  function stepDepuisPos(pos: number): number {
+    if (hasAddons) return pos
+    if (pos === 2) return 3
+    if (pos === 3) return 4
+    return pos
+  }
+
   function updateForm(data: Partial<BookingFormData>) {
     setForm(prev => ({ ...prev, ...data }))
   }
@@ -156,7 +165,19 @@ export default function BookingForm({ washer, services, categories, availabiliti
               const active = sp === n
               return (
                 <div key={n} className={`flex items-start ${n < STEPS.length ? 'flex-1' : ''}`}>
-                  <div className="flex flex-col items-center gap-1 shrink-0">
+                  {/* Une étape déjà franchie ramène directement à sa section.
+                      Les suivantes restent inertes : on ne saute pas une étape
+                      qu'on n'a pas remplie. */}
+                  <button
+                    type="button"
+                    onClick={() => { if (done) setStep(stepDepuisPos(n)) }}
+                    disabled={!done}
+                    aria-current={active ? 'step' : undefined}
+                    aria-label={done ? `Revenir à l'étape ${label}` : label}
+                    className={`flex flex-col items-center gap-1 shrink-0 rounded-lg px-1 py-0.5 transition-opacity ${
+                      done ? 'cursor-pointer hover:opacity-70' : 'cursor-default'
+                    }`}
+                  >
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                         done ? 'bg-emerald-500 text-white' :
@@ -176,7 +197,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                       done ? 'text-emerald-600 dark:text-emerald-400' :
                       'text-slate-400 dark:text-slate-500'
                     }`}>{label}</span>
-                  </div>
+                  </button>
                   {n < STEPS.length && (
                     <div className={`flex-1 h-px mt-3.5 mx-1 transition-colors ${done ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
                   )}
@@ -195,7 +216,11 @@ export default function BookingForm({ washer, services, categories, availabiliti
             factureApresPrestation={washer.facturation_prete === true}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
-              updateForm(data)
+              // Changer de prestation invalide les options de la précédente :
+              // les garder fausserait le prix et la durée, d'autant qu'on peut
+              // maintenant revenir ici d'un clic sur la barre d'étapes.
+              const changeDePrestation = data.service_id !== form.service_id
+              updateForm(changeDePrestation ? { ...data, selected_addons: [] } : data)
               const svc = services.find(s => s.id === data.service_id)
               setStep((svc?.addons ?? []).length > 0 ? 2 : 3)
             }}
