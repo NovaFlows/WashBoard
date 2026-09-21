@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import type { Service, ServiceAddon, ServiceCategory } from '@/types'
+import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
 import { champsManquants, estReservable, messageManques, DUREE_MAX_MINUTES } from '@/lib/prestation'
+import { dureeIncompatible } from '@/lib/slots'
+import { formatDureeFr } from '@/lib/pricing'
 
 type FormData = { category_id: string; name: string; description: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
 const EMPTY: FormData = { category_id: '', name: '', description: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
@@ -19,6 +21,7 @@ type ServiceFormProps = {
   form: FormData
   categories: ServiceCategory[]
   sansCategorie: SansCategorie | null
+  availabilities: Availability[]
   onChange: (f: FormData) => void
   onSave: () => void
   onCancel: () => void
@@ -26,7 +29,7 @@ type ServiceFormProps = {
   error: string | null
 }
 
-function ServiceForm({ form, categories, sansCategorie, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
+function ServiceForm({ form, categories, sansCategorie, availabilities, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
   const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '', duration_minutes: '' })
 
@@ -99,6 +102,17 @@ function ServiceForm({ form, categories, sansCategorie, onChange, onSave, onCanc
 
   const manques = champsManquants(form)
   const canSave = manques.length === 0 && !loading
+
+  // Toutes les options ne sont pas exclusives (cases à cocher indépendantes) :
+  // un client peut toutes les cumuler, donc c'est cette durée-là qui doit
+  // rentrer dans au moins une disponibilité du laveur — pas seulement la
+  // durée de base. Averti seulement s'il a déjà configuré des disponibilités
+  // (sinon rien à comparer, et ça ne doit pas bloquer un tout nouveau compte).
+  const dureeAvecOptions = Number(form.duration_minutes || 0)
+    + form.addons.reduce((somme, a) => somme + (a.duration_minutes ?? 0), 0)
+  const horsDisponibilites = availabilities.length > 0
+    && dureeAvecOptions > 0
+    && dureeIncompatible(availabilities, dureeAvecOptions)
 
   return (
     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
@@ -328,6 +342,12 @@ function ServiceForm({ form, categories, sansCategorie, onChange, onSave, onCanc
         </div>
       </div>
 
+      {horsDisponibilites && (
+        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+          Options comprises, cette prestation peut durer jusqu&apos;à {formatDureeFr(dureeAvecOptions)} : ça ne rentre dans aucune de vos disponibilités actuelles. Un client qui coche toutes les options ne verrait aucun créneau.
+        </p>
+      )}
+
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
@@ -354,7 +374,7 @@ function ServiceForm({ form, categories, sansCategorie, onChange, onSave, onCanc
   )
 }
 
-export default function PrestationsManager({ services: initialServices, categories: initialCategories }: { services: Service[]; categories: ServiceCategory[] }) {
+export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[] }) {
   const [categories, setCategories] = useState(initialCategories)
   const [services, setServices] = useState(initialServices)
   const [showAdd, setShowAdd] = useState(false)
@@ -498,6 +518,7 @@ export default function PrestationsManager({ services: initialServices, categori
                 sansCategorie={categories.some(c => c.id === svc.category_id)
                   ? null
                   : { vehicle_types: [...svc.vehicle_types], vehicle_price_overrides: { ...(svc.vehicle_price_overrides ?? {}) } }}
+                availabilities={availabilities}
                 onChange={setForm}
                 onSave={update}
                 onCancel={cancelForm}
@@ -549,6 +570,7 @@ export default function PrestationsManager({ services: initialServices, categori
             form={form}
             categories={categories}
             sansCategorie={null}
+            availabilities={availabilities}
             onChange={setForm}
             onSave={add}
             onCancel={cancelForm}

@@ -84,7 +84,7 @@ export default function AdminTabs({ washer, services, categories, availabilities
       {tab === 'identite'       && <IdentiteForm washer={washer} />}
       {/* Ancres de defilement : les onglets Prestations et Disponibilites
           n'ont pas de section interne a cibler, on ancre leur contenu entier. */}
-      {tab === 'prestations'    && <div id="prestations" className="scroll-mt-24"><PrestationsManager services={services} categories={categories} /></div>}
+      {tab === 'prestations'    && <div id="prestations" className="scroll-mt-24"><PrestationsManager services={services} categories={categories} availabilities={availabilities} /></div>}
       {tab === 'disponibilites' && <div id="disponibilites" className="scroll-mt-24"><DisponibilitesManager availabilities={availabilities} unavailabilities={unavailabilities} teamSize={washer.team_size ?? 1} services={services} /></div>}
     </div>
   )
