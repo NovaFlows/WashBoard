@@ -11,6 +11,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
 import { hasFeature } from '@/lib/plan'
 import { getPeriodRange } from '@/lib/comptaPeriod'
+import { getMondayOf } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
 import { widgetsVisibles, type WidgetKey } from '@/lib/dashboardWidgets'
 import { countDistinctSessions, buildReferrerBreakdown } from '@/lib/funnelStats'
@@ -70,6 +71,12 @@ export default async function DashboardPage() {
 
   const visibles = widgetsVisibles(washer.dashboard_widgets)
   const mois = getPeriodRange('mois', new Date())
+  // Bornes pour « +X visiteurs cette semaine » du widget Clients : cette
+  // semaine (lundi → maintenant) contre la précédente (lundi → dimanche),
+  // même convention que les vues « semaine » de la Comptabilité.
+  const lundiCetteSemaine = getMondayOf(new Date())
+  const lundiSemaineDerniere = new Date(lundiCetteSemaine)
+  lundiSemaineDerniere.setDate(lundiSemaineDerniere.getDate() - 7)
 
   // Tout part en même temps : une seule attente réseau au lieu d'une file.
   //
@@ -90,6 +97,7 @@ export default async function DashboardPage() {
     statsMois,
     clientsLite,
     visitesLite,
+    visitesHebdo,
     prestationsMois,
     services,
     availabilities,
@@ -160,6 +168,17 @@ export default async function DashboardPage() {
           .lte('created_at', `${mois.end}T23:59:59`)
           .range(debut, fin))
       : aucuneLigne<{ session_id: string; step: string; referrer_host: string | null }>(),
+    // Comparaison hebdomadaire du widget Clients : une fenêtre à part (14
+    // jours), distincte du « mois en cours » ci-dessus — début de mois, la
+    // semaine précédente déborde souvent sur le mois d'avant.
+    visibles.has('clients')
+      ? toutesLesLignes((debut, fin) => supabase
+          .from('booking_funnel_events')
+          .select('session_id, created_at')
+          .eq('washer_id', washer.id)
+          .gte('created_at', lundiSemaineDerniere.toISOString())
+          .range(debut, fin))
+      : aucuneLigne<{ session_id: string; created_at: string }>(),
     // Widget Prestations : quelle prestation a été la plus demandée ce mois-ci.
     // Compte tout rendez-vous ayant existé (hors annulés) : c'est la demande
     // qu'on mesure, pas seulement ce qui a été facturé.
@@ -184,6 +203,7 @@ export default async function DashboardPage() {
   if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
   if (clientsLite.error) logger.warn('dashboard.clients_widget.fetch_failed', { washerId: washer.id }, clientsLite.error)
   if (visitesLite.error) logger.warn('dashboard.visiteurs_widget.fetch_failed', { washerId: washer.id }, visitesLite.error)
+  if (visitesHebdo.error) logger.warn('dashboard.visiteurs_hebdo.fetch_failed', { washerId: washer.id }, visitesHebdo.error)
   if (prestationsMois.error) logger.warn('dashboard.prestations_widget.fetch_failed', { washerId: washer.id }, prestationsMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
@@ -236,6 +256,16 @@ export default async function DashboardPage() {
   const resumeClientsWidget = resumeClients(clientsLite.data ?? [], mois.start)
   const visiteursCeMois = countDistinctSessions(visitesLite.data ?? [])
 
+  // Widget Clients (comparaison) : visiteurs de cette semaine moins ceux de
+  // la précédente. `null` tant que le widget n'a jamais été activé (aucune
+  // ligne remontée) — pas la peine d'afficher « +0 cette semaine » à un
+  // compte qui n'a pas encore de recul.
+  const lundiCetteSemaineISO = lundiCetteSemaine.toISOString()
+  const diffVisiteursSemaine = visibles.has('clients')
+    ? countDistinctSessions((visitesHebdo.data ?? []).filter(e => e.created_at >= lundiCetteSemaineISO))
+      - countDistinctSessions((visitesHebdo.data ?? []).filter(e => e.created_at < lundiCetteSemaineISO))
+    : null
+
   // Widget Trafic : sessions ayant atteint « confirmation » (une réservation
   // vraiment déposée), rapportées aux visiteurs — exactement le calcul de la
   // page CRM (voir FunnelInsights/CrmView), aux deux premières sources.
@@ -276,6 +306,7 @@ export default async function DashboardPage() {
         total={resumeClientsWidget.total}
         nouveauxCeMois={resumeClientsWidget.nouveauxCeMois}
         visiteursCeMois={visiteursCeMois}
+        diffVisiteursSemaine={diffVisiteursSemaine}
       />
     ),
     upcoming: <ProchainsRdvWidget bookings={rdvProchains} />,
@@ -291,47 +322,47 @@ export default async function DashboardPage() {
       <DemarrageCard progress={progress} />
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div className="flex flex-wrap items-center gap-1">
-          {/* Personnaliser la page de réservation vit dans Admin, pas dans les
-              widgets — mais y aller à chaque fois n'a rien d'intuitif. Un accès
-              direct depuis l'accueil. */}
-          <Link
-            href="/dashboard/admin#identite"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            Personnaliser ma page
-          </Link>
-          <Link
-            href="/dashboard/clients"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            Suivre mes clients
-          </Link>
-        </div>
+        {/* Personnaliser la page de réservation vit dans Admin, pas dans les
+            widgets — mais y aller à chaque fois n'a rien d'intuitif. Un accès
+            direct depuis l'accueil. « Suivre mes clients », lui, est dans le
+            widget Clients (en haut à droite de sa carte) : inutile de le
+            répéter ici aussi. */}
+        <Link
+          href="/dashboard/admin#identite"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          Personnaliser ma page
+        </Link>
         <WidgetsConfigurator visibles={[...visibles]} />
       </div>
-
-      {widgetsAffiches.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-          {widgetsAffiches.map((cle, i) => {
-            // Un nombre impair de widgets laisserait le dernier seul sur sa
-            // ligne, avec un trou à côté : il prend alors toute la largeur.
-            const dernierSeul = i === widgetsAffiches.length - 1 && widgetsAffiches.length % 2 === 1
-            return (
-              <div key={cle} className={dernierSeul ? 'sm:col-span-2' : ''}>
-                {widgetsParCle[cle]}
-              </div>
-            )
-          })}
-        </div>
-      )}
 
       <BookingList
         bookings={all}
         washerId={washer.id}
         facturationPrete={infosFacturationManquantes(washer).length === 0}
         historiqueTronque={passes.length === HISTORIQUE_AFFICHE}
-      />
+      >
+        {/* Passés en enfants de BookingList : lui seul peut placer « à venir »,
+            widgets et historique dans une même grille, réagencée par zone
+            selon la largeur d'écran — téléphone : à venir tout en haut,
+            widgets ensuite ; ordinateur : à venir à gauche, widgets à droite
+            sur toute la hauteur. Voir BookingList.tsx. */}
+        {widgetsAffiches.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+            {widgetsAffiches.map((cle, i) => {
+              // Un nombre impair de widgets laisserait le dernier seul sur sa
+              // ligne, avec un trou à côté : il prend alors toute la largeur.
+              // Sans objet en colonne large (lg), déjà à une seule colonne.
+              const dernierSeul = i === widgetsAffiches.length - 1 && widgetsAffiches.length % 2 === 1
+              return (
+                <div key={cle} className={dernierSeul ? 'sm:col-span-2 lg:col-span-1' : ''}>
+                  {widgetsParCle[cle]}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </BookingList>
     </DashboardShell>
   )
 }

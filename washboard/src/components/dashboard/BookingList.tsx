@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
@@ -47,6 +47,17 @@ type Props = {
    * liste tronquée en silence ferait croire à un historique perdu.
    */
   historiqueTronque?: boolean
+  /**
+   * Les widgets de l'accueil, affichés ENTRE « À venir » et « Historique ».
+   *
+   * Portés ici plutôt que rendus à côté de `<BookingList>` : sur téléphone,
+   * « À venir » doit passer tout en haut de la page, et sur ordinateur dans
+   * la colonne de gauche pendant que les widgets occupent la droite — un
+   * agencement qui n'est possible que si les trois blocs (à venir, widgets,
+   * historique) sont des cases d'UNE MÊME grille, replacées librement par
+   * zone nommée selon la largeur d'écran.
+   */
+  children?: ReactNode
 }
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
@@ -57,7 +68,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   closed_late: { label: 'Délai dépassé', dot: 'bg-orange-400',  badge: 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800' },
 }
 
-export default function BookingList({ bookings, facturationPrete, historiqueTronque }: Props) {
+export default function BookingList({ bookings, facturationPrete, historiqueTronque, children }: Props) {
   const router = useRouter()
   const [list, setList]       = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
@@ -127,25 +138,44 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
   const past     = list.filter(b => b.status === 'done'  || b.status === 'cancelled')
 
   if (list.length === 0) {
+    // Les widgets restent affichés même sans la moindre réservation : un
+    // compte tout neuf ne doit pas les perdre, ils sont utiles dès l'inscription
+    // (Zone d'intervention, Prestations…). Avant, cette sortie anticipée les
+    // faisait disparaître avec le reste de la page.
     return (
-      <div className="text-center py-20">
-        <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
+      <div className="space-y-8">
+        {children}
+        <div className="text-center py-20">
+          <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <p className="font-semibold text-slate-700 dark:text-slate-300">Aucune réservation</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
+            Partagez votre lien de réservation pour recevoir vos premiers clients.
+          </p>
         </div>
-        <p className="font-semibold text-slate-700 dark:text-slate-300">Aucune réservation</p>
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
-          Partagez votre lien de réservation pour recevoir vos premiers clients.
-        </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    // Une seule grille nommée pour les trois blocs, replacés par zone plutôt
+    // que par ordre d'apparition dans le HTML :
+    //  – téléphone (une colonne) : à venir, puis widgets, puis historique ;
+    //  – ordinateur (deux colonnes) : à venir + historique à gauche, widgets
+    //    à droite sur toute la hauteur.
+    // `children` peut être vide (page sans widget affiché) : la zone
+    // « widgets » ne réclame alors aucune hauteur, les deux autres se
+    // recollent normalement.
+    <div
+      className="grid grid-cols-1 gap-8 [grid-template-areas:'avenir'_'widgets'_'historique']
+                 lg:grid-cols-[1fr_340px] lg:gap-6 lg:items-start
+                 lg:[grid-template-areas:'avenir_widgets'_'historique_widgets']"
+    >
       {upcoming.length > 0 && (
-        <section>
+        <section style={{ gridArea: 'avenir' }}>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">À venir</h2>
             <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full">
@@ -160,8 +190,10 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
         </section>
       )}
 
+      {children && <div style={{ gridArea: 'widgets' }}>{children}</div>}
+
       {past.length > 0 && (
-        <section>
+        <section style={{ gridArea: 'historique' }}>
           <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Historique</h2>
           <div className="space-y-2.5">
             {past.map(b => (
