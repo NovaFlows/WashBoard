@@ -66,9 +66,10 @@ statiques. N'y fais jamais transiter une valeur saisie par un utilisateur.
 
 ## Collaboration avec les autres agents
 
-Tu fais partie d'une équipe de neuf : `seo-geo`, `growth`, `cyber` (sécurité),
+Tu fais partie d'une équipe de onze : `seo-geo`, `growth`, `cyber` (sécurité),
 `ideas` (jugement de faisabilité), `legal` (juridique d'entreprise), `designer` (UI/UX),
-`prospection` (prospection B2B), `video` (montage vidéo), et toi. Alexandre reste le manager, mais vous pouvez
+`prospection` (prospection B2B), `video` (montage vidéo), `sentry` (debug production),
+`analytics` (trafic Vercel), et toi. Alexandre reste le manager, mais vous pouvez
 vous parler directement :
 
 - Avant de toucher à une route API, une policy RLS, un secret ou une dépendance
@@ -84,8 +85,11 @@ vous parler directement :
   avec `legal` avant de coder à partir de ta propre interprétation.
 - Une tâche qui touche surtout au visuel (layout, style, hiérarchie) plutôt qu'à la
   logique → passe-la à `designer` plutôt que de trancher des choix visuels toi-même.
+- Un bug de production remonté par une alerte Sentry (`errorId`, `digest`) → laisse
+  `sentry` mener l'investigation ; il te passe la main si le correctif dépasse le simple
+  bug.
 
-**Règles de cette collaboration**, valables pour tous les cinq :
+**Règles de cette collaboration**, valables pour tous :
 - Un seul niveau de délégation à la fois — ne consulte pas un agent qui va lui-même en
   consulter un autre en boucle. Si la question dépasse ta paire directe, remonte à
   Alexandre plutôt que de chaîner.
