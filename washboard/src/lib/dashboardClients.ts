@@ -10,20 +10,20 @@ export type LigneClientLite = { client_email: string | null; created_at: string 
 
 export type ResumeClientsDashboard = {
   total: number
-  nouveauxCeMois: number
+  nouveauxCetteSemaine: number
 }
 
 const cle = (email: string) => email.trim().toLowerCase()
 
 /**
- * @param debutMois Borne basse (incluse) du mois en cours, format `YYYY-MM-DD`
- *   — même convention que `comptaPeriod.getPeriodRange('mois', …).start`, pour
- *   que « ce mois-ci » ne raconte pas une histoire différente d'un widget à
- *   l'autre du tableau de bord.
+ * @param debutSemaine Borne basse (incluse) de la semaine en cours, format
+ *   `YYYY-MM-DD` — lundi, même convention que `dateUtils.getMondayOf`, pour
+ *   que « cette semaine » ne raconte pas une histoire différente d'un widget
+ *   à l'autre du tableau de bord.
  */
-export function resumeClients(lignes: LigneClientLite[], debutMois: string): ResumeClientsDashboard {
+export function resumeClients(lignes: LigneClientLite[], debutSemaine: string): ResumeClientsDashboard {
   // Un client peut réserver plusieurs fois : on ne retient que sa PREMIÈRE
-  // réservation, seule pertinente pour dire s'il est « nouveau ce mois-ci ».
+  // réservation, seule pertinente pour dire s'il est « nouveau cette semaine ».
   const premiereReservation = new Map<string, string>()
   for (const l of lignes) {
     const email = l.client_email?.trim()
@@ -35,8 +35,8 @@ export function resumeClients(lignes: LigneClientLite[], debutMois: string): Res
 
   let nouveaux = 0
   for (const premiere of premiereReservation.values()) {
-    if (premiere >= debutMois) nouveaux++
+    if (premiere >= debutSemaine) nouveaux++
   }
 
-  return { total: premiereReservation.size, nouveauxCeMois: nouveaux }
+  return { total: premiereReservation.size, nouveauxCetteSemaine: nouveaux }
 }

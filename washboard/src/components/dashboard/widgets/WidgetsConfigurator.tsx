@@ -55,6 +55,14 @@ export function WidgetsConfigurator({ visibles }: { visibles: WidgetKey[] }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [ouvert])
 
+  // La page derrière la modale ne doit pas défiler pendant qu'elle est ouverte.
+  useEffect(() => {
+    if (!ouvert) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [ouvert])
+
   function basculer(cle: WidgetKey) {
     setCoches(prev => {
       const next = new Set(prev)

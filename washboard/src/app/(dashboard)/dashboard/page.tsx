@@ -11,7 +11,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
 import { hasFeature } from '@/lib/plan'
 import { getPeriodRange } from '@/lib/comptaPeriod'
-import { getMondayOf } from '@/lib/dateUtils'
+import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
 import { widgetsVisibles, type WidgetKey } from '@/lib/dashboardWidgets'
 import { countDistinctSessions, buildReferrerBreakdown } from '@/lib/funnelStats'
@@ -71,12 +71,10 @@ export default async function DashboardPage() {
 
   const visibles = widgetsVisibles(washer.dashboard_widgets)
   const mois = getPeriodRange('mois', new Date())
-  // Bornes pour « +X visiteurs cette semaine » du widget Clients : cette
-  // semaine (lundi → maintenant) contre la précédente (lundi → dimanche),
+  // Début de la semaine en cours (lundi → maintenant) : sert au widget
+  // Clients (nouveaux clients) et au widget Trafic (visiteurs, conversion),
   // même convention que les vues « semaine » de la Comptabilité.
   const lundiCetteSemaine = getMondayOf(new Date())
-  const lundiSemaineDerniere = new Date(lundiCetteSemaine)
-  lundiSemaineDerniere.setDate(lundiSemaineDerniere.getDate() - 7)
 
   // Tout part en même temps : une seule attente réseau au lieu d'une file.
   //
@@ -96,8 +94,7 @@ export default async function DashboardPage() {
     historique,
     statsMois,
     clientsLite,
-    visitesLite,
-    visitesHebdo,
+    visitesSemaine,
     prestationsMois,
     services,
     availabilities,
@@ -154,31 +151,17 @@ export default async function DashboardPage() {
           .eq('washer_id', washer.id)
           .range(debut, fin))
       : aucuneLigne<{ client_email: string | null; created_at: string }>(),
-    // Une seule lecture des événements de visite pour DEUX widgets (Clients ET
-    // Trafic), tant que l'un des deux est affiché : même donnée, même mois, pas
-    // de raison de la demander deux fois. `step` et `referrer_host` ne servent
-    // qu'à Trafic, mais les redemander séparément coûterait un aller-retour de
-    // plus pour rien.
-    visibles.has('clients') || visibles.has('traffic')
+    // Widget Trafic : événements de visite de la semaine en cours (lundi →
+    // maintenant). `step` sert à compter les conversions, `referrer_host` à la
+    // répartition par source.
+    visibles.has('traffic')
       ? toutesLesLignes((debut, fin) => supabase
           .from('booking_funnel_events')
           .select('session_id, step, referrer_host')
           .eq('washer_id', washer.id)
-          .gte('created_at', `${mois.start}T00:00:00`)
-          .lte('created_at', `${mois.end}T23:59:59`)
+          .gte('created_at', lundiCetteSemaine.toISOString())
           .range(debut, fin))
       : aucuneLigne<{ session_id: string; step: string; referrer_host: string | null }>(),
-    // Comparaison hebdomadaire du widget Clients : une fenêtre à part (14
-    // jours), distincte du « mois en cours » ci-dessus — début de mois, la
-    // semaine précédente déborde souvent sur le mois d'avant.
-    visibles.has('clients')
-      ? toutesLesLignes((debut, fin) => supabase
-          .from('booking_funnel_events')
-          .select('session_id, created_at')
-          .eq('washer_id', washer.id)
-          .gte('created_at', lundiSemaineDerniere.toISOString())
-          .range(debut, fin))
-      : aucuneLigne<{ session_id: string; created_at: string }>(),
     // Widget Prestations : quelle prestation a été la plus demandée ce mois-ci.
     // Compte tout rendez-vous ayant existé (hors annulés) : c'est la demande
     // qu'on mesure, pas seulement ce qui a été facturé.
@@ -202,8 +185,7 @@ export default async function DashboardPage() {
   if (erreurAVenir) logger.error('dashboard.bookings.fetch_failed', { washerId: washer.id }, erreurAVenir)
   if (historique.error) logger.error('dashboard.historique.fetch_failed', { washerId: washer.id }, historique.error)
   if (clientsLite.error) logger.warn('dashboard.clients_widget.fetch_failed', { washerId: washer.id }, clientsLite.error)
-  if (visitesLite.error) logger.warn('dashboard.visiteurs_widget.fetch_failed', { washerId: washer.id }, visitesLite.error)
-  if (visitesHebdo.error) logger.warn('dashboard.visiteurs_hebdo.fetch_failed', { washerId: washer.id }, visitesHebdo.error)
+  if (visitesSemaine.error) logger.warn('dashboard.visiteurs_widget.fetch_failed', { washerId: washer.id }, visitesSemaine.error)
   if (prestationsMois.error) logger.warn('dashboard.prestations_widget.fetch_failed', { washerId: washer.id }, prestationsMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
@@ -253,26 +235,17 @@ export default async function DashboardPage() {
     .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
     .slice(0, 3)
 
-  const resumeClientsWidget = resumeClients(clientsLite.data ?? [], mois.start)
-  const visiteursCeMois = countDistinctSessions(visitesLite.data ?? [])
+  const resumeClientsWidget = resumeClients(clientsLite.data ?? [], toDateStr(lundiCetteSemaine))
 
-  // Widget Clients (comparaison) : visiteurs de cette semaine moins ceux de
-  // la précédente. `null` tant que le widget n'a jamais été activé (aucune
-  // ligne remontée) — pas la peine d'afficher « +0 cette semaine » à un
-  // compte qui n'a pas encore de recul.
-  const lundiCetteSemaineISO = lundiCetteSemaine.toISOString()
-  const diffVisiteursSemaine = visibles.has('clients')
-    ? countDistinctSessions((visitesHebdo.data ?? []).filter(e => e.created_at >= lundiCetteSemaineISO))
-      - countDistinctSessions((visitesHebdo.data ?? []).filter(e => e.created_at < lundiCetteSemaineISO))
-    : null
-
-  // Widget Trafic : sessions ayant atteint « confirmation » (une réservation
-  // vraiment déposée), rapportées aux visiteurs — exactement le calcul de la
-  // page CRM (voir FunnelInsights/CrmView), aux deux premières sources.
-  const conversionsCeMois = new Set(
-    (visitesLite.data ?? []).filter(e => e.step === 'confirmation').map(e => e.session_id),
+  // Widget Trafic : visiteurs de la semaine en cours, et sessions ayant
+  // atteint « confirmation » (une réservation vraiment déposée) rapportées à
+  // ces visiteurs — exactement le calcul de la page CRM (voir
+  // FunnelInsights/CrmView), aux deux premières sources.
+  const visiteursSemaine = countDistinctSessions(visitesSemaine.data ?? [])
+  const conversionsSemaine = new Set(
+    (visitesSemaine.data ?? []).filter(e => e.step === 'confirmation').map(e => e.session_id),
   ).size
-  const sourcesCeMois = buildReferrerBreakdown(visitesLite.data ?? []).slice(0, 2)
+  const sourcesSemaine = buildReferrerBreakdown(visitesSemaine.data ?? []).slice(0, 2)
 
   // Widget Prestations : un décompte par nom, le plus demandé en tête. La
   // jointure `services` est parfois un objet, parfois un tableau selon ce que
@@ -304,13 +277,11 @@ export default async function DashboardPage() {
     clients: (
       <ClientsWidget
         total={resumeClientsWidget.total}
-        nouveauxCeMois={resumeClientsWidget.nouveauxCeMois}
-        visiteursCeMois={visiteursCeMois}
-        diffVisiteursSemaine={diffVisiteursSemaine}
+        nouveauxCetteSemaine={resumeClientsWidget.nouveauxCetteSemaine}
       />
     ),
     upcoming: <ProchainsRdvWidget bookings={rdvProchains} />,
-    traffic: <TraficWidget visiteurs={visiteursCeMois} conversions={conversionsCeMois} sources={sourcesCeMois} />,
+    traffic: <TraficWidget visiteurs={visiteursSemaine} conversions={conversionsSemaine} sources={sourcesSemaine} />,
     services: <PrestationsWidget prestations={prestationsComptees} />,
     zone: <ZoneWidget zone={washer.zone_config} />,
   }

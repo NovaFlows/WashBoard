@@ -24,14 +24,18 @@ export function TraficWidget({
       </h2>
 
       {visiteurs === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Aucun visiteur ce mois-ci.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500">Aucun visiteur cette semaine.</p>
       ) : (
         <>
-          <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatConversionRate(conversions, visiteurs)}</span>
-            <span className="text-[10px] uppercase tracking-wide font-semibold text-slate-400 dark:text-slate-500">
-              conversion · {conversions}/{visiteurs}
-            </span>
+          <div className="flex items-end gap-4 flex-wrap mb-3">
+            <div>
+              <p className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">{visiteurs}</p>
+              <p className="text-[10px] uppercase tracking-wide font-semibold text-slate-400 dark:text-slate-500 mt-1.5">visiteurs · semaine</p>
+            </div>
+            <div>
+              <p className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatConversionRate(conversions, visiteurs)}</p>
+              <p className="text-[10px] uppercase tracking-wide font-semibold text-slate-400 dark:text-slate-500 mt-1.5">conversion · {conversions}/{visiteurs}</p>
+            </div>
           </div>
 
           {sources.length > 0 && (

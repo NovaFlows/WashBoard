@@ -15,9 +15,9 @@ export type WidgetKey = 'today' | 'stats' | 'clients' | 'upcoming' | 'traffic' |
 export const WIDGETS: { key: WidgetKey; label: string; description: string }[] = [
   { key: 'today',    label: 'Aujourd’hui',           description: 'Vos rendez-vous du jour, en un coup d’œil' },
   { key: 'stats',    label: 'Statistiques',          description: 'Réservations et chiffre d’affaires' },
-  { key: 'clients',  label: 'Clients',               description: 'Combien, les nouveaux ce mois-ci, et les visiteurs' },
+  { key: 'clients',  label: 'Clients',               description: 'Combien, et les nouveaux cette semaine' },
   { key: 'upcoming', label: 'Prochains rendez-vous', description: 'Ce qui arrive après aujourd’hui' },
-  { key: 'traffic',  label: 'Trafic & conversion',   description: 'D’où viennent vos visiteurs, et combien réservent' },
+  { key: 'traffic',  label: 'Trafic & conversion',   description: 'Vos visiteurs de la semaine, d’où ils viennent, et combien réservent' },
   { key: 'services', label: 'Prestations',           description: 'La plus demandée ce mois-ci' },
   { key: 'zone',     label: 'Zone d’intervention',   description: 'Votre rayon d’action actuel' },
 ]
