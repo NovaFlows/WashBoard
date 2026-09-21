@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import { horaireAligne } from '@/lib/bookingWindow'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
@@ -23,6 +24,13 @@ export async function POST(request: NextRequest) {
   }
   if (String(start_time) >= String(end_time)) {
     return NextResponse.json({ error: "L'heure de fin doit être après l'heure de début" }, { status: 400 })
+  }
+  // Le formulaire pose déjà step="1800", mais un appel direct à cette route
+  // (ou un navigateur qui ignore l'attribut) peut encore envoyer une minute
+  // bâtarde — elle romprait silencieusement l'alignement sur le pas de 30 min
+  // que suppose `generateSlots` côté réservation publique.
+  if (!horaireAligne(String(start_time)) || !horaireAligne(String(end_time))) {
+    return NextResponse.json({ error: 'Les horaires doivent être alignés sur 30 minutes' }, { status: 400 })
   }
 
   const { data, error } = await supabase

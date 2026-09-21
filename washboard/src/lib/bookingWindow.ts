@@ -76,12 +76,23 @@ export function heureParis(scheduledAt: string): { jour: number; minutes: number
 export type PlageOuverture = { day_of_week: number; start_time: string; end_time: string }
 
 /** "08:30" → 510. Renvoie `null` si le format est inattendu. */
-function enMinutes(hhmm: string): number | null {
+export function enMinutes(hhmm: string): number | null {
   const m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm))
   if (!m) return null
   const h = Number(m[1]); const min = Number(m[2])
   if (h > 23 || min > 59) return null
   return h * 60 + min
+}
+
+/** Vrai si l'horaire est lisible et tombe pile sur le pas de créneaux (30 min
+ *  par défaut). Le laveur le saisit dans un `<input type="time">`, qui
+ *  accepte n'importe quelle minute sans ce contrôle : une valeur bâtarde
+ *  (ex. 17:07) produit une plage que `generateSlots` ne découpe jamais
+ *  proprement, et peut faire disparaître silencieusement tous les créneaux
+ *  du jour concerné. */
+export function horaireAligne(hhmm: string, pas: number = SLOT_STEP): boolean {
+  const m = enMinutes(hhmm)
+  return m !== null && m % pas === 0
 }
 
 /** Le créneau démarre-t-il sur une ouverture du laveur, et la prestation

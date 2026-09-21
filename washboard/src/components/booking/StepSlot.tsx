@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize } from '@/lib/slots'
-import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount } from '@/lib/pricing'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible } from '@/lib/slots'
+import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
@@ -241,13 +241,20 @@ export default function StepSlot({
     durationMin: effectiveDuration(embedDuration(b.services) + addonsDuration(b.selected_addons), b.vehicle_count),
   }))
 
+  const dayAvailabilities = selectedDate
+    ? availabilities.filter(a => a.day_of_week === selectedDate.getDay())
+    : []
+
   const slotsForDay = selectedDate
-    ? availabilities
-        .filter(a => a.day_of_week === selectedDate.getDay())
+    ? dayAvailabilities
         .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
         .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []
+
+  // Distingue « la prestation ne rentre nulle part ce jour-là » de « tout est
+  // déjà réservé » : deux causes différentes derrière le même écran vide.
+  const dureeTropLongue = selectedDate && dureeIncompatible(dayAvailabilities, serviceDuration)
 
   // Si le créneau sélectionné est devenu infaisable (contraintes de trajet chargées après),
   // on le désélectionne pour éviter qu'un client valide un RDV physiquement impossible.
@@ -454,11 +461,15 @@ export default function StepSlot({
           </div>
 
           {slotsForDay.length === 0 ? (
-            <div className="flex items-center gap-2 py-3 px-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className={`flex items-center gap-2 py-3 px-4 rounded-xl ${dureeTropLongue ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-slate-50 dark:bg-slate-800'}`}>
+              <svg className={`w-4 h-4 shrink-0 ${dureeTropLongue ? 'text-amber-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
               </svg>
-              <p className="text-sm text-slate-400 dark:text-slate-500">Aucun créneau disponible ce jour</p>
+              <p className={`text-sm ${dureeTropLongue ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                {dureeTropLongue
+                  ? `Avec les options choisies, la prestation dure ${formatDureeFr(serviceDuration)} et ne rentre dans aucun de vos horaires disponibles ce jour-là.`
+                  : 'Aucun créneau disponible ce jour'}
+              </p>
             </div>
           ) : (
             <>

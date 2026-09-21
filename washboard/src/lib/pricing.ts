@@ -42,6 +42,26 @@ export function addonsDuration(addons: { duration_minutes?: number }[] | null | 
   return (addons ?? []).reduce((sum, a) => sum + (a.duration_minutes ?? 0), 0)
 }
 
+export type ServiceAvecOptions = { duration_minutes: number; addons?: { duration_minutes?: number }[] | null }
+
+/** Durée maximale qu'une prestation du laveur peut atteindre, TOUTES ses
+ *  options cochées à la fois — aucune n'est exclusive (voir StepOptions, ce
+ *  sont des cases à cocher indépendantes). Sert à avertir le laveur qu'une
+ *  plage d'ouverture trop courte rend une prestation invendable dès qu'un
+ *  client coche une option (incident PistaClean du 19/09/2026 : 3h + 30 min
+ *  d'option, plage unique de 17h-20h). */
+export function dureeMaxPrestation(services: ServiceAvecOptions[]): number {
+  return services.reduce((max, s) => Math.max(max, s.duration_minutes + addonsDuration(s.addons)), 0)
+}
+
+/** "90" → "1h30", "210" → "3h30", "45" → "45min", "120" → "2h". */
+export function formatDureeFr(minutes: number): string {
+  if (minutes < 60) return `${minutes}min`
+  const h = Math.floor(minutes / 60)
+  const reste = minutes % 60
+  return reste === 0 ? `${h}h` : `${h}h${String(reste).padStart(2, '0')}`
+}
+
 /** Durée réellement bloquée = (durée prestation + options) × nombre de véhicules (min 1).
  *
  *  ⚠️ Ne convient qu'aux réservations dont les options sont communes à tous les

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  verdictDate, heureParis, creneauDansOuverture, BOOKING_HORIZON_DAYS,
+  verdictDate, heureParis, creneauDansOuverture, BOOKING_HORIZON_DAYS, horaireAligne,
 } from './bookingWindow'
 
 const JOUR = 24 * 60 * 60_000
@@ -126,5 +126,25 @@ describe('creneauDansOuverture', () => {
     expect(creneauDansOuverture(SAMEDI_10H, 60, [
       { day_of_week: 6, start_time: '09:00', end_time: '99:99' },
     ])).toBe(false)
+  })
+})
+
+describe('horaireAligne — verrou de saisie côté serveur', () => {
+  it('accepte un horaire sur le pas de 30 min', () => {
+    expect(horaireAligne('08:00')).toBe(true)
+    expect(horaireAligne('17:30')).toBe(true)
+  })
+  it('refuse une minute qui n\'est pas un multiple de 30', () => {
+    // Une plage 17:07-20:00 saisie par erreur ferait disparaître tous les
+    // créneaux du jour sans que rien ne le signale.
+    expect(horaireAligne('17:07')).toBe(false)
+    expect(horaireAligne('08:15')).toBe(false)
+  })
+  it('refuse un horaire illisible', () => {
+    expect(horaireAligne('nawak')).toBe(false)
+  })
+  it('respecte un pas personnalisé', () => {
+    expect(horaireAligne('08:15', 15)).toBe(true)
+    expect(horaireAligne('08:10', 15)).toBe(false)
   })
 })

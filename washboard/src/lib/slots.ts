@@ -49,6 +49,20 @@ export function isSlotInWindows(slotTime: string, date: Date, windows: TimeWindo
   return windows.some(w => start >= new Date(w.start).getTime() && start <= new Date(w.end).getTime())
 }
 
+export type OpeningWindow = { start_time: string; end_time: string }
+
+/** Vrai si aucune des plages d'ouverture données ne peut contenir une
+ *  prestation de cette durée — distingue « la durée ne rentre nulle part »
+ *  de « tout est déjà réservé », deux causes différentes du même message
+ *  générique « Aucun créneau disponible ». Confondues jusqu'ici : une option
+ *  de 30 min poussait une prestation de 3h à 3h30, au-delà de la seule plage
+ *  17h-20h du laveur, sans que le client comprenne pourquoi (PistaClean,
+ *  19/09/2026). */
+export function dureeIncompatible(windows: OpeningWindow[], durationMinutes: number): boolean {
+  if (windows.length === 0) return false
+  return windows.every(w => generateSlots(w.start_time, w.end_time, durationMinutes).length === 0)
+}
+
 export type DayUnavailability = { start_date: string; end_date: string; team_members_off?: number | null }
 
 /** Capacité effective un jour donné = nb de laveurs − absences couvrant ce jour. */

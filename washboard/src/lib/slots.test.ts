@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   generateSlots, countOverlaps, countConflicts, isSlotInWindows,
-  isSlotFeasible, effectiveTeamSize,
+  isSlotFeasible, effectiveTeamSize, dureeIncompatible,
 } from './slots'
 
 // Repère local fixe → ISO construits localement pour être TZ-safe
@@ -129,6 +129,26 @@ describe('isSlotInWindows — créneaux optimisés', () => {
     expect(isSlotInWindows('11:00', date, win)).toBe(true)
   })
   it('aucune fenêtre → false', () => expect(isSlotInWindows('10:00', date, [])).toBe(false))
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('dureeIncompatible — la durée ne rentre nulle part (bug PistaClean 19/09)', () => {
+  it('vrai quand aucune plage ne peut contenir la durée', () => {
+    // 17h-20h = 3h de plage, prestation à 3h30 (option comprise) : ne rentre jamais.
+    expect(dureeIncompatible([{ start_time: '17:00', end_time: '20:00' }], 210)).toBe(true)
+  })
+  it('faux dès qu\'une plage suffit', () => {
+    expect(dureeIncompatible([
+      { start_time: '17:00', end_time: '20:00' },
+      { start_time: '08:00', end_time: '12:00' },
+    ], 210)).toBe(false)
+  })
+  it('faux quand la durée tient pile', () => {
+    expect(dureeIncompatible([{ start_time: '17:00', end_time: '20:00' }], 180)).toBe(false)
+  })
+  it('aucune plage ce jour-là → faux (c\'est un jour fermé, pas une durée trop longue)', () => {
+    expect(dureeIncompatible([], 210)).toBe(false)
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import type { Availability, Unavailability } from '@/types'
+import type { Availability, Service, Unavailability } from '@/types'
+import { dureeMaxPrestation, formatDureeFr } from '@/lib/pricing'
 
 const DAYS       = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -19,9 +20,17 @@ type Props = {
   availabilities: Availability[]
   unavailabilities: Unavailability[]
   teamSize: number
+  services: Service[]
 }
 
-export default function DisponibilitesManager({ availabilities: initial, unavailabilities: initialUnavail, teamSize }: Props) {
+/** Minutes entre deux horaires "HH:MM". */
+function ecartMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  return (eh * 60 + em) - (sh * 60 + sm)
+}
+
+export default function DisponibilitesManager({ availabilities: initial, unavailabilities: initialUnavail, teamSize, services }: Props) {
   // ── Créneaux hebdomadaires ───────────────────────────────────────────────
   const [slots,      setSlots]      = useState(initial)
   const [dayOfWeek,  setDayOfWeek]  = useState<number>(1)
@@ -31,6 +40,12 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
   const [slotErr,    setSlotErr]    = useState<string | null>(null)
 
   const byDay = DAYS.map((_, i) => slots.filter(s => s.day_of_week === i))
+
+  // Durée max qu'une prestation peut atteindre, options comprises — sert à
+  // repérer une plage trop courte avant qu'un client ne tombe dessus (voir
+  // `dureeMaxPrestation`, incident PistaClean du 19/09/2026).
+  const dureeMax = dureeMaxPrestation(services)
+  const plageTropCourte = dureeMax > 0 && startTime < endTime && ecartMinutes(startTime, endTime) < dureeMax
 
   async function addSlot() {
     if (startTime >= endTime) { setSlotErr("L'heure de fin doit être après l'heure de début"); return }
@@ -106,14 +121,24 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
         <div className="flex items-center gap-3 mb-4">
           <div>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Début</p>
-            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputClass} />
+            {/* step="1800" (30 min) : une minute saisie au hasard produit une
+                plage que le formulaire de réservation ne découpe jamais
+                proprement, et peut en faire disparaître tous les créneaux
+                sans que rien ne le signale. */}
+            <input type="time" step="1800" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputClass} />
           </div>
           <div className="text-slate-400 mt-5">→</div>
           <div>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fin</p>
-            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={inputClass} />
+            <input type="time" step="1800" value={endTime} onChange={e => setEndTime(e.target.value)} className={inputClass} />
           </div>
         </div>
+        {plageTropCourte && (
+          <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2 mb-3">
+            Cette plage ({ecartMinutes(startTime, endTime) >= 0 ? formatDureeFr(ecartMinutes(startTime, endTime)) : '—'}) est plus courte
+            que votre prestation la plus longue avec options ({formatDureeFr(dureeMax)}) : un client qui la choisirait ne verrait aucun créneau ce jour-là.
+          </p>
+        )}
         {slotErr && <p className="text-xs text-red-600 dark:text-red-400 mb-3">{slotErr}</p>}
         <button onClick={addSlot} disabled={slotLoad}
           className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
@@ -136,19 +161,25 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
                   <span className="text-xs text-slate-400 dark:text-slate-500 pt-0.5">Indisponible</span>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {daySlots.map(slot => (
-                      <div key={slot.id} className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded-lg px-2.5 py-1">
-                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                          {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
-                        </span>
-                        <button onClick={() => removeSlot(slot.id)}
-                          className="text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors ml-0.5">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                            <path d="M18 6 6 18M6 6l12 12"/>
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                    {daySlots.map(slot => {
+                      const tropCourt = dureeMax > 0 && ecartMinutes(slot.start_time.slice(0, 5), slot.end_time.slice(0, 5)) < dureeMax
+                      return (
+                        <div key={slot.id} className={`flex items-center gap-1.5 bg-white dark:bg-slate-900 border rounded-lg px-2.5 py-1 ${tropCourt ? 'border-amber-300 dark:border-amber-700' : 'border-emerald-200 dark:border-emerald-800'}`}>
+                          {tropCourt && (
+                            <span title={`Trop court pour votre prestation la plus longue avec options (${formatDureeFr(dureeMax)})`} className="text-amber-500">⚠</span>
+                          )}
+                          <span className={`text-xs font-semibold ${tropCourt ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                            {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
+                          </span>
+                          <button onClick={() => removeSlot(slot.id)}
+                            className="text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors ml-0.5">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                              <path d="M18 6 6 18M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
