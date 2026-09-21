@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // En-têtes de sécurité.
 //
@@ -45,4 +46,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// L'enveloppe Sentry patche la config Next (webpack/Turbopack) pour agréger
+// les erreurs — voir sentry.server.config.ts pour pourquoi elle ne fait rien
+// tant qu'aucun DSN n'est configuré. `org`/`project`/`authToken` restent
+// facultatifs : sans eux, l'étape d'envoi des source maps est simplement
+// sautée (message dans les journaux de build, jamais un échec du build) —
+// tant que WashBoard n'a pas de compte Sentry avec accès à un jeton, les
+// erreurs remontent avec du code minifié plutôt que le code source d'origine.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+});

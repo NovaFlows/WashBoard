@@ -1,8 +1,18 @@
+import * as Sentry from '@sentry/nextjs'
+
 // Logger structuré (JSON une ligne). Vercel capture stdout/stderr → les logs
 // sont recherchables/filtrables par `event`, `level`, `errorId`, etc.
 //
 // Objectif prod : quand quelque chose casse, on retrouve l'incident en secondes
 // (grep dans les logs Vercel) grâce à un format cohérent et à des identifiants.
+//
+// `logger.error` relaie aussi vers Sentry (alerte + stack trace), tant que
+// NEXT_PUBLIC_SENTRY_DSN est configurée — voir sentry.server.config.ts. Un
+// seul point d'accroche plutôt qu'un appel Sentry ajouté dans chaque route :
+// tout ce qui passe déjà par `logger.error` (AppError 5xx via apiError.ts,
+// error boundaries React, échecs de lecture...) devient une alerte sans
+// toucher ces dizaines d'appels existants. `logger.warn` (4xx attendus,
+// pannes tolérées avec repli) n'y remonte pas : ce ne sont pas des pannes.
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -46,6 +56,11 @@ function emit(level: LogLevel, event: string, context?: LogContext, err?: unknow
   // warn/error → stderr ; debug/info → stdout. Les deux sont captés par Vercel.
   if (level === 'error' || level === 'warn') console.error(line)
   else console.log(line)
+
+  if (level === 'error' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    if (err instanceof Error) Sentry.captureException(err, { extra: { event, ...context } })
+    else Sentry.captureMessage(event, { level: 'error', extra: context })
+  }
 }
 
 export const logger = {

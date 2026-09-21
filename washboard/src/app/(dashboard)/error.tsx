@@ -16,7 +16,9 @@ export default function DashboardError({
   reset: () => void
 }) {
   useEffect(() => {
-    logger.error('react.dashboard_error', { digest: error.digest, message: error.message })
+    // `error` passé en 3ᵉ argument (plutôt que son seul message) pour que
+    // l'alerte Sentry relayée par logger.error porte la vraie stack.
+    logger.error('react.dashboard_error', { digest: error.digest }, error)
   }, [error])
 
   return (

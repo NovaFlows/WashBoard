@@ -16,8 +16,10 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Trace côté client (visible dans la console navigateur / outils de session)
-    logger.error('react.global_error', { digest: error.digest, message: error.message })
+    // Trace côté client (visible dans la console navigateur / outils de session),
+    // et alerte Sentry avec la vraie stack (voir logger.ts) — d'où `error` passé
+    // en 3ᵉ argument plutôt que son seul message.
+    logger.error('react.global_error', { digest: error.digest }, error)
   }, [error])
 
   return (

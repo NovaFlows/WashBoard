@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+
+const { captureException, captureMessage } = vi.hoisted(() => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}))
+vi.mock('@sentry/nextjs', () => ({ captureException, captureMessage }))
+
 import { serializeError, buildLogEntry, logger } from './logger'
 
 describe('serializeError', () => {
@@ -67,5 +74,47 @@ describe('logger (émission)', () => {
     logger.warn('w')
     expect(logSpy).toHaveBeenCalledOnce()
     expect(errSpy).toHaveBeenCalledOnce()
+  })
+})
+
+describe('logger → Sentry', () => {
+  const DSN = 'https://exemple@o0.ingest.sentry.io/1'
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+    captureException.mockClear()
+    captureMessage.mockClear()
+  })
+
+  it('sans DSN configurée, aucun appel à Sentry', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    logger.error('x', undefined, new Error('boom'))
+    expect(captureException).not.toHaveBeenCalled()
+    expect(captureMessage).not.toHaveBeenCalled()
+  })
+
+  it('avec DSN et une Error, relaie via captureException', () => {
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', DSN)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const err = new Error('db down')
+    logger.error('stripe.webhook.failed', { eventId: 'evt_1' }, err)
+    expect(captureException).toHaveBeenCalledWith(err, { extra: { event: 'stripe.webhook.failed', eventId: 'evt_1' } })
+    expect(captureMessage).not.toHaveBeenCalled()
+  })
+
+  it('avec DSN et sans Error, relaie via captureMessage', () => {
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', DSN)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    logger.error('account.not_found', { userId: 'u1' })
+    expect(captureMessage).toHaveBeenCalledWith('account.not_found', { level: 'error', extra: { userId: 'u1' } })
+    expect(captureException).not.toHaveBeenCalled()
+  })
+
+  it('avec DSN, un warn ne relaie pas vers Sentry (pas une panne)', () => {
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', DSN)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    logger.warn('x', undefined, new Error('attendu'))
+    expect(captureException).not.toHaveBeenCalled()
+    expect(captureMessage).not.toHaveBeenCalled()
   })
 })
