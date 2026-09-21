@@ -396,21 +396,19 @@ export default function LandingPage() {
         .dark .wb-cloud-fade-white {
           background: linear-gradient(to bottom, transparent 0%, transparent 64%, #FFFFFF 100%);
         }
-        /* Carte planning — suit le thème */
-        .wb-schedule {
+        /* Cadre des vraies captures produit dans le hero — même esprit que
+           l'ancienne carte planning (fond léger, bordure fine, ombre douce)
+           mais autour d'une image plutôt que d'une maquette inventée. */
+        .wb-hero-shot {
           background: rgba(255, 255, 255, 0.95);
           border: 1px solid rgba(22, 81, 232, 0.10);
           box-shadow: 0 4px 24px rgba(22, 81, 232, 0.06);
         }
-        .dark .wb-schedule {
+        .dark .wb-hero-shot {
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.10);
-          box-shadow: none;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
         }
-        .wb-schedule-zone { background: rgba(22, 81, 232, 0.05); }
-        .dark .wb-schedule-zone { background: rgba(0, 196, 212, 0.08); }
-        .wb-schedule-divider { border-top: 1px solid rgba(22, 81, 232, 0.08); }
-        .dark .wb-schedule-divider { border-top: 1px solid rgba(255, 255, 255, 0.08); }
       `}</style>
 
       {/* ── Nav ── */}
@@ -492,7 +490,7 @@ export default function LandingPage() {
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1 } } }}
-            className="grid lg:grid-cols-[1fr_420px] gap-12 lg:gap-16 items-center"
+            className="grid lg:grid-cols-[1fr_440px] gap-12 lg:gap-16 items-center"
           >
             <div>
               <motion.p
@@ -533,46 +531,35 @@ export default function LandingPage() {
               </motion.p>
             </div>
 
-            {/* Planning — sans chrome navigateur */}
+            {/* Aperçu produit — vraies captures d'écran (mêmes fichiers que
+                la section « Le produit en vrai » plus bas), pas une maquette
+                inventée. Le calendrier illustre déjà le regroupement de
+                créneaux par zone (marqué ★ sur la capture) décrit dans le
+                texte à gauche. La page de réservation, posée en avant-plan,
+                montre ce que voit le client qui réserve. */}
             <motion.div
               variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.7, delay: 0.15 } } }}
-              className="wb-schedule rounded-2xl p-5"
+              className="relative max-w-[380px] mx-auto lg:max-w-none lg:mx-0 pb-10 sm:pb-14 lg:pb-16"
             >
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">Mardi 8 juillet</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-white/80 mt-0.5">Bordeaux Sud</p>
-                </div>
-                <span className="text-xs font-bold text-[#00C4D4] bg-[#00C4D4]/10 px-2.5 py-1 rounded-full shrink-0">3 zones groupées</span>
+              <div className="wb-hero-shot rounded-2xl overflow-hidden">
+                <Image
+                  src="/landing/calendrier-clair.webp" alt="Le calendrier WashBoard, avec les créneaux groupés par zone"
+                  width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto dark:hidden"
+                />
+                <Image
+                  src="/landing/calendrier-sombre.webp" alt="Le calendrier WashBoard, avec les créneaux groupés par zone"
+                  width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto hidden dark:block"
+                />
               </div>
-              <div className="space-y-1">
-                {[
-                  { time: '09:00', name: 'Martin Dupont', service: 'Lavage extérieur', zone: false },
-                  { time: '10:00', name: 'Sophie Bernard', service: 'Lavage complet', zone: true },
-                  { time: '10:45', name: 'Paul Roche', service: 'Lavage extérieur', zone: true },
-                  { time: '13:30', name: 'Lucie Martin', service: 'Pack famille', zone: false },
-                  { time: '14:15', name: 'Éric Vidal', service: 'Lavage complet', zone: true },
-                  { time: '16:30', name: 'Garage Lefebvre', service: 'Pack entreprise × 4', zone: false },
-                ].map((rdv) => (
-                  <div key={rdv.time} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${rdv.zone ? 'wb-schedule-zone' : ''}`}>
-                    <span className="text-xs font-mono text-slate-400 dark:text-white/40 w-11 shrink-0">{rdv.time}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 dark:text-white/90 truncate">{rdv.name}</p>
-                      <p className="text-xs text-slate-400 dark:text-white/40 truncate">{rdv.service}</p>
-                    </div>
-                    {rdv.zone ? (
-                      <span className="text-xs text-[#00C4D4] font-bold shrink-0">zone</span>
-                    ) : (
-                      <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="wb-schedule-divider mt-4 pt-4 flex items-center justify-between px-1">
-                <span className="text-xs text-slate-400 dark:text-white/35">6 lavages · 0 km de plus</span>
-                <span className="text-base font-black text-emerald-600 dark:text-white">320€</span>
+              <div className="wb-hero-shot absolute -bottom-2 -left-4 sm:-left-6 w-[42%] max-w-[190px] rounded-2xl overflow-hidden">
+                <Image
+                  src="/landing/reservation-clair.webp" alt="La page de réservation WashBoard, côté client, sur téléphone"
+                  width={600} height={1000} sizes="190px" className="w-full h-auto dark:hidden"
+                />
+                <Image
+                  src="/landing/reservation-sombre.webp" alt="La page de réservation WashBoard, côté client, sur téléphone"
+                  width={600} height={1000} sizes="190px" className="w-full h-auto hidden dark:block"
+                />
               </div>
             </motion.div>
           </motion.div>
