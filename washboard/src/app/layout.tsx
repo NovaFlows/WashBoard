@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
@@ -96,6 +97,7 @@ export default async function RootLayout({
         <ServiceWorkerRegistrar />
           <RecoveryRedirect />
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
