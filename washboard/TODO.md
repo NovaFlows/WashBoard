@@ -7,9 +7,11 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-14 (réseaux sociaux, facturation électronique ; légal et
-> Stripe live repoussés vers mi-novembre ; landing livrée ; et plus tôt : compte d'essai
-> EssaiAuto à supprimer, blog SEO, centre d'aide, fiche client, forfaits annuels)
+> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
+> partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
+> facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
+> livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
+> fiche client, forfaits annuels)
 
 ---
 
@@ -30,6 +32,57 @@
     (2) servir fonds et logos via l'optimisation d'images de Next (`/_next/image`, mise en
     cache par Vercel, ~5× plus légers) ; (3) vérifier que l'organisation n'a pas d'autre
     projet qui consomme ; (4) si besoin, passer en offre Pro Supabase avant le 5 octobre.
+
+- [ ] **Audit post-lancement du 2026-09-21 (liste « 20 points à vérifier » vue sur TikTok).**
+      Fait par Ryan, en lecture seule, sur www.washboard.fr et le code à jour. **15 points
+      déjà en place, 5 restent.** Ordre prévu par Ryan : la vitesse d'abord (session
+      suivante).
+  - [ ] **1. Vitesse de chargement.** Mesuré en 4G lente, sur un téléphone moyen (CPU ×4) :
+        blog LCP 1,3 s (très bon), accueil LCP 2,3 s (bon), **page de réservation LCP 3,1 s,
+        dont 2,3 s d'attente du serveur (TTFB)** — c'est la page que voient les clients des
+        laveurs. Une seule mesure : la refaire d'abord pour écarter un démarrage à froid.
+        Sur l'accueil, **CLS 0,155** (seuil 0,1) : le contenu bouge pendant le chargement.
+        PageSpeed Insights n'a pas pu être utilisé (quota Google épuisé ce jour-là).
+        Agent : `dev`.
+  - [ ] **2. Contraste des couleurs.** axe-core, WCAG AA, mode clair : 6 à 12 éléments en
+        échec par page publique. Cause principale : `text-slate-400` (#90a1b9) sur fond
+        blanc = **2,63:1** (minimum 4,5:1) — pied de page, dates d'articles, petites
+        mentions, liens légaux. Aussi `#62748e` sur fonds bleutés (4,3:1) et l'onglet actif
+        de la page de réservation (`#0ea5e9` sur `#ecf8fd`, 2,56:1). `/signup` et `/login`
+        passent. Lié à « Accessibilité » dans 🟢 Polish. Agent : `designer`.
+  - [ ] **3. Image de prévisualisation de la page d'accueil.** Le blog (une image par
+        article) et les pages de réservation (logo du laveur) en ont une ; **l'accueil
+        n'a ni `og:image` ni `twitter:image`**, alors que `twitter:card` vaut
+        `summary_large_image`. C'est le lien le plus partagé. Ajouter
+        `src/app/opengraph-image.tsx` sur le modèle de `src/app/blog/opengraph-image.tsx`.
+        Agent : `designer` pour le visuel.
+  - [ ] **4. CGU.** Pas de page. Ryan : à faire. Agent : `legal`.
+  - [ ] **5. Acceptation des CGV à l'inscription.** Les CGV existent, mais `/signup` ne
+        demande pas de les accepter (ni la politique de confidentialité) : sans trace
+        d'acceptation, elles sont difficilement opposables à un laveur en cas de litige
+        (impayé, résiliation contestée). Case à cocher + date d'acceptation enregistrée.
+        À faire avec le point 4 (une seule case pour CGU et CGV). Agents : `legal` pour le
+        texte, `dev`, relecture `cyber` (ça touche l'inscription).
+  - Détails mineurs relevés : `/login`, `/signup` et la page 404 reprennent le titre de
+    l'accueil ; `robots.txt` bloque `/register`, qui n'existe pas (la route est `/signup`) ;
+    `/confidentialite` ne cite pas la mesure d'audience (Vercel Analytics, sans cookie) ;
+    la vidéo `tuto.mp4` (14 Mo) de l'accueil n'a ni `poster` ni `preload="none"` ;
+    5 libellés différents pour le même bouton d'inscription.
+  - **Déjà en place, inutile de revérifier** : page RGPD (`/confidentialite`), aucune clé
+    secrète dans le code envoyé au navigateur (1,3 Mo analysés, `.env` hors git), HTTPS
+    forcé + HSTS, **pas de bandeau cookies nécessaire** (seulement le cookie de session et
+    le thème ; il le deviendra si on ajoute Google Analytics ou le pixel Meta), title et
+    description sur toutes les pages, favicon, sitemap et robots.txt, 0 image sans `alt`,
+    images de l'accueil en webp (17 à 47 Ko), aucun débordement à 390 px, page 404
+    personnalisée avec un vrai code 404, aucun guillemet cassé dans le texte visible,
+    formulaires validés (et zod côté serveur pour la réservation), anti-spam (piège à robots
+    sur la réservation, plafonds sur inscription, réservation, mot de passe, support et
+    Maps — compteurs en mémoire par instance, suffisant pour l'instant), analytics (Vercel
+    + entonnoir maison anonyme), un seul objectif pour tous les CTA (`/signup`). Routes de
+    test fermées en production (`/api/e2e/cleanup` 403, `/api/debug/reviews` 401).
+  - **QUESTION POUR ALEXANDRE** : les points 1, 3 et 5 touchent l'accueil, la page de
+    réservation et l'inscription, qui sont dans ton périmètre. OK pour que Ryan s'en
+    charge, ou tu préfères les prendre ?
 
 - [x] 2026-09-14 — **Corrigé** : enregistrement refusé sans type (écran et serveur, règle
       commune `lib/prestation.ts`, 11 tests), message qui dit ce qui manque, « Sans
