@@ -15,8 +15,10 @@ export type ProchainRdv = {
 
 export function ProchainsRdvWidget({ bookings }: { bookings: ProchainRdv[] }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100">
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Prochains rendez-vous</h2>
+    <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100">
+      <h2 className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+        Prochains rendez-vous
+      </h2>
 
       {bookings.length === 0 ? (
         <p className="text-sm text-slate-400 dark:text-slate-500">Rien de prévu pour l’instant.</p>

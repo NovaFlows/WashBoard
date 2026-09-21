@@ -262,7 +262,7 @@ export default async function DashboardPage() {
   // dans l'ORDRE choisi par le laveur (voir WidgetsConfigurator : l'ordre du
   // tableau `dashboard_widgets` EST l'ordre d'affichage).
   const widgetsParCle: Record<WidgetKey, ReactNode> = {
-    today: <AujourdhuiWidget bookings={rdvAujourdhui} />,
+    today: <AujourdhuiWidget bookings={rdvAujourdhui} dateDuJour={aujourdhui} />,
     stats: (
       <StatsWidget
         pending={pending}
@@ -290,16 +290,24 @@ export default async function DashboardPage() {
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <DemarrageCard progress={progress} />
 
-      <div className="flex items-center justify-between gap-2 mb-3">
-        {/* Personnaliser la page de réservation vit dans Admin, pas dans les
-            widgets — mais y aller à chaque fois n'a rien d'intuitif. Un accès
-            direct depuis l'accueil, à côté du réglage des widgets. */}
-        <Link
-          href="/dashboard/admin#identite"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          Personnaliser ma page
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-1">
+          {/* Personnaliser la page de réservation vit dans Admin, pas dans les
+              widgets — mais y aller à chaque fois n'a rien d'intuitif. Un accès
+              direct depuis l'accueil. */}
+          <Link
+            href="/dashboard/admin#identite"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            Personnaliser ma page
+          </Link>
+          <Link
+            href="/dashboard/clients"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            Suivre mes clients
+          </Link>
+        </div>
         <WidgetsConfigurator visibles={[...visibles]} />
       </div>
 

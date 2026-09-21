@@ -50,3 +50,26 @@ export function formatHeureCompacte(date: Date): string {
   const minutes = Number(m)
   return minutes === 0 ? `${heures}h` : `${heures}h${String(minutes).padStart(2, '0')}`
 }
+
+/** Décalage de Paris par rapport à UTC, en heures, à l'instant donné (+1
+ *  l'hiver, +2 l'été). Lu directement via Intl plutôt que reconstruit à la
+ *  main : une double conversion (aller-retour par `toLocaleString`) donne
+ *  facilement le mauvais signe ou le mauvais jour de bascule. */
+function decalageParisHeures(instant: Date): number {
+  const part = new Intl.DateTimeFormat('en-US', { timeZone: FUSEAU, timeZoneName: 'shortOffset' })
+    .formatToParts(instant)
+    .find(p => p.type === 'timeZoneName')?.value ?? 'GMT+1'
+  const m = /GMT([+-]\d+)/.exec(part)
+  return m ? Number(m[1]) : 1
+}
+
+/** Minuit à Paris pour la date `YYYY-MM-DD` donnée, en instant UTC exact.
+ *
+ *  Sert à borner une journée dans une requête (`gte`/`lt` sur `scheduled_at`) :
+ *  la colonne est en UTC, mais « le 21 septembre » est une notion parisienne.
+ *  Se recale automatiquement heure d'été / heure d'hiver, y compris le jour
+ *  même du changement (vérifié sur les bascules 2026 : 29 mars, 25 octobre). */
+export function minuitParisUTC(dateStr: string): Date {
+  const naif = new Date(`${dateStr}T00:00:00Z`)
+  return new Date(naif.getTime() - decalageParisHeures(naif) * 60 * 60_000)
+}

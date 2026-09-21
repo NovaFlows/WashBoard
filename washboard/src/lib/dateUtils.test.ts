@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toDateStr, getMondayOf, formatHeure, formatHeureCompacte } from './dateUtils'
+import { toDateStr, getMondayOf, formatHeure, formatHeureCompacte, minuitParisUTC, FUSEAU } from './dateUtils'
 
 describe('toDateStr', () => {
   it('formate en YYYY-MM-DD (timezone locale)', () => {
@@ -57,5 +57,33 @@ describe('formatHeureCompacte', () => {
   it('reste plus court que le format long, ce qui est toute sa raison d’être', () => {
     const d = new Date('2026-09-04T08:00:00+02:00')
     expect(formatHeureCompacte(d).length).toBeLessThan(formatHeure(d).length)
+  })
+})
+
+describe('minuitParisUTC', () => {
+  it('heure d’été (CEST, UTC+2)', () => {
+    expect(minuitParisUTC('2026-09-21').toISOString()).toBe('2026-09-20T22:00:00.000Z')
+  })
+
+  it('heure d’hiver (CET, UTC+1)', () => {
+    expect(minuitParisUTC('2026-01-15').toISOString()).toBe('2026-01-14T23:00:00.000Z')
+  })
+
+  it('reste juste le jour même du passage à l’heure d’été (29 mars 2026)', () => {
+    const u = minuitParisUTC('2026-03-29')
+    expect(u.toLocaleString('en-CA', { timeZone: FUSEAU, hour12: false })).toContain('2026-03-29')
+  })
+
+  it('reste juste le jour même du passage à l’heure d’hiver (25 octobre 2026)', () => {
+    const u = minuitParisUTC('2026-10-25')
+    expect(u.toLocaleString('en-CA', { timeZone: FUSEAU, hour12: false })).toContain('2026-10-25')
+  })
+
+  it('vaut exactement 24 h avant le minuit du lendemain, même à cheval sur un changement d’heure', () => {
+    // Le 29/03 fait 23h à Paris (l'horloge saute de 2h à 3h) : les deux
+    // instants UTC ne peuvent donc PAS être espacés de 24h ce jour-là.
+    const a = minuitParisUTC('2026-03-30').getTime()
+    const b = minuitParisUTC('2026-03-31').getTime()
+    expect(b - a).toBe(24 * 60 * 60_000)
   })
 })

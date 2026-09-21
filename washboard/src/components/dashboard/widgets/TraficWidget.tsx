@@ -17,18 +17,20 @@ export function TraficWidget({
   return (
     <Link
       href="/dashboard/crm"
-      className="block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100 hover:border-slate-300 dark:hover:border-slate-700"
+      className="block bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 transition-transform duration-150 [@media(hover:hover)]:hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100 hover:border-slate-300 dark:hover:border-slate-700"
     >
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Trafic &amp; conversion</h2>
+      <h2 className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+        Trafic &amp; conversion
+      </h2>
 
       {visiteurs === 0 ? (
         <p className="text-sm text-slate-400 dark:text-slate-500">Aucun visiteur ce mois-ci.</p>
       ) : (
         <>
-          <div className="flex items-baseline gap-1.5 mb-3">
-            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatConversionRate(conversions, visiteurs)}</span>
-            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
-              de conversion · {conversions} sur {visiteurs} visiteurs
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatConversionRate(conversions, visiteurs)}</span>
+            <span className="text-[10px] uppercase tracking-wide font-semibold text-slate-400 dark:text-slate-500">
+              conversion · {conversions}/{visiteurs}
             </span>
           </div>
 
@@ -37,7 +39,7 @@ export function TraficWidget({
               {sources.map(s => (
                 <div key={s.host} className="flex items-center justify-between text-xs">
                   <span className="text-slate-600 dark:text-slate-400 truncate">{s.host === 'direct' ? 'Accès direct' : s.host}</span>
-                  <span className="text-slate-400 dark:text-slate-500 tabular-nums shrink-0 ml-2">{s.pct}%</span>
+                  <span className="font-mono text-slate-400 dark:text-slate-500 tabular-nums shrink-0 ml-2">{s.pct}%</span>
                 </div>
               ))}
             </div>
