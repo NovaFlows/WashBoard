@@ -87,6 +87,15 @@ describe('logger → Sentry', () => {
   })
 
   it('sans DSN configurée, aucun appel à Sentry', () => {
+    // Ne pas se fier à l'absence ambiante de la variable : en production (et
+    // donc dans l'environnement de build Vercel, qui exécute `npm run test`),
+    // NEXT_PUBLIC_SENTRY_DSN EST configurée pour de vrai. Sans ce `stubEnv`
+    // explicite, ce test passait en local (où la variable est absente) mais
+    // échouait systématiquement sur Vercel — bloquant `npm run build` et donc
+    // TOUT déploiement, silencieusement, pendant plus de 3h (2026-09-21).
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '')
+    captureException.mockClear()
+    captureMessage.mockClear()
     vi.spyOn(console, 'error').mockImplementation(() => {})
     logger.error('x', undefined, new Error('boom'))
     expect(captureException).not.toHaveBeenCalled()
