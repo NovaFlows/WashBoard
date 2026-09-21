@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
-import { estReservable, ERREUR_SANS_TYPE } from '@/lib/prestation'
+import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX } from '@/lib/prestation'
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -12,6 +12,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json()
   if (body.vehicle_types !== undefined && !estReservable(body)) {
     return NextResponse.json({ error: ERREUR_SANS_TYPE }, { status: 400 })
+  }
+  if (body.duration_minutes !== undefined && !dureeValide(Number(body.duration_minutes))) {
+    return NextResponse.json({ error: ERREUR_DUREE_MAX }, { status: 400 })
   }
   const updates: Record<string, unknown> = {}
   if (body.name !== undefined) updates.name = body.name.trim()

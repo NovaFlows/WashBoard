@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
-import { champsManquants, estReservable, messageManques } from '@/lib/prestation'
+import { champsManquants, estReservable, messageManques, DUREE_MAX_MINUTES } from '@/lib/prestation'
 
 type FormData = { category_id: string; name: string; description: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
 const EMPTY: FormData = { category_id: '', name: '', description: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
@@ -162,6 +162,7 @@ function ServiceForm({ form, categories, sansCategorie, onChange, onSave, onCanc
           <input
             type="number"
             min="15"
+            max={DUREE_MAX_MINUTES}
             step="15"
             value={form.duration_minutes}
             onChange={e => onChange({ ...form, duration_minutes: e.target.value })}

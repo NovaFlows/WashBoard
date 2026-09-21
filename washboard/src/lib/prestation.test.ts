@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { estReservable, champsManquants, messageManques } from './prestation'
+import { estReservable, champsManquants, messageManques, dureeValide, DUREE_MAX_MINUTES } from './prestation'
 
 const complete = { name: 'Lavage complet', price: '80', duration_minutes: '90', vehicle_types: ['SUV'] }
 
@@ -39,6 +39,35 @@ describe('champsManquants', () => {
 
   it('une durée nulle compte comme manquante', () => {
     expect(champsManquants({ ...complete, duration_minutes: '0' })).toEqual(['duree'])
+  })
+
+  it('une durée déraisonnable (5000 min, incident réel) est signalée, pas juste acceptée', () => {
+    expect(champsManquants({ ...complete, duration_minutes: '5000' })).toEqual(['duree_max'])
+  })
+
+  it('la durée maximale exacte reste acceptée', () => {
+    expect(champsManquants({ ...complete, duration_minutes: String(DUREE_MAX_MINUTES) })).toEqual([])
+  })
+})
+
+describe('dureeValide', () => {
+  it('accepte une durée normale', () => {
+    expect(dureeValide(90)).toBe(true)
+  })
+
+  it('refuse zéro, le négatif et le non fini', () => {
+    expect(dureeValide(0)).toBe(false)
+    expect(dureeValide(-10)).toBe(false)
+    expect(dureeValide(NaN)).toBe(false)
+  })
+
+  it('accepte le plafond, refuse juste au-dessus', () => {
+    expect(dureeValide(DUREE_MAX_MINUTES)).toBe(true)
+    expect(dureeValide(DUREE_MAX_MINUTES + 1)).toBe(false)
+  })
+
+  it('refuse 5000 minutes, la valeur enregistrée en vrai avant ce correctif', () => {
+    expect(dureeValide(5000)).toBe(false)
   })
 })
 

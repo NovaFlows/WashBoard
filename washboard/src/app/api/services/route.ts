@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
-import { estReservable, ERREUR_SANS_TYPE } from '@/lib/prestation'
+import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX } from '@/lib/prestation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
   }
   if (!estReservable({ vehicle_types })) {
     return NextResponse.json({ error: ERREUR_SANS_TYPE }, { status: 400 })
+  }
+  if (!dureeValide(Number(duration_minutes))) {
+    return NextResponse.json({ error: ERREUR_DUREE_MAX }, { status: 400 })
   }
 
   const { data, error } = await supabase

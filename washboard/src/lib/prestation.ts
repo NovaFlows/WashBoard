@@ -13,7 +13,15 @@ export function estReservable(s: { vehicle_types?: unknown }): boolean {
   return Array.isArray(s.vehicle_types) && s.vehicle_types.length > 0
 }
 
-export type ChampPrestation = 'nom' | 'prix' | 'duree' | 'type'
+export type ChampPrestation = 'nom' | 'prix' | 'duree' | 'type' | 'duree_max'
+
+/** Au-delà, une prestation ne peut plus jamais aboutir à un créneau : sa
+ *  durée dépasse toute plage d'ouverture plausible. Repéré après
+ *  l'enregistrement d'une prestation à 5000 minutes (~83h) — le formulaire
+ *  posait un `step="15"` mais aucun plafond, et le client serait tombé sur
+ *  le message « ne rentre dans aucun horaire » (voir `slots.ts`) sans que le
+ *  laveur comprenne jamais pourquoi. */
+export const DUREE_MAX_MINUTES = 480
 
 /** Ce qui manque pour enregistrer, dans l'ordre du formulaire. */
 export function champsManquants(p: {
@@ -26,6 +34,7 @@ export function champsManquants(p: {
   if (!p.name.trim()) manques.push('nom')
   if (p.price === '') manques.push('prix')
   if (!p.duration_minutes || Number(p.duration_minutes) <= 0) manques.push('duree')
+  else if (Number(p.duration_minutes) > DUREE_MAX_MINUTES) manques.push('duree_max')
   if (!estReservable(p)) manques.push('type')
   return manques
 }
@@ -35,6 +44,7 @@ const LIBELLES: Record<ChampPrestation, string> = {
   prix: 'le prix',
   duree: 'la durée',
   type: 'au moins un type',
+  duree_max: `une durée de ${DUREE_MAX_MINUTES / 60}h maximum`,
 }
 
 /** Phrase affichée sous le bouton Enregistrer quand il est grisé — sans elle,
@@ -51,3 +61,13 @@ export function messageManques(manques: ChampPrestation[]): string | null {
 /** Refus serveur : même message que l'écran, pour qui passerait à côté. */
 export const ERREUR_SANS_TYPE =
   'Cochez au moins un type : sans type, vos clients ne peuvent pas réserver cette prestation.'
+
+/** Refus serveur d'une durée déraisonnable — même plafond que le formulaire
+ *  (`DUREE_MAX_MINUTES`), pour qui l'atteindrait par un appel direct. */
+export const ERREUR_DUREE_MAX =
+  `La durée doit être comprise entre 1 et ${DUREE_MAX_MINUTES} minutes (${DUREE_MAX_MINUTES / 60}h).`
+
+/** Durée utilisable pour une prestation : positive et sous le plafond. */
+export function dureeValide(minutes: number): boolean {
+  return Number.isFinite(minutes) && minutes > 0 && minutes <= DUREE_MAX_MINUTES
+}
