@@ -491,10 +491,88 @@
     plus piloté par `prefers-color-scheme` (cookie `theme` lu serveur,
     `layout.tsx`) : `page.emulateMedia({colorScheme})` seul ne change rien,
     il faut poser le cookie (`context.addCookies`).
-- [ ] Passes 5 à 8 : Chiffres (CRM + compta), Plus, Agenda, Aujourd'hui en
-      dernier. Voir le plan de vol. La passe 5 (Chiffres) et la passe 6 (Plus)
-      devront aussi corriger le mapping interimaire de `BarreBasV2.tsx`
-      ci-dessus.
+- [x] **Passe 5 — Chiffres = CRM + Comptabilité fusionnés**, 2026-09-23.
+      Nouvelle destination `/dashboard/chiffres`, 3 onglets (Argent ·
+      Acquisition · Clients) — voir `project/Chiffres.dc.html`,
+      `ChiffresAcquisition.dc.html`, `ChiffresClients.dc.html`. Le mapping
+      interimaire de `BarreBasV2.tsx` (Chiffres → `/dashboard/compta`) est
+      corrigé, il pointe maintenant vers `/dashboard/chiffres`.
+  - **Nouveaux fichiers** : `app/(dashboard)/dashboard/chiffres/page.tsx`
+    (charge réservations + événements d'entonnoir + un compte de factures,
+    même requêtes que `crm/page.tsx`), `components/dashboard/Chiffres.tsx`
+    (garde-fou), `ChiffresV2.tsx` (les 3 onglets), `ChiffresArgent.tsx`,
+    `ChiffresAcquisition.tsx`, `ChiffresClients.tsx`.
+  - **`CrmDashboard.tsx` et `ComptaDashboard.tsx` ne deviennent PAS des
+    points de branchement v1/v2** — décision de cette passe, à ne pas
+    rouvrir sans le dire. Contrairement à `ClientsView`/`ClientProfileModal`
+    (même URL, contenu qui bascule), « Chiffres » est une destination
+    **neuve**, absente de toute navigation v1 : le site n'a jamais de raison
+    d'atteindre `/dashboard/chiffres`. `Chiffres.tsx` vérifie quand même
+    `isPwaStandalone()` au montage et renvoie vers `/dashboard/crm` sinon
+    (lien copié, favori...) — rien pendant la vérification, jamais de flash
+    v2 côté site. `/dashboard/crm` et `/dashboard/compta` restent
+    entièrement inchangés, joignables par le menu latéral comme avant.
+  - **Logique réutilisée telle quelle, aucune requête dupliquée** :
+    `crmStats.ts` (`ecartRelatif`, `getLast6Months`, `comptePourLeCA`,
+    `effectivePrice`), `comptaPeriod.ts` (`getPeriodRange`,
+    `navigatePeriod`), `funnelStats.ts` (`buildFunnelSummary`,
+    `restrictToSessionsReaching`, `comparePeriods`,
+    `buildReferrerBreakdown`, `buildDeviceBreakdown`,
+    `buildVisitTimingBreakdown`, `formatConversionRate`), `crmPeriod.ts`
+    (`getCrmPeriodBounds`, `previousCrmPeriod`), `listeClients.ts`,
+    `clientProfile.ts`/`buildClientProfile`, et les mêmes routes API que
+    `ComptaDashboard.tsx` (`/api/expenses`, `/api/compta/revenue`,
+    `/api/compta/year-summary`) — vérifié qu'elles acceptent n'importe
+    quelle plage `start`/`end`, y compris une année entière, donc aucune
+    route n'a eu besoin d'être touchée. `ClientProfileModal` (déjà v2)
+    s'ouvre depuis l'onglet Clients sans rien savoir du nouvel appelant.
+    `CATEGORIES` exporté depuis `ComptaDashboard.tsx` (`const` →
+    `export const`, seul changement dans ce fichier — son rendu ne bouge
+    pas) pour ne pas dupliquer les libellés de catégorie de dépense.
+  - **Trois coupes assumées, faute de donnée ou de logique existante** (à
+    signaler si Alexandre veut les construire — ce sont des chantiers `dev`,
+    pas de la présentation) :
+    1. Période de l'onglet Argent : Jour/Semaine/Mois/Année (celle de
+       `comptaPeriod.ts`) plutôt que Mois/Semaine/Année/**Tout** de la
+       maquette — « Tout » sur l'argent demanderait une nouvelle requête
+       d'agrégat sur tout l'historique, qui n'existe pas.
+    2. Onglets Acquisition et Clients : pas de sélecteur de période (fixés
+       au mois courant / à tout l'historique), la maquette n'en montre pas
+       sur ces deux écrans — contrairement à l'ancien CRM qui en propose
+       un. Un laveur qui veut naviguer les mois reste sur `/dashboard/crm`.
+    3. Onglet Clients : ni les cohortes « reviennent, par mois d'arrivée »,
+       ni « gagnés/perdus ce mois », ni « Les relances qui marchent »
+       (canal + résultat d'une relance : rien dans la base ne relie
+       aujourd'hui une relance envoyée à son canal ni à si le client est
+       revenu — voir « Les deux automatismes de message » plus haut, et
+       l'étape 4 du plan CRM, `client_events`, pas construite). Remplacé
+       par une note honnête plutôt qu'un faux chiffre. Gardés : valeur
+       moyenne par client, meilleurs clients (classement par CA, agrégat
+       direct de `listeClients`), part CA/RDV pro vs particulier.
+  - **Vérifié qu'aucune page ne devient orpheline** : parcours des liens de
+    l'ancien CRM (export Excel, filtre Tous/Particuliers/Professionnels,
+    fiche client, liens par réseau) et de la Comptabilité (formulaire
+    d'ajout de frais, frais récurrents, 4 vues de période, export) — tous
+    restent sur `/dashboard/crm`/`/dashboard/compta`, atteignables par le
+    menu latéral, non touchés par cette passe. Le nouvel écran renvoie vers
+    eux plutôt que de les dupliquer (« + Ajouter un frais » → `/dashboard/
+    compta`, « Factures » → `/dashboard/factures`).
+  - **Vérifié en local** (compte Kooki Clean, plan Pro) : `tsc`, `eslint`
+    (0 erreur, seuls les avertissements `set-state-in-effect` déjà acceptés
+    par le projet), `vitest run --coverage` (1006/1006, seuils respectés),
+    `next build` propre, et capture Playwright (contournement documenté
+    plus bas) sur `/dashboard/crm`, `/dashboard/compta`, `/dashboard/
+    chiffres` (3 onglets + fiche client), site et PWA émulée, clair et
+    sombre. `/dashboard/crm` et `/dashboard/compta` rendent des captures
+    **strictement identiques en octets** entre site et PWA — aucune fuite
+    de v2. `/dashboard/chiffres` en mode site redirige vers `/dashboard/crm`
+    (capture identique à `/dashboard/crm` normal). **Non vérifié** : l'état
+    verrouillé (`UpgradePrompt`) de l'onglet Argent pour un plan Essentiel
+    — le seul compte de test disponible (Kooki Clean) est en Pro ; le code
+    réutilise exactement le même `hasFeature`/`UpgradePrompt` que
+    `/dashboard/compta`, déjà éprouvé là-bas.
+- [ ] Passes 6 à 8 : Plus, Agenda, Aujourd'hui en dernier. Voir le plan de
+      vol.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,

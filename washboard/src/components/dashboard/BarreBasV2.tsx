@@ -13,18 +13,18 @@ import { usePathname } from 'next/navigation'
 //
 // Les 5 destinations de la maquette (`project/Main.dc.html`, nav du bas) —
 // Aujourd'hui · Agenda · Clients · Chiffres · Plus — n'ont pas toutes une
-// route dédiée à ce stade de la refonte (passes 5 « Chiffres = CRM + compta
-// fusionnés » et 6 « Plus / réglages » pas encore faites). Mapping interimaire
-// choisi à cette passe, faute d'écran final :
+// route dédiée à ce stade de la refonte (passe 6 « Plus / réglages » pas
+// encore faite). Mapping :
 //   Aujourd'hui → /dashboard        (déjà la page d'accueil)
 //   Agenda      → /dashboard/calendrier
 //   Clients     → /dashboard/clients (déjà en v2 depuis la passe 2)
-//   Chiffres    → /dashboard/compta  (le plus proche de "l'argent" ce soir ;
-//                 /dashboard/crm et /dashboard/factures restent joignables
-//                 par le menu latéral jusqu'à la fusion de la passe 5)
-//   Plus        → /dashboard/parametres (deviendra "Plus" à la passe 6)
-// Arbitrage à signaler à Alexandre/Ryan si une autre priorité se dessine
-// avant la passe 5 — voir le compte rendu.
+//   Chiffres    → /dashboard/chiffres (passe 5 : fusion CRM + Comptabilité,
+//                 3 onglets Argent/Acquisition/Clients — voir Chiffres.tsx.
+//                 /dashboard/crm et /dashboard/compta restent inchangés et
+//                 joignables par le menu latéral)
+//   Plus        → /dashboard/parametres (interimaire, deviendra "Plus" à la
+//                 passe 6 — arbitrage à signaler si une autre priorité se
+//                 dessine avant)
 const DESTINATIONS = [
   {
     href: '/dashboard',
@@ -61,9 +61,9 @@ const DESTINATIONS = [
     ),
   },
   {
-    href: '/dashboard/compta',
+    href: '/dashboard/chiffres',
     label: 'Chiffres',
-    actif: (p: string) => p.startsWith('/dashboard/compta'),
+    actif: (p: string) => p.startsWith('/dashboard/chiffres'),
     icone: (actif: boolean) => (
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actif ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 20h16" />

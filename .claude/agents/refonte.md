@@ -113,6 +113,37 @@ conditionnel local, `{condition && <Composant />}`) est le bon niveau — forker
 `DashboardShell.tsx` en deux fichiers aurait dupliqué tout ce qui NE change pas (header, menu,
 footer, bouton WhatsApp) pour une seule ligne de différence.
 
+**Une fusion de plusieurs écrans v1 n'est pas non plus un fork V1/V2 — troisième cas, posé à
+la passe 5 (Chiffres = CRM + Comptabilité).** Le schéma `EcranV1.tsx`/`EcranV2.tsx` suppose une
+même URL dont le CONTENU bascule. « Chiffres » n'a pas d'équivalent v1 : c'est une destination
+neuve (`/dashboard/chiffres`), absente de toute navigation v1, qui recompose des données que
+deux écrans v1 séparés (`/dashboard/crm`, `/dashboard/compta`) continuent de montrer chacun de
+leur côté, inchangés. Forker `CrmDashboard.tsx`/`ComptaDashboard.tsx` en V1/V2 aurait été le
+mauvais réflexe : leur contenu v1 ne bouge pas, et le contenu v2 n'est pas un reskin de la même
+architecture (3 onglets qui remplacent 2 pages entières), donc rien à brancher dans ces
+fichiers. La bonne question avant d'écrire le JSX n'est donc pas seulement « CSS seul ou
+JSX différent » (les deux mécanismes déjà documentés plus haut), mais d'abord : **est-ce que
+l'écran v2 vit à la MÊME url qu'un écran v1 existant ?**
+- Oui → un des deux mécanismes déjà documentés (classe `wb-pwa` ou `usePwaStandalone()`).
+- Non, c'est une destination neuve qui n'existait dans aucun menu v1 → composant(s) neuf(s),
+  garde-fou dans le composant d'entrée qui vérifie `isPwaStandalone()` au montage et redirige
+  vers l'ancien écran le plus proche si ce n'est pas le cas (voir `Chiffres.tsx` — état à trois
+  valeurs `verification`/`pwa`/`site`, jamais de flash de contenu v2 côté site, rien pendant la
+  vérification). Les écrans v1 sources ne sont PAS touchés, restent joignables par le menu
+  latéral, et gardent 100 % de leur logique — le nouvel écran la réutilise (mêmes fonctions
+  pures, mêmes routes API), il ne la déplace ni ne la duplique.
+
+**Garde le principe « garde la logique, remplace la présentation » y compris pour une
+fusion — et sache reconnaître quand une pièce de la maquette EST de la nouvelle logique.**
+À la passe 5, l'onglet Clients de la maquette demandait des cohortes de rétention et un taux de
+retour par canal de relance : aucune des deux n'existait dans le code, et les calculer
+correctement (fenêtre glissante par client, lien relance→canal→résultat qui n'existe pas en
+base) est un vrai chantier métier, pas une présentation d'un chiffre déjà calculé ailleurs.
+Plutôt que d'inventer un calcul approximatif ou un faux chiffre, ces sections ont été coupées
+avec une note honnête à la place — documenté dans `TODO.md`. Le réflexe : si un composant de la
+maquette n'a **aucune** fonction pure ni requête existante qui le nourrit déjà, ce n'est pas
+cette passe qui l'écrit — elle le signale.
+
 ## La direction visuelle
 
 **Le verre est un matériau de châssis, jamais de contenu.** Barre du bas, en-tête sous
@@ -431,7 +462,7 @@ dessus, une fois. Deuxieme conflit : tu t'arretes et tu le signales.
 | 2 | **ecran pilote** : liste Clients | `ClientsView.tsx` (147 l.) | le premier ecran en v2 |
 | 3 | fiche client (feuille) | `ClientProfileModal.tsx` (148 l.) | |
 | 4 | barre du bas **derriere `washers.beta_refonte`** | `DashboardShell.tsx` (392 l.), `Sidebar.tsx` (251 l.) | navigation v2, equipe seulement |
-| 5 | Chiffres = CRM + compta fusionnes | `CrmView.tsx` (173 l.), `CrmDashboard.tsx` (693 l.), `ComptaDashboard.tsx` (463 l.) | la plus grosse passe : decoupe-la en trois |
+| 5 | Chiffres = CRM + compta fusionnes — **fait, 2026-09-23** | route neuve `/dashboard/chiffres` + `Chiffres.tsx`/`ChiffresV2.tsx`/`ChiffresArgent.tsx`/`ChiffresAcquisition.tsx`/`ChiffresClients.tsx` (`CrmView.tsx`, `CrmDashboard.tsx`, `ComptaDashboard.tsx` inchanges, voir plus haut pourquoi) | 3 onglets livres, 3 sections coupees faute de logique existante (cohortes, relances par canal) — voir TODO.md |
 | 6 | Plus / reglages | `ParametresForm.tsx` (1028 l.) | **decoupe obligatoirement** : un groupe de reglages par commit |
 | 7 | Agenda | `CalendrierDashboard.tsx` (1727 l.) | **le plus gros du depot** : au moins trois passes |
 | 8 | Aujourd'hui | `BookingList.tsx` (579 l.) + les widgets | **en dernier** — Alex et Ryan viennent de le refaire |

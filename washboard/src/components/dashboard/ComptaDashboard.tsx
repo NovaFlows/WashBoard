@@ -32,7 +32,10 @@ type MonthSummary = {
   expenses: number
 }
 
-const CATEGORIES = [
+// Exporté pour ChiffresArgent.tsx (refonte 2026, passe 5) : mêmes catégories
+// et libellés que l'écran Comptabilité existant, pour ne pas faire diverger
+// les deux présentations d'une même donnée.
+export const CATEGORIES = [
   { value: 'carburant',  label: 'Carburant' },
   { value: 'produits',   label: 'Produits' },
   { value: 'equipement', label: 'Équipement' },

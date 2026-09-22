@@ -16,10 +16,12 @@ import ClientProfileModalV2 from '@/components/dashboard/ClientProfileModalV2'
 // vs feuille, piège de focus, retour de focus, animation d'entrée) — et non
 // une simple classe CSS.
 //
-// Import unique et stable pour tout le reste du dashboard : ClientsView.tsx
-// ET CrmDashboard.tsx (l'ancien CRM, encore en v1, pas migré avant la
-// passe 5) continuent d'importer ClientProfileModal sans rien savoir du
-// branchement.
+// Import unique et stable pour tout le reste du dashboard : ClientsView.tsx,
+// CrmDashboard.tsx (l'ancien CRM, resté en v1 volontairement — voir la passe
+// 5, qui fusionne CRM + Comptabilité dans un nouvel écran « Chiffres » plutôt
+// que de forker cet écran-ci) et ChiffresClients.tsx (le nouvel onglet
+// Clients de « Chiffres ») continuent d'importer ClientProfileModal sans
+// rien savoir du branchement.
 export default function ClientProfileModal({
   profile,
   onClose,
