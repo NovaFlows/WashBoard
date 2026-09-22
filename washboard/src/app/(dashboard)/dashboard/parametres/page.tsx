@@ -50,7 +50,12 @@ export default async function ParametresPage() {
       <div className="mb-4">
         <SetupProgressBar progress={progress} />
       </div>
-      <ParametresForm washer={washer} email={user.email ?? ''} />
+      {/* servicesCount : réutilise le comptage déjà fait juste au-dessus pour
+          la barre d'avancement — aucune requête ajoutée. `undefined` si la
+          lecture a échoué (voir le commentaire plus haut) : ParametresFormV2
+          affiche alors la ligne « Prestations et prix » sans nombre plutôt
+          qu'un zéro inventé. */}
+      <ParametresForm washer={washer} email={user.email ?? ''} servicesCount={services.error ? undefined : (services.count ?? 0)} />
     </DashboardShell>
   )
 }

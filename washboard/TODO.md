@@ -571,8 +571,95 @@
     — le seul compte de test disponible (Kooki Clean) est en Pro ; le code
     réutilise exactement le même `hasFeature`/`UpgradePrompt` que
     `/dashboard/compta`, déjà éprouvé là-bas.
-- [ ] Passes 6 à 8 : Plus, Agenda, Aujourd'hui en dernier. Voir le plan de
-      vol.
+- [x] **Passe 6 — « Plus » (menu de réglages)**, 2026-09-23. Écrit par un
+      agent `refonte` dédié, **en attente de relecture/commit par
+      l'orchestrateur** (l'agent ne commite jamais — voir plus bas). Même URL
+      qu'avant (`/dashboard/parametres`) : vérifié avant d'écrire que c'était
+      bien le cas « même URL qu'un écran v1 existant » (schéma
+      `EcranV1.tsx`/`EcranV2.tsx`), pas le cas « destination neuve » de la
+      passe 5 (Chiffres) — les deux se ressemblent mais n'ont pas la même
+      architecture, voir `.claude/agents/refonte.md`.
+  - **Nouveaux fichiers** : `ParametresFormV1.tsx` (reprend à l'identique
+    l'ancien `ParametresForm.tsx`, deux onglets, formulaire complet — seul
+    ajout : un `id="lien-reservation"` sur la carte du lien, sans effet
+    visuel, qui sert de cible d'ancrage), `ParametresFormV2.tsx` (le nouveau
+    menu « Plus », planche `project/Reglages.dc.html`), et une route neuve
+    `app/(dashboard)/dashboard/parametres/tout/page.tsx` qui rend
+    `ParametresFormV1` tel quel, sans passer par le branchement v1/v2.
+    `ParametresForm.tsx` redevient un point de branchement
+    (`usePwaStandalone()`), même schéma que `ClientsView.tsx`.
+  - **Pourquoi la route `/tout` existe, alors qu'elle n'est dans aucune
+    maquette** : la maquette « Plus » ne montre que 12 lignes de menu. Le
+    formulaire v1 en contient bien plus — email, mot de passe, notifications,
+    accès support, zone de danger, facturation — qui n'ont pas de ligne
+    dédiée dans ce menu. Sans un filet de secours, ces réglages deviendraient
+    inatteignables depuis la PWA dès que `/dashboard/parametres` affiche le
+    menu v2 (le menu latéral y renvoie aussi) : exactement le bug des « six
+    pages orphelines » qui a coûté la première version du CRM. `Ligne`
+    « Messages automatiques » → `#avis`, « Équipe » → `#profil`, « Un lien
+    par réseau » → `#lien-reservation`, plus une ligne « Tous les réglages »
+    en bas de l'écran v2 pour le reste. À répartir sur ses propres lignes du
+    menu au fur et à mesure que ces réglages ont leur écran v2 dédié — pas
+    fait dans cette passe, volume trop important pour une seule passe qui
+    reste vérifiable.
+  - **Trois lignes de la maquette non construites, faute de logique
+    existante** (même réflexe qu'à la passe 5 : signalées, pas approximées) :
+    1. **« Modèles de messages » (7 dans la maquette)** — le code n'a qu'un
+       seul message d'avis (codé en dur dans `api/cron/send-reviews`) et un
+       seul message de relance personnalisable. Aucune notion de modèles
+       multiples nulle part.
+    2. **« Importer mes clients »** — la table `clients` et son import
+       (étape 1 du plan CRM, `.claude/agents/refonte.md`) n'existent pas
+       encore. Rien à lier à cette ligne.
+    3. **Résumé « Lun–Sam » de la ligne Horaires** — aucune fonction du
+       projet ne réduit une liste de créneaux (`availabilities`) à un résumé
+       de jours ouverts ; `DisponibilitesManager.tsx` a bien un tableau
+       `DAYS_SHORT` mais rien qui calcule cette phrase. La ligne s'affiche
+       sans valeur plutôt qu'un résumé inventé.
+  - **Valeurs affichées, toutes réelles, aucune approximée** : « Messages
+    automatiques » compte `review_enabled`/`followup_enabled` ; « Équipe »
+    lit `team_size` (affiche « Pro » plutôt qu'un nombre pour un compte sans
+    `multi_laveurs`, comme le fait déjà l'ancien formulaire) ; « Prestations
+    et prix » réutilise le comptage déjà fait par `page.tsx` pour la barre
+    d'avancement (`servicesCount`, nouvelle prop facultative, aucune requête
+    ajoutée — `undefined` si la lecture a échoué, pas un zéro inventé) ;
+    « Zone et déplacement » lit `zone_config` tel quel (`X km` ou
+    `X départements` selon le type stocké — pas de « communes », qui n'existe
+    dans aucune des trois formes de zone) ; « Apparence de ma page » montre un
+    point de la couleur `brand_color` réelle, jamais un nom de couleur inventé
+    (« Bleu » dans la maquette) faute de fonction de nommage ; « Abonnement »
+    réutilise `PLAN_LABELS`/`grandfathered`, sans le compte à rebours d'essai
+    (les champs `trial_ends_at`/`subscription_status` ne sont pas passés à ce
+    composant aujourd'hui — pas ajoutés dans cette passe, ce serait un
+    changement de logique, pas de présentation).
+  - **Deux réglages du menu qui n'ouvrent rien d'autre** (déviations
+    assumées par rapport à la maquette, comme `ChiffresArgent.tsx` à la passe
+    5) : « Apparence » (thème) bascule sur place via `useTheme()` — même hook
+    que `ThemeToggle.tsx` — au lieu de renvoyer vers l'artboard de référence
+    `Sombre.dc.html`, qui n'est pas un écran de réglage ; « Déconnexion »
+    réutilise exactement le même `<form action="/api/auth/logout"
+    method="POST">` que l'en-tête du dashboard (`DashboardShell.tsx`), pas
+    une seconde implémentation.
+  - **Repéré en construisant cette passe, non corrigé (hors périmètre)** :
+    `ChiffresArgent.tsx` (passe 5) colore ses chevrons en
+    `stroke="rgba(22,22,26,0.28)"` codé en dur, sans variante sombre — presque
+    invisible sur fond sombre. `ParametresFormV2.tsx` utilise à la place
+    `var(--v2-color-gris)` (posé via `style`, une propriété CSS `stroke`
+    accepte une variable), correctement contrasté dans les deux thèmes. À
+    corriger dans `ChiffresArgent.tsx` si Alexandre le confirme utile.
+  - **Vérifié** (compte de test `novaflows.pro@gmail.com`, plan grandfathered,
+    slug `autonettoyage`) : `tsc` (0 erreur), `eslint` sur les 5 fichiers
+    touchés (0 avertissement), `vitest run --coverage` (1006/1006, seuils
+    respectés, inchangé), `next build` propre (`/dashboard/parametres/tout`
+    listée parmi les routes). Capture Playwright (contournements
+    `display-mode`/cookie `theme` déjà documentés) : site (affiche l'ancien
+    formulaire, identique à avant) et PWA (affiche le nouveau menu) × clair
+    × sombre, 4 captures. Vérifié en plus que l'ancre `#avis` de
+    `/dashboard/parametres/tout` fonctionne (défilement jusqu'à la carte Avis
+    Google). **Non vérifié** : un compte non-`grandfathered` en plan
+    Essentiel (la ligne « Équipe » afficherait « Pro », jamais testé en
+    conditions réelles) ; l'installation réelle de la PWA sur un appareil.
+- [ ] Passes 7 à 8 : Agenda, Aujourd'hui en dernier. Voir le plan de vol.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,

@@ -463,7 +463,7 @@ dessus, une fois. Deuxieme conflit : tu t'arretes et tu le signales.
 | 3 | fiche client (feuille) | `ClientProfileModal.tsx` (148 l.) | |
 | 4 | barre du bas **derriere `washers.beta_refonte`** | `DashboardShell.tsx` (392 l.), `Sidebar.tsx` (251 l.) | navigation v2, equipe seulement |
 | 5 | Chiffres = CRM + compta fusionnes — **fait, 2026-09-23** | route neuve `/dashboard/chiffres` + `Chiffres.tsx`/`ChiffresV2.tsx`/`ChiffresArgent.tsx`/`ChiffresAcquisition.tsx`/`ChiffresClients.tsx` (`CrmView.tsx`, `CrmDashboard.tsx`, `ComptaDashboard.tsx` inchanges, voir plus haut pourquoi) | 3 onglets livres, 3 sections coupees faute de logique existante (cohortes, relances par canal) — voir TODO.md |
-| 6 | Plus / reglages | `ParametresForm.tsx` (1028 l.) | **decoupe obligatoirement** : un groupe de reglages par commit |
+| 6 | Plus / reglages — **fait, 2026-09-23** | `ParametresFormV1.tsx`/`ParametresFormV2.tsx` + `ParametresForm.tsx` en point de branchement, route neuve `/dashboard/parametres/tout` (rend `ParametresFormV1` tel quel, filet de secours) | menu « Plus » livre (carte lien + 3 groupes), 3 lignes de la maquette non construites faute de logique (modeles de messages, import clients, resume horaires) — voir TODO.md |
 | 7 | Agenda | `CalendrierDashboard.tsx` (1727 l.) | **le plus gros du depot** : au moins trois passes |
 | 8 | Aujourd'hui | `BookingList.tsx` (579 l.) + les widgets | **en dernier** — Alex et Ryan viennent de le refaire |
 
