@@ -3,7 +3,7 @@ import {
   vehiclePrice, hasPriceOverrides, minVehiclePrice, addonsDuration, effectiveDuration,
   smartDiscountAmount, smartPrice, finalDisplayPrice, formatPrice,
   optionsParVehicule, dureeTotale, prixOptions, revenuNet,
-  dureeMaxPrestation, formatDureeFr,
+  formatDureeFr,
 } from './pricing'
 
 const svc = { price: 100, vehicle_price_overrides: { SUV: 130, citadine: 80 }, vehicle_types: ['SUV', 'citadine', 'berline'] }
@@ -224,34 +224,6 @@ describe('prixOptions', () => {
 
   it('tolère une option sans prix', () => {
     expect(prixOptions([{ count: 1, addons: [{ duration_minutes: 30 }] }], null, 1)).toBe(0)
-  })
-})
-
-describe('dureeMaxPrestation — la plus longue prestation possible, options comprises', () => {
-  it('additionne la durée de base et toutes les options d\'un service', () => {
-    // Le cas PistaClean : 3h de base + une option de 30 min = 3h30.
-    expect(dureeMaxPrestation([
-      { duration_minutes: 180, addons: [{ duration_minutes: 30 }] },
-    ])).toBe(210)
-  })
-  it('additionne TOUTES les options, pas une seule : rien n\'est exclusif', () => {
-    expect(dureeMaxPrestation([
-      { duration_minutes: 60, addons: [{ duration_minutes: 15 }, { duration_minutes: 30 }] },
-    ])).toBe(105)
-  })
-  it('retient le maximum parmi plusieurs prestations', () => {
-    expect(dureeMaxPrestation([
-      { duration_minutes: 60, addons: [] },
-      { duration_minutes: 180, addons: [{ duration_minutes: 30 }] },
-      { duration_minutes: 90, addons: [{ duration_minutes: 200 }] },
-    ])).toBe(290)
-  })
-  it('tolère une liste d\'options absente ou vide', () => {
-    expect(dureeMaxPrestation([{ duration_minutes: 60 }])).toBe(60)
-    expect(dureeMaxPrestation([{ duration_minutes: 60, addons: null }])).toBe(60)
-  })
-  it('aucune prestation → 0', () => {
-    expect(dureeMaxPrestation([])).toBe(0)
   })
 })
 
