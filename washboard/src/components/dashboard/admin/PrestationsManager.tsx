@@ -4,8 +4,10 @@ import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
 import { champsManquants, estReservable, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
-import { dureeIncompatible } from '@/lib/slots'
+import { joursDureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
+
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
 type FormData = { category_id: string; name: string; description: string; price: string; duration_minutes: string; vehicle_types: string[]; vehicle_price_overrides: Record<string, number>; addons: ServiceAddon[] }
 const EMPTY: FormData = { category_id: '', name: '', description: '', price: '', duration_minutes: '', vehicle_types: [], vehicle_price_overrides: {}, addons: [] }
@@ -108,11 +110,23 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
   // rentrer dans au moins une disponibilité du laveur — pas seulement la
   // durée de base. Averti seulement s'il a déjà configuré des disponibilités
   // (sinon rien à comparer, et ça ne doit pas bloquer un tout nouveau compte).
-  const dureeAvecOptions = Number(form.duration_minutes || 0)
+  const dureeBase = Number(form.duration_minutes || 0)
+  const dureeAvecOptions = dureeBase
     + form.addons.reduce((somme, a) => somme + (a.duration_minutes ?? 0), 0)
-  const horsDisponibilites = availabilities.length > 0
-    && dureeAvecOptions > 0
-    && dureeIncompatible(availabilities, dureeAvecOptions)
+  // Un laveur peut avoir des horaires très inégaux selon le jour (3h le lundi,
+  // 8h le mardi) : dire seulement « ça ne rentre nulle part » serait faux dès
+  // qu'un seul jour convient, et ne dirait pas lequel corriger. On détaille
+  // donc jour par jour, et on distingue « trop long même sans option » de
+  // « trop long seulement si des options sont cochées ».
+  const joursProblematiques = dureeAvecOptions > 0
+    ? joursDureeIncompatible(availabilities, dureeBase, dureeAvecOptions)
+    : []
+  const joursMemeSansOptions = joursProblematiques.filter(j => j.memeSansOptions).map(j => JOURS[j.day_of_week])
+  const joursSeulementAvecOptions = joursProblematiques.filter(j => !j.memeSansOptions).map(j => JOURS[j.day_of_week])
+
+  function listeJours(jours: string[]): string {
+    return jours.length === 1 ? jours[0] : `${jours.slice(0, -1).join(', ')} et ${jours[jours.length - 1]}`
+  }
 
   return (
     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
@@ -346,10 +360,19 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
         <p className={NOTE_BLOQUANTE}>{ERREUR_DUREE_MAX}</p>
       )}
 
-      {horsDisponibilites && (
-        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
-          Options comprises, cette prestation peut durer jusqu&apos;à {formatDureeFr(dureeAvecOptions)} : ça ne rentre dans aucune de vos disponibilités actuelles. Un client qui coche toutes les options ne verrait aucun créneau.
-        </p>
+      {joursProblematiques.length > 0 && (
+        <div className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2 space-y-1">
+          {joursMemeSansOptions.length > 0 && (
+            <p>
+              Cette prestation dure {formatDureeFr(dureeBase)} : trop long pour votre {listeJours(joursMemeSansOptions)}, même sans option.
+            </p>
+          )}
+          {joursSeulementAvecOptions.length > 0 && (
+            <p>
+              Options comprises, elle peut durer jusqu&apos;à {formatDureeFr(dureeAvecOptions)} : ça dépasse votre {listeJours(joursSeulementAvecOptions)} dès qu&apos;une option est cochée.
+            </p>
+          )}
+        </div>
       )}
 
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}

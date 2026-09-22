@@ -63,6 +63,40 @@ export function dureeIncompatible(windows: OpeningWindow[], durationMinutes: num
   return windows.every(w => generateSlots(w.start_time, w.end_time, durationMinutes).length === 0)
 }
 
+export type JourOuverture = OpeningWindow & { day_of_week: number }
+export type JourDureeIncompatible = {
+  day_of_week: number
+  /** Vrai si même la durée SANS aucune option ne rentre déjà pas ce jour-là
+   *  — plus grave que « seulement avec les options cochées ». */
+  memeSansOptions: boolean
+}
+
+/** Comme `dureeIncompatible`, mais détaille QUELS jours posent problème —
+ *  un laveur peut très bien avoir 3h le lundi et 8h le mardi : dire « ça ne
+ *  rentre dans aucune de vos disponibilités » est faux dès que ça rentre le
+ *  mardi, et inutile pour savoir quoi corriger. Un jour sans disponibilité
+ *  configurée est ignoré (fermé, pas « trop long »). */
+export function joursDureeIncompatible(
+  availabilities: JourOuverture[],
+  dureeBase: number,
+  dureeAvecOptions: number,
+): JourDureeIncompatible[] {
+  const parJour = new Map<number, OpeningWindow[]>()
+  for (const a of availabilities) {
+    const liste = parJour.get(a.day_of_week) ?? []
+    liste.push(a)
+    parJour.set(a.day_of_week, liste)
+  }
+
+  const resultats: JourDureeIncompatible[] = []
+  for (const [day, windows] of parJour) {
+    if (dureeIncompatible(windows, dureeAvecOptions)) {
+      resultats.push({ day_of_week: day, memeSansOptions: dureeIncompatible(windows, dureeBase) })
+    }
+  }
+  return resultats.sort((a, b) => a.day_of_week - b.day_of_week)
+}
+
 export type DayUnavailability = { start_date: string; end_date: string; team_members_off?: number | null }
 
 /** Capacité effective un jour donné = nb de laveurs − absences couvrant ce jour. */

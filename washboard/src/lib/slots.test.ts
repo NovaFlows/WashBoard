@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   generateSlots, countOverlaps, countConflicts, isSlotInWindows,
-  isSlotFeasible, effectiveTeamSize, dureeIncompatible,
+  isSlotFeasible, effectiveTeamSize, dureeIncompatible, joursDureeIncompatible,
 } from './slots'
 
 // Repère local fixe → ISO construits localement pour être TZ-safe
@@ -148,6 +148,57 @@ describe('dureeIncompatible — la durée ne rentre nulle part (bug PistaClean 1
   })
   it('aucune plage ce jour-là → faux (c\'est un jour fermé, pas une durée trop longue)', () => {
     expect(dureeIncompatible([], 210)).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('joursDureeIncompatible — quels jours précisément (laveur avec des horaires inégaux)', () => {
+  // Lundi (1) : 3h de dispo. Mardi (2) : 8h de dispo.
+  const dispos = [
+    { day_of_week: 1, start_time: '09:00', end_time: '12:00' },
+    { day_of_week: 2, start_time: '08:00', end_time: '16:00' },
+  ]
+
+  it('un jour trop court reste signalé même si un autre jour convient très bien', () => {
+    // Prestation 2h de base, 3h30 options comprises : passe le mardi, jamais le lundi.
+    expect(joursDureeIncompatible(dispos, 120, 210)).toEqual([
+      { day_of_week: 1, memeSansOptions: false },
+    ])
+  })
+
+  it('distingue « trop long même sans option » de « trop long seulement avec »', () => {
+    // 3h30 de base : ne rentre même pas le lundi sans la moindre option.
+    expect(joursDureeIncompatible(dispos, 210, 210)).toEqual([
+      { day_of_week: 1, memeSansOptions: true },
+    ])
+  })
+
+  it('rien à signaler si tout rentre partout', () => {
+    expect(joursDureeIncompatible(dispos, 60, 90)).toEqual([])
+  })
+
+  it('un jour absent de la liste n\'apparaît jamais dans le résultat (fermé, pas trop long)', () => {
+    // Seul le mardi (2) a une disponibilité déclarée ; le lundi (1), absent de
+    // la liste, ne doit jamais être signalé — même avec une durée énorme.
+    expect(joursDureeIncompatible([{ day_of_week: 2, start_time: '08:00', end_time: '16:00' }], 60, 600))
+      .toEqual([{ day_of_week: 2, memeSansOptions: false }])
+  })
+
+  it('plusieurs jours en défaut, triés par jour', () => {
+    const troisJours = [
+      { day_of_week: 5, start_time: '09:00', end_time: '12:00' },
+      { day_of_week: 1, start_time: '09:00', end_time: '12:00' },
+      { day_of_week: 2, start_time: '09:00', end_time: '12:00' },
+    ]
+    expect(joursDureeIncompatible(troisJours, 120, 210).map(j => j.day_of_week)).toEqual([1, 2, 5])
+  })
+
+  it('plusieurs plages le même jour : une seule suffisante suffit à ne pas signaler ce jour', () => {
+    const deuxPlagesLundi = [
+      { day_of_week: 1, start_time: '08:00', end_time: '10:00' },  // 2h, trop court
+      { day_of_week: 1, start_time: '14:00', end_time: '18:00' },  // 4h, suffit
+    ]
+    expect(joursDureeIncompatible(deuxPlagesLundi, 120, 210)).toEqual([])
   })
 })
 
