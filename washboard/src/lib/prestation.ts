@@ -39,19 +39,25 @@ export function champsManquants(p: {
   return manques
 }
 
-const LIBELLES: Record<ChampPrestation, string> = {
+const LIBELLES: Record<'nom' | 'prix' | 'duree' | 'type', string> = {
   nom: 'le nom',
   prix: 'le prix',
   duree: 'la durée',
   type: 'au moins un type',
-  duree_max: `une durée de ${DUREE_MAX_MINUTES / 60}h maximum`,
 }
 
 /** Phrase affichée sous le bouton Enregistrer quand il est grisé — sans elle,
- *  le laveur ne sait pas ce que le formulaire attend. */
+ *  le laveur ne sait pas ce que le formulaire attend.
+ *
+ *  `duree_max` n'est volontairement pas de ce ressort : ce champ N'EST PAS
+ *  manquant, il est renseigné mais trop grand. Le fondre dans « il manque
+ *  une durée de 8h maximum » (essayé, puis retiré) se lisait comme l'inverse
+ *  du sens voulu — une exigence de durée minimale. Il a son propre message,
+ *  voir `ERREUR_DUREE_MAX`, affiché séparément par l'appelant. */
 export function messageManques(manques: ChampPrestation[]): string | null {
-  if (manques.length === 0) return null
-  const liste = manques.map(c => LIBELLES[c])
+  const reels = manques.filter((c): c is keyof typeof LIBELLES => c !== 'duree_max')
+  if (reels.length === 0) return null
+  const liste = reels.map(c => LIBELLES[c])
   const texte = liste.length === 1
     ? liste[0]
     : `${liste.slice(0, -1).join(', ')} et ${liste[liste.length - 1]}`

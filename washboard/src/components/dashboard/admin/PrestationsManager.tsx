@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
-import { champsManquants, estReservable, messageManques, DUREE_MAX_MINUTES } from '@/lib/prestation'
+import { champsManquants, estReservable, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
 import { dureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
 
@@ -341,6 +341,10 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
           </button>
         </div>
       </div>
+
+      {manques.includes('duree_max') && (
+        <p className={NOTE_BLOQUANTE}>{ERREUR_DUREE_MAX}</p>
+      )}
 
       {horsDisponibilites && (
         <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">

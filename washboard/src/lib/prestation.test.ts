@@ -84,4 +84,12 @@ describe('messageManques', () => {
     expect(messageManques(['nom', 'prix', 'type']))
       .toBe('Pour enregistrer, il manque le nom, le prix et au moins un type.')
   })
+
+  it('« duree_max » seul ne produit aucun message : ce champ n’est pas manquant, il est trop grand — son message vit ailleurs (ERREUR_DUREE_MAX), pas dans « il manque »', () => {
+    expect(messageManques(['duree_max'])).toBeNull()
+  })
+
+  it('« duree_max » est ignoré au milieu d’une vraie liste de manques', () => {
+    expect(messageManques(['nom', 'duree_max'])).toBe('Pour enregistrer, il manque le nom.')
+  })
 })
