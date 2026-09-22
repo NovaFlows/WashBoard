@@ -220,6 +220,55 @@ button, a { touch-action: manipulation; user-select: none; }
 Onze lignes qui séparent « un site dans un navigateur » d'une app installée. Cible tactile
 44 px minimum.
 
+## Comment livrer — l'ordre, et les pieges
+
+Le design est valide. Le risque n'est plus le dessin, c'est la livraison.
+
+**Trois pieges :**
+
+- **La reecriture d'un bloc.** Trois semaines sans rien livrer, une branche qui diverge, un
+  jour de bascule ou tout casse ensemble. L'equipe livre tous les jours : c'est le scenario
+  le plus destructeur possible.
+- **La branche longue.** Pas de branche `refonte`. Une branche par ecran, **48 h maximum**,
+  sur le tronc commun.
+- **Migrer l'ecran qu'ils viennent de refaire.** Alex et Ryan ont pousse sept commits sur un
+  tableau de bord a widgets (`eff3ab0`, `bf96346`, `d420150`, `fcf93fe`, `5ed4918`,
+  `8e79b0e`, `d6f4b18`). Regarde ce qu'ils ont fait **avant** de toucher a l'accueil, et
+  migre-le en dernier : techniquement faisable, humainement mauvais de jeter du travail
+  encore chaud.
+
+**L'ordre :**
+
+| Quand | Quoi | Pourquoi celui-la |
+|---|---|---|
+| Jour 1 | le socle mobile (les 11 lignes) | profite a **tout** le dashboard existant, zero risque visuel, gain immediat |
+| Jour 2 | les jetons v2 dans `globals.css`, **a cote** des existants | aucun ecran ne bouge ; permet de verifier le poids reel d'Archivo variable avant de s'engager |
+| Semaine 1 | ecran pilote : **la liste Clients** | exerce presque toutes les primitives, peu de dependances, ecran aujourd'hui le plus pauvre donc tout gain se voit, et c'est la porte d'entree du CRM |
+| Semaine 2 | la barre du bas, **derriere un drapeau** | change toute la navigation ; il n'existe pas de mecanisme de drapeau (`hasFeature` est lie a la formule) : une colonne `washers.beta_refonte` suffit. Equipe d'abord, puis Kookii Clean, puis tout le monde |
+| Ensuite | ecran par ecran, chacun livrable seul | |
+
+En parallele, sur l'autre rail : l'etape 0 du plan CRM (le schema), qui ne depend d'aucun
+visuel.
+
+**Fini veut dire :** aucune couleur en dur (que des jetons) · le mode sombre marche · cibles
+tactiles 44 px · **teste sur un vrai telephone** · capture avant/apres dans la PR.
+
+La capture n'est pas du confort : Alexandre ne peut pas juger un changement visuel decrit
+avec des mots. Sans elle, il valide a l'aveugle. Un garde-fou utile : une capture Playwright
+par ecran migre, comparee d'un commit a l'autre — ca attrape les regressions que personne ne
+regarde, le mode sombre en premier.
+
+**Ne touche pas au flux de reservation public** (`(public)/book/[slug]`). C'est l'outil de
+demo commerciale et le chemin qui rapporte l'argent. La refonte concerne le dashboard ; y
+toucher serait un chantier separe, decide pour lui-meme.
+
+**Kookii Clean est une vraie cliente** qui ouvre l'app tous les jours. Un message avant la
+bascule la transforme en testeuse au lieu d'en victime.
+
+**Mesurer avant de changer la navigation** : quelles pages du dashboard sont reellement
+utilisees, et sur quel appareil. Vercel Analytics et Sentry viennent d'etre installes. Sans
+ce point de depart, personne ne saura si la refonte a aide.
+
 ## Ta manière de travailler
 
 **Prouve, ne décris pas.** Alexandre n'a aucune compétence design (voir l'agent `designer`) :
