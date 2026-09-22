@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Archivo, Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -15,6 +15,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Refonte 2026, passe 1 : Archivo variable, chargée et exposée en variable
+// CSS comme geistMono ci-dessus (jamais appliquée nulle part aujourd'hui,
+// --font-geist-mono ne l'est pas non plus) — donc aucun écran ne change de
+// police à cette passe. `axes: ["wdth"]` ajoute l'axe de largeur au-dessus
+// du wght variable par défaut : c'est lui qui porte le contraste
+// 100 %→118 % de la direction visuelle (métadonnées Google Fonts confirmées
+// dans node_modules/next : Archivo expose wght 100–900 et wdth 62–125).
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  weight: "variable",
+  axes: ["wdth"],
+  display: "swap",
 });
 
 // Barre d'état du téléphone accordée au thème actif, et pas de zoom bloqué :
@@ -105,7 +120,7 @@ export default async function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased${isDark ? " dark" : ""}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${archivo.variable} h-full antialiased${isDark ? " dark" : ""}`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">

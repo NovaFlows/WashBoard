@@ -206,3 +206,135 @@ body.wb-dashboard-active {
    fichier) et les états :hover (Tailwind v4 les enveloppe déjà dans
    @media (hover: hover) and (pointer: fine) par défaut) répondent déjà aux
    deux points restants du socle — rien à ajouter ici. */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants
+   ──────────────────────────────────────────────────────────────────────────
+   Rien ici n'est appliqué à un sélecteur existant : ces variables ne
+   produisent aucun changement visuel tant qu'un écran ne les consomme pas
+   explicitement (passes suivantes, écran par écran). Objectif de cette passe :
+   vérifier la convention, le mécanisme de thème, et le poids réel d'Archivo.
+
+   Convention de nommage retenue : préfixe `--v2-` (grep facile, élimine toute
+   collision avec `--background`/`--foreground`/`--font-geist-*`, et signale
+   sans ambiguïté qu'une variable appartient à la refonte tant qu'elle
+   coexiste avec v1), puis `--v2-<catégorie>-<nom>`. Les noms de couleur
+   reprennent le vocabulaire français de la planche Système (fond, surface,
+   encre, gris...) plutôt que des noms génériques (bg, fg, muted...) : c'est
+   ce vocabulaire que l'équipe utilise à l'oral et dans la maquette, la
+   correspondance code ↔ planche reste directe. Le thème suit le mécanisme
+   RÉEL du projet — classe `.dark` posée sur <html> depuis un cookie lu
+   serveur (`ThemeProvider`, pas next-themes malgré la dépendance présente
+   dans package.json) — exactement le procédé déjà utilisé par
+   `--background`/`--foreground` juste au-dessus : une valeur dans `:root`,
+   une redéfinition dans `.dark` seulement quand la valeur change réellement
+   entre les deux thèmes (sinon elle est simplement héritée de `:root`).
+
+   Source : planche Système de la maquette v2, `specs/20_Systeme.txt` +
+   `page_20.png` (référence @claude.ai/artifact/N5vHJDAgqgRatmxMmDaoCF,
+   copie locale). Les valeurs marquées [mesuré] ont été vérifiées par
+   échantillonnage de pixel sur `page_17.png` (écran de référence en sombre,
+   1109×2400 → 390×844 CSS, facteur 2,8436) car la planche Système ne montre
+   que les jetons du thème clair — voir le compte rendu de la passe pour le
+   détail des écarts constatés avec la fiche de décisions de l'agent. */
+
+:root {
+  /* Couleurs — planche Système, panneau "Couleurs" (thème clair, confirmé) */
+  --v2-color-fond: #F6F5F3;
+  --v2-color-surface: #FFFFFF;
+  --v2-color-encre: #16161A;
+  --v2-color-gris: #6B6B76;
+  --v2-color-accent: #2B59FF;
+  --v2-color-vert: #127A4B;
+  --v2-color-ambre: #9A5B00;
+  --v2-color-rouge: #B3261E;
+
+  /* Filets — un seul confirmé sur la planche (panneau "Densité" :
+     "filet : rgba(22,22,26,.06)", utilisé pour les lignes de liste).
+     --v2-filet-fort (.10) vient de la fiche de décisions de l'agent, pas de
+     la planche elle-même : à vérifier avant un usage visible. */
+  --v2-filet: rgba(22, 22, 26, .06);
+  --v2-filet-fort: rgba(22, 22, 26, .10); /* [non confirmé sur la planche] */
+
+  /* Rayons — planche Système, panneau "Composants" */
+  --v2-radius-surface: 16px;
+  --v2-radius-carte: 14px;
+  --v2-radius-bouton: 13px;
+  --v2-radius-feuille: 26px; /* haut uniquement — border-top-*-radius côté composant */
+  --v2-radius-pilule: 9999px; /* pilule pleine hauteur, quelle que soit la hauteur réelle */
+
+  /* Densité — planche Système, panneau "Densité" */
+  --v2-space-gouttiere: 20px;
+  --v2-space-section-min: 22px;
+  --v2-space-section-max: 26px;
+  --v2-space-ligne-min: 11px;
+  --v2-space-ligne-max: 13px;
+
+  /* Mouvement — planche Système, panneau "Mouvement" */
+  --v2-ease-out: cubic-bezier(.23, 1, .32, 1);
+  --v2-ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --v2-ease-sheet: cubic-bezier(.32, .72, 0, 1);
+  --v2-duration-press: 120ms;   /* pression bouton · scale(.97) */
+  --v2-duration-sheet: 320ms;   /* feuille client */
+  --v2-duration-stagger: 40ms;  /* décalage entre lignes au chargement d'une liste */
+  /* Pas de jeton pour le changement d'onglet : la planche est explicite,
+     "aucune animation" — un onglet est touché cent fois par jour. */
+
+  /* Typographie — Archivo variable. La famille de police elle-même est
+     exposée par next/font dans layout.tsx (--font-archivo), pas ici : ce
+     bloc ne fixe QUE les réglages de graisse/largeur/tracking par rôle,
+     à consommer explicitement écran par écran. Rien n'est appliqué ici.
+     Écart avec la fiche de décisions : elle simplifie "Corps 450/largeur
+     100" en une seule ligne ; la planche montre deux corps distincts
+     ("Corps 15/550 et 14/450 · largeur 100") — un corps "fort" à 550 et un
+     corps normal à 450, tous deux largeur 100. Les deux sont repris. */
+  --v2-type-hero-poids: 650;
+  --v2-type-hero-largeur: 118%;
+  --v2-type-hero-tracking: -0.045em;
+  --v2-type-titre-poids: 650;
+  --v2-type-titre-largeur: 108%;
+  --v2-type-titre-tracking: -0.025em;
+  --v2-type-nom-poids: 550;
+  --v2-type-nom-largeur: 100%;
+  --v2-type-corps-fort-poids: 550;  /* corps 15px/550, planche Système */
+  --v2-type-corps-poids: 450;       /* corps 14px/450, planche Système */
+  --v2-type-corps-largeur: 100%;
+  /* Chiffres : font-variant-numeric: tabular-nums — propriété statique, pas
+     un jeton ; à poser directement sur les chiffres héros le moment venu. */
+}
+
+.dark {
+  /* Couleurs sombres — la planche Système ne montre QUE le thème clair.
+     Valeurs [mesurées] par échantillonnage de pixel sur l'écran de
+     référence sombre (page_17.png, voir en-tête de section) ; comparées à
+     la fiche de décisions de l'agent, qui les donnait déjà (accord dans
+     la limite de l'arrondi PDF→PNG, ±1 sur un canal 8 bits) :
+       fond    #0E0E11 mesuré #0e0e10 (confirmé aussi par le <meta
+               theme-color> de la planche, seule valeur sombre qu'elle donne)
+       surface #17171B mesuré #17161b (carte "Garage Renault Mérignac")
+       encre   #F3F3F5 mesuré #f2f2f4 (chiffre "09:00")
+       gris    #9A9AA4 mesuré #9d9ca3 (texte "18 min de route") — la fiche
+               listait "Gris #6B6B76 / #9A9AA4" sans dire lequel est sombre ;
+               la mesure tranche : #6B6B76 est la valeur claire (confirmée
+               sur la planche), #9A9AA4 est sa contrepartie sombre.
+     Accent et Vert ont été mesurés IDENTIQUES au clair (accent #2c58ff,
+     vert #137a4b mesurés contre #2B59FF / #127A4B) : une seule couleur
+     d'action et des statuts qui ne changent pas de teinte entre les thèmes,
+     cohérent avec "une seule couleur d'action" de la planche. Ambre et
+     Rouge n'ont pas pu être échantillonnés (absents de cet écran de
+     référence) : laissés hérités du clair par hypothèse, non vérifiés. */
+  --v2-color-fond: #0E0E11;
+  --v2-color-surface: #17171B;
+  --v2-color-encre: #F3F3F5;
+  --v2-color-gris: #9A9AA4;
+
+  /* Filet sombre — [mesuré] sur le filet interne d'une carte (page_17.png,
+     entre deux rendez-vous) : #2e2d32 sur fond de carte #17171b, ce qui
+     correspond à du blanc 10% mélangé (calcul : 23+0,10×(255-23) ≈ 46 →
+     #2e2e32, à 1 près de la mesure). Confirme la valeur "filets blanc .10"
+     de la fiche de décisions — mais c'est une opacité DIFFÉRENTE du filet
+     clair (.06) pour le même rôle (ligne de liste), pas un simple
+     retournement de teinte : à signaler, pas à corriger seul. */
+  --v2-filet: rgba(255, 255, 255, .10);
+}
+/* ── Fin jetons v2 (passe 1) ──────────────────────────────────────────── */
