@@ -1,1 +1,5 @@
 gstack/
+
+# Liens symboliques recréés localement par `npx skills add` —
+# core.symlinks=false sous Windows les committerait en fichiers texte cassés.
+.claude/skills/
