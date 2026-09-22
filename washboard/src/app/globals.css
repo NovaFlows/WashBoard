@@ -139,3 +139,70 @@ body {
 body.wb-hide-fab [data-wb-whatsapp-fab] {
   display: none;
 }
+
+/* ── Socle mobile (refonte 2026, passe 0) ──────────────────────────────────
+   Ce qui sépare « un site dans un navigateur » d'une app installée. html et
+   body sont communs à TOUT le site — dashboard, landing, blog, et le flux de
+   réservation public /book/[slug] qu'on ne doit pas toucher. Chaque règle
+   posée ici a été vérifiée sans effet visible sur les pages publiques ;
+   celles qui en auraient un sont réservées au dashboard (voir plus bas).
+
+   Le viewport-fit=cover et l'interactive-widget qui rendent le reste possible
+   sont dans l'export `viewport` de layout.tsx, pas ici (pas de <meta> en
+   double). */
+html {
+  /* Supprime le flash gris/bleu que Safari iOS et Chrome Android posent sur
+     tout élément tapé qui a un gestionnaire de clic — sans changer aucune
+     couleur de fond, juste ce voile temporaire au toucher. */
+  -webkit-tap-highlight-color: transparent;
+  /* Empêche iOS de regrossir le texte tout seul au passage en paysage. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* touch-action seul (sans user-select) : supprime le délai ~300ms avant un
+   tap et le double-tap-zoom involontaire sur un bouton ou un lien. Posé
+   globalement — aucun risque pour un lien d'article de blog, ça ne touche
+   pas à la sélection de texte. */
+button, a {
+  touch-action: manipulation;
+}
+
+/* user-select: none seulement sur les boutons, partout : un bouton n'a
+   jamais de libellé qu'on cherche à copier, et ça évite la sélection
+   accidentelle au tap prolongé (et le menu « Copier » qui l'accompagne sur
+   iOS, d'où -webkit-touch-callout). Sur les <a>, la même règle est réservée
+   au dashboard juste en dessous : un lien dans un article de blog ou sur la
+   page de réservation doit rester sélectionnable et copiable — c'est du
+   contenu, pas un contrôle. */
+button {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ── Réservé au tableau de bord ─────────────────────────────────────────── */
+
+/* `wb-dashboard-active` est posée sur <body> par DashboardShell tant qu'un
+   écran du dashboard est monté (même mécanisme que `wb-hide-fab` ci-dessus).
+   Neutralise le rebond de défilement en haut de page : utile dans le
+   dashboard pour ne pas déclencher un rechargement accidentel en tirant vers
+   le bas une liste (clients, factures...). Le reste du site — en particulier
+   /book/[slug] — doit garder le tirer-pour-rafraîchir natif du navigateur,
+   d'où le scope sur cette classe plutôt que sur html/body directement. */
+body.wb-dashboard-active {
+  overscroll-behavior: none;
+}
+
+/* Liens de navigation du dashboard (menu, en-tête, bouton WhatsApp...) : ce
+   sont des contrôles, pas du contenu à sélectionner. `wb-dashboard-shell` est
+   posée sur le conteneur racine de DashboardShell. */
+.wb-dashboard-shell a {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Remarque : les champs de saisie (16px sous 767px, plus haut dans ce
+   fichier) et les états :hover (Tailwind v4 les enveloppe déjà dans
+   @media (hover: hover) and (pointer: fine) par défaut) répondent déjà aux
+   deux points restants du socle — rien à ajouter ici. */

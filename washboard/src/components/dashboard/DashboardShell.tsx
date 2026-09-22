@@ -275,8 +275,19 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // voir `libelleBoutonMenu` juste au-dessus pour le pourquoi.
   const menuBadgeCount = (unreadSupportCount ?? 0) + (unreadTeamCount ?? 0)
 
+  // Socle mobile (refonte 2026, passe 0) : pose sur <body> la classe qui
+  // neutralise le rebond de défilement (voir globals.css,
+  // `body.wb-dashboard-active`), tant que ce composant est monté. Même
+  // mécanisme que `wb-hide-fab` un peu plus bas dans ce fichier. Limité au
+  // dashboard : le reste du site (landing, blog, /book/[slug]) doit garder
+  // le tirer-pour-rafraîchir natif.
+  useEffect(() => {
+    document.body.classList.add('wb-dashboard-active')
+    return () => document.body.classList.remove('wb-dashboard-active')
+  }, [])
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden wb-dashboard-shell">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -373,13 +384,17 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
 
       {/* Bouton WhatsApp flottant. data-wb-whatsapp-fab : accroche pour le
           masquer (globals.css) pendant qu'un panneau de question est ouvert —
-          les deux se disputent le coin bas-droit au même z-index. */}
+          les deux se disputent le coin bas-droit au même z-index.
+          Le bottom en calc() ci-dessous décale le bouton au-dessus de la
+          zone d'encoche/barre d'accueil (safe-area-inset-bottom) au lieu de
+          se faire chevaucher par elle — sans viewportFit=cover (layout.tsx)
+          cette variable vaudrait 0 et la ligne ne changerait rien. */}
       <a
         href="https://wa.me/33684140438"
         target="_blank"
         rel="noopener noreferrer"
         data-wb-whatsapp-fab
-        className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold p-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105"
+        className="fixed right-3 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold p-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105 bottom-[calc(1rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))]"
         aria-label="Contacter le support WhatsApp"
       >
         <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">

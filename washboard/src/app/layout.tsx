@@ -19,9 +19,25 @@ const geistMono = Geist_Mono({
 
 // Barre d'état du téléphone accordée au thème actif, et pas de zoom bloqué :
 // un laveur doit pouvoir agrandir son planning au doigt.
+//
+// Socle mobile (refonte 2026, passe 0) :
+// - viewportFit "cover" laisse la page passer sous l'encoche / la Dynamic
+//   Island — sans lui, les env(safe-area-inset-*) posés ailleurs (globals.css,
+//   DashboardShell, Sidebar) valent 0 et ne servent à rien.
+// - interactiveWidget "resizes-content" fait rétrécir la mise en page quand
+//   le clavier s'ouvre sur Chrome Android (déjà le comportement par défaut
+//   sur iOS) : un champ en bas d'écran reste visible au-dessus du clavier au
+//   lieu d'être masqué dessous.
+// Les couleurs de theme-color restent en v1 (#ffffff / #0f172a) : les écrans
+// actuels sont encore habillés en v1, les poser en v2 (#F6F5F3 / #0E0E11)
+// maintenant ferait jurer la barre de statut avec un en-tête blanc pur / une
+// surface slate-900 sur CHAQUE écran jusqu'à la bascule des jetons (passe 1
+// puis écran par écran). À revoir quand les premiers écrans passent en v2.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)",  color: "#0f172a" },
