@@ -2,10 +2,26 @@ import type { Metadata, Viewport } from "next";
 import { Archivo, Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
 import { ServiceWorkerRegistrar } from "@/components/ui/ServiceWorkerRegistrar";
+
+// Refonte 2026 : détection "PWA installée" posée AVANT toute peinture, pour
+// la classe `wb-pwa` (niveau CSS pur — couleurs, espacements, rayons ; pas de
+// changement de structure JSX, voir usePwaStandalone.ts pour ce cas-là).
+// Il n'existe pas d'équivalent "cookie lu côté serveur" pour
+// `display-mode: standalone` (contrairement au thème clair/sombre juste en
+// dessous) : `strategy="beforeInteractive"` injecte ce script dans le HTML
+// initial et le fait tourner avant toute hydratation React, donc sans flash.
+// Même test que `NotificationsToggle.tsx` / `lib/pwaStandalone.ts`, réécrit
+// à la main ici car il tourne hors React.
+const PWA_DETECT_SCRIPT = `(function(){try{
+  var s = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  if (s) document.documentElement.classList.add('wb-pwa');
+}catch(e){}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -124,6 +140,9 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
+        <Script id="wb-pwa-detect" strategy="beforeInteractive">
+          {PWA_DETECT_SCRIPT}
+        </Script>
         <a href="#main-content" className="skip-to-content">Aller au contenu</a>
         <ServiceWorkerRegistrar />
           <RecoveryRedirect />

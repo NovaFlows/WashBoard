@@ -25,6 +25,69 @@ pour savoir **où il va maintenant**.
 Chaque fois que tu hésites, reviens à cette phrase. Elle a produit la moitié des décisions
 ci-dessous.
 
+## v1 sur le site, v2 seulement dans la PWA installée
+
+Décision d'Alexandre, 2026-09-22 — **ne rouvre pas sans le dire** : « moi je veux que la PWA
+ressemble a une app mais que le site web que ce soit sur mobile ou ordinateur reste comme
+actuellement ». Ça change l'échelle de TOUT ce qui suit dans ce fichier : la direction
+visuelle v2 (jetons `--v2-*`, Archivo, verre de châssis, barre du bas...) ne s'applique QU'à
+la PWA installée, en mode standalone. Le site — navigateur classique, mobile ou ordinateur —
+reste v1, pixel pour pixel, sans exception.
+
+À ne pas confondre avec « Tout reste accessible sur le téléphone » (Arbitrages déjà tranchés,
+plus bas) : cette règle-là porte sur l'**appareil** (téléphone vs ordinateur), celle-ci sur le
+**conteneur** (onglet de navigateur vs app installée) — les deux se croisent librement : un
+laveur sur ordinateur qui installe la PWA (Chrome/Edge le permettent) voit v2 ; un laveur sur
+téléphone qui n'a pas installé l'app voit v1.
+
+**Deux mécanismes, à choisir écran par écran — compare le JSX v1 et v2 côte à côte avant de
+trancher, ne devine pas :**
+
+1. **Changement purement visuel** (couleurs, espacements, rayons — pas de JSX différent) →
+   classe `wb-pwa` posée sur `<html>` par un script synchrone `beforeInteractive`
+   (`src/app/layout.tsx`, constante `PWA_DETECT_SCRIPT`, via `next/script`) : zéro flash, la
+   classe existe avant la première peinture (il n'existe pas d'équivalent "cookie lu côté
+   serveur" pour `display-mode: standalone`, contrairement au thème clair/sombre — d'où le
+   script). Convention documentée dans `globals.css`, juste avant les jetons v2.
+2. **Changement de FORME** (structure JSX différente — icônes/avatars différents, boutons en
+   plus, layout différent) → hook React `usePwaStandalone()`
+   (`src/hooks/usePwaStandalone.ts`, lui-même basé sur `src/lib/pwaStandalone.ts` pour le test
+   de détection), pattern `mounted` déjà établi dans le projet (voir `ThemeToggle.tsx`,
+   `NotificationsToggle.tsx`) : rend v1 par défaut tant que le composant n'est pas monté, un
+   flash v1→v2 bref au montage côté PWA est accepté.
+
+**Exemple concret (retrofit du 2026-09-22, passes 2 et 3)** — les deux premiers écrans passés
+en v2 avaient une structure trop différente de la v1 pour du CSS seul (avatar rond/carré,
+badge PRO ↔ pastille, carte centrée ↔ feuille qui monte du bas, boutons Appeler/Message en
+plus, filtre Pros en plus...) : branchement JSX dans les deux cas, pas de classe CSS.
+- `ClientsView.tsx` est redevenu un point de branchement (`usePwaStandalone()` →
+  `ClientsViewV1` ou `ClientsViewV2`). `ClientsViewV1.tsx` reprend le code du commit `8a1efa6`
+  (dernier avant le passage en v2) à l'identique ; `ClientsViewV2.tsx` est l'ancien contenu de
+  `ClientsView.tsx`.
+- Même schéma pour `ClientProfileModal.tsx` → `ClientProfileModalV1.tsx` /
+  `ClientProfileModalV2.tsx`. Un seul point d'entrée : les deux appelants existants
+  (`ClientsView.tsx` ET `CrmDashboard.tsx`, l'ancien CRM pas encore migré) continuent
+  d'importer `ClientProfileModal` sans rien savoir du branchement.
+- La logique n'a pas bougé (`listeClients`, `rechercherClients`, `buildClientProfile`) — seule
+  la présentation est dupliquée entre V1 et V2, jamais le calcul. Ce que ça veut dire pour la
+  suite : une correction de LOGIQUE (bug, nouveau champ calculé) profite aux deux versions
+  automatiquement ; une correction de PRÉSENTATION doit être reportée à la main sur l'autre
+  fichier si elle s'applique aux deux (rare — le but de la refonte est justement que la
+  présentation diverge).
+
+**Pour toute passe à venir (4 à 8) : poser ce branchement DÈS L'ÉCRITURE de l'écran, pas
+après coup.** Écrire l'écran v2 directement puis découvrir qu'il faut le protéger double le
+travail et risque d'oublier un des appelants existants. Le réflexe, avant d'écrire le JSX :
+décider laquelle des deux catégories ci-dessus s'applique, nommer les fichiers `EcranV1.tsx` /
+`EcranV2.tsx`, et faire de l'ancien nom (`Ecran.tsx`) le point de branchement dès le premier
+commit de la passe — jamais un fichier qui contient déjà le v2 sans garde.
+
+**Vérifier une passe :** Chrome DevTools → More tools → Rendering → « Emulate CSS media
+feature display-mode » → `standalone` (aucune installation requise, itère vite). Capture
+obligatoire dans les DEUX états — `display-mode: browser` (émulation désactivée, = le site) ET
+`standalone` (émulée, = la PWA) — clair et sombre : quatre captures par écran qui change de
+forme, deux si le mécanisme est la classe CSS seule.
+
 ## La direction visuelle
 
 **Le verre est un matériau de châssis, jamais de contenu.** Barre du bas, en-tête sous
@@ -110,6 +173,10 @@ graphe des liens dans les maquettes le prouve — c'est le bug qui a tué la pre
 du CRM (six pages orphelines).
 
 ## Arbitrages déjà tranchés — n'y reviens pas sans le dire
+
+**v2 seulement dans la PWA installée, jamais sur le site.** Voir la section dédiée juste après
+« L'utilisateur, qui décide de tout le reste » — c'est la contrainte qui change l'échelle de
+tout ce fichier (Alexandre, 2026-09-22).
 
 **Tout reste accessible sur le téléphone.** Découper par appareil (« ça, c'est sur PC »)
 était envisagé puis écarté : beaucoup de laveurs n'ouvrent jamais d'ordinateur, ça crée du
@@ -347,21 +414,32 @@ dessus, une fois. Deuxieme conflit : tu t'arretes et tu le signales.
 `SupportInbox`, `ImportFactures`, `AbonnementPanel`, `GuideContent` : hors refonte pour
 l'instant, ils heritent des jetons sans etre redessines.
 
+Les passes 2 et 3 (retrofit du 2026-09-22) suivent maintenant le schema `EcranV1.tsx` /
+`EcranV2.tsx` + `Ecran.tsx` en point de branchement — voir « v1 sur le site, v2 seulement
+dans la PWA installée » plus haut. Les colonnes « Fichiers » ci-dessus donnent les noms
+d'origine (avant le retrofit) ; pour les passes 4 à 8, prevoir ce triplet des le depart plutot
+que de retrofiter apres coup.
+
 ## La recette d'un ecran
 
 1. **Lis l'existant en entier** avant d'ecrire. Note ce qu'il fait et que la maquette ne
    montre pas — un etat vide, un message d'erreur, un cas Pro, un chargement. **Ces cas-la
    se perdent toujours dans une refonte, et ce sont eux qui font les bugs.**
-2. **Garde la logique, remplace la presentation.** Les hooks, les appels Supabase, les
+2. **Choisis le mecanisme v1/v2 avant d'ecrire le JSX** — classe CSS `wb-pwa` (changement
+   purement visuel) ou hook `usePwaStandalone()` (changement de forme) : voir « v1 sur le
+   site, v2 seulement dans la PWA installée » plus haut. Le site reste v1 sans exception.
+3. **Garde la logique, remplace la presentation.** Les hooks, les appels Supabase, les
    calculs : on n'y touche pas. Une refonte visuelle qui deplace de la logique est deux
    chantiers melanges, et on ne sait plus quoi bisecter quand ca casse.
-3. Remplace les classes par les jetons v2. **Aucune couleur en dur.**
-4. Verifie les cas oublies : liste vide, erreur de chargement, laveur en Essentiel devant
-   une fonction Pro, texte tres long, nom a rallonge.
-5. Mode sombre.
-6. Cibles tactiles 44 px, champs de saisie a 16 px.
-7. `typecheck` + `lint` + `vitest`, puis capture clair et sombre.
-8. Commit.
+4. Remplace les classes par les jetons v2 (dans la branche v2 uniquement). **Aucune couleur
+   en dur.**
+5. Verifie les cas oublies : liste vide, erreur de chargement, laveur en Essentiel devant
+   une fonction Pro, texte tres long, nom a rallonge — **dans les deux versions**, v1 et v2.
+6. Mode sombre.
+7. Cibles tactiles 44 px, champs de saisie a 16 px.
+8. `typecheck` + `lint` + `vitest`, puis capture **site** (display-mode: browser) et **PWA**
+   (display-mode: standalone, émulée) — clair et sombre pour chacun.
+9. Commit.
 
 ## Ta manière de travailler
 

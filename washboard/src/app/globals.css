@@ -207,6 +207,30 @@ body.wb-dashboard-active {
    @media (hover: hover) and (pointer: fine) par défaut) répondent déjà aux
    deux points restants du socle — rien à ajouter ici. */
 
+/* ── `wb-pwa` — la refonte v2 n'existe que dans la PWA installée ───────────
+   Décision d'Alexandre (2026-09-22) : le site (navigateur classique, mobile
+   ou ordinateur) reste v1 sans exception ; seule la PWA installée en mode
+   standalone voit la direction v2. `wb-pwa` est posée sur <html> par un
+   script synchrone dans layout.tsx (`beforeInteractive`, avant toute
+   peinture — il n'existe pas d'équivalent "cookie lu côté serveur" pour
+   `display-mode: standalone`, contrairement à la classe `dark`).
+
+   Deux mécanismes, pas un seul — ne pas les confondre :
+   - Un écran qui ne change que de couleurs/espacements/rayons (pas de JSX
+     différent) peut se contenter d'un sélecteur `html.wb-pwa …` ici, ou de
+     la variante Tailwind arbitraire `[html.wb-pwa_&]:…` côté composant.
+     Zéro flash : la classe est posée avant le premier rendu.
+   - Un écran dont la FORME change (ex. ClientProfileModal : carte v1 vs
+     feuille v2) a besoin d'un vrai branchement JSX — voir le hook React
+     `usePwaStandalone()` (src/hooks/usePwaStandalone.ts). Un flash v1→v2
+     bref au montage y est accepté (mêmes contraintes que ThemeToggle /
+     NotificationsToggle, aucun équivalent serveur possible ici).
+   Aucun sélecteur n'utilise encore `wb-pwa` à ce jour (les deux premiers
+   écrans passés en v2, Clients et la fiche client, ont une structure trop
+   différente de la v1 pour du CSS seul — voir ClientsView.tsx et
+   ClientProfileModal.tsx). Prêt pour la prochaine passe qui n'aurait besoin
+   que de couleurs. */
+
 /* ══════════════════════════════════════════════════════════════════════════
    Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants
    ──────────────────────────────────────────────────────────────────────────

@@ -393,6 +393,39 @@
 > d'Alexandre reprenne sans redécouvrir. **Passes 0 à 3 faites, la 4 est la
 > suivante.** Le plan de vol complet est dans `.claude/agents/refonte.md`.
 
+- [ ] **CHANGEMENT D'ARCHITECTURE (2026-09-22, pas encore commité) — v2
+      seulement dans la PWA installée, jamais sur le site.** Alexandre : « moi
+      je veux que la PWA ressemble a une app mais que le site web que ce soit
+      sur mobile ou ordinateur reste comme actuellement ». Les passes 2 et 3
+      avaient posé la v2 **sans aucune condition** (n'importe quel visiteur du
+      site la voyait) — retrofité par un Claude dédié, en attente de relecture
+      et de commit par l'orchestrateur :
+  - Deux mécanismes de détection, documentés en détail dans
+    `.claude/agents/refonte.md` (section « v1 sur le site, v2 seulement dans
+    la PWA installée ») : la classe `wb-pwa` posée sur `<html>` par un script
+    `beforeInteractive` (`layout.tsx`) pour un changement purement visuel, et
+    le hook `usePwaStandalone()` (`src/hooks/usePwaStandalone.ts`, basé sur
+    `src/lib/pwaStandalone.ts`) pour un changement de FORME.
+  - `ClientsView.tsx` et `ClientProfileModal.tsx` sont redevenus des points
+    de branchement (comparaison v1/v2 : structure trop différente pour du CSS
+    seul → hook, pas de classe). Le code v1 vient de `git show
+    8a1efa6:washboard/src/components/dashboard/<fichier>.tsx` repris à
+    l'identique dans `ClientsViewV1.tsx` / `ClientProfileModalV1.tsx` ;
+    l'ancien contenu (v2) est devenu `ClientsViewV2.tsx` /
+    `ClientProfileModalV2.tsx`. `CrmDashboard.tsx` (l'ancien CRM, pas migré)
+    importe toujours `ClientProfileModal` sans rien savoir du branchement.
+  - Vérifié : `tsc`, `eslint` (33 avertissements, baseline 32 + 1 attendu —
+    pattern `mounted` déjà présent sur `ThemeToggle`/`NotificationsToggle`),
+    `vitest run --coverage` (nouveau test `pwaStandalone.test.ts`, 100 % sur
+    le fichier), `next build` propre, et un script Playwright jetable
+    (jamais commité) qui capture Clients + la fiche en 4 combinaisons
+    (site/PWA émulée × clair/sombre) sur `npm run dev` **et** sur
+    `npm run build && npm run start` — 16 captures au total, toutes
+    conformes. **Non fait : installation réelle de la PWA sur un appareil.**
+  - **Pour la suite (passes 4 à 8) : poser ce branchement DÈS L'ÉCRITURE de
+    l'écran**, schéma `EcranV1.tsx` / `EcranV2.tsx` + `Ecran.tsx` en point
+    d'entrée — voir `.claude/agents/refonte.md`, mis à jour avec un exemple
+    complet.
 - [x] **Passe 0** `e630338` — socle mobile. Rien ne bouge à l'écran. Les règles
       qui auraient changé une page publique (tirer-pour-rafraîchir, sélection
       des liens) sont limitées au dashboard via `body.wb-dashboard-active`.
@@ -400,8 +433,10 @@
       `globals.css`, Archivo variable exposée en `--font-archivo`, appliquée
       nulle part. Archivo pèse ~88 Ko contre ~29 Ko pour Geist : mesuré, assumé.
 - [x] **Passe 2** `d6e6623` — liste Clients, écran pilote, premier écran en v2.
+      Voir le changement d'architecture ci-dessus : retrofité le 2026-09-22
+      pour ne s'appliquer qu'à la PWA installée.
 - [x] **Passe 3** `31a42de` — fiche client en feuille, plus Appeler/Message,
-      piège de focus et retour du focus.
+      piège de focus et retour du focus. Même retrofit que la passe 2.
 - [ ] **Passe 4 — barre du bas derrière `washers.beta_refonte`.** Lancée puis
       arrêtée avant toute écriture (quota). Deux contraintes à ne pas perdre :
   - le SQL se donne à Ryan pour qu'il le colle dans Supabase, **jamais un
@@ -427,6 +462,10 @@ un agent `refonte` **neuf par passe** (son contexte se dégrade sinon, son propr
 plan de vol le dit), l'agent **ne commite jamais** (l'orchestrateur relit le
 diff, relance typecheck + eslint + `vitest run --coverage`, puis commite), et
 chaque passe rend une capture clair **et** sombre comparée à la maquette.
+Depuis le retrofit du 2026-09-22 : **quatre captures par écran qui change de
+forme**, pas deux — site (display-mode: browser) et PWA (display-mode:
+standalone, émulée dans Chrome DevTools → Rendering), chacun clair et sombre.
+Une capture « site » qui montre du v2 est un bug bloquant, pas un détail.
 
 **Trois pièges rencontrés, qui ne se voient dans aucun outil :**
 - un motif entre crochets écrit **dans un commentaire** JSX est lu par le
