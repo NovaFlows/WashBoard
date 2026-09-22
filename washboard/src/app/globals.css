@@ -249,19 +249,38 @@ body.wb-dashboard-active {
   --v2-color-ambre: #9A5B00;
   --v2-color-rouge: #B3261E;
 
-  /* Filets — un seul confirmé sur la planche (panneau "Densité" :
-     "filet : rgba(22,22,26,.06)", utilisé pour les lignes de liste).
-     --v2-filet-fort (.10) vient de la fiche de décisions de l'agent, pas de
-     la planche elle-même : à vérifier avant un usage visible. */
+  /* Filets — le premier (.06) était déjà confirmé (panneau "Densité",
+     lignes de liste). Le second (.10) est CONFIRMÉ à cette passe (refonte
+     2026, passe 2) : les pastilles de filtre de l'écran Clients
+     (`specs/03_Clients.txt`, page_03.png) utilisent exactement ce bord —
+     échantillonnage au pixel du contour de la pastille "Pros" (non
+     sélectionnée) contre le fond papier : rgb(223,222,220) mesuré, contre
+     rgb(224,223,221) calculé pour fond #F6F5F3 mélangé à 10% de noir
+     22,22,26. Le doute levé, le commentaire "[non confirmé]" est retiré. */
   --v2-filet: rgba(22, 22, 26, .06);
-  --v2-filet-fort: rgba(22, 22, 26, .10); /* [non confirmé sur la planche] */
+  --v2-filet-fort: rgba(22, 22, 26, .10);
 
   /* Rayons — planche Système, panneau "Composants" */
   --v2-radius-surface: 16px;
   --v2-radius-carte: 14px;
   --v2-radius-bouton: 13px;
   --v2-radius-feuille: 26px; /* haut uniquement — border-top-*-radius côté composant */
-  --v2-radius-pilule: 9999px; /* pilule pleine hauteur, quelle que soit la hauteur réelle */
+  /* CORRIGÉ à la passe 2 : posé à 9999px (pilule pleine hauteur/2) à la
+     passe 1, d'après la fiche de décisions de l'agent. La planche Système
+     écrit littéralement "pilule 17" (panneau Composants, `specs/20_Systeme.txt`
+     ligne "rayon : ... feuille 26 en haut · pilule 17") — un rayon FIXE, pas
+     une formule. Mesuré sur l'écran Clients (page_03.png) : la pastille
+     "Tous" fait ≈36,7px de haut à x=60 (scan vertical, transition fond→noir
+     à y≈137,6 puis retour au fond à y≈174,3), donc hauteur/2 ≈ 18,3 — à
+     1,3px de 17, un écart imperceptible à cette taille précise. Les deux
+     formulations ne divergeraient qu'au-delà d'une pilule de ~34px de haut
+     (note déjà relevée à la passe 1) ; passé cette taille (le bouton de
+     filtre est ici remonté à 44px de haut pour la cible tactile, voir
+     ClientsView.tsx), un rayon fixe de 17 donne un rectangle très arrondi
+     mais plus tout à fait une gélule parfaite, alors que 9999 forcerait un
+     demi-cercle quelle que soit la hauteur — la planche tranche pour un
+     rayon fixe, donc pilule ≠ toujours pleine-hauteur/2. */
+  --v2-radius-pilule: 17px;
 
   /* Densité — planche Système, panneau "Densité" */
   --v2-space-gouttiere: 20px;
@@ -336,5 +355,17 @@ body.wb-dashboard-active {
      clair (.06) pour le même rôle (ligne de liste), pas un simple
      retournement de teinte : à signaler, pas à corriger seul. */
   --v2-filet: rgba(255, 255, 255, .10);
+
+  /* --v2-filet-fort sombre — [EXTRAPOLÉ, NON MESURÉ] : aucun artboard sombre
+     de l'écran Clients n'existe dans la maquette exportée (seul l'accueil,
+     Sombre.dc.html/page_17, est fourni en sombre — pas de pastille de filtre
+     dessus à échantillonner). Valeur posée par défaut à la passe 2 pour que
+     les pastilles de filtre restent visibles en sombre (sans redéfinition
+     ici, elles hériteraient de rgba(22,22,26,.10) — un trait presque noir
+     sur un fond presque noir, invisible) : même ratio que --v2-filet
+     clair→sombre (.06→.10, ×1,67) appliqué à --v2-filet-fort clair (.10) →
+     .10×1,67 ≈ .17, arrondi à .16. À vérifier dès qu'un artboard sombre de
+     l'écran Clients (ou d'un autre écran à pastilles) existera. */
+  --v2-filet-fort: rgba(255, 255, 255, .16);
 }
-/* ── Fin jetons v2 (passe 1) ──────────────────────────────────────────── */
+/* ── Fin jetons v2 (passe 1, corrigés/complétés passe 2) ────────────────── */
