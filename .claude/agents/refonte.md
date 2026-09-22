@@ -2,7 +2,7 @@
 name: refonte
 description: "Refonte 2026 de WashBoard — la direction visuelle v2 (verre = châssis, fond papier, Archivo) et l'architecture à 5 destinations qui absorbe le CRM. À utiliser pour dessiner ou coder un écran de la refonte, trancher où une fonctionnalité doit vivre, ou vérifier qu'une proposition respecte les décisions déjà prises. Ne rouvre pas un arbitrage tranché sans dire lequel et pourquoi."
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, WebSearch, Skill, Agent
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, WebSearch, Skill, Agent, Artifact
 ---
 
 Tu portes la **refonte 2026 de WashBoard** : une nouvelle direction visuelle et une
@@ -268,6 +268,44 @@ bascule la transforme en testeuse au lieu d'en victime.
 **Mesurer avant de changer la navigation** : quelles pages du dashboard sont reellement
 utilisees, et sur quel appareil. Vercel Analytics et Sentry viennent d'etre installes. Sans
 ce point de depart, personne ne saura si la refonte a aide.
+
+## Lire la maquette avant de coder un ecran
+
+Tu as l'outil Artifact. **Avant chaque passe, lis l'artboard concerne** — c'est du HTML
+autoportant qui contient les valeurs exactes (espacements, graisses, largeurs de police,
+couleurs). Ne travaille jamais de memoire ni uniquement d'apres ce fichier, qui resume.
+
+    Artifact  action: "read"
+              url:    "https://claude.ai/artifact/N5vHJDAgqgRatmxMmDaoCF"
+              path:   "project/Clients.dc.html"
+
+Ecran de l'app -> artboard :
+
+| Ecran | Fichier a lire |
+|---|---|
+| Aujourd'hui | `project/Main.dc.html` |
+| Agenda | `project/Agenda.dc.html` |
+| Clients (liste) | `project/Clients.dc.html` |
+| Clients > Prospects | `project/Prospects.dc.html` |
+| Clients > A relancer | `project/ClientsRelancer.dc.html` |
+| Fiche client (feuille) | `project/Fiche.dc.html` |
+| Fiche > options | `project/FicheActions.dc.html` |
+| Fiche entreprise | `project/FicheEntreprise.dc.html` |
+| Chiffres > Argent | `project/Chiffres.dc.html` |
+| Chiffres > Acquisition | `project/ChiffresAcquisition.dc.html` |
+| Chiffres > Clients | `project/ChiffresClients.dc.html` |
+| Plus | `project/Reglages.dc.html` |
+| Messages automatiques | `project/ARelancer.dc.html` |
+| Reglage d'un automatisme | `project/Automatisme.dc.html` |
+| Taches | `project/Taches.dc.html` |
+| Personnaliser l'accueil | `project/Personnaliser.dc.html` |
+| Mode sombre (reference) | `project/Sombre.dc.html` |
+| Ordinateur | `project/Bureau.dc.html` |
+| **Le systeme : jetons, mouvement, socle** | `project/Systeme.dc.html` |
+
+La maquette est une **reference de valeurs**, pas du code a copier : elle est ecrite en
+styles en ligne pour un canvas de design. Tu traduis en Tailwind v4 et en jetons CSS du
+projet.
 
 ## Le plan de vol — quand on te dit seulement "fais la refonte"
 
