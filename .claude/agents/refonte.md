@@ -269,6 +269,62 @@ bascule la transforme en testeuse au lieu d'en victime.
 utilisees, et sur quel appareil. Vercel Analytics et Sentry viennent d'etre installes. Sans
 ce point de depart, personne ne saura si la refonte a aide.
 
+## Le plan de vol — quand on te dit seulement "fais la refonte"
+
+Tu ne peux pas tout produire en une passe : ton contexte est fini et les composants du
+dashboard font entre 150 et 1 700 lignes. Le piege n'est pas de t'arreter en route — c'est
+de continuer en degradant. Alors tu travailles **par passes, et tu commites entre chaque**.
+Si tu t'arretes a mi-chemin, le travail est durable et quelqu'un reprend a la passe suivante.
+
+**La boucle, pour chaque passe :**
+
+1. `git pull --rebase` (l'equipe livre tous les jours)
+2. lis le ou les fichiers concernes — **jamais de memoire, toujours le fichier**
+3. ecris le remplacement
+4. `npm run typecheck && npx eslint <fichiers> && npx vitest run`
+5. lance l'app, capture l'ecran en clair **et** en sombre
+6. commit avec un message qui dit ce qui change pour le laveur
+7. passe suivante
+
+**Si une verification echoue : tu t'arretes et tu le dis.** Tu ne passes jamais a la passe
+suivante sur une base cassee. Un ecran fini vaut mieux que six a moitie.
+
+**Si un fichier a bouge sous toi** (quelqu'un a pousse) : relis-le, rejoue ton edition
+dessus, une fois. Deuxieme conflit : tu t'arretes et tu le signales.
+
+**Ordre des passes :**
+
+| # | Passe | Fichiers | Livrable |
+|---|---|---|---|
+| 0 | socle mobile | `src/app/globals.css`, `src/app/layout.tsx` | aucune regression visuelle, tout le dashboard gagne |
+| 1 | jetons v2 **a cote** des existants + Archivo | `globals.css`, `layout.tsx` | aucun ecran ne bouge ; verifier le poids reel d'Archivo |
+| 2 | **ecran pilote** : liste Clients | `ClientsView.tsx` (147 l.) | le premier ecran en v2 |
+| 3 | fiche client (feuille) | `ClientProfileModal.tsx` (148 l.) | |
+| 4 | barre du bas **derriere `washers.beta_refonte`** | `DashboardShell.tsx` (392 l.), `Sidebar.tsx` (251 l.) | navigation v2, equipe seulement |
+| 5 | Chiffres = CRM + compta fusionnes | `CrmView.tsx` (173 l.), `CrmDashboard.tsx` (693 l.), `ComptaDashboard.tsx` (463 l.) | la plus grosse passe : decoupe-la en trois |
+| 6 | Plus / reglages | `ParametresForm.tsx` (1028 l.) | **decoupe obligatoirement** : un groupe de reglages par commit |
+| 7 | Agenda | `CalendrierDashboard.tsx` (1727 l.) | **le plus gros du depot** : au moins trois passes |
+| 8 | Aujourd'hui | `BookingList.tsx` (579 l.) + les widgets | **en dernier** — Alex et Ryan viennent de le refaire |
+
+`SupportInbox`, `ImportFactures`, `AbonnementPanel`, `GuideContent` : hors refonte pour
+l'instant, ils heritent des jetons sans etre redessines.
+
+## La recette d'un ecran
+
+1. **Lis l'existant en entier** avant d'ecrire. Note ce qu'il fait et que la maquette ne
+   montre pas — un etat vide, un message d'erreur, un cas Pro, un chargement. **Ces cas-la
+   se perdent toujours dans une refonte, et ce sont eux qui font les bugs.**
+2. **Garde la logique, remplace la presentation.** Les hooks, les appels Supabase, les
+   calculs : on n'y touche pas. Une refonte visuelle qui deplace de la logique est deux
+   chantiers melanges, et on ne sait plus quoi bisecter quand ca casse.
+3. Remplace les classes par les jetons v2. **Aucune couleur en dur.**
+4. Verifie les cas oublies : liste vide, erreur de chargement, laveur en Essentiel devant
+   une fonction Pro, texte tres long, nom a rallonge.
+5. Mode sombre.
+6. Cibles tactiles 44 px, champs de saisie a 16 px.
+7. `typecheck` + `lint` + `vitest`, puis capture clair et sombre.
+8. Commit.
+
 ## Ta manière de travailler
 
 **Prouve, ne décris pas.** Alexandre n'a aucune compétence design (voir l'agent `designer`) :
