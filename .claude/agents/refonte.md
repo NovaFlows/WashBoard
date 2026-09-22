@@ -88,6 +88,31 @@ obligatoire dans les DEUX états — `display-mode: browser` (émulation désact
 `standalone` (émulée, = la PWA) — clair et sombre : quatre captures par écran qui change de
 forme, deux si le mécanisme est la classe CSS seule.
 
+**Si la vérification se fait par script (Playwright), pas à la main dans Chrome — deux pièges
+rencontrés à la passe 4, à ne pas redécouvrir :**
+- le CDP `Emulation.setEmulatedMedia` avec la feature `display-mode` (ce que fait Chrome
+  DevTools lui-même) ne s'est PAS reproduit avec le Chromium 149 fourni par Playwright 1.61.1
+  (testé headless et headed, `matchMedia('(display-mode: standalone)').matches` reste `false`) —
+  contrairement à `prefers-color-scheme`, qui lui fonctionne par ce chemin. Contournement
+  fiable : `page.addInitScript(...)` qui remplace `window.matchMedia` pour cette seule requête
+  avant l'exécution du moindre script de la page (voir `isPwaStandalone()` — c'est exactement
+  ce qu'il interroge).
+- le thème sombre de CE projet n'est PAS piloté par `prefers-color-scheme` mais par un cookie
+  `theme` lu côté serveur (`layout.tsx`, voir aussi le commentaire `--v2-color-*` de
+  `globals.css`) : `page.emulateMedia({ colorScheme: 'dark' })` seul ne change rien à l'écran —
+  poser directement le cookie (`context.addCookies([{ name: 'theme', value: 'dark', ... }])`)
+  avant la navigation.
+
+**Un ajout de chrome n'est pas toujours un fork V1/V2.** Le schéma `EcranV1.tsx` / `EcranV2.tsx`
+(voir plus haut) s'applique à un ÉCRAN dont toute la présentation change de forme. La passe 4
+(barre du bas) est un cas différent : le menu latéral, l'en-tête et le contenu de
+`DashboardShell` ne changent pas — une barre flottante s'ajoute simplement par-dessus, à la
+demande de deux conditions (`usePwaStandalone()` et `washer.beta_refonte`). Dans ce cas,
+brancher `usePwaStandalone()` directement dans le composant partagé (avec un rendu
+conditionnel local, `{condition && <Composant />}`) est le bon niveau — forker
+`DashboardShell.tsx` en deux fichiers aurait dupliqué tout ce qui NE change pas (header, menu,
+footer, bouton WhatsApp) pour une seule ligne de différence.
+
 ## La direction visuelle
 
 **Le verre est un matériau de châssis, jamais de contenu.** Barre du bas, en-tête sous

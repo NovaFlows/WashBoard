@@ -344,6 +344,25 @@ body.wb-dashboard-active {
   --v2-type-corps-largeur: 100%;
   /* Chiffres : font-variant-numeric: tabular-nums — propriété statique, pas
      un jeton ; à poser directement sur les chiffres héros le moment venu. */
+
+  /* Verre de châssis (refonte 2026, passe 4) — première utilisation réelle de
+     cette matière (passes 2 et 3 n'en avaient pas besoin : la liste Clients et
+     la feuille client sont des surfaces opaques, voir la fiche de décisions
+     "le verre est un matériau de châssis, jamais de contenu"). Valeurs
+     [mesurées] sur la barre du bas de l'écran Aujourd'hui,
+     `project/Main.dc.html` (référence @claude.ai/artifact/N5vHJDAgqgRatmxMmDaoCF) :
+     voile blanc 50%→26%, flou 34px + saturation 220%, bordure blanche 70%,
+     arête spéculaire interne 92% en haut. L'en-tête de ce même artboard utilise
+     un voile différent (66%→42%) — pas repris ici : l'en-tête du dashboard
+     reste en v1 tant que la passe 8 (Aujourd'hui) n'est pas faite, seule la
+     barre du bas est concernée par cette passe. */
+  --v2-verre-haut: rgba(255, 255, 255, .5);
+  --v2-verre-bas: rgba(255, 255, 255, .26);
+  --v2-verre-flou: blur(34px) saturate(220%);
+  --v2-verre-bordure: rgba(255, 255, 255, .70);
+  --v2-verre-arete: rgba(255, 255, 255, .92);        /* inset haut — l'arête qui "fait verre" */
+  --v2-verre-arete-basse: rgba(22, 22, 26, .05);      /* inset bas, discret */
+  --v2-verre-ombre: 0 10px 34px rgba(22, 22, 26, .14), 0 2px 8px rgba(22, 22, 26, .04);
 }
 
 .dark {
@@ -391,5 +410,37 @@ body.wb-dashboard-active {
      .10×1,67 ≈ .17, arrondi à .16. À vérifier dès qu'un artboard sombre de
      l'écran Clients (ou d'un autre écran à pastilles) existera. */
   --v2-filet-fort: rgba(255, 255, 255, .16);
+
+  /* Verre de châssis sombre — [EXTRAPOLÉ, NON MESURÉ], même réserve que
+     --v2-filet-fort ci-dessus : aucun artboard sombre ne montre la barre du
+     bas (Sombre.dc.html est un écran Aujourd'hui sans nav visible dans
+     l'export dont dispose cet agent). Un voile blanc à ces opacités sur un
+     fond quasi noir (#0E0E11) ferait une plaque grise plate plutôt qu'un
+     verre — on teinte donc le voile avec la couleur de surface sombre
+     (#17171B) au lieu du blanc, en gardant le même ratio d'opacité que la
+     version claire. Bordure et arête restent claires (rim light), plus
+     discrètes qu'en clair — même logique que --v2-filet clair→sombre. À
+     vérifier dès qu'un artboard sombre avec barre du bas existera. */
+  --v2-verre-haut: rgba(23, 23, 27, .55);
+  --v2-verre-bas: rgba(23, 23, 27, .30);
+  --v2-verre-bordure: rgba(255, 255, 255, .14);
+  --v2-verre-arete: rgba(255, 255, 255, .10);
+  --v2-verre-arete-basse: rgba(0, 0, 0, .30);
+  --v2-verre-ombre: 0 10px 34px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .20);
 }
-/* ── Fin jetons v2 (passe 1, corrigés/complétés passe 2) ────────────────── */
+/* ── Fin jetons v2 (passe 1, corrigés/complétés passes 2–4) ─────────────── */
+
+/* ── Barre du bas v2 (refonte 2026, passe 4) ────────────────────────────────
+   Classe dédiée plutôt que des utilitaires Tailwind arbitraires : la valeur
+   `box-shadow` combine une ombre portée ET deux arêtes internes (inset) dans
+   la même déclaration — illisible et fragile à échapper caractère par
+   caractère en syntaxe crochets. Consommée par BarreBasV2.tsx, affichée
+   uniquement dans la PWA installée avec `washer.beta_refonte` actif (voir
+   DashboardShell.tsx) — jamais sur le site. */
+.wb-barre-bas-verre {
+  background: linear-gradient(180deg, var(--v2-verre-haut), var(--v2-verre-bas));
+  backdrop-filter: var(--v2-verre-flou);
+  -webkit-backdrop-filter: var(--v2-verre-flou);
+  border: 1px solid var(--v2-verre-bordure);
+  box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
+}

@@ -437,19 +437,64 @@
       pour ne s'appliquer qu'à la PWA installée.
 - [x] **Passe 3** `31a42de` — fiche client en feuille, plus Appeler/Message,
       piège de focus et retour du focus. Même retrofit que la passe 2.
-- [ ] **Passe 4 — barre du bas derrière `washers.beta_refonte`.** Lancée puis
-      arrêtée avant toute écriture (quota). Deux contraintes à ne pas perdre :
-  - le SQL se donne à Ryan pour qu'il le colle dans Supabase, **jamais un
-    fichier de migration**, et `cyber` le relit avant ;
-  - **le code doit tourner AVANT que la colonne existe.** La branche peut être
-    déployée ou fusionnée sans que le SQL soit passé : un `select` sur une
-    colonne absente casse l'écran pour tout le monde, Kookii Clean comprise.
-    Drapeau absent = éteint, en silence.
-  - Vérifier ce qui devient inatteignable si la barre remplace le menu : c'est
-    le bug qui a tué la première version du CRM (six pages orphelines). Le menu
-    latéral reste le filet tant que les passes 5 et 6 ne sont pas faites.
+- [x] **Passe 4 — barre du bas derrière `washers.beta_refonte`** (code écrit,
+      **en attente du SQL** — la colonne n'existe pas encore en base, voir
+      plus bas pour l'instruction exacte à donner à Ryan) :
+  - `BarreBasV2.tsx` (nouveau) — les 5 destinations de la maquette
+    (`project/Main.dc.html`), verre de châssis (nouveaux jetons `--v2-verre-*`
+    dans `globals.css`, première utilisation réelle de cette matière : les
+    passes 2/3 sont des surfaces opaques). Mapping **interimaire** faute
+    d'écrans finaux pour Chiffres et Plus (passes 5/6 pas faites) : Chiffres
+    → `/dashboard/compta`, Plus → `/dashboard/parametres` — à corriger dès que
+    ces passes livrent leurs vrais écrans. Signalé dans le compte rendu de
+    passe pour arbitrage si une autre priorité se dessine avant la passe 5.
+  - `DashboardShell.tsx` : branchement par `usePwaStandalone()` (la FORME du
+    châssis change, une nav en plus apparaît) **+** nouvelle prop
+    `betaRefonte`. **Additif, pas un fork V1/V2** — contrairement au schéma
+    `EcranV1/EcranV2` des passes 2-3 : le menu latéral, l'en-tête et le
+    contenu ne changent pas de JSX, seule une barre en plus apparaît quand
+    `isPwa && !!betaRefonte`. Le menu latéral (Sidebar) n'est conditionné par
+    rien de tout ça — toujours rendu, jamais cette règle à revoir avant les
+    passes 5/6.
+  - `washer.beta_refonte?: boolean | null` ajouté au type `Washer`, même
+    convention que `dashboard_widgets` (absent = colonne pas en base,
+    `null`/`false` = pas encore dans le bêta, les trois « éteint », jamais une
+    erreur). 11 des 12 pages du dashboard passent `betaRefonte={washer.beta_refonte}`
+    à `DashboardShell` ; `assistance` et `guide` sont passées de
+    `select('name, ...')` à `select('*')` (même règle que ci-dessus : un
+    `select` à colonnes nommées casserait tant que `beta_refonte` n'existe pas
+    en base) ; `/dashboard/support` (outil interne, hors des 5 destinations,
+    n'apparaît dans aucun menu) n'a volontairement pas été touchée.
+  - **SQL à donner à Ryan, jamais un fichier de migration** (relecture `cyber`
+    d'abord) :
+    ```sql
+    ALTER TABLE washers ADD COLUMN IF NOT EXISTS beta_refonte boolean DEFAULT false;
+    ```
+    Une seule colonne sur une table déjà exposée (RLS déjà en place sur
+    `washers`) : pas de nouveau `GRANT` nécessaire.
+  - Vérifié que le code tourne colonne absente : tous les `select` restent
+    `'*'` ou explicites-mais-sans-`beta_refonte`, `!!undefined` → `false`
+    partout, aucun risque de casser l'écran pour un laveur réel aujourd'hui.
+  - Liste des 12 pages du dashboard vérifiée une à une (voir le compte rendu
+    complet de la passe) : aucune ne devient orpheline, le menu latéral reste
+    le filet de secours pour CRM, Factures, Guide, Assistance, Abonnement,
+    Admin (accessible depuis des liens sur l'accueil, pas depuis un menu) et
+    Support (déjà hors menu par conception, avant cette passe).
+  - **Piège rencontré, à connaître pour la suite** : l'émulation DevTools
+    « Rendering → display-mode: standalone » (Chrome réel) ne se reproduit
+    PAS via le CDP `Emulation.setEmulatedMedia` en Playwright avec le
+    Chromium 149 fourni (testé headless et headed, `matchMedia` reste
+    `false`) — contrairement à `prefers-color-scheme`, qui lui fonctionne.
+    Contournement fiable : `page.addInitScript` qui remplace
+    `window.matchMedia` pour la seule requête `display-mode: standalone`
+    avant tout script de page. Le thème sombre de ce projet n'est pas non
+    plus piloté par `prefers-color-scheme` (cookie `theme` lu serveur,
+    `layout.tsx`) : `page.emulateMedia({colorScheme})` seul ne change rien,
+    il faut poser le cookie (`context.addCookies`).
 - [ ] Passes 5 à 8 : Chiffres (CRM + compta), Plus, Agenda, Aujourd'hui en
-      dernier. Voir le plan de vol.
+      dernier. Voir le plan de vol. La passe 5 (Chiffres) et la passe 6 (Plus)
+      devront aussi corriger le mapping interimaire de `BarreBasV2.tsx`
+      ci-dessus.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,

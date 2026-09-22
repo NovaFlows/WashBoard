@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
+import { BarreBasV2 } from './BarreBasV2'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
@@ -10,6 +11,7 @@ import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
 import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
+import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -25,6 +27,12 @@ type Props = {
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
   cancelsAt?: string | null
+  // Refonte 2026, passe 4 : `washer.beta_refonte`, tel quel — `undefined`
+  // tant que la colonne n'existe pas en base (SQL pas encore passé),
+  // `null`/`false`/absent pour un laveur qui n'a pas rejoint le bêta. Les
+  // trois valent « pas de barre du bas », jamais une erreur (voir
+  // `betaRefonte` ci-dessous, converti en booléen strict).
+  betaRefonte?: boolean | null
 }
 
 function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
@@ -256,8 +264,18 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Barre du bas (refonte 2026, passe 4) : uniquement dans la PWA installée
+  // (usePwaStandalone — la FORME du châssis change, une nav en plus apparaît,
+  // donc le hook plutôt que la classe CSS `wb-pwa`, voir globals.css) ET
+  // seulement pour un laveur qui a rejoint le bêta. `!!betaRefonte` absorbe
+  // `undefined` (colonne absente), `null` et `false` de la même façon : rien
+  // ne s'affiche, jamais d'erreur. Le menu latéral (Sidebar, juste en dessous)
+  // n'est JAMAIS conditionné par ces deux variables : il reste le filet de
+  // secours tant que les passes 5 et 6 ne sont pas faites.
+  const isPwa = usePwaStandalone()
+  const showBarreBas = isPwa && !!betaRefonte
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
   // (Sidebar) et le bouton ☰ juste en dessous, qui doivent montrer le même
@@ -286,6 +304,17 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     return () => document.body.classList.remove('wb-dashboard-active')
   }, [])
 
+  // La barre du bas flotte sur toute la largeur (left-3 right-3), au même
+  // coin que le bouton WhatsApp (data-wb-whatsapp-fab, bottom-right) : sans
+  // ça, la bulle resterait posée PAR-DESSUS la barre, au même titre que le
+  // panneau de question (voir globals.css, body.wb-hide-fab, et
+  // ClientProfileModalV2 qui utilise déjà exactement ce mécanisme).
+  useEffect(() => {
+    if (!showBarreBas) return
+    document.body.classList.add('wb-hide-fab')
+    return () => document.body.classList.remove('wb-hide-fab')
+  }, [showBarreBas])
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden wb-dashboard-shell">
       <Sidebar
@@ -295,6 +324,15 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         estEquipeSupport={estEquipeSupport}
         unreadTeamCount={unreadTeamCount}
       />
+
+      {/* Filet de secours volontaire (refonte 2026, passe 4) : le menu
+          latéral ci-dessus n'est JAMAIS caché ni retiré quand la barre du bas
+          s'affiche — c'est elle qui s'ajoute, pas l'inverse. Tant que les
+          passes 5 et 6 (Chiffres, Plus) ne sont pas faites, plusieurs pages
+          du dashboard (CRM, Factures, Guide, Assistance...) ne sont
+          atteignables que par ce menu. Voir le compte rendu de la passe pour
+          la liste vérifiée. */}
+      {showBarreBas && <BarreBasV2 />}
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
@@ -364,7 +402,18 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </div>
       </header>
 
-      <main id="main-content" className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden">
+      <main
+        id="main-content"
+        className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden"
+        // La barre du bas flotte par-dessus le contenu (position: fixed) :
+        // sans réserve explicite, elle couvrirait les dernières lignes d'une
+        // longue page. `pb-24`/`sm:pb-6` ci-dessus suffisaient au bouton
+        // WhatsApp seul ; la barre est plus haute (66px + 14px d'écart + encoche)
+        // et s'affiche aussi sur grand écran (PWA installée sur ordinateur),
+        // où `sm:pb-6` (24px) ne suffit pas — d'où ce style qui prend le pas
+        // sur les deux classes Tailwind quand la barre est affichée.
+        style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 16px + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
         {children}
       </main>
 

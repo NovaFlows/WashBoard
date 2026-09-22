@@ -15,7 +15,12 @@ export default async function AssistancePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: washer } = await supabase.from('washers').select('name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at').eq('user_id', user.id).single()
+  // '*' plutôt qu'une liste de colonnes explicite (refonte 2026, passe 4) :
+  // `washer.beta_refonte` doit rester lisible ici pour que la barre du bas
+  // s'affiche sur cette page aussi. Un `select` qui nomme les colonnes une à
+  // une casserait dès qu'on en ajoute une qui n'existe pas encore en base
+  // (jamais le cas de '*', qui tolère une colonne absente).
+  const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
 
   return (
@@ -27,6 +32,7 @@ export default async function AssistancePage() {
       grandfathered={washer.grandfathered}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
+      betaRefonte={washer.beta_refonte}
     >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-6">
