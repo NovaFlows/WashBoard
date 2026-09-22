@@ -387,6 +387,61 @@
   - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
         (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
 
+## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
+
+> Écrit par le Claude de Ryan en fin de session, pour que celui de Yanis ou
+> d'Alexandre reprenne sans redécouvrir. **Passes 0 à 3 faites, la 4 est la
+> suivante.** Le plan de vol complet est dans `.claude/agents/refonte.md`.
+
+- [x] **Passe 0** `e630338` — socle mobile. Rien ne bouge à l'écran. Les règles
+      qui auraient changé une page publique (tirer-pour-rafraîchir, sélection
+      des liens) sont limitées au dashboard via `body.wb-dashboard-active`.
+- [x] **Passe 1** `8a1efa6` — jetons v2 sous le préfixe `--v2-` dans
+      `globals.css`, Archivo variable exposée en `--font-archivo`, appliquée
+      nulle part. Archivo pèse ~88 Ko contre ~29 Ko pour Geist : mesuré, assumé.
+- [x] **Passe 2** `d6e6623` — liste Clients, écran pilote, premier écran en v2.
+- [x] **Passe 3** `31a42de` — fiche client en feuille, plus Appeler/Message,
+      piège de focus et retour du focus.
+- [ ] **Passe 4 — barre du bas derrière `washers.beta_refonte`.** Lancée puis
+      arrêtée avant toute écriture (quota). Deux contraintes à ne pas perdre :
+  - le SQL se donne à Ryan pour qu'il le colle dans Supabase, **jamais un
+    fichier de migration**, et `cyber` le relit avant ;
+  - **le code doit tourner AVANT que la colonne existe.** La branche peut être
+    déployée ou fusionnée sans que le SQL soit passé : un `select` sur une
+    colonne absente casse l'écran pour tout le monde, Kookii Clean comprise.
+    Drapeau absent = éteint, en silence.
+  - Vérifier ce qui devient inatteignable si la barre remplace le menu : c'est
+    le bug qui a tué la première version du CRM (six pages orphelines). Le menu
+    latéral reste le filet tant que les passes 5 et 6 ne sont pas faites.
+- [ ] Passes 5 à 8 : Chiffres (CRM + compta), Plus, Agenda, Aujourd'hui en
+      dernier. Voir le plan de vol.
+
+**La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
+poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
+la taille de police et la position exactes de chaque ligne de texte. Utile si
+l'outil Artifact n'est pas accessible. Lire `LISEZMOI.md` d'abord. Source :
+l'artifact « WashBoard — direction v2 » exporté en PDF.
+
+**Comment les passes ont été menées** — à reprendre tel quel, ça a bien marché :
+un agent `refonte` **neuf par passe** (son contexte se dégrade sinon, son propre
+plan de vol le dit), l'agent **ne commite jamais** (l'orchestrateur relit le
+diff, relance typecheck + eslint + `vitest run --coverage`, puis commite), et
+chaque passe rend une capture clair **et** sombre comparée à la maquette.
+
+**Trois pièges rencontrés, qui ne se voient dans aucun outil :**
+- un motif entre crochets écrit **dans un commentaire** JSX est lu par le
+  scanner de classes de Tailwind v4, qui tente d'en faire du CSS et fait
+  planter la compilation. Ni `tsc`, ni `eslint`, ni `vitest` ne le voient :
+  seul le lancement réel de l'app le montre ;
+- après un `next dev` interrompu, `npm run typecheck` échoue sur un fichier de
+  types généré à moitié → `rm -rf .next` avant de conclure quoi que ce soit ;
+- `npm install` remet un `"dev": true` sur `fsevents` dans `package-lock.json`,
+  et `next dev` réécrit `AGENTS.md` : à écarter de chaque commit.
+
+**Valeurs encore non vérifiées, signalées en commentaire dans `globals.css` :**
+l'ambre et le rouge en sombre, et `--v2-filet-fort` en sombre (extrapolé) —
+aucun écran sombre de la maquette ne permet de les mesurer.
+
 ## 🛡️ Prod-grade (observabilité + non-régression)
 
 - [x] 2026-07-02 — **Socle prod mis en place** (commit 9342092) :
