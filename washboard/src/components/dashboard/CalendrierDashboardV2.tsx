@@ -8,6 +8,7 @@ import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
 import { doitDemanderConfirmation } from '@/lib/cloture'
+import { useCoordonneesRdv } from '@/hooks/useCoordonneesRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
 import { useConges } from '@/hooks/useConges'
@@ -106,6 +107,8 @@ const STATUT: Record<StatutClef, { couleur: string; label: string }> = {
 // qu'un seul créneau libre notable (2 h), pas les petits écarts entre deux
 // jobs enchaînés.
 const SEUIL_LIBRE_MIN = 30
+
+const AUCUN_RDV_A_LOCALISER: Booking[] = []
 
 function dureeLisible(min: number): string {
   if (min < 60) return `${min} min`
@@ -240,10 +243,17 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     return m
   }, [bookings])
 
-  const jour = useMemo(
+  const jourBrut = useMemo(
     () => [...(byDate.get(dayKey(dayDate)) ?? [])].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)),
     [byDate, dayDate],
   )
+  // Un rendez-vous saisi à la main sans choisir la suggestion d'adresse n'a pas
+  // de coordonnées, et le trajet entre deux rendez-vous ne se calcule pas sans
+  // elles. On les retrouve à partir de l'adresse (`/api/geocode`, rien n'est
+  // écrit en base) — pour le seul jour affiché, et seulement s'il y a au moins
+  // deux rendez-vous : chaque recherche d'adresse est facturée par Google.
+  const jourLocalise = useCoordonneesRdv(jourBrut.length >= 2 ? jourBrut : AUCUN_RDV_A_LOCALISER)
+  const jour = jourBrut.length >= 2 ? jourLocalise : jourBrut
   // Un rendez-vous annulé n'occupe plus de temps : il reste visible dans la
   // liste (jamais escamoté), mais n'entre dans aucun calcul de trajet, de
   // créneau libre ou de total.
