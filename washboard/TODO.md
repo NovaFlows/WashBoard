@@ -954,6 +954,82 @@
       GPS (chemin « trajet estimé ~N min pour ~K km » : même hook, jamais
       exercé en v2 faute d'adresse sélectionnée dans la liste), rendu de la
       feuille sur grand écran (`sm:` — non capturé), lecteur d'écran.
+- [~] **Ajout hors sous-lot — « Proposer » un créneau libre à un client**,
+      2026-09-24. Demande d'Alexandre : la maquette montrait un lien
+      « Proposer » sur la ligne de créneau libre sans dire vers quoi (le
+      sous-lot 3 l'avait donc coupé, voir juste au-dessus) ; décidé ce jour-là :
+      il ouvre une feuille listant les clients du laveur, en choisir un part
+      vers WhatsApp ou SMS avec un message déjà écrit, modifiable avant envoi.
+      **En attente de relecture/commit par l'orchestrateur.**
+  - **Nouveaux fichiers** : `ProposerCreneauV2.tsx`. Modifiés :
+    `CalendrierDashboardV2.tsx` (le bouton « Proposer » sur la ligne de trou,
+    plus la ville du rendez-vous qui précède le trou via `villeDepuisAdresse`,
+    déjà utilisée ailleurs dans ce fichier), `src/lib/phone.ts`/`phone.test.ts`
+    (nouvelle fonction `whatsappDigits`, voir plus bas), `src/lib/contact.ts`
+    (la réutilise, comportement inchangé — `openWhatsapp` sert toujours le
+    site v1).
+  - **Rien de nouveau en base, aucune route ajoutée** : ce sont des liens
+    `wa.me`/`sms:`, comme les boutons Appeler/Message existants
+    (`ClientProfileModalV2.tsx`). Réutilise `listeClients`/`rechercherClients`
+    (`@/lib/listeClients`) sur les réservations déjà chargées par l'agenda —
+    aucune requête ajoutée.
+  - **Ordre de la liste** : le client sans nouvelle depuis le plus longtemps
+    en premier (tri croissant sur `activite`, le champ que `listeClients`
+    calcule déjà — simple inversion de son tri par défaut, aucun nouveau
+    calcul). Raisonnement : proposer ce créneau EST une relance déguisée ; un
+    client revenu récemment ou qui a déjà un rendez-vous à venir n'en a pas
+    besoin, et son `activite` récente le fait naturellement descendre en fin
+    de liste.
+  - **Client sans téléphone** : affiché quand même (le masquer aurait laissé
+    croire qu'il n'existe pas), mais sans les boutons WhatsApp/SMS — une ligne
+    « Pas de téléphone — impossible de le lui proposer ainsi. » à la place,
+    pour ne jamais laisser une action échouer en silence.
+  - **Message suggéré** (via `messageCreneau`, `ProposerCreneauV2.tsx`) :
+    `Bonjour {prénom}, j'ai un créneau libre {jeudi 24 septembre} de {10h00} à
+    {12h00}. Ça vous intéresse ?` — ne mentionne pas la ville, déjà donnée par
+    la ligne du créneau quand l'adresse la fournit.
+  - **`whatsappDigits` extraite de `contact.ts`** (`openWhatsapp` faisait
+    cette normalisation en dur) vers `@/lib/phone.ts`, testée
+    (`phone.test.ts`), réutilisée par `openWhatsapp` **et** par
+    `ProposerCreneauV2.tsx` — comportement de `openWhatsapp` vérifié
+    inchangé (elle ne valide rien, contrairement à `normalizePhone` : un
+    numéro imparfait continue de produire un lien).
+  - **Limite découverte en testant sur le compte réel** (pas introduite par
+    cet ajout, déjà vraie pour l'écran Clients) : `listeClients` exige un
+    email pour regrouper un client (son unique identifiant stable
+    aujourd'hui) — un rendez-vous sans email (le RDV manuel n'en a jamais
+    exigé un dans la maquette, et l'étape 3 du plan CRM veut le rendre
+    facultatif partout) n'apparaît dans AUCUNE liste de clients, y compris
+    celle-ci, alors que « Proposer » ne se sert justement que du téléphone.
+    Vérifié sur le compte de test : deux rendez-vous du jour (« Yanis Zidi »,
+    « ad ») ont un email vide et n'apparaissent ni ici ni dans `/dashboard/
+    clients`. Pas corrigé ici — changer la clé d'identification d'un client
+    est une décision de logique métier partagée (étape 1 du plan CRM, table
+    `clients` dédiée), pas une présentation.
+  - **Séparateur `sms:?body=` vs `sms:&body=`** : iOS et Android n'acceptent
+    pas le même séparateur avant `body` — détection par `navigator.userAgent`
+    (`/iPad|iPhone|iPod/`, même test que `NotificationsToggle.tsx`), câblée
+    directement dans `ProposerCreneauV2.tsx` sans extraction (composant, pas
+    logique pure testable côté `src/lib` sans DOM).
+  - **Vérifié** (compte de test `novaflows.pro@gmail.com`) : `tsc` 0 erreur ;
+    `eslint` sur les fichiers touchés (0 erreur, 1 avertissement
+    `set-state-in-effect` préexistant sur `?rdv=`, déjà présent avant cet
+    ajout) ; `vitest run --coverage` 1042/1042 (+7 tests `whatsappDigits`,
+    seuils respectés) ; `next build` propre. Captures Playwright (mêmes
+    contournements `display-mode`/cookie `theme` que les passes précédentes,
+    390×900) sur les VRAIES données du compte de test (un trou réel de 30 min
+    ce jour-là) : PWA clair/sombre — agenda avec « Proposer », feuille
+    ouverte (8 clients existants, triés du moins récent au plus récent),
+    recherche filtrée ; site clair/sombre — grille mois v1, inchangée, pas de
+    « Proposer ».
+  - **Non vérifié** : le rendu de la ligne « Pas de téléphone » — tous les
+    clients du compte de test ont un numéro enregistré, aucun cas réel
+    disponible pour la capturer ; la branche est simple
+    (`{c.phone ? … : …}`, vérifiée par relecture et par le typage) mais pas
+    prouvée à l'écran. Le séparateur `sms:` selon iOS/Android (un seul
+    appareil disponible). L'ouverture réelle de WhatsApp/l'app SMS avec le
+    texte prérempli (les liens `wa.me`/`sms:` n'ont pas été cliqués jusqu'au
+    bout, pour ne rien envoyer). Appareil réel, lecteur d'écran.
 - [x] **Passe 8 — « Aujourd'hui » en v2**, 2026-09-23. Écrite par un agent
       `refonte`, relue et commitée par l'orchestrateur. Dernière passe du plan
       de vol.

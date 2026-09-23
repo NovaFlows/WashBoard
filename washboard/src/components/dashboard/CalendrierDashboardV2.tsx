@@ -15,6 +15,7 @@ import { useConges } from '@/hooks/useConges'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
+import ProposerCreneauV2 from '@/components/dashboard/ProposerCreneauV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
@@ -70,16 +71,13 @@ import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTa
 //     sous le jour dans le bandeau des 7 jours, et une liste « Congés à venir »
 //     en bas d'écran pour tout voir sans feuilleter les semaines.
 //
-// **Ce que ce sous-lot ne fait pas** :
-//   - Pas de bouton « Proposer » sur un créneau libre (la maquette en montre
-//     un) : rien dans le code ne sait proposer un créneau à un client
-//     (aucune table, aucune route). Le créneau libre s'affiche donc en
-//     information seule, sans action.
-//   - Pas de nom de ville par rendez-vous (la maquette en affiche un —
-//     « Pessac », « Mérignac »...) : `ClientProfileModalV2.tsx` a déjà tranché
-//     cette question pour la fiche client (« extraire une ville serait
-//     deviner un format qui n'est pas garanti », l'adresse est un champ
-//     libre). Même règle reprise ici, pour la même raison.
+// **Depuis (ajout du 2026-09-24, hors sous-lot) :** un nom de ville par
+// rendez-vous (`villeDepuisAdresse`, voir RendezVousCarte plus bas — `null`
+// sans invention quand l'adresse ne le donne pas sans ambiguïté) et le bouton
+// « Proposer » sur un créneau libre, décidé ce jour-là par Alexandre : il ouvre
+// `ProposerCreneauV2.tsx`, une feuille qui liste les clients du laveur et part
+// vers WhatsApp ou SMS avec un message déjà écrit — voir ce fichier pour le
+// détail (aucune table, aucune route, rien envoyé automatiquement).
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -189,6 +187,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
   const [menuAjout, setMenuAjout] = useState(false)
+  // Créneau libre en cours de proposition à un client — voir ProposerCreneauV2.tsx.
+  const [creneauPropose, setCreneauPropose] = useState<{ debut: Date; fin: Date; ville: string | null } | null>(null)
 
   // Congés — partagés avec CalendrierDashboardV1.tsx via `useConges`. Ils
   // possèdent l'état `unavails`, lu ensuite par les deux autres hooks pour
@@ -421,16 +421,32 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
             const suivant = !cancelled && indexActif >= 0 ? actifs[indexActif + 1] : undefined
             const gapMin = suivant ? Math.round((new Date(suivant.scheduled_at).getTime() - finRendezVous(b).getTime()) / 60_000) : null
             const trajet = suivant ? trajetEntre(b, suivant) : null
+            // Ville du rendez-vous qui PRÉCÈDE le trou (celui-ci, `b`) — c'est
+            // là que le laveur se trouve pendant ce temps libre, pas la ville
+            // du rendez-vous suivant. `null` sans invention si l'adresse ne la
+            // donne pas sans ambiguïté (voir `villeDepuisAdresse`).
+            const villeTrou = villeDepuisAdresse(b.address)
             return (
               <div key={b.id}>
                 <RendezVousCarte booking={b} onOuvrir={() => openBooking(b)} estompe={cancelled} />
-                {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && (
+                {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && suivant && (
                   <div className="flex items-center gap-3 py-1.5">
                     <span className={`w-10 shrink-0 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
                       {formatHeure(finRendezVous(b))}
                     </span>
-                    <span className={`flex-1 rounded-[var(--v2-radius-carte)] border border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2.5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                      {dureeLisible(gapMin)} de libre
+                    <span className="flex flex-1 items-center justify-between gap-2 rounded-[var(--v2-radius-carte)] border border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2.5">
+                      <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
+                        {dureeLisible(gapMin)} de libre{villeTrou ? ` à ${villeTrou}` : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou })}
+                        aria-label={`Proposer ce créneau libre de ${dureeLisible(gapMin)} à un client`}
+                        className={`-my-2.5 -mr-1.5 flex h-11 shrink-0 items-center px-2.5 text-[13px] ${corpsFort}`}
+                        style={{ color: 'var(--v2-color-accent)' }}
+                      >
+                        Proposer
+                      </button>
                     </span>
                   </div>
                 )}
@@ -538,6 +554,16 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           saving={uSaving}
           onDelete={deleteUnavail}
           onClose={() => setDelModal(null)}
+        />
+      )}
+
+      {creneauPropose && (
+        <ProposerCreneauV2
+          bookings={bookings}
+          debut={creneauPropose.debut}
+          fin={creneauPropose.fin}
+          ville={creneauPropose.ville}
+          onClose={() => setCreneauPropose(null)}
         />
       )}
 
