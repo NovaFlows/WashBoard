@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
-import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
 import { doitDemanderConfirmation } from '@/lib/cloture'
-import { useCoordonneesRdv } from '@/hooks/useCoordonneesRdv'
+import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
 import { useConges } from '@/hooks/useConges'
@@ -37,9 +36,9 @@ import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTa
 // boutons Appeler/Message de ClientProfileModalV2.tsx, « point plein + le
 // mot » pour les statuts), pas une maquette précise à reproduire au pixel.
 //
-// Logique réutilisée telle quelle, jamais dupliquée : `cleStatut` et le
-// calcul « km → minutes de trajet » viennent de `@/lib/calendarLayout` et
-// `@/lib/geo`. `Booking`/`CalendrierProps` viennent de
+// Logique réutilisée telle quelle, jamais dupliquée : `cleStatut` vient de
+// `@/lib/calendarLayout`. Le temps de route entre deux rendez-vous vient de
+// `useTrajetsRdv` (trajet en voiture réel via Google). `Booking`/`CalendrierProps` viennent de
 // CalendrierDashboardV1.tsx : une seule définition de la forme des données
 // envoyées par `calendrier/page.tsx`. Les quatre actions de la fiche
 // (changer de statut, reprogrammer, écrire une note, émettre une facture)
@@ -108,8 +107,6 @@ const STATUT: Record<StatutClef, { couleur: string; label: string }> = {
 // jobs enchaînés.
 const SEUIL_LIBRE_MIN = 30
 
-const AUCUN_RDV_A_LOCALISER: Booking[] = []
-
 function dureeLisible(min: number): string {
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
@@ -146,12 +143,6 @@ function finRendezVous(b: Booking): Date {
 }
 
 type Trajet = { minutes: number; km: number } | null
-
-function trajetEntre(a: Booking, b: Booking): Trajet {
-  if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) return null
-  const km = haversineKm(a.lat, a.lng, b.lat, b.lng)
-  return { minutes: estimateTravelMinutes(km), km }
-}
 
 export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete }: CalendrierProps) {
   const [today] = useState(() => new Date())
@@ -247,27 +238,29 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     () => [...(byDate.get(dayKey(dayDate)) ?? [])].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)),
     [byDate, dayDate],
   )
-  // Un rendez-vous saisi à la main sans choisir la suggestion d'adresse n'a pas
-  // de coordonnées, et le trajet entre deux rendez-vous ne se calcule pas sans
-  // elles. On les retrouve à partir de l'adresse (`/api/geocode`, rien n'est
-  // écrit en base) — pour le seul jour affiché, et seulement s'il y a au moins
-  // deux rendez-vous : chaque recherche d'adresse est facturée par Google.
-  const jourLocalise = useCoordonneesRdv(jourBrut.length >= 2 ? jourBrut : AUCUN_RDV_A_LOCALISER)
-  const jour = jourBrut.length >= 2 ? jourLocalise : jourBrut
+  const jour = jourBrut
   // Un rendez-vous annulé n'occupe plus de temps : il reste visible dans la
   // liste (jamais escamoté), mais n'entre dans aucun calcul de trajet, de
   // créneau libre ou de total.
   const actifs = useMemo(() => jour.filter(b => b.status !== 'cancelled'), [jour])
 
+  // Trajet en voiture réel (Google, via `/api/trajet`) entre rendez-vous
+  // consécutifs : pour le seul jour affiché, et rien n'est demandé sous deux
+  // rendez-vous non annulés — chaque appel Google est facturé. Sans réponse de
+  // Google, aucun trajet n'est affiché (pas de repli à vol d'oiseau : il
+  // sous-estimait le temps de route de moitié).
+  const trajets = useTrajetsRdv(actifs)
+  const trajetEntre = (a: Booking, b: Booking): Trajet => trajets.get(`${a.id}>${b.id}`) ?? null
+
   const totalRoute = useMemo(() => {
     let somme = 0
     let connu = false
     for (let i = 0; i < actifs.length - 1; i++) {
-      const t = trajetEntre(actifs[i], actifs[i + 1])
+      const t = trajets.get(`${actifs[i].id}>${actifs[i + 1].id}`)
       if (t) { somme += t.minutes; connu = true }
     }
     return connu ? somme : null
-  }, [actifs])
+  }, [actifs, trajets])
   const totalPrix = useMemo(() => actifs.reduce((s, b) => s + montant(b), 0), [actifs])
 
   const congeDuJour = getUnavail(dayDate)
