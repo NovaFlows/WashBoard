@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -90,7 +91,34 @@ const police = '[font-family:var(--font-archivo)]'
 export function BarreBasV2() {
   const pathname = usePathname()
 
+  // Retour immédiat au toucher : les pages du tableau de bord sont rendues par
+  // le serveur, il s'écoule un moment entre le tap et l'arrivée de la page.
+  // Sans ceci, la barre restait sur l'ancien onglet et rien ne bougeait —
+  // exactement ce qui fait paraître une PWA lente. On garde la page de départ
+  // avec la destination : l'attente s'éteint d'elle-même dès que l'adresse
+  // change, sans effet ni état à resynchroniser.
+  const [attente, setAttente] = useState<{ href: string; depuis: string } | null>(null)
+  const enAttente = attente && attente.depuis === pathname ? attente.href : null
+
+  // Filet de sécurité : si la navigation n'aboutit jamais (réseau coupé), le
+  // filet ne tourne pas indéfiniment.
+  useEffect(() => {
+    if (!enAttente) return
+    const t = setTimeout(() => setAttente(null), 15_000)
+    return () => clearTimeout(t)
+  }, [enAttente])
+
   return (
+    <>
+    {enAttente && (
+      <div
+        aria-hidden
+        className="fixed inset-x-0 z-[40] h-[3px] overflow-hidden pointer-events-none"
+        style={{ top: 'env(safe-area-inset-top, 0px)' }}
+      >
+        <div className="wb-chargement-filet h-full w-1/3 rounded-full" style={{ background: 'var(--v2-color-accent)' }} />
+      </div>
+    )}
     <nav
       aria-label="Navigation"
       // Position fixe, pas absolue : DashboardShell n'est pas un cadre de
@@ -104,12 +132,14 @@ export function BarreBasV2() {
       style={{ bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))', height: 66 }}
     >
       {DESTINATIONS.map(dest => {
-        const actif = dest.actif(pathname ?? '')
+        // Pendant une navigation, l'onglet visé s'allume tout de suite.
+        const actif = enAttente ? dest.href === enAttente : dest.actif(pathname ?? '')
         return (
           <Link
             key={dest.href}
             href={dest.href}
             aria-current={actif ? 'page' : undefined}
+            onClick={() => { if (!dest.actif(pathname ?? '')) setAttente({ href: dest.href, depuis: pathname ?? '' }) }}
             // Aucune animation sur un onglet — planche Système, "touché cent
             // fois par jour". Seul l'état actif/inactif change, sans transition.
             className={`flex flex-col items-center justify-center gap-1 rounded-[28px] text-[10.5px] select-none ${
@@ -124,5 +154,6 @@ export function BarreBasV2() {
         )
       })}
     </nav>
+    </>
   )
 }
