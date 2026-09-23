@@ -100,25 +100,19 @@ export function BarreBasV2() {
   const [attente, setAttente] = useState<{ href: string; depuis: string } | null>(null)
   const enAttente = attente && attente.depuis === pathname ? attente.href : null
 
-  // Filet de sécurité : si la navigation n'aboutit jamais (réseau coupé), le
-  // filet ne tourne pas indéfiniment.
+  // Filet de sécurité : si la navigation n'aboutit jamais (réseau coupé), la
+  // pastille revient sur l'onglet de la page réellement affichée.
   useEffect(() => {
     if (!enAttente) return
     const t = setTimeout(() => setAttente(null), 15_000)
     return () => clearTimeout(t)
   }, [enAttente])
 
+  const indexActif = DESTINATIONS.findIndex(dest =>
+    enAttente ? dest.href === enAttente : dest.actif(pathname ?? ''),
+  )
+
   return (
-    <>
-    {enAttente && (
-      <div
-        aria-hidden
-        className="fixed inset-x-0 z-[40] h-[3px] overflow-hidden pointer-events-none"
-        style={{ top: 'env(safe-area-inset-top, 0px)' }}
-      >
-        <div className="wb-chargement-filet h-full w-1/3 rounded-full" style={{ background: 'var(--v2-color-accent)' }} />
-      </div>
-    )}
     <nav
       aria-label="Navigation"
       // Position fixe, pas absolue : DashboardShell n'est pas un cadre de
@@ -131,6 +125,22 @@ export function BarreBasV2() {
       className={`fixed left-3 right-3 z-[15] grid grid-cols-5 gap-[2px] rounded-[33px] p-[5px] wb-barre-bas-verre ${police}`}
       style={{ bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))', height: 66 }}
     >
+      {/* Pastille de l'onglet actif : elle glisse d'un onglet à l'autre au lieu
+          de sauter (demande d'Alexandre, 2026-09-23, « comme sur Insta »). Elle
+          remplace le fond que portait chaque onglet actif. Largeur d'une
+          colonne = (largeur − 2×5 px de marge − 4×2 px d'écart) / 5 ; le
+          décalage d'un cran = une colonne + un écart. Sans onglet actif (page
+          hors des cinq destinations), elle disparaît. */}
+      <span
+        aria-hidden
+        className="absolute top-[5px] bottom-[5px] left-[5px] rounded-[28px] bg-[color:var(--v2-color-surface)] shadow-[0_2px_6px_rgba(22,22,26,.14)] transition-[transform,opacity] duration-[260ms] motion-reduce:transition-none"
+        style={{
+          width: 'calc((100% - 18px) / 5)',
+          transform: `translateX(calc(${Math.max(indexActif, 0)} * (100% + 2px)))`,
+          opacity: indexActif >= 0 ? 1 : 0,
+          transitionTimingFunction: 'var(--v2-ease-out)',
+        }}
+      />
       {DESTINATIONS.map(dest => {
         // Pendant une navigation, l'onglet visé s'allume tout de suite.
         const actif = enAttente ? dest.href === enAttente : dest.actif(pathname ?? '')
@@ -140,11 +150,11 @@ export function BarreBasV2() {
             href={dest.href}
             aria-current={actif ? 'page' : undefined}
             onClick={() => { if (!dest.actif(pathname ?? '')) setAttente({ href: dest.href, depuis: pathname ?? '' }) }}
-            // Aucune animation sur un onglet — planche Système, "touché cent
-            // fois par jour". Seul l'état actif/inactif change, sans transition.
-            className={`flex flex-col items-center justify-center gap-1 rounded-[28px] text-[10.5px] select-none ${
+            // Le fond de l'onglet actif est porté par la pastille qui glisse
+            // (voir plus haut) ; l'onglet ne change que de couleur et de graisse.
+            className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-[28px] text-[10.5px] select-none ${
               actif
-                ? 'bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] font-semibold shadow-[0_2px_6px_rgba(22,22,26,.14)]'
+                ? 'text-[color:var(--v2-color-encre)] font-semibold'
                 : 'text-[color:var(--v2-color-gris)] font-normal'
             }`}
           >
@@ -154,6 +164,5 @@ export function BarreBasV2() {
         )
       })}
     </nav>
-    </>
   )
 }

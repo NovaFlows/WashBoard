@@ -444,17 +444,3 @@ body.wb-dashboard-active {
   border: 1px solid var(--v2-verre-bordure);
   box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
 }
-
-/* Filet de chargement en haut de l'écran, pendant qu'une page du tableau de
-   bord se charge (BarreBasV2.tsx, PWA seulement). Un trait qui glisse, pas un
-   pourcentage : on ne sait pas combien de temps le serveur va prendre. */
-@keyframes wb-chargement {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(350%); }
-}
-.wb-chargement-filet {
-  animation: wb-chargement 1.1s var(--v2-ease-out) infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .wb-chargement-filet { animation: none; transform: none; width: 100%; }
-}

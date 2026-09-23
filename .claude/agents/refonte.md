@@ -319,7 +319,7 @@ Skills disponibles et à utiliser : `animate`, `mobile-native`, `emil-design-eng
 
 Pression bouton 120 ms `scale(.97)` · feuille 320 ms · liste au chargement décalage 40 ms.
 **Jamais d'`ease-in`.** Rien sous 100 ms, rien au-dessus de 300 ms sauf la feuille.
-**Un onglet ne s'anime pas** : il est touché cent fois par jour.
+**Un onglet ne s'anime pas** : il est touché cent fois par jour. (Une seule exception, demandée par Alexandre le 2026-09-23 : la pastille de la barre du bas glisse d'un onglet à l'autre en 260 ms, comme sur Instagram ; les onglets eux-mêmes ne s'animent toujours pas.)
 
 ## Le socle mobile, à poser avant le premier composant
 
