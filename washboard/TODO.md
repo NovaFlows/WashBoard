@@ -954,7 +954,96 @@
       GPS (chemin « trajet estimé ~N min pour ~K km » : même hook, jamais
       exercé en v2 faute d'adresse sélectionnée dans la liste), rendu de la
       feuille sur grand écran (`sm:` — non capturé), lecteur d'écran.
-- [ ] Passe 8 : Aujourd'hui, en dernier. Voir le plan de vol.
+- [x] **Passe 8 — « Aujourd'hui » en v2**, 2026-09-23. Écrite par un agent
+      `refonte`, relue et commitée par l'orchestrateur. Dernière passe du plan
+      de vol.
+  - **Correction de fait, au passage** : le briefing annonçait que les widgets
+    ne se réordonnent pas. **C'est faux** — `WidgetsConfigurator` a une
+    fonction `deplacer()`, et `widgetsVisibles(pref)` respecte l'ordre
+    enregistré. C'est **l'en-tête de `lib/dashboardWidgets.ts` qui est périmé**
+    (« Quatre blocs » alors qu'il y en a 7, « aucune réorganisation » alors
+    qu'elle existe) : commentaire corrigé dans un commit séparé, puisque c'est
+    du code v1. Seul le *glisser* de la maquette n'existe pas ; le
+    réordonnancement, si.
+  - **Décision : la v2 impose sa colonne vertébrale, les widgets pilotent le
+    reste.** Les deux autres options ont été écartées pour de bonnes raisons :
+    rhabiller les 7 widgets en v2 (5 sur 7 sont des tuiles « libellé / gros
+    chiffre » — le tic explicitement interdit — et 5 sur 7 doublonnent des
+    destinations que la v2 a déjà) ; les ignorer (jetterait un réglage déjà
+    stocké et rendrait le bouton « Configurer » du site menteur d'un appareil à
+    l'autre). Retenu : **même colonne `washers.dashboard_widgets`, même
+    registre, même `widgetsVisibles()`, même `PATCH /api/washer`.** Un widget
+    masqué sur le site reste masqué dans la PWA, et l'ordre du laveur est
+    respecté.
+  - **Deux écarts assumés dans cette décision** : (1) la colonne vertébrale
+    (héros + la journée + à confirmer) **n'est pas gouvernée par la clé
+    `today`** — en v1 la masquer laissait « À venir » juste dessous, donc on
+    masquait un doublon ; en v2 la journée EST l'écran, appliquer cette clé
+    viderait la destination de son seul rôle. La clé continue de piloter le
+    widget du site, inchangée. (2) Les six autres deviennent **des lignes, pas
+    des tuiles**, regroupées dans une carte commune ; `upcoming` garde sa
+    section (« Ensuite ») parce qu'une liste de rendez-vous n'est pas une ligne.
+  - **Le vrai piège de cette passe, désamorcé** : `PersonnaliserV2` réinjecte
+    `today` **exactement à sa position stockée** au moment d'enregistrer. Sans
+    ça, régler son accueil dans la PWA aurait modifié celui du navigateur en
+    douce.
+  - **Pas de `AccueilV1.tsx`, et c'est délibéré** — seule entorse au schéma des
+    passes 2/3/7. L'accueil v1 n'est pas un composant : c'est l'assemblage fait
+    par `page.tsx`, dont plusieurs morceaux (`StatsWidget`, `ClientsWidget`,
+    `ZoneWidget`) sont des composants **serveur**. Le recopier dans un fichier
+    client les aurait poussés dans le navigateur et aurait changé le rendu du
+    site. Il passe donc tel quel, déjà rendu, dans la prop `v1` de
+    `Accueil.tsx`. Diff de `page.tsx` : 60 ajouts, 3 suppressions, JSX v1
+    déplacé verbatim dans un fragment, widgets non touchés, aucune requête
+    ajoutée.
+  - **Nouveaux fichiers** : `Accueil.tsx` (branchement `usePwaStandalone()`),
+    `AccueilV2.tsx` (l'écran), `PersonnaliserV2.tsx` (la feuille de réglage).
+  - **Deux ajouts hors maquette, assumés** : si la journée est vide, le héros
+    bascule sur le **prochain rendez-vous tout court** avec sa date (un écran
+    vide un jour de repos n'aide personne) ; et le sous-titre distingue
+    « Journée terminée » de « Rien de prévu aujourd'hui ».
+  - **Coupes assumées** : (1) la section **« À faire »** de la maquette — les
+    tâches n'existent nulle part dans le produit, ni table ni route ; (2) le
+    **« 12 min de route » du héros** — c'est le trajet depuis la position du
+    laveur, or `washers.base_address` est un texte libre jamais géocodé ; le
+    temps de route n'apparaît donc que là où il est calculable et déjà éprouvé
+    (entre deux rendez-vous, et en total de journée) ; (3) **« portail 1234 »**
+    — aucun champ « code d'accès » n'existe, `notes` est la note interne du
+    laveur ; (4) **six des douze blocs de `Personnaliser.dc.html`** (météo,
+    avis reçus, devis, factures impayées, créneaux libres, tâches) n'existent
+    nulle part ; (5) poignées de glissement → **flèches**, le mécanisme réel ;
+    (6) l'historique et « Charger plus » ne sont pas sur l'accueil v2 —
+    vérifié non orphelin (l'agenda v2 navigue les jours passés, la fiche client
+    garde l'historique).
+  - **Vérifié** : `tsc` 0 erreur · `eslint` sur les 4 fichiers 0 avertissement,
+    et `eslint src` mesuré par `git stash` → **34 avertissements avant comme
+    après, zéro nouveau** · `vitest` 1013/1013 · `next build` propre,
+    `/dashboard` toujours listée, aucune route parasite. 6 captures 390×844
+    clair et sombre (accueil, personnaliser, journée terminée). Trois défauts
+    trouvés grâce à ces captures et corrigés : « Mercredi 23 **S**eptembre »
+    (`capitalize` → `first-letter:uppercase`), « Sam. 26 » qui passait à la
+    ligne dans la colonne de 40 px, et le prix du héros avalé par les points de
+    suspension d'une prestation à nom long.
+  - **NON vérifié, à faire dès que `.env.local` existe sur le poste** : il n'y
+    a **ni `.env.local` ni `.env.test.local`**, donc aucune connexion possible.
+    Les captures viennent d'une **route jetable** (`/apercu-passe8`) rendant
+    `AccueilV2` avec des données fabriquées dans le même châssis DOM —
+    supprimée depuis, arbre propre. Elles prouvent le rendu, la mise en page,
+    le sombre et la feuille ; elles **ne prouvent pas le branchement ni le
+    câblage des données**. Restent à vérifier : que le site rende v1 et la PWA
+    v2 sur `/dashboard` réel (4 captures + comparaison octet à octet du site
+    avant/après, comme aux passes 5 à 7) · le `PATCH /api/washer` de
+    `PersonnaliserV2`, jamais envoyé · le lien Itinéraire sur un vrai téléphone
+    (sur iOS sans l'app Google Maps, il ouvrira Safari) · un compte neuf (la
+    `DemarrageCard` en haut de l'écran v2) · un plan Essentiel (CA masqué) ·
+    l'installation réelle, la lisibilité au soleil.
+  - **Deux détails signalés, non corrigés** : les flèches de réordonnancement
+    font 32 px et non 44 (deux cibles de 44 empilées donneraient des lignes de
+    88 px ; l'interrupteur, lui, fait bien 44×44) ; et le fond papier s'arrête
+    où le contenu s'arrête, laissant apparaître le `slate-50`/`slate-950` du
+    châssis en bas d'écran — même comportement qu'à la passe 7, le corriger
+    proprement toucherait `DashboardShell` et tous les écrans encore en v1.
+
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,

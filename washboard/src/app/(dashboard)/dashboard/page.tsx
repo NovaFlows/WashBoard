@@ -24,6 +24,7 @@ import { TraficWidget } from '@/components/dashboard/widgets/TraficWidget'
 import { PrestationsWidget, type PrestationComptee } from '@/components/dashboard/widgets/PrestationsWidget'
 import { ZoneWidget } from '@/components/dashboard/widgets/ZoneWidget'
 import { WidgetsConfigurator } from '@/components/dashboard/widgets/WidgetsConfigurator'
+import Accueil from '@/components/dashboard/Accueil'
 import Link from 'next/link'
 
 /**
@@ -235,6 +236,26 @@ export default async function DashboardPage() {
     .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
     .slice(0, 3)
 
+  // Les deux valeurs ci-dessous ne servent QUE à l'accueil v2 (PWA installée,
+  // voir Accueil.tsx) : elles se déduisent de listes déjà en main, sans une
+  // requête ni une colonne de plus, et n'ont aucun effet sur le rendu du site.
+  //
+  // « À confirmer » : les demandes en attente APRÈS aujourd'hui — celles du
+  // jour sont déjà dans la journée, juste au-dessus, et les répéter en ferait
+  // du bruit.
+  const aConfirmer = (aVenir ?? []).filter(
+    b => b.status === 'pending'
+      && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui,
+  )
+  // « Journée commencée » : au moins un rendez-vous clôturé aujourd'hui, pour
+  // distinguer « journée terminée » de « rien de prévu » quand il ne reste
+  // rien à faire. Un booléen, pas un compte : `historique` est tronqué aux
+  // cinq plus récents, un nombre affiché serait faux.
+  const journeeCommencee = passes.some(
+    b => b.status === 'done'
+      && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
+  )
+
   const resumeClientsWidget = resumeClients(clientsLite.data ?? [], toDateStr(lundiCetteSemaine))
 
   // Widget Trafic : visiteurs de la semaine en cours, et sessions ayant
@@ -288,9 +309,18 @@ export default async function DashboardPage() {
 
   const widgetsAffiches = [...visibles]
 
-  return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <DemarrageCard progress={progress} />
+  // Rendue une seule fois, placée par chacune des deux versions de l'accueil :
+  // elle ouvre la page v1 comme avant, et ouvre l'écran v2 dans la PWA. Un
+  // compte neuf doit trouver ses étapes de configuration des deux côtés.
+  const demarrage = <DemarrageCard progress={progress} />
+
+  // L'accueil v1, à l'identique — le même arbre qu'avant cette passe, aux
+  // mêmes composants serveur (widgets, BookingList). Il est passé tel quel au
+  // point de branchement (voir Accueil.tsx) plutôt que recopié dans un
+  // `AccueilV1.tsx` client : le site doit rendre exactement ce qu'il rendait.
+  const accueilV1 = (
+    <>
+      {demarrage}
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         {/* Personnaliser la page de réservation vit dans Admin, pas dans les
@@ -334,6 +364,33 @@ export default async function DashboardPage() {
           </div>
         )}
       </BookingList>
+    </>
+  )
+
+  return (
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+      {/* Passe 8 de la refonte 2026 : dans la PWA installée, l'accueil devient
+          « Aujourd'hui » (héros du prochain rendez-vous, la journée, à
+          confirmer, puis les widgets du laveur en lignes). Sur le site, rien ne
+          change — voir Accueil.tsx. Aucune requête n'a été ajoutée : les
+          valeurs ci-dessous sortent toutes de ce qui est déjà calculé plus
+          haut pour la v1, et restent à `null` quand le widget correspondant
+          est masqué (donc sa donnée jamais demandée à la base). */}
+      <Accueil
+        v1={accueilV1}
+        demarrage={demarrage}
+        rdvAujourdhui={rdvAujourdhui}
+        rdvProchains={rdvProchains}
+        aConfirmer={aConfirmer}
+        journeeCommencee={journeeCommencee}
+        dateDuJour={aujourdhui}
+        widgets={widgetsAffiches}
+        stats={statsMois ? { terminesCeMois, caCeMois: hasFeature(washer, 'compta') ? caCeMois : null } : null}
+        clients={visibles.has('clients') ? resumeClientsWidget : null}
+        trafic={visibles.has('traffic') ? { visiteurs: visiteursSemaine, conversions: conversionsSemaine } : null}
+        prestationTop={visibles.has('services') ? (prestationsComptees[0] ?? null) : null}
+        zone={washer.zone_config}
+      />
     </DashboardShell>
   )
 }
