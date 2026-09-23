@@ -13,6 +13,7 @@ import { DEPARTMENTS } from '@/lib/france-departments'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
 import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
+import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -134,14 +135,6 @@ function lignePrestation(b: RdvAccueil): string {
   return b.services.service_categories?.name
     ? `${b.services.service_categories.name} · ${b.services.name}`
     : b.services.name
-}
-
-/** Lien d'itinéraire vers l'adresse du client. URL universelle Google Maps
- *  (aucune clé d'API, ouvre l'application installée quand il y en a une) —
- *  même esprit que `lib/contact.ts`, qui ouvre déjà Gmail et WhatsApp par une
- *  URL. Non vérifié sur un vrai téléphone (voir le compte rendu de passe). */
-function lienItineraire(adresse: string): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(adresse)}`
 }
 
 /** Temps de route du jour : la somme des trajets entre deux rendez-vous
@@ -353,6 +346,9 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
   const estAujourdhui = new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) === dateDuJour
   const adresse = b.address?.trim()
   const telephone = b.client_phone?.trim()
+  // Choix de l'application d'itinéraire (Plans, Waze, Google Maps), ouvert au
+  // toucher du bouton — voir ChoixItineraireV2.tsx.
+  const [choixItineraire, setChoixItineraire] = useState(false)
 
   return (
     <div className="rounded-[18px] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
@@ -396,10 +392,10 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
       {(adresse || telephone) && (
         <div className="flex gap-[9px] px-[14px] pb-[14px]">
           {adresse && (
-            <a
-              href={lienItineraire(adresse)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => setChoixItineraire(true)}
+              aria-haspopup="dialog"
               className={`flex h-[47px] flex-1 items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white transition-transform active:scale-[.97] motion-reduce:transition-none`}
               style={{
                 background: 'var(--v2-color-accent)',
@@ -409,7 +405,7 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
             >
               <Navigation size={18} strokeWidth={2} aria-hidden />
               Itinéraire
-            </a>
+            </button>
           )}
           {telephone && (
             <a
@@ -425,6 +421,10 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
             </a>
           )}
         </div>
+      )}
+
+      {choixItineraire && adresse && (
+        <ChoixItineraireV2 adresse={adresse} onClose={() => setChoixItineraire(false)} />
       )}
     </div>
   )
