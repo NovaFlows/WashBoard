@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
@@ -14,6 +14,7 @@ import {
 } from '@/lib/calendarLayout'
 import ConfirmerCloture from '@/components/dashboard/ConfirmerCloture'
 import { doitDemanderConfirmation } from '@/lib/cloture'
+import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 
 // Calendrier, présentation v1 — c'est ce que voit tout visiteur du SITE,
 // mobile ou ordinateur : la refonte 2026 (agenda du jour, temps de route
@@ -133,12 +134,32 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
   const [weekStart,   setWeekStart]   = useState(getWeekStart(today))
   const [dayDate,     setDayDate]     = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings,    setBookings]    = useState(initial)
-  const [selected,    setSelected]    = useState<Booking | null>(null)
   // La liste du jour se retient par sa DATE, pas par un instantané de ses
   // réservations : dérivée de `byDate` à chaque rendu, elle reste à jour si
   // une réservation change pendant qu'elle est ouverte, et permet de
   // naviguer vers un jour voisin même vide (voir les flèches du modal).
   const [dayListDate, setDayListDate] = useState<Date | null>(null)
+
+  // Unavailabilities
+  const [unavails,    setUnavails]    = useState(initialUnavail)
+  const [addModal,    setAddModal]    = useState<{ start: string; end: string; label: string; team_members_off: number } | null>(null)
+  const [delModal,    setDelModal]    = useState<Unavailability | null>(null)
+  const [uSaving,     setUSaving]     = useState(false)
+
+  // Fiche de rendez-vous actionnable (statut, reprogrammation, note,
+  // facture) — extraite dans `useRendezVousFiche` pendant la passe 7,
+  // sous-lot 2, pour que l'agenda v2 (CalendrierDashboardV2.tsx) la partage
+  // au lieu d'en garder une copie. Comportement inchangé.
+  const {
+    selected, setSelected, openBooking,
+    updating,
+    editNotes, setEditNotes, notesSaving, saveNotes,
+    rescheduling, setRescheduling, startReschedule,
+    editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
+    updateStatus,
+    clotureDemandee, setClotureDemandee,
+    factureEnCours, factureMsg, emettreFactureManuelle,
+  } = useRendezVousFiche({ bookings, setBookings, unavailabilities: unavails, teamSize })
 
   // Arrivée depuis une notification : `?rdv=<id>` ouvre la fiche tout de suite.
   //
@@ -149,8 +170,12 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
   // Le mois, la semaine et le jour se calent aussi sur la date du rendez-vous :
   // en refermant la fiche, on doit retomber là où il se trouve, pas sur
   // aujourd'hui. `applique` garantit qu'on ne le fait qu'une fois : sinon,
-  // refermer la fiche la rouvrirait aussitôt.
-  const router = useRouter()
+  // refermer la fiche la rouvrirait aussitôt. Volontairement `setSelected(rdv)`
+  // plutôt que `openBooking(rdv)` (identique à avant l'extraction) : ce
+  // chemin ne pré-remplit donc pas `editNotes` avec la note existante tant
+  // que la fiche n'est pas rouverte manuellement — comportement préexistant,
+  // pas corrigé ici pour ne rien changer côté site (voir CalendrierDashboardV2
+  // pour la version corrigée de ce même chemin).
   const searchParams = useSearchParams()
   const rdvParam = searchParams.get('rdv')
   const rdvApplique = useRef(false)
@@ -165,23 +190,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
     setWeekStart(getWeekStart(d))
     setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
     setSelected(rdv)
-  }, [rdvParam, bookings])
-  const [updating,    setUpdating]    = useState(false)
-  const [editNotes,   setEditNotes]   = useState('')
-  const [notesSaving, setNotesSaving] = useState(false)
-
-  // Reprogrammation (modifier date/heure d'un RDV existant)
-  const [rescheduling,     setRescheduling]     = useState(false)
-  const [editDate,         setEditDate]         = useState('')
-  const [editTime,         setEditTime]         = useState('')
-  const [rescheduleSaving, setRescheduleSaving] = useState(false)
-  const [rescheduleErr,    setRescheduleErr]    = useState<string | null>(null)
-
-  // Unavailabilities
-  const [unavails,    setUnavails]    = useState(initialUnavail)
-  const [addModal,    setAddModal]    = useState<{ start: string; end: string; label: string; team_members_off: number } | null>(null)
-  const [delModal,    setDelModal]    = useState<Unavailability | null>(null)
-  const [uSaving,     setUSaving]     = useState(false)
+  }, [rdvParam, bookings, setSelected])
 
   // ── Ajout manuel de réservation ─────────────────────────────────────────
   const emptyManual = (): ManualBooking => {
@@ -473,147 +482,13 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
   const dayBkgsForView = byDate.get(dayKey(dayDate)) ?? []
   const unavailDay = getUnavail(dayDate)
 
-  function openBooking(b: Booking) {
-    setSelected(b)
-    setEditNotes(b.notes ?? '')
-    setRescheduling(false)
-    setRescheduleErr(null)
-  }
-
-  function startReschedule(b: Booking) {
-    const d = new Date(b.scheduled_at)
-    setEditDate(toDateStr(d))
-    setEditTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)
-    setRescheduleErr(null)
-    setRescheduling(true)
-  }
-
-  async function saveReschedule() {
-    if (!selected) return
-    setRescheduleErr(null)
-    const newStart = new Date(`${editDate}T${editTime}:00`)
-    if (isNaN(newStart.getTime())) { setRescheduleErr('Date ou heure invalide'); return }
-
-    const durationMin = effectiveDuration((selected.services?.duration_minutes ?? 60) + addonsDuration(selected.selected_addons), selected.vehicle_count)
-    const newEnd      = new Date(newStart.getTime() + durationMin * 60_000)
-    const dayStr      = editDate
-
-    // Capacité de l'équipe ce jour-là (congés partiels)
-    const dayUnavail    = unavails.find(u => u.start_date <= dayStr && dayStr <= u.end_date)
-    const effectiveTeam = Math.max(0, teamSize - (dayUnavail?.team_members_off ?? 0))
-    if (effectiveTeam === 0) { setRescheduleErr("Toute l'équipe est en congés ce jour-là"); return }
-
-    // RDV qui se chevauchent (hors le RDV courant et les annulés)
-    const overlapping = bookings.filter(b => {
-      if (b.id === selected.id || b.status === 'cancelled') return false
-      const bStart = new Date(b.scheduled_at).getTime()
-      const bEnd   = bStart + effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count) * 60_000
-      return bStart < newEnd.getTime() && bEnd > newStart.getTime()
-    })
-    if (overlapping.length >= effectiveTeam) {
-      setRescheduleErr(`Créneau complet — ${overlapping.length}/${effectiveTeam} laveur${effectiveTeam > 1 ? 's' : ''} déjà occupé${effectiveTeam > 1 ? 's' : ''} à cet horaire`)
-      return
-    }
-
-    const scheduled_at = newStart.toISOString()
-    setRescheduleSaving(true)
-    try {
-      const res = await fetch(`/api/bookings/${selected.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scheduled_at }),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        setRescheduleErr(json.error ?? 'Erreur lors de la modification')
-        return
-      }
-      setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, scheduled_at } : b)
-        .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)))
-      setSelected(prev => prev ? { ...prev, scheduled_at } : prev)
-      setRescheduling(false)
-    } finally {
-      setRescheduleSaving(false)
-    }
-  }
-
-  // `closedLate` : clôturé après coup, comme sur l'accueil — le rendez-vous
-  // porte alors « Délai dépassé » plutôt que « Terminé ».
-  async function updateStatus(id: string, status: string, closedLate?: boolean) {
-    setUpdating(true)
-    try {
-      const res = await fetch(`/api/bookings/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, ...(closedLate !== undefined ? { closed_late: closedLate } : {}) }),
-      })
-      if (res.ok) {
-        // Passer en « Terminé » émet la facture : on récupère son numéro pour
-        // proposer le téléchargement sans recharger la page.
-        const maj = await res.json().catch(() => null) as { facture_numero?: string | null } | null
-        const facture = maj?.facture_numero ? { facture_numero: maj.facture_numero } : {}
-        // `closed_late` suit le statut en mémoire : sans lui, le badge
-        // « Délai dépassé » n'apparaissait qu'après rechargement de la page.
-        const champs = {
-          status: status as Booking['status'],
-          ...facture,
-          ...(closedLate !== undefined ? { closed_late: closedLate } : {}),
-        }
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, ...champs } : b))
-        setSelected(prev => prev?.id === id ? { ...prev, ...champs } : prev)
-        // Idem que sur l'accueil : la grille de CETTE page est déjà à jour via
-        // `setBookings`, mais sans ceci l'accueil, lui, resterait périmé tant
-        // qu'on ne le rechargerait pas — les deux pages ont chacune leur
-        // propre état, `router.refresh()` invalide le cache pour la suite.
-        router.refresh()
-      }
-    } finally {
-      setUpdating(false)
-    }
-  }
-
-  // Fenêtre « Avez-vous fait ce rendez-vous ? », pour un créneau déjà passé.
-  const [clotureDemandee, setClotureDemandee] = useState(false)
-  const [factureEnCours, setFactureEnCours] = useState(false)
-  const [factureMsg, setFactureMsg] = useState<{ id: string; texte: string; completer: boolean } | null>(null)
-
-  /** Émission à la demande, pour un rendez-vous terminé avant que les
-   *  informations de facturation soient remplies. */
-  async function emettreFactureManuelle(id: string) {
-    setFactureEnCours(true)
-    setFactureMsg(null)
-    try {
-      const res = await fetch(`/api/bookings/${id}/facture`, { method: 'POST' })
-      const json = await res.json().catch(() => ({})) as { numero?: string; error?: string }
-      if (res.ok && json.numero) {
-        const facture = { facture_numero: json.numero }
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, ...facture } : b))
-        setSelected(prev => prev?.id === id ? { ...prev, ...facture } : prev)
-      } else {
-        setFactureMsg({ id, texte: json.error ?? 'L\'émission de la facture a échoué.', completer: res.status === 422 })
-      }
-    } finally {
-      setFactureEnCours(false)
-    }
-  }
-
-  async function saveNotes() {
-    if (!selected) return
-    setNotesSaving(true)
-    try {
-      const res = await fetch(`/api/bookings/${selected.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: editNotes }),
-      })
-      if (res.ok) {
-        setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, notes: editNotes } : b))
-        setSelected(prev => prev ? { ...prev, notes: editNotes } : prev)
-      }
-    } finally {
-      setNotesSaving(false)
-    }
-  }
+  // openBooking, startReschedule, saveReschedule, updateStatus,
+  // emettreFactureManuelle, saveNotes, et les états qui les entourent
+  // (selected, updating, editNotes, notesSaving, rescheduling, editDate,
+  // editTime, rescheduleSaving, rescheduleErr, clotureDemandee,
+  // factureEnCours, factureMsg) viennent maintenant de `useRendezVousFiche`
+  // (voir plus haut) — extraits pendant la passe 7, sous-lot 2, pour être
+  // partagés avec l'agenda v2. Comportement inchangé.
 
   function goBack() {
     if (view === 'month') setCurrent(new Date(current.getFullYear(), current.getMonth() - 1, 1))

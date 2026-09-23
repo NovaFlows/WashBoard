@@ -659,40 +659,31 @@
     Google). **Non vérifié** : un compte non-`grandfathered` en plan
     Essentiel (la ligne « Équipe » afficherait « Pro », jamais testé en
     conditions réelles) ; l'installation réelle de la PWA sur un appareil.
-- [~] **Passe 7 — Agenda, sous-lot 1/3 (au moins)**, 2026-09-23. Écrit par un
-      agent `refonte` dédié, **en attente de relecture/commit par
-      l'orchestrateur** (l'agent ne commite jamais). `CalendrierDashboard.tsx`
-      (1727 lignes) est le plus gros fichier du dépôt — le plan de vol
-      annonçait « au moins trois passes », ce sous-lot est la première.
+- [~] **Passe 7 — Agenda, sous-lots 1 et 2 sur (au moins) 3**, 2026-09-23.
+      Écrite par deux agents `refonte` dédiés (un par sous-lot, contexte neuf
+      à chaque fois — voir plus bas « Comment les passes ont été menées »),
+      **en attente de relecture/commit par l'orchestrateur** (l'agent ne
+      commite jamais). `CalendrierDashboard.tsx` (1727 lignes avant cette
+      passe) est le plus gros fichier du dépôt — le plan de vol annonçait
+      « au moins trois passes », ce sous-lot 2 est la deuxième.
   - **Découpe en 3 sous-lots** (décidée en lisant le fichier réel et
     `project/Agenda.dc.html`, pas devinée à l'avance) :
-    1. *(fait ici)* Branchement v1/v2 + la liste du jour en LECTURE SEULE :
+    1. *(fait)* Branchement v1/v2 + la liste du jour en LECTURE SEULE :
        bandeau de 7 jours, cartes de rendez-vous, temps de route estimé entre
        deux jobs, créneaux libres notables, résumé de bas de journée. Ouvrir
-       un rendez-vous montre une fiche v2, mais sans aucune action.
-    2. *(pas fait)* Rendre la fiche de rendez-vous ACTIONNABLE : changer de
-       statut, reprogrammer, écrire une note, émettre une facture — toute
-       l'interaction qui vit aujourd'hui dans `CalendrierDashboardV1.tsx`
-       (state `selected` + `updateStatus`/`saveReschedule`/`saveNotes`/
-       `emettreFactureManuelle`, ~400 lignes, fortement couplées à la liste
-       complète des rendez-vous et des congés pour les vérifications de
-       chevauchement). Premier travail : décider si ça s'extrait en
-       composant partagé entre v1 et v2 (même logique, présentation qui
-       diverge) ou si v2 réécrit sa propre version — comparer avant d'écrire.
-       Inclut aussi le lien de notification `?rdv=<id>` (`page.tsx`,
-       `AujourdhuiWidget.tsx`, `ProchainsRdvWidget.tsx`) : un laveur qui
-       touche « Nouvelle réservation » depuis son téléphone doit atterrir
-       directement sur ce rendez-vous — géré par v1, **pas encore par v2**,
-       repéré en construisant ce sous-lot, pas corrigé (plus pertinent pour
-       la PWA que pour le site, puisque c'est elle qui reçoit les
-       notifications).
+       un rendez-vous montrait une fiche v2, mais sans aucune action.
+    2. *(fait ici)* Fiche de rendez-vous ACTIONNABLE : changer de statut,
+       reprogrammer, écrire une note, émettre une facture, plus le lien de
+       notification `?rdv=<id>` réparé côté v2 — voir le compte rendu détaillé
+       ci-dessous.
     3. *(pas fait)* RDV manuel (le « + » de la maquette) et congés/
        indisponibilités — aucun des deux n'apparaît sur l'artboard
        `Agenda.dc.html` (pas de bouton « + » visible dans le HTML exporté, pas
        d'indicateur de congé) : la maquette ne couvre pas ces deux flux sur cet
        écran précis, donc rien à construire à l'identique d'elle. Les
        construire en v2 correctement (feuilles dédiées, jetons v2) est un
-       sous-lot à part entière.
+       sous-lot à part entière. Le menu latéral (Sidebar) reste le filet de
+       secours pour ces deux flux tant que ce sous-lot n'est pas fait.
   - **Nouveaux fichiers** : `CalendrierDashboardV1.tsx` (copie du dernier
     commit avant cette passe, deux extractions de logique pure près — voir
     plus bas), `CalendrierDashboardV2.tsx` (l'agenda du jour).
@@ -748,6 +739,116 @@
     que par la logique/les tests, pas par une capture qui les montre à
     l'écran), la lisibilité au soleil, le poids réel d'une agenda très
     chargée (30+ rendez-vous un jour donné, jamais simulé).
+  - **Sous-lot 2 — fiche actionnable + lien de notification**, 2026-09-23.
+    Écrit par un second agent `refonte`, sur la base du sous-lot 1 livré et
+    commité entretemps par l'orchestrateur.
+    - **Logique partagée, extraite en hook plutôt que dupliquée** :
+      `src/hooks/useRendezVousFiche.ts` (nouveau) reprend tel quel l'état
+      `selected` et les fonctions `openBooking`/`startReschedule`/
+      `saveReschedule`/`updateStatus`/`emettreFactureManuelle`/`saveNotes`
+      qui vivaient dans `CalendrierDashboardV1.tsx` (~250 lignes retirées de
+      ce fichier) — comportement inchangé, mêmes requêtes, mêmes conditions,
+      mêmes messages d'erreur. `CalendrierDashboardV1.tsx` et
+      `CalendrierDashboardV2.tsx` appellent tous les deux ce hook avec leurs
+      propres `bookings`/`unavailabilities`/`teamSize` ; seule la
+      présentation (le JSX) diverge. Choix fait après avoir comparé les deux
+      options prévues par le sous-lot 1 (composant partagé vs réécriture v2) :
+      un **hook** plutôt qu'un composant, parce que la présentation change
+      complètement de forme entre v1 (modale centrée, boutons Gmail/WhatsApp
+      avec message pré-rempli) et v2 (feuille qui monte du bas, boutons
+      Appeler/Message en liens `tel:`/`sms:` simples) — rien à mutualiser côté
+      JSX, seulement l'état et les appels réseau.
+    - **`ConfirmerClotureV2.tsx`** (nouveau) — même logique que
+      `ConfirmerCloture.tsx` (`doitDemanderConfirmation`, inchangée), habillé
+      avec les jetons v2 : seule pièce dupliquée de ce sous-lot, en
+      présentation pure, pour la même raison que `ClientProfileModalV1`/`V2`
+      divergent sur les statuts (aucune source commune de styles entre les
+      deux langages visuels).
+    - **Lien de notification `?rdv=<id>` réparé côté v2** : un second effet
+      `useSearchParams`/`useRef`, propre à `CalendrierDashboardV2.tsx` (pas
+      dans le hook partagé — il doit aussi positionner `dayDate`, ce qui
+      diffère de la navigation mois/semaine/jour de v1). Contrairement à v1
+      (préservé à l'identique, voir plus bas), il appelle `openBooking(rdv)`
+      plutôt que d'écrire l'état sélectionné directement : la note existante
+      est donc bien pré-remplie dans le champ éditable dès l'arrivée par ce
+      lien, ce que v1 ne fait pas (voir juste en dessous) — code neuf, sans
+      contrainte de non-régression, autant qu'il n'ait pas ce défaut.
+    - **Quirk préexistant de v1 repéré et délibérément PAS corrigé** : le
+      chemin `?rdv=` de `CalendrierDashboardV1.tsx` appelait déjà
+      `setSelected(rdv)` directement (pas la fonction `openBooking`), donc le
+      champ notes s'ouvre vide même si le rendez-vous a une note enregistrée,
+      tant que la fiche n'a pas été refermée puis rouverte à la main. Vérifié
+      en conditions réelles pendant cette passe (capture `10-site-notification-
+      rdv.png`, voir plus bas) : le comportement est identique à avant
+      l'extraction, seulement relocalisé dans le hook. Corrigé pour v2, pas
+      pour v1 : le site doit rester identique pixel et comportement pour
+      point, un correctif de bug est un chantier `dev` séparé, pas cette
+      passe.
+    - **Fiche v2, ce qui devient actionnable** : point+statut, nom, date/heure
+      avec un lien « Modifier » qui bascule sur un formulaire date+heure
+      inline (Enregistrer en accent plein, Annuler en filet) ; notes internes
+      en `<textarea>` éditable (`onBlur` enregistre, identique à v1) ; boutons
+      Confirmer/Marquer terminé/Annuler (masqués une fois le rendez-vous
+      Terminé ou Annulé, mêmes règles qu'en v1, y compris le cas « en attente »
+      qui autorise de passer direct à Terminé) ; fenêtre de confirmation avant
+      clôture tardive (`ConfirmerClotureV2`) ; bouton Émettre la facture /
+      lien de téléchargement une fois Terminé, avec le message d'erreur et le
+      lien « Compléter mes informations » (pointant vers
+      `/dashboard/parametres/tout#facturation`, la route filet-de-secours de
+      la passe 6 — `/dashboard/parametres` seul, en v2, n'a plus le formulaire
+      de facturation).
+    - **Pas construit dans ce sous-lot, par choix de conception, pas oubli** :
+      les boutons Gmail/WhatsApp de v1 qui pré-remplissent un message
+      (`openGmail`/`openWhatsapp`, `lib/contact.ts`) n'ont pas d'équivalent en
+      v2 — `ClientProfileModalV2.tsx` (passe 3) avait déjà tranché ce point
+      pour la fiche client avec de simples liens `tel:`/`sms:`, repris ici à
+      l'identique pour la cohérence entre les deux fiches v2.
+    - **Couleurs** : aucune couleur en dur — jetons `--v2-color-vert`/`-rouge`/
+      `-accent`/`-ambre`, vérifiés dans `globals.css` avant usage : ces quatre
+      jetons ne sont PAS redéfinis dans le bloc sombre (seuls fond/surface/
+      encre/gris le sont), donc une même valeur hexadécimale sert de couleur
+      de texte/bordure dans les deux thèmes sans risque de contraste inversé
+      (contrairement à `--v2-color-encre`, écarté pour un fond plein + texte
+      blanc — bon en clair, imbuvable en sombre où `encre` devient presque
+      blanc). `color-mix()` envisagé puis abandonné pour les fonds teintés de
+      `ConfirmerClotureV2` (support navigateur incertain sur un Android
+      ancien, aucun précédent dans le projet) : remplacé par des `rgba()`
+      fixes.
+    - **Vérifié** (compte de test `novaflows.pro@gmail.com`, plan
+      grandfathered, un vrai rendez-vous confirmé du jour) : `tsc` (0 erreur),
+      `eslint` sur l'ensemble du projet (35 avertissements avant cette passe
+      → 36 après, +1 exactement — le même avertissement
+      `react-hooks/set-state-in-effect` que celui déjà accepté sur le chemin
+      `?rdv=` de v1, cette fois sur son équivalent v2, mesuré par comparaison
+      avant/après avec `git stash`), `vitest run --coverage` (1013/1013,
+      inchangé — le hook et `ConfirmerClotureV2` sont des fichiers React,
+      hors du périmètre mesuré par `vitest.config.ts`, `src/lib` +
+      `src/app/api` uniquement, même convention que les autres hooks du
+      projet), `next build` propre (`/dashboard/calendrier` toujours listée).
+      Capture Playwright (contournements `display-mode`/cookie `theme` déjà
+      documentés, session réutilisée depuis `e2e/auth.setup.ts`) : site clair/
+      sombre (grille mois, identique à avant, non modifiée), PWA clair/sombre
+      (liste + fiche ouverte), fiche avec la note en cours d'enregistrement,
+      formulaire de reprogrammation ouvert, et le lien `?rdv=<id>` capturé des
+      **deux côtés** (site et PWA) sur le même vrai rendez-vous — 10 captures
+      au total. La capture côté site confirme au passage le quirk décrit
+      plus haut (notes vides malgré une note enregistrée). Note de test posée
+      puis retirée par appel direct à l'API après la capture, pour ne rien
+      laisser sur la donnée réelle du compte de test.
+    - **Non vérifié, signalé plutôt qu'approximé** : les boutons Confirmer/
+      Marquer terminé/Annuler et Émettre la facture n'ont pas été cliqués
+      pendant la vérification (le seul rendez-vous disponible sur le compte
+      de test est un vrai enregistrement encore utile aux passes suivantes ;
+      cliquer « Marquer terminé » y aurait déclenché une émission de facture
+      réelle) — la logique elle-même n'a pas changé de comportement (extraite
+      telle quelle de `CalendrierDashboardV1.tsx`, déjà exercée par ce
+      dernier), mais le câblage JSX précis de ces quatre boutons en v2 n'a été
+      vérifié que par lecture de code et par le rendu visuel, pas par un clic
+      réel de bout en bout. Aussi non vérifié : l'installation réelle de la
+      PWA sur un appareil, le rendu avec un rendez-vous professionnel (aucun
+      dans les données de test disponibles), une erreur réseau pendant une
+      des quatre actions (simulable seulement avec des outils de coupure
+      réseau, pas testé), la lisibilité au soleil.
 - [ ] Passe 8 : Aujourd'hui, en dernier. Voir le plan de vol.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le

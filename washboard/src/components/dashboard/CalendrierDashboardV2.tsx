@@ -1,50 +1,57 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Mail, Phone, X } from 'lucide-react'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
+import { doitDemanderConfirmation } from '@/lib/cloture'
+import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
+import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
 // d'Alexandre, 2026-09-22 : le site reste v1 sans exception). Passe 7 de la
-// refonte 2026, sous-lot 1 sur (au moins) trois — voir le compte rendu de la
-// passe pour le découpage complet et ce qui reste.
+// refonte 2026, sous-lot 2 sur (au moins) trois — voir le compte rendu de la
+// passe pour le découpage complet et ce qui reste (sous-lot 3 : RDV manuel,
+// congés).
 //
 // Planche `project/Agenda.dc.html` : une journée à la fois (bandeau de 7
 // jours en haut, pas de bascule mois/semaine/jour comme en v1), une ligne de
 // temps verticale, le temps de route estimé entre deux jobs, un résumé en
-// bas de journée. C'est une FORME totalement différente de la grille
-// mois/semaine/jour de v1 : usePwaStandalone() plutôt qu'une classe CSS, même
-// raisonnement que ClientsView.tsx / ClientProfileModal.tsx.
+// bas de journée. Chaque carte de rendez-vous pointe vers `Fiche.dc.html`
+// dans la maquette — le même artboard que la fiche client, réutilisé comme
+// lien de prototype plutôt qu'un artboard dédié à la fiche de rendez-vous
+// actionnable : aucune référence de maquette ne couvre les actions
+// (statut/reprogrammation/note/facture) construites dans ce sous-lot. Elles
+// suivent donc les conventions déjà établies ailleurs en v2 (feuille,
+// boutons Appeler/Message de ClientProfileModalV2.tsx, « point plein + le
+// mot » pour les statuts), pas une maquette précise à reproduire au pixel.
 //
 // Logique réutilisée telle quelle, jamais dupliquée : `cleStatut` et le
 // calcul « km → minutes de trajet » viennent de `@/lib/calendarLayout` et
-// `@/lib/geo` (extraits de CalendrierDashboardV1.tsx pendant cette passe,
-// comportement inchangé — voir les tests). `Booking`/`CalendrierProps`
-// viennent aussi de CalendrierDashboardV1.tsx : une seule définition de la
-// forme des données envoyées par `calendrier/page.tsx`.
+// `@/lib/geo`. `Booking`/`CalendrierProps` viennent de
+// CalendrierDashboardV1.tsx : une seule définition de la forme des données
+// envoyées par `calendrier/page.tsx`. Les quatre actions de la fiche
+// (changer de statut, reprogrammer, écrire une note, émettre une facture)
+// viennent de `useRendezVousFiche` (`src/hooks/useRendezVousFiche.ts`),
+// extrait de CalendrierDashboardV1.tsx pendant ce sous-lot pour que v1 ET v2
+// la partagent au lieu d'en dupliquer ~400 lignes fortement couplées à la
+// liste complète des rendez-vous et des congés — voir ce fichier pour le
+// détail. `ConfirmerClotureV2.tsx` est la seule pièce dupliquée (présentation
+// pure, même logique `doitDemanderConfirmation`), pour les mêmes raisons que
+// `ClientProfileModalV1`/`V2` divergent sur les statuts : aucune source
+// commune de styles entre les deux langages visuels.
 //
-// **Ce que ce sous-lot NE fait PAS** (voir le compte rendu de la passe pour
-// le détail et pourquoi) :
+// **Ce que ce sous-lot NE fait PAS** (reporté au sous-lot 3, voir TODO.md) :
 //   - Pas de création de rendez-vous manuel (le « + » de la maquette), pas de
 //     congés/indisponibilités : la maquette ne montre ni l'un ni l'autre sur
 //     cet écran, et les construire correctement en v2 (feuilles dédiées,
 //     jetons v2) est un sous-lot à part entière — v1 (le site) garde ces deux
 //     fonctions intactes, et un laveur PWA-bêta peut toujours les faire
 //     depuis le menu latéral (Sidebar) en attendant.
-//   - La fiche ouverte en tapant un rendez-vous est EN LECTURE SEULE (nom,
-//     horaire, prestation, prix, adresse, contact, statut). Changer le
-//     statut, reprogrammer, écrire une note ou émettre une facture depuis
-//     l'agenda v2 n'est pas encore construit — cette interaction existe
-//     intégralement dans CalendrierDashboardV1.tsx (state `selected` et les
-//     fonctions `updateStatus`/`saveReschedule`/`saveNotes`/
-//     `emettreFactureManuelle`), fortement couplée à la liste complète des
-//     rendez-vous et des congés : l'extraire proprement en composant partagé
-//     est le premier chantier du sous-lot suivant plutôt qu'un copier-coller
-//     à la hâte qui aurait dupliqué ~400 lignes de logique d'état.
 //   - Pas de bouton « Proposer » sur un créneau libre (la maquette en montre
 //     un) : rien dans le code ne sait proposer un créneau à un client
 //     (aucune table, aucune route). Le créneau libre s'affiche donc en
@@ -125,10 +132,48 @@ function trajetEntre(a: Booking, b: Booking): Trajet {
   return { minutes: estimateTravelMinutes(km), km }
 }
 
-export default function CalendrierDashboardV2({ bookings }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities, teamSize, facturationPrete }: CalendrierProps) {
   const [today] = useState(() => new Date())
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
-  const [detail, setDetail] = useState<Booking | null>(null)
+  const [bookings, setBookings] = useState(initialBookings)
+
+  // Fiche de rendez-vous actionnable (statut, reprogrammation, note,
+  // facture) — partagée avec CalendrierDashboardV1.tsx, voir le grand
+  // commentaire en tête de fichier et `useRendezVousFiche`.
+  const {
+    selected, setSelected, openBooking,
+    updating,
+    editNotes, setEditNotes, notesSaving, saveNotes,
+    rescheduling, setRescheduling, startReschedule,
+    editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
+    updateStatus,
+    clotureDemandee, setClotureDemandee,
+    factureEnCours, factureMsg, emettreFactureManuelle,
+  } = useRendezVousFiche({ bookings, setBookings, unavailabilities, teamSize })
+
+  // Arrivée depuis une notification : `?rdv=<id>` ouvre la fiche tout de
+  // suite, positionnée sur le bon jour — même besoin que
+  // CalendrierDashboardV1.tsx (voir son commentaire sur ce même mécanisme),
+  // mais propre à cet écran : l'agenda v2 n'affiche qu'un seul jour à la
+  // fois, pas de mois/semaine à recaler. Contrairement à v1 (préservé à
+  // l'identique, y compris son comportement existant sur ce point precis),
+  // on appelle `openBooking` plutôt que d'écrire directement `setSelected` :
+  // la note existante est donc bien pré-remplie dans le champ éditable dès
+  // l'arrivée par ce lien — ce code est nouveau, sans contrainte de
+  // non-régression, alors autant qu'il n'ait pas ce défaut.
+  const searchParams = useSearchParams()
+  const rdvParam = searchParams.get('rdv')
+  const rdvApplique = useRef(false)
+
+  useEffect(() => {
+    if (rdvApplique.current || !rdvParam) return
+    const rdv = bookings.find(b => b.id === rdvParam)
+    if (!rdv) return
+    rdvApplique.current = true
+    const d = new Date(rdv.scheduled_at)
+    setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
+    openBooking(rdv)
+  }, [rdvParam, bookings, openBooking])
 
   const weekStart = useMemo(() => getWeekStart(dayDate), [dayDate])
   const weekDays = useMemo(
@@ -250,7 +295,7 @@ export default function CalendrierDashboardV2({ bookings }: CalendrierProps) {
             const trajet = suivant ? trajetEntre(b, suivant) : null
             return (
               <div key={b.id}>
-                <RendezVousCarte booking={b} onOuvrir={() => setDetail(b)} estompe={cancelled} />
+                <RendezVousCarte booking={b} onOuvrir={() => openBooking(b)} estompe={cancelled} />
                 {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && (
                   <div className="flex items-center gap-3 py-1.5">
                     <span className={`w-10 shrink-0 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
@@ -294,7 +339,34 @@ export default function CalendrierDashboardV2({ bookings }: CalendrierProps) {
         </div>
       )}
 
-      {detail && <DetailRendezVous booking={detail} onClose={() => setDetail(null)} />}
+      {selected && (
+        <DetailRendezVous
+          booking={selected}
+          onClose={() => setSelected(null)}
+          updating={updating}
+          editNotes={editNotes}
+          setEditNotes={setEditNotes}
+          notesSaving={notesSaving}
+          saveNotes={saveNotes}
+          rescheduling={rescheduling}
+          setRescheduling={setRescheduling}
+          startReschedule={startReschedule}
+          editDate={editDate}
+          setEditDate={setEditDate}
+          editTime={editTime}
+          setEditTime={setEditTime}
+          rescheduleSaving={rescheduleSaving}
+          rescheduleErr={rescheduleErr}
+          saveReschedule={saveReschedule}
+          updateStatus={updateStatus}
+          clotureDemandee={clotureDemandee}
+          setClotureDemandee={setClotureDemandee}
+          facturationPrete={facturationPrete}
+          factureEnCours={factureEnCours}
+          factureMsg={factureMsg}
+          emettreFactureManuelle={emettreFactureManuelle}
+        />
+      )}
     </div>
   )
 }
@@ -332,14 +404,50 @@ function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; 
   )
 }
 
-// Fiche de rendez-vous en lecture seule — pas encore d'actions (statut,
-// reprogrammation, note, facture) : voir le grand commentaire en tête de
-// fichier pour pourquoi ce sous-lot s'arrête là. Même mécanique
-// d'accessibilité que ClientProfileModalV2.tsx (feuille qui monte du bas,
-// Échap, piège de focus, retour du focus, masque le bouton WhatsApp flottant).
+// Fiche de rendez-vous ACTIONNABLE — statut, reprogrammation, note, facture
+// (sous-lot 2 de la passe 7 ; sous-lot 1 l'avait laissée en lecture seule).
+// Même mécanique d'accessibilité que ClientProfileModalV2.tsx (feuille qui
+// monte du bas, Échap, piège de focus, retour du focus, masque le bouton
+// WhatsApp flottant).
 const SELECTEUR_FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
-function DetailRendezVous({ booking: b, onClose }: { booking: Booking; onClose: () => void }) {
+function DetailRendezVous({
+  booking: b,
+  onClose,
+  updating,
+  editNotes, setEditNotes, notesSaving, saveNotes,
+  rescheduling, setRescheduling, startReschedule,
+  editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
+  updateStatus,
+  clotureDemandee, setClotureDemandee,
+  facturationPrete,
+  factureEnCours, factureMsg, emettreFactureManuelle,
+}: {
+  booking: Booking
+  onClose: () => void
+  updating: boolean
+  editNotes: string
+  setEditNotes: (v: string) => void
+  notesSaving: boolean
+  saveNotes: () => void
+  rescheduling: boolean
+  setRescheduling: (v: boolean) => void
+  startReschedule: (b: Booking) => void
+  editDate: string
+  setEditDate: (v: string) => void
+  editTime: string
+  setEditTime: (v: string) => void
+  rescheduleSaving: boolean
+  rescheduleErr: string | null
+  saveReschedule: () => void
+  updateStatus: (id: string, status: string, closedLate?: boolean) => void
+  clotureDemandee: boolean
+  setClotureDemandee: (v: boolean) => void
+  facturationPrete: boolean
+  factureEnCours: boolean
+  factureMsg: { id: string; texte: string; completer: boolean } | null
+  emettreFactureManuelle: (id: string) => void
+}) {
   const [visible, setVisible] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
@@ -380,6 +488,10 @@ function DetailRendezVous({ booking: b, onClose }: { booking: Booking; onClose: 
 
   const prix = montant(b)
   const remise = b.is_smart_slot && Number(b.smart_discount) > 0
+  // Mêmes conditions que CalendrierDashboardV1.tsx : un rendez-vous
+  // annulé ou déjà terminé ne se reprogramme plus et ne change plus de
+  // statut.
+  const modifiable = b.status !== 'cancelled' && b.status !== 'done'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={`Rendez-vous de ${b.client_name}`}>
@@ -408,9 +520,64 @@ function DetailRendezVous({ booking: b, onClose }: { booking: Booking; onClose: 
               <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
             </span>
             <h2 className={`truncate text-[22px] ${titre}`}>{b.client_name}</h2>
-            <p className={`mt-1 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))}
-            </p>
+
+            {rescheduling ? (
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={e => setEditDate(e.target.value)}
+                    aria-label="Date du rendez-vous"
+                    className={`flex-1 h-11 px-3 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+                  />
+                  <input
+                    type="time"
+                    value={editTime}
+                    onChange={e => setEditTime(e.target.value)}
+                    aria-label="Heure du rendez-vous"
+                    className={`w-28 h-11 px-3 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+                  />
+                </div>
+                {rescheduleErr && (
+                  <p className={`text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{rescheduleErr}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveReschedule}
+                    disabled={rescheduleSaving}
+                    className={`flex-1 h-10 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-white disabled:opacity-50 transition-transform active:scale-[.97]`}
+                    style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+                  >
+                    {rescheduleSaving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRescheduling(false)}
+                    className={`px-4 h-10 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className={`mt-1 flex items-center justify-between gap-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                <span>
+                  {new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))}
+                </span>
+                {modifiable && (
+                  <button
+                    type="button"
+                    onClick={() => startReschedule(b)}
+                    className={`shrink-0 text-[12.5px] ${corpsFort}`}
+                    style={{ color: 'var(--v2-color-accent)' }}
+                  >
+                    Modifier
+                  </button>
+                )}
+              </p>
+            )}
           </div>
           <button
             ref={closeRef}
@@ -432,8 +599,106 @@ function DetailRendezVous({ booking: b, onClose }: { booking: Booking; onClose: 
 
           <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{b.address}</p>
 
-          {b.notes && (
-            <p className={`mt-3 text-[13px] ${corps} text-[color:var(--v2-color-gris)] whitespace-pre-wrap`}>{b.notes}</p>
+          <div className="mt-4">
+            <label htmlFor="rdv-notes" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              Notes internes
+            </label>
+            <textarea
+              id="rdv-notes"
+              value={editNotes}
+              onChange={e => setEditNotes(e.target.value)}
+              onBlur={saveNotes}
+              placeholder="Code portail, instructions particulières…"
+              rows={2}
+              className={`w-full rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3.5 py-2.5 text-[15px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40 resize-none`}
+            />
+            {notesSaving && (
+              <p className={`mt-1 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Enregistrement…</p>
+            )}
+          </div>
+
+          {modifiable && (
+            <div className="mt-5 flex gap-2.5">
+              {b.status === 'pending' && (
+                <button
+                  type="button"
+                  onClick={() => updateStatus(b.id, 'confirmed')}
+                  disabled={updating}
+                  className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
+                  style={{ borderColor: 'var(--v2-color-vert)', color: 'var(--v2-color-vert)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+                >
+                  Confirmer
+                </button>
+              )}
+              {/* Aussi sur un rendez-vous resté « en attente », même repli
+                  qu'en v1 : certains laveurs vont chez le client sans avoir
+                  confirmé dans l'app. */}
+              <button
+                type="button"
+                onClick={() => doitDemanderConfirmation(b, new Date()) ? setClotureDemandee(true) : updateStatus(b.id, 'done')}
+                disabled={updating}
+                className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
+                style={{ borderColor: 'var(--v2-color-accent)', color: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                {b.status === 'pending' ? 'Terminé' : 'Marquer terminé'}
+              </button>
+              <button
+                type="button"
+                onClick={() => updateStatus(b.id, 'cancelled')}
+                disabled={updating}
+                className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
+                style={{ borderColor: 'var(--v2-color-rouge)', color: 'var(--v2-color-rouge)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                Annuler
+              </button>
+            </div>
+          )}
+
+          {clotureDemandee && (
+            <ConfirmerClotureV2
+              clientName={b.client_name}
+              quand={`${new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
+              professionnel={!!b.is_professional}
+              facturationPrete={facturationPrete}
+              onFait={() => { setClotureDemandee(false); updateStatus(b.id, 'done', true) }}
+              onPasFait={() => { setClotureDemandee(false); updateStatus(b.id, 'cancelled') }}
+              onClose={() => setClotureDemandee(false)}
+            />
+          )}
+
+          {/* Facture : émise au passage en « Terminé », ou à la demande */}
+          {b.status === 'done' && (
+            <div className="mt-5">
+              {b.facture_numero ? (
+                <a
+                  href={`/api/bookings/${b.id}/pdf`}
+                  className={`flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
+                  style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+                >
+                  Télécharger la facture {b.facture_numero}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => emettreFactureManuelle(b.id)}
+                  disabled={factureEnCours}
+                  className={`flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-50 transition-transform active:scale-[.97]`}
+                  style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+                >
+                  {factureEnCours ? 'Émission…' : 'Émettre la facture'}
+                </button>
+              )}
+              {factureMsg?.id === b.id && (
+                <p className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-ambre)' }}>
+                  {factureMsg.texte}{' '}
+                  {factureMsg.completer && (
+                    <a href="/dashboard/parametres/tout#facturation" className={`${corpsFort} underline`}>
+                      Compléter mes informations
+                    </a>
+                  )}
+                </p>
+              )}
+            </div>
           )}
 
           <div className={`mt-5 space-y-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
