@@ -140,6 +140,16 @@ body.wb-hide-fab [data-wb-whatsapp-fab] {
   display: none;
 }
 
+/* Barre du bas de la PWA (refonte 2026) : la bulle WhatsApp flotte au même coin
+   et se poserait par-dessus l'onglet « Plus ». Elle est masquée tant que la
+   barre existe, par la barre elle-même. Le mécanisme `wb-hide-fab` ci-dessus
+   ne suffit pas : chaque panneau qui l'utilise le RETIRE à sa fermeture, y
+   compris quand c'est la barre qui l'avait posé — la bulle réapparaissait donc
+   après la première fiche fermée. */
+body:has(.wb-barre-bas-verre) [data-wb-whatsapp-fab] {
+  display: none;
+}
+
 /* ── Socle mobile (refonte 2026, passe 0) ──────────────────────────────────
    Ce qui sépare « un site dans un navigateur » d'une app installée. html et
    body sont communs à TOUT le site — dashboard, landing, blog, et le flux de
