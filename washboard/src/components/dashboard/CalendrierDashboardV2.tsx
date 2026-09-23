@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
+import MoisV2 from '@/components/dashboard/MoisV2'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
@@ -78,6 +79,17 @@ import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTa
 // `ProposerCreneauV2.tsx`, une feuille qui liste les clients du laveur et part
 // vers WhatsApp ou SMS avec un message déjà écrit — voir ce fichier pour le
 // détail (aucune table, aucune route, rien envoyé automatiquement).
+//
+// **Vue du mois (ajout du 2026-09-24, demande d'Alexandre, modèle : le
+// Calendrier d'Apple).** L'agenda garde son bandeau de 7 jours comme vue
+// d'arrivée ; la vue « mois » (`MoisV2.tsx`, défilement continu de mois en mois)
+// s'ouvre par-dessus, et toucher un jour y ramène l'agenda positionné sur cette
+// date. Deux entrées visibles en haut : le titre du mois (« Septembre ») et un
+// bouton grille à côté du « + ». Le lien `?rdv=` n'y touche pas : la vue mois ne
+// s'ouvre que sur un geste, l'agenda reste toujours la page d'arrivée.
+// L'agenda reste monté dessous (`inert` tant que la vue est ouverte) : rien de
+// ce qu'il tient — jour affiché, trajets déjà calculés — n'est perdu ni
+// recalculé au retour.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -142,6 +154,18 @@ function IconeRoute() {
   )
 }
 
+/** Grille d'un mois (bouton d'entrée de la vue du mois) : un cadre, un bandeau
+ *  en haut, deux colonnes et deux lignes. Se distingue de l'icône d'onglet
+ *  « Agenda » de la barre du bas (calendrier à anneaux). */
+function IconeMois() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3.5" y="4" width="17" height="16.5" rx="2.5" />
+      <path d="M3.5 9.5h17M9.2 9.5v11M14.8 9.5v11M3.5 15h17" />
+    </svg>
+  )
+}
+
 function IconeLieu() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
@@ -187,6 +211,9 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
   const [menuAjout, setMenuAjout] = useState(false)
+  // Vue d'arrivée = le bandeau de 7 jours (« semaine ») ; « mois » = la couche
+  // plein écran de `MoisV2.tsx`.
+  const [vue, setVue] = useState<'semaine' | 'mois'>('semaine')
   // Créneau libre en cours de proposition à un client — voir ProposerCreneauV2.tsx.
   const [creneauPropose, setCreneauPropose] = useState<{ debut: Date; fin: Date; ville: string | null } | null>(null)
 
@@ -320,24 +347,47 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     : dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })
 
   return (
+    <>
     <div
+      inert={vue === 'mois'}
       className={`max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className={`text-[21px] ${titre} capitalize`}>{MOIS[dayDate.getMonth()]}</h1>
+          {/* Le titre du mois ouvre la vue du mois : ce qu'on lit est aussi ce
+              qu'on touche (comme « ‹ Septembre » sur iPhone). Le bouton grille
+              à droite est l'entrée visible ; celle-ci est le raccourci pour qui
+              touche le mot. `-my-2 py-2` : cible de 44 px sans agrandir la
+              ligne. */}
+          <h1 className={`text-[21px] ${titre} capitalize`}>
+            <button type="button" onClick={() => setVue('mois')} aria-label={`${MOIS[dayDate.getMonth()]} : ouvrir la vue du mois`} className="-my-2 block py-2 text-left">
+              {MOIS[dayDate.getMonth()]}
+            </button>
+          </h1>
           <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1 capitalize`}>{sousTitre}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setMenuAjout(true)}
-          aria-label="Ajouter un rendez-vous ou bloquer une période"
-          aria-haspopup="dialog"
-          className="-mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.97]"
-          style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
-        >
-          <Plus size={22} strokeWidth={2.25} />
-        </button>
+        <div className="-mt-1 flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setVue('mois')}
+            aria-label="Voir le mois"
+            aria-haspopup="dialog"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]"
+            style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+          >
+            <IconeMois />
+          </button>
+          <button
+            type="button"
+            onClick={() => setMenuAjout(true)}
+            aria-label="Ajouter un rendez-vous ou bloquer une période"
+            aria-haspopup="dialog"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white transition-transform active:scale-[.97]"
+            style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+          >
+            <Plus size={22} strokeWidth={2.25} />
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -596,6 +646,25 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         />
       )}
     </div>
+
+    {vue === 'mois' && (
+      <MoisV2
+        jourAffiche={dayDate}
+        aujourdhui={today}
+        byDate={byDate}
+        getUnavail={getUnavail}
+        onFermer={() => setVue('semaine')}
+        onChoisir={d => {
+          setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
+          setVue('semaine')
+          // L'agenda a pu être défilé vers le bas (liste, congés à venir)
+          // avant l'ouverture du mois : on le ramène en haut pour que le jour
+          // choisi et son bandeau soient ce qu'on voit.
+          window.scrollTo({ top: 0 })
+        }}
+      />
+    )}
+    </>
   )
 }
 
