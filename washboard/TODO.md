@@ -659,7 +659,96 @@
     Google). **Non vérifié** : un compte non-`grandfathered` en plan
     Essentiel (la ligne « Équipe » afficherait « Pro », jamais testé en
     conditions réelles) ; l'installation réelle de la PWA sur un appareil.
-- [ ] Passes 7 à 8 : Agenda, Aujourd'hui en dernier. Voir le plan de vol.
+- [~] **Passe 7 — Agenda, sous-lot 1/3 (au moins)**, 2026-09-23. Écrit par un
+      agent `refonte` dédié, **en attente de relecture/commit par
+      l'orchestrateur** (l'agent ne commite jamais). `CalendrierDashboard.tsx`
+      (1727 lignes) est le plus gros fichier du dépôt — le plan de vol
+      annonçait « au moins trois passes », ce sous-lot est la première.
+  - **Découpe en 3 sous-lots** (décidée en lisant le fichier réel et
+    `project/Agenda.dc.html`, pas devinée à l'avance) :
+    1. *(fait ici)* Branchement v1/v2 + la liste du jour en LECTURE SEULE :
+       bandeau de 7 jours, cartes de rendez-vous, temps de route estimé entre
+       deux jobs, créneaux libres notables, résumé de bas de journée. Ouvrir
+       un rendez-vous montre une fiche v2, mais sans aucune action.
+    2. *(pas fait)* Rendre la fiche de rendez-vous ACTIONNABLE : changer de
+       statut, reprogrammer, écrire une note, émettre une facture — toute
+       l'interaction qui vit aujourd'hui dans `CalendrierDashboardV1.tsx`
+       (state `selected` + `updateStatus`/`saveReschedule`/`saveNotes`/
+       `emettreFactureManuelle`, ~400 lignes, fortement couplées à la liste
+       complète des rendez-vous et des congés pour les vérifications de
+       chevauchement). Premier travail : décider si ça s'extrait en
+       composant partagé entre v1 et v2 (même logique, présentation qui
+       diverge) ou si v2 réécrit sa propre version — comparer avant d'écrire.
+       Inclut aussi le lien de notification `?rdv=<id>` (`page.tsx`,
+       `AujourdhuiWidget.tsx`, `ProchainsRdvWidget.tsx`) : un laveur qui
+       touche « Nouvelle réservation » depuis son téléphone doit atterrir
+       directement sur ce rendez-vous — géré par v1, **pas encore par v2**,
+       repéré en construisant ce sous-lot, pas corrigé (plus pertinent pour
+       la PWA que pour le site, puisque c'est elle qui reçoit les
+       notifications).
+    3. *(pas fait)* RDV manuel (le « + » de la maquette) et congés/
+       indisponibilités — aucun des deux n'apparaît sur l'artboard
+       `Agenda.dc.html` (pas de bouton « + » visible dans le HTML exporté, pas
+       d'indicateur de congé) : la maquette ne couvre pas ces deux flux sur cet
+       écran précis, donc rien à construire à l'identique d'elle. Les
+       construire en v2 correctement (feuilles dédiées, jetons v2) est un
+       sous-lot à part entière.
+  - **Nouveaux fichiers** : `CalendrierDashboardV1.tsx` (copie du dernier
+    commit avant cette passe, deux extractions de logique pure près — voir
+    plus bas), `CalendrierDashboardV2.tsx` (l'agenda du jour).
+    `CalendrierDashboard.tsx` redevient un point de branchement
+    (`usePwaStandalone()`), même schéma que `ClientsView.tsx` — vérifié avant
+    d'écrire que c'était bien le cas « même URL qu'un écran v1 existant »
+    (`/dashboard/calendrier`, déjà le lien « Agenda » de `BarreBasV2.tsx`) et
+    pas une destination neuve comme Chiffres (passe 5).
+  - **Deux extractions de logique PURE, comportement inchangé** (préparent le
+    sous-lot 2 autant que ce sous-lot-ci) : `cleStatut` (« Délai dépassé »
+    plutôt que « Terminé » sur un rendez-vous clôturé en retard) déplacée de
+    `CalendrierDashboard.tsx` vers `@/lib/calendarLayout.ts` ; le calcul
+    « km → minutes de trajet à 60 km/h » (dupliqué deux fois dans
+    l'avertissement de faisabilité d'un rendez-vous manuel) déplacé vers
+    `@/lib/geo.ts` (`estimateTravelMinutes`). Les deux sont maintenant
+    importées par `CalendrierDashboardV1.tsx` (résultat identique à avant,
+    vérifié par des tests dédiés) et par `CalendrierDashboardV2.tsx` (qui les
+    réutilise pour son propre affichage plutôt que d'en garder une copie).
+    `Booking`/`CalendrierProps`/etc. exportés depuis `CalendrierDashboardV1.tsx`
+    pour la même raison (une seule définition de la forme des données
+    envoyées par `calendrier/page.tsx`).
+  - **Trois coupes assumées par rapport à la maquette, faute de logique
+    existante** (même réflexe qu'aux passes 5 et 6, signalées, pas
+    approximées) :
+    1. Pas de bouton « Proposer » sur un créneau libre — rien dans le code ne
+       sait proposer un créneau à un client (aucune table, aucune route).
+    2. Pas de nom de ville par rendez-vous (« Pessac », « Mérignac »...) —
+       `ClientProfileModalV2.tsx` avait déjà tranché cette question pour la
+       fiche client (« extraire une ville serait deviner un format qui n'est
+       pas garanti », l'adresse est un champ libre) : même règle reprise ici.
+    3. La ligne 2 de chaque carte montre catégorie·prestation (même repli que
+       le modal de détail v1), pas le véhicule/l'option que montre la
+       maquette au cas par cas (« Lavage complet · Tiguan »,
+       « 4 véhicules VO · sans eau ») — en déduire une règle de mise en forme
+       fiable pour chaque type de prestation n'est couvert par aucune
+       fonction existante.
+  - **Vérifié** (compte de test, plan grandfathered) : `tsc` (0 erreur),
+    `eslint` sur les 7 fichiers touchés (0 avertissement nouveau — le seul
+    avertissement de `CalendrierDashboardV1.tsx`, `set-state-in-effect` sur le
+    lien `?rdv=`, existait déjà avant cette passe), `vitest run --coverage`
+    (1013/1013, +7 tests pour les deux extractions, seuils respectés),
+    `next build` propre (`/dashboard/calendrier` listée). Capture Playwright
+    (contournements `display-mode`/cookie `theme` déjà documentés) : site
+    (grille mois, identique à avant) et PWA (agenda du jour) × clair × sombre,
+    4 captures. Zoom supplémentaire sur le bandeau de jours en sombre pour
+    vérifier que le jour actif (fond clair, texte foncé — inversion du
+    fond/encre standard du thème sombre, même mécanisme que le filtre actif
+    de `ClientsViewV2.tsx`) n'est pas illisible : correct à l'œil.
+    **Non vérifié** : l'installation réelle de la PWA sur un appareil, un
+    compte avec plusieurs rendez-vous le même jour à des adresses différentes
+    (le seul compte de test disponible n'avait qu'un rendez-vous le jour
+    capturé — le calcul de trajet et le créneau libre n'ont donc été vérifiés
+    que par la logique/les tests, pas par une capture qui les montre à
+    l'écran), la lisibilité au soleil, le poids réel d'une agenda très
+    chargée (30+ rendez-vous un jour donné, jamais simulé).
+- [ ] Passe 8 : Aujourd'hui, en dernier. Voir le plan de vol.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
