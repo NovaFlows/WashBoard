@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
+import { villeDepuisAdresse } from '@/lib/adresse'
 import { doitDemanderConfirmation } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
@@ -130,8 +131,47 @@ function prixAffiche(b: Booking): string {
  *  véhicule/l'option que montre la maquette au cas par cas : les déduire
  *  demanderait une règle de mise en forme différente pour chaque type de
  *  prestation, non couverte par une fonction existante. */
+// Icônes reprises telles quelles de la planche `project/Agenda.dc.html`
+// (mêmes tracés, mêmes épaisseurs) — la couleur passe par le jeton v2 plutôt
+// que par le gris codé en dur de la maquette, pour suivre le mode sombre.
+function IconeRoute() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+      <circle cx="6" cy="18.5" r="2.5" />
+      <circle cx="18" cy="5.5" r="2.5" />
+      <path d="M8.5 18.5h7a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7h6" />
+    </svg>
+  )
+}
+
+function IconeLieu() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.6" />
+    </svg>
+  )
+}
+
+/** Distance en kilomètres, à une décimale comme la maquette (« 9,2 km »). */
+function km(valeur: number): string {
+  return valeur.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+}
+
+/** Modèle(s) de véhicule saisis par le client à la réservation, s'il y en a —
+ *  même donnée que la fiche v1 et les emails (`vehicles_detail[].models`). */
+function modeleVehicule(b: Booking): string | null {
+  const modeles = (b.vehicles_detail ?? []).flatMap(v => (v.models ?? []).map(m => m.trim()).filter(Boolean))
+  if (modeles.length === 0) return null
+  return modeles.length === 1 ? modeles[0] : `${modeles[0]} +${modeles.length - 1}`
+}
+
 function lignePrestation(b: Booking): string {
   if (!b.services) return 'Prestation'
+  // Avec un modèle, il remplace la catégorie : « Lavage complet · Tiguan » dit
+  // plus au laveur que « Voiture · Lavage complet » (planche Agenda).
+  const modele = modeleVehicule(b)
+  if (modele) return `${b.services.name} · ${modele}`
   return b.services.service_categories?.name
     ? `${b.services.service_categories.name} · ${b.services.name}`
     : b.services.name
@@ -406,8 +446,9 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                       }}
                     />
                     {trajet && (
-                      <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                        ~{trajet.minutes} min de route · ~{Math.round(trajet.km)} km
+                      <span className={`flex items-center gap-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                        <IconeRoute />
+                        {trajet.minutes} min de route · {km(trajet.km)} km
                       </span>
                     )}
                   </div>
@@ -534,6 +575,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
 function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; onOuvrir: () => void; estompe: boolean }) {
   const statut = STATUT[cleStatut(b)]
+  const ville = villeDepuisAdresse(b.address)
   return (
     <div className="flex items-start gap-3">
       <div className="w-10 shrink-0 flex flex-col items-end pt-3 gap-0.5">
@@ -556,9 +598,21 @@ function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; 
           <span className={`shrink-0 text-[14.5px] ${corpsFort} tabular-nums`}>{prixAffiche(b)}</span>
         </span>
         <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{lignePrestation(b)}</span>
-        <span className="flex items-center gap-1.5 pt-0.5">
-          <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: statut.couleur }} aria-hidden />
-          <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
+        <span className="flex items-center justify-between gap-2 pt-0.5">
+          {/* La ville ne s'affiche que si l'adresse la donne sans ambiguïté
+              (voir `villeDepuisAdresse`) : sinon, rien plutôt qu'un lieu faux. */}
+          {ville
+            ? (
+              <span className={`flex min-w-0 items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                <IconeLieu />
+                <span className="truncate">{ville}</span>
+              </span>
+            )
+            : <span />}
+          <span className="flex shrink-0 items-center gap-1.5">
+            <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: statut.couleur }} aria-hidden />
+            <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
+          </span>
         </span>
       </button>
     </div>
