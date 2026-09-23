@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { WIDGETS, type WidgetKey } from '@/lib/dashboardWidgets'
+import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // « Personnaliser l'accueil », feuille v2 — planche `project/Personnaliser.dc.html`.
 // Passe 8 de la refonte 2026, réservée à la PWA installée (elle n'est ouverte
@@ -50,6 +51,8 @@ const REGLABLES = WIDGETS.filter(w => w.key !== 'today')
 export default function PersonnaliserV2({ visibles, onClose }: { visibles: WidgetKey[]; onClose: () => void }) {
   const router = useRouter()
   const feuilleRef = useRef<HTMLDivElement>(null)
+  useBloquerDefilement()
+  const glisser = useGlisserPourFermer(onClose)
   const closeRef = useRef<HTMLButtonElement>(null)
   const focusPrecedent = useRef<HTMLElement | null>(null)
   const [visible, setVisible] = useState(false)
@@ -178,7 +181,7 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
         aria-hidden
         tabIndex={-1}
         onClick={onClose}
-        className={`absolute inset-0 bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
+        className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
           visible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
@@ -188,9 +191,9 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
         className={`relative flex w-full max-h-[88dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
           visible ? 'translate-y-0 sm:scale-100 sm:opacity-100' : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
         }`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
+        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
-        <div className="flex justify-center pt-2.5 pb-1 sm:hidden" aria-hidden>
+        <div className="flex cursor-grab justify-center pt-2.5 pb-3 sm:hidden" aria-hidden {...glisser.poignee}>
           <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
         </div>
 
@@ -211,7 +214,7 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pt-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4">
           <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
             <p className={`text-[15px] ${corps}`}>Prochain rendez-vous et journée</p>
             <p className={`mt-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>

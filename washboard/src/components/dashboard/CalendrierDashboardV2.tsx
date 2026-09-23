@@ -16,6 +16,7 @@ import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
+import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -608,6 +609,8 @@ function DetailRendezVous({
   const [visible, setVisible] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
+  useBloquerDefilement()
+  const glisser = useGlisserPourFermer(onClose)
   const focusPrecedent = useRef<HTMLElement | null>(null)
   const statut = STATUT[cleStatut(b)]
 
@@ -656,7 +659,7 @@ function DetailRendezVous({
         aria-hidden
         tabIndex={-1}
         onClick={onClose}
-        className={`absolute inset-0 bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${visible ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${visible ? 'opacity-100' : 'opacity-0'}`}
         style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
       />
       <div
@@ -664,9 +667,9 @@ function DetailRendezVous({
         className={`relative flex w-full max-h-[88dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
           visible ? 'translate-y-0 sm:scale-100 sm:opacity-100' : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
         }`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
+        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
-        <div className="flex justify-center pt-2.5 pb-1 sm:hidden" aria-hidden>
+        <div className="flex cursor-grab justify-center pt-2.5 pb-3 sm:hidden" aria-hidden {...glisser.poignee}>
           <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
         </div>
 
@@ -746,7 +749,7 @@ function DetailRendezVous({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pt-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
           <div className={`flex items-center justify-between rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] px-3.5 py-3`}>
             <span className={`text-[14px] ${corps}`}>{lignePrestation(b)}</span>
             <span className={`text-[15px] ${corpsFort} tabular-nums`}>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Phone, Mail, MapPin } from 'lucide-react'
 import type { ClientBooking, ClientProfile } from '@/lib/clientProfile'
 import { FUSEAU } from '@/lib/dateUtils'
+import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
 // une carte centrée (ordinateur), réservée à la PWA installée en mode
@@ -74,6 +75,8 @@ export default function ClientProfileModalV2({
   const [visible, setVisible] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
+  useBloquerDefilement()
+  const glisser = useGlisserPourFermer(onClose)
   const focusPrecedent = useRef<HTMLElement | null>(null)
 
   // Entrée animée : un cran après le montage pour que le navigateur parte
@@ -161,7 +164,7 @@ export default function ClientProfileModalV2({
         aria-hidden
         tabIndex={-1}
         onClick={onClose}
-        className={`absolute inset-0 bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
+        className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
           visible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
@@ -174,9 +177,9 @@ export default function ClientProfileModalV2({
             ? 'translate-y-0 sm:scale-100 sm:opacity-100'
             : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
         }`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
+        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
-        <div className="flex justify-center pt-2.5 pb-1 sm:hidden" aria-hidden>
+        <div className="flex cursor-grab justify-center pt-2.5 pb-3 sm:hidden" aria-hidden {...glisser.poignee}>
           <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
         </div>
 
@@ -203,7 +206,7 @@ export default function ClientProfileModalV2({
         </div>
 
         <div
-          className="flex-1 overflow-y-auto px-5 pt-5"
+          className="flex-1 overflow-y-auto overscroll-contain px-5 pt-5"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
         >
           <dl className="grid grid-cols-3 gap-3">
