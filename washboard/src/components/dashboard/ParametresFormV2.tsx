@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { Washer } from '@/types'
 import { hasFeature, PLAN_LABELS } from '@/lib/plan'
 import { useTheme } from '@/components/ui/ThemeProvider'
+import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 
 // « Plus » — refonte 2026, passe 6. Présentation v2 de l'écran de réglages,
 // réservée à la PWA installée en mode standalone (voir ParametresForm.tsx, le
@@ -29,6 +30,16 @@ import { useTheme } from '@/components/ui/ThemeProvider'
 // `/dashboard/parametres`, qui affiche maintenant ce menu v2 en PWA. Signalé
 // dans le compte rendu de la passe : à répartir sur ses propres lignes du
 // menu au fur et à mesure que ces réglages ont leur écran v2 dédié.
+//
+// 2026-09-24 — l'en-tête (☰, titre, badge de plan, déconnexion, thème) et le
+// menu latéral disparaissent de la PWA en bêta (voir DashboardShell.tsx,
+// `wb-entete-beta` dans globals.css). « Plus » devient alors le SEUL chemin
+// vers ce que le menu donnait et que ni la barre du bas ni Chiffres
+// n'atteignent : le guide, l'ancien écran CRM (export Excel, liens par
+// réseau — sans le mot « CRM »), et pour l'équipe l'outil interne « Support »
+// avec son compteur. Le compteur de messages non lus de l'assistance, qui
+// vivait sur le ☰, est désormais porté par la ligne « Aide et assistance ».
+// Abonnement, apparence (thème) et déconnexion y étaient déjà.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -53,10 +64,27 @@ function Chevron() {
   )
 }
 
+// Messages non lus du canal d'assistance : point plein + le mot, jamais une
+// pastille colorée (tableau des tics d'IA, refonte.md). Même seuil de
+// troncature que UnreadCountBadge (« 9+ ») — un « 47 » n'apprend rien de plus
+// qu'un « beaucoup » à quelqu'un qui n'a pas ouvert ses messages. `null`/`0` :
+// rien ne s'affiche, jamais un « 0 non lu ».
+function NonLus({ count }: { count: number | null | undefined }) {
+  if (!count || count <= 0) return null
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[12.5px] ${corpsFort} shrink-0`} style={{ color: 'var(--v2-color-accent)' }}>
+      <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--v2-color-accent)' }} />
+      {count > 9 ? '9+' : count} non lu{count > 1 ? 's' : ''}
+    </span>
+  )
+}
+
 type LigneProps = {
   label: string
   valeur?: string | null
   sousLabel?: string
+  /** Signal à droite du libellé (ex. `NonLus`), avant le chevron. */
+  signal?: React.ReactNode
   href?: string
   onClick?: () => void
   chevron?: boolean
@@ -68,12 +96,13 @@ type LigneProps = {
 // dernière bascule sur place plutôt que de naviguer vers un écran qui
 // n'existe pas encore, déviation assumée par rapport à la maquette qui
 // pointe vers l'artboard de référence `Sombre.dc.html`).
-function Ligne({ label, valeur, sousLabel, href, onClick, chevron = true }: LigneProps) {
+function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true }: LigneProps) {
   const contenu = (
     <>
       <span className={`flex-1 text-[15px] ${corps}`}>{label}</span>
       {sousLabel && <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] shrink-0`}>{sousLabel}</span>}
       {valeur && <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] shrink-0`}>{valeur}</span>}
+      {signal}
       {chevron && <Chevron />}
     </>
   )
@@ -131,6 +160,10 @@ type Props = {
 
 export default function ParametresFormV2({ washer, servicesCount }: Props) {
   const { theme, setTheme } = useTheme()
+  // Signaux du canal d'assistance, interrogés une fois par DashboardShell (voir
+  // SupportBadgesContext) — ce sont eux que portait le menu latéral et le
+  // bouton ☰, disparus de la PWA en bêta.
+  const { estEquipeSupport, unreadSupportCount, unreadTeamCount } = useSupportBadges()
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const domaine = origin.replace(/^https?:\/\//, '')
   const lienReservation = `${domaine}/book/${washer.slug}`
@@ -218,6 +251,13 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
             valeur={canTeam ? `${washer.team_size} laveur${washer.team_size > 1 ? 's' : ''}` : 'Pro'}
             href="/dashboard/parametres/tout#profil"
           />
+          {/* Ancien écran « CRM » (`/dashboard/crm`), sans le mot : il porte
+              ce que Chiffres n'a pas repris — l'export Excel des réservations
+              (CrmDashboard) et les liens par réseau, avec le sélecteur de
+              période complet des statistiques de visite. Ligne ajoutée le
+              2026-09-24, quand le menu latéral (seule entrée vers cette page)
+              a disparu de la PWA en bêta. */}
+          <Ligne label="Export et liens par réseau" href="/dashboard/crm" />
         </CarteListe>
       </div>
 
@@ -261,7 +301,14 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             chevron={false}
           />
-          <Ligne label="Aide et assistance" href="/dashboard/assistance" />
+          {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
+              menu latéral (et par un lien discret dans l'assistance). */}
+          <Ligne label="Guide d’utilisation" href="/dashboard/guide" />
+          <Ligne
+            label="Aide et assistance"
+            href="/dashboard/assistance"
+            signal={<NonLus count={unreadSupportCount} />}
+          />
           <form action="/api/auth/logout" method="POST" className="flex items-center min-h-[46px] py-1.5">
             <button type="submit" className={`text-[15px] ${corps} text-left`} style={{ color: 'var(--v2-color-rouge)' }}>
               Déconnexion
@@ -269,6 +316,25 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
           </form>
         </CarteListe>
       </div>
+
+      {/* Réservé à l'équipe, jamais deviné côté client (voir
+          useEstEquipeSupport : la valeur vient du serveur). Séparé de « Mon
+          compte » comme l'était « Outil interne » dans le menu latéral — on
+          doit comprendre d'un coup d'œil que ce n'est pas une fonction du
+          produit. Le compteur est celui des laveurs qui attendent une réponse,
+          distinct de celui d'« Aide et assistance » au-dessus. */}
+      {estEquipeSupport && (
+        <div>
+          <TitreSection>Outil interne</TitreSection>
+          <CarteListe>
+            <Ligne
+              label="Support (équipe)"
+              href="/dashboard/support"
+              signal={<NonLus count={unreadTeamCount} />}
+            />
+          </CarteListe>
+        </div>
+      )}
 
       {/* Filet de secours (voir le commentaire en tête de fichier) : email,
           mot de passe, notifications, accès support, zone de danger. */}

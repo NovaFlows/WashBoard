@@ -57,7 +57,12 @@ export default async function SupportPage() {
   // cas, DashboardShell passe simplement en mode dégradé.
   const { data: washer, error: washerError } = await supabase
     .from('washers')
-    .select('name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at')
+    // `*` et non une liste de colonnes : `beta_refonte` doit rester lisible ici
+    // pour que la PWA en bêta garde sa barre du bas sur cette page (sans elle,
+    // le châssis retomberait sur l'en-tête et le menu, retirés du bêta), et une
+    // liste nommée casserait tant que la colonne n'existe pas en base — même
+    // règle que guide/assistance (refonte 2026, passe 4).
+    .select('*')
     .eq('user_id', user.id)
     .maybeSingle()
   if (washerError) {
@@ -73,6 +78,7 @@ export default async function SupportPage() {
       grandfathered={washer?.grandfathered ?? false}
       stripeSubscriptionId={washer?.stripe_subscription_id ?? null}
       cancelsAt={washer?.cancels_at ?? null}
+      betaRefonte={washer?.beta_refonte}
     >
       <h1 className="text-2xl font-black text-slate-900 dark:text-white">Support</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-6">

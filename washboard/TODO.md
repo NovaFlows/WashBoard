@@ -1030,6 +1030,77 @@
     appareil disponible). L'ouverture réelle de WhatsApp/l'app SMS avec le
     texte prérempli (les liens `wa.me`/`sms:` n'ont pas été cliqués jusqu'au
     bout, pour ne rien envoyer). Appareil réel, lecteur d'écran.
+- [~] **Ajout hors sous-lot — vue du mois dans l'agenda (PWA)**, 2026-09-24.
+      Demande d'Alexandre, modèle : le Calendrier d'Apple sur iPhone, vue du
+      mois — « on change de mois en scrollant, on peut choisir une date et ça
+      se met sur la semaine avec la vue actuelle ; on arrive sur la semaine
+      mais il faut pouvoir accéder à la vue mois ».
+      **En attente de relecture/commit par l'orchestrateur.**
+  - **Nouveaux fichiers** : `MoisV2.tsx` (la vue), `src/lib/vueMois.ts` +
+    `vueMois.test.ts` (calculs purs : plage de mois, semaines d'un mois,
+    comptage des rendez-vous actifs par jour, points sous un numéro — 19
+    tests). Modifié : `CalendrierDashboardV2.tsx` uniquement (v1 et tous les
+    autres écrans intouchés — la vue n'existe pas sur le site).
+  - **Comportement** : le bouton grille (à gauche du « + ») ou le titre du mois
+    ouvrent une couche plein écran (`fixed`, sous la barre du bas, sous le menu
+    latéral) qui se cale sur le mois du jour affiché. Défilement continu de
+    12 mois avant à 24 mois après le mois courant ; titre du mois aligné sur la colonne du 1er
+    (comme sur iPhone), année ajoutée hors de l'année en cours ; initiales L M
+    M J V S D + « ‹ Semaine » + « Aujourd'hui » dans un en-tête collant en
+    verre (voile de la couleur de fond + flou : seul élément translucide, la
+    grille est sur papier opaque). Aujourd'hui = rond plein accent, jour affiché
+    dans l'agenda = rond encre (même convention que le bandeau de 7 jours),
+    week-ends en gris. Toucher un jour ferme la vue, place l'agenda sur ce jour
+    et le remonte en haut de page ; « ‹ Semaine » et Échap ferment sans
+    choisir. `?rdv=` n'est pas touché : la vue ne s'ouvre que sur un geste.
+  - **Indicateurs** : un point encre par rendez-vous non annulé (`compterActifs
+    ParJour`, sur le `byDate` déjà tenu par l'agenda) jusqu'à 3, puis 3 points
+    et un « + » (un chiffre exact ne tient pas dans 55 px à côté des points, et
+    le détail est un tap plus loin) ; un point ambre pour un congé (même
+    convention que le bandeau de 7 jours, via `getUnavail`). Aucun chargement
+    supplémentaire.
+  - **Coût, mesuré** (Playwright, Chromium headless, `next dev` — donc PLUS
+    LENT qu'en production ; ordre de grandeur seulement) : ouverture de la vue
+    entre le tap et la deuxième frame. Première version (37 mois rendus d'un
+    coup, `content-visibility: auto` par bloc) : ~120–325 ms sans limitation
+    CPU, ~2 000 ms avec CPU ×4. `content-visibility` seul n'y changeait rien
+    (le coût est le rendu React de ~1 100 boutons, pas la mise en page). Version
+    livrée : chaque mois est un bloc à hauteur exacte (titre + semaines × 60 px)
+    dont le contenu n'est rendu que lorsqu'il approche de l'écran
+    (IntersectionObserver, un écran d'avance) ou est voisin du mois cible :
+    ~50 ms sans limitation, ~150–450 ms en CPU ×4 ; 245 boutons montés à
+    l'ouverture au lieu de 1 126. `content-visibility: auto` est gardé en
+    complément pour les mois déjà rendus et dépassés (défilement long — non
+    mesuré).
+  - **Indépendance vis-à-vis de l'en-tête d'appli** : la vue est en `fixed`, son
+    en-tête colle au haut de l'écran quoi qu'il y ait dessus ; l'agenda, lui,
+    garde son `-mt-6 pt-6` — capturé avec `header{display:none}` : le titre
+    reste à 24 px du haut, rien ne dépend de la barre. Le manifeste est en
+    `statusBarStyle: "default"` : pas de recouvrement de la barre d'état, donc
+    pas de marge d'encoche à ajouter en haut (un `env(safe-area-inset-top)` est
+    quand même posé sur l'en-tête de la vue, à 0 aujourd'hui).
+  - **Vérifié** : `tsc` 0 erreur ; `eslint` sur les 4 fichiers (0 erreur, 1
+    avertissement `set-state-in-effect` préexistant sur `?rdv=`) ; `vitest run
+    --coverage` 88 fichiers / 1 061 tests verts ; Playwright PWA émulée
+    390×844 clair et sombre (agenda avec le nouveau bouton, vue ouverte sur
+    septembre 2026 avec rendez-vous le 24 et congé le 26, mois suivant, saut
+    lointain puis « Aujourd'hui », choix du 29 → agenda sur mardi 29, réouverture
+    avec le 29 en rond encre, retour et Échap) + 1280×800 clair + agenda sans
+    en-tête ; site 1280 px : aucun bouton « Voir le mois ». Aucune donnée créée,
+    modifiée ni supprimée.
+  - **Non vérifié** : le geste de défilement sur un vrai téléphone (fluidité,
+    élan, arrivée sur un bloc pas encore rendu en défilement très rapide : un
+    vide d'une frame est possible, le rendu se fait un écran d'avance mais pas
+    plus) ; le rendu en verre de l'en-tête sur un Android ancien
+    (`backdrop-filter`) ; le texte agrandi par le système (hauteurs de ligne
+    fixes en px) ; `inert` sur iOS Safari (supporté depuis 15.5) ; le bouton Retour d'Android : il quitte l'agenda au lieu de fermer
+    la vue (pas d'entrée d'historique — à décider : `pushState` interfère avec
+    le routeur de Next, non tenté) ; lecteur d'écran.
+  - **Constat hors périmètre** : les feuilles de l'agenda (`Feuille`,
+    `DetailRendezVous`) retirent `wb-hide-fab` du `<body>` à leur fermeture, ce
+    qui, d'après le code (non vérifié à l'écran), réaffiche le bouton WhatsApp
+    par-dessus la barre du bas dans la PWA bêta
+    tant qu'on ne recharge pas la page — la vue du mois n'y touche donc pas.
 - [x] **Passe 8 — « Aujourd'hui » en v2**, 2026-09-23. Écrite par un agent
       `refonte`, relue et commitée par l'orchestrateur. Dernière passe du plan
       de vol.
@@ -1120,6 +1191,95 @@
     châssis en bas d'écran — même comportement qu'à la passe 7, le corriger
     proprement toucherait `DashboardShell` et tous les écrans encore en v1.
 
+
+- [x] **Retrait de l'en-tête et du menu latéral dans la PWA en bêta**,
+      2026-09-24. Demande d'Alexandre : « Supprime le header, on est en mode
+      vraiment ressembler à une app. » Écrit par un agent `refonte`, **non
+      commité, rendu vérifié par relecture seulement** (voir plus bas).
+  - **Condition** : la même que la barre du bas — PWA installée
+    (`html.wb-pwa`) ET `washer.beta_refonte`. **Site (mobile et ordinateur) et
+    PWA sans bêta : en-tête et menu inchangés d'un iota** (les classes ajoutées
+    ne s'activent que sous `html.wb-pwa`).
+  - **Mécanisme : CSS, pas le hook.** Contrairement à la barre du bas (un ajout,
+    un flash accepté), un en-tête qui apparaît puis disparaît au montage
+    provoquerait un saut de mise en page. `DashboardShell` pose donc
+    `wb-entete-beta` sur le `<header>` dès que le serveur sait que le laveur est
+    dans le bêta, et `wb-entete-barre` sur la rangée ☰ / « WashBoard » / badge de
+    plan / déconnexion / thème ; `globals.css` (bloc juste sous la convention
+    `wb-pwa`) masque la rangée et rend au `<header>` un rôle de simple bloc en
+    flux normal (plus collant, sans fond ni filet). Zéro flash. Le `Sidebar`,
+    lui, n'est plus monté quand `showBarreBas` (il était fermé hors écran, mais
+    ses liens restaient focalisables au clavier).
+  - **Bandeaux conservés** : `TrialBanner` (fin d'essai, essai expiré, carte
+    enregistrée, résiliation programmée — l'information commerciale) et
+    `AppBetaBanner` restent dans le `<header>`, donc visibles, en haut de page,
+    en flux normal (ils défilent avec la page au lieu de rester collés).
+    Aucun changement de composant ni d'état : pas de remontage.
+  - **Compteur de messages non lus** : il ne peut plus être sur un ☰ (il n'y en
+    a plus dans ce mode). Il est porté par la ligne **« Aide et assistance »**
+    de « Plus » (point plein + « 3 non lus », `9+` au-delà), et celui de
+    l'équipe par la ligne **« Support (équipe) »**. Nouveau
+    `SupportBadgesContext.tsx` : `DashboardShell` continue d'interroger
+    `/api/support/non-lues`, `/non-lues-equipe` et `/est-equipe` une seule fois
+    par page et redistribue le résultat — aucune requête ajoutée.
+    **Contrepartie assumée** : le signal n'est plus visible d'un coup d'œil
+    depuis n'importe quel écran ; il faut ouvrir « Plus ». Piste si c'est trop
+    discret : un point sur l'onglet « Plus » de la barre du bas (fichier
+    `BarreBasV2.tsx`, un `unreadSupportCount` de plus) — non fait, à arbitrer.
+  - **Ce que le menu latéral donnait vs ce qui est atteignable maintenant**,
+    page par page (les 14 pages de `app/(dashboard)/dashboard/`, vérifiées une
+    à une dans le code, pas de mémoire) :
+    | Page | Avant (PWA bêta) | Maintenant |
+    |---|---|---|
+    | `/dashboard` | menu « Tableau de bord » | barre du bas › Aujourd'hui |
+    | `/dashboard/calendrier` | menu « Calendrier » | barre du bas › Agenda |
+    | `/dashboard/clients` | menu « Clients » | barre du bas › Clients |
+    | `/dashboard/chiffres` | barre du bas | barre du bas › Chiffres |
+    | `/dashboard/compta` | menu « Comptabilité » | Chiffres › Argent (lien « + Ajouter un frais », `ChiffresArgent.tsx` — la compta entière n'a pas d'autre entrée, mais c'est l'entrée existante depuis la passe 5) |
+    | `/dashboard/factures` | menu « Factures » | Chiffres › Argent (ligne « Factures · N émises ») |
+    | `/dashboard/crm` | menu « CRM » | **« Plus » › De temps en temps › « Export et liens par réseau » (ajouté)** |
+    | `/dashboard/guide` | menu « Guide » | **« Plus » › Mon compte › « Guide d'utilisation » (ajouté)** ; aussi le lien du bandeau d'annonce |
+    | `/dashboard/assistance` | menu « Assistance » + compteur | « Plus » › Mon compte › « Aide et assistance » + compteur (existait, compteur ajouté) |
+    | `/dashboard/abonnement` | menu + badge de plan du ☰ + bandeaux | « Plus » › Mon compte › « Abonnement » (affiche déjà le plan) ; liens des bandeaux |
+    | `/dashboard/parametres` | menu « Paramètres » | barre du bas › Plus |
+    | `/dashboard/parametres/tout` | via Paramètres | « Plus » › « Tous les réglages » (email, mot de passe, notifications, accès support, zone de danger) |
+    | `/dashboard/admin` | accueil, Paramètres | « Plus » › Une fois (prestations, horaires, zone, apparence de ma page) |
+    | `/dashboard/support` | menu « Support (équipe) » — équipe seulement | **« Plus » › Outil interne › « Support (équipe) » + compteur (ajouté), visible uniquement si `/api/support/est-equipe` confirme** |
+    Aussi disparus avec l'en-tête, déjà dans « Plus » : déconnexion, thème
+    (« Apparence »), badge de plan (ligne « Abonnement »). **Non repris** : les
+    icônes Instagram / TikTok du pied de menu (liens externes, pas des pages).
+  - **Corrigé au passage** : `/dashboard/support` ne transmettait pas
+    `betaRefonte` au châssis (son `select` nommait ses colonnes) — la barre du
+    bas y aurait disparu et l'en-tête serait revenu. Passé à `select('*')`
+    (même règle que guide/assistance, passe 4) + `betaRefonte` transmis.
+  - **Haut de page** : `main` garde `pt-6`. `layout.tsx` déclare
+    `appleWebApp.statusBarStyle: "default"` : sur iOS le contenu commence sous
+    la barre d'état opaque (`safe-area-inset-top` vaut 0), aucune réserve à
+    ajouter. Les quatre écrans v2 qui se calent sur l'ancien en-tête
+    (`-mt-6` : Accueil, Agenda, Clients, Chiffres) restent corrects — leur fond
+    papier remonte simplement jusqu'en haut de l'écran et leur `pt-6` donne
+    24 px d'air. **Non modifiés.**
+  - **À signaler, non traité** : (1) `CrmDashboard.tsx` (v1, inchangé) affiche
+    toujours un titre « CRM » : un laveur qui ouvre « Export et liens par
+    réseau » le voit. Le changer touche le site, donc arbitrage d'Alexandre —
+    piste : `usePwaStandalone()` dans ce seul titre. (2) `themeColor` de
+    `layout.tsx` reste `#ffffff` / sombre : sans en-tête blanc dessous, la barre
+    d'état Android peut jurer avec le fond papier `#F6F5F3` des écrans v2 (à
+    voir sur un vrai téléphone ; le changer ici modifierait aussi la couleur du
+    navigateur sur le site). (3) `AppBetaBanner` (« Recevez vos réservations en
+    notification ») s'affiche dans la PWA déjà installée, où l'annonce est
+    presque sans objet — gardé à la demande, à reconsidérer. (4) Les écrans
+    encore en v1 sous le châssis (Compta, Factures, Guide, Assistance...)
+    gardent le fond `slate-50` du châssis, pas le papier.
+  - **Vérifié** : `tsc` 0 erreur · `eslint` sur les 5 fichiers touchés 0
+    avertissement · `vitest run` 1061/1061 (88 fichiers). **NON vérifié** :
+    aucun rendu — ni `next build`, ni serveur de dev, ni Playwright (un autre
+    agent travaillait dans le même dossier `.next`). À faire : 4 captures
+    (site / PWA émulée × clair / sombre) sur `/dashboard`, `/dashboard/parametres`
+    et une page à bandeau (compte en essai) ; vérifier que le site est
+    strictement identique ; qu'un compte en essai voit bien son bandeau sans
+    en-tête ; que « Plus » affiche « Support (équipe) » pour un membre de
+    l'équipe et rien pour un laveur ; le compteur sur un vrai fil non lu.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
+import { SupportBadgesContext } from './SupportBadgesContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
@@ -278,9 +279,10 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const showBarreBas = isPwa && !!betaRefonte
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
-  // (Sidebar) et le bouton ☰ juste en dessous, qui doivent montrer le même
-  // nombre — sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
-  // jamais le compteur.
+  // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
+  // nombre, sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
+  // jamais le compteur — et, dans la PWA en bêta où ni l'un ni l'autre
+  // n'existe plus, l'écran « Plus » (via SupportBadgesContext).
   const unreadSupportCount = useSupportUnreadBadge()
   // Pendant équipe : nombre de messages de laveurs non lus par l'équipe.
   // Appelé pour tout compte (voir useSupportUnreadTeamBadge) — silencieux et
@@ -292,6 +294,10 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Chiffre unique affiché sur le bouton ☰ : la somme des deux compteurs,
   // voir `libelleBoutonMenu` juste au-dessus pour le pourquoi.
   const menuBadgeCount = (unreadSupportCount ?? 0) + (unreadTeamCount ?? 0)
+  const supportBadges = useMemo(
+    () => ({ estEquipeSupport, unreadSupportCount, unreadTeamCount }),
+    [estEquipeSupport, unreadSupportCount, unreadTeamCount],
+  )
 
   // Socle mobile (refonte 2026, passe 0) : pose sur <body> la classe qui
   // neutralise le rebond de défilement (voir globals.css,
@@ -317,27 +323,39 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden wb-dashboard-shell">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        unreadSupportCount={unreadSupportCount}
-        estEquipeSupport={estEquipeSupport}
-        unreadTeamCount={unreadTeamCount}
-      />
+      {/* Menu latéral : retiré dans la PWA en bêta (refonte 2026, 2026-09-24),
+          où le bouton ☰ qui l'ouvre a disparu avec l'en-tête — le laisser
+          monté offrirait des liens focalisables au clavier sur un tiroir que
+          rien ne peut ouvrir. Tout ce qu'il donnait reste atteignable : les
+          5 destinations de la barre du bas, et « Plus » pour le reste (guide,
+          export et liens par réseau, assistance, abonnement, réglages, et
+          l'outil interne de l'équipe). Liste vérifiée page par page dans
+          TODO.md. Site et PWA sans bêta : inchangé, le menu reste monté. */}
+      {!showBarreBas && (
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          unreadSupportCount={unreadSupportCount}
+          estEquipeSupport={estEquipeSupport}
+          unreadTeamCount={unreadTeamCount}
+        />
+      )}
 
-      {/* Filet de secours volontaire (refonte 2026, passe 4) : le menu
-          latéral ci-dessus n'est JAMAIS caché ni retiré quand la barre du bas
-          s'affiche — c'est elle qui s'ajoute, pas l'inverse. Tant que les
-          passes 5 et 6 (Chiffres, Plus) ne sont pas faites, plusieurs pages
-          du dashboard (CRM, Factures, Guide, Assistance...) ne sont
-          atteignables que par ce menu. Voir le compte rendu de la passe pour
-          la liste vérifiée. */}
       {showBarreBas && <BarreBasV2 />}
 
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+      {/* En-tête. Dans la PWA en bêta, la classe `wb-entete-beta` (posée dès
+          que le serveur sait que le laveur est dans le bêta) le réduit, par
+          CSS et sans flash, à ses seuls bandeaux : la rangée ☰ / titre /
+          badge de plan / déconnexion / thème (`wb-entete-barre`) est masquée,
+          et le bloc perd son statut collant, son fond et son filet — voir
+          globals.css. Les bandeaux (fin d'essai, paiement, résiliation,
+          annonce) restent : information commerciale, ils ne sont jamais
+          retirés. Ailleurs (site, PWA sans bêta), aucune de ces règles ne
+          s'applique et l'en-tête est identique à celui d'avant. */}
+      <header className={`bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10${betaRefonte ? ' wb-entete-beta' : ''}`}>
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
         <AppBetaBanner />
-        <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+        <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -414,7 +432,9 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         // sur les deux classes Tailwind quand la barre est affichée.
         style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 16px + env(safe-area-inset-bottom, 0px))' } : undefined}
       >
-        {children}
+        <SupportBadgesContext.Provider value={supportBadges}>
+          {children}
+        </SupportBadgesContext.Provider>
       </main>
 
       <footer className="max-w-3xl mx-auto px-3 sm:px-4 pb-6 text-center">

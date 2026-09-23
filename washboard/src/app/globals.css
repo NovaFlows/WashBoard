@@ -235,11 +235,37 @@ body.wb-dashboard-active {
      `usePwaStandalone()` (src/hooks/usePwaStandalone.ts). Un flash v1→v2
      bref au montage y est accepté (mêmes contraintes que ThemeToggle /
      NotificationsToggle, aucun équivalent serveur possible ici).
-   Aucun sélecteur n'utilise encore `wb-pwa` à ce jour (les deux premiers
-   écrans passés en v2, Clients et la fiche client, ont une structure trop
-   différente de la v1 pour du CSS seul — voir ClientsView.tsx et
-   ClientProfileModal.tsx). Prêt pour la prochaine passe qui n'aurait besoin
-   que de couleurs. */
+   Premier usage réel (2026-09-24) : l'en-tête du tableau de bord disparaît
+   dans la PWA en bêta (voir le bloc `wb-entete-beta` juste en dessous). Les
+   écrans Clients et fiche client, eux, ont une structure trop différente de
+   la v1 pour du CSS seul — voir ClientsView.tsx et ClientProfileModal.tsx. */
+
+/* ── En-tête du tableau de bord — retiré dans la PWA en bêta ──────────────
+   Demande d'Alexandre (2026-09-24) : « supprime le header, on est en mode
+   vraiment ressembler à une app ». DashboardShell pose `wb-entete-beta` sur
+   le <header> quand `washer.beta_refonte` est vrai (connu du serveur), et
+   `wb-entete-barre` sur la rangée ☰ / WashBoard / badge de plan /
+   déconnexion / thème. Sans la classe `wb-pwa` (site, PWA sans bêta) rien
+   de tout ça ne s'applique : l'en-tête est exactement celui d'avant.
+
+   Pourquoi du CSS plutôt que le hook `usePwaStandalone()` : la classe existe
+   avant la première peinture, donc aucun flash « en-tête puis plus
+   d'en-tête » — un saut de mise en page bien plus visible que celui d'un
+   simple ajout de barre en bas.
+
+   Ce qui RESTE dans le <header> : les bandeaux TrialBanner (fin d'essai,
+   paiement en retard, résiliation) et AppBetaBanner. Ils ne sont pas retirés
+   (information commerciale) ; le <header> perd seulement son statut « collant »,
+   son fond et son filet : il devient un simple bloc en flux normal en haut de
+   page, et vide (hauteur nulle) quand aucun bandeau n'a rien à dire. */
+html.wb-pwa .wb-entete-beta {
+  position: static;
+  background: transparent;
+  border-bottom-width: 0;
+}
+html.wb-pwa .wb-entete-beta .wb-entete-barre {
+  display: none;
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants

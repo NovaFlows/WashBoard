@@ -6,11 +6,13 @@ import { usePathname } from 'next/navigation'
 
 // Barre du bas de la refonte 2026 (passe 4) — n'apparaît QUE dans la PWA
 // installée, quand `washer.beta_refonte` est vrai (voir DashboardShell.tsx,
-// qui décide des deux conditions et rend ce composant). Elle s'AJOUTE au menu
-// latéral (Sidebar), elle ne le remplace pas : le bouton ☰ reste dans
-// l'en-tête, filet de secours tant que les passes 5 et 6 (Chiffres, Plus) ne
-// sont pas faites — voir le compte rendu de la passe pour le détail du bug
-// (six pages orphelines) qui a motivé cette règle.
+// qui décide des deux conditions et rend ce composant). Depuis le 2026-09-24
+// elle REMPLACE le menu latéral et l'en-tête (☰, titre, badge de plan,
+// déconnexion, thème) dans ce mode : les passes 5 et 6 (Chiffres, Plus) ont
+// livré, et « Plus » porte désormais tout ce que le menu donnait — voir
+// ParametresFormV2.tsx. Avant ce retrait (passes 4 à 7), le ☰ restait le
+// filet de secours, à cause du bug des six pages orphelines de la première
+// version du CRM.
 //
 // Les 5 destinations de la maquette (`project/Main.dc.html`, nav du bas) —
 // Aujourd'hui · Agenda · Clients · Chiffres · Plus — n'ont pas toutes une
