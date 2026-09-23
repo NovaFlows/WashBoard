@@ -3,6 +3,7 @@
 import { ChevronRight } from 'lucide-react'
 import { Feuille, corpsFort, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { applicationsItineraire, detecterPlateforme } from '@/lib/itineraire'
+import { LogoApplication } from '@/components/dashboard/LogosItineraire'
 
 // « Ouvrir l'itinéraire avec… » — feuille du bas de l'accueil v2 (PWA). Demande
 // d'Alexandre, 2026-09-24 : Plans, Waze ou Google Maps selon le téléphone, sans
@@ -30,10 +31,13 @@ export default function ChoixItineraireV2({ adresse, onClose }: { adresse: strin
               target="_blank"
               rel="noopener noreferrer"
               onClick={onClose}
-              className={`flex min-h-[52px] items-center justify-between gap-3 px-4 text-[16px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-colors active:bg-[color:var(--v2-filet)]`}
+              className={`flex min-h-[60px] items-center gap-3.5 px-4 text-[16px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-colors active:bg-[color:var(--v2-filet)]`}
               style={PRESSION}
             >
-              {app.nom}
+              <span className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[9px]">
+                <LogoApplication application={app.id} />
+              </span>
+              <span className="flex-1">{app.nom}</span>
               <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />
             </a>
           </li>
