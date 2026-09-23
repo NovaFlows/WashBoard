@@ -2,21 +2,26 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Mail, Phone, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
+import { toDateStr } from '@/lib/dateUtils'
 import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
 import { doitDemanderConfirmation } from '@/lib/cloture'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
+import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
+import { useConges } from '@/hooks/useConges'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
+import { Feuille } from '@/components/dashboard/FeuilleV2'
+import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
+import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
 // d'Alexandre, 2026-09-22 : le site reste v1 sans exception). Passe 7 de la
-// refonte 2026, sous-lot 2 sur (au moins) trois — voir le compte rendu de la
-// passe pour le découpage complet et ce qui reste (sous-lot 3 : RDV manuel,
-// congés).
+// refonte 2026, sous-lot 3 sur 3 — voir le compte rendu de la passe pour le
+// découpage complet.
 //
 // Planche `project/Agenda.dc.html` : une journée à la fois (bandeau de 7
 // jours en haut, pas de bascule mois/semaine/jour comme en v1), une ligne de
@@ -45,13 +50,25 @@ import type { Booking, CalendrierProps } from '@/components/dashboard/Calendrier
 // `ClientProfileModalV1`/`V2` divergent sur les statuts : aucune source
 // commune de styles entre les deux langages visuels.
 //
-// **Ce que ce sous-lot NE fait PAS** (reporté au sous-lot 3, voir TODO.md) :
-//   - Pas de création de rendez-vous manuel (le « + » de la maquette), pas de
-//     congés/indisponibilités : la maquette ne montre ni l'un ni l'autre sur
-//     cet écran, et les construire correctement en v2 (feuilles dédiées,
-//     jetons v2) est un sous-lot à part entière — v1 (le site) garde ces deux
-//     fonctions intactes, et un laveur PWA-bêta peut toujours les faire
-//     depuis le menu latéral (Sidebar) en attendant.
+// **Sous-lot 3 : rendez-vous manuel et congés.** Ni l'un ni l'autre n'est sur
+// l'artboard `Agenda.dc.html` ; construits avec les conventions v2 déjà
+// posées. La logique vient de `useRendezVousManuel` et `useConges`
+// (`src/hooks/`), extraits de CalendrierDashboardV1.tsx comme
+// `useRendezVousFiche` l'avait été au sous-lot 2 ; la présentation vit dans
+// `FeuilleV2.tsx` (feuille du bas générique), `RendezVousManuelV2.tsx` et
+// `CongesV2.tsx`.
+//   - Entrée unique : un « + » en haut à droite, à côté du titre. Pas de
+//     bouton flottant en bas : la barre de navigation du bas (BarreBasV2) et
+//     le bouton WhatsApp l'occupent déjà, un troisième objet flottant y
+//     serait touché par erreur. Le « + » ouvre une feuille à deux choix
+//     (nouveau rendez-vous / bloquer une période) : un seul point d'entrée à
+//     retenir, un tap de plus pour l'action la plus fréquente, mais rien à
+//     deviner. Les deux actions se préremplissent avec le jour affiché.
+//   - Congés : un bandeau en tête du jour concerné (avec Supprimer), un point
+//     sous le jour dans le bandeau des 7 jours, et une liste « Congés à venir »
+//     en bas d'écran pour tout voir sans feuilleter les semaines.
+//
+// **Ce que ce sous-lot ne fait pas** :
 //   - Pas de bouton « Proposer » sur un créneau libre (la maquette en montre
 //     un) : rien dans le code ne sait proposer un créneau à un client
 //     (aucune table, aucune route). Le créneau libre s'affiche donc en
@@ -132,10 +149,41 @@ function trajetEntre(a: Booking, b: Booking): Trajet {
   return { minutes: estimateTravelMinutes(km), km }
 }
 
-export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities, teamSize, facturationPrete }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete }: CalendrierProps) {
   const [today] = useState(() => new Date())
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
+  const [menuAjout, setMenuAjout] = useState(false)
+
+  // Congés — partagés avec CalendrierDashboardV1.tsx via `useConges`. Ils
+  // possèdent l'état `unavails`, lu ensuite par les deux autres hooks pour
+  // le calcul de capacité.
+  const {
+    unavails,
+    addModal, setAddModal,
+    delModal, setDelModal,
+    uSaving,
+    getUnavail, openAddModal, isFullyUnavailable, saveUnavail, deleteUnavail,
+  } = useConges({ initialUnavailabilities, teamSize })
+
+  // Rendez-vous manuel — partagé avec CalendrierDashboardV1.tsx via
+  // `useRendezVousManuel`. `onCree` place l'agenda sur le jour du rendez-vous
+  // qu'on vient de créer : sans ça, créer un rendez-vous pour un autre jour
+  // que celui affiché ne montrerait rien de changé.
+  const {
+    manualModal, setManualModal,
+    manualSaving, manualErr,
+    feasibilityWarn, setFeasibilityWarn,
+    setOverrideFeasibility,
+    openManualModal, updateManual, submitManualBooking,
+    serviceTypes,
+  } = useRendezVousManuel({
+    bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId,
+    onCree: b => {
+      const d = new Date(b.scheduled_at)
+      setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
+    },
+  })
 
   // Fiche de rendez-vous actionnable (statut, reprogrammation, note,
   // facture) — partagée avec CalendrierDashboardV1.tsx, voir le grand
@@ -149,7 +197,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     updateStatus,
     clotureDemandee, setClotureDemandee,
     factureEnCours, factureMsg, emettreFactureManuelle,
-  } = useRendezVousFiche({ bookings, setBookings, unavailabilities, teamSize })
+  } = useRendezVousFiche({ bookings, setBookings, unavailabilities: unavails, teamSize })
 
   // Arrivée depuis une notification : `?rdv=<id>` ouvre la fiche tout de
   // suite, positionnée sur le bon jour — même besoin que
@@ -211,6 +259,13 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   }, [actifs])
   const totalPrix = useMemo(() => actifs.reduce((s, b) => s + montant(b), 0), [actifs])
 
+  const congeDuJour = getUnavail(dayDate)
+  const auJourdhui = toDateStr(today)
+  const congesAVenir = useMemo(
+    () => unavails.filter(u => u.end_date >= auJourdhui).sort((a, b) => a.start_date.localeCompare(b.start_date)),
+    [unavails, auJourdhui],
+  )
+
   function allerSemaine(delta: number) {
     setDayDate(d => { const n = new Date(d); n.setDate(n.getDate() + delta * 7); return n })
   }
@@ -224,9 +279,21 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     <div
       className={`max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
-      <div>
-        <h1 className={`text-[21px] ${titre} capitalize`}>{MOIS[dayDate.getMonth()]}</h1>
-        <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1 capitalize`}>{sousTitre}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className={`text-[21px] ${titre} capitalize`}>{MOIS[dayDate.getMonth()]}</h1>
+          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1 capitalize`}>{sousTitre}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMenuAjout(true)}
+          aria-label="Ajouter un rendez-vous ou bloquer une période"
+          aria-haspopup="dialog"
+          className="-mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.97]"
+          style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+        >
+          <Plus size={22} strokeWidth={2.25} />
+        </button>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -242,14 +309,15 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           {weekDays.map((d, i) => {
             const actif = d.getFullYear() === dayDate.getFullYear() && d.getMonth() === dayDate.getMonth() && d.getDate() === dayDate.getDate()
             const estJourReel = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+            const enConge = getUnavail(d) !== null
             return (
               <button
                 key={dayKey(d)}
                 type="button"
                 onClick={() => setDayDate(d)}
                 aria-current={actif ? 'date' : undefined}
-                aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                className={`flex h-14 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] ${
+                aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
+                className={`relative flex h-14 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] ${
                   actif ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]' : 'text-[color:var(--v2-color-encre)]'
                 }`}
               >
@@ -257,6 +325,13 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 <span className={`text-[16px] ${corpsFort} tabular-nums ${!actif && estJourReel ? 'text-[color:var(--v2-color-accent)]' : ''}`}>
                   {d.getDate()}
                 </span>
+                {enConge && (
+                  <span
+                    aria-hidden
+                    className="absolute bottom-[3px] h-[5px] w-[5px] rounded-full"
+                    style={{ background: actif ? 'var(--v2-color-surface)' : 'var(--v2-color-ambre)' }}
+                  />
+                )}
               </button>
             )
           })}
@@ -279,6 +354,15 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         >
           Revenir à aujourd’hui
         </button>
+      )}
+
+      {congeDuJour && (
+        <BandeauConge
+          conge={congeDuJour}
+          teamSize={teamSize}
+          complet={isFullyUnavailable(congeDuJour)}
+          onSupprimer={() => setDelModal(congeDuJour)}
+        />
       )}
 
       {jour.length === 0 ? (
@@ -337,6 +421,79 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           </span>
           <span className={`text-[14px] ${corpsFort} tabular-nums`}>{totalPrix} €</span>
         </div>
+      )}
+
+      <CongesAVenir
+        conges={congesAVenir}
+        teamSize={teamSize}
+        estComplet={isFullyUnavailable}
+        onOuvrir={setDelModal}
+      />
+
+      {menuAjout && (
+        <Feuille titre="Ajouter" onClose={() => setMenuAjout(false)}>
+          <ul>
+            <li>
+              <button
+                type="button"
+                onClick={() => { setMenuAjout(false); openManualModal(dayDate) }}
+                className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
+              >
+                <span className={`text-[16px] ${nom}`}>Nouveau rendez-vous</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Un client qui a appelé ou écrit</span>
+              </button>
+            </li>
+            <li className="border-t border-[color:var(--v2-filet)]">
+              <button
+                type="button"
+                onClick={() => { setMenuAjout(false); openAddModal(dayDate) }}
+                className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
+              >
+                <span className={`text-[16px] ${nom}`}>Bloquer une période</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Congés, formation, jour férié</span>
+              </button>
+            </li>
+          </ul>
+        </Feuille>
+      )}
+
+      {manualModal && (
+        <RendezVousManuelV2
+          form={manualModal}
+          setForm={setManualModal}
+          services={services}
+          serviceTypes={serviceTypes}
+          updateManual={updateManual}
+          saving={manualSaving}
+          err={manualErr}
+          feasibilityWarn={feasibilityWarn}
+          onAnnulerAvertissement={() => { setFeasibilityWarn(null); setOverrideFeasibility(false) }}
+          onConfirmerQuandMeme={() => { setOverrideFeasibility(true); submitManualBooking(true) }}
+          onSubmit={() => submitManualBooking()}
+          onClose={() => setManualModal(null)}
+        />
+      )}
+
+      {addModal && (
+        <FeuilleAjoutConge
+          form={addModal}
+          setForm={setAddModal}
+          teamSize={teamSize}
+          saving={uSaving}
+          onSave={saveUnavail}
+          onClose={() => setAddModal(null)}
+        />
+      )}
+
+      {delModal && (
+        <FeuilleSuppressionConge
+          conge={delModal}
+          teamSize={teamSize}
+          complet={isFullyUnavailable(delModal)}
+          saving={uSaving}
+          onDelete={deleteUnavail}
+          onClose={() => setDelModal(null)}
+        />
       )}
 
       {selected && (

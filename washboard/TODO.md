@@ -659,8 +659,8 @@
     Google). **Non vérifié** : un compte non-`grandfathered` en plan
     Essentiel (la ligne « Équipe » afficherait « Pro », jamais testé en
     conditions réelles) ; l'installation réelle de la PWA sur un appareil.
-- [~] **Passe 7 — Agenda, sous-lots 1 et 2 sur (au moins) 3**, 2026-09-23.
-      Écrite par deux agents `refonte` dédiés (un par sous-lot, contexte neuf
+- [~] **Passe 7 — Agenda, sous-lots 1, 2 et 3 sur 3**, 2026-09-23.
+      Écrite par trois agents `refonte` dédiés (un par sous-lot, contexte neuf
       à chaque fois — voir plus bas « Comment les passes ont été menées »),
       **en attente de relecture/commit par l'orchestrateur** (l'agent ne
       commite jamais). `CalendrierDashboard.tsx` (1727 lignes avant cette
@@ -676,8 +676,8 @@
        reprogrammer, écrire une note, émettre une facture, plus le lien de
        notification `?rdv=<id>` réparé côté v2 — voir le compte rendu détaillé
        ci-dessous.
-    3. *(pas fait)* RDV manuel (le « + » de la maquette) et congés/
-       indisponibilités — aucun des deux n'apparaît sur l'artboard
+    3. *(fait — voir « Sous-lot 3 » plus bas)* RDV manuel (le « + » de la
+       maquette) et congés/indisponibilités — aucun des deux n'apparaît sur l'artboard
        `Agenda.dc.html` (pas de bouton « + » visible dans le HTML exporté, pas
        d'indicateur de congé) : la maquette ne couvre pas ces deux flux sur cet
        écran précis, donc rien à construire à l'identique d'elle. Les
@@ -849,6 +849,111 @@
       dans les données de test disponibles), une erreur réseau pendant une
       des quatre actions (simulable seulement avec des outils de coupure
       réseau, pas testé), la lisibilité au soleil.
+  - **Sous-lot 3 — RDV manuel et congés en v2**, 2026-09-23. Écrit par un
+    troisième agent `refonte`, qui a repris l'extraction de logique laissée
+    inachevée (non commitée) par un agent interrompu — relue et vérifiée
+    avant usage, pas supposée correcte.
+    - **Deux hooks partagés, comportement du site strictement inchangé** :
+      `src/hooks/useRendezVousManuel.ts` (validation, capacité d'équipe
+      compte tenu des congés, avertissement de faisabilité du trajet,
+      création) et `src/hooks/useConges.ts` (lister, bloquer, supprimer).
+      Vérifié par comparaison mécanique (diff normalisé de l'indentation)
+      contre le fichier d'origine `git show HEAD:…/CalendrierDashboardV1.tsx` :
+      le corps des fonctions est identique, seule la variable `unavails`
+      devient le paramètre `unavailabilities`. Le JSX de V1 n'a pas été
+      touché. Une seule addition, pas un changement de comportement : un
+      paramètre facultatif `onCree` (rappel appelé une fois, après l'ajout du
+      rendez-vous à la liste) que V1 ne passe pas — l'agenda v2 s'en sert pour
+      se placer sur le jour du rendez-vous créé.
+    - **Preuve de non-régression du site** : mêmes scénarios rejoués sur le
+      site (v1) et la PWA (v2) — corps de la requête `POST /api/bookings`
+      identique octet pour octet entre les deux, mêmes messages (« Nom du
+      client requis », « Créneau complet — 1/1 laveur déjà occupé à cet
+      horaire », « Impossible — toute l'équipe est en congés ce jour-là »,
+      avertissement de faisabilité « RDV précédent se termine à 12:00 —
+      seulement 10 min d'écart… »), même séquence réseau pour les congés
+      (`POST` puis `DELETE /api/unavailabilities/<id>`).
+    - **Entrée dans l'agenda : un « + » en en-tête, à droite du titre**, qui
+      ouvre une feuille à deux choix (« Nouveau rendez-vous » / « Bloquer une
+      période »). Pourquoi pas un bouton flottant : la barre du bas
+      (`BarreBasV2`) et le bouton Support l'occupent déjà, un troisième objet
+      flottant y serait touché par erreur. Pourquoi une feuille à deux choix
+      plutôt que deux boutons : un seul point d'entrée à retenir ; coût
+      assumé : un tap de plus pour l'action la plus fréquente (le rendez-vous
+      manuel). Les deux formulaires se préremplissent avec le jour affiché.
+      Alternative écartée : « + » qui ouvre directement le rendez-vous, avec
+      les congés en lien discret — à rouvrir si les retours disent que le tap
+      en plus gêne.
+    - **Congés visibles** (« voir ») : bandeau en tête du jour concerné avec
+      « Supprimer » (période, motif, nombre de laveurs si équipe > 1), petit
+      point ambre sous le jour dans le bandeau des 7 jours, liste « Congés à
+      venir » en bas d'écran (une ligne par période, appui = feuille de
+      suppression). Poser : feuille « Bloquer une période » (dates, motifs
+      rapides ou libre, nombre de laveurs si équipe > 1) — mêmes champs que v1,
+      sans règle nouvelle.
+    - **Nouveaux fichiers** : `FeuilleV2.tsx` (feuille du bas générique + les
+      classes de champs/boutons partagées par les trois autres),
+      `RendezVousManuelV2.tsx`, `CongesV2.tsx`. `FeuilleV2` recopie la
+      mécanique de `DetailRendezVous` (Échap, piège de focus, retour du
+      focus, masque le bouton Support) plutôt que d'en extraire une base
+      commune : `DetailRendezVous` est livré et commité, y toucher aurait
+      mélangé refactorisation et fonctionnalité — à unifier quand une
+      quatrième feuille apparaîtra. Un formulaire ne se ferme pas d'un tap à
+      côté (mains mouillées, saisie perdue) : croix, « Annuler » ou Échap.
+    - **Lisibilité** : erreurs et avertissements en « point plein + le
+      mot », texte en encre, jamais en rouge/ambre : ces deux jetons ne sont
+      pas redéfinis en sombre et donnent ~2,3:1 (rouge) et ~3,3:1 (ambre) sur
+      `--v2-color-surface` sombre — sous le seuil pour du texte courant.
+      Bouton Supprimer : fond `--v2-color-rouge` + texte blanc (lisible dans
+      les deux thèmes).
+    - **Limites connues, non corrigées ici** :
+      1. L'**email reste obligatoire** pour un rendez-vous manuel (même
+         règle que v1) : le rendre facultatif est l'étape 3 du plan CRM, un
+         chantier `dev` (route `/api/bookings`, schéma), pas une refonte
+         visuelle.
+      2. La **liste de suggestions d'adresse** (`AddressAutocomplete.tsx`)
+         garde le style v1 (slate) : ce composant est partagé avec le flux de
+         réservation public, que la refonte ne touche pas. Lisible dans les
+         deux thèmes mais hors jetons ; à habiller par une prop facultative
+         quand ce sera décidé.
+      3. Les **icônes natives** des champs date/heure sont grisées en sombre
+         (rendu du navigateur, pas des jetons).
+      4. Pré-existant du sous-lot 1, repéré en passant : à 390 px de large, les
+         7 jours du bandeau dépassent de ~14 px et défilent un peu (le « L »
+         de lundi se coupe après un appui sur un jour du bout).
+    - **Vérifié** (compte de test `novaflows.pro@gmail.com`, plan
+      grandfathered, équipe de 1) : `tsc` 0 erreur ; `eslint .` 36
+      avertissements, 0 erreur — identique à avant ce sous-lot (les deux
+      `set-state-in-effect` sur `?rdv=`, v1 et v2, existaient déjà) ;
+      `vitest run --coverage` 1013/1013 (inchangé : hooks et composants React
+      hors du périmètre mesuré) ; `next build` propre. Captures Playwright
+      (390×844 pour la PWA émulée, 1280×900 pour le site, mêmes
+      contournements `display-mode`/cookie `theme`) : PWA clair et sombre —
+      agenda avec « + », feuille de choix, formulaire (haut, erreur, client
+      professionnel, rempli, après création), avertissement de faisabilité,
+      erreur « équipe en congés », bandeau de congé, feuille de suppression,
+      feuille d'ajout ; site clair et sombre — grille mois, modale de
+      suppression, ajout de congé, avertissement de faisabilité.
+    - **Données réelles touchées, dites explicitement** : (a) **Congés** :
+      créés puis supprimés par les vraies routes, sur des dates lointaines
+      (11 avril 2027 côté PWA, 15 octobre 2026 côté site), 4 aller-retours
+      `POST` + `DELETE` ; le compte de test a un congé préexistant le 26
+      septembre 2026, jamais modifié — contrôlé en fin de test : seul ce
+      congé reste. (b) **Rendez-vous** : **aucun n'a été créé**. `POST
+      /api/bookings` était intercepté par Playwright (jamais envoyé) :
+      il n'existe pas de route de suppression d'un rendez-vous, une vraie
+      création aurait été irréversible (et aurait déclenché les emails de
+      confirmation). Conséquence : la création réelle de bout en bout n'a pas
+      été exercée en v2 ; seul le corps de la requête envoyée a été comparé
+      à v1.
+    - **Non vérifié** : appareil réel (clavier iOS/Android qui recouvre le pied
+      de la feuille malgré `interactive-widget=resizes-content` ; tap sur les
+      champs date/heure natifs), équipe de plus d'un laveur (le sélecteur
+      « laveurs indisponibles » et les libellés « capacité réduite » n'ont
+      jamais été affichés), avertissement de faisabilité avec coordonnées
+      GPS (chemin « trajet estimé ~N min pour ~K km » : même hook, jamais
+      exercé en v2 faute d'adresse sélectionnée dans la liste), rendu de la
+      feuille sur grand écran (`sm:` — non capturé), lecteur d'écran.
 - [ ] Passe 8 : Aujourd'hui, en dernier. Voir le plan de vol.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
