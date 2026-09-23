@@ -1,5 +1,6 @@
 'use client'
 
+import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
 import Link from 'next/link'
 import type { Washer } from '@/types'
 import { hasFeature, PLAN_LABELS } from '@/lib/plan'
@@ -344,6 +345,8 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
       >
         Tous les réglages
       </Link>
+
+      <DiagnosticPwa />
     </div>
   )
 }

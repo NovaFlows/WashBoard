@@ -36,6 +36,13 @@ const ENTETES_DASHBOARD = [
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Numéro de version visible en bas de l'écran « Plus » de la PWA (voir
+  // DiagnosticPwa.tsx) : permet de savoir en un coup d'œil si un téléphone
+  // affiche le dernier déploiement. Vercel fournit l'empreinte du commit au
+  // moment du build ; hors Vercel (développement), « local ».
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7),
+  },
   serverExternalPackages: ['@react-pdf/renderer'],
 
   async headers() {
