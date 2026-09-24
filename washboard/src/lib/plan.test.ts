@@ -5,7 +5,8 @@ import {
   quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
   PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
   TEAM_SIZE_INCLUS, PLAN_ESSAI, PLAN_HISTORIQUE,
-  RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, suitRetourGratuit, essaiTermineSansFormule,
+  RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, COMPTES_TEST_RETOUR_GRATUIT,
+  suitRetourGratuit, essaiTermineSansFormule,
   planEffectif, doitChoisirFormule,
   type Plan, type Feature,
 } from './plan'
@@ -487,6 +488,47 @@ describe('suitRetourGratuit — qui est concerné par la règle 2026', () => {
     expect(suitRetourGratuit(null)).toBe(false)
     expect(suitRetourGratuit({ created_at: null })).toBe(false)
     expect(suitRetourGratuit({ created_at: 'pas une date' })).toBe(false)
+  })
+})
+
+describe('COMPTES_TEST_RETOUR_GRATUIT — bascule anticipée, compte par compte', () => {
+  const LISTE = ['compte-de-test'] as const
+
+  it('bascule un compte listé, même créé bien avant la date', () => {
+    // C'est tout l'objet de la liste : essayer la règle sur un compte à soi
+    // sans falsifier sa date de création en base.
+    expect(suitRetourGratuit({ slug: 'compte-de-test', created_at: AVANT }, LISTE)).toBe(true)
+  })
+
+  it('le bascule même sans date de création connue', () => {
+    expect(suitRetourGratuit({ slug: 'compte-de-test' }, LISTE)).toBe(true)
+  })
+
+  it('ne bascule pas un compte absent de la liste', () => {
+    expect(suitRetourGratuit({ slug: 'un-laveur-quelconque', created_at: AVANT }, LISTE)).toBe(false)
+  })
+
+  it('n’a aucun effet sur les comptes quand la liste est vide', () => {
+    // L'état livré : la liste ne fait rien tant que personne n'y est inscrit.
+    expect(suitRetourGratuit({ slug: 'compte-de-test', created_at: AVANT }, [])).toBe(false)
+  })
+
+  it('laisse la date décider pour un compte listé ET récent', () => {
+    expect(suitRetourGratuit({ slug: 'compte-de-test', created_at: APRES }, [])).toBe(true)
+  })
+
+  it('ne contient que des liens publics en minuscules, sans espace', () => {
+    // Un `slug` mal orthographié ne casse rien : il ne correspond simplement à
+    // personne, et l'essai semble « ne pas marcher » sans qu'on sache pourquoi.
+    for (const slug of COMPTES_TEST_RETOUR_GRATUIT) {
+      expect(slug, slug).toMatch(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)
+    }
+  })
+
+  it('reste vide ou courte — ce n’est pas là que se fait le déploiement général', () => {
+    // Pour étendre la règle à tout le monde, on recule la DATE ; la liste sert
+    // aux essais et à quelques bascules choisies, pas à recopier la base.
+    expect(COMPTES_TEST_RETOUR_GRATUIT.length).toBeLessThanOrEqual(20)
   })
 })
 

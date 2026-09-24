@@ -28,6 +28,8 @@ type Props = {
   /** Date de création de la fiche : décide si ce compte suit la règle 2026
    *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
   createdAt?: string | null
+  /** Lien public du laveur, pour la liste de bascule anticipée (COMPTES_TEST_RETOUR_GRATUIT). */
+  slug?: string | null
 }
 
 function PlanBadge({ plan, grandfathered, effectif }: { plan?: Plan; grandfathered?: boolean; effectif: Plan }) {
@@ -282,11 +284,11 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
-    plan, grandfathered,
+    plan, grandfathered, slug,
     created_at: createdAt,
     subscription_status: subscriptionStatus,
     trial_ends_at: trialEndsAt,

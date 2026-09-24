@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Trial J0
     admin.from('washers')
-      .select('id, user_id, name, trial_ends_at, created_at')
+      .select('id, user_id, name, trial_ends_at, created_at, slug')
       .eq('subscription_status', 'trial')
       .eq('grandfathered', false)
       .is('trial_expired_sent_at', null)
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     // Candidats à l'avertissement de fin de grâce (filtrés en JS ci-dessous,
     // car l'échéance de référence est soit trial_ends_at, soit subscription_ends_at)
     admin.from('washers')
-      .select('id, user_id, name, trial_ends_at, subscription_ends_at, created_at')
+      .select('id, user_id, name, trial_ends_at, subscription_ends_at, created_at, slug')
       .neq('subscription_status', 'active')
       .is('grace_reminder_sent_at', null),
   ])

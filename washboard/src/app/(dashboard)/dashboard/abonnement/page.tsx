@@ -43,7 +43,7 @@ export default async function AbonnementPage() {
       trialEndsAt={washer.trial_ends_at}
       subscriptionStatus={washer.subscription_status}
       plan={washer.plan}
-      grandfathered={washer.grandfathered} createdAt={washer.created_at}
+      grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
     >

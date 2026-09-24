@@ -164,10 +164,30 @@ export const PLAN_HISTORIQUE: Plan = 'pro'
  *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé. */
 export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-09-24T00:00:00.000Z'
 
+/** Comptes soumis à la règle 2026 QUELLE QUE SOIT leur date de création,
+ *  désignés par le lien public de leur page de réservation (`slug`).
+ *
+ *  Sert à deux choses, dans cet ordre :
+ *    1. ESSAYER la bascule sur un compte à soi, sans attendre un mois et sans
+ *       réécrire la date de création d'une ligne de production — une date
+ *       falsifiée est une information fausse qui reste en base pour toujours,
+ *       et personne ne se souviendra pourquoi dans six mois ;
+ *    2. plus tard, faire passer les clients existants un par un plutôt que
+ *       tous d'un coup en reculant la date ci-dessus.
+ *
+ *  Un compte listé ici voit exactement ce que verra un compte neuf. La liste
+ *  est dans le code, pas dans une variable d'environnement : c'est une règle
+ *  qui décide qui est rétrogradé, elle doit se relire dans l'historique Git. */
+export const COMPTES_TEST_RETOUR_GRATUIT: string[] = [
+  // Exemple : 'mon-compte-de-test'
+]
+
 /** Ce qu'il faut savoir d'un compte pour trancher la fin d'essai. Tous les
  *  champs sont facultatifs : un appelant qui ne les lit pas obtient le
  *  comportement d'avant, jamais une perte d'accès par omission. */
 export type AbonnementInfo = PlanInfo & {
+  /** Lien public du laveur, pour la liste de bascule anticipée ci-dessus. */
+  slug?: string | null
   created_at?: string | null
   subscription_status?: string | null
   trial_ends_at?: string | null
@@ -175,7 +195,16 @@ export type AbonnementInfo = PlanInfo & {
 }
 
 /** Ce compte suit-il la règle 2026 ? */
-export function suitRetourGratuit(w: AbonnementInfo | null | undefined): boolean {
+export function suitRetourGratuit(
+  w: AbonnementInfo | null | undefined,
+  // La liste est un paramètre pour rester vérifiable : sans ça, un test ne
+  // pourrait constater la bascule anticipée qu'en attendant qu'un vrai compte
+  // y figure — c'est-à-dire jamais.
+  liste: readonly string[] = COMPTES_TEST_RETOUR_GRATUIT,
+): boolean {
+  // Bascule anticipée, demandée explicitement compte par compte.
+  if (w?.slug && liste.includes(w.slug)) return true
+
   // Sans date de création, on ne change rien : l'absence d'information ne doit
   // jamais faire basculer un compte dont on ne sait rien.
   if (!w?.created_at) return false

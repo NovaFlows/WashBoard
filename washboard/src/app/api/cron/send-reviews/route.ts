@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     const { data: washer, error: errWasher } = await admin
       .from('washers')
-      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, created_at, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
+      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, slug, created_at, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
       .eq('id', b.washer_id)
       .single()
 
