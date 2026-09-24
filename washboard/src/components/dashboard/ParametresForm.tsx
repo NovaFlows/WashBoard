@@ -24,11 +24,14 @@ type Props = {
   /** Voir ParametresFormV2 : nombre de prestations déjà compté par la page,
    *  facultatif, ignoré côté v1. */
   servicesCount?: number
+  /** Voir ParametresFormV2 : phrase de résumé des horaires (« Lun–Ven 8h–18h »),
+   *  facultative, ignorée côté v1. */
+  resumeHoraires?: string
 }
 
-export default function ParametresForm({ washer, email, servicesCount }: Props) {
+export default function ParametresForm({ washer, email, servicesCount, resumeHoraires }: Props) {
   const isPwa = usePwaStandalone()
   return isPwa
-    ? <ParametresFormV2 washer={washer} servicesCount={servicesCount} />
+    ? <ParametresFormV2 washer={washer} servicesCount={servicesCount} resumeHoraires={resumeHoraires} />
     : <ParametresFormV1 washer={washer} email={email} />
 }

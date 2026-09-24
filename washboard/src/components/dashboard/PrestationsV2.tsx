@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import type { Availability, Service, ServiceCategory } from '@/types'
 import { usePrestationsV2 } from '@/hooks/usePrestationsV2'
-import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
+import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { CarteListe, Chevron, Ligne } from '@/components/dashboard/ParametresFormV2'
 import FeuillePrestationV2 from '@/components/dashboard/FeuillePrestationV2'
 import FeuilleCategorieV2 from '@/components/dashboard/FeuilleCategorieV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
-import { Constat, nom } from '@/components/dashboard/PrestationsUiV2'
+import { ConfirmationSuppression, Constat, nom } from '@/components/dashboard/PrestationsUiV2'
 import { estReservable } from '@/lib/prestation'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
@@ -99,52 +99,6 @@ function LignePrestation({ service, categorie, onOuvrir }: { service: Service; c
         <Chevron />
       </button>
     </li>
-  )
-}
-
-function ConfirmationSuppression({
-  titre: intitule, texte, remarque, enCours, erreur, onConfirmer, onClose,
-}: {
-  titre: string
-  texte: string
-  remarque?: string
-  enCours: boolean
-  erreur: string | null
-  onConfirmer: () => void
-  onClose: () => void
-}) {
-  return (
-    <Feuille
-      titre={intitule}
-      onClose={onClose}
-      pied={
-        <div>
-          {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
-              style={PRESSION}
-            >
-              {erreur ? 'Fermer' : 'Annuler'}
-            </button>
-            <button
-              type="button"
-              onClick={onConfirmer}
-              disabled={enCours}
-              className={`${BOUTON} flex-1 text-white`}
-              style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
-            >
-              {enCours ? 'Suppression…' : 'Supprimer'}
-            </button>
-          </div>
-        </div>
-      }
-    >
-      <p className={`text-[15px] leading-snug ${corps}`}>{texte}</p>
-      {remarque && <p className={`mt-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{remarque}</p>}
-    </Feuille>
   )
 }
 

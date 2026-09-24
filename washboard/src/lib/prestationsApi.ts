@@ -15,7 +15,7 @@ import { corpsPrestation, type FormulairePrestation } from '@/lib/prestationForm
 
 export type ResultatApi<T> = { ok: true; data: T } | { ok: false; message: string }
 
-type Action = 'enregistrer' | 'supprimer'
+export type Action = 'enregistrer' | 'supprimer'
 
 const RESEAU: Record<Action, string> = {
   enregistrer: 'Enregistrement impossible. Vérifiez votre connexion et réessayez.',
@@ -26,7 +26,7 @@ const SERVEUR: Record<Action, string> = {
   supprimer: 'Suppression impossible. Réessayez dans un instant.',
 }
 
-async function appeler(action: Action, method: string, url: string, corps?: unknown): Promise<ResultatApi<unknown>> {
+export async function appeler(action: Action, method: string, url: string, corps?: unknown): Promise<ResultatApi<unknown>> {
   let res: Response
   try {
     res = await fetch(url, {
@@ -56,7 +56,7 @@ async function appeler(action: Action, method: string, url: string, corps?: unkn
 /** Une création qui répond « ok » sans la ligne créée est traitée comme un
  *  échec : l'écran n'aurait rien à afficher, et on ne veut pas de doublon si le
  *  laveur retente. */
-function avecLigne<T extends { id: string }>(r: ResultatApi<unknown>): ResultatApi<T> {
+export function avecLigne<T extends { id: string }>(r: ResultatApi<unknown>): ResultatApi<T> {
   if (!r.ok) return r
   const ligne = r.data as { id?: unknown } | undefined
   if (!ligne || typeof ligne.id !== 'string') {

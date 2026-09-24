@@ -159,9 +159,14 @@ type Props = {
    *  quel, aucune requête ajoutée. `undefined` si le comptage a échoué : la
    *  ligne affiche alors son libellé sans le nombre plutôt qu'un zéro inventé. */
   servicesCount?: number
+  /** Phrase de résumé des horaires (`resumeHoraires`, lib/horaires.ts), calculée par
+   *  la page à partir d'une lecture de `availabilities`. `undefined` si la lecture
+   *  a échoué : la ligne s'affiche alors sans valeur, jamais avec un « Aucun
+   *  horaire » inventé. */
+  resumeHoraires?: string
 }
 
-export default function ParametresFormV2({ washer, servicesCount }: Props) {
+export default function ParametresFormV2({ washer, servicesCount, resumeHoraires }: Props) {
   const { theme, setTheme } = useTheme()
   // Signaux du canal d'assistance, interrogés une fois par DashboardShell (voir
   // SupportBadgesContext) — ce sont eux que portait le menu latéral et le
@@ -288,7 +293,7 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
             valeur={typeof servicesCount === 'number' ? String(servicesCount) : undefined}
             href="/dashboard/parametres/prestations"
           />
-          <Ligne label="Horaires" href="/dashboard/admin#disponibilites" />
+          <Ligne label="Horaires" valeur={resumeHoraires} href="/dashboard/parametres/horaires" />
           <Ligne label="Zone et déplacement" valeur={zone ?? undefined} href="/dashboard/admin#zone" />
           <Link href="/dashboard/admin#identite" className="flex items-center gap-2.5 min-h-[46px] py-1.5 w-full">
             <span className={`flex-1 text-[15px] ${corps}`}>Apparence de ma page</span>

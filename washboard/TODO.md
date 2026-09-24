@@ -1433,6 +1433,36 @@
   - **Non vérifié** : appareil réel, clavier ouvert (feuille + pied fixe), 360 px de large
     (titre + « + Prestation » serrés à 390).
 
+- [x] **« Horaires » en v2**, 2026-09-24 (même demande d'Alexandre que « Prestations et prix » :
+      « même design, mêmes fonctionnalités qu'avant »). Destination neuve, troisième cas de
+      `refonte.md`. Conception validée par `designer` et `ideas`.
+  - **Fichiers** : route `/dashboard/parametres/horaires` (le site est renvoyé vers
+    `/dashboard/admin#disponibilites` par `Horaires.tsx`), `HorairesV2.tsx` (une carte, sept
+    lignes lundi → dimanche, section Congés), `FeuillePlageV2.tsx` (ajout), `FeuilleJourV2.tsx`
+    (plages d'un jour, retrait), `HorairesEtatVideV2.tsx` (retirable), `hooks/useHorairesV2.ts`,
+    `lib/horaires.ts` (résumé, chevauchement, échec partiel, verrou `unSeulALaFois`) et
+    `lib/horairesApi.ts`. Congés : `useConges`, `CongesAVenir`, `FeuilleAjoutConge`,
+    `FeuilleSuppressionConge` réutilisés tels quels. Ligne « Horaires » de Plus repointée, avec le
+    résumé (« Lun–Ven 8h–18h ») en valeur.
+  - **Le site n'a pas bougé** : `DisponibilitesManager`, `AdminTabs` et les routes
+    `/api/availabilities` sont intacts. Seule modif côté page partagée : `parametres/page.tsx` lit
+    maintenant les plages (3 colonnes) au lieu de les compter (`head`) — même barre d'avancement.
+  - **Durcissements et ajouts hors « mêmes fonctionnalités »** : jours à choix multiple (un POST par
+    jour, échec partiel dit jour par jour, jours en échec restent cochés) ; chevauchement de deux
+    plages refusé avant l'envoi (ni la route ni la base ne l'interdisent ; `StepSlot` proposerait
+    l'horaire en double) ; état vide « Quand travaillez-vous ? » à un tap (fichier isolé) ; phrase de
+    résumé ; « Fermé » à la place d'« Indisponible » ; la liste « Passées » des congés disparaît
+    (la liste v2 ne montre que l'à venir).
+  - **Plages qui se touchent** (8–12 puis 12–14) : confirmé, une prestation ne peut plus enjamber
+    midi (`generateSlots` découpe chaque plage séparément, `creneauDansOuverture` aussi côté
+    serveur). Message informatif dans la feuille d'ajout, aucune fusion automatique.
+  - **`useConges` (partagé avec le site), trous constatés, non corrigés** : `saveUnavail` n'affiche
+    rien si le serveur refuse (seule la feuille v2 grise maintenant « Bloquer » quand fin < début) et
+    reste bloqué sur « Enregistrement… » si la réponse n'est pas du JSON ; `deleteUnavail` retire le
+    congé de la liste même si le DELETE a échoué (écriture optimiste : le créneau reste bloqué en
+    base). À corriger dans le hook, de façon additive.
+  - **Non vérifié** : appareil réel (iOS : liste native des heures, date), clavier ouvert, 360 px.
+
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
 la taille de police et la position exactes de chaque ligne de texte. Utile si

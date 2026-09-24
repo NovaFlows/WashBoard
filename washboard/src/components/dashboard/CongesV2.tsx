@@ -5,6 +5,8 @@ import { Minus, Plus } from 'lucide-react'
 import type { Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
 import type { AjoutConge } from '@/hooks/useConges'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import { Constat } from '@/components/dashboard/PrestationsUiV2'
+import { erreurPeriode } from '@/lib/horaires'
 
 // Congés / indisponibilités, présentation v2 — réservée à la PWA installée
 // (voir CalendrierDashboardV2.tsx). Passe 7, sous-lot 3. La logique (états,
@@ -145,6 +147,10 @@ export function FeuilleAjoutConge({
 }) {
   const restants = teamSize - form.team_members_off
   const toutes = form.team_members_off >= teamSize
+  // Présentation seulement : `useConges.saveUnavail` (partagé avec le site) ne
+  // dit rien quand le serveur refuse des dates incohérentes — la feuille
+  // resterait ouverte sans un mot. On grise donc le bouton et on dit pourquoi.
+  const erreurDates = erreurPeriode(form.start, form.end)
   return (
     <Feuille
       titre="Bloquer une période"
@@ -152,24 +158,27 @@ export function FeuilleAjoutConge({
       onClose={onClose}
       fermerSurFond={false}
       pied={
-        <div className="flex gap-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
-            style={PRESSION}
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className={`${BOUTON} flex-1 text-white`}
-            style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
-          >
-            {saving ? 'Enregistrement…' : 'Bloquer'}
-          </button>
+        <div>
+          {erreurDates && <div className="mb-3"><Constat ton="rouge" role="alert">{erreurDates}</Constat></div>}
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
+              style={PRESSION}
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving || !!erreurDates}
+              className={`${BOUTON} flex-1 text-white`}
+              style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
+            >
+              {saving ? 'Enregistrement…' : 'Bloquer'}
+            </button>
+          </div>
         </div>
       }
     >

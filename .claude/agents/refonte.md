@@ -298,6 +298,15 @@ fixes (jamais d'UUID) ; les types orphelins de `services.vehicle_types` s'affich
 côté client. La logique v2 est dupliquée dans `lib/prestationForm.ts` (correspondance avec
 le v1 écrite en tête) : une correction de règle se reporte des deux côtés.
 
+**Écran livré le 2026-09-24 : `/dashboard/parametres/horaires`** (« Horaires », PWA seulement, le
+site est renvoyé vers `/dashboard/admin#disponibilites`). À ne pas redécouvrir : dimanche = 0 en
+base, affichage lundi → dimanche ; heures `HH:MM` sans fuseau, jamais via `new Date` ; la route
+`POST /api/availabilities` n'interdit pas le chevauchement (l'écran le refuse : `StepSlot`
+dupliquerait les créneaux) ; deux plages qui se touchent empêchent une prestation d'enjamber la
+limite ; aucun avertissement « durée qui ne tient pas » ici (il ne vit que dans Prestations) ; les
+appels par jour ne sont pas atomiques (`ajouterPlages` rend un résultat par jour). Les congés
+réutilisent `useConges` et les feuilles de `CongesV2` ; `useConges.deleteUnavail` reste optimiste.
+
 ## Intégrer le CRM au code — l'ordre
 
 **Étape 0, bloquante : le schéma du dépôt ment.** Le code lit `booked_price`,

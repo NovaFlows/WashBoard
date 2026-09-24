@@ -2,10 +2,10 @@
 
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { corps, corpsFort, police } from '@/components/dashboard/FeuilleV2'
+import { Feuille, BOUTON, PRESSION, corps, corpsFort, police } from '@/components/dashboard/FeuilleV2'
 
-// Petites pièces partagées par l'écran « Prestations et prix » de la PWA
-// (`PrestationsV2`, ses feuilles de prestation et de catégorie).
+// Petites pièces partagées par les écrans « Prestations et prix » et « Horaires »
+// de la PWA (`PrestationsV2` et ses feuilles, `HorairesV2` et ses feuilles).
 
 export const nom = `${police} [font-weight:var(--v2-type-nom-poids)] [font-stretch:var(--v2-type-nom-largeur)]`
 
@@ -30,6 +30,58 @@ export function Constat({
       />
       <span className={`min-w-0 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>{children}</span>
     </p>
+  )
+}
+
+/** Confirmation d'une suppression, en feuille du bas : Annuler / action rouge,
+ *  l'échec éventuel dit sur place. Déplacée ici depuis `PrestationsV2` pour que
+ *  l'écran Horaires la partage sans charger tout l'écran Prestations. */
+export function ConfirmationSuppression({
+  titre: intitule, texte, remarque, enCours, erreur, libelleAction = 'Supprimer', libelleEnCours = 'Suppression…', onConfirmer, onClose,
+}: {
+  titre: string
+  texte: string
+  remarque?: string
+  enCours: boolean
+  erreur: string | null
+  /** Texte du bouton rouge (« Supprimer » par défaut, « Retirer » pour une plage). */
+  libelleAction?: string
+  libelleEnCours?: string
+  onConfirmer: () => void
+  onClose: () => void
+}) {
+  return (
+    <Feuille
+      titre={intitule}
+      onClose={onClose}
+      pied={
+        <div>
+          {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
+              style={PRESSION}
+            >
+              {erreur ? 'Fermer' : 'Annuler'}
+            </button>
+            <button
+              type="button"
+              onClick={onConfirmer}
+              disabled={enCours}
+              className={`${BOUTON} flex-1 text-white`}
+              style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
+            >
+              {enCours ? libelleEnCours : libelleAction}
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <p className={`text-[15px] leading-snug ${corps}`}>{texte}</p>
+      {remarque && <p className={`mt-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{remarque}</p>}
+    </Feuille>
   )
 }
 
