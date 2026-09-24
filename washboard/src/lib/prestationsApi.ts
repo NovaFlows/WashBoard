@@ -15,15 +15,33 @@ import { corpsPrestation, type FormulairePrestation } from '@/lib/prestationForm
 
 export type ResultatApi<T> = { ok: true; data: T } | { ok: false; message: string }
 
-export type Action = 'enregistrer' | 'supprimer'
+export type Action = 'enregistrer' | 'supprimer' | 'envoyer'
 
 const RESEAU: Record<Action, string> = {
   enregistrer: 'Enregistrement impossible. Vérifiez votre connexion et réessayez.',
   supprimer: 'Suppression impossible. Vérifiez votre connexion et réessayez.',
+  envoyer: 'Envoi impossible. Vérifiez votre connexion et réessayez.',
 }
 const SERVEUR: Record<Action, string> = {
   enregistrer: 'Enregistrement impossible. Réessayez dans un instant.',
   supprimer: 'Suppression impossible. Réessayez dans un instant.',
+  envoyer: 'Envoi impossible. Réessayez dans un instant.',
+}
+
+export const phraseReseau = (action: Action): string => RESEAU[action]
+
+/** Traduit la réponse d'un échec en une phrase (voir l'en-tête du fichier). Partagée
+ *  avec les envois d'image de l'écran Apparence (`apparenceApi`), qui n'ont pas le
+ *  même format de succès mais le même contrat d'erreur. */
+export function echecDepuisReponse(
+  action: Action, status: number, json: { error?: unknown; errorId?: unknown },
+): { ok: false; message: string } {
+  if (status === 401) return { ok: false, message: 'Votre session a expiré. Reconnectez-vous.' }
+  if (status >= 400 && status < 500 && typeof json.error === 'string' && json.error.trim()) {
+    return { ok: false, message: json.error }
+  }
+  const ref = typeof json.errorId === 'string' && json.errorId ? ` (réf. ${json.errorId.slice(0, 8)})` : ''
+  return { ok: false, message: SERVEUR[action] + ref }
 }
 
 export async function appeler(action: Action, method: string, url: string, corps?: unknown): Promise<ResultatApi<unknown>> {
@@ -45,12 +63,7 @@ export async function appeler(action: Action, method: string, url: string, corps
   }
 
   if (res.ok) return { ok: true, data: json.data }
-  if (res.status === 401) return { ok: false, message: 'Votre session a expiré. Reconnectez-vous.' }
-  if (res.status >= 400 && res.status < 500 && typeof json.error === 'string' && json.error.trim()) {
-    return { ok: false, message: json.error }
-  }
-  const ref = typeof json.errorId === 'string' && json.errorId ? ` (réf. ${json.errorId.slice(0, 8)})` : ''
-  return { ok: false, message: SERVEUR[action] + ref }
+  return echecDepuisReponse(action, res.status, json)
 }
 
 /** Une création qui répond « ok » sans la ligne créée est traitée comme un

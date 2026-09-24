@@ -9,7 +9,7 @@ export type BgThemePreset = {
 }
 
 // Overlay commun pour les photos — assure la lisibilité du texte
-const OVERLAY = 'rgba(0,0,0,0.52)'
+export const OVERLAY = 'rgba(0,0,0,0.52)'
 
 export const BG_THEME_PRESETS: BgThemePreset[] = [
   // — Dégradés —
@@ -85,3 +85,16 @@ export function getBgStyle(theme: string | null | undefined): React.CSSPropertie
 export function isCustomTheme(theme: string | null | undefined): boolean {
   return !!theme && !BG_THEME_PRESETS.some(t => t.id === theme)
 }
+
+/** Les 24 couleurs de marque proposées au laveur, dans l'ordre d'affichage.
+ *  Partagée par l'ancien écran (`IdentiteForm`) et l'écran « Apparence de ma
+ *  page » de la PWA : une seule liste, pour qu'elles ne divergent jamais. */
+export const PALETTE = [
+  '#1e3a8a', '#1d4ed8', '#2563eb', '#0ea5e9',
+  '#0891b2', '#0284c7', '#0369a1',
+  '#15803d', '#16a34a', '#059669', '#0d9488',
+  '#6d28d9', '#7c3aed', '#9333ea',
+  '#dc2626', '#e11d48', '#db2777', '#c026d3',
+  '#c2410c', '#ea580c', '#d97706',
+  '#0f172a', '#1e293b', '#374151',
+]

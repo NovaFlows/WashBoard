@@ -6,7 +6,7 @@ import { Sun, Moon } from 'lucide-react'
 import type { Washer, ZoneConfig } from '@/types'
 import { DEPARTMENTS } from '@/lib/france-departments'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { BG_THEME_PRESETS, isCustomTheme } from '@/lib/themes'
+import { BG_THEME_PRESETS, PALETTE, isCustomTheme } from '@/lib/themes'
 
 import type { BgThemePreset } from '@/lib/themes'
 import { compressImage, LOGO_OPTIONS, BACKGROUND_OPTIONS } from '@/lib/imageCompression'
@@ -53,16 +53,6 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
     </button>
   )
 }
-
-const PALETTE = [
-  '#1e3a8a', '#1d4ed8', '#2563eb', '#0ea5e9',
-  '#0891b2', '#0284c7', '#0369a1',
-  '#15803d', '#16a34a', '#059669', '#0d9488',
-  '#6d28d9', '#7c3aed', '#9333ea',
-  '#dc2626', '#e11d48', '#db2777', '#c026d3',
-  '#c2410c', '#ea580c', '#d97706',
-  '#0f172a', '#1e293b', '#374151',
-]
 
 export default function IdentiteForm({ washer }: { washer: Washer }) {
   const router = useRouter()

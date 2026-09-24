@@ -307,6 +307,19 @@ limite ; aucun avertissement « durée qui ne tient pas » ici (il ne vit que da
 appels par jour ne sont pas atomiques (`ajouterPlages` rend un résultat par jour). Les congés
 réutilisent `useConges` et les feuilles de `CongesV2` ; `useConges.deleteUnavail` reste optimiste.
 
+**Écran livré le 2026-09-24 : `/dashboard/parametres/apparence`** (« Apparence de ma page », PWA
+seulement, le site est renvoyé vers `/dashboard/admin#identite`). Périmètre décidé par Alexandre :
+les cinq premières cartes de `IdentiteForm` (logo, couleur, fond, message, site web) — Zone,
+Créneaux intelligents et Google Agenda n'y sont pas et gardent deux lignes PROVISOIRES dans Plus
+(bloc « À NE PAS OUBLIER » du TODO). À ne pas redécouvrir : l'état d'un envoi d'image vit dans le
+hook `useApparenceV2`, pas dans les feuilles (le détourage imgly peut durer une minute, fermer la
+feuille n'annule rien) et le sélecteur de fichier est dans l'écran ; la marque du laveur n'apparaît
+que dans l'aperçu et l'échantillon de couleur, jamais comme accent de l'écran ; le logo est rogné
+(`object-cover` 48 px) sur la vraie page ; logo et fond gardent la même URL d'un envoi à l'autre
+(`<user_id>.<ext>`) ; les avis du site sont lus une fois par jour et une redirection les fait
+disparaître ; `PALETTE` et `OVERLAY` vivent dans `lib/themes.ts`. Pour tester un envoi sans
+télécharger le modèle imgly : remplacer temporairement `hooks/retirerLeFond.ts` par un stub.
+
 ## Intégrer le CRM au code — l'ordre
 
 **Étape 0, bloquante : le schéma du dépôt ment.** Le code lit `booked_price`,

@@ -1463,6 +1463,65 @@
     base). À corriger dans le hook, de façon additive.
   - **Non vérifié** : appareil réel (iOS : liste native des heures, date), clavier ouvert, 360 px.
 
+- [x] **« Apparence de ma page » en v2**, 2026-09-24 (même demande d'Alexandre : « même design,
+      mêmes fonctionnalités qu'avant »). Destination neuve, troisième cas de `refonte.md`.
+      Périmètre décidé par lui : les CINQ premières cartes de `IdentiteForm` seulement (Logo,
+      Couleur, Fond, Message d'accueil, Présence en ligne = le site web) — voir le bloc « À NE
+      PAS OUBLIER » plus bas pour les trois autres. Conception validée par `designer` et `ideas`.
+  - **Fichiers** : route `/dashboard/parametres/apparence` (le site est renvoyé vers
+    `/dashboard/admin#identite` par `Apparence.tsx`), `ApparenceV2.tsx` (aperçu en héros, « Voir
+    ma page », carte de cinq lignes), `ApercuPageV2.tsx`, cinq feuilles `FeuilleLogoV2`,
+    `FeuilleCouleurV2`, `FeuilleFondV2`, `FeuilleMessageV2`, `FeuilleSiteV2`,
+    `ApparenceUiV2.tsx`, `hooks/useApparenceV2.ts` (état des envois d'image : il vit dans
+    l'écran, fermer une feuille n'annule rien), `hooks/retirerLeFond.ts` (détourage imgly isolé),
+    `lib/apparence.ts` et `lib/apparenceApi.ts` (testés). La page serveur n'envoie au navigateur
+    que les colonnes utiles (jamais `*`). Ligne « Apparence de ma page » de Plus repointée
+    (pastille gardée) ; deux lignes **PROVISOIRES** ajoutées dans Plus (« Créneaux intelligents »
+    → `/dashboard/admin#creneaux`, « Google Agenda » → `#agenda`), à supprimer avec le bloc
+    « À NE PAS OUBLIER ».
+  - **Le site n'a pas bougé, à un remplacement d'import près** : `IdentiteForm.tsx` n'a changé
+    que par `PALETTE` (24 couleurs), déplacée dans `lib/themes.ts` et réimportée (test : les 24
+    valeurs et leur ordre) ; `themes.ts` exporte aussi `OVERLAY` (voile 52 %, valeur inchangée).
+    Aucune route API modifiée. `prestationsApi.ts` a gagné (additif) l'action « envoyer » et
+    `echecDepuisReponse`, extraite d'`appeler` pour les envois d'image.
+  - **Ajouts hors « mêmes fonctionnalités »** (chacun retirable) : « Retirer le logo » (le v1 n'a
+    aucun moyen d'en retirer un ; API `logo_url: null`) et confirmation avant de retirer la
+    photo de fond ; avertissement de contraste du blanc sous 4,5:1 (`contrasteBlanc`, 8 couleurs
+    sur 24, jamais bloquant) ; site web validé et normalisé à la saisie (`https://` ajouté, autre
+    schéma refusé — le v1 acceptait « monsite.fr » puis l'ignorait sans un mot) ; compteur
+    indicatif du message à 120 caractères ; annulation avec message quand le choix d'un fond
+    ou d'une couleur échoue (le v1 échouait sans rien dire) ; « max 5 Mo » du v1 (faux) remplacé.
+  - **Constats sur la page publique** : le logo y est en `object-cover` 48 px (un logo large est
+    rogné ; l'ancien aperçu le montrait entier) ; le message d'accueil n'est ni tronqué ni
+    limité (une ligne d'en-tête + description des aperçus de lien) ; un fond retire bien le
+    bouton clair/sombre ; les avis du site sont lus une fois par jour (`revalidate: 86400`) et
+    **une redirection les fait disparaître** (`redirect: 'error'`) : la feuille le dit.
+  - **Même adresse de fichier à chaque envoi** (`<user_id>.<ext>`, `upsert`) : un logo ou un fond
+    remplacé garde son URL. Les fichiers observés répondent `Cache-Control: no-cache` + ETag
+    (le navigateur revalide) mais les aperçus de lien (og:image) et tout cache tiers clé sur
+    l'URL peuvent garder l'ancien. L'écran ajoute `?t=` en local seulement. Non corrigé côté
+    serveur ; à rapporter à `dev`.
+  - **Non vérifié** : appareil réel (sélecteur de fichier iOS/Android, HEIC, clavier ouvert
+    devant le pied fixe, 360 px), le vrai détourage (modèle imgly non téléchargé pendant les
+    tests, remplacé par un stub — voir le compte rendu), le rendu au soleil des anneaux.
+
+- [ ] **À NE PAS OUBLIER — trois réglages à replacer ailleurs dans la PWA** (décision
+      d'Alexandre, 2026-09-24). L'écran v2 « Apparence de ma page » ne reprend que
+      Logo, Couleur de la marque, Fond, Message d'accueil et Présence en ligne. Ces
+      trois cartes de l'ancien onglet Identité (`admin/IdentiteForm.tsx`) n'y sont
+      **volontairement pas** : elles doivent trouver **leur propre place** dans la
+      refonte, à décider avec lui :
+  - **Zone d'intervention** (`#zone`) — rayon ou départements, frais de déplacement.
+  - **Créneaux intelligents** (`#creneaux`) — regroupement des créneaux par zone.
+  - **Google Agenda** (`#agenda`) — connexion du calendrier.
+  - **Accès en attendant** : ils restent tous les trois sur l'ancien écran
+    `/dashboard/admin` (onglet Identité), toujours joignable. « Zone et déplacement »
+    y mène déjà depuis Plus ; « Créneaux intelligents » et « Google Agenda » y ont
+    chacun une ligne **provisoire** dans Plus, à supprimer le jour où ils auront leur
+    vraie place. Rien n'est perdu, mais ce n'est pas le design final.
+  - Ne pas oublier non plus : la fonction n'a pas de maquette, il faudra la concevoir
+    (`designer`, avis `ideas`) comme pour Prestations et Horaires.
+
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
 la taille de police et la position exactes de chaque ligne de texte. Utile si

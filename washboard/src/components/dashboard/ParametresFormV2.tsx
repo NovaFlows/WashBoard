@@ -295,7 +295,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
           />
           <Ligne label="Horaires" valeur={resumeHoraires} href="/dashboard/parametres/horaires" />
           <Ligne label="Zone et déplacement" valeur={zone ?? undefined} href="/dashboard/admin#zone" />
-          <Link href="/dashboard/admin#identite" className="flex items-center gap-2.5 min-h-[46px] py-1.5 w-full">
+          <Link href="/dashboard/parametres/apparence" className="flex items-center gap-2.5 min-h-[46px] py-1.5 w-full">
             <span className={`flex-1 text-[15px] ${corps}`}>Apparence de ma page</span>
             {washer.brand_color && (
               <span
@@ -306,6 +306,16 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
             )}
             <Chevron />
           </Link>
+          {/* PROVISOIRE — deux lignes à supprimer le jour où ces réglages auront leur
+              vraie place dans la PWA (voir le bloc « À NE PAS OUBLIER — trois réglages à
+              replacer ailleurs » de TODO.md, section Refonte 2026). L'écran « Apparence
+              de ma page » ne reprend que les cinq premières cartes de l'ancien onglet
+              Identité (décision d'Alexandre, 2026-09-24) : ces deux cartes-ci n'y sont
+              PAS, mais elles doivent rester atteignables — elles vivent toujours sur
+              l'ancien écran, joignable par ces ancres (comme « Zone et déplacement »
+              ci-dessus). Ni valeur ni résumé : rien d'inventé. */}
+          <Ligne label="Créneaux intelligents" href="/dashboard/admin#creneaux" />
+          <Ligne label="Google Agenda" href="/dashboard/admin#agenda" />
           {/* « Importer mes clients » de la maquette n'a aucune logique
               derrière : la table `clients` et son import (étape 1 du plan
               CRM, refonte.md) ne sont pas construits. Pas de ligne plutôt

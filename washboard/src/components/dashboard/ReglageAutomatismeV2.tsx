@@ -36,7 +36,7 @@ const chip = (actif: boolean) =>
       : 'bg-transparent text-[color:var(--v2-color-gris)] border-[color:var(--v2-filet-fort)]'
   }`
 
-function Bloc({ titre, aide, children }: { titre: string; aide?: string; children: React.ReactNode }) {
+export function Bloc({ titre, aide, children }: { titre: string; aide?: string; children: React.ReactNode }) {
   return (
     <section className="mb-5">
       <div className="flex items-baseline justify-between pb-2">
@@ -109,14 +109,14 @@ function ChoixCanal({
   )
 }
 
-function Erreur({ texte }: { texte: string | null }) {
+export function Erreur({ texte }: { texte: string | null }) {
   if (!texte) return null
   return (
     <p role="alert" className={`mb-3 text-[13px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{texte}</p>
   )
 }
 
-function Pied({
+export function Pied({
   enCours, libelle, onClose, formulaire,
 }: { enCours: boolean; libelle: string; onClose: () => void; formulaire: string }) {
   return (
