@@ -85,6 +85,7 @@ const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
   { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
+  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue) émise à chaque prestation terminée et envoyée automatiquement à tes clients pros. Import de tes anciennes factures. On prépare déjà la facturation électronique, obligatoire pour les petites entreprises dès le 1ᵉʳ septembre 2027.' },
   { titre: 'Avis Google automatiques', desc: 'Une demande d’avis par email après chaque prestation terminée. Par SMS en formule Pro (150 par mois).' },
   { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', pro: true },
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
@@ -919,6 +920,7 @@ export default function LandingPage() {
             { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, en échange de 2 mois offerts.' },
             { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Pro. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
             { q: 'Les clients peuvent payer en ligne ?', a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.' },
+            { q: 'Et la facturation électronique obligatoire en 2027 ?', a: 'L\'État impose aux petites entreprises et micro-entrepreneurs d\'émettre des factures électroniques à leurs clients pros à partir du 1ᵉʳ septembre 2027. WashBoard s\'en occupe : tes factures sont déjà conformes, et on te raccordera à une plateforme agréée avant l\'échéance.' },
             { q: 'Et mes données ?', a: 'Elles restent les tiennes. Tu peux supprimer ton compte à tout moment depuis tes paramètres : tout est effacé sous 30 jours.' },
           ].map((item) => (
             <FadeUp key={item.q} className="py-6 sm:py-7">

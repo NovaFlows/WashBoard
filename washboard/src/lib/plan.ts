@@ -92,6 +92,7 @@ export const PLAN_CARDS: PlanCard[] = [
       'Agenda + créneaux intelligents',
       'Frais de déplacement',
       'CRM analytique',
+      'Facturation conforme (SIRET, TVA)',
       'Avis Google par email',
     ],
   },
