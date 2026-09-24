@@ -280,6 +280,15 @@ Piste non tranchée : relancer **au rythme de chaque client** (médiane de ses i
 1,15) plutôt qu'à un délai unique, avec repli par prestation quand l'historique manque
 (auto 2 mois, canapé 6 mois, terrasse 12 mois).
 
+**Écran livré le 2026-09-24 : `/dashboard/parametres/messages`** (PWA seulement, le site est
+renvoyé vers `parametres/tout#avis`). Ce que la base sait et ne sait pas, à ne pas
+redécouvrir : `review_request_sent_at` et `followup_sent_at` veulent dire « TRAITÉ », pas
+« envoyé » — seul `review_sms_sent_at` prouve un envoi, le reste est déduit
+(`lib/messagesAutomatiques.ts`, en-tête) ; aucune donnée ne relie un avis reçu à sa demande
+ni ne garde les réponses ; aucune opposition à être contacté n'est enregistrée (à soumettre à
+`legal`). Le canal reste UN réglage pour les deux messages, et le message d'avis reste codé en
+dur : les deux corrections produit ci-dessus ne sont toujours pas faites.
+
 ## Intégrer le CRM au code — l'ordre
 
 **Étape 0, bloquante : le schéma du dépôt ment.** Le code lit `booked_price`,

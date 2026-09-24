@@ -1342,6 +1342,64 @@
     en-tête ; que « Plus » affiche « Support (équipe) » pour un membre de
     l'équipe et rien pour un laveur ; le compteur sur un vrai fil non lu.
 
+- [x] **« Messages automatiques » en v2**, 2026-09-24 (hors plan de vol : demande
+      d'Alexandre après la passe 8). Écrite par un agent `refonte` neuf, relue et
+      commitée par l'orchestrateur. Planches `ARelancer.dc.html` (la page) et
+      `Automatisme.dc.html` (le réglage). Destination neuve : troisième cas de
+      `refonte.md` (comme Chiffres).
+  - **Fichiers** : route `/dashboard/parametres/messages` (sous `parametres` pour
+    que « Plus » reste allumé dans la barre du bas), `MessagesAutomatiques.tsx`
+    (garde-fou : le site est renvoyé vers `/dashboard/parametres/tout#avis`),
+    `MessagesAutomatiquesV2.tsx` (la page), `ReglageAutomatismeV2.tsx` (les deux
+    feuilles de réglage), `lib/messagesAutomatiques.ts` (tout le calcul, 50 tests),
+    `lib/enregistrerReglages.ts` (l'appel `PATCH /api/washer`, 6 tests). La ligne
+    « Messages automatiques » de `ParametresFormV2.tsx` pointe vers la nouvelle
+    route et compte ce qui part VRAIMENT (un avis « activé » sans lien Google, ou
+    une relance sans message, ne part pas : le cron les traite sans rien envoyer).
+    `ParametresFormV1.tsx` et les crons : intacts.
+  - **Ce que la donnée permet, élément par élément** : (a) interrupteurs et résumés
+    (délai, canal) : réels. (b) « Programmé » : calculable avec la règle exacte des
+    crons — avis = `review_request_at` non nul et `review_request_sent_at` nul ;
+    relance = dernier rendez-vous non annulé du client (regroupé par `client_email`
+    à l'identique, comme le cron), confirmé/terminé, non marqué, + délai. (c)
+    « Parti » : SMS d'avis = lu (`review_sms_sent_at`) ; email d'avis et relance =
+    DÉDUITS (aucun accusé n'est enregistré : `review_request_sent_at` est posé aussi
+    sur les demandes écartées ou en échec, `followup_sent_at` aussi sur les
+    rendez-vous clos sans envoi). L'écran le dit. Résultats : « a réservé depuis »
+    (rendez-vous pris après la relance) oui ; « 5 étoiles reçues » et « pas de
+    réponse » non — rien ne relie une demande d'avis à l'avis reçu, ni ne
+    enregistre les réponses.
+  - **Coupé, faute de donnée** : le lien « passer » (aucun moyen d'annuler l'envoi
+    d'un message précis) ; la section « clients écartés et pourquoi » (aucune trace
+    d'opposition à être contacté : « ne souhaite plus être contacté » est
+    inconstructible — **à soumettre à `legal` : aucune relance ne propose de STOP**) ;
+    le canal WhatsApp ; les variables `{{prénom}}`, `{{lien}}`, `{{prestation}}`,
+    `{{véhicule}}` (le cron ne remplace que `{{nom}}`) ; l'heure exacte d'une
+    relance (le code ne connaît pas l'heure du cron, réglée dans cron-job.org : on
+    annonce un jour, « dès jeudi »).
+  - **À signaler, non corrigé** : le canal est UN SEUL réglage (`review_channel`)
+    pour l'avis ET la relance — les deux feuilles le disent. Le message d'avis est
+    codé en dur dans le cron : montré en lecture seule. Le cron de relance ne
+    contrôle pas le plan (un compte repassé en Essentiel avec relances actives
+    continue d'envoyer). Le planificateur externe de `send-followups` n'est
+    documenté nulle part dans le dépôt (seul `send-reviews`, toutes les heures) :
+    à vérifier dans cron-job.org, sinon « Programmé » annonce des envois qui ne
+    partent jamais. Le premier passage après activation d'une relance sur un
+    vieux fichier clients peut viser des centaines de clients d'un coup : l'écran
+    montre « au prochain envoi » et le compte avant que ça parte.
+  - **Vérifié** : `tsc` 0 ; `eslint` 0 erreur (1 avertissement `set-state-in-effect`
+    sur le garde-fou, même motif que `Chiffres.tsx`) ; `vitest run --coverage`
+    95 fichiers / 1 237 tests verts ; `next build` propre. Captures Playwright PWA
+    390×844 clair et sombre : compte de test réel (vide), banc d'essai jetable
+    (plein, vide, avis sans lien / relance sans message, Essentiel, lecture
+    incomplète, interrupteur en échec réseau, feuilles de réglage, aperçu recalculé
+    au changement de délai). Site : `/dashboard/parametres/messages` renvoie bien
+    vers `/dashboard/parametres/tout#avis`. Toutes les écritures ont été
+    interceptées (`page.route`) : aucun `PATCH` n'a atteint le compte.
+  - **Non vérifié** : appareil réel ; les listes « Programmé/Parti » sur des
+    données réelles non vides (le compte de test n'avait rien à montrer) ; le
+    contraste de l'ambre et du rouge en sombre (jetons hérités du clair).
+
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
 la taille de police et la position exactes de chaque ligne de texte. Utile si

@@ -4,6 +4,7 @@ import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
 import Link from 'next/link'
 import type { Washer } from '@/types'
 import { hasFeature, PLAN_LABELS } from '@/lib/plan'
+import { nombreActifs } from '@/lib/messagesAutomatiques'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 
@@ -19,8 +20,9 @@ import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 // (`/dashboard/admin`, `/dashboard/abonnement`, `/dashboard/assistance`), soit
 // vers `/dashboard/parametres/tout` — la nouvelle route qui rend l'ancien
 // formulaire complet tel quel (ParametresFormV1, réutilisé sans modification),
-// pour les réglages qui n'ont pas encore leur propre écran v2 (Messages
-// automatiques, Équipe). Aucune requête ni aucun calcul n'est dupliqué ici :
+// pour les réglages qui n'ont pas encore leur propre écran v2 (Équipe ; les
+// Messages automatiques ont le leur depuis le 2026-09-24 :
+// `/dashboard/parametres/messages`). Aucune requête ni aucun calcul n'est dupliqué ici :
 // cet écran est un sommaire, pas une nouvelle source de vérité.
 //
 // Dernière ligne du menu (« Tous les réglages »), absente de la maquette :
@@ -170,7 +172,22 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
   const lienReservation = `${domaine}/book/${washer.slug}`
 
   const canTeam = hasFeature(washer, 'multi_laveurs')
-  const automatismesActifs = (washer.review_enabled ? 1 : 0) + (washer.followup_enabled ? 1 : 0)
+  // Ce qui part VRAIMENT : un avis « activé » sans lien Google, ou une relance
+  // sans message, ne part pas (le cron les traite sans rien envoyer) — compter
+  // « 2 actifs » ici alors que l'écran Messages automatiques en montre 1 serait
+  // se contredire.
+  const automatismesActifs = nombreActifs(
+    {
+      review_enabled: !!washer.review_enabled,
+      review_delay_hours: washer.review_delay_hours,
+      google_review_url: washer.google_review_url,
+      review_channel: washer.review_channel === 'sms' ? 'sms' : 'email',
+      followup_enabled: !!washer.followup_enabled,
+      followup_delay_days: washer.followup_delay_days,
+      followup_message: washer.followup_message,
+    },
+    { smsAutorise: hasFeature(washer, 'avis_sms') },
+  )
   const zone = resumeZone(washer)
   const planLabel = washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]
 
@@ -240,7 +257,7 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
           <Ligne
             label="Messages automatiques"
             valeur={`${automatismesActifs} actif${automatismesActifs > 1 ? 's' : ''}`}
-            href="/dashboard/parametres/tout#avis"
+            href="/dashboard/parametres/messages"
           />
           {/* « Modèles de messages » de la maquette (7) n'a pas d'équivalent
               dans le code : un seul message d'avis (codé en dur, voir
