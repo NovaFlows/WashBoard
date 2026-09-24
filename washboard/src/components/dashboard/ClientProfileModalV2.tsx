@@ -179,7 +179,9 @@ export default function ClientProfileModalV2({
         }`}
         style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
-        <div className="flex cursor-grab justify-center pt-2.5 pb-3 sm:hidden" aria-hidden {...glisser.poignee}>
+        {/* Bande du haut (poignée + titre) : zone de tirage pour fermer la feuille. */}
+        <div className="shrink-0" {...glisser.poignee}>
+<div className="flex justify-center pt-2.5 pb-3 sm:hidden" aria-hidden>
           <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
         </div>
 
@@ -203,6 +205,7 @@ export default function ClientProfileModalV2({
           >
             <X size={20} strokeWidth={2} />
           </button>
+        </div>
         </div>
 
         <div

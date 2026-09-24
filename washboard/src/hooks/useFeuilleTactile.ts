@@ -44,6 +44,7 @@ const DISTANCE_FERMETURE_PX = 100
 const VITESSE_FERMETURE_PX_PAR_MS = 0.6
 const DISTANCE_MIN_GESTE_RAPIDE_PX = 30
 const DUREE_SORTIE_MS = 200
+const SEUIL_SAISIE_PX = 8
 
 /**
  * Tirer la poignée vers le bas suit le doigt ; au relâchement, la feuille se
@@ -56,24 +57,23 @@ const DUREE_SORTIE_MS = 200
 export function useGlisserPourFermer(onClose: () => void) {
   const [decalage, setDecalage] = useState(0)
   const [enCours, setEnCours] = useState(false)
-  const depart = useRef<{ y: number; t: number } | null>(null)
+  // `depart` : où le doigt s'est posé. `saisi` : le glissement a réellement
+  // commencé (seuil franchi), seul moment où l'on capture le pointeur.
+  const depart = useRef<{ x: number; y: number; t: number; cible: HTMLElement; id: number } | null>(null)
+  const saisi = useRef(false)
   const decalageRef = useRef(0)
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => () => { if (minuterie.current) clearTimeout(minuterie.current) }, [])
 
-  function suivre(y: number) {
-    if (!depart.current) return
-    const d = Math.max(0, y - depart.current.y)
-    decalageRef.current = d
-    setDecalage(d)
-  }
-
   function relacher() {
-    if (!depart.current) return
-    const d = decalageRef.current
-    const duree = Math.max(1, Date.now() - depart.current.t)
+    const d0 = depart.current
+    const etaitSaisi = saisi.current
     depart.current = null
+    saisi.current = false
+    if (!d0 || !etaitSaisi) return
+    const d = decalageRef.current
+    const duree = Math.max(1, Date.now() - d0.t)
     setEnCours(false)
     const geste = d > DISTANCE_FERMETURE_PX || (d > DISTANCE_MIN_GESTE_RAPIDE_PX && d / duree > VITESSE_FERMETURE_PX_PAR_MS)
     if (geste) {
@@ -87,15 +87,35 @@ export function useGlisserPourFermer(onClose: () => void) {
     }
   }
 
+  // Posé sur toute la bande du haut de la feuille (poignée ET titre) : c'est là
+  // qu'un doigt cherche à tirer, la poignée seule ne fait que quelques pixels de
+  // haut. Comme cette bande contient aussi le bouton Fermer, le pointeur n'est
+  // capturé qu'une fois le seuil de glissement franchi : un simple toucher sur
+  // le bouton reste un clic. Doigt et stylet seulement — à la souris, sur
+  // ordinateur, la feuille est une fenêtre centrée qu'on ne tire pas.
   const poignee = {
     onPointerDown: (e: PointerEvent<HTMLElement>) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return
-      e.currentTarget.setPointerCapture(e.pointerId)
-      depart.current = { y: e.clientY, t: Date.now() }
+      if (e.pointerType === 'mouse') return
+      depart.current = { x: e.clientX, y: e.clientY, t: Date.now(), cible: e.currentTarget, id: e.pointerId }
+      saisi.current = false
       decalageRef.current = 0
-      setEnCours(true)
     },
-    onPointerMove: (e: PointerEvent<HTMLElement>) => suivre(e.clientY),
+    onPointerMove: (e: PointerEvent<HTMLElement>) => {
+      const d0 = depart.current
+      if (!d0) return
+      const dy = e.clientY - d0.y
+      const dx = e.clientX - d0.x
+      if (!saisi.current) {
+        // Seuil : vers le bas, et plus vertical qu'horizontal.
+        if (dy < SEUIL_SAISIE_PX || Math.abs(dy) < Math.abs(dx)) return
+        saisi.current = true
+        try { d0.cible.setPointerCapture(d0.id) } catch { /* pointeur déjà libéré */ }
+        setEnCours(true)
+      }
+      const d = Math.max(0, dy)
+      decalageRef.current = d
+      setDecalage(d)
+    },
     onPointerUp: relacher,
     onPointerCancel: relacher,
     style: { touchAction: 'none' } as CSSProperties,
