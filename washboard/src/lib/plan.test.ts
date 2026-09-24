@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
   formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
@@ -663,5 +663,74 @@ describe('doitChoisirFormule — quand demander une décision', () => {
 
   it('ne le demande pas à quelqu’un qui paie', () => {
     expect(doitChoisirFormule(compteNeufEssaiFini({ subscription_status: 'active' }), MAINTENANT)).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Simulation locale (NEXT_PUBLIC_DEV_OFFRE / NEXT_PUBLIC_DEV_FIN_ESSAI)
+//
+// Un outil qui force l'offre de tous les comptes doit être vérifié sur un point
+// avant tout autre : qu'il ne puisse RIEN faire en production. Le reste n'est
+// qu'un confort de test ; celui-là est une garde.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('simulation d’offre en local', () => {
+  const PRO_PAYANT = { plan: 'pro', grandfathered: false, subscription_status: 'active' }
+  const HISTORIQUE = { plan: 'pro', grandfathered: true }
+
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('ne fait rien tant qu’aucune variable n’est posée — l’état livré', () => {
+    expect(planEffectif(PRO_PAYANT)).toBe('pro')
+    expect(hasFeature(PRO_PAYANT, 'compta')).toBe(true)
+    expect(doitChoisirFormule(PRO_PAYANT)).toBe(false)
+  })
+
+  it('force l’offre demandée sur un compte payant', () => {
+    vi.stubEnv('NEXT_PUBLIC_DEV_OFFRE', 'starter')
+    expect(planEffectif(PRO_PAYANT)).toBe('starter')
+    expect(hasFeature(PRO_PAYANT, 'crm')).toBe(true)      // Starter l'a
+    expect(hasFeature(PRO_PAYANT, 'compta')).toBe(false)  // Starter ne l'a pas
+    expect(quotaReservations(PRO_PAYANT)).toBe(15)
+  })
+
+  it('passe outre le statut de client historique', () => {
+    // Sans ça, simuler depuis le compte de l'équipe — qui a tout débloqué —
+    // ne montrerait jamais rien, et on croirait à un bug.
+    vi.stubEnv('NEXT_PUBLIC_DEV_OFFRE', 'decouverte')
+    expect(planEffectif(HISTORIQUE)).toBe('decouverte')
+    expect(hasFeature(HISTORIQUE, 'compta')).toBe(false)
+    expect(quotaReservations(HISTORIQUE)).toBe(5)
+    expect(quotaPrestations(HISTORIQUE)).toBe(3)
+  })
+
+  it('rend au client historique tout son accès dès la simulation retirée', () => {
+    expect(hasFeature(HISTORIQUE, 'compta')).toBe(true)
+    expect(quotaReservations(HISTORIQUE)).toBeNull()
+  })
+
+  it('simule une fin d’essai : Découverte et invitation à choisir', () => {
+    vi.stubEnv('NEXT_PUBLIC_DEV_FIN_ESSAI', '1')
+    expect(planEffectif(PRO_PAYANT)).toBe('decouverte')
+    expect(doitChoisirFormule(PRO_PAYANT)).toBe(true)
+    expect(quotaReservations(PRO_PAYANT)).toBe(5)
+  })
+
+  it('ignore une valeur d’offre qui n’existe pas, plutôt que de tout casser', () => {
+    vi.stubEnv('NEXT_PUBLIC_DEV_OFFRE', 'offre_imaginaire')
+    expect(planEffectif(PRO_PAYANT)).toBe('pro')
+  })
+
+  it('EST INERTE EN PRODUCTION', () => {
+    // La garde qui compte. Même posées, les deux variables ne doivent avoir
+    // aucun effet dès que le code tourne en production — déploiement de
+    // prévisualisation Vercel compris, qui bâtit lui aussi en production.
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('NEXT_PUBLIC_DEV_OFFRE', 'decouverte')
+    vi.stubEnv('NEXT_PUBLIC_DEV_FIN_ESSAI', '1')
+
+    expect(planEffectif(PRO_PAYANT)).toBe('pro')
+    expect(doitChoisirFormule(PRO_PAYANT)).toBe(false)
+    expect(hasFeature(HISTORIQUE, 'compta')).toBe(true)
+    expect(quotaReservations(PRO_PAYANT)).toBeNull()
   })
 })

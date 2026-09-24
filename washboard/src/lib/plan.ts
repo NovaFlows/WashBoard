@@ -194,6 +194,43 @@ export type AbonnementInfo = PlanInfo & {
   subscription_ends_at?: string | null
 }
 
+// ── Simulation, en développement UNIQUEMENT ────────────────────────────────
+//
+// Regarder de ses yeux ce que voit un laveur sur telle ou telle offre ne
+// devrait pas obliger à modifier une ligne de la base de production. C'était
+// pourtant la seule façon de le faire : reculer un `trial_ends_at`, ou
+// éteindre un `grandfathered` — avec le risque d'oublier de le remettre et de
+// retirer son accès complet à quelqu'un sans que personne ne s'en aperçoive.
+//
+// Ces deux variables donnent le même résultat sans rien écrire nulle part.
+// Elles sont INERTES en production (`NODE_ENV`), y compris sur un déploiement
+// de prévisualisation Vercel : elles ne servent qu'en local, `npm run dev`.
+
+function enProduction(): boolean {
+  return process.env.NODE_ENV === 'production'
+}
+
+/** `NEXT_PUBLIC_DEV_OFFRE=starter` — force l'offre vue par TOUS les comptes. */
+function offreForceeEnDev(): Plan | null {
+  if (enProduction()) return null
+  const v = process.env.NEXT_PUBLIC_DEV_OFFRE
+  return v && PLANS.includes(v as Plan) ? (v as Plan) : null
+}
+
+/** `NEXT_PUBLIC_DEV_FIN_ESSAI=1` — fait comme si l'essai venait de se terminer
+ *  sans formule choisie : offre Découverte et invitation à choisir. */
+function finEssaiSimuleeEnDev(): boolean {
+  if (enProduction()) return false
+  return process.env.NEXT_PUBLIC_DEV_FIN_ESSAI === '1'
+}
+
+/** Vrai dès qu'une des deux simulations est active. Sert à passer OUTRE le
+ *  statut de client historique : sans ça, simuler depuis un compte
+ *  `grandfathered` — celui de l'équipe, typiquement — ne montrerait rien. */
+function simulationActive(): boolean {
+  return offreForceeEnDev() !== null || finEssaiSimuleeEnDev()
+}
+
 /** Ce compte suit-il la règle 2026 ? */
 export function suitRetourGratuit(
   w: AbonnementInfo | null | undefined,
@@ -239,6 +276,10 @@ export function planEffectif(
   w: AbonnementInfo | null | undefined,
   now: Date = new Date(),
 ): Plan {
+  const forcee = offreForceeEnDev()
+  if (forcee) return forcee
+  if (finEssaiSimuleeEnDev()) return 'decouverte'
+
   if (suitRetourGratuit(w) && essaiTermineSansFormule(w, now)) return 'decouverte'
   return washerPlan(w)
 }
@@ -249,6 +290,7 @@ export function doitChoisirFormule(
   w: AbonnementInfo | null | undefined,
   now: Date = new Date(),
 ): boolean {
+  if (finEssaiSimuleeEnDev()) return true
   return suitRetourGratuit(w) && essaiTermineSansFormule(w, now)
 }
 
@@ -363,7 +405,7 @@ export function washerPlan(w: PlanInfo | null | undefined): Plan {
 }
 
 export function hasFeature(w: AbonnementInfo | null | undefined, feature: Feature): boolean {
-  if (w?.grandfathered) return true
+  if (w?.grandfathered && !simulationActive()) return true
   return RANK[planEffectif(w)] >= RANK[MIN_PLAN[feature]]
 }
 
@@ -376,13 +418,13 @@ export function requiredPlanLabel(feature: Feature): string {
 
 /** Réservations autorisées ce mois-ci, `null` si illimité. */
 export function quotaReservations(w: AbonnementInfo | null | undefined): number | null {
-  if (w?.grandfathered) return null
+  if (w?.grandfathered && !simulationActive()) return null
   return BOOKING_QUOTA[planEffectif(w)]
 }
 
 /** Prestations autorisées au catalogue, `null` si illimité. */
 export function quotaPrestations(w: AbonnementInfo | null | undefined): number | null {
-  if (w?.grandfathered) return null
+  if (w?.grandfathered && !simulationActive()) return null
   return SERVICE_QUOTA[planEffectif(w)]
 }
 
