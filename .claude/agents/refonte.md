@@ -372,7 +372,7 @@ Pression bouton 120 ms `scale(.97)` · feuille 320 ms · liste au chargement dé
 
 ```css
 html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
-       overscroll-behavior: none; }
+       overscroll-behavior-y: none; }   /* -y seulement : `none` sur l'axe X coupe le geste « retour » depuis le bord */
 input, textarea, select { font-size: 16px; }   /* sinon iOS zoome */
 button, a { touch-action: manipulation; user-select: none; }
 .app { height: 100dvh; }

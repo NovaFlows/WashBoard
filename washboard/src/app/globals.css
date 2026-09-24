@@ -198,9 +198,15 @@ button {
    dashboard pour ne pas déclencher un rechargement accidentel en tirant vers
    le bas une liste (clients, factures...). Le reste du site — en particulier
    /book/[slug] — doit garder le tirer-pour-rafraîchir natif du navigateur,
-   d'où le scope sur cette classe plutôt que sur html/body directement. */
+   d'où le scope sur cette classe plutôt que sur html/body directement.
+
+   Axe VERTICAL seulement (`-y`). Le raccourci `overscroll-behavior: none`
+   coupait aussi l'axe horizontal, et c'est cet axe que le navigateur utilise
+   pour le geste « retour » depuis le bord gauche de l'écran (iPhone comme
+   Android) : dans la PWA installée, glisser depuis le bord ne revenait plus à la
+   page précédente (signalé par Alexandre, 2026-09-24). */
 body.wb-dashboard-active {
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 /* Liens de navigation du dashboard (menu, en-tête, bouton WhatsApp...) : ce
