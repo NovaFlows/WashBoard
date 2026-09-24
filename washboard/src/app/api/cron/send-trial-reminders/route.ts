@@ -4,6 +4,7 @@ import { sendTrialReminder, sendTrialExpired, sendSubReminder, sendSubExpired, s
 import { notifierLaveur } from '@/lib/push'
 import { logger } from '@/lib/logger'
 import { FUSEAU } from '@/lib/dateUtils'
+import { suitRetourGratuit, BOOKING_QUOTA } from '@/lib/plan'
 
 // Tourne chaque matin à 8h (cron-job.org : 0 8 * * *)
 export async function GET(request: NextRequest) {
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Trial J0
     admin.from('washers')
-      .select('id, user_id, name, trial_ends_at')
+      .select('id, user_id, name, trial_ends_at, created_at')
       .eq('subscription_status', 'trial')
       .eq('grandfathered', false)
       .is('trial_expired_sent_at', null)
@@ -75,12 +76,16 @@ export async function GET(request: NextRequest) {
     // Candidats à l'avertissement de fin de grâce (filtrés en JS ci-dessous,
     // car l'échéance de référence est soit trial_ends_at, soit subscription_ends_at)
     admin.from('washers')
-      .select('id, user_id, name, trial_ends_at, subscription_ends_at')
+      .select('id, user_id, name, trial_ends_at, subscription_ends_at, created_at')
       .neq('subscription_status', 'active')
       .is('grace_reminder_sent_at', null),
   ])
 
   const graceToWarn = (graceCandidates ?? []).filter(w => {
+    // Règle 2026 : ces comptes ne seront jamais coupés, ils retombent sur
+    // Découverte. Leur annoncer que « vos réservations vont s'arrêter » serait
+    // une fausse alerte — et la prochaine vraie alerte ne serait plus lue.
+    if (suitRetourGratuit(w)) return false
     const anchor = w.subscription_ends_at ?? w.trial_ends_at
     if (!anchor) return false
     const cutoff = new Date(anchor)
@@ -105,8 +110,9 @@ export async function GET(request: NextRequest) {
     if (!washer.user_id) continue
     const { data: { user } } = await admin.auth.admin.getUserById(washer.user_id)
     if (!user?.email) continue
+    const retourGratuit = suitRetourGratuit(washer)
     try {
-      await sendTrialExpired({ to: user.email, washerName: washer.name })
+      await sendTrialExpired({ to: user.email, washerName: washer.name, retourGratuit })
       // Notification en PLUS de l'email, jamais a sa place : un laveur peut
       // ne pas l'avoir activee, ou etre sur iPhone sans l'application
       // installee. L'email reste le canal fiable, et `notifierLaveur` ne leve
@@ -114,10 +120,16 @@ export async function GET(request: NextRequest) {
       // que l'avis a ete envoye, sinon on le renverrait le lendemain.
       await notifierLaveur(washer.id, {
         title: '⏳ Votre essai est terminé',
-        body: [
-          'Vous gardez l’accès à tout pendant 30 jours.',
-          'Activez votre abonnement pour continuer ensuite.',
-        ].join('\n'),
+        body: (retourGratuit
+          ? [
+              `Vous êtes sur l’offre Découverte : ${BOOKING_QUOTA.decouverte} réservations par mois, gratuites.`,
+              'Choisissez votre formule quand vous voulez.',
+            ]
+          : [
+              'Vous gardez l’accès à tout pendant 30 jours.',
+              'Activez votre abonnement pour continuer ensuite.',
+            ]
+        ).join('\n'),
         url: '/dashboard/abonnement',
         tag: `trial-expired-${washer.id}`,
       })

@@ -5,6 +5,8 @@ import {
   quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
   PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
   TEAM_SIZE_INCLUS, PLAN_ESSAI, PLAN_HISTORIQUE,
+  RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, suitRetourGratuit, essaiTermineSansFormule,
+  planEffectif, doitChoisirFormule,
   type Plan, type Feature,
 } from './plan'
 
@@ -431,5 +433,193 @@ describe('monthsOwed — mois dus après échéance', () => {
 
   it('retombe sur la fin d’essai quand le laveur n’a jamais été abonné', () => {
     expect(monthsOwed(null, '2026-01-01T00:00:00.000Z', new Date('2026-01-15T00:00:00.000Z'))).toBe(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fin de l'essai : retour sur l'offre gratuite (règle 2026)
+//
+// La partie la plus délicate de la grille, parce qu'elle touche des comptes qui
+// tournent déjà. Deux exigences, dans cet ordre :
+//   1. AUCUN compte existant ne change de comportement ;
+//   2. un compte neuf dont l'essai se termine retombe sur Découverte au lieu
+//      d'être coupé.
+//
+// Les dates sont dérivées de la constante, jamais écrites en dur : la reculer
+// pour étendre la règle à tout le monde ne doit pas casser ces tests.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BASCULE = new Date(RETOUR_GRATUIT_POUR_COMPTES_CREES_DES).getTime()
+const JOUR = 24 * 60 * 60 * 1000
+const AVANT  = new Date(BASCULE - 30 * JOUR).toISOString()   // compte existant
+const APRES  = new Date(BASCULE + 30 * JOUR).toISOString()   // compte neuf
+
+/** Un compte neuf dont l'essai s'est terminé hier, sans formule choisie. */
+function compteNeufEssaiFini(extra: Record<string, unknown> = {}) {
+  return {
+    plan: 'pro', grandfathered: false,
+    created_at: APRES,
+    subscription_status: 'trial',
+    trial_ends_at: new Date(BASCULE + 60 * JOUR).toISOString(),
+    ...extra,
+  }
+}
+const MAINTENANT = new Date(BASCULE + 90 * JOUR)   // après la fin de l'essai ci-dessus
+
+describe('suitRetourGratuit — qui est concerné par la règle 2026', () => {
+  it('concerne un compte créé après la bascule', () => {
+    expect(suitRetourGratuit({ created_at: APRES })).toBe(true)
+  })
+
+  it('concerne un compte créé pile à la seconde de la bascule', () => {
+    expect(suitRetourGratuit({ created_at: RETOUR_GRATUIT_POUR_COMPTES_CREES_DES })).toBe(true)
+  })
+
+  it('NE concerne PAS un compte plus ancien', () => {
+    // L'exigence numéro un : les clients déjà en place ne bougent pas.
+    expect(suitRetourGratuit({ created_at: AVANT })).toBe(false)
+  })
+
+  it('ne concerne pas un compte dont on ignore la date de création', () => {
+    // Une page qui ne lit pas `created_at` ne doit pas faire basculer un compte
+    // par omission : l'absence d'information ne change jamais rien.
+    expect(suitRetourGratuit({})).toBe(false)
+    expect(suitRetourGratuit(null)).toBe(false)
+    expect(suitRetourGratuit({ created_at: null })).toBe(false)
+    expect(suitRetourGratuit({ created_at: 'pas une date' })).toBe(false)
+  })
+})
+
+describe('essaiTermineSansFormule', () => {
+  it('est faux tant que l’essai court', () => {
+    expect(essaiTermineSansFormule(
+      { subscription_status: 'trial', trial_ends_at: new Date(BASCULE + 60 * JOUR).toISOString() },
+      new Date(BASCULE + 30 * JOUR),
+    )).toBe(false)
+  })
+
+  it('devient vrai une fois l’échéance passée', () => {
+    expect(essaiTermineSansFormule(compteNeufEssaiFini(), MAINTENANT)).toBe(true)
+  })
+
+  it('est faux pour un abonnement actif', () => {
+    expect(essaiTermineSansFormule(
+      compteNeufEssaiFini({ subscription_status: 'active' }), MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('est faux pendant une relance de paiement (past_due)', () => {
+    // Prélèvement en échec, Stripe relance : on ne rétrograde pas quelqu’un
+    // qui paie et dont la carte va probablement repasser.
+    expect(essaiTermineSansFormule(
+      compteNeufEssaiFini({ subscription_status: 'past_due' }), MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('est faux pour un client historique', () => {
+    expect(essaiTermineSansFormule(
+      compteNeufEssaiFini({ grandfathered: true }), MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('est faux sans aucune échéance connue', () => {
+    expect(essaiTermineSansFormule(
+      { subscription_status: 'trial', trial_ends_at: null }, MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('privilégie la fin d’abonnement sur la fin d’essai', () => {
+    // Essai fini depuis longtemps, abonnement payé jusqu’à plus tard : la
+    // période payée fait foi.
+    expect(essaiTermineSansFormule({
+      subscription_status: 'expired',
+      trial_ends_at: new Date(BASCULE).toISOString(),
+      subscription_ends_at: new Date(BASCULE + 120 * JOUR).toISOString(),
+    }, MAINTENANT)).toBe(false)
+  })
+})
+
+describe('planEffectif — l’offre qui s’applique vraiment', () => {
+  it('fait retomber un compte neuf sur Découverte à la fin de l’essai', () => {
+    expect(planEffectif(compteNeufEssaiFini(), MAINTENANT)).toBe('decouverte')
+  })
+
+  it('LAISSE INTACT un compte existant dans la même situation', () => {
+    // Le test qui compte. Un client déjà en place dont l’essai est fini garde
+    // son plan et son ancien comportement (suspension après la grâce) : la
+    // grille 2026 ne lui retire rien du jour au lendemain.
+    const ancien = compteNeufEssaiFini({ created_at: AVANT })
+    expect(planEffectif(ancien, MAINTENANT)).toBe('pro')
+    expect(hasFeature(ancien, 'compta')).toBe(true)
+    expect(quotaReservations(ancien)).toBeNull()
+  })
+
+  it('laisse intact un compte neuf qui paie', () => {
+    expect(planEffectif(compteNeufEssaiFini({ subscription_status: 'active' }), MAINTENANT)).toBe('pro')
+  })
+
+  it('laisse intact un compte neuf pendant son essai', () => {
+    expect(planEffectif(compteNeufEssaiFini(), new Date(BASCULE + 30 * JOUR))).toBe('pro')
+  })
+
+  it('laisse intact un client historique', () => {
+    expect(planEffectif(compteNeufEssaiFini({ grandfathered: true }), MAINTENANT)).toBe('pro')
+  })
+
+  it('ne change rien quand la fiche lue ne porte pas les dates', () => {
+    // Toutes les routes ne lisent pas `created_at`. Celles-là gardent le
+    // comportement d’avant — jamais une perte d’accès par omission.
+    expect(planEffectif({ plan: 'pro', grandfathered: false })).toBe('pro')
+  })
+})
+
+describe('règle 2026 — ce que le laveur retrouve après la bascule', () => {
+  // `quotaReservations` et `hasFeature` lisent l'horloge réelle : on fige donc
+  // l'échéance loin dans le passé plutôt que d'essayer de figer l'horloge.
+  const fini = compteNeufEssaiFini({ trial_ends_at: '2020-01-01T00:00:00.000Z' })
+
+  it('le ramène aux 5 réservations par mois de l’offre gratuite', () => {
+    expect(quotaReservations(fini)).toBe(5)
+    expect(quotaPrestations(fini)).toBe(3)
+  })
+
+  it('laisse intact, dans la même situation, un compte antérieur à la bascule', () => {
+    // Le pendant du test précédent, côté clients existants : même fiche, même
+    // essai fini, seule la date de création change — et rien ne bouge.
+    expect(quotaReservations({ ...fini, created_at: AVANT })).toBeNull()
+    expect(quotaPrestations({ ...fini, created_at: AVANT })).toBeNull()
+  })
+
+  it('lui ferme la comptabilité, le CRM et la page personnalisée', () => {
+    expect(hasFeature(fini, 'compta')).toBe(false)
+    expect(hasFeature(fini, 'crm')).toBe(false)
+    expect(hasFeature(fini, 'page_personnalisee')).toBe(false)
+  })
+
+  it('ne lui prend ni son agenda ni ses clients — il n’y a pas de verrou dessus', () => {
+    // Formulé comme un rappel : aucune `Feature` ne couvre l’agenda ni les
+    // fiches clients. Si quelqu’un en ajoutait une un jour, ce test tomberait
+    // et la question se poserait explicitement.
+    const cles = Object.keys(ACCES.decouverte)
+    expect(cles).not.toContain('agenda')
+    expect(cles).not.toContain('clients')
+  })
+})
+
+describe('doitChoisirFormule — quand demander une décision', () => {
+  it('le demande à un compte neuf dont l’essai vient de finir', () => {
+    expect(doitChoisirFormule(compteNeufEssaiFini(), MAINTENANT)).toBe(true)
+  })
+
+  it('ne le demande pas pendant l’essai', () => {
+    expect(doitChoisirFormule(compteNeufEssaiFini(), new Date(BASCULE + 30 * JOUR))).toBe(false)
+  })
+
+  it('ne le demande pas à un client existant', () => {
+    expect(doitChoisirFormule(compteNeufEssaiFini({ created_at: AVANT }), MAINTENANT)).toBe(false)
+  })
+
+  it('ne le demande pas à quelqu’un qui paie', () => {
+    expect(doitChoisirFormule(compteNeufEssaiFini({ subscription_status: 'active' }), MAINTENANT)).toBe(false)
   })
 })

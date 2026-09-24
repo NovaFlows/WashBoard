@@ -18,20 +18,50 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Grille 2026 — deux décisions commerciales laissées ouvertes.** Le code est livré et
-      testé, ces deux points ne relèvent pas du code.
-  1. **Que devient un compte à la fin de l'essai, sans paiement ?** Aujourd'hui il reste
-     bloqué après 30 jours de grâce (`graceEnded`), comme avant l'arrivée d'une offre
-     gratuite. La suite logique serait de le faire **retomber sur Découverte** plutôt que de
-     le couper : c'est tout l'intérêt d'avoir un palier à 0 €, et un compte vivant à
-     5 réservations vaut mieux qu'un compte mort. Non implémenté : c'est un changement
-     d'entonnoir, pas un correctif. La FAQ de la landing dit donc « écris-nous et on te
-     bascule » — c'est-à-dire à la main.
+- [ ] **Grille 2026 — décisions commerciales.** Le code est livré et testé ; ce qui suit ne
+      relève pas du code.
+  1. ~~Que devient un compte à la fin de l'essai ?~~ **Tranché le 2026-09-24 :** il retombe
+     sur Découverte au lieu d'être coupé. Voir la section « Tester la bascule » ci-dessous.
   2. **Les anciens Pro à 69 € qui utilisent plusieurs laveurs passent en Business (129 €)**
      par la migration `004`, sans changement de prix : leur abonnement Stripe garde son
      tarif, et les paiements PayPal sont manuels. Ils gagnent donc le Business au prix de
      l'ancien Pro. À arbitrer : on les y laisse (le plus simple et le plus généreux), ou on
      les repasse au tarif Business à une date annoncée.
+
+- [ ] **TESTER LA BASCULE DE FIN D'ESSAI avant de l'étendre aux clients actuels.**
+      La règle 2026 est en place : un essai terminé sans formule choisie fait retomber le
+      compte sur Découverte (gratuit, 5 réservations/mois) au lieu de suspendre sa page.
+
+  **Qui est concerné aujourd'hui : personne d'existant.** La règle ne s'applique qu'aux
+  comptes créés à partir du `2026-09-24`
+  (`RETOUR_GRATUIT_POUR_COMPTES_CREES_DES` dans `src/lib/plan.ts`). Kookii Clean et tous
+  les comptes déjà en place gardent très exactement le comportement qu'ils connaissent :
+  suspension après 30 jours de grâce. C'est vérifié par des tests dédiés, des deux côtés.
+
+  **Comment l'essayer sans attendre un mois :**
+  1. créer un compte neuf (il sera forcément postérieur à la date de bascule) ;
+  2. reculer son échéance dans le passé :
+     `update washers set trial_ends_at = now() - interval '2 days' where slug = '<le-slug>';`
+  3. vérifier, dans cet ordre :
+     - le bandeau bleu en haut du tableau de bord (« Essai terminé — vous êtes sur l'offre
+       Découverte »), **pas** le bandeau rouge « votre essai a expiré » ;
+     - le badge d'offre en haut à droite, qui doit afficher **Découverte** ;
+     - la page Abonnement : l'encart « quelle formule vous va ? » et la jauge « 0 / 5 » ;
+     - **la page publique de réservation, qui doit continuer à accepter des rendez-vous**
+       (c'est le point qui change tout), jusqu'à la 5ᵉ du mois ;
+     - la 6ᵉ réservation refusée, avec un message qui ne parle pas d'abonnement au client ;
+     - la comptabilité, le CRM et les factures repassés en écran « changer d'offre » ;
+     - le logo et les couleurs disparus de la page publique, remplacés par la mention
+       « Réservation propulsée par WashBoard ».
+  4. remettre l'échéance d'origine sur le compte de test.
+
+  **Si quelque chose cloche, un seul endroit à toucher :** reculer ou avancer
+  `RETOUR_GRATUIT_POUR_COMPTES_CREES_DES`. La bascule est un **calcul**, rien n'est réécrit
+  en base — placer la date dans le futur remet tout comme avant, sans migration de
+  rattrapage.
+
+  **Pour l'étendre à tout le monde**, plus tard et volontairement : reculer cette même date
+  (par exemple `'2020-01-01'`). À ne faire qu'après avoir prévenu les clients concernés.
 
 - [ ] **Business : « missions et contrats récurrents » n'existe pas dans le produit.**
       La ligne figurait sur le PDF de la grille tarifaire, elle a été **volontairement

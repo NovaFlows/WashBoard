@@ -137,6 +137,92 @@ export const PLAN_ESSAI: Plan = 'pro'
  *  qui est désormais l'offre gratuite. */
 export const PLAN_HISTORIQUE: Plan = 'pro'
 
+// ── Fin de l'essai : retour sur l'offre gratuite ────────────────────────────
+//
+// Règle 2026 : un laveur essaie le produit complet pendant 30 jours. À la fin,
+// on lui demande quelle formule il veut. S'il ne choisit pas, il RETOMBE SUR
+// DÉCOUVERTE — il n'est pas coupé. Un compte vivant à 5 réservations par mois
+// vaut mieux qu'un compte mort : il continue à recevoir des clients, et le
+// jour où son activité décolle, il paie.
+//
+// Avant cette règle, un essai terminé menait à la suspension de la page de
+// réservation après 30 jours de grâce. C'est le comportement que gardent les
+// comptes plus anciens, volontairement (voir la constante ci-dessous).
+
+/** Un compte créé À PARTIR de cette date suit la règle 2026 ; les comptes plus
+ *  anciens gardent le comportement qu'ils ont toujours connu.
+ *
+ *  Ce n'est pas une précaution technique mais une précaution COMMERCIALE : on
+ *  ne change pas les règles sous les pieds de clients déjà en place, et on
+ *  observe d'abord la bascule sur de vrais comptes neufs.
+ *
+ *  Deux leviers, un seul endroit :
+ *    - étendre la règle à tout le monde → reculer la date ('2020-01-01') ;
+ *    - la désactiver entièrement        → la placer dans le futur.
+ *
+ *  Pour l'ESSAYER sans attendre 30 jours : créer un compte (il sera forcément
+ *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé. */
+export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-09-24T00:00:00.000Z'
+
+/** Ce qu'il faut savoir d'un compte pour trancher la fin d'essai. Tous les
+ *  champs sont facultatifs : un appelant qui ne les lit pas obtient le
+ *  comportement d'avant, jamais une perte d'accès par omission. */
+export type AbonnementInfo = PlanInfo & {
+  created_at?: string | null
+  subscription_status?: string | null
+  trial_ends_at?: string | null
+  subscription_ends_at?: string | null
+}
+
+/** Ce compte suit-il la règle 2026 ? */
+export function suitRetourGratuit(w: AbonnementInfo | null | undefined): boolean {
+  // Sans date de création, on ne change rien : l'absence d'information ne doit
+  // jamais faire basculer un compte dont on ne sait rien.
+  if (!w?.created_at) return false
+  const cree = new Date(w.created_at)
+  if (Number.isNaN(cree.getTime())) return false
+  return cree.getTime() >= new Date(RETOUR_GRATUIT_POUR_COMPTES_CREES_DES).getTime()
+}
+
+/** L'essai (ou la période payée) est terminé et aucune formule n'est réglée. */
+export function essaiTermineSansFormule(
+  w: AbonnementInfo | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (w?.grandfathered) return false
+  // `past_due` = prélèvement en échec, relance Stripe en cours : l'accès est
+  // conservé le temps de la relance, on ne rétrograde pas quelqu'un qui paie.
+  if (w?.subscription_status === 'active' || w?.subscription_status === 'past_due') return false
+  const fin = w?.subscription_ends_at ?? w?.trial_ends_at
+  if (!fin) return false
+  const echeance = new Date(fin)
+  if (Number.isNaN(echeance.getTime())) return false
+  return now.getTime() > echeance.getTime()
+}
+
+/** L'offre qui s'applique RÉELLEMENT aujourd'hui.
+ *
+ *  `washerPlan` dit ce qui est écrit en base ; celle-ci dit ce à quoi le laveur
+ *  a droit maintenant. Rien n'est réécrit en base : la bascule est un calcul,
+ *  donc réversible à la seconde — reculer d'une case la constante ci-dessus
+ *  suffit à tout remettre comme avant, sans migration de rattrapage. */
+export function planEffectif(
+  w: AbonnementInfo | null | undefined,
+  now: Date = new Date(),
+): Plan {
+  if (suitRetourGratuit(w) && essaiTermineSansFormule(w, now)) return 'decouverte'
+  return washerPlan(w)
+}
+
+/** Vrai quand il faut demander au laveur de choisir sa formule : son essai est
+ *  fini, il n'a rien réglé, et il est déjà retombé sur l'offre gratuite. */
+export function doitChoisirFormule(
+  w: AbonnementInfo | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  return suitRetourGratuit(w) && essaiTermineSansFormule(w, now)
+}
+
 // Les clients historiques avaient un quota illimité via l'ancien plan Business ;
 // on le leur conserve explicitement maintenant que ce plan n'existe plus.
 export const GRANDFATHERED_SMS_QUOTA = 100000
@@ -247,9 +333,9 @@ export function washerPlan(w: PlanInfo | null | undefined): Plan {
   return PLAN_ALIASES[brut] ?? 'decouverte'
 }
 
-export function hasFeature(w: PlanInfo | null | undefined, feature: Feature): boolean {
+export function hasFeature(w: AbonnementInfo | null | undefined, feature: Feature): boolean {
   if (w?.grandfathered) return true
-  return RANK[washerPlan(w)] >= RANK[MIN_PLAN[feature]]
+  return RANK[planEffectif(w)] >= RANK[MIN_PLAN[feature]]
 }
 
 // Libellé du plan minimum requis pour une fonctionnalité (pour les invites d'upgrade).
@@ -260,15 +346,15 @@ export function requiredPlanLabel(feature: Feature): string {
 // ── Lecture des quotas ─────────────────────────────────────────────────────
 
 /** Réservations autorisées ce mois-ci, `null` si illimité. */
-export function quotaReservations(w: PlanInfo | null | undefined): number | null {
+export function quotaReservations(w: AbonnementInfo | null | undefined): number | null {
   if (w?.grandfathered) return null
-  return BOOKING_QUOTA[washerPlan(w)]
+  return BOOKING_QUOTA[planEffectif(w)]
 }
 
 /** Prestations autorisées au catalogue, `null` si illimité. */
-export function quotaPrestations(w: PlanInfo | null | undefined): number | null {
+export function quotaPrestations(w: AbonnementInfo | null | undefined): number | null {
   if (w?.grandfathered) return null
-  return SERVICE_QUOTA[washerPlan(w)]
+  return SERVICE_QUOTA[planEffectif(w)]
 }
 
 /** Vrai si un élément de plus dépasse le plafond. `dejaUtilise` est le nombre

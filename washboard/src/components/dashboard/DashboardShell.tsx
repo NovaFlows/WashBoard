@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, washerPlan, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, planEffectif, doitChoisirFormule, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
@@ -25,13 +25,20 @@ type Props = {
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
   cancelsAt?: string | null
+  /** Date de création de la fiche : décide si ce compte suit la règle 2026
+   *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
+  createdAt?: string | null
 }
 
-function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
-  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[washerPlan({ plan })]
+function PlanBadge({ plan, grandfathered, effectif }: { plan?: Plan; grandfathered?: boolean; effectif: Plan }) {
+  // `plan` est ce qui est écrit en base, `effectif` ce qui s'applique
+  // aujourd'hui : après un essai non transformé, les deux diffèrent, et c'est
+  // le second que le laveur doit lire.
+  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[effectif]
   const color = grandfathered
     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-    : plan === 'pro' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
+    : effectif === 'pro' || effectif === 'business'
+      ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
   return (
     <Link
@@ -165,11 +172,30 @@ function AppBetaBanner() {
   )
 }
 
-function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null }) {
+function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean }) {
   const [dismissed, setDismissed] = useState(false)
   const [now] = useState(() => Date.now())
 
   if (dismissed) return null
+
+  // Essai terminé, aucune formule choisie, et le compte suit la règle 2026 :
+  // il tourne sur Découverte. Rien n'est cassé — donc pas de rouge, pas de
+  // « votre compte va être suspendu ». Cette branche passe AVANT les autres :
+  // sans elle, le laveur lirait « Votre période d'essai a expiré » en rouge
+  // alors que sa page de réservation fonctionne toujours.
+  if (choisirFormule) {
+    return (
+      <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
+          <span>Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.</span>
+          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
+            Voir les offres →
+          </Link>
+        </div>
+        <DismissButton onDismiss={() => setDismissed(true)} />
+      </div>
+    )
+  }
 
   // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
   if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
@@ -256,7 +282,17 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt }: Props) {
+  // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
+  // règle recopiée douze fois est une règle qui finit par diverger.
+  const fiche = {
+    plan, grandfathered,
+    created_at: createdAt,
+    subscription_status: subscriptionStatus,
+    trial_ends_at: trialEndsAt,
+  }
+  const offreEffective = planEffectif(fiche)
+  const choisirFormule = doitChoisirFormule(fiche)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
@@ -286,7 +322,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       />
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
-        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
+        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} />
         <AppBetaBanner />
         <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -334,7 +370,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
             {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
                 sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
                 ce qui laisserait croire à un abonnement qui n'existe pas. */}
-            {washerName && <PlanBadge plan={plan} grandfathered={grandfathered} />}
+            {washerName && <PlanBadge plan={plan} grandfathered={grandfathered} effectif={offreEffective} />}
             <form action="/api/auth/logout" method="POST">
               <button
                 aria-label="Se déconnecter"

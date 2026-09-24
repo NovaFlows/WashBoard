@@ -71,6 +71,7 @@ vi.mock('@/lib/push', () => ({ notifierLaveur: vi.fn(async () => {}) }))
 vi.mock('@/lib/travelFee', () => ({ computeTravelFee: vi.fn(async () => 0) }))
 vi.mock('@/lib/googleMaps', () => ({ getMapsApiKey: () => 'cle-test' }))
 
+const { RETOUR_GRATUIT_POUR_COMPTES_CREES_DES } = await import('@/lib/plan')
 const { POST } = await import('./route')
 
 // Vendredi 11 septembre 2026, 08:00 UTC = 10:00 à Paris (heure d'été).
@@ -119,6 +120,7 @@ beforeEach(() => {
         google_refresh_token: null, team_size: 1,
         subscription_status: 'active', trial_ends_at: null, subscription_ends_at: null,
         plan: 'pro', grandfathered: false, zone_config: { enabled: false },
+        created_at: '2026-01-15T00:00:00.000Z',
       }, error: null },
       services: { data: SERVICE_DEFAUT, error: null },
       unavailabilities: { data: [], error: null },
@@ -510,5 +512,118 @@ describe('POST /api/bookings — quota mensuel selon l’offre', () => {
       plan.countMois = 5
       expect((await poster()).res.status).toBe(403)
     })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fin de l'essai : coupure (ancien comportement) ou retour au gratuit (2026)
+//
+// C'est ici que la règle se voit vraiment : sur la porte d'entrée publique. Un
+// client extérieur essaie de réserver chez un laveur dont l'essai est fini —
+// que se passe-t-il ?
+//
+//   compte ANTÉRIEUR à la bascule → inchangé : page suspendue après 30 jours
+//   compte POSTÉRIEUR             → la page marche, plafonnée à 5 par mois
+// ─────────────────────────────────────────────────────────────────────────────
+describe('POST /api/bookings — fin d’essai selon l’âge du compte', () => {
+  const BASCULE = new Date(RETOUR_GRATUIT_POUR_COMPTES_CREES_DES).getTime()
+  const JOUR = 24 * 60 * 60 * 1000
+  // L'horloge des tests est figée au 2026-09-09 (voir beforeEach) : on prend
+  // des échéances très antérieures pour que la grâce de 30 jours soit dépassée.
+  const ESSAI_FINI_DEPUIS_LONGTEMPS = '2026-01-01T00:00:00.000Z'
+
+  it('coupe encore la page d’un client existant — aucun changement pour lui', () => {
+    // L'exigence numéro un de cette livraison : les comptes déjà en place ne
+    // changent pas de comportement du jour au lendemain.
+    avecWasher({
+      plan: 'pro',
+      created_at: new Date(BASCULE - 30 * JOUR).toISOString(),
+      subscription_status: 'trial',
+      trial_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+      subscription_ends_at: null,
+    })
+    return poster().then(({ res, body }) => {
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/ne sont plus disponibles/)
+      expect(rpcAppels).toHaveLength(0)
+    })
+  })
+
+  it('laisse tourner la page d’un compte neuf, plafonnée à 5 par mois', async () => {
+    avecWasher({
+      plan: 'pro',
+      created_at: new Date(BASCULE + 30 * JOUR).toISOString(),
+      subscription_status: 'trial',
+      trial_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+      subscription_ends_at: null,
+    })
+    plan.countMois = 2
+    const { res } = await poster()
+    expect(res.status).toBe(201)
+    expect(rpcAppels).toHaveLength(1)
+  })
+
+  it('refuse la sixième réservation de ce même compte neuf', async () => {
+    avecWasher({
+      plan: 'pro',
+      created_at: new Date(BASCULE + 30 * JOUR).toISOString(),
+      subscription_status: 'trial',
+      trial_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+      subscription_ends_at: null,
+    })
+    plan.countMois = 5
+    const { res, body } = await poster()
+    expect(res.status).toBe(403)
+    expect(body.quota).toEqual({ plafond: 5, utilisees: 5 })
+  })
+
+  it('n’applique jamais les deux sanctions à la fois', async () => {
+    // Couper la page ET plafonner serait punir deux fois. Le compte neuf n'a
+    // droit qu'au plafond : le message renvoyé est celui du quota, pas celui
+    // de la suspension.
+    avecWasher({
+      plan: 'pro',
+      created_at: new Date(BASCULE + 30 * JOUR).toISOString(),
+      subscription_status: 'expired',
+      trial_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+      subscription_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+    })
+    plan.countMois = 5
+    const { body } = await poster()
+    expect(body.error).not.toMatch(/ne sont plus disponibles/)
+    expect(body.error).toMatch(/Contactez-le directement/)
+  })
+
+  it('ne touche pas un compte neuf qui paie', async () => {
+    avecWasher({
+      plan: 'pro',
+      created_at: new Date(BASCULE + 30 * JOUR).toISOString(),
+      subscription_status: 'active',
+      trial_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+    })
+    plan.countMois = 500
+    expect((await poster()).res.status).toBe(201)
+  })
+
+  it('ne touche pas un compte neuf pendant son essai', async () => {
+    avecWasher({
+      plan: 'pro',
+      created_at: new Date(BASCULE + 30 * JOUR).toISOString(),
+      subscription_status: 'trial',
+      trial_ends_at: '2027-01-01T00:00:00.000Z',
+    })
+    plan.countMois = 500
+    expect((await poster()).res.status).toBe(201)
+  })
+
+  it('ne touche pas un client historique créé après la bascule', async () => {
+    avecWasher({
+      plan: 'pro', grandfathered: true,
+      created_at: new Date(BASCULE + 30 * JOUR).toISOString(),
+      subscription_status: 'expired',
+      trial_ends_at: ESSAI_FINI_DEPUIS_LONGTEMPS,
+    })
+    plan.countMois = 500
+    expect((await poster()).res.status).toBe(201)
   })
 })

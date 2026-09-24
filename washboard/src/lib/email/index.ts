@@ -4,7 +4,7 @@ import { escapeHtml } from '@/lib/escapeHtml'
 import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
-import { PLAN_PRICES, formatEuros } from '@/lib/plan'
+import { PLAN_PRICES, BOOKING_QUOTA, formatEuros } from '@/lib/plan'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -610,11 +610,62 @@ export async function sendTrialReminder({ to, washerName, trialEndsAt, appUrl }:
 }
 
 // ── Email : expiration du trial (J0) ─────────────────────────────────────
-export async function sendTrialExpired({ to, washerName, appUrl }: {
+export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit = false }: {
   to: string; washerName: string; appUrl?: string
+  /** Règle 2026 : le compte retombe sur Découverte au lieu d'être suspendu.
+   *  Le ton de l'email change du tout au tout — annoncer une coupure qui
+   *  n'aura pas lieu, c'est perdre la confiance du laveur ET la crédibilité de
+   *  tous les emails suivants. */
+  retourGratuit?: boolean
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  if (retourGratuit) {
+    return resend.emails.send({
+      from: 'WashBoard <noreply@washboard.fr>',
+      to,
+      subject: `Votre mois d'essai est terminé — quelle formule vous va ?`,
+      html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Votre mois d&apos;essai est terminé</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Rien ne s&apos;arrête — à vous de choisir la suite</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
+        réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.
+      </p>
+      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#1d4ed8;font-weight:600;">
+          En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
+          gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.
+        </p>
+      </div>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Dès que votre activité dépasse ce rythme, passez à la formule qui vous va :
+        <strong>Starter à ${formatEuros(PLAN_PRICES.starter)}€/mois</strong> (${BOOKING_QUOTA.starter} réservations),
+        ou <strong>Pro à ${formatEuros(PLAN_PRICES.pro)}€/mois</strong> (réservations illimitées, comptabilité, avis Google, relances).
+      </p>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Choisir ma formule →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Sans engagement · Vous pouvez rester sur Découverte aussi longtemps que vous voulez</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+    })
+  }
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',

@@ -52,7 +52,9 @@ export async function PATCH(request: NextRequest) {
   // consommait des SMS facturés à WashBoard sans jamais passer au plan Pro.
   // Signalé par un audit externe le 2026-09-05.
   const { data: profil, error: profilError } = await supabase
-    .from('washers').select('plan, grandfathered, facture_prochain_numero').eq('user_id', user.id).single()
+    .from('washers')
+    .select('plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, facture_prochain_numero')
+    .eq('user_id', user.id).single()
 
   if (profilError || !profil) {
     // Sans certitude sur le plan, on ne débloque rien : laisser passer

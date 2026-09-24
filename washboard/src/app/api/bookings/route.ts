@@ -10,7 +10,7 @@ import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import type { ZoneConfig } from '@/types'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { graceEnded, quotaReservations, quotaDepasse, debutDuMoisParis, washerPlan, PLAN_LABELS } from '@/lib/plan'
+import { graceEnded, quotaReservations, quotaDepasse, debutDuMoisParis, planEffectif, suitRetourGratuit, PLAN_LABELS } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
@@ -153,7 +153,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -190,8 +190,14 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
 
   // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──
+  //
+  // Ce blocage ne s'applique PLUS aux comptes qui suivent la règle 2026 : chez
+  // eux, un essai terminé sans formule ne coupe rien, il fait retomber le
+  // compte sur Découverte — le plafond mensuel juste en dessous s'en charge.
+  // Couper ET plafonner reviendrait à appliquer deux fois la même sanction.
   const isOwner = !!authUser && washer?.user_id === authUser.id
   if (!isOwner && washer && washer.subscription_status !== 'active'
+    && !suitRetourGratuit(washer)
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
     return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
   }
@@ -244,7 +250,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           // Deux messages : le client extérieur n'a pas à savoir que le laveur
           // est sur une offre limitée, le laveur si — c'est à lui d'agir.
           error: isOwner
-            ? `Vous avez atteint les ${plafondMensuel} réservations par mois de l’offre ${PLAN_LABELS[washerPlan(washer)]}. Passez à l’offre supérieure pour continuer.`
+            ? `Vous avez atteint les ${plafondMensuel} réservations par mois de l’offre ${PLAN_LABELS[planEffectif(washer)]}. Passez à l’offre supérieure pour continuer.`
             : 'Ce prestataire ne peut plus accepter de réservation en ligne ce mois-ci. Contactez-le directement.',
           quota: { plafond: plafondMensuel, utilisees: moisCount ?? 0 },
         },

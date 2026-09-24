@@ -18,6 +18,9 @@ type Props = {
   reservationsCeMois: number | null
   plafondPrestations: number | null
   prestationsAuCatalogue: number | null
+  /** Essai terminé sans formule choisie : le compte tourne sur Découverte et
+   *  on attend une décision. */
+  doitChoisir: boolean
 }
 
 /** Une jauge « 3 / 5 ». Le laveur doit voir sa limite AVANT de la heurter :
@@ -82,6 +85,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function AbonnementPanel({
   subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered,
   plafondReservations, reservationsCeMois, plafondPrestations, prestationsAuCatalogue,
+  doitChoisir,
 }: Props) {
   const [now] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
@@ -109,6 +113,25 @@ export default function AbonnementPanel({
 
   return (
     <div className="space-y-6">
+
+      {/* Essai terminé : le choix de la formule, posé calmement */}
+      {doitChoisir && (
+        // Ni rouge ni alarmiste : rien n'est cassé, la page de réservation
+        // tourne toujours. Un bandeau d'urgence pour une situation qui n'en est
+        // pas une apprend au laveur à ignorer les bandeaux d'urgence.
+        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 p-6">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">
+            Votre mois d’essai est terminé — quelle formule vous va ?
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Vous n’avez rien perdu : votre page de réservation, votre agenda et vos clients
+            sont toujours là. En attendant votre choix, votre compte tourne sur l’offre{' '}
+            <strong>Découverte</strong>, gratuite et limitée à{' '}
+            <strong>{plafondReservations ?? 5} réservations par mois</strong>.
+            Choisissez une formule ci-dessous dès que votre activité le demande.
+          </p>
+        </div>
+      )}
 
       {/* Statut actuel */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
