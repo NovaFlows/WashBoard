@@ -1400,6 +1400,39 @@
     données réelles non vides (le compte de test n'avait rien à montrer) ; le
     contraste de l'ambre et du rouge en sombre (jetons hérités du clair).
 
+- [x] **« Prestations et prix » en v2**, 2026-09-24 (hors plan de vol : la maquette
+      n'a aucun écran pour gérer les prestations ; demande d'Alexandre « même design,
+      mêmes fonctionnalités qu'avant »). Destination neuve, troisième cas de
+      `refonte.md`. Conception validée par `designer`, état vide proposé par `ideas`.
+  - **Fichiers** : route `/dashboard/parametres/prestations` (le site est renvoyé vers
+    `/dashboard/admin#prestations` par `Prestations.tsx`), `PrestationsV2.tsx` (liste,
+    une carte par catégorie, confirmations de suppression), `FeuillePrestationV2.tsx`,
+    `FeuilleCategorieV2.tsx`, `PrestationsEtatVideV2.tsx` (retirable, voir ci-dessous),
+    `PrestationsUiV2.tsx`, `hooks/usePrestationsV2.ts`, `lib/prestationForm.ts` (règles
+    de saisie, 59 tests) et `lib/prestationsApi.ts` (appels, 16 tests). Lien « Prestations
+    et prix » de `ParametresFormV2` et « La plus demandée » d'`AccueilV2` repointés.
+  - **Le site n'a pas bougé** : `PrestationsManager`, `CategoriesManager` (hors un mot,
+    `export` devant `PRESETS`) et `AdminTabs` sont intacts. Règles **dupliquées** dans
+    `lib/prestationForm.ts` (correspondance écrite en tête du fichier) : `changeCategory`,
+    `toggleVehicle`, le prix par type, `payload()`, la fusion locale de `update()`,
+    `startAdd`/`startEdit`, l'avertissement de durée, `applyPreset`. À rapprocher du v1
+    (extraction faisable, diff court) quand la cliente aura validé le v2.
+  - **Route `DELETE /api/services/[id]`** : une prestation déjà réservée ne se supprime
+    pas (`bookings.service_id` sans `ON DELETE`, code 23503) ; la route répondait 500
+    « erreur interne ». Elle répond désormais 409 avec une phrase claire (additif,
+    testé). **Le site n'en dit toujours rien** (`if (res.ok)` muet) : à reprendre côté v1.
+  - **Trou produit à trancher** : une prestation réservée ne peut ni être supprimée ni
+    être rendue invisible (une prestation sans type est refusée, écran et serveur). Il
+    manque un « archiver » (colonne `services.active` ou `archived_at`, filtrée par la
+    page publique) — demandé nulle part, non construit.
+  - **Types orphelins** : retirer un type d'une catégorie, ou supprimer la catégorie,
+    laisse l'id dans `services.vehicle_types` ; le tunnel client l'affiche sous son id
+    brut (un UUID pour un type personnalisé). Non corrigé côté données ; l'écran v2 le
+    signale (avant d'enregistrer la catégorie, dans la confirmation de suppression) et
+    propose « Retirer » dans la prestation concernée.
+  - **Non vérifié** : appareil réel, clavier ouvert (feuille + pied fixe), 360 px de large
+    (titre + « + Prestation » serrés à 390).
+
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
 la taille de police et la position exactes de chaque ligne de texte. Utile si

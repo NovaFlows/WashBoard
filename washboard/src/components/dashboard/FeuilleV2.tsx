@@ -38,6 +38,16 @@ export const ETIQUETTE = `mb-1.5 block text-[12.5px] ${corps} text-[color:var(--
 /** Base commune des boutons pleine largeur : 44 px, pression 120 ms scale(.97). */
 export const BOUTON = `flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] px-4 text-[15px] ${corpsFort} transition-transform active:scale-[.97] disabled:opacity-50 disabled:active:scale-100`
 
+/** Puce de choix : encre pleine quand elle est choisie, contour sinon. 44 px de
+ *  haut. Même style que les puces de `ReglageAutomatismeV2` (qui garde la sienne,
+ *  livrée avant celle-ci). */
+export const puce = (actif: boolean) =>
+  `shrink-0 h-11 px-4 rounded-[var(--v2-radius-pilule)] text-[13.5px] ${corpsFort} border transition-colors motion-reduce:transition-none ${
+    actif
+      ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] border-[color:var(--v2-color-encre)]'
+      : 'bg-transparent text-[color:var(--v2-color-gris)] border-[color:var(--v2-filet-fort)]'
+  }`
+
 export const PRESSION: CSSProperties = {
   transitionDuration: 'var(--v2-duration-press)',
   transitionTimingFunction: 'var(--v2-ease-out)',

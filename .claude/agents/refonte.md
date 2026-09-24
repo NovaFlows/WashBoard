@@ -289,6 +289,15 @@ ni ne garde les réponses ; aucune opposition à être contacté n'est enregistr
 `legal`). Le canal reste UN réglage pour les deux messages, et le message d'avis reste codé en
 dur : les deux corrections produit ci-dessus ne sont toujours pas faites.
 
+**Écran livré le 2026-09-24 : `/dashboard/parametres/prestations`** (« Prestations et
+prix », PWA seulement, le site est renvoyé vers `/dashboard/admin#prestations`). À ne pas
+redécouvrir : une prestation réservée ne se supprime pas (`bookings.service_id` sans
+cascade) et ne peut pas être « masquée » (une prestation sans type est refusée, écran et
+serveur) — il manque un archivage ; les ids de types du preset « Voiture » sont des slugs
+fixes (jamais d'UUID) ; les types orphelins de `services.vehicle_types` s'affichent bruts
+côté client. La logique v2 est dupliquée dans `lib/prestationForm.ts` (correspondance avec
+le v1 écrite en tête) : une correction de règle se reporte des deux côtés.
+
 ## Intégrer le CRM au code — l'ordre
 
 **Étape 0, bloquante : le schéma du dépôt ment.** Le code lit `booked_price`,

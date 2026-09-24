@@ -77,3 +77,24 @@ export const ERREUR_DUREE_MAX =
 export function dureeValide(minutes: number): boolean {
   return Number.isFinite(minutes) && minutes > 0 && minutes <= DUREE_MAX_MINUTES
 }
+
+/** Code Postgres « violation de clé étrangère ». `bookings.service_id` référence
+ *  `services(id)` sans `ON DELETE` : supprimer une prestation déjà réservée
+ *  échoue donc côté base (`supabase/schema.sql`). */
+export const CODE_PG_CLE_ETRANGERE = '23503'
+
+/** Vrai si l'erreur renvoyée par Supabase est un refus de clé étrangère. */
+export function estRefusCleEtrangere(erreur: unknown): boolean {
+  return typeof erreur === 'object' && erreur !== null
+    && (erreur as { code?: unknown }).code === CODE_PG_CLE_ETRANGERE
+}
+
+/** Refus de supprimer une prestation qui a des réservations. Sans ce message,
+ *  la route répondait « Une erreur interne est survenue » (500) : le laveur ne
+ *  pouvait pas deviner que la prestation était simplement utilisée.
+ *
+ *  Le conseil de la fin est celui qui reste vrai : retirer tous les types pour
+ *  la rendre invisible n'est PAS possible (une prestation sans type est
+ *  refusée, voir `ERREUR_SANS_TYPE`), donc on ne le propose pas. */
+export const ERREUR_PRESTATION_RESERVEE =
+  'Impossible de supprimer cette prestation : des réservations l’utilisent. Vous pouvez la modifier, mais elle restera sur votre page de réservation.'

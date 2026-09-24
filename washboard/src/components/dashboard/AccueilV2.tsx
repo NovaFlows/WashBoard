@@ -546,7 +546,7 @@ function BlocsOptionnels({
             key={cle}
             label="La plus demandée"
             valeur={prestationTop ? `${prestationTop.nom} · ${prestationTop.nombre}` : 'Aucune ce mois-ci'}
-            href="/dashboard/admin#prestations"
+            href="/dashboard/parametres/prestations"
           />
         )
       case 'zone':

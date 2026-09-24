@@ -59,7 +59,7 @@ function initiales(texte: string): string {
   return (mots[0][0] + mots[mots.length - 1][0]).toUpperCase()
 }
 
-function Chevron() {
+export function Chevron() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ stroke: 'var(--v2-color-gris)', opacity: 0.55 }}>
       <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
@@ -99,7 +99,7 @@ type LigneProps = {
 // dernière bascule sur place plutôt que de naviguer vers un écran qui
 // n'existe pas encore, déviation assumée par rapport à la maquette qui
 // pointe vers l'artboard de référence `Sombre.dc.html`).
-function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true }: LigneProps) {
+export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true }: LigneProps) {
   const contenu = (
     <>
       <span className={`flex-1 text-[15px] ${corps}`}>{label}</span>
@@ -122,7 +122,7 @@ function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true
 
 // Une carte-liste : fond surface, filet, rayon de surface, lignes séparées
 // par un filet fin — planche Système, mêmes jetons que ChiffresArgent.tsx.
-function CarteListe({ children }: { children: React.ReactNode }) {
+export function CarteListe({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
       <div className="px-4 divide-y divide-[color:var(--v2-filet)]">
@@ -132,7 +132,7 @@ function CarteListe({ children }: { children: React.ReactNode }) {
   )
 }
 
-function TitreSection({ children }: { children: React.ReactNode }) {
+export function TitreSection({ children }: { children: React.ReactNode }) {
   return (
     <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>
       {children}
@@ -286,7 +286,7 @@ export default function ParametresFormV2({ washer, servicesCount }: Props) {
           <Ligne
             label="Prestations et prix"
             valeur={typeof servicesCount === 'number' ? String(servicesCount) : undefined}
-            href="/dashboard/admin#prestations"
+            href="/dashboard/parametres/prestations"
           />
           <Ligne label="Horaires" href="/dashboard/admin#disponibilites" />
           <Ligne label="Zone et déplacement" valeur={zone ?? undefined} href="/dashboard/admin#zone" />
