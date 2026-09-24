@@ -85,7 +85,7 @@ const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
   { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
-  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue) émise à chaque prestation terminée et envoyée automatiquement à tes clients pros. Import de tes anciennes factures. On prépare déjà la facturation électronique, obligatoire pour les petites entreprises dès le 1ᵉʳ septembre 2027.' },
+  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue) émise à chaque prestation terminée, envoyée par email à tes clients pros et accessible aux particuliers depuis leur confirmation. Import de tes anciennes factures. Tu factures des entreprises ? La facturation électronique deviendra obligatoire pour toi le 1ᵉʳ septembre 2027 — on suit le sujet de près et on te tiendra informé bien avant.' },
   { titre: 'Avis Google automatiques', desc: 'Une demande d’avis par email après chaque prestation terminée. Par SMS en formule Pro (150 par mois).' },
   { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', pro: true },
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
@@ -776,6 +776,45 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Facturation ── */}
+      <section id="facturation" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-12">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Facturation</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            La facture part toute seule.
+          </h2>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+            Dès qu&apos;un rendez-vous passe en « Terminé », WashBoard émet la facture avec tes mentions
+            obligatoires — SIRET, régime de TVA, numérotation continue attribuée par le système, sans
+            trou ni doublon — et l&apos;envoie à ton client. Tu n&apos;as rien à recopier,
+            rien à numéroter à la main.
+          </p>
+        </FadeUp>
+        <div className="grid lg:grid-cols-[400px_minmax(0,1fr)] gap-10 items-start">
+          <Capture
+            clair="/landing/facture-demo.webp" sombre="/landing/facture-demo.webp" largeur={1100} hauteur={980}
+            alt="Une facture WashBoard : SIRET, TVA, numéro continu et détail de la prestation"
+            legende="Facture de démonstration (données fictives), telle que WashBoard la produit : ton logo, tes mentions obligatoires et un numéro attribué automatiquement."
+            className="max-w-[400px] mx-auto lg:mx-0 w-full"
+            sizes="(min-width: 1024px) 400px, 90vw"
+          />
+          <FadeGroup className="space-y-6">
+            <FadeItem>
+              <p className="font-bold text-slate-900 dark:text-white">Un numéro qui ne saute jamais</p>
+              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">La numérotation est attribuée par le système, pas par toi : une suite continue, sans trou ni doublon, même si tu émets une facture plus tard.</p>
+            </FadeItem>
+            <FadeItem>
+              <p className="font-bold text-slate-900 dark:text-white">Tes anciennes factures au même endroit</p>
+              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">Celles que tu faisais avant WashBoard s’importent en PDF ou en photo, et se rangent dans le même onglet que les nouvelles.</p>
+            </FadeItem>
+            <FadeItem>
+              <p className="font-bold text-slate-900 dark:text-white">Le client pro reçoit la sienne par email</p>
+              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">Il en a besoin pour sa comptabilité. Le particulier, lui, retrouve la sienne depuis son lien de confirmation.</p>
+            </FadeItem>
+          </FadeGroup>
+        </div>
+      </section>
+
       {/* ── Comment ça marche ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-12">
@@ -920,7 +959,7 @@ export default function LandingPage() {
             { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, en échange de 2 mois offerts.' },
             { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Pro. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
             { q: 'Les clients peuvent payer en ligne ?', a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.' },
-            { q: 'Et la facturation électronique obligatoire en 2027 ?', a: 'L\'État impose aux petites entreprises et micro-entrepreneurs d\'émettre des factures électroniques à leurs clients pros à partir du 1ᵉʳ septembre 2027. WashBoard s\'en occupe : tes factures sont déjà conformes, et on te raccordera à une plateforme agréée avant l\'échéance.' },
+            { q: 'Et la facturation électronique obligatoire en 2027 ?', a: 'À partir du 1ᵉʳ septembre 2027, deux choses changent. Si tu factures des entreprises, tes factures devront être transmises dans un format électronique via une plateforme agréée par l\'État — tes factures WashBoard ont déjà toutes les mentions obligatoires, on travaille sur ce raccordement, sans engagement de date pour l\'instant. Si tu ne factures que des particuliers (le cas de la plupart des laveurs), tu n\'as pas ce format à produire, mais tu devras transmettre à l\'administration un résumé périodique de tes ventes — c\'est l\'e-reporting, et la franchise de TVA n\'en dispense pas. WashBoard n\'y est pas raccordé aujourd\'hui ; on te dira où on en est bien avant l\'échéance.' },
             { q: 'Et mes données ?', a: 'Elles restent les tiennes. Tu peux supprimer ton compte à tout moment depuis tes paramètres : tout est effacé sous 30 jours.' },
           ].map((item) => (
             <FadeUp key={item.q} className="py-6 sm:py-7">
