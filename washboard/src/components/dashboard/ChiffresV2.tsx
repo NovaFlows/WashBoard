@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ClientBooking } from '@/lib/clientProfile'
 import type { Device } from '@/lib/funnelTracking'
 import ChiffresArgent from '@/components/dashboard/ChiffresArgent'
 import ChiffresAcquisition from '@/components/dashboard/ChiffresAcquisition'
 import ChiffresClients from '@/components/dashboard/ChiffresClients'
+import SelecteurPeriodeV2 from '@/components/dashboard/SelecteurPeriodeV2'
+import { aujourdhuiParis, type PeriodeChiffres } from '@/lib/chiffresPeriode'
 
 // « Chiffres » — refonte 2026, passe 5. Fusionne l'ancien CRM
 // (visiteurs/entonnoir/sources, aujourd'hui /dashboard/crm) et la
@@ -19,8 +21,19 @@ import ChiffresClients from '@/components/dashboard/ChiffresClients'
 // `ComptaDashboard.tsx`), toujours atteignables depuis le menu latéral. Cet
 // écran ne les remplace pas, il vit à côté — voir Chiffres.tsx pour le
 // garde-fou qui réserve cette route à la PWA installée.
+//
+// La PÉRIODE (type + jour de référence, flèches précédent/suivant) vit ICI,
+// pas dans un onglet : un seul sélecteur pour Argent, Acquisition et Clients,
+// et elle survit au changement d'onglet (les onglets sont démontés/remontés,
+// leur état local non). Décision d'Alexandre, 2026-09-24 : les graphiques
+// doivent suivre la période. Défaut : le mois en cours, à l'heure de Paris.
 
-export type ChiffresBooking = ClientBooking
+export type ChiffresBooking = ClientBooking & {
+  // Lus par le calcul de l'encaissé (`revenuNet`) ; la page charge `*`, mais
+  // `ClientBooking` ne les déclarait pas.
+  smart_discount?: number | null
+  is_smart_slot?: boolean | null
+}
 export type ChiffresEvent = {
   step: 'prestation' | 'options' | 'creneau' | 'coordonnees' | 'confirmation'
   session_id: string
@@ -42,17 +55,29 @@ const ONGLETS: { cle: Onglet; libelle: string }[] = [
   { cle: 'clients', libelle: 'Clients' },
 ]
 
-type Props = {
+export type ChiffresProps = {
   bookings: ChiffresBooking[]
   events: ChiffresEvent[]
   websiteHost?: string
   hasCompta: boolean
   comptaPlanLabel: string
   facturesCount: number
+  /** Début (ISO) de la fenêtre de visites chargée : avant, pas de donnée. */
+  evenementsDepuis?: string | null
+  /** La lecture des réservations / des visites a échoué en cours de route. */
+  reservationsIncompletes?: boolean
+  evenementsIncomplets?: boolean
 }
 
-export default function ChiffresV2({ bookings, events, websiteHost, hasCompta, comptaPlanLabel, facturesCount }: Props) {
+export default function ChiffresV2({
+  bookings, events, websiteHost, hasCompta, comptaPlanLabel, facturesCount,
+  evenementsDepuis, reservationsIncompletes, evenementsIncomplets,
+}: ChiffresProps) {
   const [onglet, setOnglet] = useState<Onglet>('argent')
+  // Lu une seule fois : tout l'écran calcule sur le même « maintenant ».
+  const [maintenant] = useState(() => Date.now())
+  const aujourdhui = useMemo(() => aujourdhuiParis(maintenant), [maintenant])
+  const [periode, setPeriode] = useState<PeriodeChiffres>(() => ({ type: 'mois', ref: aujourdhuiParis(maintenant) }))
 
   return (
     <div
@@ -73,7 +98,7 @@ export default function ChiffresV2({ bookings, events, websiteHost, hasCompta, c
             role="tab"
             aria-selected={onglet === o.cle}
             onClick={() => setOnglet(o.cle)}
-            className={`shrink-0 h-[34px] px-3.5 rounded-[var(--v2-radius-pilule)] text-[13.5px] ${corpsFort} transition-colors ${
+            className={`shrink-0 h-11 px-4 rounded-[var(--v2-radius-pilule)] text-[13.5px] ${corpsFort} transition-colors ${
               onglet === o.cle
                 ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] border border-[color:var(--v2-color-encre)]'
                 : 'bg-transparent text-[color:var(--v2-color-gris)] border border-[color:var(--v2-filet-fort)]'
@@ -84,14 +109,36 @@ export default function ChiffresV2({ bookings, events, websiteHost, hasCompta, c
         ))}
       </div>
 
+      <SelecteurPeriodeV2 periode={periode} aujourdhui={aujourdhui} onChange={setPeriode} />
+
       {onglet === 'argent' && (
-        <ChiffresArgent hasCompta={hasCompta} comptaPlanLabel={comptaPlanLabel} facturesCount={facturesCount} />
+        <ChiffresArgent
+          hasCompta={hasCompta}
+          comptaPlanLabel={comptaPlanLabel}
+          facturesCount={facturesCount}
+          bookings={bookings}
+          periode={periode}
+          maintenant={maintenant}
+          reservationsIncompletes={reservationsIncompletes}
+        />
       )}
       {onglet === 'acquisition' && (
-        <ChiffresAcquisition events={events} websiteHost={websiteHost} />
+        <ChiffresAcquisition
+          events={events}
+          websiteHost={websiteHost}
+          periode={periode}
+          maintenant={maintenant}
+          evenementsDepuis={evenementsDepuis}
+          evenementsIncomplets={evenementsIncomplets}
+        />
       )}
       {onglet === 'clients' && (
-        <ChiffresClients bookings={bookings} />
+        <ChiffresClients
+          bookings={bookings}
+          periode={periode}
+          maintenant={maintenant}
+          reservationsIncompletes={reservationsIncompletes}
+        />
       )}
     </div>
   )

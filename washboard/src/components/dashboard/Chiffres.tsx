@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
-import ChiffresV2, { type ChiffresBooking, type ChiffresEvent } from '@/components/dashboard/ChiffresV2'
+import ChiffresV2, { type ChiffresProps } from '@/components/dashboard/ChiffresV2'
 
 // Point d'entrée de « Chiffres » — nouvelle destination de la refonte 2026
 // (passe 5) qui fusionne l'ancien CRM et la Comptabilité en un seul écran à
@@ -25,14 +25,7 @@ import ChiffresV2, { type ChiffresBooking, type ChiffresEvent } from '@/componen
 // trois valeurs plutôt que le booléen de `usePwaStandalone()` seul.
 type Statut = 'verification' | 'pwa' | 'site'
 
-type Props = {
-  bookings: ChiffresBooking[]
-  events: ChiffresEvent[]
-  websiteHost?: string
-  hasCompta: boolean
-  comptaPlanLabel: string
-  facturesCount: number
-}
+type Props = ChiffresProps
 
 export default function Chiffres(props: Props) {
   const router = useRouter()

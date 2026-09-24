@@ -571,6 +571,67 @@
     — le seul compte de test disponible (Kooki Clean) est en Pro ; le code
     réutilise exactement le même `hasFeature`/`UpgradePrompt` que
     `/dashboard/compta`, déjà éprouvé là-bas.
+- [x] **Passe 5 bis — Chiffres : les graphiques suivent la période**,
+      2026-09-24 (demande d'Alexandre : « les diagrammes sont fixes et ne
+      s'adaptent pas à la période et aux filtres »). **En attente de
+      relecture/commit** (l'agent ne commite jamais).
+  - **La période vit dans `ChiffresV2.tsx`** (type + jour de référence,
+    défaut : mois en cours) et se partage entre les 3 onglets, elle survit au
+    changement d'onglet. Nouveau `SelecteurPeriodeV2.tsx` : Jour/Semaine/Mois/
+    Année + flèches précédent/suivant (« suivant » désactivé quand la période
+    contient aujourd'hui), cibles 44 px. Nouveau `GraphiqueBarres.tsx` : un
+    seul composant pour Argent et Acquisition — toucher/glisser (ou flèches
+    du clavier) lit la barre, ligne de zéro, perte = barre vers le bas ET
+    rouge, animation coupée sous `prefers-reduced-motion`, `aria-label` de
+    résumé.
+  - **Argent** : le graphique montre le DÉTAIL de la période (semaine 7
+    barres, mois 28–31, année 12, jour = une barre par heure 6 h–21 h élargie
+    aux heures qui ont de la donnée). Valeur = résultat du créneau
+    (encaissé − dépensé). **Exception vue « Jour »** : les frais n'ont pas
+    d'heure, les barres montrent l'encaissé par heure (le titre le dit), le
+    résultat du jour reste dans le héros.
+  - **Définition du CA = celle de la Compta** (terminé seulement, net de
+    remise, `revenuNet`) dans l'onglet Argent ; **celle du CRM** (confirmé +
+    terminé, `booked_price ?? services.price`) dans l'onglet Clients — l'écran
+    le dit en bas de l'onglet Clients. `/api/compta/revenue` et
+    `/api/compta/year-summary` ne sont PLUS appelées par Chiffres : l'encaissé
+    est calculé côté client depuis `bookings` (déjà chargées page par page,
+    jamais tronquées), donc somme des barres = « Encaissé » par construction.
+    Les dépenses viennent toujours de `/api/expenses?start&end`.
+  - **Écart connu avec la Compta (v1), non corrigé** : `/api/compta/revenue`
+    et `/api/compta/year-summary` bornent en UTC (`start + 'T00:00:00'` sans
+    fuseau ; `getMonth()` serveur) — un RDV entre minuit et 2 h (Paris) à une
+    frontière de période compte dans la période d'avant. Chiffres découpe à
+    l'heure de Paris. Vérifié sur le compte de test (semaine, mois, année,
+    mois d'août) : mêmes montants au demi-euro près. À corriger côté API par
+    `dev` si on veut que les deux écrans concordent aussi pour un RDV de nuit.
+  - **Bugs existants relevés, non touchés (hors périmètre)** :
+    `comptaPeriod.navigatePeriod` déborde sur les mois courts (`setMonth`
+    depuis un 31 : le 31 octobre « précédent » retombe le 1er octobre) — la
+    Compta v1 est concernée les jours 29–31. Chiffres a sa propre navigation
+    (`chiffresPeriode.deplacer`, testée). `/api/expenses?start&end` appelle
+    `materializeRecurring` : naviguer vers une période passée CRÉE des lignes
+    de frais récurrents dans ces mois passés (aucun gabarit actif sur le
+    compte de test, donc rien créé pendant la vérification).
+  - **Acquisition** : entonnoir, sources, appareils, horaires, comparaison à
+    la période précédente ET nouveau graphique « Visiteurs par jour/heure/
+    mois » se recalculent (bornes de Paris). Fenêtre de visites = 365 jours
+    (`page.tsx`, passée en `evenementsDepuis`) : période entièrement avant →
+    « Pas de données avant le … » ; à cheval → mention ; comparaison masquée
+    si la période précédente n'est pas entièrement chargée.
+  - **Clients** : période + filtre Tous / Particuliers / Pros (sur
+    `is_professional` de chaque RÉSERVATION, comme l'ancien CRM). Défaut
+    passé de « tout l'historique » à « mois en cours » (pas de « Tout » dans
+    le sélecteur commun — à ajouter si Alexandre y tient).
+  - Lisibilité : barres à 60 % d'encre (au lieu de `--v2-filet-fort`, 10 %,
+    illisible), 30 % pendant qu'on lit une autre barre ; nouveau jeton
+    `--v2-color-encre-pale`. Chevrons et barres d'entonnoir/sources en dur
+    (`rgba(22,22,26,…)`, invisibles en sombre) remplacés par des jetons.
+  - Un RDV `done` daté dans le futur (constaté : 27 sept. sur le compte de
+    test) garde sa barre : « à venir » n'est posé que sur un créneau vide.
+  - **Non vérifié** : tap réel sur un téléphone (testé avec
+    `touchscreen.tap` Playwright + clavier), état verrouillé Essentiel (pas
+    de compte), périodes de plus de 1 000 frais.
 - [x] **Passe 6 — « Plus » (menu de réglages)**, 2026-09-23. Écrit par un
       agent `refonte` dédié, **en attente de relecture/commit par
       l'orchestrateur** (l'agent ne commite jamais — voir plus bas). Même URL

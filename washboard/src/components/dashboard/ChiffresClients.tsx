@@ -4,15 +4,28 @@ import { useMemo, useState } from 'react'
 import { Building2 } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import { buildClientProfile } from '@/lib/clientProfile'
-import { listeClients } from '@/lib/listeClients'
-import { comptePourLeCA, effectivePrice } from '@/lib/crmStats'
+import { formaterJour, type PeriodeChiffres } from '@/lib/chiffresPeriode'
+import { statsClients, type FiltreClients } from '@/lib/chiffresClients'
+import { finitAvant, premierJourDeDonnee } from '@/lib/chiffresArgent'
 import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
 
-// Onglet « Clients » de Chiffres (refonte 2026, passe 5). Reprend
-// `listeClients`/`buildClientProfile` (déjà utilisés par l'écran Clients v2
-// et par l'ancien CRM) plutôt que d'écrire un nouveau calcul par client —
-// aucune requête supplémentaire, les réservations sont déjà chargées par
-// `page.tsx`.
+// Onglet « Clients » de Chiffres (refonte 2026, passe 5, repris au
+// 2026-09-24). Reprend `listeClients`/`buildClientProfile` (déjà utilisés par
+// l'écran Clients v2 et par l'ancien CRM) plutôt que d'écrire un nouveau calcul
+// par client — aucune requête supplémentaire, les réservations sont déjà
+// chargées par `page.tsx` (page par page : jamais tronquées).
+//
+// La période est celle de l'écran (choisie dans ChiffresV2, partagée avec les
+// deux autres onglets) : les clients « actifs », leur valeur moyenne, le
+// classement et la part des pros portent sur les rendez-vous de la période
+// (jours de Paris). Le filtre Tous / Particuliers / Pros porte sur
+// `is_professional` de chaque réservation, comme l'ancien CRM — voir
+// `chiffresClients.ts`.
+//
+// Définition du chiffre d'affaires : celle du CRM (confirmé + terminé, prix
+// `booked_price ?? services.price`), PAS celle de l'onglet Argent (terminé
+// seulement, net de remise). Les deux totaux peuvent donc différer ; la ligne
+// de bas de page le dit.
 //
 // Portée volontairement réduite par rapport à la maquette
 // (`project/ChiffresClients.dc.html`), signalé dans le compte rendu de la
@@ -29,8 +42,6 @@ import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
 //   automatismes de message » — cette liaison fait partie de l'étape 4 du
 //   plan CRM, pas encore construite). Afficher un faux taux de retour aurait
 //   été pire que ne rien afficher.
-// Les deux (best clients, valeur moyenne, répartition pro/particulier)
-// restent : ce sont des agrégats directs des réservations déjà en mémoire.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -40,82 +51,115 @@ const hero = `${police} [font-weight:var(--v2-type-hero-poids)] [font-stretch:va
 const nombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const euros = (v: number) => `${nombre.format(Math.round(v))} €`
 
-export default function ChiffresClients({ bookings }: { bookings: ChiffresBooking[] }) {
-  const [maintenant] = useState(() => Date.now())
+const FILTRES: { cle: FiltreClients; libelle: string }[] = [
+  { cle: 'tous', libelle: 'Tous' },
+  { cle: 'particuliers', libelle: 'Particuliers' },
+  { cle: 'pros', libelle: 'Pros' },
+]
+
+export default function ChiffresClients({ bookings, periode, maintenant, reservationsIncompletes }: {
+  bookings: ChiffresBooking[]
+  periode: PeriodeChiffres
+  maintenant: number
+  reservationsIncompletes?: boolean
+}) {
+  const [filtre, setFiltre] = useState<FiltreClients>('tous')
   const [ouvert, setOuvert] = useState<string | null>(null)
 
-  const clients = useMemo(() => listeClients(bookings, new Date(maintenant)), [bookings, maintenant])
-
-  const stats = useMemo(() => {
-    const actifs = clients.filter(c => c.honoredCount > 0)
-    const totalCA = actifs.reduce((s, c) => s + c.totalRevenue, 0)
-    const valeurMoyenne = actifs.length ? totalCA / actifs.length : 0
-    const meilleurs = [...actifs].sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5)
-
-    const compteesCA = bookings.filter(comptePourLeCA)
-    const caTotal = compteesCA.reduce((s, b) => s + effectivePrice(b), 0)
-    const caPro = compteesCA.filter(b => b.is_professional).reduce((s, b) => s + effectivePrice(b), 0)
-    const partCaPro = caTotal > 0 ? Math.round((caPro / caTotal) * 100) : 0
-    const partRdvPro = compteesCA.length > 0 ? Math.round((compteesCA.filter(b => b.is_professional).length / compteesCA.length) * 100) : 0
-
-    return { actifs, totalCA, valeurMoyenne, meilleurs, partCaPro, partRdvPro }
-  }, [clients, bookings])
+  const stats = useMemo(
+    () => statsClients(bookings, periode, filtre, new Date(maintenant)),
+    [bookings, periode, filtre, maintenant],
+  )
+  const premierJour = useMemo(() => premierJourDeDonnee(bookings), [bookings])
 
   const fiche = ouvert ? buildClientProfile(bookings, ouvert) : null
-
-  if (stats.actifs.length === 0) {
-    return (
-      <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-        Vos statistiques clients apparaîtront ici dès votre première prestation honorée.
-      </p>
-    )
-  }
+  const libelleFiltre = filtre === 'pros' ? 'professionnel' : filtre === 'particuliers' ? 'particulier' : ''
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-[3px]">
-        <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Valeur moyenne par client</span>
-        <span className={`text-[44px] sm:text-[52px] leading-none ${hero}`}>{euros(stats.valeurMoyenne)}</span>
-        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          sur l’ensemble de vos {nombre.format(stats.actifs.length)} client{stats.actifs.length > 1 ? 's' : ''} actif{stats.actifs.length > 1 ? 's' : ''}
-        </span>
+      {reservationsIncompletes && (
+        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)]`} role="status">
+          Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.
+        </p>
+      )}
+
+      <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Type de client">
+        {FILTRES.map(f => (
+          <button
+            key={f.cle}
+            type="button"
+            aria-pressed={filtre === f.cle}
+            onClick={() => setFiltre(f.cle)}
+            className={`shrink-0 h-11 px-4 rounded-[var(--v2-radius-pilule)] text-[13.5px] ${corpsFort} transition-colors ${
+              filtre === f.cle
+                ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] border border-[color:var(--v2-color-encre)]'
+                : 'bg-transparent text-[color:var(--v2-color-gris)] border border-[color:var(--v2-filet-fort)]'
+            }`}
+          >
+            {f.libelle}
+          </button>
+        ))}
       </div>
 
-      <div>
-        <div className="flex items-baseline justify-between px-0.5 pb-2">
-          <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Vos meilleurs clients</span>
-          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {Math.round((stats.meilleurs.reduce((s, c) => s + c.totalRevenue, 0) / (stats.totalCA || 1)) * 100)} % du chiffre d’affaires
-          </span>
-        </div>
-        <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
-          {stats.meilleurs.map((c, i) => {
-            const titreClient = c.isProfessional && c.companyName ? c.companyName : c.name
-            const part = stats.totalCA > 0 ? Math.round((c.totalRevenue / stats.totalCA) * 100) : 0
-            return (
-              <button
-                key={c.email}
-                type="button"
-                onClick={() => setOuvert(c.email)}
-                aria-label={`Voir la fiche de ${titreClient}`}
-                className="w-full grid grid-cols-[18px_1fr_auto_40px] gap-2.5 items-center py-2.5 text-left"
-              >
-                <span className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{i + 1}</span>
-                <span className="min-w-0 flex items-center gap-1.5">
-                  {c.isProfessional && <Building2 size={13} strokeWidth={2} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />}
-                  <span className={`text-[14.5px] ${corpsFort} truncate`}>{titreClient}</span>
-                </span>
-                <span className={`text-[14.5px] ${corpsFort} tabular-nums text-right`}>{euros(c.totalRevenue)}</span>
-                <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] text-right`}>{part} %</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      {stats.actifs.length === 0 ? (
+        <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed`} aria-live="polite">
+          {finitAvant(periode, premierJour)
+            ? `Pas de données avant le ${formaterJour(premierJour!)}, date de votre premier rendez-vous.`
+            : `Aucune prestation honorée${libelleFiltre ? ` pour un client ${libelleFiltre}` : ''} sur cette période.`}
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-[3px]">
+            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Valeur moyenne par client</span>
+            <span className={`text-[44px] sm:text-[52px] leading-none ${hero}`}>{euros(stats.valeurMoyenne)}</span>
+            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              sur {nombre.format(stats.actifs.length)} client{stats.actifs.length > 1 ? 's' : ''} actif{stats.actifs.length > 1 ? 's' : ''} sur la période
+            </span>
+          </div>
 
-      <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
-        Les clients professionnels font {stats.partCaPro} % du chiffre d’affaires pour {stats.partRdvPro} % des rendez-vous.
-      </p>
+          <div>
+            <div className="flex items-baseline justify-between px-0.5 pb-2">
+              <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Vos meilleurs clients</span>
+              <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                {Math.round((stats.meilleurs.reduce((s, c) => s + c.totalRevenue, 0) / (stats.totalCA || 1)) * 100)} % du chiffre d’affaires
+              </span>
+            </div>
+            <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
+              {stats.meilleurs.map((c, i) => {
+                const titreClient = c.isProfessional && c.companyName ? c.companyName : c.name
+                const part = stats.totalCA > 0 ? Math.round((c.totalRevenue / stats.totalCA) * 100) : 0
+                return (
+                  <button
+                    key={c.email}
+                    type="button"
+                    onClick={() => setOuvert(c.email)}
+                    aria-label={`Voir la fiche de ${titreClient}`}
+                    className="w-full min-h-11 grid grid-cols-[18px_1fr_auto_40px] gap-2.5 items-center py-2.5 text-left"
+                  >
+                    <span className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{i + 1}</span>
+                    <span className="min-w-0 flex items-center gap-1.5">
+                      {c.isProfessional && <Building2 size={13} strokeWidth={2} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />}
+                      <span className={`text-[14.5px] ${corpsFort} truncate`}>{titreClient}</span>
+                    </span>
+                    <span className={`text-[14.5px] ${corpsFort} tabular-nums text-right`}>{euros(c.totalRevenue)}</span>
+                    <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] text-right`}>{part} %</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {filtre === 'tous' && (
+            <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
+              Les clients professionnels font {stats.partCaPro} % du chiffre d’affaires pour {stats.partRdvPro} % des rendez-vous.
+            </p>
+          )}
+
+          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
+            Ici, le chiffre d’affaires compte les rendez-vous confirmés et terminés ; l’onglet Argent ne compte que les terminés, remises déduites.
+          </p>
+        </>
+      )}
 
       <div className="rounded-[var(--v2-radius-surface)] border border-dashed border-[color:var(--v2-filet-fort)] px-4 py-3.5">
         <p className={`text-[13px] ${corpsFort}`}>Les relances qui marchent</p>

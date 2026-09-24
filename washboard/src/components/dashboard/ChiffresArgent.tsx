@@ -1,26 +1,41 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/GraphiqueBarres'
 import { CATEGORIES } from '@/components/dashboard/ComptaDashboard'
-import { getPeriodRange, navigatePeriod, type PeriodType } from '@/lib/comptaPeriod'
-import { getLast6Months, ecartRelatif } from '@/lib/crmStats'
+import { deplacer, formaterJour, libelleComparaison, plageDe, type PeriodeChiffres, type PeriodType } from '@/lib/chiffresPeriode'
+import { finitAvant, premierJourDeDonnee, serieArgent, totauxArgent, type ReservationArgent } from '@/lib/chiffresArgent'
+import { ecartRelatif } from '@/lib/crmStats'
 
-// Onglet « Argent » de Chiffres (refonte 2026, passe 5) — fusion visuelle de
-// la Comptabilité existante (`/dashboard/compta`, `ComptaDashboard.tsx`) dans
-// le nouvel écran. La logique n'a pas bougé : mêmes routes API
-// (`/api/expenses`, `/api/compta/revenue`, `/api/compta/year-summary`), même
-// moteur de période (`comptaPeriod.ts`) — seule la présentation change.
+// Onglet « Argent » de Chiffres (refonte 2026, passe 5, repris au 2026-09-24
+// pour que le graphique suive la période) — fusion visuelle de la Comptabilité
+// existante (`/dashboard/compta`, `ComptaDashboard.tsx`) dans le nouvel écran.
+//
+// La PÉRIODE (type + jour de référence, flèches précédent/suivant) vit dans
+// ChiffresV2 et se partage avec les deux autres onglets ; elle est choisie par
+// SelecteurPeriodeV2. Ici on ne fait que la lire.
+//
+// D'où viennent les chiffres — un seul calcul pour tout l'onglet :
+// - l'ENCAISSÉ (héros, ligne « Encaissé » et chaque barre) est calculé dans
+//   `chiffresArgent.ts` à partir des réservations que la page a déjà chargées
+//   (`bookings`, lues page par page : jamais tronquées), avec la définition de
+//   la Comptabilité (terminé seulement, net de remise — `revenuNet`) et les
+//   jours de Paris. La somme des barres est donc le chiffre « Encaissé », par
+//   construction. `/api/compta/revenue` n'est plus appelée d'ici : elle borne
+//   la période en UTC (voir l'en-tête de `chiffresArgent.ts`) ;
+// - les DÉPENSES viennent de `/api/expenses?start&end`, la même route que la
+//   Comptabilité, pour la période ET la précédente (l'écart). Les frais ont
+//   une date, pas d'heure : en vue « Jour », les barres montrent l'encaissé
+//   par heure et le résultat du jour reste dans le héros.
 //
 // Déviation assumée par rapport à la maquette (`project/Chiffres.dc.html`) :
 // les pilules de période y sont « Mois · Semaine · Année · Tout ». Le
-// sélecteur ici reste « Jour · Semaine · Mois · Année », celui déjà utilisé
-// par ComptaDashboard : une période « Tout » sur l'argent demanderait une
+// sélecteur reste « Jour · Semaine · Mois · Année », celui déjà utilisé par
+// ComptaDashboard : une période « Tout » sur l'argent demanderait une
 // nouvelle requête d'agrégat (aucune route existante ne somme tout
-// l'historique), ce qui sort du périmètre d'une passe de présentation.
-// Signalé dans le compte rendu de la passe pour arbitrage si Alexandre y
-// tient.
+// l'historique).
 //
 // Le formulaire d'ajout de frais et la gestion des frais récurrents restent
 // sur `/dashboard/compta` (lien « + Ajouter un frais » plus bas) : les
@@ -34,13 +49,6 @@ const hero = `${police} [font-weight:var(--v2-type-hero-poids)] [font-stretch:va
 
 type Expense = { id: string; date: string; category: string; label: string; amount: number }
 
-const PERIODES: { cle: PeriodType; libelle: string }[] = [
-  { cle: 'jour', libelle: 'Jour' },
-  { cle: 'semaine', libelle: 'Semaine' },
-  { cle: 'mois', libelle: 'Mois' },
-  { cle: 'annee', libelle: 'Année' },
-]
-
 const nombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const euros = (v: number) => `${nombre.format(Math.round(v))} €`
 
@@ -53,100 +61,88 @@ function libelleHero(type: PeriodType): string {
   }
 }
 
-function libelleComparaison(type: PeriodType, precedent: { label: string }): string {
+function titreGraphique(type: PeriodType): string {
   switch (type) {
-    case 'jour': return 'par rapport à la veille'
-    case 'semaine': return 'par rapport à la semaine précédente'
-    case 'annee': return `par rapport à ${precedent.label}`
-    default: return `par rapport à ${precedent.label.split(' ')[0].toLowerCase()}`
+    case 'jour': return "Encaissé par heure — les frais n'ont pas d'heure"
+    case 'annee': return 'Résultat par mois'
+    default: return 'Résultat par jour'
   }
 }
 
-export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCount }: {
+type Reponse = { cle: string; frais: Expense[]; fraisPrecedents: Expense[] | null; erreur: boolean }
+
+async function lireFrais(debut: string, fin: string): Promise<Expense[] | null> {
+  const res = await fetch(`/api/expenses?start=${debut}&end=${fin}`)
+  if (!res.ok) return null
+  const json = await res.json()
+  return (json.expenses ?? []) as Expense[]
+}
+
+export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCount, bookings, periode, maintenant, reservationsIncompletes }: {
   hasCompta: boolean
   comptaPlanLabel: string
   facturesCount: number
+  bookings: ReservationArgent[]
+  periode: PeriodeChiffres
+  maintenant: number
+  reservationsIncompletes?: boolean
 }) {
-  const [periodType, setPeriodType] = useState<PeriodType>('mois')
-  const [refDate] = useState(() => new Date())
+  const plage = plageDe(periode)
+  const precedente: PeriodeChiffres = useMemo(
+    // On recule depuis `ref`, qui n'est jamais après aujourd'hui : le plafond
+    // de `deplacer` (3e argument) ne joue donc jamais ici.
+    () => deplacer({ type: periode.type, ref: periode.ref }, -1, periode.ref),
+    [periode.type, periode.ref],
+  )
+  const plagePrec = plageDe(precedente)
+  const cle = `${plage.debut}|${plage.fin}`
 
-  const [revenue, setRevenue] = useState<number | null>(null)
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [revenuePrecedent, setRevenuePrecedent] = useState<number | null>(null)
-  const [expensesPrecedent, setExpensesPrecedent] = useState<number | null>(null)
-  const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState(false)
+  const [reponse, setReponse] = useState<Reponse | null>(null)
+  const chargement = reponse?.cle !== cle
 
-  const [sixMois, setSixMois] = useState<{ label: string; resultat: number }[] | null>(null)
-
-  const chargerPeriode = useCallback(async () => {
-    if (!hasCompta) return
-    setChargement(true)
-    setErreur(false)
-    try {
-      const courante = getPeriodRange(periodType, refDate)
-      const precedenteRef = navigatePeriod(periodType, refDate, -1)
-      const precedente = getPeriodRange(periodType, precedenteRef)
-
-      const [exRes, revRes, revPrecRes, exPrecRes] = await Promise.all([
-        fetch(`/api/expenses?start=${courante.start}&end=${courante.end}`),
-        fetch(`/api/compta/revenue?start=${courante.start}&end=${courante.end}`),
-        fetch(`/api/compta/revenue?start=${precedente.start}&end=${precedente.end}`),
-        fetch(`/api/expenses?start=${precedente.start}&end=${precedente.end}`),
-      ])
-      if (!exRes.ok || !revRes.ok) { setErreur(true); return }
-
-      const exJson = await exRes.json()
-      const revJson = await revRes.json()
-      setExpenses(exJson.expenses ?? [])
-      setRevenue(revJson.revenue ?? 0)
-
-      if (revPrecRes.ok && exPrecRes.ok) {
-        const revPrecJson = await revPrecRes.json()
-        const exPrecJson = await exPrecRes.json()
-        setRevenuePrecedent(revPrecJson.revenue ?? 0)
-        const totalExPrec = (exPrecJson.expenses ?? []).reduce((s: number, e: Expense) => s + Number(e.amount), 0)
-        setExpensesPrecedent(totalExPrec)
-      } else {
-        setRevenuePrecedent(null)
-        setExpensesPrecedent(null)
-      }
-    } catch {
-      setErreur(true)
-    } finally {
-      setChargement(false)
-    }
-  }, [hasCompta, periodType, refDate])
-
-  useEffect(() => { chargerPeriode() }, [chargerPeriode])
-
-  // Frise des 6 derniers mois : indépendante de la période choisie plus haut
-  // (comme la maquette, qui garde toujours "Avr → Sep" quel que soit l'onglet
-  // Mois/Semaine/Année sélectionné). `getLast6Months` peut couvrir deux
-  // années civiles (ex. avril à septembre ne déborde pas, mais
-  // octobre à mars si) : on ne demande le bilan annuel qu'aux années
-  // réellement concernées.
+  // Les dépenses de la période et de la précédente. `annule` écarte la réponse
+  // d'une période qu'on a déjà quittée (flèche tapée deux fois vite) : sans
+  // lui, la plus lente écraserait la plus récente.
   useEffect(() => {
     if (!hasCompta) return
     let annule = false
     ;(async () => {
-      const mois = getLast6Months()
-      const annees = [...new Set(mois.map(m => m.year))]
-      const bilans = await Promise.all(annees.map(async annee => {
-        const res = await fetch(`/api/compta/year-summary?year=${annee}`)
-        if (!res.ok) return null
-        const j = await res.json()
-        return { annee, months: j.months as { month: number; revenue: number; expenses: number }[] }
-      }))
-      if (annule) return
-      const parAnnee = new Map(bilans.filter(Boolean).map(b => [b!.annee, b!.months]))
-      setSixMois(mois.map(m => {
-        const ligne = parAnnee.get(m.year)?.find(x => x.month === m.month + 1)
-        return { label: m.label, resultat: (ligne?.revenue ?? 0) - (ligne?.expenses ?? 0) }
-      }))
+      try {
+        const [courant, precedent] = await Promise.all([
+          lireFrais(plage.debut, plage.fin),
+          lireFrais(plagePrec.debut, plagePrec.fin).catch(() => null),
+        ])
+        if (annule) return
+        setReponse({ cle, frais: courant ?? [], fraisPrecedents: precedent, erreur: courant === null })
+      } catch {
+        if (!annule) setReponse({ cle, frais: [], fraisPrecedents: null, erreur: true })
+      }
     })()
     return () => { annule = true }
-  }, [hasCompta])
+  }, [hasCompta, cle, plage.debut, plage.fin, plagePrec.debut, plagePrec.fin])
+
+  const premierJour = useMemo(() => premierJourDeDonnee(bookings), [bookings])
+
+  const serie = useMemo(
+    () => (reponse && reponse.cle === cle && !reponse.erreur ? serieArgent(periode, bookings, reponse.frais, maintenant) : null),
+    [reponse, cle, periode, bookings, maintenant],
+  )
+
+  const totauxPrecedents = useMemo(
+    () => (reponse?.fraisPrecedents ? totauxArgent(precedente, bookings, reponse.fraisPrecedents) : null),
+    [reponse, precedente, bookings],
+  )
+
+  const points: PointBarre[] = useMemo(() => (serie?.points ?? []).map(pt => ({
+    cle: pt.cle,
+    label: pt.label,
+    afficherLabel: pt.afficherLabel,
+    libelleLong: pt.libelleLong,
+    valeur: serie!.fraisParCreneau ? pt.resultat : pt.encaisse,
+    detail: serie!.fraisParCreneau ? `Encaissé ${euros(pt.encaisse)} · Dépensé ${euros(pt.depense)}` : undefined,
+    futur: pt.futur,
+    courant: pt.courant,
+  })), [serie])
 
   if (!hasCompta) {
     return (
@@ -158,38 +154,25 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
     )
   }
 
-  const precedente = getPeriodRange(periodType, navigatePeriod(periodType, refDate, -1))
-  const resultat = (revenue ?? 0) - expenses.reduce((s, e) => s + Number(e.amount), 0)
-  const resultatPrecedent = revenuePrecedent !== null && expensesPrecedent !== null
-    ? revenuePrecedent - expensesPrecedent
-    : null
-  const ecart = resultatPrecedent !== null ? ecartRelatif(resultat, resultatPrecedent) : null
+  const erreur = reponse?.cle === cle && reponse.erreur
+  const resultat = serie?.resultat ?? 0
+  const ecart = serie && totauxPrecedents ? ecartRelatif(resultat, totauxPrecedents.resultat) : null
+  const recentes = [...(reponse?.cle === cle ? reponse.frais : [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
 
-  const totalDepenses = expenses.reduce((s, e) => s + Number(e.amount), 0)
-  const recentes = [...expenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
-
-  const maxAbs = sixMois ? Math.max(1, ...sixMois.map(m => Math.abs(m.resultat))) : 1
+  const meilleur = points.filter(p => !p.futur).reduce<PointBarre | null>((m, p) => (!m || p.valeur > m.valeur ? p : m), null)
+  const resume = serie && !serie.vide
+    ? `${titreGraphique(periode.type)}, ${plage.label}. ${serie.fraisParCreneau ? 'Résultat' : 'Encaissé'} total ${euros(serie.fraisParCreneau ? serie.resultat : serie.encaisse)}.`
+      + (meilleur ? ` Meilleur créneau : ${meilleur.libelleLong}, ${euros(meilleur.valeur)}.` : '')
+      + ' Flèches gauche et droite pour parcourir les barres.'
+    : ''
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Période">
-        {PERIODES.map(p => (
-          <button
-            key={p.cle}
-            type="button"
-            role="tab"
-            aria-selected={periodType === p.cle}
-            onClick={() => setPeriodType(p.cle)}
-            className={`shrink-0 h-[34px] px-3.5 rounded-[var(--v2-radius-pilule)] text-[13.5px] ${corpsFort} transition-colors ${
-              periodType === p.cle
-                ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] border border-[color:var(--v2-color-encre)]'
-                : 'bg-transparent text-[color:var(--v2-color-gris)] border border-[color:var(--v2-filet-fort)]'
-            }`}
-          >
-            {p.libelle}
-          </button>
-        ))}
-      </div>
+      {reservationsIncompletes && (
+        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)]`} role="status">
+          Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.
+        </p>
+      )}
 
       {erreur ? (
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-rouge)]`}>
@@ -198,13 +181,13 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
       ) : (
         <>
           <div className="flex flex-col gap-[3px]">
-            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{libelleHero(periodType)}</span>
+            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{libelleHero(periode.type)}</span>
             <span className={`text-[44px] sm:text-[52px] leading-none ${hero}`}>
-              {chargement ? '—' : euros(resultat)}
+              {serie ? euros(resultat) : '—'}
             </span>
-            {!chargement && ecart !== null && (
+            {serie && ecart !== null && (
               <span className={`text-[13.5px] ${corps}`} style={{ color: ecart >= 0 ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}>
-                {ecart >= 0 ? '+' : ''}{ecart} % {libelleComparaison(periodType, precedente)}
+                {ecart >= 0 ? '+' : ''}{ecart} % {libelleComparaison(periode.type)}
               </span>
             )}
           </div>
@@ -213,38 +196,35 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
             <div className="flex justify-between px-4 py-3.5">
               <span className="flex flex-col gap-0.5">
                 <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Encaissé</span>
-                <span className={`text-[19px] ${corpsFort} tabular-nums`}>{chargement ? '—' : euros(revenue ?? 0)}</span>
+                <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.encaisse) : '—'}</span>
               </span>
               <span className="flex flex-col gap-0.5 items-end">
                 <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Dépensé</span>
-                <span className={`text-[19px] ${corpsFort} tabular-nums`}>{chargement ? '—' : euros(totalDepenses)}</span>
+                <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.depense) : '—'}</span>
               </span>
             </div>
             <div className="h-px bg-[color:var(--v2-filet)]" />
-            {sixMois && (
-              <div className="flex items-end gap-2 px-4 py-3.5" role="img" aria-label={sixMois.map(m => `${m.label} ${euros(m.resultat)}`).join(', ')}>
-                {sixMois.map((m, i) => {
-                  const hauteur = Math.max(6, Math.round((Math.abs(m.resultat) / maxAbs) * 104))
-                  const dernier = i === sixMois.length - 1
-                  return (
-                    <div key={m.label} className="flex-1 flex flex-col items-center gap-[7px]">
-                      <div className="w-full h-[104px] flex items-end">
-                        <span
-                          className="w-full rounded-[5px]"
-                          style={{
-                            height: hauteur,
-                            backgroundColor: dernier ? 'var(--v2-color-encre)' : 'var(--v2-filet-fort)',
-                          }}
-                        />
-                      </div>
-                      <span className={`text-[11px] ${corpsFort}`} style={{ color: dernier ? 'var(--v2-color-encre)' : 'var(--v2-color-gris)' }}>
-                        {m.label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            <div className="px-4 py-3.5">
+              {!serie ? (
+                <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-12`}>Chargement…</p>
+              ) : serie.vide || points.every(p => p.valeur === 0) ? (
+                <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-12 leading-relaxed`}>
+                  {serie.vide && finitAvant(periode, premierJour)
+                    ? `Pas de données avant le ${formaterJour(premierJour!)}, date de votre premier rendez-vous.`
+                    : serie.vide
+                      ? 'Aucun rendez-vous terminé ni frais sur cette période.'
+                      : 'Aucun encaissement à tracer sur cette période.'}
+                </p>
+              ) : (
+                <GraphiqueBarres
+                  key={cle}
+                  points={points}
+                  formaterValeur={euros}
+                  resume={resume}
+                  titreParDefaut={`${titreGraphique(periode.type)} · touchez une barre pour lire sa valeur`}
+                />
+              )}
+            </div>
           </div>
 
           <div>
@@ -281,7 +261,7 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
             <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
               Factures · {nombre.format(facturesCount)} émise{facturesCount > 1 ? 's' : ''}
             </span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(22,22,26,0.28)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="text-[color:var(--v2-color-gris)]">
               <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
             </svg>
           </Link>

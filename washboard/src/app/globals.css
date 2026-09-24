@@ -308,6 +308,11 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
   --v2-color-vert: #127A4B;
   --v2-color-ambre: #9A5B00;
   --v2-color-rouge: #B3261E;
+  /* Encre atténuée — barres des graphiques de Chiffres quand une autre barre
+     est mise en avant. Dérivée de l'encre du thème (donc juste en clair ET en
+     sombre, sans second jeton à maintenir) ; `--v2-filet-fort` (10 % d'encre)
+     est trop pâle pour porter une valeur à lire. */
+  --v2-color-encre-pale: color-mix(in srgb, var(--v2-color-encre) 30%, transparent);
 
   /* Filets — le premier (.06) était déjà confirmé (panneau "Densité",
      lignes de liste). Le second (.10) est CONFIRMÉ à cette passe (refonte
@@ -465,6 +470,23 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
   --v2-verre-ombre: 0 10px 34px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .20);
 }
 /* ── Fin jetons v2 (passe 1, corrigés/complétés passes 2–4) ─────────────── */
+
+/* ── Graphiques de Chiffres v2 — barre qui pousse depuis sa ligne de zéro ────
+   Consommée par GraphiqueBarres.tsx (PWA installée uniquement). 260 ms,
+   `--v2-ease-out`, jamais d'ease-in ; la barre part de la ligne de zéro
+   (`transform-origin` posé en ligne : en bas pour un gain, en haut pour une
+   perte). Coupée entièrement sous `prefers-reduced-motion`. */
+@keyframes v2-barre-pousse {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.v2-barre {
+  animation: v2-barre-pousse 260ms var(--v2-ease-out) both;
+  transition: background-color 120ms var(--v2-ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-barre { animation: none; transition: none; }
+}
 
 /* ── Barre du bas v2 (refonte 2026, passe 4) ────────────────────────────────
    Classe dédiée plutôt que des utilitaires Tailwind arbitraires : la valeur

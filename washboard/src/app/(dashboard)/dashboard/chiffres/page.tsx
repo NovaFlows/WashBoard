@@ -81,6 +81,9 @@ export default async function ChiffresPage() {
         hasCompta={hasFeature(washer, 'compta')}
         comptaPlanLabel={requiredPlanLabel('compta')}
         facturesCount={facturesCount ?? 0}
+        evenementsDepuis={since.toISOString()}
+        reservationsIncompletes={!!bookingsError}
+        evenementsIncomplets={!!funnelError}
       />
     </DashboardShell>
   )
