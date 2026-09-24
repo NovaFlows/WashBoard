@@ -4,6 +4,7 @@ import { escapeHtml } from '@/lib/escapeHtml'
 import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
+import { PLAN_PRICES, formatEuros } from '@/lib/plan'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -642,7 +643,7 @@ export async function sendTrialExpired({ to, washerName, appUrl }: {
       </div>
       <div style="text-align:center;margin-bottom:16px;">
         <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Activer mon abonnement — 49€/mois →
+          Activer mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
@@ -684,7 +685,7 @@ export async function sendSubReminder({ to, washerName, endsAt, appUrl }: {
       </p>
       <div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
         <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">
-          Effectuez votre paiement de 49€ par PayPal ou virement — activation sous 24h ouvrées.
+          Effectuez votre paiement par PayPal ou virement — activation sous 24h ouvrées.
         </p>
       </div>
       <div style="text-align:center;">
@@ -734,7 +735,7 @@ export async function sendSubExpired({ to, washerName, appUrl }: {
       </div>
       <div style="text-align:center;margin-bottom:16px;">
         <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Renouveler mon abonnement — 49€/mois →
+          Renouveler mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>

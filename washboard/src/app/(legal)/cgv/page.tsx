@@ -36,7 +36,7 @@ export default function CGV() {
           <li>La confirmation automatique des réservations par email</li>
         </ul>
         <p>
-          Les fonctionnalités disponibles dépendent du plan souscrit (Essentiel, Pro).
+          Les fonctionnalités disponibles dépendent du plan souscrit (Découverte, Starter, Pro, Business).
         </p>
       </Section>
 

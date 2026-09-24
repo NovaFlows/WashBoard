@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, washerPlan, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
@@ -28,7 +28,7 @@ type Props = {
 }
 
 function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
-  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[plan ?? 'essentiel']
+  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[washerPlan({ plan })]
   const color = grandfathered
     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
     : plan === 'pro' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'

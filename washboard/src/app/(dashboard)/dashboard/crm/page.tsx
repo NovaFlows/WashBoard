@@ -3,11 +3,12 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmView from '@/components/dashboard/CrmView'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
-import { SITE_URL_FALLBACK } from '@/lib/plan'
+import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel } from '@/lib/plan'
 import { normalizeHost } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -21,6 +22,26 @@ export default async function CrmPage() {
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'crm')
+
+  // Le CRM fait partie de l'offre Starter (et au-dessus). Le verrou est posé
+  // AVANT les lectures : inutile de parcourir une année d'événements pour
+  // afficher un écran d'invitation à changer d'offre.
+  if (!hasFeature(washer, 'crm')) {
+    return (
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+        <div className="p-4">
+          <div className="mb-6">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">CRM</h1>
+          </div>
+          <UpgradePrompt
+            title="Sachez d’où viennent vos clients"
+            description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning. Disponible à partir de l’offre Starter."
+            planLabel={requiredPlanLabel('crm')}
+          />
+        </div>
+      </DashboardShell>
+    )
+  }
 
   // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
   // erreur. Voir `toutesLesLignes`.

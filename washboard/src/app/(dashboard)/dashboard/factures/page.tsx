@@ -12,6 +12,8 @@ import {
 } from '@/lib/listeFactures'
 import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
+import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,6 +117,24 @@ export default async function FacturesPage({
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'factures')
+
+  // La facturation conforme fait partie de l'offre Pro (et au-dessus).
+  if (!hasFeature(washer, 'facturation')) {
+    return (
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+        <div className="p-4">
+          <div className="mb-6">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Factures</h1>
+          </div>
+          <UpgradePrompt
+            title="Éditez des factures conformes"
+            description="Mentions légales, SIRET, TVA, numérotation continue : des factures que votre comptable accepte. Disponible à partir de l’offre Pro."
+            planLabel={requiredPlanLabel('facturation')}
+          />
+        </div>
+      </DashboardShell>
+    )
+  }
 
   // Lectures paginées : au-delà de 1 000 lignes, une lecture simple serait
   // coupée sans prévenir (voir `toutesLesLignes`).

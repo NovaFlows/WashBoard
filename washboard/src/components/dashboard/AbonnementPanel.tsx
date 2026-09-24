@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import {
-  PLAN_CARDS, monthsOwed, freeMonthsLabel, formatEuros, yearlyPrice,
-  yearlyMonthlyEquivalent, type Plan, type BillingCycle,
+  PLAN_CARDS, PLAN_PRICES, PLAN_HISTORIQUE, monthsOwed, freeMonthsLabel, formatEuros,
+  yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
 
@@ -13,6 +13,45 @@ type Props = {
   subscriptionEndsAt: string | null
   plan: Plan
   grandfathered: boolean
+  /** `null` : l'offre n'a pas de plafond, ou le comptage n'a pas pu être lu. */
+  plafondReservations: number | null
+  reservationsCeMois: number | null
+  plafondPrestations: number | null
+  prestationsAuCatalogue: number | null
+}
+
+/** Une jauge « 3 / 5 ». Le laveur doit voir sa limite AVANT de la heurter :
+ *  découvrir le plafond au moment où un client n'arrive pas à réserver, c'est
+ *  découvrir qu'on a déjà perdu le client. */
+function Jauge({ titre, utilise, plafond, unite }: {
+  titre: string
+  utilise: number
+  plafond: number
+  unite: string
+}) {
+  const part = Math.min(100, Math.round((utilise / plafond) * 100))
+  const chaud = utilise >= plafond
+  const proche = !chaud && utilise >= plafond - 1
+  const couleur = chaud ? 'bg-red-500' : proche ? 'bg-amber-500' : 'bg-blue-600'
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{titre}</p>
+        <p className={`text-sm font-bold ${chaud ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-slate-100'}`}>
+          {utilise} <span className="font-medium text-slate-400">/ {plafond}</span>
+        </p>
+      </div>
+      <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+        <div className={`h-full rounded-full ${couleur} transition-all`} style={{ width: `${part}%` }} />
+      </div>
+      {chaud && (
+        <p className="text-xs text-red-600 dark:text-red-400 mt-1.5 font-medium">
+          Plafond atteint : {unite}
+        </p>
+      )}
+    </div>
+  )
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -40,7 +79,10 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered }: Props) {
+export default function AbonnementPanel({
+  subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered,
+  plafondReservations, reservationsCeMois, plafondPrestations, prestationsAuCatalogue,
+}: Props) {
   const [now] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [billing, setBilling] = useState<BillingCycle>('yearly')
@@ -49,7 +91,11 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
     : null
 
-  const currentPrice = PLAN_CARDS.find(c => c.key === plan)?.price ?? 49
+  // Les clients historiques ne sont sur aucune carte de la grille : leur tarif
+  // est celui qu'ils paient depuis le début, pas celui de leur clé de plan.
+  const currentPrice = grandfathered
+    ? PLAN_PRICES[PLAN_HISTORIQUE]
+    : PLAN_CARDS.find(c => c.key === plan)?.price ?? PLAN_PRICES.decouverte
 
   const owed = subscriptionStatus === 'active' ? 0 : monthsOwed(subscriptionEndsAt, trialEndsAt, new Date(now))
   const dueMonths = Math.max(1, owed)
@@ -73,7 +119,11 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
           </div>
           <div className="text-right">
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Tarif</p>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{currentPrice}€<span className="text-sm font-medium text-slate-400">/mois</span></p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+              {currentPrice === 0
+                ? 'Gratuit'
+                : <>{currentPrice}€<span className="text-sm font-medium text-slate-400">/mois</span></>}
+            </p>
           </div>
         </div>
 
@@ -108,6 +158,32 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
         )}
       </div>
 
+      {/* Ce qu'il reste dans l'offre en cours */}
+      {(plafondReservations !== null || plafondPrestations !== null) && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Votre consommation</h2>
+          {plafondReservations !== null && reservationsCeMois !== null && (
+            <Jauge
+              titre="Réservations ce mois-ci"
+              utilise={reservationsCeMois}
+              plafond={plafondReservations}
+              unite="vos clients ne peuvent plus réserver en ligne jusqu’au 1er du mois prochain."
+            />
+          )}
+          {plafondPrestations !== null && prestationsAuCatalogue !== null && (
+            <Jauge
+              titre="Prestations au catalogue"
+              utilise={prestationsAuCatalogue}
+              plafond={plafondPrestations}
+              unite="vous ne pouvez plus en ajouter."
+            />
+          )}
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Les réservations se remettent à zéro le 1er de chaque mois. Les rendez-vous annulés ne comptent pas.
+          </p>
+        </div>
+      )}
+
       {/* Nos offres */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Nos offres</h2>
@@ -117,8 +193,8 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
             {/* Le tarif était écrit en dur : il ne suivait ni la bascule
                 mensuel/annuel, ni un changement de prix dans `plan.ts`. */}
             {billing === 'yearly'
-              ? `${formatEuros(yearlyMonthlyEquivalent(PLAN_CARDS[0].price))}€/mois, soit ${formatEuros(yearlyPrice(PLAN_CARDS[0].price))}€/an`
-              : `${formatEuros(PLAN_CARDS[0].price)}€/mois`}.
+              ? `${formatEuros(yearlyMonthlyEquivalent(PLAN_PRICES[PLAN_HISTORIQUE]))}€/mois, soit ${formatEuros(yearlyPrice(PLAN_PRICES[PLAN_HISTORIQUE]))}€/an`
+              : `${formatEuros(PLAN_PRICES[PLAN_HISTORIQUE])}€/mois`}.
           </p>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Choisissez l&apos;offre adaptée à votre activité.</p>
@@ -145,14 +221,19 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                   ) : null}
                 </div>
                 <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-0.5">
-                  {billing === 'yearly' ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
-                  <span className="text-xs font-medium text-slate-400">/mois</span>
+                  {card.price === 0 ? 'Gratuit' : (
+                    <>
+                      {card.from && <span className="text-xs font-medium text-slate-400">dès </span>}
+                      {billing === 'yearly' ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
+                      <span className="text-xs font-medium text-slate-400">/mois</span>
+                    </>
+                  )}
                 </p>
                 {/* L'économie annuelle ne s'affiche qu'en vue annuelle. En vue
                     mensuelle, cette ligne verte vendait l'engagement annuel au
                     milieu des tarifs mensuels : le vert du produit signale une
                     économie, il n'a rien à faire là où il n'y en a pas. */}
-                {billing === 'yearly' && (
+                {billing === 'yearly' && card.price > 0 && (
                   <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
                     Soit {formatEuros(yearlyPrice(card.price))}€/an — {freeMonthsLabel()}
                   </p>
@@ -169,9 +250,16 @@ export default function AbonnementPanel({ subscriptionStatus, trialEndsAt, subsc
                   ))}
                 </ul>
 
-                {grandfathered && card.key !== 'essentiel' ? (
+                {/* Un client historique a déjà tout : aucune carte ne lui propose
+                    de payer quoi que ce soit. L'offre gratuite non plus, pour
+                    une raison inverse — il n'y a rien à encaisser. */}
+                {grandfathered ? (
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
                     Inclus dans votre plan
+                  </span>
+                ) : card.price === 0 ? (
+                  <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
+                    {isCurrent ? 'Votre offre actuelle' : 'Sans paiement'}
                   </span>
                 ) : subscriptionStatus !== 'active' ? (
                   <div className="space-y-2">

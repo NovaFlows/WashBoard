@@ -6,7 +6,7 @@ import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
-import { graceEnded } from '@/lib/plan'
+import { graceEnded, hasFeature } from '@/lib/plan'
 import { estReservable } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
@@ -178,7 +178,18 @@ export default async function BookingPage({ params }: Props) {
   if (bookingsError) logger.error('book.bookings.fetch_failed', { washerId: washer.id, slug }, bookingsError)
   if (unavailError) logger.error('book.unavailabilities.fetch_failed', { washerId: washer.id, slug }, unavailError)
 
-  const bgStyle = getBgStyle(washer.background_theme)
+  // ── Identité visuelle : réservée aux offres payantes ────────────────────
+  //
+  // Sur l'offre Découverte, la page reste aux couleurs de WashBoard et porte
+  // notre nom. C'est ce qu'annonce la grille tarifaire, et le contrôle est ici
+  // plutôt que dans les réglages seuls : un compte qui aurait personnalisé sa
+  // page AVANT de rétrograder garde ses valeurs en base, et elles doivent
+  // cesser de s'afficher sans qu'on ait à les effacer.
+  const personnalisee = hasFeature(washer, 'page_personnalisee')
+  const logoUrl       = personnalisee ? washer.logo_url : null
+  const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
+
+  const bgStyle = personnalisee ? getBgStyle(washer.background_theme) : null
   const themed  = !!bgStyle
 
   const reviewData = washer.website_url ? await scrapeWebsiteReviews(washer.website_url) : { reviews: [] }
@@ -186,7 +197,7 @@ export default async function BookingPage({ params }: Props) {
 
   return (
     <>
-    {washer.logo_url && <link rel="icon" href={washer.logo_url} type="image/png" />}
+    {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
     <div
       className={`min-h-screen ${themed ? '' : 'bg-slate-50 dark:bg-slate-950'}`}
       style={bgStyle ?? undefined}
@@ -198,9 +209,9 @@ export default async function BookingPage({ params }: Props) {
       }>
         <div className="w-full px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {washer.logo_url ? (
+            {logoUrl ? (
               <img
-                src={washer.logo_url}
+                src={logoUrl}
                 alt={washer.name}
                 className="w-12 h-12 rounded-xl object-cover"
               />
@@ -264,7 +275,7 @@ export default async function BookingPage({ params }: Props) {
           availabilities={availabilities ?? []}
           existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; selected_addons: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }[]}
           unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string; team_members_off?: number | null }[]}
-          accent={washer.brand_color ?? '#2563eb'}
+          accent={accent}
         />
 
         {hasReviews && (
@@ -287,6 +298,21 @@ export default async function BookingPage({ params }: Props) {
               Nous contacter sur WhatsApp
             </a>
           </div>
+        )}
+        {!personnalisee && (
+          // La marque de l'offre gratuite. Discrète mais cliquable : c'est le
+          // seul canal d'acquisition que le produit s'offre à lui-même.
+          <p className="mt-10 text-center text-xs text-slate-400 dark:text-slate-500">
+            Réservation propulsée par{' '}
+            <a
+              href="https://www.washboard.fr"
+              target="_blank"
+              rel="noopener"
+              className="font-semibold text-slate-500 dark:text-slate-400 underline underline-offset-2"
+            >
+              WashBoard
+            </a>
+          </p>
         )}
       </main>
     </div>

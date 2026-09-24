@@ -271,7 +271,10 @@ export default async function DashboardPage() {
         pending={pending}
         confirmed={confirmed}
         terminesCeMois={terminesCeMois}
-        caCeMois={hasFeature(washer, 'compta') ? caCeMois : null}
+        // « Suivi simple du chiffre d'affaires » : c'est ce que l'offre
+        // Starter promet, et ça tient dans cette seule case. La comptabilité
+        // détaillée (dépenses, résultat, export) reste au Pro.
+        caCeMois={hasFeature(washer, 'ca_simple') ? caCeMois : null}
       />
     ),
     clients: (

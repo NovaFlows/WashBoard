@@ -15,23 +15,36 @@ type Reponse = { data?: unknown; error?: unknown; count?: number }
 let plan: {
   tables: Record<string, Reponse>
   countJour: number
+  /** Réservations déjà prises ce mois-ci (quota de l'offre). */
+  countMois: number
+  /** Panne de lecture sur le comptage mensuel. */
+  erreurCountMois: unknown
   rpc: Reponse
   utilisateur: unknown
 }
 
 function nouveauBuilder(table: string) {
   let head = false
+  // Les deux comptages de cette route portent sur la même table. Celui du
+  // quota mensuel se distingue par son `.neq('status', 'cancelled')` : un
+  // rendez-vous annulé ne consomme pas le quota du laveur, alors que le
+  // plafond anti-spam du jour compte tout.
+  let mensuel = false
   const b: Record<string, unknown> = {}
   const self = () => b
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
-    eq: self, neq: self, gte: self, lte: self, in: self, order: self, limit: self,
+    eq: self, gte: self, lte: self, in: self, order: self, limit: self,
+    neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
     maybeSingle: () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
     then: (ok: (v: Reponse) => unknown, ko?: (e: unknown) => unknown) =>
       Promise.resolve(
-        head ? { count: plan.countJour, error: null }
-             : (plan.tables[table] ?? { data: [], error: null }),
+        head
+          ? (mensuel
+              ? { count: plan.countMois, error: plan.erreurCountMois }
+              : { count: plan.countJour, error: null })
+          : (plan.tables[table] ?? { data: [], error: null }),
       ).then(ok, ko),
   })
   return b
@@ -96,6 +109,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-09-09T09:00:00Z'))
   plan = {
     countJour: 0,
+    countMois: 0,
+    erreurCountMois: null,
     utilisateur: null,
     rpc: { data: { id: 'ok' }, error: null },
     tables: {
@@ -103,7 +118,7 @@ beforeEach(() => {
         name: 'Kooki Clean', phone: '0600000000', user_id: 'user-1',
         google_refresh_token: null, team_size: 1,
         subscription_status: 'active', trial_ends_at: null, subscription_ends_at: null,
-        grandfathered: false, zone_config: { enabled: false },
+        plan: 'pro', grandfathered: false, zone_config: { enabled: false },
       }, error: null },
       services: { data: SERVICE_DEFAUT, error: null },
       unavailabilities: { data: [], error: null },
@@ -356,5 +371,144 @@ describe('POST /api/bookings — garde-fous existants', () => {
     const res = await POST(requete({ washer_id: 'pas-un-uuid' }))
     expect(res.status).toBe(400)
     expect(rpcAppels).toHaveLength(0)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quota mensuel de réservations (grille 2026)
+//
+// C'est LA limite qui sépare les offres : Découverte 5, Starter 15, Pro et
+// Business sans plafond. Elle est vérifiée ici, côté serveur, parce que la
+// page de réservation est publique — le formulaire du navigateur ne protège
+// rien du tout.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('POST /api/bookings — quota mensuel selon l’offre', () => {
+  describe('offre Découverte — 5 par mois', () => {
+    beforeEach(() => { avecWasher({ plan: 'decouverte' }) })
+
+    it('accepte la cinquième réservation du mois', async () => {
+      plan.countMois = 4
+      const { res } = await poster()
+      expect(res.status).toBe(201)
+      expect(rpcAppels).toHaveLength(1)
+    })
+
+    it('refuse la sixième', async () => {
+      plan.countMois = 5
+      const { res, body } = await poster()
+      expect(res.status).toBe(403)
+      expect(body.quota).toEqual({ plafond: 5, utilisees: 5 })
+      expect(rpcAppels).toHaveLength(0)
+    })
+
+    it('ne dit pas au client que le laveur est sur une offre limitée', async () => {
+      // Le visiteur d'une page publique n'a pas à connaître l'abonnement du
+      // prestataire : ce serait une information commerciale sur son dos.
+      plan.countMois = 5
+      const { body } = await poster()
+      expect(body.error).not.toMatch(/Découverte|offre|abonnement/i)
+      expect(body.error).toMatch(/Contactez-le directement/)
+    })
+
+    it('refuse aussi au laveur lui-même, en le lui expliquant', async () => {
+      // Si la saisie manuelle échappait au plafond, l'offre gratuite serait
+      // illimitée en pratique : il suffirait de saisir les rendez-vous à la main.
+      plan.countMois = 5
+      plan.utilisateur = { id: 'user-1' }   // le propriétaire de la fiche
+      const { res, body } = await poster()
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/5 réservations par mois/)
+      expect(body.error).toMatch(/Découverte/)
+      expect(rpcAppels).toHaveLength(0)
+    })
+  })
+
+  describe('offre Starter — 15 par mois', () => {
+    beforeEach(() => { avecWasher({ plan: 'starter' }) })
+
+    it('accepte la quinzième', async () => {
+      plan.countMois = 14
+      expect((await poster()).res.status).toBe(201)
+    })
+
+    it('refuse la seizième', async () => {
+      plan.countMois = 15
+      const { res, body } = await poster()
+      expect(res.status).toBe(403)
+      expect(body.quota.plafond).toBe(15)
+    })
+
+    it('n’est pas plafonné à 30 — c’est bien 15 qui a été retenu', async () => {
+      plan.countMois = 20
+      expect((await poster()).res.status).toBe(403)
+    })
+  })
+
+  describe('offres sans plafond', () => {
+    it('laisse passer le Pro et le Business quel que soit le volume', async () => {
+      for (const offre of ['pro', 'business']) {
+        rpcAppels.length = 0
+        avecWasher({ plan: offre })
+        plan.countMois = 5000
+        expect((await poster()).res.status, offre).toBe(201)
+      }
+    })
+
+    it('laisse passer un client historique avec « decouverte » en base', async () => {
+      avecWasher({ plan: 'decouverte', grandfathered: true })
+      plan.countMois = 5000
+      expect((await poster()).res.status).toBe(201)
+    })
+
+    it('traite un ancien plan « essentiel » comme le Pro', async () => {
+      avecWasher({ plan: 'essentiel' })
+      plan.countMois = 5000
+      expect((await poster()).res.status).toBe(201)
+    })
+  })
+
+  describe('lecture du compteur', () => {
+    it('refuse plutôt que de compter à l’aveugle si la lecture échoue', async () => {
+      // À l'inverse du plafond anti-spam quotidien, qui laisse passer : ici,
+      // laisser passer offrirait les réservations illimitées à toute la base
+      // le jour où cette requête échoue, sans que personne ne le voie.
+      avecWasher({ plan: 'decouverte' })
+      plan.countMois = 0
+      plan.erreurCountMois = { message: 'RLS' }
+      const { res } = await poster()
+      expect(res.status).toBe(503)
+      expect(rpcAppels).toHaveLength(0)
+    })
+
+    it('n’interroge pas le compteur mensuel pour une offre sans plafond', async () => {
+      // Le comptage coûte une requête à chaque réservation : inutile de la
+      // payer pour les offres qui n'ont rien à plafonner.
+      avecWasher({ plan: 'pro' })
+      plan.erreurCountMois = { message: 'si cette lecture avait lieu, la route renverrait 503' }
+      expect((await poster()).res.status).toBe(201)
+    })
+
+    it('traite un plan inconnu en base comme l’offre gratuite', async () => {
+      avecWasher({ plan: 'offre_fantome' })
+      plan.countMois = 5
+      expect((await poster()).res.status).toBe(403)
+    })
+  })
+
+  describe('ordre des contrôles', () => {
+    it('refuse une page « proposition » avant de regarder le quota', async () => {
+      avecWasher({ plan: 'pro', is_preview: true })
+      const { res } = await poster()
+      expect(res.status).toBe(403)
+      expect(rpcAppels).toHaveLength(0)
+    })
+
+    it('applique le quota même à un laveur dont l’abonnement est actif', async () => {
+      // Le statut d'abonnement dit qu'on a payé ; le plan dit ce qu'on a payé.
+      // Les confondre rendrait le plafond inopérant sur tous les comptes actifs.
+      avecWasher({ plan: 'decouverte', subscription_status: 'active' })
+      plan.countMois = 5
+      expect((await poster()).res.status).toBe(403)
+    })
   })
 })

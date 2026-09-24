@@ -1,53 +1,316 @@
 import { describe, it, expect } from 'vitest'
-import { hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent, formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel } from './plan'
+import {
+  hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
+  formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
+  quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
+  PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
+  TEAM_SIZE_INCLUS, PLAN_ESSAI, PLAN_HISTORIQUE,
+  type Plan, type Feature,
+} from './plan'
 
-describe('washerPlan', () => {
-  it('renvoie le plan valide', () => {
-    expect(washerPlan({ plan: 'pro' })).toBe('pro')
-    expect(washerPlan({ plan: 'essentiel' })).toBe('essentiel')
+// ─────────────────────────────────────────────────────────────────────────────
+// La grille 2026 a quatre offres. Ce qui distingue une offre d'une autre — ce
+// pour quoi le laveur paie — tient dans deux tableaux : ce qui est ACCESSIBLE
+// (hasFeature) et ce qui est PLAFONNÉ (les quotas). Les deux sont vérifiés ici
+// offre par offre, ligne par ligne, sans raccourci du type « le Pro a tout » :
+// c'est exactement le genre de raccourci qui laisse passer une fonctionnalité
+// oubliée le jour où on en ajoute une.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const OFFRES: Plan[] = ['decouverte', 'starter', 'pro', 'business']
+
+/** Ce que chaque offre doit ouvrir. La table est écrite en toutes lettres,
+ *  volontairement : elle sert de contrat lisible, pas de reflet du code. */
+const ACCES: Record<Plan, Record<Feature, boolean>> = {
+  decouverte: {
+    page_personnalisee: false, crm: false, ca_simple: false,
+    avis_email: false, avis_sms: false, compta: false, facturation: false,
+    creneaux_intelligents: false, frais_deplacement: false, followup: false,
+    multi_laveurs: false,
+  },
+  starter: {
+    page_personnalisee: true, crm: true, ca_simple: true,
+    avis_email: false, avis_sms: false, compta: false, facturation: false,
+    creneaux_intelligents: false, frais_deplacement: false, followup: false,
+    multi_laveurs: false,
+  },
+  pro: {
+    page_personnalisee: true, crm: true, ca_simple: true,
+    avis_email: true, avis_sms: true, compta: true, facturation: true,
+    creneaux_intelligents: true, frais_deplacement: true, followup: true,
+    multi_laveurs: false,
+  },
+  business: {
+    page_personnalisee: true, crm: true, ca_simple: true,
+    avis_email: true, avis_sms: true, compta: true, facturation: true,
+    creneaux_intelligents: true, frais_deplacement: true, followup: true,
+    multi_laveurs: true,
+  },
+}
+
+describe('washerPlan — résolution du plan lu en base', () => {
+  it('renvoie les quatre offres de la grille', () => {
+    for (const p of OFFRES) expect(washerPlan({ plan: p })).toBe(p)
   })
-  it('retombe sur essentiel pour un plan supprimé', () => {
-    expect(washerPlan({ plan: 'business' })).toBe('essentiel')
+
+  it('fait remonter un ancien compte « essentiel » sur Pro', () => {
+    // Même tarif (49 €), davantage de fonctionnalités : le repli se fait vers
+    // le haut. Le faire vers le bas retirerait un acquis le jour du déploiement.
+    expect(washerPlan({ plan: 'essentiel' })).toBe('pro')
+    expect(PLAN_PRICES.pro).toBe(49)
   })
-  it('retombe sur essentiel si plan absent ou invalide', () => {
-    expect(washerPlan(null)).toBe('essentiel')
-    expect(washerPlan({})).toBe('essentiel')
-    expect(washerPlan({ plan: 'n_importe_quoi' })).toBe('essentiel')
+
+  it('retombe sur l’offre gratuite si le plan est absent ou inconnu', () => {
+    // Le repli par défaut n'ouvre JAMAIS un accès payant : une chaîne
+    // inattendue en base ne doit pas offrir la comptabilité à tout le monde.
+    expect(washerPlan(null)).toBe('decouverte')
+    expect(washerPlan(undefined)).toBe('decouverte')
+    expect(washerPlan({})).toBe('decouverte')
+    expect(washerPlan({ plan: null })).toBe('decouverte')
+    expect(washerPlan({ plan: 'n_importe_quoi' })).toBe('decouverte')
+    expect(washerPlan({ plan: 'PRO' })).toBe('decouverte')  // la casse compte
   })
 })
 
-describe('hasFeature — plan essentiel', () => {
-  const w = { plan: 'essentiel', grandfathered: false }
-  it('autorise les avis email', () => expect(hasFeature(w, 'avis_email')).toBe(true))
-  it('bloque la compta', () => expect(hasFeature(w, 'compta')).toBe(false))
-  it('bloque les avis SMS', () => expect(hasFeature(w, 'avis_sms')).toBe(false))
-  it('bloque le multi-laveurs', () => expect(hasFeature(w, 'multi_laveurs')).toBe(false))
+describe('hasFeature — la matrice complète des accès', () => {
+  for (const offre of OFFRES) {
+    const attendu = ACCES[offre]
+    describe(`offre ${PLAN_LABELS[offre]}`, () => {
+      for (const [feature, ouvert] of Object.entries(attendu) as [Feature, boolean][]) {
+        it(`${ouvert ? 'ouvre' : 'ferme'} ${feature}`, () => {
+          expect(hasFeature({ plan: offre, grandfathered: false }, feature)).toBe(ouvert)
+        })
+      }
+    })
+  }
+
+  it('n’oublie aucune fonctionnalité dans la table de test', () => {
+    // Garde-fou : si `Feature` gagne une valeur et qu'on oublie de l'ajouter
+    // ci-dessus, la nouvelle fonctionnalité serait livrée sans qu'aucun test
+    // ne dise à quelle offre elle appartient.
+    const declarees = Object.keys(ACCES.decouverte).sort()
+    for (const offre of OFFRES) {
+      expect(Object.keys(ACCES[offre]).sort()).toEqual(declarees)
+    }
+  })
+
+  it('est monotone : ce qu’une offre ouvre, l’offre au-dessus l’ouvre aussi', () => {
+    // Une grille tarifaire où il faut RÉTROGRADER pour garder une
+    // fonctionnalité est une grille cassée.
+    for (let i = 1; i < OFFRES.length; i++) {
+      const dessous = ACCES[OFFRES[i - 1]]
+      const dessus  = ACCES[OFFRES[i]]
+      for (const f of Object.keys(dessous) as Feature[]) {
+        if (dessous[f]) expect(dessus[f]).toBe(true)
+      }
+    }
+  })
 })
 
-describe('hasFeature — plan pro', () => {
-  const w = { plan: 'pro', grandfathered: false }
-  it('autorise tout', () => {
-    expect(hasFeature(w, 'compta')).toBe(true)
-    expect(hasFeature(w, 'avis_sms')).toBe(true)
+describe('hasFeature — client historique (grandfathered)', () => {
+  it('ouvre tout, y compris depuis l’offre gratuite', () => {
+    const w = { plan: 'decouverte', grandfathered: true }
+    for (const f of Object.keys(ACCES.business) as Feature[]) {
+      expect(hasFeature(w, f)).toBe(true)
+    }
+  })
+
+  it('ouvre tout même avec un plan illisible en base', () => {
+    const w = { plan: 'valeur_corrompue', grandfathered: true }
     expect(hasFeature(w, 'multi_laveurs')).toBe(true)
   })
 })
 
-describe('hasFeature — grandfathered', () => {
-  it('débloque tout, même sur le plan essentiel', () => {
-    const w = { plan: 'essentiel', grandfathered: true }
-    expect(hasFeature(w, 'compta')).toBe(true)
-    expect(hasFeature(w, 'avis_sms')).toBe(true)
-    expect(hasFeature(w, 'multi_laveurs')).toBe(true)
-  })
-})
-
-describe('requiredPlanLabel', () => {
-  it('renvoie le bon plan minimum requis', () => {
-    expect(requiredPlanLabel('avis_email')).toBe('Essentiel')
+describe('requiredPlanLabel — l’offre à prendre pour débloquer', () => {
+  it('nomme le palier exact, pas « Pro » par défaut', () => {
+    expect(requiredPlanLabel('crm')).toBe('Starter')
+    expect(requiredPlanLabel('page_personnalisee')).toBe('Starter')
+    expect(requiredPlanLabel('ca_simple')).toBe('Starter')
     expect(requiredPlanLabel('compta')).toBe('Pro')
+    expect(requiredPlanLabel('facturation')).toBe('Pro')
+    expect(requiredPlanLabel('avis_email')).toBe('Pro')
     expect(requiredPlanLabel('avis_sms')).toBe('Pro')
-    expect(requiredPlanLabel('multi_laveurs')).toBe('Pro')
+    expect(requiredPlanLabel('followup')).toBe('Pro')
+    expect(requiredPlanLabel('creneaux_intelligents')).toBe('Pro')
+    expect(requiredPlanLabel('frais_deplacement')).toBe('Pro')
+    expect(requiredPlanLabel('multi_laveurs')).toBe('Business')
+  })
+
+  it('désigne toujours une offre qui ouvre réellement la fonctionnalité', () => {
+    for (const f of Object.keys(ACCES.business) as Feature[]) {
+      const label = requiredPlanLabel(f)
+      const offre = OFFRES.find(p => PLAN_LABELS[p] === label)!
+      expect(hasFeature({ plan: offre }, f)).toBe(true)
+    }
+  })
+})
+
+describe('quotas de réservations — la limite qui sépare les offres', () => {
+  it('plafonne Découverte à 5 par mois', () => {
+    expect(quotaReservations({ plan: 'decouverte' })).toBe(5)
+    expect(BOOKING_QUOTA.decouverte).toBe(5)
+  })
+
+  it('plafonne Starter à 15 par mois', () => {
+    // 15, et non 30 : décision d'Alexandre, contre la proposition initiale.
+    expect(quotaReservations({ plan: 'starter' })).toBe(15)
+    expect(BOOKING_QUOTA.starter).toBe(15)
+  })
+
+  it('ne plafonne ni le Pro ni le Business', () => {
+    expect(quotaReservations({ plan: 'pro' })).toBeNull()
+    expect(quotaReservations({ plan: 'business' })).toBeNull()
+  })
+
+  it('ne plafonne pas un client historique, même sur l’offre gratuite', () => {
+    expect(quotaReservations({ plan: 'decouverte', grandfathered: true })).toBeNull()
+  })
+
+  it('applique le plafond le plus strict à un plan inconnu', () => {
+    expect(quotaReservations({ plan: 'inconnu' })).toBe(5)
+    expect(quotaReservations(null)).toBe(5)
+  })
+})
+
+describe('quotas de prestations au catalogue', () => {
+  it('plafonne Découverte à 3 prestations', () => {
+    expect(quotaPrestations({ plan: 'decouverte' })).toBe(3)
+    expect(SERVICE_QUOTA.decouverte).toBe(3)
+  })
+
+  it('ouvre le catalogue dès Starter', () => {
+    expect(quotaPrestations({ plan: 'starter' })).toBeNull()
+    expect(quotaPrestations({ plan: 'pro' })).toBeNull()
+    expect(quotaPrestations({ plan: 'business' })).toBeNull()
+  })
+
+  it('ne plafonne pas un client historique', () => {
+    expect(quotaPrestations({ plan: 'decouverte', grandfathered: true })).toBeNull()
+  })
+})
+
+describe('quotaDepasse — où tombe exactement la limite', () => {
+  it('accepte jusqu’au plafond inclus et refuse le suivant', () => {
+    // Avec un quota de 5 : les cinq premiers passent, le sixième est refusé.
+    expect(quotaDepasse(5, 0)).toBe(false)
+    expect(quotaDepasse(5, 4)).toBe(false)   // la 5ᵉ réservation
+    expect(quotaDepasse(5, 5)).toBe(true)    // la 6ᵉ
+    expect(quotaDepasse(5, 99)).toBe(true)
+  })
+
+  it('n’oppose jamais de limite quand il n’y en a pas', () => {
+    expect(quotaDepasse(null, 0)).toBe(false)
+    expect(quotaDepasse(null, 10_000)).toBe(false)
+  })
+
+  it('refuse tout avec un plafond à zéro', () => {
+    expect(quotaDepasse(0, 0)).toBe(true)
+  })
+})
+
+describe('SMS d’avis inclus', () => {
+  it('n’en donne aucun aux offres sans avis', () => {
+    expect(SMS_QUOTA.decouverte).toBe(0)
+    expect(SMS_QUOTA.starter).toBe(0)
+  })
+
+  it('en donne 150 au Pro et au Business', () => {
+    expect(SMS_QUOTA.pro).toBe(150)
+    expect(SMS_QUOTA.business).toBe(150)
+  })
+
+  it('n’accorde de quota qu’aux offres qui ouvrent les avis SMS', () => {
+    // Un quota de SMS sur une offre qui n'a pas la fonctionnalité serait un
+    // budget affiché mais inatteignable.
+    for (const p of OFFRES) {
+      if (SMS_QUOTA[p] > 0) expect(hasFeature({ plan: p }, 'avis_sms')).toBe(true)
+    }
+  })
+})
+
+describe('taille d’équipe incluse', () => {
+  it('donne 3 laveurs au Business et un seul ailleurs', () => {
+    expect(TEAM_SIZE_INCLUS.business).toBe(3)
+    expect(TEAM_SIZE_INCLUS.decouverte).toBe(1)
+    expect(TEAM_SIZE_INCLUS.starter).toBe(1)
+    expect(TEAM_SIZE_INCLUS.pro).toBe(1)
+  })
+
+  it('ne promet plusieurs laveurs que là où le multi-laveurs est ouvert', () => {
+    for (const p of OFFRES) {
+      if (TEAM_SIZE_INCLUS[p] > 1) expect(hasFeature({ plan: p }, 'multi_laveurs')).toBe(true)
+    }
+  })
+})
+
+describe('tarifs de la grille', () => {
+  it('reprend les prix décidés', () => {
+    expect(PLAN_PRICES).toEqual({ decouverte: 0, starter: 19, pro: 49, business: 129 })
+  })
+
+  it('monte à mesure qu’on monte dans la grille', () => {
+    for (let i = 1; i < OFFRES.length; i++) {
+      expect(PLAN_PRICES[OFFRES[i]]).toBeGreaterThan(PLAN_PRICES[OFFRES[i - 1]])
+    }
+  })
+
+  it('fait démarrer l’essai sur l’offre complète, pas sur l’offre gratuite', () => {
+    expect(PLAN_ESSAI).toBe('pro')
+    expect(quotaReservations({ plan: PLAN_ESSAI })).toBeNull()
+  })
+
+  it('facture les clients historiques au tarif qu’ils payaient', () => {
+    expect(PLAN_PRICES[PLAN_HISTORIQUE]).toBe(49)
+  })
+})
+
+describe('PLAN_CARDS — ce qui est montré au laveur', () => {
+  it('présente les quatre offres, dans l’ordre des prix', () => {
+    expect(PLAN_CARDS.map(c => c.key)).toEqual(OFFRES)
+  })
+
+  it('affiche le prix de la grille, jamais un prix écrit à la main', () => {
+    for (const c of PLAN_CARDS) expect(c.price).toBe(PLAN_PRICES[c.key])
+  })
+
+  it('annonce les bons plafonds sur les offres limitées', () => {
+    const decouverte = PLAN_CARDS.find(c => c.key === 'decouverte')!
+    expect(decouverte.features.join(' ')).toContain(`${BOOKING_QUOTA.decouverte} réservations`)
+    expect(decouverte.features.join(' ')).toContain(`${SERVICE_QUOTA.decouverte} prestations`)
+
+    const starter = PLAN_CARDS.find(c => c.key === 'starter')!
+    expect(starter.features.join(' ')).toContain(`${BOOKING_QUOTA.starter} réservations`)
+  })
+
+  it('ne met en avant qu’une seule offre', () => {
+    expect(PLAN_CARDS.filter(c => c.highlight)).toHaveLength(1)
+  })
+
+  it('ne présente « à partir de » que là où le prix dépend de l’usage', () => {
+    // Seul le Business a un prix variable (laveurs supplémentaires).
+    expect(PLAN_CARDS.filter(c => c.from).map(c => c.key)).toEqual(['business'])
+  })
+})
+
+describe('debutDuMoisParis — la borne de remise à zéro des quotas', () => {
+  it('tombe sur le 1er du mois à minuit heure de Paris', () => {
+    // 15 juillet → 1er juillet 00:00 Paris = 30 juin 22:00 UTC (heure d'été).
+    expect(debutDuMoisParis(new Date('2026-07-15T12:00:00.000Z')).toISOString())
+      .toBe('2026-06-30T22:00:00.000Z')
+  })
+
+  it('tient compte de l’heure d’hiver', () => {
+    // 1er janvier 00:00 Paris = 31 décembre 23:00 UTC.
+    expect(debutDuMoisParis(new Date('2026-01-20T12:00:00.000Z')).toISOString())
+      .toBe('2025-12-31T23:00:00.000Z')
+  })
+
+  it('bascule sur le nouveau mois dès la première minute parisienne', () => {
+    // 1er août 00:30 à Paris = 31 juillet 22:30 UTC. Une borne calculée en UTC
+    // aurait renvoyé le 1er JUILLET : le laveur se serait vu refuser une
+    // réservation avec un compteur qui venait pourtant d'être remis à zéro.
+    expect(debutDuMoisParis(new Date('2026-07-31T22:30:00.000Z')).toISOString())
+      .toBe('2026-07-31T22:00:00.000Z')
   })
 })
 
@@ -57,7 +320,12 @@ describe('tarifs annuels', () => {
   // vérifie désormais la règle, qui elle ne change pas.
   it('facture douze mois moins les mois offerts', () => {
     expect(yearlyPrice(49)).toBe(49 * (12 - YEARLY_FREE_MONTHS))
-    expect(yearlyPrice(69)).toBe(69 * (12 - YEARLY_FREE_MONTHS))
+    expect(yearlyPrice(19)).toBe(19 * (12 - YEARLY_FREE_MONTHS))
+  })
+
+  it('laisse l’offre gratuite gratuite, y compris à l’année', () => {
+    expect(yearlyPrice(0)).toBe(0)
+    expect(yearlyMonthlyEquivalent(0)).toBe(0)
   })
 
   it('revient moins cher que douze mensualités', () => {

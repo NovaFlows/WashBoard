@@ -7,6 +7,7 @@ import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { notifierEquipe } from '@/lib/push'
 import { reprendreApercu, annonceReprise, type ResultatReprise } from '@/lib/repriseApercu'
 import { FUSEAU } from '@/lib/dateUtils'
+import { PLAN_ESSAI } from '@/lib/plan'
 
 function generateSlug(name: string): string {
   return name
@@ -160,6 +161,12 @@ export async function POST(request: NextRequest) {
         phone: telephone,
         trial_ends_at: trialEndsAt,
         subscription_status: 'trial',
+        // Pendant l'essai, le laveur a le produit complet : c'est ce qu'on lui
+        // vend, et c'est ce qu'il avait avant l'arrivée de l'offre gratuite.
+        // Écrit ici plutôt que laissé à la valeur par défaut de la colonne :
+        // cette valeur par défaut a changé avec la grille 2026, et un compte
+        // d'essai bridé à 5 réservations n'aurait plus rien d'un essai.
+        plan: PLAN_ESSAI,
       })
 
     washerError = error

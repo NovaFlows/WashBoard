@@ -10,7 +10,7 @@ import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import type { ZoneConfig } from '@/types'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { graceEnded } from '@/lib/plan'
+import { graceEnded, quotaReservations, quotaDepasse, debutDuMoisParis, washerPlan, PLAN_LABELS } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
@@ -153,7 +153,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -194,6 +194,63 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   if (!isOwner && washer && washer.subscription_status !== 'active'
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
     return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
+  }
+
+  // ── Quota mensuel de réservations (offre Découverte et Starter) ──────────
+  //
+  // C'est la limite qui fait la différence entre les offres : sans elle, la
+  // grille tarifaire n'est qu'une page de vente. Elle est vérifiée ICI, côté
+  // serveur, parce que la page de réservation est publique et que le formulaire
+  // du navigateur ne protège rien.
+  //
+  // Le laveur lui-même est compté et bloqué comme les autres : si la saisie
+  // manuelle échappait au plafond, l'offre gratuite serait illimitée en
+  // pratique — il suffirait de saisir les rendez-vous à la main.
+  //
+  // Les rendez-vous annulés ne comptent pas : un client qui se décommande ne
+  // doit pas consommer le quota du laveur. Le compte porte sur le mois civil
+  // parisien de CRÉATION, pas sur la date du rendez-vous : c'est l'usage du
+  // logiciel qu'on facture, pas le remplissage de l'agenda.
+  const plafondMensuel = quotaReservations(washer)
+  if (plafondMensuel !== null) {
+    const { count: moisCount, error: errMois } = await admin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('washer_id', bookingData.washer_id)
+      .neq('status', 'cancelled')
+      .gte('created_at', debutDuMoisParis().toISOString())
+
+    // À l'inverse du plafond anti-spam, un comptage illisible REFUSE. Laisser
+    // passer reviendrait à offrir les réservations illimitées à toute la base
+    // le jour où cette requête échoue, et personne ne s'en apercevrait.
+    if (errMois) {
+      logger.error('bookings.quotaMensuel.read_failed',
+        { washerId: bookingData.washer_id }, errMois)
+      return Response.json(
+        { error: 'Impossible de vérifier les disponibilités. Merci de réessayer dans un instant.' },
+        { status: 503 },
+      )
+    }
+
+    if (quotaDepasse(plafondMensuel, moisCount ?? 0)) {
+      logger.warn('bookings.quota_mensuel_atteint', {
+        washerId: bookingData.washer_id,
+        plan: washer?.plan ?? null,
+        plafond: plafondMensuel,
+        utilisees: moisCount ?? 0,
+      })
+      return Response.json(
+        {
+          // Deux messages : le client extérieur n'a pas à savoir que le laveur
+          // est sur une offre limitée, le laveur si — c'est à lui d'agir.
+          error: isOwner
+            ? `Vous avez atteint les ${plafondMensuel} réservations par mois de l’offre ${PLAN_LABELS[washerPlan(washer)]}. Passez à l’offre supérieure pour continuer.`
+            : 'Ce prestataire ne peut plus accepter de réservation en ligne ce mois-ci. Contactez-le directement.',
+          quota: { plafond: plafondMensuel, utilisees: moisCount ?? 0 },
+        },
+        { status: 403 },
+      )
+    }
   }
   // Durée réellement bloquée par ce rendez-vous. Calculée ici parce qu'elle
   // sert deux fois : au contrôle des horaires, puis à l'enregistrement de la

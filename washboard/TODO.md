@@ -7,7 +7,8 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
+> Dernière mise à jour : 2026-09-24 (grille tarifaire 2026 : 4 offres, quotas de
+> réservations et de prestations, verrous par offre). Avant : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
 > partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
 > facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
 > livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
@@ -16,6 +17,27 @@
 ---
 
 ## 🔴 Priorité haute
+
+- [ ] **Grille 2026 — deux décisions commerciales laissées ouvertes.** Le code est livré et
+      testé, ces deux points ne relèvent pas du code.
+  1. **Que devient un compte à la fin de l'essai, sans paiement ?** Aujourd'hui il reste
+     bloqué après 30 jours de grâce (`graceEnded`), comme avant l'arrivée d'une offre
+     gratuite. La suite logique serait de le faire **retomber sur Découverte** plutôt que de
+     le couper : c'est tout l'intérêt d'avoir un palier à 0 €, et un compte vivant à
+     5 réservations vaut mieux qu'un compte mort. Non implémenté : c'est un changement
+     d'entonnoir, pas un correctif. La FAQ de la landing dit donc « écris-nous et on te
+     bascule » — c'est-à-dire à la main.
+  2. **Les anciens Pro à 69 € qui utilisent plusieurs laveurs passent en Business (129 €)**
+     par la migration `004`, sans changement de prix : leur abonnement Stripe garde son
+     tarif, et les paiements PayPal sont manuels. Ils gagnent donc le Business au prix de
+     l'ancien Pro. À arbitrer : on les y laisse (le plus simple et le plus généreux), ou on
+     les repasse au tarif Business à une date annoncée.
+
+- [ ] **Business : « missions et contrats récurrents » n'existe pas dans le produit.**
+      La ligne figurait sur le PDF de la grille tarifaire, elle a été **volontairement
+      retirée** des cartes d'offres : on ne vend pas ce qui n'est pas construit. La carte
+      Business annonce aujourd'hui les 3 laveurs inclus, le tarif par laveur supplémentaire
+      et le planning collectif — tout cela existe. À construire avant de la remettre.
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
@@ -1307,6 +1329,24 @@ rien à faire, mais que le projet reste globalement sain.
 ## 📌 SQL / config en attente (à exécuter en prod si pas déjà fait)
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
+
+- [ ] **AU MOMENT DU DÉPLOIEMENT DE LA GRILLE 2026 — `supabase/migrations/004_offres_2026.sql`.**
+      Passe la colonne `washers.plan` de 2 valeurs (`essentiel`, `pro`) à 4
+      (`decouverte`, `starter`, `pro`, `business`), reprend les comptes existants, change la
+      valeur par défaut et pose une contrainte `CHECK`.
+      **À exécuter au déploiement, pas après** : tant qu'elle n'a pas tourné, un compte qui
+      utilise plusieurs laveurs (`team_size > 1`) perd le multi-laveurs, qui appartient
+      désormais au Business. Le reste ne casse pas (le code sait lire l'ancien `essentiel` et
+      le fait remonter sur Pro, au même tarif de 49 €).
+      Vérification après : `select plan, count(*) from washers group by plan order by plan;`
+      — aucune ligne hors des quatre valeurs.
+
+- [ ] **Créer les tarifs Stripe des nouvelles offres avant le déploiement.**
+      `STRIPE_PRICE_ID_STARTER` (19 €) et `STRIPE_PRICE_ID_BUSINESS` (129 €) à créer dans le
+      catalogue Stripe puis à renseigner dans Vercel. `STRIPE_PRICE_ID_PRO` reste, mais doit
+      **pointer sur un tarif à 49 €** (l'ancien Pro était à 69 €) — sinon un laveur qui
+      choisit le Pro paie l'ancien prix. `STRIPE_PRICE_ID_ESSENTIEL` n'est plus lue.
+      Sans ces variables, le bouton de paiement de l'offre concernée répond « Plan invalide ».
 
 - [ ] **`GRANT DELETE ON public.booking_funnel_events TO service_role;` manquant.**
       Constaté le 2026-09-14 en supprimant trois comptes de test : « permission denied for

@@ -75,7 +75,9 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
 }
 
 // Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
-// PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans l'Essentiel ce qui est Pro.
+// PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans une offre ce qui appartient
+// à l'offre du dessus. La grille 2026 en compte quatre — Découverte, Starter,
+// Pro, Business — et c'est `plan.ts` qui en est la seule source.
 const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
   { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
@@ -887,7 +889,7 @@ export default function LandingPage() {
         <FadeUp className="mb-8">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Les formules</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-            {billing === 'yearly' ? `${formatEuros(yearlyMonthlyEquivalent(49))}€/mois en annuel.` : '49€/mois. Sans engagement.'}
+            Commence gratuitement. Tu paies quand ça remplit.
           </h2>
         </FadeUp>
 
@@ -895,10 +897,12 @@ export default function LandingPage() {
           <BillingToggle value={billing} onChange={setBilling} />
         </FadeUp>
 
-        <FadeGroup className="grid sm:grid-cols-2 gap-6 items-stretch max-w-3xl">
+        <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {PLAN_CARDS.map((card) => {
-            const featured = card.key === 'essentiel'
-            const yearly = billing === 'yearly'
+            const featured = !!card.highlight
+            // Une offre gratuite n'a ni tarif annuel, ni mois offert : tout ce
+            // qui parle d'engagement doit se taire sur cette carte.
+            const yearly = billing === 'yearly' && card.price > 0
             return (
               <FadeItem
                 key={card.key}
@@ -912,13 +916,20 @@ export default function LandingPage() {
                 </div>
                 <p className={`text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{card.name}</p>
                 <p className={`text-4xl font-black mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                  {yearly ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
-                  <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>/mois</span>
+                  {card.price === 0 ? 'Gratuit' : (
+                    <>
+                      {card.from && <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>dès </span>}
+                      {yearly ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
+                      <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>/mois</span>
+                    </>
+                  )}
                 </p>
                 <p className={`text-xs mt-1.5 font-semibold ${featured ? 'text-emerald-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {yearly
-                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
-                    : `Passez à l’année : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
+                  {card.price === 0
+                    ? 'Sans carte bancaire, sans limite de durée'
+                    : yearly
+                      ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
+                      : `Passez à l’année : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
                 </p>
                 <p className={`text-sm mt-1 mb-6 ${featured ? 'text-white/60' : 'text-slate-500 dark:text-slate-400'}`}>{card.tagline}</p>
                 <div className="space-y-3 text-left mb-8 flex-1">
@@ -932,14 +943,14 @@ export default function LandingPage() {
                   ))}
                 </div>
                 <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
-                  Je démarre
+                  {card.price === 0 ? 'Je commence gratuitement' : 'Je démarre'}
                 </Link>
               </FadeItem>
             )
           })}
         </FadeGroup>
         <FadeUp className="mt-8">
-          <p className="text-xs text-slate-400">1 mois offert · Sans carte bancaire · Support WhatsApp — 06 84 14 04 38</p>
+          <p className="text-xs text-slate-400">Offre gratuite sans carte bancaire · 1 mois d’essai sur les offres payantes · Support WhatsApp — 06 84 14 04 38</p>
         </FadeUp>
       </section>
 
@@ -955,9 +966,9 @@ export default function LandingPage() {
             { q: 'Ça marche pour d\'autres métiers que le lavage auto ?', a: 'Oui. Tu crées tes propres catégories et prestations, avec leurs durées et leurs prix : ménage, canapés, vitres, piscines… WashBoard n\'impose aucun métier.' },
             { q: 'Comment mes clients trouvent ma page ?', a: 'Tu partages ton lien partout : bio Instagram, TikTok, fiche Google, ton site, WhatsApp. Des liens dédiés à chaque réseau te montrent ensuite d\'où viennent tes réservations.' },
             { q: 'Je suis prévenu quand un client réserve ?', a: 'Oui, par email à chaque réservation. Et si tu installes WashBoard sur ton téléphone, aussi en notification (en bêta).' },
-            { q: 'Que se passe-t-il après le mois gratuit ?', a: 'Tu choisis de continuer à 49€/mois ou non. Ton compte est suspendu sans frais si tu arrêtes. Aucune carte n\'est demandée pendant l\'essai.' },
-            { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, en échange de 2 mois offerts.' },
-            { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Pro. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
+            { q: 'Que se passe-t-il après le mois gratuit ?', a: 'Tu choisis une formule : Starter à 19€/mois ou Pro à 49€/mois. Tu peux aussi passer sur l’offre Découverte, gratuite, limitée à 5 réservations par mois : écris-nous et on te bascule. Aucune carte n\'est demandée pendant l\'essai.' },
+            { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, avec un mois offert en cadeau.' },
+            { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Business. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
             { q: 'Les clients peuvent payer en ligne ?', a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.' },
             { q: 'Et la facturation électronique obligatoire en 2027 ?', a: 'À partir du 1ᵉʳ septembre 2027, deux choses changent. Si tu factures des entreprises, tes factures devront être transmises dans un format électronique via une plateforme agréée par l\'État — tes factures WashBoard ont déjà toutes les mentions obligatoires, on travaille sur ce raccordement, sans engagement de date pour l\'instant. Si tu ne factures que des particuliers (le cas de la plupart des laveurs), tu n\'as pas ce format à produire, mais tu devras transmettre à l\'administration un résumé périodique de tes ventes — c\'est l\'e-reporting, et la franchise de TVA n\'en dispense pas. WashBoard n\'y est pas raccordé aujourd\'hui ; on te dira où on en est bien avant l\'échéance.' },
             { q: 'Et mes données ?', a: 'Elles restent les tiennes. Tu peux supprimer ton compte à tout moment depuis tes paramètres : tout est effacé sous 30 jours.' },

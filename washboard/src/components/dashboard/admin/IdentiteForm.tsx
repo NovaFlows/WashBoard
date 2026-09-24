@@ -10,6 +10,8 @@ import { BG_THEME_PRESETS, isCustomTheme } from '@/lib/themes'
 
 import type { BgThemePreset } from '@/lib/themes'
 import { compressImage, LOGO_OPTIONS, BACKGROUND_OPTIONS } from '@/lib/imageCompression'
+import { SectionVerrouillee } from '@/components/dashboard/SectionVerrouillee'
+import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 
 type LogoStatus = 'idle' | 'removing' | 'uploading' | 'done' | 'error'
 
@@ -265,8 +267,14 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
   const busy = logoStatus === 'removing' || logoStatus === 'uploading'
 
+  // Ce que l'offre du laveur comprend. Le serveur refuse de toute façon ces
+  // réglages (PATCH /api/washer) : ici on lui évite de les remplir pour rien.
+  const peutPersonnaliser = hasFeature(washer, 'page_personnalisee')
+  const peutCreneaux      = hasFeature(washer, 'creneaux_intelligents')
+
   return (
     <form onSubmit={save} noValidate className="space-y-5">
+      <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Logo */}
       <div id="identite" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Logo</h2>
@@ -433,6 +441,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         </p>
       </div>
 
+      </SectionVerrouillee>
       {/* Message d'accueil */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Message d&apos;accueil</h2>
@@ -638,6 +647,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         </button>
       </div>
 
+      <SectionVerrouillee verrouille={!peutCreneaux} planLabel={requiredPlanLabel('creneaux_intelligents')}>
       {/* Créneaux intelligents */}
       <div id="creneaux" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
@@ -706,6 +716,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         </button>
       </div>
 
+      </SectionVerrouillee>
       {/* Google Agenda */}
       <div id="agenda" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <div className="flex items-start justify-between gap-4">
