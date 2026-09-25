@@ -15,6 +15,29 @@
 
 ---
 
+## 🔔 À FAIRE PAR ALEXANDRE — à lui rappeler à chaque conversation (2026-09-25)
+
+> Actions que seul Alexandre peut faire (accès Vercel / Supabase). Tant qu'une case est
+> ouverte, le lui redire en fin de réponse. Cocher + dater quand c'est fait.
+
+- [ ] **Vercel → projet `wash-board` → Settings → Environment Variables → `SUPPORT_ADMIN_EMAILS` :
+      cocher « Preview » en plus de « Production »** (même valeur), sauvegarder, puis
+      redéployer la branche `refonte-pwa`. Sans ça, la PWA de test ne le reconnaît pas comme
+      équipe : ni le formulaire « Prendre la main sur un compte » (Assistance), ni le bouton
+      dans les conversations, ni la ligne « Support (équipe) » de Plus n'apparaissent.
+- [ ] **Supabase (SQL Editor) — colonne de suppression des conversations d'Assistance côté
+      laveur** (sans elle, le glisser-supprimer répond « Impossible de supprimer », la liste
+      continue de marcher) :
+      ```sql
+      ALTER TABLE support_questions ADD COLUMN IF NOT EXISTS hidden_for_washer_at timestamptz;
+      GRANT SELECT, UPDATE (hidden_for_washer_at) ON support_questions TO authenticated;
+      ```
+- [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
+      retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
+      `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
+
+---
+
 ## 🔴 Priorité haute
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans

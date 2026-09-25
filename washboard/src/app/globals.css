@@ -520,3 +520,11 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
 @media (prefers-reduced-motion: reduce) {
   .wb-agenda-arrivee { animation: none; }
 }
+
+/* PWA en bêta : le papier de la refonte couvre tout l'écran, y compris derrière les
+   encoches, le rebond et ce qui dépasse du contenu (voir DashboardShell). La barre du
+   bas est le repère : elle n'existe que dans ce mode. */
+html:has(.wb-barre-bas-verre),
+body:has(.wb-barre-bas-verre) {
+  background-color: var(--v2-color-fond);
+}

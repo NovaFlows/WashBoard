@@ -322,7 +322,15 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   }, [showBarreBas])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden wb-dashboard-shell">
+    // PWA en bêta : tout le fond de l'écran est le papier de la refonte (`--v2-color-fond`),
+    // pas seulement le rectangle que dessine chaque écran v2 — sinon les bords et le bas
+    // de la page restent gris-bleu autour d'un rectangle beige (signalé par Alexandre,
+    // 2026-09-25). Site et PWA sans bêta : inchangé.
+    <div
+      className={`min-h-screen overflow-x-hidden wb-dashboard-shell ${
+        showBarreBas ? 'bg-[color:var(--v2-color-fond)]' : 'bg-slate-50 dark:bg-slate-950'
+      }`}
+    >
       {/* Menu latéral : retiré dans la PWA en bêta (refonte 2026, 2026-09-24),
           où le bouton ☰ qui l'ouvre a disparu avec l'en-tête — le laisser
           monté offrirait des liens focalisables au clavier sur un tiroir que
@@ -430,13 +438,16 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         // et s'affiche aussi sur grand écran (PWA installée sur ordinateur),
         // où `sm:pb-6` (24px) ne suffit pas — d'où ce style qui prend le pas
         // sur les deux classes Tailwind quand la barre est affichée.
-        style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 16px + env(safe-area-inset-bottom, 0px))' } : undefined}
+        style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 8px + env(safe-area-inset-bottom, 0px))' } : undefined}
       >
         <SupportBadgesContext.Provider value={supportBadges}>
           {children}
         </SupportBadgesContext.Provider>
       </main>
 
+      {/* Retiré dans la PWA en bêta : posé sous la barre du bas, il allongeait la page de
+          plus d'un écran de vide et passait sous la barre (2026-09-25). */}
+      {!showBarreBas && (
       <footer className="max-w-3xl mx-auto px-3 sm:px-4 pb-6 text-center">
         <p className="text-xs text-slate-400 dark:text-slate-600">
           Créé par{' '}
@@ -450,6 +461,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           </a>
         </p>
       </footer>
+      )}
 
       {/* Bouton WhatsApp flottant. data-wb-whatsapp-fab : accroche pour le
           masquer (globals.css) pendant qu'un panneau de question est ouvert —
