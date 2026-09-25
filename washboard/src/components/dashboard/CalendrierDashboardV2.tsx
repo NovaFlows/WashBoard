@@ -16,7 +16,7 @@ import { useConges } from '@/hooks/useConges'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
-import ProposerCreneauV2 from '@/components/dashboard/ProposerCreneauV2'
+import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/ProposerCreneauV2'
 import FeuilleGoogleAgendaV2, { issueDepuisParametre } from '@/components/dashboard/FeuilleGoogleAgendaV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
@@ -200,6 +200,21 @@ function lignePrestation(b: Booking): string {
     : b.services.name
 }
 
+/** D'où mesurer la distance des clients : le rendez-vous qui précède le trou, ou à défaut celui
+ *  qui le suit (quand le précédent n'a ni coordonnées ni adresse). */
+function origineDuTrou(precedent: Booking, suivant: Booking): OrigineCreneau {
+  const position = (b: Booking) => (typeof b.lat === 'number' && typeof b.lng === 'number' ? { lat: b.lat, lng: b.lng } : null)
+  const adresse = (b: Booking) => b.address?.trim() || null
+  // Le précédent d'abord (ses coordonnées, sinon son adresse), puis le suivant.
+  for (const [b, voisin] of [[precedent, 'précédent'], [suivant, 'suivant']] as const) {
+    const p = position(b)
+    if (p) return { position: p, adresse: adresse(b), voisin }
+    const a = adresse(b)
+    if (a) return { position: null, adresse: a, voisin }
+  }
+  return { position: null, adresse: null, voisin: 'précédent' }
+}
+
 function finRendezVous(b: Booking): Date {
   const duree = effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count)
   return new Date(new Date(b.scheduled_at).getTime() + duree * 60_000)
@@ -218,7 +233,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // Vrai pendant le zoom de la vue du mois vers le jour choisi : l'agenda s'avance.
   const [arrivee, setArrivee] = useState(false)
   // Créneau libre en cours de proposition à un client — voir ProposerCreneauV2.tsx.
-  const [creneauPropose, setCreneauPropose] = useState<{ debut: Date; fin: Date; ville: string | null } | null>(null)
+  const [creneauPropose, setCreneauPropose] = useState<{ debut: Date; fin: Date; ville: string | null; origine: OrigineCreneau } | null>(null)
 
   // Congés — partagés avec CalendrierDashboardV1.tsx via `useConges`. Ils
   // possèdent l'état `unavails`, lu ensuite par les deux autres hooks pour
@@ -497,7 +512,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                       </span>
                       <button
                         type="button"
-                        onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou })}
+                        onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou, origine: origineDuTrou(b, suivant) })}
                         aria-label={`Proposer ce créneau libre de ${dureeLisible(gapMin)} à un client`}
                         className={`-my-2.5 -mr-1.5 flex h-11 shrink-0 items-center px-2.5 text-[13px] ${corpsFort}`}
                         style={{ color: 'var(--v2-color-accent)' }}
@@ -653,6 +668,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           debut={creneauPropose.debut}
           fin={creneauPropose.fin}
           ville={creneauPropose.ville}
+          origine={creneauPropose.origine}
           onClose={() => setCreneauPropose(null)}
         />
       )}
