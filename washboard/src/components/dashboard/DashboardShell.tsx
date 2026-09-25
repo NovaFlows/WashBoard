@@ -321,6 +321,30 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     return () => document.body.classList.remove('wb-hide-fab')
   }, [showBarreBas])
 
+  // PWA en bêta : la barre d'état du téléphone prend le papier de la refonte, pour que le
+  // beige monte jusqu'en haut de l'écran (demande d'Alexandre, 2026-09-25). `theme-color`
+  // (posé en blanc / ardoise par `layout.tsx` pour le site) n'est changé qu'ici et suit le
+  // thème choisi DANS l'application — les deux balises ne se distinguent que par le thème
+  // du téléphone, or l'app peut être en sombre sur un téléphone en clair. Rendu à la
+  // sortie, et à chaque changement de thème.
+  useEffect(() => {
+    if (!showBarreBas) return
+    const metas = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'))
+    const avant = metas.map(m => m.content)
+    const racine = document.documentElement
+    const poser = () => {
+      const couleur = racine.classList.contains('dark') ? '#0E0E11' : '#F6F5F3'
+      metas.forEach(m => { m.content = couleur })
+    }
+    poser()
+    const observateur = new MutationObserver(poser)
+    observateur.observe(racine, { attributes: true, attributeFilter: ['class'] })
+    return () => {
+      observateur.disconnect()
+      metas.forEach((m, i) => { m.content = avant[i] })
+    }
+  }, [showBarreBas])
+
   return (
     // PWA en bêta : tout le fond de l'écran est le papier de la refonte (`--v2-color-fond`),
     // pas seulement le rectangle que dessine chaque écran v2 — sinon les bords et le bas
