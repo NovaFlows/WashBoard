@@ -7,6 +7,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
 import { ServiceWorkerRegistrar } from "@/components/ui/ServiceWorkerRegistrar";
+import MarqueurPret from "@/components/ui/MarqueurPret";
 
 // Refonte 2026 : détection "PWA installée" posée AVANT toute peinture, pour
 // la classe `wb-pwa` (niveau CSS pur — couleurs, espacements, rayons ; pas de
@@ -75,6 +76,23 @@ export const viewport: Viewport = {
   ],
 };
 
+// Écrans de lancement de l'application installée sur iPhone (le noir qu'iOS montre tant que
+// la première page n'est pas arrivée, long avec une mauvaise connexion). iOS n'en choisit
+// un que si la taille de l'écran correspond EXACTEMENT : d'où une image par modèle, en clair
+// et en sombre (fond beige / gris foncé de la refonte + le logo, mêmes positions que l'écran
+// de lancement CSS de globals.css pour que le passage de l'un à l'autre ne se voie pas).
+// Images générées une fois (public/splash) ; un nouveau modèle d'iPhone = une ligne ici.
+const ECRANS_IPHONE: [number, number, number][] = [
+  [440, 956, 3], [402, 874, 3], [430, 932, 3], [393, 852, 3], [428, 926, 3],
+  [390, 844, 3], [375, 812, 3], [414, 896, 3], [414, 896, 2], [414, 736, 3], [375, 667, 2],
+];
+const startupImage = ECRANS_IPHONE.flatMap(([w, h, r]) =>
+  (["clair", "sombre"] as const).map(theme => ({
+    url: `/splash/${w}x${h}-${r}x-${theme}.png`,
+    media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait) and (prefers-color-scheme: ${theme === "clair" ? "light" : "dark"})`,
+  })),
+);
+
 export const metadata: Metadata = {
   title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
   manifest: "/manifest.webmanifest",
@@ -93,6 +111,7 @@ export const metadata: Metadata = {
     capable: true,
     title: "WashBoard",
     statusBarStyle: "default",
+    startupImage,
   },
   description: "Le logiciel tout-en-un des pros du nettoyage et de l'entretien à domicile (lavage auto, detailing, ménage, entretien de piscine...) : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
   keywords: ["outil laveur auto mobile", "outil gestion lavage auto", "logiciel laveur auto", "lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "logiciel detailing", "logiciel nettoyage à domicile", "outil pro du nettoyage mobile", "logiciel entretien à domicile"],
@@ -145,6 +164,7 @@ export default async function RootLayout({
         </Script>
         <a href="#main-content" className="skip-to-content">Aller au contenu</a>
         <ServiceWorkerRegistrar />
+        <MarqueurPret />
           <RecoveryRedirect />
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />

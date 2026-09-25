@@ -509,6 +509,18 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
   box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
 }
 
+/* Fin trait qui fait le tour de la barre du bas pendant qu'une page se charge (voir
+   BarreBasV2.tsx, ContourChargement). Sous `prefers-reduced-motion` : contour entier, fixe,
+   sans course. */
+@keyframes wb-contour {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+.wb-contour-trait { animation: wb-contour 1.1s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .wb-contour-trait { animation: none; stroke-dasharray: none; stroke-opacity: .5; }
+}
+
 /* Vue du mois de l'agenda (PWA) : quand un jour est choisi, l'agenda du jour
    apparaît en fondu sous les rangées du mois qui s'écartent (voir MoisV2.tsx).
    Coupé sous `prefers-reduced-motion`. */
@@ -528,3 +540,39 @@ html:has(.wb-barre-bas-verre),
 body:has(.wb-barre-bas-verre) {
   background-color: var(--v2-color-fond);
 }
+
+/* ── Écran de lancement de la PWA installée ─────────────────────────────────
+   Tant que l'application n'a pas démarré dans le navigateur (`wb-pret`, posée par
+   MarqueurPret), un écran plein (papier de la refonte + logo, comme les images de
+   lancement iOS de `public/splash`) recouvre tout : plus de fond noir prolongé quand la
+   connexion est mauvaise, plus de page v1 entrevue avant la v2. Uniquement en
+   standalone (`wb-pwa`) : le site n'est pas concerné. Le thème est celui de l'app
+   (classe `dark` posée par le serveur). Règle de secours : sans démarrage au bout de
+   10 s, l'écran s'efface de lui-même et laisse voir la page. */
+html.wb-pwa:not(.wb-pret) body {
+  visibility: hidden;
+  animation: wb-lancement-secours 0s linear 10s forwards;
+}
+html.wb-pwa:not(.wb-pret) body::before,
+html.wb-pwa:not(.wb-pret) body::after {
+  content: '';
+  visibility: visible;
+  position: fixed;
+  z-index: 2147483000;
+  animation: wb-lancement-secours-ecran 0s linear 10s forwards;
+}
+html.wb-pwa:not(.wb-pret) body::before {
+  inset: 0;
+  background: var(--v2-color-fond);
+}
+html.wb-pwa:not(.wb-pret) body::after {
+  top: 50%;
+  left: 50%;
+  width: 88px;
+  height: 88px;
+  margin: -44px 0 0 -44px;
+  border-radius: 22.5%;
+  background: url('/icon-512.png') center / cover no-repeat;
+}
+@keyframes wb-lancement-secours { to { visibility: visible; } }
+@keyframes wb-lancement-secours-ecran { to { visibility: hidden; } }

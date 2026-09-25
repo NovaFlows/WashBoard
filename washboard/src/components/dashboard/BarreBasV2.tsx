@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -90,6 +90,51 @@ const DESTINATIONS = [
 
 const police = '[font-family:var(--font-archivo)]'
 
+/** Fin trait qui fait le tour de la barre pendant qu'une page se charge (demande
+ *  d'Alexandre, 2026-09-26 : « un trait noir fin qui fait le contour du menu en bas »).
+ *  Un SVG à la taille exacte de la barre, mesurée : le contour est une pilule (rayon =
+ *  moitié de la hauteur), donc un rectangle arrondi dont `pathLength` vaut 100 — le
+ *  trait est un segment de 28 % qui court le long du tracé, sur une piste très pâle. */
+function ContourChargement() {
+  const ref = useRef<SVGSVGElement>(null)
+  const [taille, setTaille] = useState<{ l: number; h: number } | null>(null)
+  useEffect(() => {
+    const parent = ref.current?.parentElement
+    if (!parent) return
+    const mesurer = () => setTaille({ l: parent.offsetWidth, h: parent.offsetHeight })
+    mesurer()
+    const o = new ResizeObserver(mesurer)
+    o.observe(parent)
+    return () => o.disconnect()
+  }, [])
+  const decalage = 0.75
+  return (
+    <svg
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none absolute left-0 top-0 z-20 overflow-visible"
+      width={taille?.l ?? 0}
+      height={taille?.h ?? 0}
+      style={{ margin: -1 }}
+    >
+      {taille && (
+        <>
+          <rect
+            x={decalage} y={decalage} width={taille.l - 2 * decalage} height={taille.h - 2 * decalage}
+            rx={(taille.h - 2 * decalage) / 2} fill="none" stroke="var(--v2-color-encre)" strokeOpacity={0.1} strokeWidth={1.5}
+          />
+          <rect
+            className="wb-contour-trait"
+            x={decalage} y={decalage} width={taille.l - 2 * decalage} height={taille.h - 2 * decalage}
+            rx={(taille.h - 2 * decalage) / 2} fill="none" stroke="var(--v2-color-encre)" strokeWidth={1.5}
+            strokeLinecap="round" pathLength={100} strokeDasharray="28 72"
+          />
+        </>
+      )}
+    </svg>
+  )
+}
+
 export function BarreBasV2() {
   const pathname = usePathname()
 
@@ -143,6 +188,7 @@ export function BarreBasV2() {
           transitionTimingFunction: 'var(--v2-ease-out)',
         }}
       />
+      {enAttente && <ContourChargement />}
       {DESTINATIONS.map(dest => {
         // Pendant une navigation, l'onglet visé s'allume tout de suite.
         const actif = enAttente ? dest.href === enAttente : dest.actif(pathname ?? '')

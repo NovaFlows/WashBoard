@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
 import MoisV2 from '@/components/dashboard/MoisV2'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
-import { getWeekStart, dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
+import { dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
 import { villeDepuisAdresse } from '@/lib/adresse'
 import { doitDemanderConfirmation } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
@@ -307,11 +307,28 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     openBooking(rdv)
   }, [rdvParam, bookings, openBooking])
 
-  const weekStart = useMemo(() => getWeekStart(dayDate), [dayDate])
+  // Le bandeau de 7 jours est CENTRÉ sur le jour affiché (demande d'Alexandre, 2026-09-26) :
+  // le jour choisi est toujours celui du milieu, trois jours avant, trois après. Toucher un
+  // autre jour recentre le bandeau sur lui, avec un glissement (voir plus bas).
   const weekDays = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d }),
-    [weekStart],
+    () => Array.from({ length: 7 }, (_, i) => { const d = new Date(dayDate); d.setDate(d.getDate() + i - 3); return d }),
+    [dayDate],
   )
+  const bandeauRef = useRef<HTMLDivElement>(null)
+  // Décalage (en jours) du jour touché par rapport au milieu, posé au toucher : lu par
+  // l'effet qui suit le changement de jour pour faire glisser le bandeau.
+  const decalageBandeau = useRef(0)
+  useLayoutEffect(() => {
+    const k = decalageBandeau.current
+    decalageBandeau.current = 0
+    const boutons = bandeauRef.current?.querySelectorAll<HTMLElement>('button')
+    if (!k || !boutons || boutons.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const pas = boutons[1].getBoundingClientRect().left - boutons[0].getBoundingClientRect().left
+    boutons.forEach(b => b.animate(
+      [{ transform: `translateX(${k * pas}px)` }, { transform: 'translateX(0)' }],
+      { duration: 280, easing: 'cubic-bezier(.23, 1, .32, 1)' },
+    ))
+  }, [dayDate])
 
   const byDate = useMemo(() => {
     const m = new Map<string, Booking[]>()
@@ -421,7 +438,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         >
           <ChevronLeft size={18} strokeWidth={2} />
         </button>
-        <div className="flex flex-1 justify-between gap-1 overflow-x-auto">
+        <div ref={bandeauRef} className="flex flex-1 justify-between gap-1 overflow-x-auto">
           {weekDays.map((d, i) => {
             const actif = d.getFullYear() === dayDate.getFullYear() && d.getMonth() === dayDate.getMonth() && d.getDate() === dayDate.getDate()
             const estJourReel = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
@@ -430,14 +447,14 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               <button
                 key={dayKey(d)}
                 type="button"
-                onClick={() => setDayDate(d)}
+                onClick={() => { decalageBandeau.current = i - 3; setDayDate(d) }}
                 aria-current={actif ? 'date' : undefined}
                 aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
                 className={`relative flex h-14 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] ${
                   actif ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]' : 'text-[color:var(--v2-color-encre)]'
                 }`}
               >
-                <span className={`text-[11px] ${corps} opacity-70`}>{JOURS_INITIALE[i]}</span>
+                <span className={`text-[11px] ${corps} opacity-70`}>{JOURS_INITIALE[(d.getDay() + 6) % 7]}</span>
                 <span className={`text-[16px] ${corpsFort} tabular-nums ${!actif && estJourReel ? 'text-[color:var(--v2-color-accent)]' : ''}`}>
                   {d.getDate()}
                 </span>
