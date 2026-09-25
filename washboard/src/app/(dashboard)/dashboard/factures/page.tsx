@@ -14,6 +14,7 @@ import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { ApercuFactures } from '@/components/dashboard/ApercusVerrouilles'
 
 export const dynamic = 'force-dynamic'
 
@@ -130,6 +131,7 @@ export default async function FacturesPage({
             title="Éditez des factures conformes"
             description="Mentions légales, SIRET, TVA, numérotation continue : des factures que votre comptable accepte. Disponible à partir de l’offre Pro."
             planLabel={requiredPlanLabel('facturation')}
+            apercu={<ApercuFactures />}
           />
         </div>
       </DashboardShell>

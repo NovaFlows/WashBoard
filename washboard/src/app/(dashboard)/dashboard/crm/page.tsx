@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { ApercuCrm } from '@/components/dashboard/ApercusVerrouilles'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -37,6 +38,7 @@ export default async function CrmPage() {
             title="Sachez d’où viennent vos clients"
             description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning. Disponible à partir de l’offre Starter."
             planLabel={requiredPlanLabel('crm')}
+            apercu={<ApercuCrm />}
           />
         </div>
       </DashboardShell>

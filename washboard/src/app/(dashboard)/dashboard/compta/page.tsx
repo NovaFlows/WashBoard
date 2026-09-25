@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ComptaDashboard from '@/components/dashboard/ComptaDashboard'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { ApercuCompta } from '@/components/dashboard/ApercusVerrouilles'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
@@ -26,8 +27,9 @@ export default async function ComptaPage() {
           </div>
           <UpgradePrompt
             title="Gérez votre comptabilité"
-            description="Suivez votre chiffre d'affaires, vos dépenses et votre résultat chaque mois. Disponible à partir du plan Pro."
+            description="Suivez votre chiffre d'affaires, vos dépenses et votre résultat chaque mois. Disponible à partir de l’offre Pro."
             planLabel={requiredPlanLabel('compta')}
+            apercu={<ApercuCompta />}
           />
         </div>
       </DashboardShell>
