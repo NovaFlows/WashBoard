@@ -40,9 +40,7 @@ export async function POST(request: NextRequest) {
 
   const { error: updateError } = await supabase
     .from('washers')
-    // `profile_updated_at` : voir PATCH /api/washer — choisir son fond est une
-    // modification du laveur, elle doit se voir dans le suivi client.
-    .update({ background_theme: publicUrl, profile_updated_at: new Date().toISOString() })
+    .update({ background_theme: publicUrl })
     .eq('user_id', user.id)
 
   if (updateError) return errorResponse('washer.background.post.db', updateError)

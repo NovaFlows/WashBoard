@@ -48,9 +48,7 @@ export async function POST(request: NextRequest) {
 
   const { error: updateError } = await supabase
     .from('washers')
-    // `profile_updated_at` : voir PATCH /api/washer — envoyer son logo est une
-    // modification du laveur, elle doit se voir dans le suivi client.
-    .update({ logo_url: publicUrl, profile_updated_at: new Date().toISOString() })
+    .update({ logo_url: publicUrl })
     .eq('user_id', user.id)
 
   if (updateError) return errorResponse('washer.logo.post.db', updateError)

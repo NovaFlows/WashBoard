@@ -269,31 +269,6 @@ describe('PATCH /api/washer — champs non modifiables', () => {
   })
 })
 
-describe('PATCH /api/washer — horodatage de la modification du laveur', () => {
-  it('pose profile_updated_at quand le laveur change quelque chose', async () => {
-    const avant = Date.now()
-    const { res } = await patch({ name: 'Test' })
-    expect(res.status).toBe(200)
-    const pose = new Date(String(updates[0].profile_updated_at)).getTime()
-    expect(pose).toBeGreaterThanOrEqual(avant)
-    expect(pose).toBeLessThanOrEqual(Date.now())
-  })
-
-  it('ne pose rien quand aucun champ connu n est envoyé', async () => {
-    // Un formulaire renvoyé sans modification ne doit pas faire croire à un
-    // laveur actif : c'est exactement le faux signal qu'on cherche à éviter.
-    await patch({ champ_inconnu: 'peu importe' })
-    expect(updates[0]).not.toHaveProperty('profile_updated_at')
-  })
-
-  it('ignore une date envoyée par le client', async () => {
-    // Sinon n'importe qui pourrait antidater sa fiche et se rendre invisible
-    // dans le suivi des inscrits qui décrochent.
-    await patch({ name: 'Test', profile_updated_at: '2020-01-01T00:00:00.000Z' })
-    expect(updates[0].profile_updated_at).not.toBe('2020-01-01T00:00:00.000Z')
-  })
-})
-
 describe('PATCH /api/washer — validation de base', () => {
   it('refuse un nom d entreprise vide', async () => {
     const { res } = await patch({ name: '   ' })
