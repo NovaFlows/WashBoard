@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
@@ -60,20 +61,23 @@ export default async function PrestationsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Prestations
-        services={(services ?? []) as Service[]}
-        categories={(categories ?? []) as ServiceCategory[]}
-        availabilities={(availabilities ?? []) as Availability[]}
-        lectureIncomplete={!!errServices || !!errCategories}
-        zone={washer.zone_config ?? null}
-        adresseDeBase={washer.base_address ?? null}
-        creneaux={{
-          actif: !!washer.smart_slot_enabled,
-          proximite: washer.smart_slot_radius_minutes ?? 15,
-          type: washer.smart_slot_discount_type === 'percent' ? 'percent' : 'fixed',
-          valeur: Number(washer.smart_slot_discount_value ?? 0),
-        }}
-      />
+      {/* useSearchParams (lecture de ?vue=) exige une limite Suspense. */}
+      <Suspense fallback={null}>
+        <Prestations
+          services={(services ?? []) as Service[]}
+          categories={(categories ?? []) as ServiceCategory[]}
+          availabilities={(availabilities ?? []) as Availability[]}
+          lectureIncomplete={!!errServices || !!errCategories}
+          zone={washer.zone_config ?? null}
+          adresseDeBase={washer.base_address ?? null}
+          creneaux={{
+            actif: !!washer.smart_slot_enabled,
+            proximite: washer.smart_slot_radius_minutes ?? 15,
+            type: washer.smart_slot_discount_type === 'percent' ? 'percent' : 'fixed',
+            valeur: Number(washer.smart_slot_discount_value ?? 0),
+          }}
+        />
+      </Suspense>
     </DashboardShell>
   )
 }

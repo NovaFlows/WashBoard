@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ChevronLeft, Trash2 } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
 import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
 import { usePrestationsV2 } from '@/hooks/usePrestationsV2'
 import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
@@ -46,11 +46,15 @@ import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
 // une confirmation (plus de `confirm()` natif).
 //
 // 2026-09-25 — deux réglages de l'ancien onglet Identité rejoignent cet écran
-// (décision d'Alexandre) : « Où vous intervenez » (`#zone`) et « Créneaux
-// intelligents » (`#creneaux`), chacun en une ligne qui ouvre sa feuille. Ils
-// sont ici parce qu'ils décrivent la même chose que les prix : ce que le client
+// (décision d'Alexandre) : la zone d'intervention et les créneaux intelligents.
+// Ils sont ici parce qu'ils décrivent la même chose que les prix : ce que le client
 // final voit et peut réserver — pour qui, où, et à quel prix. Le site, lui,
 // continue de les régler dans `admin/IdentiteForm.tsx`, inchangé.
+//
+// Deux vues (Alexandre, 2026-09-25 : « trois entrées, et Prestations mène à une
+// page où il n'y a que les prestations ») : l'accueil, avec trois lignes
+// (Prestations, Zone d'intervention, Créneaux intelligents), et la liste
+// `?vue=prestations`. Zone et créneaux ouvrent leur feuille depuis l'accueil.
 
 type FeuilleOuverte =
   | { quoi: 'prestation'; service: Service | null; formulaire: FormulairePrestation }
@@ -93,10 +97,17 @@ export function Section({
 }) {
   return (
     <section className="mt-[22px] scroll-mt-20" id={ancre}>
-      <div className="flex items-center justify-between gap-3 pb-1">
-        <h2 className={`flex min-w-0 items-baseline gap-2 px-0.5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
+      <div className="flex items-center justify-between gap-3 pb-1.5">
+        <h2 className={`flex min-w-0 items-center gap-2 px-0.5 text-[19px] leading-tight ${titre}`}>
           <span className="truncate">{intitule}</span>
-          {typeof nombre === 'number' && <span className={`${corps} tabular-nums`}>{nombre}</span>}
+          {typeof nombre === 'number' && (
+            <span
+              className={`inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-color-surface)] px-2 text-[13px] ${corpsFort} tabular-nums text-[color:var(--v2-color-gris)]`}
+              style={{ boxShadow: 'inset 0 0 0 1px var(--v2-filet-fort)' }}
+            >
+              {nombre}
+            </span>
+          )}
         </h2>
         {action}
       </div>
@@ -185,7 +196,15 @@ export default function PrestationsV2({
   // attendre le rechargement — la phrase de la ligne change tout de suite.
   const [zone, setZone] = useState(zoneServeur)
   const [creneaux, setCreneaux] = useState(creneauxServeur)
-  const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
+  // Arrivée par un lien de l'accueil de l'app (`#zone`, `#creneaux`) : on ouvre
+  // directement la feuille visée. Cet écran ne se monte qu'après le garde-fou de
+  // `Prestations.tsx`, donc toujours dans le navigateur.
+  const [feuille, setFeuille] = useState<FeuilleOuverte>(() => {
+    const ancre = window.location.hash
+    if (ancre === '#zone') return { quoi: 'zone' }
+    if (ancre === '#creneaux') return { quoi: 'creneaux' }
+    return null
+  })
   const [suppression, setSuppression] = useState<Suppression>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
@@ -285,70 +304,94 @@ export default function PrestationsV2({
   const prestationsPrix = services.map(s => ({ nom: s.name, prix: minVehiclePrice(s) }))
   const ligneZone = resumeZone(zone)
 
-  const reglagesDeZone = (
-    <>
-      <Section titre="Où vous intervenez" ancre="zone">
-        <CarteListe>
-          <ul>
-            <LigneDeuxNiveaux
-              label="Zone d’intervention"
-              valeur={ligneZone.texte}
-              ton={ligneZone.ton}
-              onClick={() => setFeuille({ quoi: 'zone' })}
-            />
-          </ul>
-        </CarteListe>
-      </Section>
+  const peutAjouterPrestation = categories.length > 0
 
-      <Section titre="Créneaux intelligents" ancre="creneaux">
-        <CarteListe>
-          <ul>
-            <LigneDeuxNiveaux
-              label="Remise de regroupement"
-              valeur={resumeCreneaux(creneaux)}
-              onClick={() => setFeuille({ quoi: 'creneaux' })}
-            />
-          </ul>
-        </CarteListe>
-      </Section>
-    </>
+  // Deux vues : l'accueil de « Prestations et prix » (trois entrées) et la liste des
+  // prestations. `?vue=prestations` est une vraie adresse : le geste « retour » du
+  // téléphone ramène à l'accueil, comme n'importe quelle application.
+  const vueListe = useSearchParams().get('vue') === 'prestations'
+
+  const enteteListe = (
+    <div className="flex items-center gap-1 pb-2">
+      <Link
+        href="/dashboard/parametres/prestations"
+        aria-label="Retour à Prestations et prix"
+        className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+      >
+        <ChevronLeft size={22} strokeWidth={2} />
+      </Link>
+      <div className="min-w-0 flex-1">
+        <h1 className={`text-[24px] leading-none ${titre}`}>Prestations</h1>
+        {!lectureIncomplete && (
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            {sousTitrePrestations(services.length, categories.length)}
+          </p>
+        )}
+      </div>
+      {!lectureIncomplete && peutAjouterPrestation && (
+        <button
+          type="button"
+          onClick={ouvrirNouvellePrestation}
+          aria-label="Ajouter une prestation"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
+          style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
+        >
+          <Plus size={22} strokeWidth={2.4} aria-hidden />
+        </button>
+      )}
+    </div>
   )
 
-  const peutAjouterPrestation = categories.length > 0
+  const enteteAccueil = (
+    <div className="flex items-center gap-1 pb-2">
+      <Link
+        href="/dashboard/parametres"
+        aria-label="Retour à Plus"
+        className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+      >
+        <ChevronLeft size={22} strokeWidth={2} />
+      </Link>
+      <h1 className={`text-[24px] leading-none ${titre}`}>Prestations et prix</h1>
+    </div>
+  )
+
+  const resumePrestations = lectureIncomplete
+    ? 'À recharger : la lecture a échoué'
+    : sousTitrePrestations(services.length, categories.length)
+
+  const accueil = (
+    <div className="mt-2">
+      <CarteListe>
+        <ul className="divide-y divide-[color:var(--v2-filet)]">
+          <LigneDeuxNiveaux
+            label="Prestations"
+            valeur={resumePrestations}
+            ton={lectureIncomplete ? 'ambre' : undefined}
+            onClick={() => router.push('/dashboard/parametres/prestations?vue=prestations')}
+          />
+          <LigneDeuxNiveaux
+            label="Zone d’intervention"
+            valeur={ligneZone.texte}
+            ton={ligneZone.ton}
+            onClick={() => setFeuille({ quoi: 'zone' })}
+          />
+          <LigneDeuxNiveaux
+            label="Créneaux intelligents"
+            valeur={resumeCreneaux(creneaux)}
+            onClick={() => setFeuille({ quoi: 'creneaux' })}
+          />
+        </ul>
+      </CarteListe>
+    </div>
+  )
 
   return (
     <div
       className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]`}
     >
-      <div className="flex items-center gap-1 pb-3">
-        <Link
-          href="/dashboard/parametres"
-          aria-label="Retour à Plus"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Prestations et prix</h1>
-          {!lectureIncomplete && (
-            <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {sousTitrePrestations(services.length, categories.length)}
-            </p>
-          )}
-        </div>
-        {!lectureIncomplete && peutAjouterPrestation && (
-          <button
-            type="button"
-            onClick={ouvrirNouvellePrestation}
-            className={`inline-flex h-11 shrink-0 items-center rounded-[var(--v2-radius-bouton)] px-4 text-[14.5px] ${corpsFort} text-white transition-transform active:scale-[.97] motion-reduce:transition-none`}
-            style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
-          >
-            + Prestation
-          </button>
-        )}
-      </div>
+      {vueListe ? enteteListe : enteteAccueil}
 
-      {lectureIncomplete ? (
+      {!vueListe ? accueil : lectureIncomplete ? (
         <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-4">
           <Constat ton="ambre" role="status">
             Vos prestations n’ont pas pu être lues. Rien n’a été modifié. Rechargez la page avant d’y toucher : un écran vide
@@ -369,9 +412,6 @@ export default function PrestationsV2({
             onModele={creerDepuisModele}
             onAutre={() => setFeuille({ quoi: 'categorie', categorie: null })}
           />
-          {/* Même sur un compte vide : une zone peut déjà être réglée, et les
-              ancres `#zone` / `#creneaux` doivent mener quelque part. */}
-          {reglagesDeZone}
         </>
       ) : (
         <>
@@ -393,7 +433,7 @@ export default function PrestationsV2({
                     type="button"
                     onClick={() => setFeuille({ quoi: 'categorie', categorie: cat })}
                     aria-label={`Modifier la catégorie ${cat.name}`}
-                    className={`-mr-2 flex min-h-11 shrink-0 items-center px-2 text-[13px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
+                    className={`-mr-2 flex min-h-11 shrink-0 items-center px-2 text-[14.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
                   >
                     Modifier
                   </button>
@@ -433,8 +473,6 @@ export default function PrestationsV2({
               <Ligne label="+ Ajouter une catégorie" onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
             </CarteListe>
           </div>
-
-          {reglagesDeZone}
         </>
       )}
 
