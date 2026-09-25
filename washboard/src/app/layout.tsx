@@ -21,7 +21,20 @@ import MarqueurPret from "@/components/ui/MarqueurPret";
 const PWA_DETECT_SCRIPT = `(function(){try{
   var s = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
-  if (s) document.documentElement.classList.add('wb-pwa');
+  if (s) {
+    document.documentElement.classList.add('wb-pwa');
+    // Barre d'état : le papier de la refonte dès la première image, pour les comptes en bêta
+    // (repère posé par DashboardShell) — voir le commentaire de DashboardShell.
+    try {
+      if (window.localStorage.getItem('wb-beta-pwa') === '1' && !document.querySelector('meta[data-wb-beta]')) {
+        var m = document.createElement('meta');
+        m.name = 'theme-color';
+        m.setAttribute('data-wb-beta', '');
+        m.content = document.documentElement.classList.contains('dark') ? '#0E0E11' : '#F6F5F3';
+        document.head.insertBefore(m, document.head.firstChild);
+      }
+    } catch(e){}
+  }
 }catch(e){}})();`;
 
 const geistSans = Geist({

@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
 
 // Ligne de diagnostic discrète au bas de l'écran « Plus » de la PWA : la version
@@ -30,10 +30,21 @@ export function DiagnosticPwa() {
   const brut = useSyncExternalStore(rien, lire, () => '')
   const etat = brut ? (JSON.parse(brut) as { appli: boolean; classe: boolean }) : null
   const oui = (v: boolean) => (v ? 'oui' : 'non')
+  // Accès équipe : ce que le serveur répond pour CE compte (voir `api/support/est-equipe`).
+  const [equipe, setEquipe] = useState<{ membre: boolean; compte: string | null; listeConfiguree: boolean } | null>(null)
+  useEffect(() => {
+    let annule = false
+    fetch('/api/support/est-equipe')
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => { if (!annule && j && typeof j.membre === 'boolean') setEquipe(j) })
+      .catch(() => {})
+    return () => { annule = true }
+  }, [])
   return (
     <p className="pb-2 text-center text-[11px] text-[color:var(--v2-color-gris)] tabular-nums opacity-70">
       v. {process.env.NEXT_PUBLIC_BUILD_SHA}
       {etat && <> · mode appli : {oui(etat.appli)} · classe wb-pwa : {oui(etat.classe)}</>}
+      {equipe && <><br />compte : {equipe.compte ?? '?'} · équipe : {oui(equipe.membre)} · liste du déploiement : {equipe.listeConfiguree ? 'définie' : 'ABSENTE'}</>}
     </p>
   )
 }

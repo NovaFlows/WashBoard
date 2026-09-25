@@ -22,5 +22,9 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const membre = isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)
-  return NextResponse.json({ membre })
+  // `compte` et `listeConfiguree` : diagnostic TEMPORAIRE (2026-09-26), affiché par
+  // `DiagnosticPwa` au bas de « Plus » — quand l'accès équipe n'apparaît pas, dit si c'est
+  // l'adresse du compte ou la variable du déploiement. Rien de sensible : l'adresse est celle
+  // de la personne qui demande, et la liste elle-même n'est jamais révélée.
+  return NextResponse.json({ membre, compte: user.email ?? null, listeConfiguree: !!process.env.SUPPORT_ADMIN_EMAILS })
 }
