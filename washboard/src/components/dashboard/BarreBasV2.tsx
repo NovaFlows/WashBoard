@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 // Barre du bas de la refonte 2026 (passe 4) — n'apparaît QUE dans la PWA
 // installée, quand `washer.beta_refonte` est vrai (voir DashboardShell.tsx,
@@ -94,25 +94,39 @@ const police = '[font-family:var(--font-archivo)]'
  *  (demande d'Alexandre, 2026-09-26 : « le tour en entier, comme un ovale, fluide, qu'on le
  *  voit avancer super vite si c'est rapide »). Il PROGRESSE au lieu de tourner en boucle :
  *  il part vite, ralentit sans jamais atteindre la fin tant que la page n'est pas là, puis
- *  boucle le tour en un instant à son arrivée et s'efface. Un chargement rapide se voit
- *  donc comme un tour vif, un lent comme un trait qui avance patiemment.
+ *  boucle le tour à son arrivée et s'efface. Le tour va TOUJOURS jusqu'au bout, même si la
+ *  page s'ouvre presque tout de suite (demande d'Alexandre, 2026-09-26) : la fin dure de quoi
+ *  porter le tour entier à `DUREE_MINI_TOUR_MS` depuis le toucher.
  *
  *  Un SVG à la taille exacte de la barre, mesurée : le contour est une pilule (rayon = moitié
  *  de la hauteur), donc un rectangle arrondi dont `pathLength` vaut 100 ; `stroke-dashoffset`
  *  va de 100 (rien) à 0 (le tour complet). */
 type PhaseContour = 'repos' | 'depart' | 'avance' | 'fin'
-const REGLAGES_CONTOUR: Record<PhaseContour, { decalage: number; duree: number; courbe: string; opacite: number }> = {
+const DUREE_MINI_TOUR_MS = 750
+const DUREE_FIN_MINI_MS = 300
+const REGLAGES_CONTOUR: Record<Exclude<PhaseContour, 'fin' | 'depart'>, { decalage: number; duree: number; courbe: string; opacite: number }> = {
   repos: { decalage: 0, duree: 0, courbe: 'linear', opacite: 0 },
-  depart: { decalage: 100, duree: 0, courbe: 'linear', opacite: 1 },
   // 5 s vers 92 % : progression régulière, qui ralentit franchement vers la fin.
   avance: { decalage: 8, duree: 5000, courbe: 'cubic-bezier(.25, .4, .35, 1)', opacite: 1 },
-  fin: { decalage: 0, duree: 300, courbe: 'cubic-bezier(.3, .6, .4, 1)', opacite: 1 },
 }
+
+// Chaque page rend SA PROPRE barre (DashboardShell est dans chaque page, pas dans une mise en
+// page commune) : à l'arrivée de la page, la barre qui dessinait le contour disparaît avec
+// l'ancienne page, et une neuve apparaît. Le chargement en cours est donc tenu ICI, hors de
+// React, pour que la nouvelle barre reprenne le trait là où l'ancienne l'a laissé et le mène
+// jusqu'au bout du tour.
+let chargement: { debut: number; progres: number } | null = null
+const PEREMPTION_MS = 20_000
 
 function ContourChargement({ actif }: { actif: boolean }) {
   const ref = useRef<SVGSVGElement>(null)
+  const trait = useRef<SVGRectElement>(null)
   const [taille, setTaille] = useState<{ l: number; h: number } | null>(null)
   const [phase, setPhase] = useState<PhaseContour>('repos')
+  const phaseRef = useRef<PhaseContour>('repos')
+  useEffect(() => { phaseRef.current = phase }, [phase])
+  const [decalageDepart, setDecalageDepart] = useState(100)
+  const [dureeFin, setDureeFin] = useState(DUREE_FIN_MINI_MS)
 
   useEffect(() => {
     const parent = ref.current?.parentElement
@@ -124,8 +138,41 @@ function ContourChargement({ actif }: { actif: boolean }) {
     return () => o.disconnect()
   }, [])
 
+  // Termine le tour : départ posé (peint), puis fin en `fin` ms — jamais moins que ce qu'il
+  // faut pour que le tour entier ait duré `DUREE_MINI_TOUR_MS` depuis le toucher.
+  function terminer(depuis: number) {
+    const fin = Math.max(DUREE_FIN_MINI_MS, DUREE_MINI_TOUR_MS - (Date.now() - depuis))
+    let a = 0
+    const b = requestAnimationFrame(() => {
+      a = requestAnimationFrame(() => { setDureeFin(fin); setPhase(p => (p === 'repos' ? p : 'fin')) })
+    })
+    const t = setTimeout(() => { setPhase('repos'); chargement = null }, fin + 140)
+    return () => { cancelAnimationFrame(b); cancelAnimationFrame(a); clearTimeout(t) }
+  }
+
+  // Une page vient d'arriver pendant qu'un chargement était en cours (barre neuve) : le trait
+  // reprend à sa position et termine son tour.
+  useEffect(() => {
+    if (!chargement || Date.now() - chargement.debut > PEREMPTION_MS) { chargement = null; return }
+    setDecalageDepart(100 - chargement.progres)
+    setPhase('depart')
+    return terminer(chargement.debut)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, à l'arrivée
+  }, [])
+
+  // Cette barre est remplacée (nouvelle page) en plein chargement : on retient où en est le trait.
+  // Effet de mise en page, pas un effet ordinaire : son nettoyage tourne AVANT que le tracé ne
+  // quitte la page, seul moment où sa position se lit encore.
+  useLayoutEffect(() => () => {
+    if (!chargement || (phaseRef.current !== 'avance' && phaseRef.current !== 'depart')) return
+    const r = trait.current
+    if (r) chargement.progres = Math.max(0, Math.min(100, 100 - parseFloat(getComputedStyle(r).strokeDashoffset)))
+  }, [])
+
   useEffect(() => {
     if (actif) {
+      chargement = { debut: Date.now(), progres: 0 }
+      setDecalageDepart(100)
       setPhase('depart')
       // Deux images d'écart : le départ (trait à zéro) doit être peint avant que la
       // transition vers « avance » ne s'enclenche.
@@ -133,12 +180,15 @@ function ContourChargement({ actif }: { actif: boolean }) {
       const b = requestAnimationFrame(() => { a = requestAnimationFrame(() => setPhase('avance')) })
       return () => { cancelAnimationFrame(b); cancelAnimationFrame(a) }
     }
-    setPhase(p => (p === 'repos' ? p : 'fin'))
-    const t = setTimeout(() => setPhase('repos'), 420)
-    return () => clearTimeout(t)
+    // Fin de chargement SANS changement de barre (la page est la même) : même fin de tour.
+    if (chargement && phaseRef.current !== 'repos') return terminer(chargement.debut)
   }, [actif])
 
-  const r = REGLAGES_CONTOUR[phase]
+  const r = phase === 'fin'
+    ? { decalage: 0, duree: dureeFin, courbe: 'cubic-bezier(.3, .6, .4, 1)', opacite: 1 }
+    : phase === 'depart'
+      ? { decalage: decalageDepart, duree: 0, courbe: 'linear', opacite: 1 }
+      : REGLAGES_CONTOUR[phase]
   const decalage = 0.75
   return (
     <svg
@@ -151,6 +201,7 @@ function ContourChargement({ actif }: { actif: boolean }) {
     >
       {taille && (
         <rect
+          ref={trait}
           className="wb-contour-trait"
           x={decalage} y={decalage} width={taille.l - 2 * decalage} height={taille.h - 2 * decalage}
           rx={(taille.h - 2 * decalage) / 2} fill="none" stroke="var(--v2-color-encre)" strokeWidth={1.5}
@@ -164,6 +215,33 @@ function ContourChargement({ actif }: { actif: boolean }) {
 
 export function BarreBasV2() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  // « Chauffe » des cinq onglets, une fois par session, pendant que l'écran de lancement est
+  // encore là (demande d'Alexandre, 2026-09-26 : le logo laisse aux pages le temps de charger,
+  // pour que changer d'onglet soit plus rapide ensuite). Les pages sont rendues par le serveur :
+  // les demander une fois réveille leurs fonctions (départ à froid) et prépare leur code côté
+  // navigateur. Rien n'est GARDÉ : chaque navigation relit des données fraîches, un planning
+  // périmé serait pire qu'un onglet un peu plus lent.
+  useEffect(() => {
+    let dejaFait = false
+    try {
+      dejaFait = window.sessionStorage.getItem('wb-chauffe') === '1'
+      window.sessionStorage.setItem('wb-chauffe', '1')
+    } catch { /* stockage refusé : on chauffe, sans mémoire */ }
+    if (dejaFait) return
+    let vivant = true
+    const cibles = DESTINATIONS.map(d => d.href).filter(h => h !== pathname)
+    const timer = setTimeout(async () => {
+      for (const href of cibles) {
+        if (!vivant) return
+        try { router.prefetch(href) } catch { /* rien */ }
+        try { await fetch(href, { headers: { RSC: '1' }, credentials: 'same-origin', cache: 'no-store' }) } catch { /* hors ligne : tant pis */ }
+      }
+    }, 400)
+    return () => { vivant = false; clearTimeout(timer) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, au démarrage
+  }, [])
 
   // Retour immédiat au toucher : les pages du tableau de bord sont rendues par
   // le serveur, il s'écoule un moment entre le tap et l'arrivée de la page.

@@ -24,9 +24,21 @@
   button { margin-top: 26px; height: 46px; padding: 0 26px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; font: 600 15px/1 inherit; font-family: inherit; }
   button:active { transform: scale(.97); }
   .etat { margin-top: 18px; font-size: 13px; }
+  /* Lancement de l'application : le logo seul pendant 3 secondes (comme l'écran de lancement
+     de l'application, même sans réseau), puis le message. Une seule fois par session. */
+  #lancement { position: fixed; inset: 0; z-index: 10; background: var(--fond); display: flex; align-items: center; justify-content: center; animation: fondu 320ms ease-out 2700ms forwards; }
+  @keyframes fondu { to { opacity: 0; visibility: hidden; } }
+  @media (prefers-reduced-motion: reduce) { #lancement { animation-duration: 1ms; } }
 </style>
 </head>
 <body>
+<div id="lancement" aria-hidden="true"><img src="/icon-512.png" alt="" width="88" height="88"></div>
+<script>
+  try {
+    if (sessionStorage.getItem('wb-lance') === '1') document.getElementById('lancement').remove();
+    else sessionStorage.setItem('wb-lance', '1');
+  } catch (e) { document.getElementById('lancement').remove(); }
+</script>
 <main>
   <img src="/icon-512.png" alt="" width="88" height="88">
   <h1>Pas de connexion</h1>

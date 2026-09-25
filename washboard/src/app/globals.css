@@ -571,3 +571,19 @@ html.wb-pwa:not(.wb-pret) body::after {
 }
 @keyframes wb-lancement-secours { to { visibility: visible; } }
 @keyframes wb-lancement-secours-ecran { to { visibility: hidden; } }
+
+/* Sortie en fondu : la page est révélée dessous, l'écran de lancement s'efface dessus (la
+   classe `wb-pret` le retire ensuite pour de bon). */
+html.wb-pwa.wb-lancement-fin:not(.wb-pret) body {
+  visibility: visible;
+  animation: none;
+}
+html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::before,
+html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after {
+  animation: wb-lancement-fondu 260ms ease-out forwards;
+}
+@keyframes wb-lancement-fondu { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::before,
+  html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after { animation-duration: 1ms; }
+}
