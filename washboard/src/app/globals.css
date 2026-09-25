@@ -516,7 +516,7 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.wb-agenda-arrivee { animation: v2-agenda-arrivee 360ms var(--v2-ease-out); }
+.wb-agenda-arrivee { animation: v2-agenda-arrivee 520ms var(--v2-ease-out); }
 @media (prefers-reduced-motion: reduce) {
   .wb-agenda-arrivee { animation: none; }
 }

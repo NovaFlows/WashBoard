@@ -86,7 +86,7 @@ type Props = {
 // L'ouverture du mois joue la même chose à l'envers. Web Animations plutôt que du
 // CSS : la géométrie (position de la rangée, du bandeau) n'est connue qu'à
 // l'exécution.
-const DUREE_TRANSITION_MS = 360
+const DUREE_TRANSITION_MS = 520
 const DECALAGE_AUTRES_PX = 90
 const EASE_SORTIE = 'cubic-bezier(.23, 1, .32, 1)'
 
