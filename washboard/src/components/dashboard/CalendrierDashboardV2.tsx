@@ -215,6 +215,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // Vue d'arrivée = le bandeau de 7 jours (« semaine ») ; « mois » = la couche
   // plein écran de `MoisV2.tsx`.
   const [vue, setVue] = useState<'semaine' | 'mois'>('semaine')
+  // Vrai pendant le zoom de la vue du mois vers le jour choisi : l'agenda s'avance.
+  const [arrivee, setArrivee] = useState(false)
   // Créneau libre en cours de proposition à un client — voir ProposerCreneauV2.tsx.
   const [creneauPropose, setCreneauPropose] = useState<{ debut: Date; fin: Date; ville: string | null } | null>(null)
 
@@ -355,7 +357,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     <>
     <div
       inert={vue === 'mois'}
-      className={`max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      className={`${arrivee ? 'wb-agenda-arrivee ' : ''}max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -691,10 +693,12 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         aujourdhui={today}
         byDate={byDate}
         getUnavail={getUnavail}
-        onFermer={() => setVue('semaine')}
+        onFermer={() => { setVue('semaine'); setArrivee(false) }}
         onChoisir={d => {
+          setArrivee(true)
+          // La vue du mois se ferme d'elle-même une fois son zoom terminé (`onFermer`) :
+          // ici on cale seulement le jour, que le zoom laisse apparaître dessous.
           setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
-          setVue('semaine')
           // L'agenda a pu être défilé vers le bas (liste, congés à venir)
           // avant l'ouverture du mois : on le ramène en haut pour que le jour
           // choisi et son bandeau soient ce qu'on voit.

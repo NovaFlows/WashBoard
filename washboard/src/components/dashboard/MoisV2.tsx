@@ -71,14 +71,33 @@ type Props = {
   /** Rendez-vous par jour (clés `dayKey`), tel que l'agenda le tient déjà. */
   byDate: Map<string, Booking[]>
   getUnavail: (d: Date) => Unavailability | null
+  /** Le jour choisi : l'agenda se cale dessus PENDANT le zoom, la vue se ferme ensuite (`onFermer`). */
   onChoisir: (d: Date) => void
   onFermer: () => void
 }
+
+// Durée du zoom d'arrivée sur un jour (« comme le Calendrier d'Apple »).
+const DUREE_ZOOM_MS = 320
 
 export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, onChoisir, onFermer }: Props) {
   const coucheRef = useRef<HTMLDivElement>(null)
   const enteteRef = useRef<HTMLDivElement>(null)
   const retourRef = useRef<HTMLButtonElement>(null)
+  // Zoom de sortie : le mois grossit autour de la case touchée en s'effaçant, et
+  // laisse voir le jour choisi dessous. `null` tant qu'aucun jour n'est choisi.
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null)
+  const minuterieZoom = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (minuterieZoom.current) clearTimeout(minuterieZoom.current) }, [])
+
+  function choisir(jour: Date, caseJour: HTMLElement) {
+    if (zoom) return
+    onChoisir(jour)
+    if (reduireMouvement()) { onFermer(); return }
+    const boite = caseJour.getBoundingClientRect()
+    const couche = coucheRef.current?.getBoundingClientRect()
+    setZoom({ x: boite.left + boite.width / 2 - (couche?.left ?? 0), y: boite.top + boite.height / 2 - (couche?.top ?? 0) })
+    minuterieZoom.current = setTimeout(onFermer, DUREE_ZOOM_MS)
+  }
 
   const plage = useMemo(() => plageDeMois(aujourdhui, MOIS_AVANT, MOIS_APRES, jourAffiche), [aujourdhui, jourAffiche])
   const compte = useMemo(() => compterActifsParJour(byDate), [byDate])
@@ -124,7 +143,16 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
       ref={coucheRef}
       role="region"
       aria-label="Vue du mois"
-      className={`fixed inset-0 z-[12] overflow-y-auto overscroll-contain bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      className={`wb-mois-entree fixed inset-0 z-[12] overflow-y-auto overscroll-contain bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      style={zoom
+        ? {
+            transformOrigin: `${zoom.x}px ${zoom.y}px`,
+            transform: 'scale(2.8)',
+            opacity: 0,
+            pointerEvents: 'none',
+            transition: `transform ${DUREE_ZOOM_MS}ms var(--v2-ease-out), opacity ${DUREE_ZOOM_MS - 40}ms var(--v2-ease-out)`,
+          }
+        : undefined}
     >
       <div
         ref={enteteRef}
@@ -176,7 +204,7 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
             jourAffiche={jourAffiche}
             compte={compte}
             getUnavail={getUnavail}
-            onChoisir={onChoisir}
+            onChoisir={choisir}
           />
         ))}
       </div>
@@ -196,7 +224,7 @@ function BlocMois({
   jourAffiche: Date
   compte: Map<string, number>
   getUnavail: (d: Date) => Unavailability | null
-  onChoisir: (d: Date) => void
+  onChoisir: (d: Date, caseJour: HTMLElement) => void
 }) {
   const semaines = semainesDuMois(annee, mois)
   const hauteur = HAUT_TITRE + semaines.length * HAUT_LIGNE
@@ -275,7 +303,7 @@ function CaseJour({
   estAffiche: boolean
   rendezVous: number
   enConge: boolean
-  onChoisir: (d: Date) => void
+  onChoisir: (d: Date, caseJour: HTMLElement) => void
 }) {
   const { points, plus } = pointsRendezVous(rendezVous)
   // Aujourd'hui : rond plein d'accent. Le jour affiché dans l'agenda, s'il en
@@ -295,7 +323,7 @@ function CaseJour({
   return (
     <button
       type="button"
-      onClick={() => onChoisir(jour)}
+      onClick={e => onChoisir(jour, e.currentTarget)}
       aria-label={etiquette}
       aria-current={estAffiche ? 'date' : undefined}
       className="flex flex-col items-center gap-1 rounded-[var(--v2-radius-bouton)] pt-[7px] transition-colors active:bg-[color:var(--v2-filet)]"
