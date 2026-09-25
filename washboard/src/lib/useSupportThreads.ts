@@ -190,5 +190,32 @@ export function useSupportThreads() {
 
   const dismissSendError = useCallback(() => setSendError(null), [])
 
-  return { threads, loaded, sendError, envoyerQuestion, ouvrirFil, dismissSendError }
+  // « Supprimer » une conversation de SA liste (glisser vers la gauche, PWA) : un
+  // masquage côté serveur, l'équipe garde le fil, et un nouveau message le fait
+  // réapparaître. Pas d'effet optimiste : la confirmation reste ouverte tant que le
+  // serveur n'a pas répondu, et dit l'échec sur place. Rend `null` en cas de succès,
+  // sinon la phrase à afficher.
+  const masquerFil = useCallback(async (id: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/support/questions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hidden: true }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => null)
+        logger.error('support.hide_failed', { threadId: id, status: res.status })
+        return typeof json?.error === 'string' ? json.error : 'Impossible de supprimer cette conversation. Réessayez.'
+      }
+    } catch (e) {
+      logger.error('support.hide_failed', { threadId: id }, e)
+      return 'Impossible de supprimer cette conversation. Vérifiez votre connexion et réessayez.'
+    }
+    setThreads(ts => ts.filter(t => t.id !== id))
+    // Le fil masqué est aussi marqué lu côté serveur : la pastille du menu se recale.
+    notifySupportThreadRead()
+    return null
+  }, [])
+
+  return { threads, loaded, sendError, envoyerQuestion, ouvrirFil, dismissSendError, masquerFil }
 }

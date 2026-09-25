@@ -21,7 +21,7 @@ export default function AssistanceContent() {
   const searchParams = useSearchParams()
   const filParam = searchParams.get('fil')
 
-  const { threads, loaded, sendError, envoyerQuestion, ouvrirFil, dismissSendError } = useSupportThreads()
+  const { threads, loaded, sendError, envoyerQuestion, ouvrirFil, dismissSendError, masquerFil } = useSupportThreads()
 
   const [vue, setVue] = useState<SupportVue>({ type: 'liste' })
   // La vue de départ ne peut être décidée qu'une fois les fils réellement
@@ -69,6 +69,7 @@ export default function AssistanceContent() {
         threads={threads}
         onSend={envoyerQuestion}
         onOpenThread={ouvrirFil}
+        onDeleteThread={masquerFil}
         sendError={sendError}
         onDismissSendError={dismissSendError}
         vue={vue}

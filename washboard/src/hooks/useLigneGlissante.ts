@@ -26,8 +26,8 @@ type Options = {
   onFermer: () => void
 }
 
-export function useLigneGlissante({ ouverte, onOuvrir, onFermer }: Options): {
-  refLigne: RefObject<HTMLLIElement | null>
+export function useLigneGlissante<T extends HTMLElement = HTMLLIElement>({ ouverte, onOuvrir, onFermer }: Options): {
+  refLigne: RefObject<T | null>
   poignee: {
     onPointerDown: (e: PointerEvent<HTMLElement>) => void
     onPointerMove: (e: PointerEvent<HTMLElement>) => void
@@ -45,7 +45,7 @@ export function useLigneGlissante({ ouverte, onOuvrir, onFermer }: Options): {
   const saisi = useRef(false)
   const decalageRef = useRef(0)
   const ignorerClic = useRef(false)
-  const refLigne = useRef<HTMLLIElement | null>(null)
+  const refLigne = useRef<T | null>(null)
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => () => { if (minuterie.current) clearTimeout(minuterie.current) }, [])
