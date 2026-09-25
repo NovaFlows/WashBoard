@@ -48,7 +48,10 @@ export function Bloc({ titre, aide, children }: { titre: string; aide?: string; 
   )
 }
 
-function Puces({
+/** Rangée de puces + « Autre ». Partagée avec les feuilles Zone et Créneaux
+ *  intelligents de « Prestations et prix » (rayon, proximité, remise) : mêmes
+ *  valeurs proposées d'un tap, même repli sur un champ libre. */
+export function Puces({
   valeurs, libelle, valeur, autre, onChoisir, nom,
 }: {
   valeurs: readonly number[]

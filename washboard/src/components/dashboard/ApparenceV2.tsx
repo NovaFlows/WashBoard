@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { useApparenceV2, type ReglagesApparence } from '@/hooks/useApparenceV2'
 import { BOUTON, PRESSION, corps, titre } from '@/components/dashboard/FeuilleV2'
-import { CarteListe, Chevron } from '@/components/dashboard/ParametresFormV2'
-import { ConfirmationSuppression, nom as classeNom } from '@/components/dashboard/PrestationsUiV2'
+import { CarteListe } from '@/components/dashboard/ParametresFormV2'
+import { ConfirmationSuppression, LigneDeuxNiveaux as Ligne } from '@/components/dashboard/PrestationsUiV2'
 import { EtatEnvoi } from '@/components/dashboard/ApparenceUiV2'
 import ApercuPageV2 from '@/components/dashboard/ApercuPageV2'
 import FeuilleLogoV2 from '@/components/dashboard/FeuilleLogoV2'
@@ -43,37 +43,6 @@ type Props = {
   nom: string
   slug: string
   initial: ReglagesApparence
-}
-
-function Ligne({
-  label, valeur, pastille, tronquer, onClick,
-}: { label: string; valeur?: string; pastille?: string; tronquer?: boolean; onClick: () => void }) {
-  return (
-    <li>
-      <button type="button" onClick={onClick} className="flex min-h-[56px] w-full items-center gap-3 py-2.5 text-left">
-        {/* Le libellé au-dessus, la valeur dessous sur toute la largeur : à côté, un
-            libellé long (« Message d'accueil ») ne laissait que trois mots à la valeur. */}
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className={`text-[15.5px] ${classeNom}`}>{label}</span>
-          {valeur && (
-            <span
-              className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)] ${tronquer ? 'truncate' : ''}`}
-            >
-              {valeur}
-            </span>
-          )}
-        </span>
-        {pastille && (
-          <span
-            aria-hidden
-            className="h-[18px] w-[18px] shrink-0 rounded-full"
-            style={{ background: pastille, boxShadow: 'inset 0 0 0 1px var(--v2-filet-fort)' }}
-          />
-        )}
-        <Chevron />
-      </button>
-    </li>
-  )
 }
 
 export default function ApparenceV2({ nom, slug, initial }: Props) {

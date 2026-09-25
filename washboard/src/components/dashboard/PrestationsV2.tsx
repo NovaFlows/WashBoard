@@ -2,21 +2,30 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
-import type { Availability, Service, ServiceCategory } from '@/types'
+import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
 import { usePrestationsV2 } from '@/hooks/usePrestationsV2'
 import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { CarteListe, Chevron, Ligne } from '@/components/dashboard/ParametresFormV2'
 import FeuillePrestationV2 from '@/components/dashboard/FeuillePrestationV2'
 import FeuilleCategorieV2 from '@/components/dashboard/FeuilleCategorieV2'
+import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
+import FeuilleCreneauxV2 from '@/components/dashboard/FeuilleCreneauxV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
-import { ConfirmationSuppression, Constat, nom } from '@/components/dashboard/PrestationsUiV2'
+import { ConfirmationSuppression, Constat, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
 import { estReservable } from '@/lib/prestation'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
   type FormulairePrestation, type ModeleCategorie,
 } from '@/lib/prestationForm'
-import { formatDureeFr } from '@/lib/pricing'
+import { formatDureeFr, minVehiclePrice } from '@/lib/pricing'
+import { resumeZone } from '@/lib/zoneForm'
+import {
+  prestationExemple, prixLePlusBas, resumeCreneaux,
+  type ChampsCreneaux, type ReglagesCreneaux,
+} from '@/lib/creneauxForm'
+import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
 
 // « Prestations et prix » — refonte 2026, destination NEUVE de « Plus » (la
 // maquette n'a aucun écran pour gérer les prestations ; Alexandre, 2026-09-24 :
@@ -34,10 +43,19 @@ import { formatDureeFr } from '@/lib/pricing'
 // Toute la ligne d'une prestation ouvre son édition : pas de boutons Modifier /
 // Supprimer en série. La suppression se fait depuis la feuille d'édition, avec
 // une confirmation (plus de `confirm()` natif).
+//
+// 2026-09-25 — deux réglages de l'ancien onglet Identité rejoignent cet écran
+// (décision d'Alexandre) : « Où vous intervenez » (`#zone`) et « Créneaux
+// intelligents » (`#creneaux`), chacun en une ligne qui ouvre sa feuille. Ils
+// sont ici parce qu'ils décrivent la même chose que les prix : ce que le client
+// final voit et peut réserver — pour qui, où, et à quel prix. Le site, lui,
+// continue de les régler dans `admin/IdentiteForm.tsx`, inchangé.
 
 type FeuilleOuverte =
   | { quoi: 'prestation'; service: Service | null; formulaire: FormulairePrestation }
   | { quoi: 'categorie'; categorie: ServiceCategory | null }
+  | { quoi: 'zone' }
+  | { quoi: 'creneaux' }
   | null
 
 type Suppression =
@@ -53,17 +71,31 @@ type Props = {
    *  écran vide (le laveur le prendrait pour son état réel et referait sa
    *  configuration, doublons à la clé). */
   lectureIncomplete: boolean
+  /** `washers.zone_config` — la zone d'intervention, réglée par la feuille `#zone`. */
+  zone: ZoneConfig
+  /** `washers.base_address` : proposée d'un tap dans la feuille Zone, jamais
+   *  fusionnée avec `zone_config.center_address` (deux adresses distinctes). */
+  adresseDeBase: string | null
+  creneaux: ReglagesCreneaux
 }
 
-function Section({
-  titre: intitule, nombre, action, children,
-}: { titre: string; nombre: number; action?: React.ReactNode; children: React.ReactNode }) {
+/** Titre de section en phrase, gris. `nombre` est facultatif : les sections
+ *  « Où vous intervenez » et « Créneaux intelligents » n'ont rien à compter. */
+export function Section({
+  titre: intitule, nombre, ancre, action, children,
+}: {
+  titre: string
+  nombre?: number
+  ancre?: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
-    <section className="mt-[22px]">
+    <section className="mt-[22px] scroll-mt-20" id={ancre}>
       <div className="flex items-center justify-between gap-3 pb-1">
         <h2 className={`flex min-w-0 items-baseline gap-2 px-0.5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
           <span className="truncate">{intitule}</span>
-          <span className={`${corps} tabular-nums`}>{nombre}</span>
+          {typeof nombre === 'number' && <span className={`${corps} tabular-nums`}>{nombre}</span>}
         </h2>
         {action}
       </div>
@@ -102,9 +134,17 @@ function LignePrestation({ service, categorie, onOuvrir }: { service: Service; c
   )
 }
 
-export default function PrestationsV2({ services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete }: Props) {
+export default function PrestationsV2({
+  services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
+  zone: zoneServeur, adresseDeBase, creneaux: creneauxServeur,
+}: Props) {
+  const router = useRouter()
   const p = usePrestationsV2(servicesServeur, categoriesServeur)
   const { services, categories } = p
+  // Zone et créneaux : l'état local suit la base dès qu'une écriture réussit, sans
+  // attendre le rechargement — la phrase de la ligne change tout de suite.
+  const [zone, setZone] = useState(zoneServeur)
+  const [creneaux, setCreneaux] = useState(creneauxServeur)
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [suppression, setSuppression] = useState<Suppression>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
@@ -171,6 +211,65 @@ export default function PrestationsV2({ services: servicesServeur, categories: c
     setFeuille(null)
   }
 
+  // Un seul `PATCH /api/washer` par feuille : plusieurs champs doivent être
+  // valides ensemble (un rayon sans adresse, une remise sans son type n'ont
+  // pas de sens). En cas d'échec la feuille reste ouverte, avec la saisie.
+  async function enregistrerZone(config: ZoneConfig): Promise<string | null> {
+    const r = await enregistrerZoneCreneaux({ zone_config: config })
+    if (!r.ok) return r.message
+    setZone(config)
+    setFeuille(null)
+    router.refresh()
+    return null
+  }
+
+  async function enregistrerCreneaux(champs: ChampsCreneaux): Promise<string | null> {
+    const r = await enregistrerZoneCreneaux(champs)
+    if (!r.ok) return r.message
+    setCreneaux(prev => ({
+      actif: champs.smart_slot_enabled,
+      // Éteindre n'envoie que l'interrupteur : le reste garde sa valeur.
+      proximite: champs.smart_slot_radius_minutes ?? prev.proximite,
+      type: champs.smart_slot_discount_type ?? prev.type,
+      valeur: champs.smart_slot_discount_value ?? prev.valeur,
+    }))
+    setFeuille(null)
+    router.refresh()
+    return null
+  }
+
+  const prestationsPrix = services.map(s => ({ nom: s.name, prix: minVehiclePrice(s) }))
+  const ligneZone = resumeZone(zone)
+
+  const reglagesDeZone = (
+    <>
+      <Section titre="Où vous intervenez" ancre="zone">
+        <CarteListe>
+          <ul>
+            <LigneDeuxNiveaux
+              label="Zone d’intervention"
+              valeur={ligneZone.texte}
+              ton={ligneZone.ton}
+              onClick={() => setFeuille({ quoi: 'zone' })}
+            />
+          </ul>
+        </CarteListe>
+      </Section>
+
+      <Section titre="Créneaux intelligents" ancre="creneaux">
+        <CarteListe>
+          <ul>
+            <LigneDeuxNiveaux
+              label="Remise de regroupement"
+              valeur={resumeCreneaux(creneaux)}
+              onClick={() => setFeuille({ quoi: 'creneaux' })}
+            />
+          </ul>
+        </CarteListe>
+      </Section>
+    </>
+  )
+
   const peutAjouterPrestation = categories.length > 0
 
   return (
@@ -221,10 +320,15 @@ export default function PrestationsV2({ services: servicesServeur, categories: c
           </button>
         </div>
       ) : vide ? (
-        <PrestationsEtatVideV2
-          onModele={creerDepuisModele}
-          onAutre={() => setFeuille({ quoi: 'categorie', categorie: null })}
-        />
+        <>
+          <PrestationsEtatVideV2
+            onModele={creerDepuisModele}
+            onAutre={() => setFeuille({ quoi: 'categorie', categorie: null })}
+          />
+          {/* Même sur un compte vide : une zone peut déjà être réglée, et les
+              ancres `#zone` / `#creneaux` doivent mener quelque part. */}
+          {reglagesDeZone}
+        </>
       ) : (
         <>
           {!peutAjouterPrestation && (
@@ -285,6 +389,8 @@ export default function PrestationsV2({ services: servicesServeur, categories: c
               <Ligne label="+ Ajouter une catégorie" onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
             </CarteListe>
           </div>
+
+          {reglagesDeZone}
         </>
       )}
 
@@ -314,6 +420,24 @@ export default function PrestationsV2({ services: servicesServeur, categories: c
               })
             : undefined}
           onClose={suppression ? () => {} : fermerFeuille}
+        />
+      )}
+
+      {feuille?.quoi === 'zone' && (
+        <FeuilleZoneV2
+          zone={zone}
+          adresseDeBase={adresseDeBase}
+          onEnregistrer={enregistrerZone}
+          onClose={fermerFeuille}
+        />
+      )}
+      {feuille?.quoi === 'creneaux' && (
+        <FeuilleCreneauxV2
+          reglages={creneaux}
+          prestation={prestationExemple(prestationsPrix)}
+          prixLePlusBas={prixLePlusBas(prestationsPrix)}
+          onEnregistrer={enregistrerCreneaux}
+          onClose={fermerFeuille}
         />
       )}
 

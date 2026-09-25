@@ -1505,22 +1505,104 @@
     devant le pied fixe, 360 px), le vrai détourage (modèle imgly non téléchargé pendant les
     tests, remplacé par un stub — voir le compte rendu), le rendu au soleil des anneaux.
 
+- [x] **Zone d'intervention et Créneaux intelligents dans « Prestations et prix »**,
+      2026-09-25 (demande d'Alexandre : les deux réglages rejoignent l'écran v2, **avec un
+      design revu**, pas un simple déplacement). Conception validée par `designer` et `ideas`.
+  - **Où** : deux sections sous « + Ajouter une catégorie », titre en phrase gris, sans
+    compteur — « Où vous intervenez » (`#zone`) et « Créneaux intelligents » (`#creneaux`),
+    chacune une carte d'**une seule ligne à deux niveaux** qui ouvre une feuille. Aucun
+    réglage sur la page elle-même. Elles sont dans le même écran que les prix parce qu'elles
+    répondent à la même question que lui : ce que le client final voit et peut réserver.
+  - **Fichiers neufs** : `FeuilleZoneV2.tsx`, `FeuilleCreneauxV2.tsx`, `AdresseV2.tsx`
+    (autocomplétion en ligne, style v2), `lib/zoneForm.ts`, `lib/creneauxForm.ts`,
+    `lib/zoneApi.ts` — les trois `lib` testés (100 % lignes/branches). Modifiés :
+    `PrestationsV2.tsx` (sections + feuilles + un seul `PATCH` par feuille), `Prestations.tsx`
+    (le garde-fou du site renvoie aussi `#zone`/`#creneaux` vers l'ancien écran),
+    `parametres/prestations/page.tsx` (colonnes ÉNUMÉRÉES, + `zone_config`, `smart_slot_*`,
+    `base_address`), `ParametresFormV2.tsx` (deux lignes retirées, sous-libellé
+    « Zone, créneaux »), `AccueilV2.tsx` (lien de zone repointé, v2 seulement).
+    `Interrupteur` et la ligne à deux niveaux sont remontés dans `PrestationsUiV2.tsx`,
+    `Puces` est exporté de `ReglageAutomatismeV2.tsx` — mêmes composants, mêmes
+    comportements, juste partagés.
+  - **Le site n'a pas bougé** : aucune route API touchée, `IdentiteForm.tsx`, `AdminTabs.tsx`,
+    `ParametresFormV1.tsx`, `setupProgress.ts` et `ZoneWidget` sont intacts. Les liens du site
+    continuent donc d'atterrir sur `/dashboard/admin` — c'est voulu.
+  - **Design revu, pas déplacé** : des mots de laveur (« En ligne droite », « Selon les
+    routes ») à la place de « vol d'oiseau » / « distance routière » ; **plus de curseurs**
+    (10 · 20 · 30 · 50 · 100 km + « Autre » ; 5 · 10 · 15 · 20 · 30 min + « Autre ») — un
+    curseur ne se vise pas les mains mouillées ; la liste des 101 départements ne s'ouvre
+    plus par défaut (pastilles retirables + recherche + `Repliable`).
+  - **Durcissements** (ni le v1 ni la route ne les font) : recherche de département
+    insensible aux accents et à la casse (le v1 ne trouvait pas « herault ») ; une zone
+    « départements » **vide est refusée** (le v1 laissait enregistrer une zone qui bloque
+    tous les clients) ; remise en pourcentage plafonnée à 50 %, remise en euros plafonnée au
+    prix de la prestation la moins chère, valeur vide ou négative refusée. **Ce ne sont pas
+    des protections** : voir la faille ci-dessous.
+  - **Ajouts hors « mêmes fonctionnalités »** (chacun retirable) : la puce « Utiliser mon
+    adresse de départ » (`base_address`, les deux adresses restent DISTINCTES, rien n'est
+    fusionné) ; l'avertissement ambre « Choisissez une suggestion » quand l'adresse est tapée
+    à la main (non bloquant : `verdictZone` laisse passer quand Google ne reconnaît pas
+    l'adresse) ; la phrase vivante « Jusqu'à 20 km en ligne droite autour de … » ;
+    l'exemple chiffré des créneaux (calculé par `smartPrice`, aucune route ajoutée) ; les
+    deux points d'alerte des configurations cassées (voir juste en dessous).
+  - **Ce que « proche » veut dire**, relu dans `api/slots/smart/route.ts` et écrit tel quel
+    dans la feuille : un rendez-vous **du même jour** (hors annulés), un temps de voiture
+    (Distance Matrix) de ce rendez-vous vers le client **≤ `smart_slot_radius_minutes`**, et
+    un créneau qui tombe entre **90 min avant le début** et **90 min après la fin** du
+    rendez-vous (`WINDOW_MIN = 90`, **codé en dur**, ni réglable ni stocké ; la fin tient
+    compte de la durée × nombre de véhicules). Sans clé Google, sans rendez-vous ce jour-là
+    ou si Distance Matrix échoue : aucun créneau optimisé, la réservation passe quand même.
+  - **Deux configurations cassées, signalées et non corrigées en base** : une zone par rayon
+    sans adresse de centre (point **ambre** « Adresse manquante : la limite n'est pas
+    appliquée » — le géocodage ne rend rien et `verdictZone` laisse passer) ; une zone
+    « départements » vide (point **rouge** « Aucun département : personne ne peut réserver »).
+    L'écran les dit ; il n'écrit rien de lui-même.
+  - **Trous préexistants constatés, non corrigés** : `/api/places/autocomplete` répond
+    `{ suggestions: [] }` aussi bien pour « rien trouvé » que pour « Google en panne »
+    (`fetchGoogleMaps` rend `null`, la route l'aplatit) — depuis le navigateur, une clé
+    expirée se lit « Aucune adresse trouvée » ; le message « hors zone » du tunnel de
+    réservation (`StepSlot`, « Adresse hors zone d'intervention ») est **sec** alors que
+    `/api/zone/check` renvoie déjà `distance_km` et `radius_km` : il pourrait dire « à 34 km,
+    votre zone s'arrête à 20 km » ; `PATCH /api/washer` n'écrête pas `zone_config` (un rayon
+    à 100 000 km passe) et ne valide pas `smart_slot_discount_type`.
+  - **Non vérifié** : appareil réel (clavier ouvert devant le pied fixe, sélection d'une
+    suggestion au doigt), la vraie autocomplétion Google (toutes les réponses `places` ont été
+    simulées, aucun appel réel), le comportement d'un compte **sans aucune prestation**
+    (l'exemple retombe sur « un lavage à 80 € », non capturé sur un vrai compte vide).
+  - ⚠️ **Faille connue, traitée à part par `dev` + `cyber` — pas par cette passe** :
+    `POST /api/bookings` accepte `is_smart_slot` et `smart_discount` tels que le client les
+    envoie (`z.number().min(0)` seulement, `bookings/route.ts` ~l. 37-38 et 398-399) : un
+    visiteur peut réclamer une remise énorme et obtenir un prix à 0 €, répercuté dans l'email,
+    le PDF, la facture et la compta. `PATCH /api/washer` ne plafonne pas non plus une remise en
+    pourcentage à 100 %. Les garde-fous de la feuille (≤ 50 %, ≤ prix le plus bas) sont **de
+    l'interface**, ils ne ferment rien.
+
 - [ ] **À NE PAS OUBLIER — trois réglages à replacer ailleurs dans la PWA** (décision
       d'Alexandre, 2026-09-24). L'écran v2 « Apparence de ma page » ne reprend que
       Logo, Couleur de la marque, Fond, Message d'accueil et Présence en ligne. Ces
       trois cartes de l'ancien onglet Identité (`admin/IdentiteForm.tsx`) n'y sont
       **volontairement pas** : elles doivent trouver **leur propre place** dans la
-      refonte, à décider avec lui :
-  - **Zone d'intervention** (`#zone`) — rayon ou départements, frais de déplacement.
-  - **Créneaux intelligents** (`#creneaux`) — regroupement des créneaux par zone.
-  - **Google Agenda** (`#agenda`) — connexion du calendrier.
-  - **Accès en attendant** : ils restent tous les trois sur l'ancien écran
-    `/dashboard/admin` (onglet Identité), toujours joignable. « Zone et déplacement »
-    y mène déjà depuis Plus ; « Créneaux intelligents » et « Google Agenda » y ont
-    chacun une ligne **provisoire** dans Plus, à supprimer le jour où ils auront leur
-    vraie place. Rien n'est perdu, mais ce n'est pas le design final.
-  - Ne pas oublier non plus : la fonction n'a pas de maquette, il faudra la concevoir
-    (`designer`, avis `ideas`) comme pour Prestations et Horaires.
+      refonte, à décider avec lui. **Deux sur trois sont placées.**
+  - [x] **Zone d'intervention** (`#zone`) — **placée le 2026-09-25** dans l'écran
+    « Prestations et prix » (`/dashboard/parametres/prestations#zone`), section
+    « Où vous intervenez ». La ligne « Zone et déplacement » a disparu de Plus.
+  - [x] **Créneaux intelligents** (`#creneaux`) — **placés le 2026-09-25** dans le même
+    écran (`/dashboard/parametres/prestations#creneaux`), section « Créneaux
+    intelligents ». La ligne provisoire de Plus a disparu.
+  - [ ] **Google Agenda** (`#agenda`) — connexion du calendrier. **Toujours en attente** :
+    garde sa ligne **provisoire** dans Plus (`/dashboard/admin#agenda`), à supprimer le
+    jour où il aura sa vraie place. Pas de maquette : à concevoir (`designer`, avis
+    `ideas`) comme pour Prestations, Horaires et la zone.
+  - [ ] **Frais de déplacement à replacer avec la zone (passe suivante)** — ils vivent
+    dans `ParametresFormV1.tsx` (~l. 294-370, « Mon profil », atteint depuis Plus par la
+    ligne « Équipe ») et n'ont **aucun écran v2**. `designer` recommande qu'ils voisinent
+    avec la zone : même question (« jusqu'où je vais, et à quel prix »), même endroit.
+    Non construits le 2026-09-25, exprès — hors périmètre de la passe.
+  - **Accès en attendant** : les trois cartes restent sur l'ancien écran
+    `/dashboard/admin` (onglet Identité), toujours joignable — c'est là qu'atterrissent
+    les liens du **site** (`setupProgress.ts`, `ZoneWidget`, non modifiés) et le garde-fou
+    PWA de `Prestations.tsx`, qui renvoie `#zone` et `#creneaux` vers `admin#zone` et
+    `admin#creneaux`. Rien n'est perdu, mais ce n'est pas le design final.
 
 **La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
 poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,

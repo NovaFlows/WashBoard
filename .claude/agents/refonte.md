@@ -298,6 +298,27 @@ fixes (jamais d'UUID) ; les types orphelins de `services.vehicle_types` s'affich
 côté client. La logique v2 est dupliquée dans `lib/prestationForm.ts` (correspondance avec
 le v1 écrite en tête) : une correction de règle se reporte des deux côtés.
 
+**Complété le 2026-09-25 : la zone d'intervention et les créneaux intelligents rejoignent
+`/dashboard/parametres/prestations`** (deux sections sous « + Ajouter une catégorie », ancres
+`#zone` et `#creneaux`, chacune une ligne à deux niveaux qui ouvre une feuille). Ils quittent donc
+les lignes provisoires de Plus ; **seul Google Agenda garde la sienne**. Le site ne bouge pas
+(`IdentiteForm`, `setupProgress`, `ZoneWidget` intacts) : ses liens continuent d'atterrir sur
+`/dashboard/admin`, et le garde-fou de `Prestations.tsx` y renvoie aussi `#zone` et `#creneaux`.
+À ne pas redécouvrir : **« proche » se lit dans `api/slots/smart/route.ts`** — même jour, temps de
+voiture ≤ `smart_slot_radius_minutes`, et une fenêtre de **90 min avant/après le rendez-vous codée
+en dur** (`WINDOW_MIN`), donc non réglable ; `zone_config` est un champ unique, éteindre la zone
+l'EFFACE (`{enabled:false}`), et une zone « départements » vide bloque tout le monde
+(`verdictZone`) tandis qu'une zone par rayon sans adresse ne bloque personne — les deux sont
+signalées par un point sur la ligne ; `/api/places/autocomplete` aplatit « Google en panne » en
+« aucun résultat », un client ne peut pas distinguer les deux ; les garde-fous de remise (≤ 50 %,
+≤ prix le plus bas) sont **de l'interface**, `POST /api/bookings` accepte toujours la remise que le
+visiteur envoie (faille suivie par `dev` + `cyber`). Logique dans `lib/zoneForm.ts`,
+`lib/creneauxForm.ts`, `lib/zoneApi.ts` (testés). `AdresseV2.tsx` remplace `AddressAutocomplete`
+dans les feuilles (suggestions EN LIGNE : une liste flottante serait rognée par la feuille) et
+appelle les **mêmes routes**, sans `places/details` — la zone n'a pas besoin des coordonnées.
+Restent à replacer : **Google Agenda** et les **frais de déplacement** (`ParametresFormV1`, à mettre
+près de la zone — voir TODO.md).
+
 **Écran livré le 2026-09-24 : `/dashboard/parametres/horaires`** (« Horaires », PWA seulement, le
 site est renvoyé vers `/dashboard/admin#disponibilites`). À ne pas redécouvrir : dimanche = 0 en
 base, affichage lundi → dimanche ; heures `HH:MM` sans fuseau, jamais via `new Date` ; la route

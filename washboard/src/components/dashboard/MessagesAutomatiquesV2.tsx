@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ReglageAvisV2, ReglageRelanceV2 } from '@/components/dashboard/ReglageAutomatismeV2'
+import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { enregistrerReglages } from '@/lib/enregistrerReglages'
 import {
   avisActif, blocageAvis, relanceActive, nombreActifs, libelleCanal, libelleDelaiAvis, libelleDelaiRelance,
@@ -62,36 +63,6 @@ export type MessagesAutomatiquesProps = {
 }
 
 type FeuilleOuverte = { quoi: 'avis' | 'relance'; activer: boolean } | null
-
-function Interrupteur({
-  actif, enCours, libelle, onClick, verrouille,
-}: { actif: boolean; enCours: boolean; libelle: string; onClick: () => void; verrouille?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={actif}
-      aria-label={libelle}
-      aria-busy={enCours}
-      disabled={enCours || verrouille}
-      onClick={onClick}
-      className="flex h-11 w-[52px] shrink-0 items-center justify-center disabled:opacity-50"
-    >
-      <span
-        className="flex h-[28px] w-[46px] items-center rounded-[15px] p-[3px] transition-colors motion-reduce:transition-none"
-        style={{
-          background: actif ? 'var(--v2-color-accent)' : 'var(--v2-filet-fort)',
-          justifyContent: actif ? 'flex-end' : 'flex-start',
-          transitionDuration: 'var(--v2-duration-press)',
-          transitionTimingFunction: 'var(--v2-ease-out)',
-        }}
-        aria-hidden
-      >
-        <span className="h-[22px] w-[22px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)]" />
-      </span>
-    </button>
-  )
-}
 
 function LigneAutomatisme({
   libelle, resume, avertissement, actif, enCours, onBasculer, onOuvrir, href, verrouille,

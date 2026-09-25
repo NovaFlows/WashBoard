@@ -550,7 +550,9 @@ function BlocsOptionnels({
           />
         )
       case 'zone':
-        return <LigneBloc key={cle} label="Zone d’intervention" valeur={resumeZone(zone)} href="/dashboard/admin#zone" />
+        // v2 seulement (cet écran n'existe pas côté site) : la zone se règle
+        // depuis le 2026-09-25 dans « Prestations et prix », section `#zone`.
+        return <LigneBloc key={cle} label="Zone d’intervention" valeur={resumeZone(zone)} href="/dashboard/parametres/prestations#zone" />
       default:
         return null
     }

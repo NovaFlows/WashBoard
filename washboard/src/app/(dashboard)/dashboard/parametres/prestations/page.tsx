@@ -15,15 +15,27 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 // la barre du bas (BarreBasV2 : `startsWith('/dashboard/parametres')`) — c'est un
 // écran de « Plus », comme `parametres/messages`.
 //
-// Lecture seule ici : les écritures passent par `/api/services` et
-// `/api/categories` depuis le navigateur. Mêmes requêtes que
+// Lecture seule ici : les écritures passent par `/api/services`,
+// `/api/categories` et `/api/washer` depuis le navigateur. Mêmes requêtes que
 // `/dashboard/admin` (`admin/page.tsx`).
+//
+// Depuis le 2026-09-25, l'écran porte aussi la zone d'intervention et les
+// créneaux intelligents (sections `#zone` et `#creneaux`) : d'où les colonnes
+// `zone_config`, `smart_slot_*` et `base_address`. Les colonnes sont ÉNUMÉRÉES
+// (jamais `*`) : tout ce qui franchit la frontière serveur → navigateur est
+// sérialisé dans la page, et la fiche laveur porte des jetons Google et des
+// identifiants Stripe.
+const COLONNES =
+  'id, name, zone_config, base_address, ' +
+  'smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, ' +
+  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
+
 export default async function PrestationsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const washer = await washerDuUtilisateur(supabase, user.id, 'prestations')
+  const washer = await washerDuUtilisateur(supabase, user.id, 'prestations', COLONNES)
 
   const [
     { data: services, error: errServices },
@@ -53,6 +65,14 @@ export default async function PrestationsPage() {
         categories={(categories ?? []) as ServiceCategory[]}
         availabilities={(availabilities ?? []) as Availability[]}
         lectureIncomplete={!!errServices || !!errCategories}
+        zone={washer.zone_config ?? null}
+        adresseDeBase={washer.base_address ?? null}
+        creneaux={{
+          actif: !!washer.smart_slot_enabled,
+          proximite: washer.smart_slot_radius_minutes ?? 15,
+          type: washer.smart_slot_discount_type === 'percent' ? 'percent' : 'fixed',
+          valeur: Number(washer.smart_slot_discount_value ?? 0),
+        }}
       />
     </DashboardShell>
   )

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
-import type { Availability, Service, ServiceCategory } from '@/types'
+import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
+import type { ReglagesCreneaux } from '@/lib/creneauxForm'
 
 // Point d'entrée de « Prestations et prix » — destination NEUVE de la refonte
 // 2026 (troisième cas de refonte.md, même schéma que Chiffres.tsx et
@@ -24,6 +25,17 @@ type Props = {
   categories: ServiceCategory[]
   availabilities: Availability[]
   lectureIncomplete: boolean
+  zone: ZoneConfig
+  adresseDeBase: string | null
+  creneaux: ReglagesCreneaux
+}
+
+/** Depuis le 2026-09-25, l'écran porte aussi la zone d'intervention et les
+ *  créneaux intelligents : les trois ancres doivent atterrir sur la bonne carte
+ *  de l'ancien onglet Identité, pas toutes sur « Prestations ». */
+const ANCRES: Record<string, string> = {
+  '#zone': '#zone',
+  '#creneaux': '#creneaux',
 }
 
 export default function Prestations(props: Props) {
@@ -35,7 +47,9 @@ export default function Prestations(props: Props) {
   }, [])
 
   useEffect(() => {
-    if (statut === 'site') router.replace('/dashboard/admin#prestations')
+    if (statut !== 'site') return
+    const ancre = ANCRES[window.location.hash] ?? '#prestations'
+    router.replace(`/dashboard/admin${ancre}`)
   }, [statut, router])
 
   if (statut !== 'pwa') return null
