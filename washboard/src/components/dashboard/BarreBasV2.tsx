@@ -90,14 +90,30 @@ const DESTINATIONS = [
 
 const police = '[font-family:var(--font-archivo)]'
 
-/** Fin trait qui fait le tour de la barre pendant qu'une page se charge (demande
- *  d'Alexandre, 2026-09-26 : « un trait noir fin qui fait le contour du menu en bas »).
- *  Un SVG à la taille exacte de la barre, mesurée : le contour est une pilule (rayon =
- *  moitié de la hauteur), donc un rectangle arrondi dont `pathLength` vaut 100 — le
- *  trait est un segment de 28 % qui court le long du tracé, sur une piste très pâle. */
-function ContourChargement() {
+/** Fin trait noir qui se dessine tout autour de la barre pendant qu'une page se charge
+ *  (demande d'Alexandre, 2026-09-26 : « le tour en entier, comme un ovale, fluide, qu'on le
+ *  voit avancer super vite si c'est rapide »). Il PROGRESSE au lieu de tourner en boucle :
+ *  il part vite, ralentit sans jamais atteindre la fin tant que la page n'est pas là, puis
+ *  boucle le tour en un instant à son arrivée et s'efface. Un chargement rapide se voit
+ *  donc comme un tour vif, un lent comme un trait qui avance patiemment.
+ *
+ *  Un SVG à la taille exacte de la barre, mesurée : le contour est une pilule (rayon = moitié
+ *  de la hauteur), donc un rectangle arrondi dont `pathLength` vaut 100 ; `stroke-dashoffset`
+ *  va de 100 (rien) à 0 (le tour complet). */
+type PhaseContour = 'repos' | 'depart' | 'avance' | 'fin'
+const REGLAGES_CONTOUR: Record<PhaseContour, { decalage: number; duree: number; courbe: string; opacite: number }> = {
+  repos: { decalage: 0, duree: 0, courbe: 'linear', opacite: 0 },
+  depart: { decalage: 100, duree: 0, courbe: 'linear', opacite: 1 },
+  // 5 s vers 92 % : progression régulière, qui ralentit franchement vers la fin.
+  avance: { decalage: 8, duree: 5000, courbe: 'cubic-bezier(.25, .4, .35, 1)', opacite: 1 },
+  fin: { decalage: 0, duree: 300, courbe: 'cubic-bezier(.3, .6, .4, 1)', opacite: 1 },
+}
+
+function ContourChargement({ actif }: { actif: boolean }) {
   const ref = useRef<SVGSVGElement>(null)
   const [taille, setTaille] = useState<{ l: number; h: number } | null>(null)
+  const [phase, setPhase] = useState<PhaseContour>('repos')
+
   useEffect(() => {
     const parent = ref.current?.parentElement
     if (!parent) return
@@ -107,6 +123,22 @@ function ContourChargement() {
     o.observe(parent)
     return () => o.disconnect()
   }, [])
+
+  useEffect(() => {
+    if (actif) {
+      setPhase('depart')
+      // Deux images d'écart : le départ (trait à zéro) doit être peint avant que la
+      // transition vers « avance » ne s'enclenche.
+      let a = 0
+      const b = requestAnimationFrame(() => { a = requestAnimationFrame(() => setPhase('avance')) })
+      return () => { cancelAnimationFrame(b); cancelAnimationFrame(a) }
+    }
+    setPhase(p => (p === 'repos' ? p : 'fin'))
+    const t = setTimeout(() => setPhase('repos'), 420)
+    return () => clearTimeout(t)
+  }, [actif])
+
+  const r = REGLAGES_CONTOUR[phase]
   const decalage = 0.75
   return (
     <svg
@@ -115,21 +147,16 @@ function ContourChargement() {
       className="pointer-events-none absolute left-0 top-0 z-20 overflow-visible"
       width={taille?.l ?? 0}
       height={taille?.h ?? 0}
-      style={{ margin: -1 }}
+      style={{ margin: -1, opacity: r.opacite, transition: phase === 'repos' ? 'opacity 200ms linear' : 'none' }}
     >
       {taille && (
-        <>
-          <rect
-            x={decalage} y={decalage} width={taille.l - 2 * decalage} height={taille.h - 2 * decalage}
-            rx={(taille.h - 2 * decalage) / 2} fill="none" stroke="var(--v2-color-encre)" strokeOpacity={0.1} strokeWidth={1.5}
-          />
-          <rect
-            className="wb-contour-trait"
-            x={decalage} y={decalage} width={taille.l - 2 * decalage} height={taille.h - 2 * decalage}
-            rx={(taille.h - 2 * decalage) / 2} fill="none" stroke="var(--v2-color-encre)" strokeWidth={1.5}
-            strokeLinecap="round" pathLength={100} strokeDasharray="28 72"
-          />
-        </>
+        <rect
+          className="wb-contour-trait"
+          x={decalage} y={decalage} width={taille.l - 2 * decalage} height={taille.h - 2 * decalage}
+          rx={(taille.h - 2 * decalage) / 2} fill="none" stroke="var(--v2-color-encre)" strokeWidth={1.5}
+          strokeLinecap="round" pathLength={100} strokeDasharray="100 100" strokeDashoffset={r.decalage}
+          style={{ transition: r.duree ? `stroke-dashoffset ${r.duree}ms ${r.courbe}` : 'none' }}
+        />
       )}
     </svg>
   )
@@ -188,7 +215,7 @@ export function BarreBasV2() {
           transitionTimingFunction: 'var(--v2-ease-out)',
         }}
       />
-      {enAttente && <ContourChargement />}
+      <ContourChargement actif={!!enAttente} />
       {DESTINATIONS.map(dest => {
         // Pendant une navigation, l'onglet visé s'allume tout de suite.
         const actif = enAttente ? dest.href === enAttente : dest.actif(pathname ?? '')
