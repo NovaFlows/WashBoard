@@ -509,19 +509,14 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
   box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
 }
 
-/* Vue du mois de l'agenda (PWA) : ouverture en léger zoom arrière, et — quand un
-   jour est choisi — l'agenda dessous s'avance à mesure que le mois grossit puis
-   s'efface (voir MoisV2.tsx). Coupé sous `prefers-reduced-motion`. */
-@keyframes v2-mois-entree {
-  from { transform: scale(1.18); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
+/* Vue du mois de l'agenda (PWA) : quand un jour est choisi, l'agenda du jour
+   apparaît en fondu sous les rangées du mois qui s'écartent (voir MoisV2.tsx).
+   Coupé sous `prefers-reduced-motion`. */
 @keyframes v2-agenda-arrivee {
-  from { transform: scale(.94); opacity: .6; }
-  to { transform: none; opacity: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.wb-mois-entree { animation: v2-mois-entree 260ms var(--v2-ease-out); }
-.wb-agenda-arrivee { animation: v2-agenda-arrivee 320ms var(--v2-ease-out); }
+.wb-agenda-arrivee { animation: v2-agenda-arrivee 360ms var(--v2-ease-out); }
 @media (prefers-reduced-motion: reduce) {
-  .wb-mois-entree, .wb-agenda-arrivee { animation: none; }
+  .wb-agenda-arrivee { animation: none; }
 }

@@ -397,7 +397,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div data-bandeau-semaine className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => allerSemaine(-1)}
@@ -693,6 +693,10 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         aujourdhui={today}
         byDate={byDate}
         getUnavail={getUnavail}
+        getBandeauCentre={() => {
+          const b = document.querySelector('[data-bandeau-semaine]')?.getBoundingClientRect()
+          return b ? b.top + b.height / 2 : null
+        }}
         onFermer={() => { setVue('semaine'); setArrivee(false) }}
         onChoisir={d => {
           setArrivee(true)

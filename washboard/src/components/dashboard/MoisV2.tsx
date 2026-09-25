@@ -74,29 +74,87 @@ type Props = {
   /** Le jour choisi : l'agenda se cale dessus PENDANT le zoom, la vue se ferme ensuite (`onFermer`). */
   onChoisir: (d: Date) => void
   onFermer: () => void
+  /** Ordonnée (px, écran) du centre du bandeau de 7 jours de l'agenda : la semaine
+   *  choisie glisse jusque-là. `null` si le bandeau n'est pas mesurable. */
+  getBandeauCentre?: () => number | null
 }
 
-// Durée du zoom d'arrivée sur un jour (« comme le Calendrier d'Apple »).
-const DUREE_ZOOM_MS = 320
+// Transition mois ⇄ jour, copiée sur le Calendrier d'Apple (vidéo d'Alexandre,
+// 2026-09-25) : la RANGÉE de la semaine touchée reste, et glisse jusqu'à la place
+// du bandeau de la semaine ; les rangées au-dessus partent vers le haut, celles
+// du dessous vers le bas, en s'effaçant ; le fond se dissout sur l'agenda du jour.
+// L'ouverture du mois joue la même chose à l'envers. Web Animations plutôt que du
+// CSS : la géométrie (position de la rangée, du bandeau) n'est connue qu'à
+// l'exécution.
+const DUREE_TRANSITION_MS = 360
+const DECALAGE_AUTRES_PX = 90
+const EASE_SORTIE = 'cubic-bezier(.23, 1, .32, 1)'
 
-export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, onChoisir, onFermer }: Props) {
+function animerTransition(
+  couche: HTMLElement,
+  entete: HTMLElement | null,
+  rangeeChoisie: HTMLElement,
+  bandeauCentre: number | null,
+  sens: 'sortie' | 'entree',
+) {
+  const opts: KeyframeAnimationOptions = {
+    duration: DUREE_TRANSITION_MS,
+    easing: EASE_SORTIE,
+    fill: 'both',
+    direction: sens === 'sortie' ? 'normal' : 'reverse',
+  }
+  const boite = rangeeChoisie.getBoundingClientRect()
+  const centre = boite.top + boite.height / 2
+  const deplacement = bandeauCentre === null ? 0 : bandeauCentre - centre
+  const hauteurEcran = window.innerHeight
+  for (const el of couche.querySelectorAll<HTMLElement>('[data-semaine], [data-titre-mois]')) {
+    const r = el.getBoundingClientRect()
+    if (r.bottom < -120 || r.top > hauteurEcran + 120) continue
+    if (el === rangeeChoisie) {
+      el.animate([
+        { transform: 'translateY(0)', opacity: 1 },
+        { transform: `translateY(${deplacement}px)`, opacity: 1, offset: 0.6 },
+        { transform: `translateY(${deplacement}px)`, opacity: 0 },
+      ], opts)
+    } else {
+      const versLeHaut = r.top < boite.top
+      el.animate([
+        { transform: 'translateY(0)', opacity: 1 },
+        { transform: `translateY(${versLeHaut ? -DECALAGE_AUTRES_PX : DECALAGE_AUTRES_PX}px)`, opacity: 0 },
+      ], opts)
+    }
+  }
+  entete?.animate([{ opacity: 1 }, { opacity: 0 }], opts)
+  // Le fond ne se dissout qu'après un tiers du trajet : les rangées ne flottent
+  // pas d'emblée sur l'agenda.
+  const fond = getComputedStyle(couche).backgroundColor
+  couche.animate([
+    { backgroundColor: fond },
+    { backgroundColor: fond, offset: 0.3 },
+    { backgroundColor: 'rgba(0, 0, 0, 0)' },
+  ], opts)
+}
+
+export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, onChoisir, onFermer, getBandeauCentre }: Props) {
   const coucheRef = useRef<HTMLDivElement>(null)
   const enteteRef = useRef<HTMLDivElement>(null)
   const retourRef = useRef<HTMLButtonElement>(null)
-  // Zoom de sortie : le mois grossit autour de la case touchée en s'effaçant, et
-  // laisse voir le jour choisi dessous. `null` tant qu'aucun jour n'est choisi.
-  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null)
-  const minuterieZoom = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => () => { if (minuterieZoom.current) clearTimeout(minuterieZoom.current) }, [])
+  // Un jour vient d'être choisi : la transition de sortie est en cours, plus aucun
+  // toucher n'est pris en compte.
+  const [sortant, setSortant] = useState(false)
+  const minuterieSortie = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (minuterieSortie.current) clearTimeout(minuterieSortie.current) }, [])
 
   function choisir(jour: Date, caseJour: HTMLElement) {
-    if (zoom) return
+    if (sortant) return
+    // L'agenda se cale sur le jour (et remonte en haut) AVANT la mesure du bandeau.
     onChoisir(jour)
-    if (reduireMouvement()) { onFermer(); return }
-    const boite = caseJour.getBoundingClientRect()
-    const couche = coucheRef.current?.getBoundingClientRect()
-    setZoom({ x: boite.left + boite.width / 2 - (couche?.left ?? 0), y: boite.top + boite.height / 2 - (couche?.top ?? 0) })
-    minuterieZoom.current = setTimeout(onFermer, DUREE_ZOOM_MS)
+    const couche = coucheRef.current
+    const rangee = caseJour.closest<HTMLElement>('[data-semaine]')
+    if (reduireMouvement() || !couche || !rangee) { onFermer(); return }
+    setSortant(true)
+    animerTransition(couche, enteteRef.current, rangee, getBandeauCentre?.() ?? null, 'sortie')
+    minuterieSortie.current = setTimeout(onFermer, DUREE_TRANSITION_MS)
   }
 
   const plage = useMemo(() => plageDeMois(aujourdhui, MOIS_AVANT, MOIS_APRES, jourAffiche), [aujourdhui, jourAffiche])
@@ -108,7 +166,7 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
   const [cible, setCible] = useState({ annee: jourAffiche.getFullYear(), mois: jourAffiche.getMonth(), doux: false, n: 0 })
   const rangCible = cible.annee * 12 + cible.mois
 
-  // Le bloc cible et ses deux voisins sont rendus AVANT le défilement : sans
+  // Le bloc cible et ses quatre voisins (deux de chaque côté : la transition de l’agenda anime tout ce qui est à l’écran) sont rendus AVANT le défilement : sans
   // ça, un saut lointain (« Aujourd'hui » depuis 18 mois plus loin) atterrirait
   // sur du vide le temps qu'ils se rendent.
   useLayoutEffect(() => {
@@ -123,6 +181,16 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
     const loin = Math.abs(haut - couche.scrollTop) > window.innerHeight * 1.5
     couche.scrollTo({ top: haut, behavior: cible.doux && !loin && !reduireMouvement() ? 'smooth' : 'auto' })
   }, [cible])
+
+  // Ouverture : la même transition, à l'envers, à partir de la semaine du jour
+  // affiché. Après le calage du défilement ci-dessus (même ordre de déclaration).
+  useLayoutEffect(() => {
+    const couche = coucheRef.current
+    const rangee = couche?.querySelector<HTMLElement>('[aria-current="date"]')?.closest<HTMLElement>('[data-semaine]')
+    if (!couche || !rangee || reduireMouvement()) return
+    animerTransition(couche, enteteRef.current, rangee, getBandeauCentre?.() ?? null, 'entree')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, à l'ouverture
+  }, [])
 
   // Le focus va au bouton de retour (jamais dans la grille : 1 300 boutons), et
   // revient à l'élément d'origine à la fermeture.
@@ -143,16 +211,8 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
       ref={coucheRef}
       role="region"
       aria-label="Vue du mois"
-      className={`wb-mois-entree fixed inset-0 z-[12] overflow-y-auto overscroll-contain bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
-      style={zoom
-        ? {
-            transformOrigin: `${zoom.x}px ${zoom.y}px`,
-            transform: 'scale(2.8)',
-            opacity: 0,
-            pointerEvents: 'none',
-            transition: `transform ${DUREE_ZOOM_MS}ms var(--v2-ease-out), opacity ${DUREE_ZOOM_MS - 40}ms var(--v2-ease-out)`,
-          }
-        : undefined}
+      className={`fixed inset-0 z-[12] overflow-y-auto overscroll-contain bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      style={sortant ? { pointerEvents: 'none' } : undefined}
     >
       <div
         ref={enteteRef}
@@ -199,7 +259,7 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
             annee={annee}
             mois={mois}
             coucheRef={coucheRef}
-            proche={Math.abs(annee * 12 + mois - rangCible) <= 1}
+            proche={Math.abs(annee * 12 + mois - rangCible) <= 2}
             aujourdhui={aujourdhui}
             jourAffiche={jourAffiche}
             compte={compte}
@@ -261,6 +321,7 @@ function BlocMois({
       {/* Le nom du mois s'aligne sur la colonne du 1er, comme sur iPhone ; on le
           ramène vers la gauche quand ce serait trop près du bord pour tenir. */}
       <h2
+        data-titre-mois
         className={`flex items-end pb-2 text-[22px] ${titre}`}
         style={{ height: HAUT_TITRE, paddingLeft: `min(calc(${col} * 100% / 7), calc(100% - 12rem))` }}
       >
@@ -272,7 +333,7 @@ function BlocMois({
         </span>
       </h2>
       {semaines.map((semaine, i) => (
-        <div key={i} className="grid grid-cols-7 border-t border-[color:var(--v2-filet)]" style={{ height: HAUT_LIGNE }}>
+        <div key={i} data-semaine className="grid grid-cols-7 border-t border-[color:var(--v2-filet)]" style={{ height: HAUT_LIGNE }}>
           {semaine.map((jour, c) => jour
             ? (
               <CaseJour
