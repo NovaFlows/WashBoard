@@ -1595,6 +1595,25 @@
     et revient sur `/dashboard/calendrier?google=…` (voir `lib/googleAgendaRetour.ts`, le choix
     voyage dans le `state` OAuth). La ligne provisoire de Plus a disparu. Le site garde son
     retour sur `/dashboard/admin`, inchangé.
+  - [ ] **Google Agenda — fiabiliser la connexion depuis la PWA iPhone (à faire plus tard,
+    décision d'Alexandre 2026-09-25).** Deux constats du test sur la version d'essai :
+    1. *Limite de l'environnement d'essai* : `GOOGLE_REDIRECT_URI` pointe vers
+       `washboard.fr` (production), donc Google ramène sur le vrai site, qui n'a pas le
+       retour vers l'Agenda ; le cookie `wb_gcal_state` posé sur l'adresse d'essai n'y est
+       pas non plus. Pour tester avant la mise en ligne : ajouter l'adresse de retour de
+       l'essai dans la console Google Cloud + régler `GOOGLE_REDIRECT_URI` (et
+       `NEXT_PUBLIC_APP_URL`) sur l'environnement Preview de Vercel.
+    2. *Risque réel en production, à vérifier sur iPhone* : depuis la PWA installée, iOS
+       ouvre Google dans une fenêtre séparée qui ne partage pas les cookies de la PWA ;
+       le contrôle du `state` (cookie httpOnly) peut alors échouer. Remède envisagé :
+       `state` **signé côté serveur** (HMAC : identifiant du laveur + jeton + expiration
+       courte, idéalement à usage unique), écriture du jeton sans dépendre de la session
+       de la fenêtre, et page de fin « Connecté, vous pouvez revenir à WashBoard » ;
+       l'Agenda rafraîchit l'état au retour au premier plan. Route sensible : `dev` +
+       `cyber` (l'audit du 2026-09-05 a fixé le `state` aléatoire lié au cookie).
+    3. Deux défauts préexistants du retour, au passage : `exchangeCode` non capturé (une
+       erreur de code donne une page 500 au lieu d'un retour à l'Agenda) et cookie
+       `wb_gcal_state` supprimé seulement en cas de succès.
   - [ ] **Frais de déplacement à replacer avec la zone (passe suivante)** — ils vivent
     dans `ParametresFormV1.tsx` (~l. 294-370, « Mon profil », atteint depuis Plus par la
     ligne « Équipe ») et n'ont **aucun écran v2**. `designer` recommande qu'ils voisinent
