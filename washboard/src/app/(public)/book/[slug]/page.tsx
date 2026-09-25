@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -9,24 +10,46 @@ import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded } from '@/lib/plan'
 import { estReservable } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
-import { logger } from '@/lib/logger'
-import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 
 type Props = {
   params: Promise<{ slug: string }>
 }
+
+// Les colonnes de la fiche, énumérées plutôt que `select('*')` : charger
+// l'objet entier ferait transiter des secrets (jeton Google, identifiants
+// Stripe) par une page publique, en comptant sur le fait qu'on ne les
+// transmettrait pas plus loin.
+// Les cinq dernières (`facture_*`) faisaient l'objet d'une requête séparée,
+// pour que la page tienne debout si ces colonnes n'existaient pas encore en
+// base. Elles existent toutes en production depuis la sortie des factures, et
+// cette prudence coûtait une troisième lecture de la même ligne à chaque
+// visite. Seul un booléen en sort vers le navigateur.
+//
+// Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
+// le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
+// perdre le typage de toutes les colonnes.
+const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+
+/** Une seule lecture de la fiche par requête HTTP.
+ *
+ *  `generateMetadata` et la page s'exécutent dans le même rendu et lisaient
+ *  chacune la ligne du laveur, plus une troisième fois pour la facturation :
+ *  trois allers-retours pour la même ligne, à chaque visite. `cache()` de React
+ *  mémorise le résultat pour la durée de la requête — les appelants suivants
+ *  reçoivent le même objet sans retoucher la base. */
+const lireLaveur = cache(async (slug: string) =>
+  createAdminClient()
+    .from('washers')
+    .select(COLONNES_LAVEUR)
+    .eq('slug', slug)
+    .maybeSingle())
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   // Lecture côté serveur : la table `washers` n'est plus lisible par la clé
   // publique, qui donnait accès aux jetons Google et identifiants Stripe de
   // TOUS les laveurs à n'importe quel visiteur.
-  const admin = createAdminClient()
-  const { data: washer } = await admin
-    .from('washers')
-    .select('name, logo_url, welcome_message')
-    .eq('slug', slug)
-    .single()
+  const { data: washer } = await lireLaveur(slug)
 
   // Page privée d'un laveur : elle ne doit pas se retrouver dans un moteur de
   // recherche, même quand elle n'existe pas. `follow` reste vrai, les liens
@@ -75,14 +98,9 @@ export default async function BookingPage({ params }: Props) {
   const { slug } = await params
   const admin = createAdminClient()
 
-  // Idem : lecture serveur, et colonnes énumérées plutôt que `select('*')`.
-  // Charger l'objet entier revenait à faire transiter des secrets par une page
-  // publique, en comptant sur le fait qu'on ne les transmettrait pas plus loin.
-  const { data: washer } = await admin
-    .from('washers')
-    .select('id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview')
-    .eq('slug', slug)
-    .single()
+  // Déjà lue par `generateMetadata` dans la même requête : `cache()` rend ici
+  // le même objet, sans second aller-retour.
+  const { data: washer } = await lireLaveur(slug)
 
   if (!washer) notFound()
   if (washer.account_status && washer.account_status !== 'active') notFound()
@@ -112,16 +130,10 @@ export default async function BookingPage({ params }: Props) {
     )
   }
 
-  // Informations de facturation : lues à part, pour que cette page publique
-  // reste debout même si leurs colonnes n'existent pas encore en base. Seul un
-  // booléen en sort vers le navigateur.
-  const { data: facturation, error: errFacturation } = await admin
-    .from('washers')
-    .select('facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva')
-    .eq('id', washer.id)
-    .maybeSingle()
-  if (errFacturation) logger.warn('book.facturation.read_failed', { washerId: washer.id }, errFacturation)
-  const facturationPrete = !!facturation && infosFacturationManquantes(facturation).length === 0
+  // Les informations de facturation viennent de la même lecture que le reste
+  // de la fiche (voir COLONNES_LAVEUR). Seul un booléen en sort vers le
+  // navigateur : ni le SIRET ni l'adresse n'ont à figurer sur une page publique.
+  const facturationPrete = infosFacturationManquantes(washer).length === 0
 
   const { data: services } = await admin
     .from('services')
@@ -144,39 +156,13 @@ export default async function BookingPage({ params }: Props) {
     .select('*')
     .eq('washer_id', washer.id)
 
-  // Les RDV existants et les indisponibilités sont nécessaires au filtrage des
-  // créneaux occupés, mais la RLS interdit leur lecture au visiteur public (anon).
-  // → lecture via le service-role, en se limitant à des données NON personnelles
-  //   (horaire + durée), jamais de nom/email/téléphone côté client.
-
-  const [
-    { data: existingBookings, error: bookingsError },
-    { data: unavailabilities, error: unavailError },
-  ] = await Promise.all([
-    // Page par page : au-delà de 1 000 rendez-vous à venir, l'API couperait sans
-    // erreur, et les créneaux des rendez-vous manquants s'afficheraient libres —
-    // une double réservation. Voir `toutesLesLignes`.
-    toutesLesLignes((debut, fin) => admin
-      .from('bookings')
-      .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
-      .eq('washer_id', washer.id)
-      .neq('status', 'cancelled')
-      .gte('scheduled_at', new Date().toISOString())
-      .order('scheduled_at')
-      .order('id')
-      .range(debut, fin)),
-    admin
-      .from('unavailabilities')
-      .select('id, start_date, end_date, team_members_off')
-      .eq('washer_id', washer.id),
-  ])
-
-  // Ne jamais avaler ces erreurs en silence : une lecture qui échoue ici (clé
-  // service-role absente/invalide, RLS mal configurée, GRANT manquant...) retombe
-  // sur `?? []` plus bas et fait apparaître TOUS les créneaux comme libres côté
-  // client — déjà vécu en prod (double-réservation, congés ignorés). Voir TODO.md.
-  if (bookingsError) logger.error('book.bookings.fetch_failed', { washerId: washer.id, slug }, bookingsError)
-  if (unavailError) logger.error('book.unavailabilities.fetch_failed', { washerId: washer.id, slug }, unavailError)
+  // Les rendez-vous à venir et les congés ne sont PLUS lus ici : le formulaire
+  // les demande à `GET /api/booking-availability` dès que le visiteur touche la
+  // page. Ils ne servent qu'à l'étape des créneaux, que la grande majorité des
+  // visiteurs n'atteint jamais — et la liste des rendez-vous grandit sans fin.
+  // Le motif de sécurité d'origine n'a pas bougé : la RLS interdit ces tables au
+  // visiteur, la lecture passe par le service-role, et seules des données NON
+  // personnelles (horaire + durée) atteignent le navigateur.
 
   const bgStyle = getBgStyle(washer.background_theme)
   const themed  = !!bgStyle
@@ -262,8 +248,6 @@ export default async function BookingPage({ params }: Props) {
           services={(services ?? []).filter(estReservable)}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
-          existingBookings={(existingBookings ?? []) as unknown as { scheduled_at: string; vehicle_count: number | null; selected_addons: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }[]}
-          unavailabilities={(unavailabilities ?? []) as { id: string; start_date: string; end_date: string; team_members_off?: number | null }[]}
           accent={washer.brand_color ?? '#2563eb'}
         />
 

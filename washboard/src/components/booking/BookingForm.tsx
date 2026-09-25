@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import type { Washer, Service, ServiceCategory, Availability, BookingFormData } from '@/types'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import { dureeTotale } from '@/lib/pricing'
 import { trackFunnelStep, type FunnelStep } from '@/lib/funnelTracking'
 import StepService from './StepService'
@@ -39,10 +39,21 @@ type Props = {
   services: Service[]
   categories: ServiceCategory[]
   availabilities: Availability[]
-  existingBookings: ExistingBooking[]
-  unavailabilities: Unavailability[]
+  /** Disponibilités fournies directement, au lieu d'être chargées depuis la
+   *  base : réservé aux démonstrations et aux captures, qui tournent sur un
+   *  laveur fictif absent de la base. En production, on ne les passe pas. */
+  disponibilites?: Disponibilites
   accent?: string
 }
+
+/** Rendez-vous à venir et congés, chargés à la demande.
+ *
+ *  Ils arrivaient autrefois en props, lus par la page à chaque visite. Comme
+ *  ils ne servent qu'à l'étape des créneaux et que la plupart des visiteurs
+ *  n'y arrivent jamais, ils sont désormais demandés au premier geste du
+ *  visiteur — donc bien avant qu'il en ait besoin, et jamais pour quelqu'un
+ *  qui ne fait que passer. */
+type Disponibilites = { bookings: ExistingBooking[]; unavailabilities: Unavailability[] }
 
 /** Les seuls champs du laveur qui ont le droit d'atteindre le navigateur. */
 export type WasherPublic = {
@@ -67,12 +78,36 @@ export type WasherPublic = {
 export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function BookingForm({ washer, services, categories, availabilities, existingBookings, unavailabilities, accent = '#2563eb' }: Props) {
+export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb' }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
+  const [disposEnEchec, setDisposEnEchec] = useState(false)
+  const disposDemandees = useRef(!!disponibilites)
+
+  /** Une seule fois par page, sauf après un échec où l'on autorise un nouvel
+   *  essai. Ne jamais retomber sur des listes vides : le formulaire afficherait
+   *  tous les créneaux libres et ignorerait les congés. */
+  const chargerDispos = useCallback(() => {
+    if (disposDemandees.current) return
+    disposDemandees.current = true
+    setDisposEnEchec(false)
+    fetch(`/api/booking-availability?washer_id=${washer.id}`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
+      .then((d: Partial<Disponibilites>) => setDispos({
+        bookings: d.bookings ?? [],
+        unavailabilities: d.unavailabilities ?? [],
+      }))
+      .catch(() => { disposDemandees.current = false; setDisposEnEchec(true) })
+  }, [washer.id])
+
+  // Filet : si le visiteur arrive à l'étape des créneaux sans avoir déclenché
+  // le chargement (clavier, lecteur d'écran, navigation inattendue), on le
+  // lance ici plutôt que de le laisser devant un écran qui n'avance pas.
+  useEffect(() => { if (step >= 2) chargerDispos() }, [step, chargerDispos])
 
   const selectedService = services.find(s => s.id === form.service_id)
   const hasAddons = (selectedService?.addons ?? []).length > 0
@@ -143,7 +178,15 @@ export default function BookingForm({ washer, services, categories, availabiliti
   const estProposition = washer.is_preview === true
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+      // Au premier geste sur le formulaire — bien avant l'étape des créneaux,
+      // qui demande encore de choisir une prestation. Le temps que le visiteur
+      // clique, les disponibilités sont là : il ne voit aucune attente. Celui
+      // qui ne touche à rien (la grande majorité) ne déclenche aucune lecture.
+      onPointerDown={chargerDispos}
+      onKeyDown={chargerDispos}
+    >
       {/* Annoncé d'emblée, et pas seulement à la dernière étape : un visiteur
           qui parcourt trois écrans en croyant réserver, puis découvre que non,
           est un client perdu pour le laveur. */}
@@ -238,11 +281,52 @@ export default function BookingForm({ washer, services, categories, availabiliti
             accent={accent}
           />
         )}
-        {step === 3 && (
+        {/* Tant que les disponibilités ne sont pas là, StepSlot n'est pas monté
+            du tout : avec des listes vides il montrerait tous les créneaux
+            libres et les congés comme travaillés. Mieux vaut une seconde
+            d'attente qu'une double réservation. En pratique l'attente est
+            invisible, le chargement ayant démarré au premier geste. */}
+        {step === 3 && !dispos && (
+          <div className="py-10 text-center">
+            {disposEnEchec ? (
+              <>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Impossible d&apos;afficher les disponibilités
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-5">
+                  Vérifiez votre connexion : nous préférons ne rien proposer plutôt
+                  qu&apos;un horaire déjà pris.
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(hasAddons ? 2 : 1)}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={chargerDispos}
+                    className="px-4 py-2 rounded-lg text-sm font-bold text-white"
+                    style={{ backgroundColor: accent }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
+                Recherche des créneaux disponibles…
+              </p>
+            )}
+          </div>
+        )}
+        {step === 3 && dispos && (
           <StepSlot
             availabilities={availabilities}
-            existingBookings={existingBookings}
-            unavailabilities={unavailabilities}
+            existingBookings={dispos.bookings}
+            unavailabilities={dispos.unavailabilities}
             teamSize={washer.team_size ?? 1}
             // Règle unique, qui sait lire les deux formes : options rattachées
             // à chaque véhicule, ou liste commune des anciennes réservations.
