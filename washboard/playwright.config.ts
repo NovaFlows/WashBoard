@@ -10,7 +10,15 @@ import fs from 'fs'
 // ne protège de rien.
 for (const fichier of ['.env.test.local', '.env.local']) {
   try {
-    const lines = fs.readFileSync(fichier, 'utf-8').split('\n')
+    // Decoupage sur CRLF autant que LF : un `.env.local` enregistre sous
+    // Windows finit ses lignes par un retour chariot, et en expression
+    // reguliere JavaScript le point ne file PAS sur ce caractere. Avec un
+    // decoupage sur le seul saut de ligne, la fin de ligne `$` ne tombait
+    // jamais juste et AUCUNE variable n'etait reconnue : les tests se
+    // sautaient tous en silence, avec exactement le meme message que si le
+    // fichier etait absent. Sur un projet developpe sous Windows, c'est le
+    // cas courant, pas le cas limite.
+    const lines = fs.readFileSync(fichier, 'utf-8').split(/\r?\n/)
     for (const line of lines) {
       const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
       if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^['"]|['"]$/g, '')
