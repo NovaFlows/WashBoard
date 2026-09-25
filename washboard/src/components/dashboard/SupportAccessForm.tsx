@@ -8,15 +8,21 @@ import { useState } from 'react'
 // Le lien n'est pas suivi automatiquement : il s'affiche, et c'est un clic
 // délibéré qui ouvre la session. Entrer dans le compte de quelqu'un ne doit
 // jamais être le simple effet de bord d'un formulaire soumis.
+//
+// La demande et l'affichage du résultat sont partagés avec `AccesRapide`
+// (bouton dans chaque conversation de la boîte de l'équipe) : même route, mêmes
+// verrous côté serveur (`/api/support/access`), même avertissement.
 
-export default function SupportAccessForm() {
-  const [slug, setSlug] = useState('')
+type Acces = { url: string; washerName: string }
+
+/** Demande au serveur un lien de connexion sur le compte du laveur. Aucun contrôle
+ *  d'accès ici : c'est la route qui vérifie l'équipe et l'autorisation du laveur. */
+export function useDemandeAcces() {
   const [occupe, setOccupe] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [resultat, setResultat] = useState<{ url: string; washerName: string } | null>(null)
+  const [resultat, setResultat] = useState<Acces | null>(null)
 
-  async function demander(e: React.FormEvent) {
-    e.preventDefault()
+  async function demander(slug: string) {
     setOccupe(true)
     setErreur(null)
     setResultat(null)
@@ -36,36 +42,12 @@ export default function SupportAccessForm() {
     }
   }
 
+  return { occupe, erreur, resultat, demander }
+}
+
+export function ResultatAcces({ erreur, resultat }: { erreur: string | null; resultat: Acces | null }) {
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 max-w-xl">
-      <form onSubmit={demander} className="space-y-3">
-        <div>
-          <label htmlFor="slug" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            Lien du laveur
-          </label>
-          <input
-            id="slug"
-            type="text"
-            value={slug}
-            onChange={e => setSlug(e.target.value)}
-            placeholder="bellauto-89"
-            required
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-          />
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-            La partie après <code>/book/</code> dans son lien de réservation.
-          </p>
-        </div>
-
-        <button
-          type="submit"
-          disabled={occupe || !slug.trim()}
-          className="px-4 py-2.5 rounded-xl bg-[#1651E8] text-white text-sm font-semibold disabled:opacity-40 hover:bg-[#0F4ACC] transition-colors"
-        >
-          {occupe ? 'Vérification…' : 'Obtenir un accès'}
-        </button>
-      </form>
-
+    <>
       {erreur && (
         <div className="mt-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60">
           <p className="text-sm text-amber-800 dark:text-amber-400">{erreur}</p>
@@ -97,6 +79,50 @@ export default function SupportAccessForm() {
           </a>
         </div>
       )}
+    </>
+  )
+}
+
+export default function SupportAccessForm() {
+  const [slug, setSlug] = useState('')
+  const { occupe, erreur, resultat, demander } = useDemandeAcces()
+
+  function soumettre(e: React.FormEvent) {
+    e.preventDefault()
+    void demander(slug)
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 max-w-xl">
+      <form onSubmit={soumettre} className="space-y-3">
+        <div>
+          <label htmlFor="slug" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            Lien du laveur
+          </label>
+          <input
+            id="slug"
+            type="text"
+            value={slug}
+            onChange={e => setSlug(e.target.value)}
+            placeholder="bellauto-89"
+            required
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+          />
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+            La partie après <code>/book/</code> dans son lien de réservation.
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={occupe || !slug.trim()}
+          className="px-4 py-2.5 rounded-xl bg-[#1651E8] text-white text-sm font-semibold disabled:opacity-40 hover:bg-[#0F4ACC] transition-colors"
+        >
+          {occupe ? 'Vérification…' : 'Obtenir un accès'}
+        </button>
+      </form>
+
+      <ResultatAcces erreur={erreur} resultat={resultat} />
     </div>
   )
 }

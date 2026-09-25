@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AssistanceContent from '@/components/dashboard/AssistanceContent'
+import SupportAccessForm from '@/components/dashboard/SupportAccessForm'
+import { isSupportMember } from '@/lib/supportAccess'
 
 // Un lien direct `?fil=<id>` (notification, email) doit toujours retomber
 // sur les vraies données du laveur qui clique, jamais sur un instantané mis
@@ -22,6 +24,10 @@ export default async function AssistancePage() {
   // (jamais le cas de '*', qui tolère une colonne absente).
   const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
+
+  // Décidé ici, côté serveur : le formulaire n'est même pas envoyé à un laveur. La route
+  // `/api/support/access` refait de toute façon le contrôle (et celui de l'accord du laveur).
+  const estEquipe = isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)
 
   return (
     <DashboardShell
@@ -45,6 +51,16 @@ export default async function AssistancePage() {
             </Link>.
           </p>
         </div>
+
+        {estEquipe && (
+          <section aria-label="Équipe : prendre la main sur un compte" className="mb-8">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white mb-1">Prendre la main sur un compte</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+              Réservé à l&apos;équipe : le laveur doit avoir ouvert l&apos;accès depuis ses réglages.
+            </p>
+            <SupportAccessForm />
+          </section>
+        )}
 
         {/* useSearchParams (lecture de ?fil=) exige une limite Suspense :
             sans elle, Next refuse de construire cette route. */}

@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Check, ChevronLeft } from 'lucide-react'
 import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { CarteListe } from '@/components/dashboard/ParametresFormV2'
-import { nom } from '@/components/dashboard/PrestationsUiV2'
+import { ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
+import FeuilleLienV2 from '@/components/dashboard/FeuilleLienV2'
+import { enregistrerSlug } from '@/lib/lienReservation'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { TRAFFIC_SOURCES, buildTrackedBookingLink } from '@/lib/trafficSources'
 
@@ -19,6 +22,10 @@ import { TRAFFIC_SOURCES, buildTrackedBookingLink } from '@/lib/trafficSources'
 // même quand Instagram ou TikTok ne transmettent pas l'origine du clic. Mêmes liens,
 // même source (`lib/trafficSources.ts`) que la carte « Liens par réseau » du site.
 //
+// Le laveur peut aussi changer la fin de son lien (le « slug »), comme sur l'ancien écran :
+// une feuille de saisie, puis une confirmation qui dit que l'ancien lien cessera de
+// fonctionner (demande d'Alexandre, 2026-09-25).
+//
 // L'export Excel des réservations, qui vivait sur l'ancien écran CRM, n'est PAS repris
 // ici (demande : « juste mes liens ») : voir TODO.md.
 
@@ -26,7 +33,14 @@ const DUREE_COPIE_MS = 1800
 
 type Copie = { cle: string; ok: boolean } | null
 
-export default function MesLiensV2({ slug }: { slug: string }) {
+export default function MesLiensV2({ slug: slugServeur }: { slug: string }) {
+  const router = useRouter()
+  // Le lien suit tout de suite un changement réussi, sans attendre le rechargement.
+  const [slug, setSlug] = useState(slugServeur)
+  const [feuille, setFeuille] = useState(false)
+  const [nouveau, setNouveau] = useState<string | null>(null)
+  const [changementEnCours, setChangementEnCours] = useState(false)
+  const [changementErreur, setChangementErreur] = useState<string | null>(null)
   const base = `${SITE_URL_FALLBACK}/book/${slug}`
   const [copie, setCopie] = useState<Copie>(null)
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -46,6 +60,19 @@ export default function MesLiensV2({ slug }: { slug: string }) {
     setCopie({ cle, ok })
     if (minuterie.current) clearTimeout(minuterie.current)
     minuterie.current = setTimeout(() => setCopie(c => (c?.cle === cle ? null : c)), DUREE_COPIE_MS)
+  }
+
+  async function confirmerChangement() {
+    if (!nouveau || changementEnCours) return
+    setChangementEnCours(true)
+    setChangementErreur(null)
+    const r = await enregistrerSlug(nouveau)
+    setChangementEnCours(false)
+    if (!r.ok) { setChangementErreur(r.message); return }
+    setSlug(nouveau)
+    setNouveau(null)
+    setFeuille(false)
+    router.refresh()
   }
 
   async function partager() {
@@ -108,6 +135,13 @@ export default function MesLiensV2({ slug }: { slug: string }) {
             </button>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => setFeuille(true)}
+          className={`-mb-2 mt-2 flex min-h-11 items-center text-[14px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
+        >
+          Changer mon lien
+        </button>
       </section>
 
       <section aria-label="Un lien par réseau" className="mt-[26px]">
@@ -155,6 +189,28 @@ export default function MesLiensV2({ slug }: { slug: string }) {
           </ul>
         </CarteListe>
       </section>
+
+      {feuille && (
+        <FeuilleLienV2
+          slug={slug}
+          prefixe={`${affiche(SITE_URL_FALLBACK)}/book/`}
+          onContinuer={s => { setChangementErreur(null); setNouveau(s) }}
+          // Sous la confirmation, Échap et la poignée ne ferment que la confirmation.
+          onClose={nouveau ? () => {} : () => setFeuille(false)}
+        />
+      )}
+      {nouveau && (
+        <ConfirmationSuppression
+          titre="Changer votre lien ?"
+          texte={`L’ancien lien (${affiche(base)}) ne fonctionnera plus. Remplacez-le partout où vous l’avez publié : bio Instagram, cartes de visite, QR codes.`}
+          libelleAction="Changer le lien"
+          libelleEnCours="Changement…"
+          enCours={changementEnCours}
+          erreur={changementErreur}
+          onConfirmer={confirmerChangement}
+          onClose={() => setNouveau(null)}
+        />
+      )}
 
       <p role="status" className="sr-only">{messageCopie}</p>
       {copie && !copie.ok && (
