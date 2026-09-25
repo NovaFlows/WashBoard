@@ -1614,6 +1614,12 @@
     3. Deux défauts préexistants du retour, au passage : `exchangeCode` non capturé (une
        erreur de code donne une page 500 au lieu d'un retour à l'Agenda) et cookie
        `wb_gcal_state` supprimé seulement en cas de succès.
+  - [ ] **Export Excel des réservations — plus d'entrée dans la PWA** (2026-09-25). La ligne
+    « Export et liens par réseau » de Plus est devenue « Mes liens »
+    (`/dashboard/parametres/liens`, liens seulement, à la demande d'Alexandre). L'export
+    (`CrmDashboard.tsx`, `handleExport`, exceljs) n'existe plus que sur le site
+    (`/dashboard/crm`). À replacer en v2 si Alexandre le veut (extraire `handleExport` dans
+    un module partagé sans changer le fichier Excel produit).
   - [ ] **Frais de déplacement à replacer avec la zone (passe suivante)** — ils vivent
     dans `ParametresFormV1.tsx` (~l. 294-370, « Mon profil », atteint depuis Plus par la
     ligne « Équipe ») et n'ont **aucun écran v2**. `designer` recommande qu'ils voisinent

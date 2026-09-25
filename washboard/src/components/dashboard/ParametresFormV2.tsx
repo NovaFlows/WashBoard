@@ -261,13 +261,12 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
             valeur={canTeam ? `${washer.team_size} laveur${washer.team_size > 1 ? 's' : ''}` : 'Pro'}
             href="/dashboard/parametres/tout#profil"
           />
-          {/* Ancien écran « CRM » (`/dashboard/crm`), sans le mot : il porte
-              ce que Chiffres n'a pas repris — l'export Excel des réservations
-              (CrmDashboard) et les liens par réseau, avec le sélecteur de
-              période complet des statistiques de visite. Ligne ajoutée le
-              2026-09-24, quand le menu latéral (seule entrée vers cette page)
-              a disparu de la PWA en bêta. */}
-          <Ligne label="Export et liens par réseau" href="/dashboard/crm" />
+          {/* « Mes liens » : le lien de réservation et un lien par réseau, dans le
+              design de l'app (2026-09-25, demande d'Alexandre). Remplace la ligne
+              « Export et liens par réseau », qui menait à l'ancien écran CRM
+              (`/dashboard/crm`, toujours en v1 sur le site). L'export Excel des
+              réservations n'a plus d'entrée dans la PWA : voir TODO.md. */}
+          <Ligne label="Mes liens" href="/dashboard/parametres/liens" />
         </CarteListe>
       </div>
 
