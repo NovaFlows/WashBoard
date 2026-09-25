@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Trash2 } from 'lucide-react'
 import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
 import { usePrestationsV2 } from '@/hooks/usePrestationsV2'
+import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
 import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { CarteListe, Chevron, Ligne } from '@/components/dashboard/ParametresFormV2'
 import FeuillePrestationV2 from '@/components/dashboard/FeuillePrestationV2'
@@ -104,32 +105,71 @@ export function Section({
   )
 }
 
-function LignePrestation({ service, categorie, onOuvrir }: { service: Service; categorie: ServiceCategory | undefined; onOuvrir: () => void }) {
+// Ligne de prestation. Glissée vers la gauche (doigt), elle révèle un bouton rouge
+// « Supprimer » avec sa poubelle, qui ouvre la même confirmation que le lien de la
+// feuille d'édition : une suppression reste un geste à confirmer (elle échoue d'ailleurs
+// si des réservations utilisent la prestation, et la confirmation le dit).
+function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+  service: Service
+  categorie: ServiceCategory | undefined
+  onOuvrir: () => void
+  ouverte: boolean
+  onOuvrirLigne: () => void
+  onFermerLigne: () => void
+  onSupprimer: () => void
+}) {
   const prix = prixListe(service)
   const reservable = estReservable(service)
+  const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
+    ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
+  })
   return (
-    <li>
-      <button type="button" onClick={onOuvrir} className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left">
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className={`truncate text-[15.5px] ${nom}`}>{service.name}</span>
-          <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {reservable ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
-          </span>
-          {!reservable && (
-            <span className="flex items-start gap-2">
-              <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-rouge)' }} aria-hidden />
-              <span className={`text-[12.5px] leading-snug ${corpsFort} text-[color:var(--v2-color-encre)]`}>
-                Invisible pour vos clients : aucun type
-              </span>
-            </span>
-          )}
-        </span>
-        <span className={`shrink-0 text-right text-[15.5px] ${corpsFort} tabular-nums`}>
-          {prix.des && <span className={`mr-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès</span>}
-          {prix.montant}
-        </span>
-        <Chevron />
+    <li ref={refLigne} className="relative overflow-hidden">
+      {/* Derrière la ligne : cachée tant que la ligne n'est pas glissée, et retirée de
+          l'ordre de tabulation (l'action reste joignable par la feuille d'édition). */}
+      <button
+        type="button"
+        onClick={onSupprimer}
+        tabIndex={ouverte ? 0 : -1}
+        aria-hidden={!ouverte}
+        aria-label={`Supprimer ${service.name}`}
+        className={`absolute inset-y-1.5 right-0 flex flex-col items-center justify-center gap-1 rounded-[12px] text-[12px] text-white ${corpsFort}`}
+        style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
+      >
+        <Trash2 size={20} strokeWidth={2} aria-hidden />
+        Supprimer
       </button>
+      <div
+        {...poignee}
+        style={styleContenu}
+        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+      >
+        <button
+          type="button"
+          onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
+          className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className={`truncate text-[15.5px] ${nom}`}>{service.name}</span>
+            <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              {reservable ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
+            </span>
+            {!reservable && (
+              <span className="flex items-start gap-2">
+                <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-rouge)' }} aria-hidden />
+                <span className={`text-[12.5px] leading-snug ${corpsFort} text-[color:var(--v2-color-encre)]`}>
+                  Invisible pour vos clients : aucun type
+                </span>
+              </span>
+            )}
+          </span>
+          <span className={`shrink-0 text-right text-[15.5px] ${corpsFort} tabular-nums`}>
+            {prix.des && <span className={`mr-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès</span>}
+            {prix.montant}
+          </span>
+          <Chevron />
+        </button>
+      </div>
     </li>
   )
 }
@@ -149,13 +189,17 @@ export default function PrestationsV2({
   const [suppression, setSuppression] = useState<Suppression>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
+  // Une seule ligne de prestation glissée (bouton « Supprimer » visible) à la fois.
+  const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
 
   const categorieDe = (id: string | null) => categories.find(c => c.id === id)
   const sansCategorie = services.filter(s => !categories.some(c => c.id === s.category_id))
   const vide = categories.length === 0 && services.length === 0
 
   const ouvrirNouvellePrestation = () => setFeuille({ quoi: 'prestation', service: null, formulaire: formulaireNeuf(categories) })
-  const ouvrirPrestation = (s: Service) => setFeuille({ quoi: 'prestation', service: s, formulaire: formulaireDepuisService(s) })
+  const ouvrirPrestation = (s: Service) => { setLigneOuverte(null); setFeuille({ quoi: 'prestation', service: s, formulaire: formulaireDepuisService(s) }) }
+  const supprimerDepuisLigne = (s: Service) => { setLigneOuverte(null); demanderSuppression({ quoi: 'prestation', service: s }) }
+  const fermerLigne = () => setLigneOuverte(null)
   const fermerFeuille = () => setFeuille(null)
 
   async function enregistrerPrestation(form: FormulairePrestation): Promise<string | null> {
@@ -363,7 +407,7 @@ export default function PrestationsV2({
                   ) : (
                     <ul className="divide-y divide-[color:var(--v2-filet)]">
                       {deLaCategorie.map(s => (
-                        <LignePrestation key={s.id} service={s} categorie={cat} onOuvrir={() => ouvrirPrestation(s)} />
+                        <LignePrestation key={s.id} service={s} categorie={cat} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
                       ))}
                     </ul>
                   )}
@@ -377,7 +421,7 @@ export default function PrestationsV2({
               <CarteListe>
                 <ul className="divide-y divide-[color:var(--v2-filet)]">
                   {sansCategorie.map(s => (
-                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} onOuvrir={() => ouvrirPrestation(s)} />
+                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
                   ))}
                 </ul>
               </CarteListe>
