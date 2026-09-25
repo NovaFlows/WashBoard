@@ -72,6 +72,8 @@ export default async function CalendrierPage() {
           categories={categories ?? []}
           washerId={washer.id}
           facturationPrete={infosFacturationManquantes(washer).length === 0}
+          // Un booléen, jamais le jeton : tout ce qui passe ici est sérialisé dans la page.
+          googleAgendaConnecte={!!washer.google_refresh_token}
         />
       </Suspense>
     </DashboardShell>

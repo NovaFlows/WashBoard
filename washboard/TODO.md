@@ -1589,10 +1589,12 @@
   - [x] **Créneaux intelligents** (`#creneaux`) — **placés le 2026-09-25** dans le même
     écran (`/dashboard/parametres/prestations#creneaux`), section « Créneaux
     intelligents ». La ligne provisoire de Plus a disparu.
-  - [ ] **Google Agenda** (`#agenda`) — connexion du calendrier. **Toujours en attente** :
-    garde sa ligne **provisoire** dans Plus (`/dashboard/admin#agenda`), à supprimer le
-    jour où il aura sa vraie place. Pas de maquette : à concevoir (`designer`, avis
-    `ideas`) comme pour Prestations, Horaires et la zone.
+  - [x] **Google Agenda** (`#agenda`) — **placé dans l'Agenda**, 2026-09-25 (demande
+    d'Alexandre) : ligne « Google Agenda » en bas de l'écran + feuille
+    (`FeuilleGoogleAgendaV2.tsx`). La connexion part de `/api/auth/google-calendar?retour=agenda`
+    et revient sur `/dashboard/calendrier?google=…` (voir `lib/googleAgendaRetour.ts`, le choix
+    voyage dans le `state` OAuth). La ligne provisoire de Plus a disparu. Le site garde son
+    retour sur `/dashboard/admin`, inchangé.
   - [ ] **Frais de déplacement à replacer avec la zone (passe suivante)** — ils vivent
     dans `ParametresFormV1.tsx` (~l. 294-370, « Mon profil », atteint depuis Plus par la
     ligne « Équipe ») et n'ont **aucun écran v2**. `designer` recommande qu'ils voisinent

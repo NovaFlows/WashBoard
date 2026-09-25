@@ -297,12 +297,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
             )}
             <Chevron />
           </Link>
-          {/* PROVISOIRE — dernière ligne de ce genre, à supprimer le jour où Google
-              Agenda aura sa vraie place dans la PWA (voir le bloc « À NE PAS OUBLIER »
-              de TODO.md, section Refonte 2026). Ce réglage ne figure sur aucun écran
-              v2 : il doit rester atteignable, et il vit toujours sur l'ancien écran,
-              joignable par cette ancre. Ni valeur ni résumé : rien d'inventé. */}
-          <Ligne label="Google Agenda" href="/dashboard/admin#agenda" />
           {/* « Importer mes clients » de la maquette n'a aucune logique
               derrière : la table `clients` et son import (étape 1 du plan
               CRM, refonte.md) ne sont pas construits. Pas de ligne plutôt

@@ -17,6 +17,7 @@ import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
 import ProposerCreneauV2 from '@/components/dashboard/ProposerCreneauV2'
+import FeuilleGoogleAgendaV2, { issueDepuisParametre } from '@/components/dashboard/FeuilleGoogleAgendaV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
@@ -206,7 +207,7 @@ function finRendezVous(b: Booking): Date {
 
 type Trajet = { minutes: number; km: number } | null
 
-export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte }: CalendrierProps) {
   const [today] = useState(() => new Date())
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
@@ -273,6 +274,10 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // non-régression, alors autant qu'il n'ait pas ce défaut.
   const searchParams = useSearchParams()
   const rdvParam = searchParams.get('rdv')
+  // Retour de Google (`?google=ok|erreur|sans-jeton`) : la feuille s'ouvre d'elle-même
+  // pour dire ce qui s'est passé.
+  const issueGoogle = issueDepuisParametre(searchParams.get('google'))
+  const [feuilleGoogle, setFeuilleGoogle] = useState(issueGoogle !== null)
   const rdvApplique = useRef(false)
 
   useEffect(() => {
@@ -540,6 +545,39 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         estComplet={isFullyUnavailable}
         onOuvrir={setDelModal}
       />
+
+      <button
+        type="button"
+        onClick={() => setFeuilleGoogle(true)}
+        aria-haspopup="dialog"
+        className="flex min-h-14 w-full items-center gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span className={`block text-[15px] ${corpsFort}`}>Google Agenda</span>
+          <span className="mt-0.5 flex items-center gap-2">
+            <span
+              className="h-[7px] w-[7px] shrink-0 rounded-full"
+              style={{ background: googleAgendaConnecte ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
+              aria-hidden
+            />
+            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              {googleAgendaConnecte ? 'Connecté · vos rendez-vous s’y ajoutent' : 'Pas connecté'}
+            </span>
+          </span>
+        </span>
+        <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />
+      </button>
+
+      {feuilleGoogle && (
+        <FeuilleGoogleAgendaV2
+          connecte={googleAgendaConnecte}
+          issue={issueGoogle}
+          onClose={() => {
+            setFeuilleGoogle(false)
+            if (issueGoogle) window.history.replaceState(null, '', '/dashboard/calendrier')
+          }}
+        />
+      )}
 
       {menuAjout && (
         <Feuille titre="Ajouter" onClose={() => setMenuAjout(false)}>

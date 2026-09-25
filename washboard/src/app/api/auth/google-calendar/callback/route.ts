@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { exchangeCode } from '@/lib/google-calendar'
 import { logger } from '@/lib/logger'
 import { STATE_COOKIE } from '../route'
+import { destinationRetourGoogle, retourVersAgenda } from '@/lib/googleAgendaRetour'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
@@ -23,17 +24,23 @@ export async function GET(request: NextRequest) {
   const code  = searchParams.get('code')
   const state = searchParams.get('state')
 
+  const attendu = request.cookies.get(STATE_COOKIE)?.value
+  // Le retour vers l'Agenda de la PWA n'est lu que dans un `state` identique au
+  // cookie : un `state` inconnu n'a jamais de destination particulière. Lu avant
+  // le contrôle du code, pour qu'un refus dans l'écran de Google (pas de `code`)
+  // ramène aussi à l'Agenda.
+  const versAgenda = !!attendu && !!state && attendu === state && retourVersAgenda(state)
+
   if (!code || !state) {
-    return NextResponse.redirect(`${BASE}/dashboard/admin?error=google-calendar`)
+    return NextResponse.redirect(destinationRetourGoogle(BASE, versAgenda, 'erreur'))
   }
 
-  const attendu = request.cookies.get(STATE_COOKIE)?.value
   if (!attendu || attendu !== state) {
     // Pas d'exception : ce cas se produit aussi quand quelqu'un relance un
     // vieux lien. Mais il doit se voir dans les journaux, car c'est aussi la
     // signature d'une tentative.
     logger.warn('google_calendar.state_mismatch', { avecCookie: !!attendu })
-    return NextResponse.redirect(`${BASE}/dashboard/admin?error=google-calendar`)
+    return NextResponse.redirect(destinationRetourGoogle(BASE, versAgenda, 'erreur'))
   }
 
   const supabase = await createClient()
@@ -45,12 +52,12 @@ export async function GET(request: NextRequest) {
   const { data: washer, error: washerError } = await supabase
     .from('washers').select('id').eq('user_id', user.id).single()
   if (washerError || !washer) {
-    return NextResponse.redirect(`${BASE}/dashboard/admin?error=google-calendar`)
+    return NextResponse.redirect(destinationRetourGoogle(BASE, versAgenda, 'erreur'))
   }
 
   const refreshToken = await exchangeCode(code)
   if (!refreshToken) {
-    return NextResponse.redirect(`${BASE}/dashboard/admin?error=google-calendar-no-token`)
+    return NextResponse.redirect(destinationRetourGoogle(BASE, versAgenda, 'sans-jeton'))
   }
 
   const { error } = await supabase
@@ -63,10 +70,10 @@ export async function GET(request: NextRequest) {
     // Sans cette trace, un echec d'ecriture affichait « connecte » alors que
     // l'agenda ne l'etait pas.
     logger.error('google_calendar.token_save_failed', { washerId: washer.id }, error)
-    return NextResponse.redirect(`${BASE}/dashboard/admin?error=google-calendar`)
+    return NextResponse.redirect(destinationRetourGoogle(BASE, versAgenda, 'erreur'))
   }
 
-  const response = NextResponse.redirect(`${BASE}/dashboard/admin?tab=identite&success=google-calendar`)
+  const response = NextResponse.redirect(destinationRetourGoogle(BASE, versAgenda, 'ok'))
   // Jeton consomme : il ne doit plus servir.
   response.cookies.delete(STATE_COOKIE)
   return response

@@ -93,7 +93,7 @@ export type Unavailability = { id: string; start_date: string; end_date: string;
 // catégorie) et ManualBooking (forme du formulaire d'ajout manuel) vivent
 // maintenant dans `@/hooks/useRendezVousManuel` — sous-lot 3, voir plus haut.
 
-export type CalendrierProps = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string; facturationPrete: boolean }
+export type CalendrierProps = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string; facturationPrete: boolean; googleAgendaConnecte: boolean }
 
 export default function CalendrierDashboardV1({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId, facturationPrete }: CalendrierProps) {
   // serviceTypes/typeName viennent maintenant de useRendezVousManuel (plus bas).
