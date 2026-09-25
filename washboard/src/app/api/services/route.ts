@@ -25,10 +25,13 @@ export async function POST(request: NextRequest) {
   // parce qu'il a changé d'offre casserait ses réservations en cours.
   const plafondCatalogue = quotaPrestations(washer)
   if (plafondCatalogue !== null) {
+    // Seules les prestations ACTIVES occupent une place : celles mises en
+    // veille sont conservees mais invisibles, elles ne consomment rien.
     const { count, error: errCount } = await supabase
       .from('services')
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', washer.id)
+      .eq('en_veille', false)
 
     // Un comptage illisible refuse : sans le nombre, le plafond ne veut plus
     // rien dire, et laisser passer reviendrait à le supprimer en silence.

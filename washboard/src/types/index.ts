@@ -90,6 +90,8 @@ export type Service = {
   vehicle_types: string[]
   vehicle_price_overrides: Record<string, number>
   addons: ServiceAddon[]
+  /** En veille : conservee en base, invisible pour les clients. */
+  en_veille?: boolean
 }
 
 export type Availability = {
