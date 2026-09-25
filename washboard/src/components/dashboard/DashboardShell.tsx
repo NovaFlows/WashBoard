@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, planEffectif, doitChoisirFormule, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, planEffectif, doitChoisirFormule, accesComplet, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
@@ -32,7 +32,7 @@ type Props = {
   slug?: string | null
 }
 
-function PlanBadge({ plan, grandfathered, effectif }: { plan?: Plan; grandfathered?: boolean; effectif: Plan }) {
+function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
   // `plan` est ce qui est écrit en base, `effectif` ce qui s'applique
   // aujourd'hui : après un essai non transformé, les deux diffèrent, et c'est
   // le second que le laveur doit lire.
@@ -294,6 +294,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     trial_ends_at: trialEndsAt,
   }
   const offreEffective = planEffectif(fiche)
+  const complet = accesComplet(fiche)
   const choisirFormule = doitChoisirFormule(fiche)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
@@ -372,7 +373,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
             {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
                 sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
                 ce qui laisserait croire à un abonnement qui n'existe pas. */}
-            {washerName && <PlanBadge plan={plan} grandfathered={grandfathered} effectif={offreEffective} />}
+            {washerName && <PlanBadge grandfathered={complet} effectif={offreEffective} />}
             <form action="/api/auth/logout" method="POST">
               <button
                 aria-label="Se déconnecter"

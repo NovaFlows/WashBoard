@@ -266,6 +266,16 @@ export function essaiTermineSansFormule(
   return now.getTime() > echeance.getTime()
 }
 
+/** Vrai si ce compte a tout ouvert en tant que client historique.
+ *
+ *  Distinct de `grandfathered` lu brut : sous simulation locale, on veut voir
+ *  ce que voit un laveur ordinaire. Sans ce détour, le bandeau affichait
+ *  « Accès complet » pendant que toutes les sections étaient verrouillées —
+ *  deux informations contradictoires sur le même écran. */
+export function accesComplet(w: PlanInfo | null | undefined): boolean {
+  return !!w?.grandfathered && !simulationActive()
+}
+
 /** L'offre qui s'applique RÉELLEMENT aujourd'hui.
  *
  *  `washerPlan` dit ce qui est écrit en base ; celle-ci dit ce à quoi le laveur

@@ -311,6 +311,8 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         </div>
       </div>
 
+      </SectionVerrouillee>
+      <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Couleur */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
@@ -358,6 +360,8 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         </div>
       </div>
 
+      </SectionVerrouillee>
+      <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Thème de fond */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
