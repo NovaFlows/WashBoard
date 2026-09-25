@@ -20,12 +20,15 @@
 > Actions que seul Alexandre peut faire (accès Vercel / Supabase). Tant qu'une case est
 > ouverte, le lui redire en fin de réponse. Cocher + dater quand c'est fait.
 
-- [ ] **Vercel → projet `wash-board` → Settings → Environment Variables → `SUPPORT_ADMIN_EMAILS` :
-      cocher « Preview » en plus de « Production »** (même valeur), sauvegarder, puis
+- [~] **Vercel → projet `wash-board` → Settings → Environment Variables → `SUPPORT_ADMIN_EMAILS` :
+      cocher « Preview » en plus de « Production »** — *fait par Alexandre le 2026-09-26 (vérifié :
+      la variable est bien en Production + Preview), mais l'accès équipe n'apparaît toujours pas sur
+      l'essai : lire la ligne de diagnostic au bas de « Plus » (compte · équipe · liste du
+      déploiement) pour savoir si c'est l'adresse du compte ou la variable.* (même valeur), sauvegarder, puis
       redéployer la branche `refonte-pwa`. Sans ça, la PWA de test ne le reconnaît pas comme
       équipe : ni le formulaire « Prendre la main sur un compte » (Assistance), ni le bouton
       dans les conversations, ni la ligne « Support (équipe) » de Plus n'apparaissent.
-- [ ] **Supabase (SQL Editor) — colonne de suppression des conversations d'Assistance côté
+- [x] 2026-09-26 (dit par Alexandre) — **Supabase (SQL Editor) — colonne de suppression des conversations d'Assistance côté
       laveur** (sans elle, le glisser-supprimer répond « Impossible de supprimer », la liste
       continue de marcher) :
       ```sql
