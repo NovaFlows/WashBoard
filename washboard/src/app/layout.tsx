@@ -28,8 +28,21 @@ export const viewport: Viewport = {
   ],
 };
 
+// Le <title> place la catégorie avant la marque ("Logiciel de gestion..."
+// plutôt que "WashBoard — ...") : c'est ce que Google affiche en premier
+// dans les résultats, et ce sur quoi il juge la pertinence par rapport à la
+// requête tapée. Mesuré au pixel (canvas 2D, police Arial 20px — celle que
+// Google utilise pour le titre du résultat sur desktop) : 580px, sous la
+// limite de troncature généralement admise autour de 600px. L'ancien title
+// ("WashBoard — L'outil de gestion...") mesurait 733px, largement tronqué.
+//
+// « nettoyage ET entretien » : les deux mots comptent. Un laveur auto et un
+// nettoyeur de canapés font du nettoyage, mais l'entretien de piscines et de
+// terrasses n'en est pas — et ce sont des métiers que WashBoard sert déjà.
+// Une version sans « entretien » tenait en 541px, mais rétrécissait le
+// positionnement pour 39px gagnés.
 export const metadata: Metadata = {
-  title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
+  title: "Logiciel de gestion nettoyage et entretien à domicile | WashBoard",
   manifest: "/manifest.webmanifest",
   applicationName: "WashBoard",
   icons: {
@@ -48,7 +61,15 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   description: "Le logiciel tout-en-un des pros du nettoyage et de l'entretien à domicile (lavage auto, detailing, ménage, entretien de piscine...) : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
-  keywords: ["outil laveur auto mobile", "outil gestion lavage auto", "logiciel laveur auto", "lavage auto mobile", "laveur auto mobile", "logiciel lavage auto", "réservation lavage voiture", "detailing", "WashBoard", "logiciel detailing", "logiciel nettoyage à domicile", "outil pro du nettoyage mobile", "logiciel entretien à domicile"],
+  // Nettoyée le 2026-09-26 : retrait des doublons "outil X" / "logiciel X"
+  // qui décrivaient la même idée deux fois (ex. "outil gestion lavage auto"
+  // et "logiciel lavage auto"), et de "detailing" seul — trop ambigu pris
+  // isolément, il peut laisser croire que WashBoard est un service de
+  // detailing plutôt qu'un logiciel pour les pros qui en font. Rien
+  // n'a été ajouté : ces champs ne sont plus lus par Google, seulement par
+  // certains systèmes tiers, donc on corrige ce qui est faux/redondant sans
+  // tenter d'en tirer un gain de référencement.
+  keywords: ["laveur auto mobile", "logiciel lavage auto", "logiciel detailing", "réservation lavage voiture", "logiciel nettoyage à domicile", "logiciel entretien à domicile", "WashBoard"],
   authors: [{ name: "WashBoard" }],
   creator: "WashBoard",
   metadataBase: new URL("https://www.washboard.fr"),
@@ -58,13 +79,13 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://www.washboard.fr",
     siteName: "WashBoard",
-    title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
-    description: "L'outil de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
+    title: "Logiciel de gestion nettoyage et entretien à domicile | WashBoard",
+    description: "Le logiciel de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "WashBoard — L'outil de gestion pour pros du nettoyage et de l'entretien à domicile",
-    description: "L'outil de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
+    title: "Logiciel de gestion nettoyage et entretien à domicile | WashBoard",
+    description: "Le logiciel de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
   },
   robots: {
     index: true,

@@ -404,6 +404,64 @@
   - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
         (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
 
+## 🔎 Référencement de la landing — état au 2026-09-26
+
+> Chantier ouvert par Ryan à partir du document « Optimiser la landing page
+> WashBoard pour améliorer sa découvrabilité SEO et IA ». **P0 terminé, P1
+> commencé.** Mesures faites sur les deux sites le 2026-09-26, pas reprises
+> du document : il se trompait sur un point important.
+
+**Ce que le document dit et qui est faux** : il attribue l'avance de
+CarnetWash à son H1. Leur H1 est « Plus de clients. Moins de paperasse. », une
+accroche bénéfice exactement comme « Fais plus. Gère moins. ». **Le H1 de
+WashBoard ne doit pas bouger** — décision de Ryan. L'écart était dans le
+`<title>` (« outil » au lieu de « logiciel », marque avant catégorie, 733 px
+donc tronqué) et dans le balisage.
+
+- [x] **P0 — 6/6.** `<title>` « Logiciel de gestion nettoyage et entretien à
+      domicile | WashBoard » (580 px) ; balisage FAQPage + WebSite ; cible et
+      six métiers dans le premier écran ; « tout-en-un » dans un titre ; les
+      créneaux groupés érigés en différenciateur.
+- [ ] **P1 — en cours.** `/logiciel-lavage-auto` est construite et sert de
+      gabarit (`MetierPageTemplate.tsx`, `lib/metiers.ts`). **Restent cinq
+      métiers** : vitres, textiles/canapés, ménage, piscines, et le choix de
+      traiter ou non `exterieur` (terrasses/façades) qui a des articles mais
+      aucune carte sur la landing.
+  - Se recopie sans effort : le gabarit, le maillage vers les articles du même
+    thème, l'ajout au sitemap, le lien depuis la section « Pour quels métiers ».
+  - **S'écrit à la main pour chaque métier** : les trois contraintes réelles du
+    métier, les fonctionnalités qui le concernent (un ménage n'a pas de « type
+    de véhicule », une piscine a une saisonnalité), la FAQ, le H1 et le chapô.
+- [ ] **P2, pas commencé** : comparatifs, études de cas, contenu éditorial par
+      métier, liens externes.
+
+**Trois règles tirées de ce chantier, à ne pas perdre :**
+
+1. **Tout ce qui est écrit sur une page publique se vérifie dans le code
+   avant publication.** Trois affirmations fausses ont été trouvées en deux
+   jours : les factures « déjà conformes » à la réforme 2027, une offre
+   « envoyée aux voisins » du client qui réserve (rien n'envoie rien à
+   personne), et une FAQ promettant 2 mois offerts sur l'annuel alors que
+   l'offre est passée à 1 le 2026-09-03 (`ed5b235`).
+2. **Aucun chiffre commercial écrit à la main.** Prix, mois offerts et quotas
+   se dérivent de `lib/plan.ts`. C'est ce qui a fait mentir la FAQ pendant
+   trois semaines.
+3. **Le site tutoie.** La première page métier vouvoyait 44 fois : un visiteur
+   changeait d'interlocuteur en passant de l'accueil à la page.
+
+**Le sitemap n'est pas un levier de classement**, seulement une liste de
+découverte. Ce qui compte est le nombre de questions différentes auxquelles le
+site répond : 16 adresses au départ, 20 aujourd'hui. Les fausses dates
+`lastModified` (recalculées à chaque requête sur trois URLs) ont été retirées.
+
+**L'annuaire : tranché, ne pas rouvrir sans nouvel élément.** CarnetWash a 112
+fiches `/pro/…`, soit 90 % de son site. Nos pages `/book/[slug]` restent en
+`noindex` : les ouvrir ne ferait que +3 ou +4 pages (on n'a pas 112 laveurs),
+ça chargerait le poste qui fait déborder le quota Supabase, et ça publierait le
+nom, l'adresse et le téléphone de micro-entrepreneurs sans leur consentement
+(avis `legal` requis). La bonne forme, le jour où il y aura des clients : une
+**page d'annuaire distincte, sur opt-in**, en gardant `/book` en `noindex`.
+
 ## 🛡️ Prod-grade (observabilité + non-régression)
 
 - [x] 2026-07-02 — **Socle prod mis en place** (commit 9342092) :

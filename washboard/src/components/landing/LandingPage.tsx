@@ -11,6 +11,9 @@ import {
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
 import { SOCIAL_LINKS } from '@/components/ui/socialLinks'
+import { FAQ_ITEMS } from '@/lib/faq'
+import { metierPageForTheme } from '@/lib/metiers'
+import type { Theme } from '@/lib/blog'
 
 // Slogans courts et uniformes — pas de saut de layout
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
@@ -99,14 +102,24 @@ const ETAPES = [
   { titre: 'Partage ton lien', desc: 'Instagram, TikTok, Google, ton site : les réservations arrivent dans ton agenda.' },
 ]
 
+// Les 6 étapes que couvre le même outil, du premier clic du client à son
+// retour. Sert à rendre visible la catégorie « tout-en-un » du produit
+// (cahier des charges P0) sans dupliquer la section Fonctionnalités.
+const FLUX_TOUT_EN_UN = ['Réservation', 'Planning', 'Intervention', 'Client', 'Suivi', 'Fidélisation']
+
 // Métiers de la section « Pour qui ? ». WashBoard n'en impose aucun : le
 // laveur crée ses catégories et prestations, la liste sert d'exemples.
-const METIERS = [
-  { titre: 'Lavage auto & detailing', desc: 'Intérieur, extérieur, rénovation, par véhicule ou en pack.' },
-  { titre: 'Canapés & textiles', desc: 'Canapés, matelas, tapis et moquettes, chez le client.' },
-  { titre: 'Ménage à domicile', desc: 'Ménage régulier ou ponctuel, remise en état.' },
-  { titre: 'Vitres', desc: 'Chez les particuliers comme sur les vitrines des commerces.' },
-  { titre: 'Piscines', desc: 'Entretien régulier, mise en route et hivernage.' },
+//
+// `theme` relie une carte à sa page métier dédiée (@/lib/metiers) quand elle
+// existe : voir metierPageForTheme plus bas. Une carte sans page correspondante
+// (aucune entrée dans METIER_PAGES, ou pas de theme du tout comme « Et ton
+// métier ») reste un simple encart, sans lien.
+const METIERS: { titre: string; desc: string; theme?: Theme }[] = [
+  { titre: 'Lavage auto & detailing', desc: 'Intérieur, extérieur, rénovation, par véhicule ou en pack.', theme: 'auto' },
+  { titre: 'Canapés & textiles', desc: 'Canapés, matelas, tapis et moquettes, chez le client.', theme: 'textiles' },
+  { titre: 'Ménage à domicile', desc: 'Ménage régulier ou ponctuel, remise en état.', theme: 'menage' },
+  { titre: 'Vitres', desc: 'Chez les particuliers comme sur les vitrines des commerces.', theme: 'vitres' },
+  { titre: 'Piscines', desc: 'Entretien régulier, mise en route et hivernage.', theme: 'piscine' },
   { titre: 'Et ton métier', desc: 'Catégories, prestations, durées et prix : tout se configure.' },
 ]
 
@@ -506,12 +519,17 @@ export default function LandingPage() {
               >
                 <RotatingHeadline />
               </motion.h1>
+              {/* Répond dès le premier écran à « c'est pour qui ? » : le
+                  logiciel de gestion des pros qui se déplacent chez leurs
+                  clients, métiers cités en clair — pour le visiteur pressé
+                  comme pour un moteur qui lit la page. */}
               <motion.p
                 variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { duration: 0.55 } } }}
-                className="text-base sm:text-lg text-slate-600 dark:text-white/65 mb-10 max-w-md leading-relaxed"
+                className="text-base sm:text-lg text-slate-600 dark:text-white/65 mb-8 max-w-lg leading-relaxed"
               >
-                Réservation en ligne automatique. Créneaux groupés par quartier.
-                Tu arrives, tu laves, tu repars.
+                Le logiciel de gestion des pros qui se déplacent chez leurs clients&nbsp;:
+                lavage auto, detailing, canapés, ménage, vitres, piscines.
+                Réservation en ligne, créneaux groupés.
               </motion.p>
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { duration: 0.55 } } }}
@@ -544,11 +562,11 @@ export default function LandingPage() {
             >
               <div className="wb-hero-shot rounded-2xl overflow-hidden">
                 <Image
-                  src="/landing/calendrier-clair.webp" alt="Le calendrier WashBoard, avec les créneaux groupés par zone"
+                  src="/landing/calendrier-clair.webp" alt="Le calendrier WashBoard, avec les créneaux groupés marqués d une étoile"
                   width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto dark:hidden"
                 />
                 <Image
-                  src="/landing/calendrier-sombre.webp" alt="Le calendrier WashBoard, avec les créneaux groupés par zone"
+                  src="/landing/calendrier-sombre.webp" alt="Le calendrier WashBoard, avec les créneaux groupés marqués d une étoile"
                   width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto hidden dark:block"
                 />
               </div>
@@ -622,12 +640,40 @@ export default function LandingPage() {
           </p>
         </FadeUp>
         <FadeGroup className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          {METIERS.map((m) => (
-            <FadeItem key={m.titre} className="bg-white dark:bg-slate-950 p-5 sm:p-6">
-              <p className="font-bold text-slate-900 dark:text-white">{m.titre}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</p>
-            </FadeItem>
-          ))}
+          {METIERS.map((m) => {
+            // Seuls les métiers avec une page publiée (@/lib/metiers) sont
+            // cliquables : un lien vers une page qui n'existe pas dessert plus
+            // qu'il n'aide.
+            const page = m.theme ? metierPageForTheme(m.theme) : undefined
+            const contenu = (
+              <>
+                <p className="font-bold text-slate-900 dark:text-white">{m.titre}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</p>
+                {page && (
+                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF]">
+                    En savoir plus
+                    <svg aria-hidden className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                )}
+              </>
+            )
+            return (
+              <FadeItem key={m.titre} className="bg-white dark:bg-slate-950">
+                {page ? (
+                  <Link
+                    href={`/${page.slug}`}
+                    className="block h-full p-5 sm:p-6 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8] focus-visible:ring-inset"
+                  >
+                    {contenu}
+                  </Link>
+                ) : (
+                  <div className="p-5 sm:p-6">{contenu}</div>
+                )}
+              </FadeItem>
+            )
+          })}
         </FadeGroup>
       </section>
 
@@ -644,6 +690,35 @@ export default function LandingPage() {
           </p>
         </FadeUp>
 
+        {/* Renforce « L'essentiel. Sans le reste. » plutôt que de dupliquer une
+            section : le mot « tout-en-un » devient lisible dans un titre, et
+            le parcours réservation → fidélisation, jusque-là seulement
+            implicite dans le paragraphe au-dessus, est montré explicitement. */}
+        <FadeUp className="mb-14">
+          <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Un logiciel tout-en-un, de la réservation à la fidélisation.
+          </h3>
+          <p className="mt-3 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+            Le client réserve, le rendez-vous tombe dans ton planning, tu interviens chez lui, sa fiche
+            se met à jour, WashBoard s&apos;occupe du suivi puis de le faire revenir — un seul outil du
+            premier clic à la fidélisation, jamais un logiciel différent à chaque étape.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-3">
+            {FLUX_TOUT_EN_UN.map((etape, i) => (
+              <div key={etape} className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                  {etape}
+                </span>
+                {i < FLUX_TOUT_EN_UN.length - 1 && (
+                  <svg aria-hidden className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </div>
+            ))}
+          </div>
+        </FadeUp>
+
         {/* Feature phare */}
         <FadeUp className="mb-4">
           <div
@@ -651,26 +726,34 @@ export default function LandingPage() {
             className="border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
           >
             <div>
-              <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Fonctionnalité clé</p>
+              <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Ce qui fait la différence</p>
               <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">
-                Créneaux groupés par zone
+                Créneaux groupés au temps de trajet
               </h3>
               <p className="text-white/75 leading-relaxed mb-6 text-sm sm:text-base">
-                Un client réserve rue des Acacias. WashBoard envoie une offre à ses voisins du même bloc. Tu arrives une fois, tu enchaînes 3 prestations. Tu ne perds pas de temps sur la route.
+                Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à
+                tes rendez-vous déjà prévus ce jour-là — pas au découpage d&apos;un quartier sur une carte.
+                À moins d&apos;un quart d&apos;heure de route de l&apos;un d&apos;eux — le seuil se règle dans tes
+                paramètres — les horaires juste avant ou après sont mis en avant, avec la remise que tu as
+                réglée si tu en as réglé une.
               </p>
               <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold">
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                Plusieurs prestations dans la même rue, un seul trajet
+                Un trajet en moins entre deux rendez-vous proches
               </div>
+              <p className="mt-4 text-xs text-white/50 leading-relaxed">
+                Et même sans remise activée, WashBoard ne propose jamais un horaire que le trajet réel
+                rendrait injoignable entre deux rendez-vous.
+              </p>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-4 space-y-1.5">
               <p className="text-xs font-black text-white/40 uppercase tracking-wider mb-4">Bordeaux Sud — aujourd&apos;hui</p>
               {[
                 { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
-                { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€ zone' },
-                { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart', note: '−5€ zone' },
+                { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€ optimisé' },
+                { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart', note: '−5€ optimisé' },
                 { time: '14:00', label: 'Lucie M. — Pack famille', type: 'normal' },
               ].map((item) => (
                 <div key={item.time} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#00C4D4]/10' : 'bg-white/[0.03]'}`}>
@@ -949,19 +1032,7 @@ export default function LandingPage() {
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-12">Questions</p>
         </FadeUp>
         <div className="divide-y divide-slate-200 dark:divide-slate-800">
-          {[
-            { q: 'Mes clients doivent créer un compte ?', a: 'Non. Ils réservent directement sur ta page, sans compte, sans appli. Juste leur nom, email et téléphone.' },
-            { q: 'C\'est long à configurer ?', a: 'Non. En 10 minutes tu as ta page de réservation avec tes services, tes horaires et ta zone.' },
-            { q: 'Ça marche pour d\'autres métiers que le lavage auto ?', a: 'Oui. Tu crées tes propres catégories et prestations, avec leurs durées et leurs prix : ménage, canapés, vitres, piscines… WashBoard n\'impose aucun métier.' },
-            { q: 'Comment mes clients trouvent ma page ?', a: 'Tu partages ton lien partout : bio Instagram, TikTok, fiche Google, ton site, WhatsApp. Des liens dédiés à chaque réseau te montrent ensuite d\'où viennent tes réservations.' },
-            { q: 'Je suis prévenu quand un client réserve ?', a: 'Oui, par email à chaque réservation. Et si tu installes WashBoard sur ton téléphone, aussi en notification (en bêta).' },
-            { q: 'Que se passe-t-il après le mois gratuit ?', a: 'Tu choisis de continuer à 49€/mois ou non. Ton compte est suspendu sans frais si tu arrêtes. Aucune carte n\'est demandée pendant l\'essai.' },
-            { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, en échange de 2 mois offerts.' },
-            { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Pro. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
-            { q: 'Les clients peuvent payer en ligne ?', a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.' },
-            { q: 'Et la facturation électronique obligatoire en 2027 ?', a: 'À partir du 1ᵉʳ septembre 2027, deux choses changent. Si tu factures des entreprises, tes factures devront être transmises dans un format électronique via une plateforme agréée par l\'État — tes factures WashBoard ont déjà toutes les mentions obligatoires, on travaille sur ce raccordement, sans engagement de date pour l\'instant. Si tu ne factures que des particuliers (le cas de la plupart des laveurs), tu n\'as pas ce format à produire, mais tu devras transmettre à l\'administration un résumé périodique de tes ventes — c\'est l\'e-reporting, et la franchise de TVA n\'en dispense pas. WashBoard n\'y est pas raccordé aujourd\'hui ; on te dira où on en est bien avant l\'échéance.' },
-            { q: 'Et mes données ?', a: 'Elles restent les tiennes. Tu peux supprimer ton compte à tout moment depuis tes paramètres : tout est effacé sous 30 jours.' },
-          ].map((item) => (
+          {FAQ_ITEMS.map((item) => (
             <FadeUp key={item.q} className="py-6 sm:py-7">
               <p className="font-bold text-slate-900 dark:text-white mb-2">{item.q}</p>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{item.a}</p>
