@@ -8,6 +8,7 @@ import { formatPrice, finalDisplayPrice } from '@/lib/pricing'
 import { effectivePrice } from '@/lib/crmStats'
 import { estimateTravelMinutes, haversineKm } from '@/lib/geo'
 import { cleStatut, type StatutClef } from '@/lib/calendarLayout'
+import { jourParisDe } from '@/lib/chiffresPeriode'
 import { formatConversionRate } from '@/lib/funnelStats'
 import { DEPARTMENTS } from '@/lib/france-departments'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
@@ -220,11 +221,21 @@ export default function AccueilV2({
 }: Props) {
   const [personnaliser, setPersonnaliser] = useState(false)
 
+  // « Prochain » veut dire À VENIR. Le serveur met dans `rdvProchains` tout ce qui n'est ni
+  // terminé ni annulé, sans borne de date : un rendez-vous d'avant-hier jamais clôturé s'y
+  // trouve encore, et s'affichait ici comme prochain rendez-vous, daté du passé (signalé par
+  // Alexandre, 2026-09-26). On ne garde que les jours postérieurs à aujourd'hui — les
+  // rendez-vous du jour, eux, sont dans `rdvAujourdhui`. Le site, lui, ne change pas.
+  const prochainsAVenir = useMemo(
+    () => rdvProchains.filter(b => (jourParisDe(b.scheduled_at) ?? '') > dateDuJour),
+    [rdvProchains, dateDuJour],
+  )
+
   // Le héros : le prochain rendez-vous du jour, et à défaut le prochain tout
   // court. Un écran vide un jour de repos n'aiderait personne à savoir où il
   // va ; la date s'affiche alors dans la carte pour qu'aucune confusion ne
   // soit possible.
-  const prochain = rdvAujourdhui[0] ?? rdvProchains[0] ?? null
+  const prochain = rdvAujourdhui[0] ?? prochainsAVenir[0] ?? null
   const reste = rdvAujourdhui.slice(1)
   const routeDuJour = useMemo(() => minutesDeRoute(rdvAujourdhui), [rdvAujourdhui])
   const totalDuJour = useMemo(() => rdvAujourdhui.reduce((s, b) => s + montant(b), 0), [rdvAujourdhui])
@@ -311,7 +322,7 @@ export default function AccueilV2({
 
       <BlocsOptionnels
         widgets={widgets}
-        rdvProchains={rdvProchains}
+        rdvProchains={prochainsAVenir}
         stats={stats}
         clients={clients}
         trafic={trafic}

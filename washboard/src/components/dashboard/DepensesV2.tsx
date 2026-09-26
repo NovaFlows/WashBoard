@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
 import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
-import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
+import { PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
 import SelecteurPeriodeV2 from '@/components/dashboard/SelecteurPeriodeV2'
 import { FeuilleAjoutDepenseV2, FeuilleAjoutRecurrentV2 } from '@/components/dashboard/FeuillesDepenseV2'
@@ -188,20 +188,13 @@ export default function DepensesV2() {
           {!depenses ? (
             <p className={`py-8 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chargement…</p>
           ) : depenses.length === 0 ? (
-            <div className="px-4 py-6">
-              <p className={`text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Aucun frais sur cette période. Carburant, produits, matériel : tout ce que vous notez ici
-                se retire de votre chiffre d’affaires dans Chiffres.
-              </p>
-              <button
-                type="button"
-                onClick={() => setFeuille('frais')}
-                className={`${BOUTON} mt-3.5 w-full text-white`}
-                style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
-              >
-                Ajouter un frais
-              </button>
-            </div>
+            /* Un seul bouton d'ajout sur l'écran : le « + » de l'en-tête. Un second ici
+               faisait doublon (Alexandre, 2026-09-26). */
+            <p className={`px-4 py-6 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              Aucun frais sur cette période. Touchez « + » en haut pour en ajouter un : carburant,
+              produits, matériel… tout ce que vous notez ici se retire de votre chiffre d’affaires
+              dans Chiffres.
+            </p>
           ) : (
             <ul className="divide-y divide-[color:var(--v2-filet)] px-4">
               {depenses.map(d => (
