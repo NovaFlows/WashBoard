@@ -2,21 +2,20 @@ import Link from 'next/link'
 
 /** Enveloppe un réglage que l'offre du laveur ne comprend pas.
  *
- *  Le réglage reste VISIBLE, flouté. Il ne disparaît pas : un écran qui se vide
- *  selon l'offre laisse croire que la fonctionnalité n'existe pas, alors qu'on
- *  cherche justement à donner envie de l'avoir. On voit qu'il y a quelque
- *  chose, on ne peut pas s'en servir, et une pastille dit ce qu'il faut pour
- *  l'ouvrir.
+ *  Le titre et l'explication restent NETS ; seuls les champs — saisies,
+ *  interrupteurs, boutons, vignettes — sont flous. Sans ça, le bloc entier
+ *  devenait une tache grise : le laveur voyait qu'il lui manquait quelque
+ *  chose, mais pas quoi, donc sans jamais avoir envie de l'acheter. Il lit
+ *  maintenant « Avis Google — envoyez automatiquement un email à vos clients
+ *  après un lavage terminé », ce qui est exactement l'argument de vente.
  *
- *  Le flou plutôt qu'un simple grisé : un bloc à moitié transparent se lit
- *  encore, donc le laveur essaie de cliquer et se demande pourquoi rien ne
- *  répond. Flouté, il n'y a pas d'ambiguïté sur l'état.
+ *  Le tri se fait par TYPE D'ÉLÉMENT plutôt que par une liste de textes à
+ *  passer en paramètre : chaque section aurait dû répéter son propre titre, et
+ *  les deux copies auraient divergé au premier changement de formulation.
  *
- *  Ce n'est qu'un habillage : le verrou qui compte est côté serveur, dans
- *  `PATCH /api/washer`. Ici on évite au laveur de remplir un formulaire qui
- *  finirait par un refus — et on ne floute JAMAIS une donnée qu'il n'aurait
- *  pas le droit de voir, puisqu'un flou CSS se retire en deux clics dans les
- *  outils du navigateur. Ce composant n'enveloppe que ses propres réglages. */
+ *  Ce n'est pas une barrière — un flou CSS se retire en deux clics dans les
+ *  outils du navigateur. Ce composant n'enveloppe que les propres réglages du
+ *  laveur, jamais une donnée qu'il n'aurait pas le droit de voir. */
 export function SectionVerrouillee({ verrouille, planLabel, children }: {
   verrouille: boolean
   planLabel: string
@@ -26,19 +25,26 @@ export function SectionVerrouillee({ verrouille, planLabel, children }: {
 
   return (
     <div className="relative">
-      {/* `inert` neutralise clic ET clavier, là où le flou seul laissait la
-          section navigable au Tab — un laveur au clavier pouvait encore la
-          remplir sans jamais voir ce qu'il tapait. Il la retire aussi des
-          lecteurs d'écran, qui sinon lisaient un formulaire inutilisable. */}
-      <div inert className="select-none blur-[3px] opacity-70">
+      {/* `inert` neutralise clic ET clavier : sans lui, la section restait
+          navigable au Tab et le laveur pouvait la remplir sans voir ce qu'il
+          tapait. Il la retire aussi des lecteurs d'écran. */}
+      <div
+        inert
+        className={
+          'select-none '
+          // Les champs deviennent illisibles, les textes qui les expliquent
+          // restent nets.
+          + '[&_input]:blur-[4px] [&_textarea]:blur-[4px] [&_select]:blur-[4px] '
+          + '[&_button]:blur-[4px] [&_img]:blur-[4px] [&_svg]:opacity-40'
+        }
+      >
         {children}
       </div>
 
-      {/* Voile : sépare le flou du reste de la page. Il ÉCLAIRCIT en clair et
-          ASSOMBRIT en sombre — un voile blanc en mode sombre ferait briller la
-          zone verrouillée plus que le contenu autour, exactement l'inverse de
-          ce qu'on veut. */}
-      <div className="absolute inset-0 rounded-2xl bg-white/40 dark:bg-slate-950/50" />
+      {/* Voile léger : dit « inactif » sans empêcher de lire. Il éclaircit en
+          clair et ASSOMBRIT en sombre — un voile blanc en mode sombre ferait
+          briller la zone verrouillée plus que le contenu autour. */}
+      <div className="absolute inset-0 rounded-2xl bg-white/25 dark:bg-slate-950/35" />
 
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <Link
