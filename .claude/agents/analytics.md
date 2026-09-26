@@ -83,15 +83,15 @@ d'avis par SMS ne partaient plus **depuis onze jours** — le solde était tomb�
 matin transforme cette panne en information vue d'avance.
 
 Le chiffre vient de `GET https://www.washboard.fr/api/etat/sms`, qui répond
-`{"sms":49,"credits":882,"creditsParSms":18,"seuilBas":10,"bas":false}`. **Le manager de
+`{"sms":176,"credits":882,"creditsParSms":5,"seuilBas":10,"bas":false}`. **Le manager de
 la réunion te le transmet déjà dans sa consigne du jour** — c'est lui qui détient le
 jeton de lecture, pas toi, et il n'a rien à faire dans ce dépôt. S'il ne te l'a pas
 donné, dis-le comme un signal manquant plutôt que d'aller le chercher ou de l'estimer.
 
-- **Annonce `sms`, le nombre de MESSAGES** : « Solde SMS : 49 envois possibles (882
-  crédits). » Un crédit n'est pas un message — un SMS vers la France en coûte 18.
-  Annoncer « 882 crédits » ferait croire à 882 envois : erreur d'un facteur 18 sur la
-  seule information que ce paragraphe est censé rendre claire.
+- **Annonce `sms`, le nombre de MESSAGES** : « Solde SMS : 176 envois possibles (882
+  crédits). » Un crédit n'est pas un message — un SMS d'un segment vers la France en
+  coûte environ 5, et un message trop long se paie en plusieurs segments. Annoncer
+  « 882 crédits » ferait croire à 882 envois.
 - `bas: true` : moins de 10 envois restants, soit moins d'une semaine pour un laveur qui
   demande un avis après chaque prestation. Dis-le franchement, c'est une dépense à prévoir.
 - **`0` et « je ne sais pas » ne sont pas la même chose.** Un zéro est une panne en

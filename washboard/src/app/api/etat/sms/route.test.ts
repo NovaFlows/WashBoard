@@ -29,26 +29,27 @@ afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks() })
 
 describe('GET /api/etat/sms', () => {
   it('traduit les crédits en MESSAGES, ce qui n est pas la même chose', async () => {
-    // 900 crédits = 50 SMS, pas 900. Un crédit est une unité de facturation.
+    // 900 crédits = 180 SMS, pas 900. Un crédit est une unité de
+    // facturation : un SMS d'un segment vers la France en coûte environ 5.
     const res = await appel('jeton-de-test')
     const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.credits).toBe(900)
-    expect(body.sms).toBe(50)
+    expect(body.sms).toBe(180)
     expect(body.bas).toBe(false)
   })
 
   it('signale un solde bas sur le nombre de messages, pas sur les crédits', async () => {
-    // 200 crédits paraissent confortables, mais ne valent que 11 SMS.
     solde = 200
     const body = await (await appel('jeton-de-test')).json()
     expect(body.credits).toBe(200)
-    expect(body.sms).toBe(11)
+    expect(body.sms).toBe(40)
     expect(body.bas).toBe(false)
 
-    solde = 150
+    // 50 crédits paraissent être « un petit reste » ; ce sont 10 envois.
+    solde = 50
     const bas = await (await appel('jeton-de-test')).json()
-    expect(bas.sms).toBe(8)
+    expect(bas.sms).toBe(10)
     expect(bas.bas).toBe(true)
   })
 

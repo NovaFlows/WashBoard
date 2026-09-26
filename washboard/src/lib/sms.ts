@@ -58,19 +58,25 @@ export async function sendSms({ to, content, sender = EXPEDITEUR_SMS_DEFAUT }: {
   }
 }
 
-/** Ce qu'un SMS vers la France coûte réellement en crédits Brevo.
+/** Ce qu'un SMS d'une longueur normale coûte en crédits Brevo, vers la France.
  *
- *  Un crédit n'est PAS un message : c'est une unité de facturation dont le
- *  tarif dépend du pays et de la longueur. Mesuré le 2026-09-26 : le solde est
- *  passé de 900 à 882 pour **un seul** envoi vers un 06 français, livré.
+ *  Un crédit n'est ni un message ni un caractère : c'est une unité de
+ *  facturation qui dépend du pays et du nombre de SEGMENTS. Un SMS se découpe
+ *  tous les 153 caractères une fois concaténé, et chaque segment se paie.
  *
- *  Pourquoi c'est écrit ici plutôt que déduit : Brevo n'expose aucun tarif par
- *  API. Sans cette conversion, « 882 crédits » se lit comme 882 messages alors
- *  qu'il en reste une cinquantaine — une erreur d'un facteur 18 sur la seule
- *  information que le rapport du matin est censé rendre claire.
+ *  Mesure du 2026-09-26 : le solde est passé de 900 à 882, soit 18 crédits,
+ *  pour un envoi unique de 566 caractères — donc 4 segments, donc environ
+ *  4,5 crédits par segment. Arrondi à 5, volontairement pessimiste : mieux
+ *  vaut annoncer moins d'envois restants qu'il n'y en a que l'inverse.
  *
- *  À revoir si le tarif change ou si des SMS partent vers d'autres pays. */
-export const CREDITS_PAR_SMS = 18
+ *  ⚠️ Cette conversion suppose un message d'UN segment. Elle sous-estime la
+ *  consommation d'un laveur dont le lien d'avis est à rallonge — c'était
+ *  précisément le cas de l'envoi mesuré, qui portait une URL de recherche
+ *  Google de 468 caractères au lieu d'un lien `g.page` de 39.
+ *
+ *  Brevo n'expose aucun tarif par API : sans cette conversion, « 882 crédits »
+ *  se lirait comme 882 messages. */
+export const CREDITS_PAR_SMS = 5
 
 /** Combien de messages le solde représente réellement. */
 export function smsRestants(credits: number): number {
