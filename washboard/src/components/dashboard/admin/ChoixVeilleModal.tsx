@@ -1,7 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import type { Service } from '@/types'
+
+/** Ce dont la fenetre a besoin, et rien de plus : elle affiche un nom, un prix
+ *  et une duree. Exiger un `Service` complet obligeait les appelants a charger
+ *  des colonnes inutiles, ou a forcer le type — ce qui revient a desactiver la
+ *  verification a l'endroit meme ou elle sert. */
+type PrestationChoisissable = {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+}
 
 /** Fenêtre qui fait choisir au laveur les prestations à mettre en veille
  *  quand il en a plus que son offre n'en affiche.
@@ -16,7 +26,7 @@ import type { Service } from '@/types'
  *  sa prestation la plus rentable peut être la dernière ajoutée. Éteindre au
  *  hasard lui coûterait de l'argent sans qu'il comprenne pourquoi. */
 export function ChoixVeilleModal({ actives, plafond, aRanger, onValider, onFermer, loading, error }: {
-  actives: Service[]
+  actives: PrestationChoisissable[]
   plafond: number
   aRanger: number
   onValider: (ids: string[]) => void

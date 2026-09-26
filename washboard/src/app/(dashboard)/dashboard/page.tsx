@@ -9,7 +9,9 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, quotaPrestations } from '@/lib/plan'
+import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
+import { RappelPrestationsEnVeille } from '@/components/dashboard/RappelPrestationsEnVeille'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
@@ -289,10 +291,46 @@ export default async function DashboardPage() {
     zone: <ZoneWidget zone={washer.zone_config} />,
   }
 
+  // ── Trop de prestations pour l'offre ? ──────────────────────────────────
+  //
+  // La colonne `en_veille` est demandee EXPLICITEMENT, et c'est volontaire :
+  // tant que la migration 005 n'a pas tourne, cette requete echoue, on n'a
+  // aucune donnee, et la fenetre ne s'affiche pas. Elle ne peut donc pas
+  // proposer une action que le serveur refuserait. Avec un `select('*')`, la
+  // colonne serait simplement absente, toutes les prestations passeraient pour
+  // actives, et le laveur se heurterait a une erreur en cliquant.
+  const plafondPrestations = quotaPrestations(washer)
+  let prestationsActives: { id: string; name: string; price: number; duration_minutes: number; vehicle_types: string[]; en_veille: boolean }[] = []
+
+  if (plafondPrestations !== null) {
+    const { data, error } = await supabase
+      .from('services')
+      .select('id, name, price, duration_minutes, vehicle_types, en_veille')
+      .eq('washer_id', washer.id)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      // Migration pas encore passee, ou lecture en panne : on ne montre rien.
+      logger.warn('dashboard.prestations_veille.read_failed', { washerId: washer.id }, error)
+    } else {
+      prestationsActives = (data ?? []).filter(estVisibleParLesClients)
+    }
+  }
+
+  const prestationsARanger = aMettreEnVeille(prestationsActives.length, plafondPrestations)
+
   const widgetsAffiches = [...visibles]
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      {prestationsARanger > 0 && plafondPrestations !== null && (
+        <RappelPrestationsEnVeille
+          actives={prestationsActives}
+          plafond={plafondPrestations}
+          aRanger={prestationsARanger}
+        />
+      )}
+
       <DemarrageCard progress={progress} />
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
