@@ -92,13 +92,17 @@ export function UpgradePrompt({ title, description, feature, apercu }: {
           clavier et ne se lit pas au lecteur d'écran. Sans ça, un laveur
           naviguant au clavier traversait des chiffres inventés avant
           d'atteindre le bouton qui l'intéresse. */}
-      <div inert className="blur-[5px] opacity-80 select-none">
+      {/* Plus de flou global ici : la maquette floute elle-meme ses VALEURS et
+          laisse ses INTITULES nets. Tout flouter revenait a montrer une tache
+          grise — le laveur voyait qu'il manquait quelque chose, sans savoir
+          quoi. */}
+      <div inert className="select-none">
         {apercu}
       </div>
 
       {/* Voile : éclaircit en clair, ASSOMBRIT en sombre. Un voile blanc en
           mode sombre ferait briller la zone verrouillée plus que le reste. */}
-      <div className="absolute inset-0 bg-white/30 dark:bg-slate-950/50" />
+      <div className="absolute inset-0 bg-white/20 dark:bg-slate-950/40" />
 
       <div className="absolute inset-0 flex items-center justify-center p-4">
         {carte}

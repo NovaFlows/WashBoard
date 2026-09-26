@@ -1,20 +1,26 @@
-// Aperçus décoratifs affichés, floutés, derrière un écran « changer d'offre ».
+// Aperçus décoratifs affichés derrière un écran « changer d'offre ».
 //
 // Un écran verrouillé qui ne montre qu'un cadenas ne donne envie de rien : le
-// laveur ne sait pas ce qu'il rate. En laissant deviner la forme de l'outil —
-// des colonnes, des barres, des lignes de tableau — il comprend ce qu'il
-// achète.
+// laveur ne sait pas ce qu'il rate. Ici il lit les INTITULÉS — « Chiffre
+// d'affaires », « D'où viennent vos clients », « Instagram » — et ne voit pas
+// les VALEURS, floutées. Il comprend donc exactement ce que l'outil calcule,
+// sans qu'on lui montre des chiffres qui ne sont pas les siens.
 //
-// ⚠️ TOUT CE QUI EST ICI EST INVENTÉ. C'est la règle qui ne se négocie pas :
-// un flou CSS se retire en deux clics dans les outils du navigateur, donc rien
-// de ce qu'on met derrière n'est protégé. On n'y met JAMAIS les vrais chiffres
-// d'un laveur qui n'a pas payé pour les voir — ni, d'ailleurs, ceux de qui que
-// ce soit. Les écrans concernés ne chargent d'ailleurs aucune donnée du tout.
+// C'est la seule partie qui est floutée, et c'est un choix de lecture, pas une
+// protection : un flou CSS se retire en deux clics dans les outils du
+// navigateur. La vraie garantie est ailleurs — TOUT CE QUI EST ICI EST
+// INVENTÉ, et les pages concernées ne chargent aucune donnée réelle, le verrou
+// étant posé avant les lectures en base.
 //
-// Le mot « Exemple » est écrit dans chaque aperçu : qui retire le flou doit
-// comprendre immédiatement qu'il ne regarde pas son activité.
+// Le mot « Exemple » reste net dans chaque aperçu : personne ne doit prendre
+// ces chiffres pour son activité.
 
 const CARTE = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5'
+
+/** Une valeur qu'on devine sans la lire. Les intitulés, eux, restent nets. */
+function Flou({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <span className={`blur-[5px] select-none ${className}`}>{children}</span>
+}
 
 function Etiquette() {
   return (
@@ -24,21 +30,13 @@ function Etiquette() {
   )
 }
 
-function Barre({ pct, couleur = 'bg-blue-500' }: { pct: number; couleur?: string }) {
-  return (
-    <span className="block h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-      <span className={`block h-full rounded-full ${couleur}`} style={{ width: `${pct}%` }} />
-    </span>
-  )
-}
-
 function Chiffre({ label, valeur, couleur = 'text-slate-900 dark:text-slate-100' }: {
   label: string; valeur: string; couleur?: string
 }) {
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-w-0">
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{label}</p>
-      <p className={`text-2xl font-extrabold ${couleur}`}>{valeur}</p>
+      <p className={`text-2xl font-extrabold ${couleur}`}><Flou>{valeur}</Flou></p>
     </div>
   )
 }
@@ -57,7 +55,7 @@ export function ApercuCompta() {
       </div>
       <div className={CARTE}>
         <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">Mois par mois</p>
-        <div className="flex items-end gap-3 h-28">
+        <div className="flex items-end gap-3 h-28 blur-[4px]">
           {mois.map((h, i) => (
             <span key={i} className="flex-1 rounded-t-lg bg-blue-500/80" style={{ height: `${h}%` }} />
           ))}
@@ -90,9 +88,15 @@ export function ApercuCrm() {
           {sources.map(s => (
             <div key={s.nom}>
               <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300 mb-1.5">
-                <span>{s.nom}</span><span className="font-semibold">{s.pct} %</span>
+                {/* Le nom de la source est net, sa part est floutée : le laveur
+                    apprend qu'on lui dira d'où viennent ses clients, pas
+                    combien viennent d'où — ça, c'est ce qu'il achète. */}
+                <span>{s.nom}</span>
+                <Flou className="font-semibold">{s.pct} %</Flou>
               </div>
-              <Barre pct={s.pct} />
+              <span className="block h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden blur-[3px]">
+                <span className="block h-full rounded-full bg-blue-500" style={{ width: `${s.pct}%` }} />
+              </span>
             </div>
           ))}
         </div>
@@ -119,14 +123,15 @@ export function ApercuFactures() {
         </div>
       </div>
       <div className={`${CARTE} p-0 overflow-hidden`}>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 px-5 pt-5 pb-3">Vos factures émises</p>
         {lignes.map(([num, client, montant], i) => (
           <div
             key={num}
             className={`flex items-center gap-4 px-5 py-3.5 text-sm ${i > 0 ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}
           >
-            <span className="font-mono text-xs text-slate-400">{num}</span>
-            <span className="flex-1 text-slate-700 dark:text-slate-300">{client}</span>
-            <span className="font-bold text-slate-900 dark:text-slate-100">{montant}</span>
+            <Flou className="font-mono text-xs text-slate-400">{num}</Flou>
+            <Flou className="flex-1 text-slate-700 dark:text-slate-300 truncate">{client}</Flou>
+            <Flou className="font-bold text-slate-900 dark:text-slate-100">{montant}</Flou>
           </div>
         ))}
       </div>
