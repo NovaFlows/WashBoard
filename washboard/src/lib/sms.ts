@@ -40,11 +40,30 @@ export async function sendSms({ to, content, sender = 'WashBoard' }: { to: strin
   }
 }
 
-/** En dessous, il est temps de recharger.
+/** Ce qu'un SMS vers la France coûte réellement en crédits Brevo.
  *
- *  150 SMS = le quota mensuel d'un seul laveur au plan Pro. Sous ce seuil, un
- *  client qui passe au Pro pourrait épuiser le solde à lui seul dans le mois. */
-export const SEUIL_SMS_BAS = 150
+ *  Un crédit n'est PAS un message : c'est une unité de facturation dont le
+ *  tarif dépend du pays et de la longueur. Mesuré le 2026-09-26 : le solde est
+ *  passé de 900 à 882 pour **un seul** envoi vers un 06 français, livré.
+ *
+ *  Pourquoi c'est écrit ici plutôt que déduit : Brevo n'expose aucun tarif par
+ *  API. Sans cette conversion, « 882 crédits » se lit comme 882 messages alors
+ *  qu'il en reste une cinquantaine — une erreur d'un facteur 18 sur la seule
+ *  information que le rapport du matin est censé rendre claire.
+ *
+ *  À revoir si le tarif change ou si des SMS partent vers d'autres pays. */
+export const CREDITS_PAR_SMS = 18
+
+/** Combien de messages le solde représente réellement. */
+export function smsRestants(credits: number): number {
+  return Math.floor(credits / CREDITS_PAR_SMS)
+}
+
+/** En dessous, il est temps de recharger — exprimé en MESSAGES, pas en crédits.
+ *
+ *  Dix envois, c'est moins d'une semaine d'activité pour un seul laveur qui
+ *  demande un avis après chaque prestation. */
+export const SEUIL_SMS_BAS = 10
 
 /** Crédits SMS restants chez Brevo, ou `null` si le solde est illisible.
  *

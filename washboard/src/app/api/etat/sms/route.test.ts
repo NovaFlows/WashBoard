@@ -28,19 +28,28 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks() })
 
 describe('GET /api/etat/sms', () => {
-  it('rend le solde et le compare au seuil', async () => {
+  it('traduit les crédits en MESSAGES, ce qui n est pas la même chose', async () => {
+    // 900 crédits = 50 SMS, pas 900. Un crédit est une unité de facturation.
     const res = await appel('jeton-de-test')
     const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.credits).toBe(900)
+    expect(body.sms).toBe(50)
     expect(body.bas).toBe(false)
   })
 
-  it('signale un solde bas', async () => {
-    solde = 12
+  it('signale un solde bas sur le nombre de messages, pas sur les crédits', async () => {
+    // 200 crédits paraissent confortables, mais ne valent que 11 SMS.
+    solde = 200
     const body = await (await appel('jeton-de-test')).json()
-    expect(body.credits).toBe(12)
-    expect(body.bas).toBe(true)
+    expect(body.credits).toBe(200)
+    expect(body.sms).toBe(11)
+    expect(body.bas).toBe(false)
+
+    solde = 150
+    const bas = await (await appel('jeton-de-test')).json()
+    expect(bas.sms).toBe(8)
+    expect(bas.bas).toBe(true)
   })
 
   it('rend 0 comme un vrai chiffre, pas comme une erreur', async () => {
@@ -50,6 +59,7 @@ describe('GET /api/etat/sms', () => {
     const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.credits).toBe(0)
+    expect(body.sms).toBe(0)
     expect(body.bas).toBe(true)
   })
 

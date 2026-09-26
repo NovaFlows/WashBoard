@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { soldeSms, SEUIL_SMS_BAS } from '@/lib/sms'
+import { soldeSms, smsRestants, SEUIL_SMS_BAS, CREDITS_PAR_SMS } from '@/lib/sms'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,10 +44,17 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // `sms` d'abord, `credits` ensuite : c'est le nombre de MESSAGES qui parle.
+  // Annoncer « 882 crédits » ferait croire à 882 envois possibles alors qu'il
+  // en reste 49 — voir CREDITS_PAR_SMS.
+  const sms = smsRestants(credits)
+
   return NextResponse.json({
+    sms,
     credits,
+    creditsParSms: CREDITS_PAR_SMS,
     seuilBas: SEUIL_SMS_BAS,
-    bas: credits <= SEUIL_SMS_BAS,
+    bas: sms <= SEUIL_SMS_BAS,
     ts: new Date().toISOString(),
   })
 }
