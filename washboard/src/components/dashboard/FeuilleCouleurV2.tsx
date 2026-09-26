@@ -1,8 +1,9 @@
 'use client'
 
-import { Feuille, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import { Feuille, PRESSION, corps } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { ANNEAU_CHOIX } from '@/components/dashboard/ApparenceUiV2'
+import EchantillonCouleurV2 from '@/components/dashboard/EchantillonCouleurV2'
 import { PALETTE } from '@/lib/themes'
 import { COULEUR_PAR_DEFAUT, contrasteInsuffisant, estHorsNuancier } from '@/lib/apparence'
 
@@ -62,18 +63,13 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
         })}
       </div>
 
-      {/* L'échantillon est au contact de la palette : on choisit, on voit aussitôt ce
-          que ça donne sur un bouton (comme sur l'ancien écran). */}
-      <div className="mt-5 flex items-center gap-3">
-        <div
-          aria-hidden
-          className={`inline-flex h-11 shrink-0 items-center rounded-[var(--v2-radius-bouton)] px-4 text-[14.5px] text-white ${corpsFort}`}
-          style={{ background: affichee }}
-        >
-          Continuer →
-        </div>
-        <p className={`min-w-0 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Un bouton de votre page, à cette couleur.
+      {/* L'échantillon est au contact de la palette : on choisit, on voit aussitôt ce que ça
+          colore sur la page. Ce n'est PAS un bouton (l'ancien « Continuer → » faisait cliquer
+          des laveurs, sans effet) : la barre d'avancement et le choix coché de la page. */}
+      <div className="mt-5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
+        <EchantillonCouleurV2 couleur={affichee} libelle={null} />
+        <p className={`mt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+          Sur votre page, cette couleur colore la barre des étapes, les choix cochés et les boutons.
         </p>
       </div>
 

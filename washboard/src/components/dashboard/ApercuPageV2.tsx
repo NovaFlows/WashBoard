@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from 'react'
 import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import EchantillonCouleurV2 from '@/components/dashboard/EchantillonCouleurV2'
 import { getBgStyle } from '@/lib/themes'
 import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT } from '@/lib/apparence'
 
@@ -12,7 +13,8 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT } from '@/lib/apparence'
 //  - même logo : carré de 48 px, rogné (`object-cover`) — l'ancien aperçu le montrait
 //    en `object-contain`, entier, alors que la vraie page en coupe les bords ;
 //  - même initiale à défaut de logo, même « Réservation en ligne » à défaut de message ;
-//  - un bouton à la couleur de la marque (celle des boutons de la vraie page).
+//  - la couleur de la marque, montrée par la barre des étapes et le choix coché de la vraie
+//    page (et non par un faux bouton : il faisait cliquer sans rien déclencher).
 // Ni verre ni flou : le voile de l'en-tête est un simple aplat.
 //
 // Sur un fond « Original », la vraie page suit le thème clair/sombre du client : ici
@@ -82,14 +84,8 @@ export default function ApercuPageV2({ nom, logoUrl, message, couleur, fond }: P
           </div>
         </div>
 
-        <div className="flex min-h-[88px] items-center justify-end px-4 py-4">
-          <span
-            aria-hidden
-            className={`inline-flex h-11 items-center rounded-xl px-5 text-[14px] text-white ${corpsFort}`}
-            style={{ background: accent }}
-          >
-            Continuer →
-          </span>
+        <div className="flex min-h-[88px] items-center px-4 py-4">
+          <EchantillonCouleurV2 couleur={accent} clair={avecFond} />
         </div>
       </div>
     </div>
