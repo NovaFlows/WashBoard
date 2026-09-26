@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Phone, Mail, MapPin } from 'lucide-react'
 import type { ClientBooking, ClientProfile } from '@/lib/clientProfile'
 import { FUSEAU } from '@/lib/dateUtils'
+import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
@@ -41,12 +42,12 @@ const hero = `${police} [font-weight:var(--v2-type-hero-poids)] [font-stretch:va
 // Terminé GRIS (pas bleu — l'ancienne fiche l'inventait), Annulé rouge.
 // "Délai dépassé" n'existe pas dans la planche (propre au produit) : posé
 // en ambre par cohérence avec "en attente", à confirmer.
-const STATUT: Record<'pending' | 'confirmed' | 'done' | 'cancelled' | 'closed_late', { couleur: string; label: string }> = {
+const STATUT: Record<StatutAffiche, { couleur: string; label: string }> = {
   pending: { couleur: 'var(--v2-color-ambre)', label: 'En attente' },
   confirmed: { couleur: 'var(--v2-color-vert)', label: 'Confirmé' },
   done: { couleur: 'var(--v2-color-gris)', label: 'Terminé' },
   cancelled: { couleur: 'var(--v2-color-rouge)', label: 'Annulé' },
-  closed_late: { couleur: 'var(--v2-color-ambre)', label: 'Délai dépassé' },
+  a_cloturer: { couleur: 'var(--v2-color-ambre)', label: 'À clôturer' },
 }
 
 // Éléments qu'un Tab peut atteindre à l'intérieur de la feuille — sert au
@@ -290,7 +291,7 @@ export default function ClientProfileModalV2({
             <h3 className="sr-only">Historique</h3>
             <ol>
               {profile.bookings.map((b: ClientBooking, i) => {
-                const s = STATUT[b.closed_late ? 'closed_late' : b.status]
+                const s = STATUT[statutAffiche(b)]
                 const dernier = i === profile.bookings.length - 1
                 const prix = b.booked_price ?? b.services?.price ?? 0
                 return (

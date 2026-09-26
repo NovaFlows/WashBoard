@@ -7,7 +7,7 @@ import { formatHeure } from '@/lib/dateUtils'
 import { formatPrice, finalDisplayPrice } from '@/lib/pricing'
 import { effectivePrice } from '@/lib/crmStats'
 import { estimateTravelMinutes, haversineKm } from '@/lib/geo'
-import { cleStatut, type StatutClef } from '@/lib/calendarLayout'
+import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { jourParisDe } from '@/lib/chiffresPeriode'
 import { formatConversionRate } from '@/lib/funnelStats'
 import { DEPARTMENTS } from '@/lib/france-departments'
@@ -88,12 +88,12 @@ const hero = `${police} [font-weight:var(--v2-type-hero-poids)] [font-stretch:va
 // quand un quatrième écran en aura besoin, avec les trois captures qui vont
 // avec. Convention de la planche Système : un point plein + le mot, jamais une
 // pastille pastel.
-const STATUT: Record<StatutClef, { couleur: string; label: string }> = {
+const STATUT: Record<StatutAffiche, { couleur: string; label: string }> = {
   pending: { couleur: 'var(--v2-color-ambre)', label: 'En attente' },
   confirmed: { couleur: 'var(--v2-color-vert)', label: 'Confirmé' },
   done: { couleur: 'var(--v2-color-gris)', label: 'Terminé' },
   cancelled: { couleur: 'var(--v2-color-rouge)', label: 'Annulé' },
-  closed_late: { couleur: 'var(--v2-color-ambre)', label: 'Délai dépassé' },
+  a_cloturer: { couleur: 'var(--v2-color-ambre)', label: 'À clôturer' },
 }
 
 const NOM_DEPT = new Map(DEPARTMENTS.map(d => [d.code, d.name]))
@@ -114,7 +114,9 @@ export type RdvAccueil = {
   is_smart_slot: boolean
   smart_discount: number
   booked_price: number | null
-  services: { name: string; price: number; service_categories?: { name: string } | null } | null
+  // La durée est déjà chargée par la page (voir la requête) : elle manquait dans ce type,
+  // et sert à savoir si le créneau est fini (« À clôturer »).
+  services: { name: string; price: number; duration_minutes?: number | null; service_categories?: { name: string } | null } | null
 }
 
 /** Montant réellement facturé — les deux fonctions du projet, sans copie
@@ -353,7 +355,7 @@ function CarteListe({ children }: { children: ReactNode }) {
 /** Le héros de l'écran : l'heure en très gros, le nom, l'adresse, et deux
  *  actions — itinéraire et appel. Tout le reste de l'écran est en ligne. */
 function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: string }) {
-  const statut = STATUT[cleStatut(b)]
+  const statut = STATUT[statutAffiche(b)]
   const estAujourdhui = new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) === dateDuJour
   const adresse = b.address?.trim()
   const telephone = b.client_phone?.trim()
@@ -444,7 +446,7 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
 /** Une ligne de rendez-vous : heure (ou jour), nom, prestation, prix, statut.
  *  Même destination que les widgets v1 — la fiche de l'agenda. */
 function LigneRdv({ rdv: b, avecDate = false }: { rdv: RdvAccueil; avecDate?: boolean }) {
-  const statut = STATUT[cleStatut(b)]
+  const statut = STATUT[statutAffiche(b)]
   return (
     <Link href={`/dashboard/calendrier?rdv=${b.id}`} className="flex min-h-[46px] items-start gap-3.5 py-[11px]">
       <span

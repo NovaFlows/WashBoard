@@ -6,9 +6,9 @@ import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
 import MoisV2 from '@/components/dashboard/MoisV2'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
-import { dayKey, formatHeure, cleStatut, type StatutClef } from '@/lib/calendarLayout'
+import { dayKey, formatHeure } from '@/lib/calendarLayout'
 import { villeDepuisAdresse } from '@/lib/adresse'
-import { doitDemanderConfirmation } from '@/lib/cloture'
+import { doitDemanderConfirmation, statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
@@ -106,12 +106,12 @@ const MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 
 // Terminé en gris, pas en bleu comme l'ancienne fiche l'inventait. Dupliqué
 // ici volontairement (présentation, pas calcul) : les deux écrans n'ont pas
 // encore de source commune pour ce tableau de libellés/couleurs.
-const STATUT: Record<StatutClef, { couleur: string; label: string }> = {
+const STATUT: Record<StatutAffiche, { couleur: string; label: string }> = {
   pending: { couleur: 'var(--v2-color-ambre)', label: 'En attente' },
   confirmed: { couleur: 'var(--v2-color-vert)', label: 'Confirmé' },
   done: { couleur: 'var(--v2-color-gris)', label: 'Terminé' },
   cancelled: { couleur: 'var(--v2-color-rouge)', label: 'Annulé' },
-  closed_late: { couleur: 'var(--v2-color-ambre)', label: 'Délai dépassé' },
+  a_cloturer: { couleur: 'var(--v2-color-ambre)', label: 'À clôturer' },
 }
 
 // En dessous, un gain de temps n'est pas montré : la maquette ne montre
@@ -748,7 +748,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 }
 
 function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; onOuvrir: () => void; estompe: boolean }) {
-  const statut = STATUT[cleStatut(b)]
+  const statut = STATUT[statutAffiche(b)]
   const ville = villeDepuisAdresse(b.address)
   return (
     <div className="flex items-start gap-3">
@@ -843,7 +843,7 @@ function DetailRendezVous({
   useBloquerDefilement()
   const glisser = useGlisserPourFermer(onClose)
   const focusPrecedent = useRef<HTMLElement | null>(null)
-  const statut = STATUT[cleStatut(b)]
+  const statut = STATUT[statutAffiche(b)]
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true))
