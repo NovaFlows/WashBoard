@@ -127,7 +127,7 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
           sousTitre="Ce que vos clients voient sur votre page de réservation."
           etiquette="Nom"
           valeur={fiche.name ?? ''}
-          placeholder="Kooki Clean"
+          placeholder="AutoNettoyage"
           valider={validerNomEntreprise}
           onEnregistrer={v => enregistrer({ name: v })}
           onClose={fermer}

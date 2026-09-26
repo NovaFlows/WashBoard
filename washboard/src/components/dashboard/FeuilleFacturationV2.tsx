@@ -155,7 +155,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
             type="text"
             value={nomLegal}
             onChange={e => { setNomLegal(e.target.value); setErreur(null) }}
-            placeholder={societe ? 'Kooki Clean' : 'Jean Dupont'}
+            placeholder={societe ? 'AutoNettoyage' : 'Jean Dupont'}
             aria-label={societe ? 'Raison sociale' : 'Nom légal'}
             className={CHAMP}
           />
