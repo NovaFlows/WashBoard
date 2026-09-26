@@ -13,46 +13,59 @@ type PrestationChoisissable = {
 }
 
 // ── Identité WashBoard ──────────────────────────────────────────────────────
-// Les mêmes valeurs que la page d'accueil publique. Un écran qui invente ses
-// propres couleurs se reconnaît immédiatement comme une pièce rapportée.
+// Reprises de la page d'accueil publique. Une fenêtre qui invente ses propres
+// couleurs se reconnaît immédiatement comme une pièce rapportée.
 const BLEU = '#1651E8'
 const BLEU_SOMBRE = '#0F4ACC'
-const FOND_SOMBRE = 'linear-gradient(135deg, #0B1828 0%, #0D2248 55%, #0B1828 100%)'
-const CYAN = '#00C4D4'
 const SURTITRE = 'text-[11px] font-black uppercase tracking-[0.22em]'
 
 /** Première offre qui lève le plafond du catalogue. Calculée plutôt qu'écrite
  *  en dur : déplacer le catalogue illimité d'un palier à l'autre ne doit pas
- *  laisser cet écran proposer la mauvaise offre. */
+ *  laisser cette fenêtre proposer la mauvaise offre. */
 const OFFRES: Plan[] = ['decouverte', 'starter', 'pro', 'business']
 const OFFRE_SANS_PLAFOND = OFFRES.find(p => SERVICE_QUOTA[p] === null) ?? 'starter'
 
 /** Aperçu de la page de réservation telle que les clients la voient.
  *
- *  La pièce qui fait comprendre en une seconde ce que trois paragraphes
- *  peinaient à expliquer : le laveur n'imagine pas sa page, il la regarde. */
+ *  Il fait comprendre en une seconde ce que trois paragraphes peinaient à
+ *  expliquer : le laveur n'imagine pas sa page, il la regarde.
+ *
+ *  Sur fond clair, et volontairement. La version précédente le posait à
+ *  l'intérieur d'un bandeau sombre, donc une boîte dans une boîte dans une
+ *  carte : trois surfaces empilées, du texte translucide sur du bleu nuit, et
+ *  plus rien de net. Ici il n'y a qu'un seul encadré, et il porte le message. */
 function ApercuPage({ actives, plafond }: { actives: PrestationChoisissable[]; plafond: number }) {
   return (
-    <div className="rounded-xl border border-white/15 bg-white/[0.06] p-3">
-      <p className={`${SURTITRE} text-white/40 mb-2`}>Votre page de réservation</p>
-      <div className="space-y-1.5">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <p className={`${SURTITRE} text-slate-400 dark:text-slate-500 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800`}>
+        Votre page de réservation
+      </p>
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
         {actives.map((svc, i) => {
           const masquee = i >= plafond
           return (
             <div
               key={svc.id}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-1.5 ${
-                masquee ? 'bg-white/[0.03] border border-dashed border-white/15' : 'bg-white/10'
+              className={`flex items-center gap-3 px-3.5 py-2.5 ${
+                masquee ? 'bg-slate-50 dark:bg-slate-800/40' : ''
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: masquee ? 'rgba(255,255,255,0.2)' : CYAN }} />
-              <span className={`flex-1 truncate text-sm font-medium ${
-                masquee ? 'text-white/30 line-through' : 'text-white/90'
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${masquee ? 'bg-slate-300 dark:bg-slate-600' : ''}`}
+                style={masquee ? undefined : { backgroundColor: BLEU }}
+              />
+              <span className={`flex-1 truncate text-sm ${
+                masquee
+                  ? 'text-slate-400 dark:text-slate-500 line-through'
+                  : 'font-medium text-slate-800 dark:text-slate-200'
               }`}>
                 {svc.name}
               </span>
-              <span className={`text-xs font-semibold shrink-0 ${masquee ? 'text-white/25' : 'text-white/50'}`}>
+              <span className={`text-xs shrink-0 ${
+                masquee
+                  ? `${SURTITRE} text-slate-400 dark:text-slate-500`
+                  : 'font-semibold text-slate-400 dark:text-slate-500'
+              }`}>
                 {masquee ? 'masquée' : `${svc.price}€`}
               </span>
             </div>
@@ -63,29 +76,21 @@ function ApercuPage({ actives, plafond }: { actives: PrestationChoisissable[]; p
   )
 }
 
-function Point({ titre, children }: { titre: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <span className="mt-2 w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: BLEU }} />
-      <div>
-        <p className="text-[15px] font-bold text-slate-900 dark:text-slate-100">{titre}</p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mt-0.5">{children}</p>
-      </div>
-    </div>
-  )
-}
-
 /** Fenêtre en deux temps : on explique, puis on propose.
  *
- *  Rien ne défile À L'INTÉRIEUR de la carte : c'est le voile qui défile, et la
- *  carte reste d'un seul tenant. Un cadre à défilement interne, sur un
- *  téléphone, cache la moitié du contenu sans le dire — on croit avoir tout lu
- *  et on valide.
+ *  Une seule surface blanche, un seul encadré à l'intérieur. La version
+ *  précédente empilait un bandeau bleu nuit haut d'une demi-carte, un encadré
+ *  translucide dedans, puis un bloc blanc avec des puces — quatre niveaux de
+ *  fond pour trois phrases.
  *
+ *  Le bleu de marque ne sert plus de décor : il ne colore que ce qui est actif
+ *  ou cliquable. Ce qui est éteint est gris. On lit l'état d'un coup d'œil sans
+ *  avoir à déchiffrer une nuance.
+ *
+ *  Le laveur doit d'abord comprendre que sa page a DÉJÀ changé, sans qu'il
+ *  l'ait décidé : « Suivant » devient l'accusé de réception de l'explication.
  *  Mélanger explication et liste à cocher faisait qu'on ne lisait ni l'une ni
- *  l'autre : l'œil tombe sur les cases, coche, et passe. Le laveur doit d'abord
- *  comprendre que sa page a DÉJÀ changé, sans qu'il l'ait décidé. Le bouton
- *  « Suivant » devient l'accusé de réception.
+ *  l'autre — l'œil tombe sur les cases, coche, et passe.
  *
  *  Et pourquoi le laisser choisir plutôt que d'éteindre les plus récentes : sa
  *  prestation la plus rentable peut être la dernière ajoutée. Choisir au hasard
@@ -94,6 +99,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   actives: PrestationChoisissable[]
   plafond: number
   aRanger: number
+  /** Offre en cours, pour la nommer au lieu de dire « votre offre ». */
   offre: Plan
 }) {
   const router = useRouter()
@@ -160,175 +166,177 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
 
   if (ferme) return null
 
-  const principal = 'px-5 py-3 text-white text-[15px] font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-  const secondaire = 'px-4 py-3 text-[15px] font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-40'
+  // `:active` sur les boutons : un bouton qui ne bouge pas sous le doigt donne
+  // l'impression que le clic n'est pas passé. Seuls `transform` et les couleurs
+  // sont animés — jamais la géométrie, qui ferait sauter la mise en page.
+  const principal = 'px-5 py-3 text-white text-[15px] font-semibold rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100'
+  const secondaire = 'px-4 py-3 text-[15px] font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40'
 
   return (
     // `overflow-y-auto` sur le VOILE, pas sur la carte : si le contenu dépasse
     // l'écran, c'est l'arrière-plan qui défile et la carte garde un seul bloc.
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1828]/70 backdrop-blur-sm">
-      <div className="mx-auto max-w-md px-4 py-3 sm:py-8 min-h-full flex flex-col justify-center">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1828]/60 backdrop-blur-[2px]">
+      <div className="mx-auto max-w-md px-4 py-4 sm:py-8 min-h-full flex flex-col justify-center">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 p-6">
 
-        {/* ── En-tête ──────────────────────────────────────────────────── */}
-        <div className="rounded-t-2xl p-5 pb-4" style={{ background: FOND_SOMBRE }}>
+          {/* ── Bandeau : offre + avancement ─────────────────────────────── */}
           <div className="flex items-center justify-between gap-3 mb-5">
-            <span className={SURTITRE} style={{ color: CYAN }}>Offre {PLAN_LABELS[offre]}</span>
+            <span className={SURTITRE} style={{ color: BLEU }}>Offre {PLAN_LABELS[offre]}</span>
             <span className="flex items-center gap-1.5" aria-label={`Étape ${etape} sur 2`}>
-              <span className="w-7 h-1 rounded-full" style={{ backgroundColor: etape === 1 ? CYAN : 'rgba(255,255,255,0.2)' }} />
-              <span className="w-7 h-1 rounded-full" style={{ backgroundColor: etape === 2 ? CYAN : 'rgba(255,255,255,0.2)' }} />
+              <span
+                className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
+                style={{ backgroundColor: etape === 1 ? BLEU : '#e2e8f0' }}
+              />
+              <span
+                className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
+                style={{ backgroundColor: etape === 2 ? BLEU : '#e2e8f0' }}
+              />
             </span>
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-[1.1]">
-            {etape === 1
-              ? `${plafond} prestation${plafond > 1 ? 's' : ''} sur ${actives.length} seulement sont en ligne`
-              : pluriel ? 'Lesquelles retirer de votre page ?' : 'Laquelle retirer de votre page ?'}
-          </h1>
-
+          {/* ── Écran 1 : ce qui se passe, et pourquoi ───────────────────── */}
           {etape === 1 && (
-            <div className="mt-4">
-              <ApercuPage actives={actives} plafond={plafond} />
-            </div>
-          )}
-        </div>
+            <>
+              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15]">
+                {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length} seulement
+                <br />sont en ligne
+              </h2>
 
-        {/* ── Écran 1 : ce qui se passe, et pourquoi ───────────────────── */}
-        {etape === 1 && (
-          <div className="bg-white dark:bg-slate-900 rounded-b-2xl px-5 pt-5 pb-4">
-            <div className="space-y-3.5">
-              <Point titre="Pourquoi ?">
-                L’offre {PLAN_LABELS[offre]} en affiche {plafond} au maximum. Vous en avez {actives.length}.
-              </Point>
-              <Point titre="Ce n’est pas vous qui avez choisi">
+              <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed mt-3">
+                L’offre <strong className="text-slate-700 dark:text-slate-200">{PLAN_LABELS[offre]}</strong> en
+                affiche {plafond} au maximum. Faute de décision de votre part,{' '}
                 {masqueesAujourdhui.length > 0 && (
                   <strong className="text-slate-700 dark:text-slate-200">
                     {masqueesAujourdhui.map(s => `« ${s.name} »`).join(', ')}
                   </strong>
                 )}{' '}
-                {pluriel ? 'ont été masquées' : 'a été masquée'} par défaut. Reprenez la main.
-              </Point>
-              <Point titre="Rien n’est effacé">
-                {/* Dit avant toute décision : c'est la crainte d'effacer qui
-                    fait qu'on n'ose pas trancher, et donc qu'on repousse. */}
-                Rendez-vous, factures et historique restent intacts. Elle revient si vous changez d’offre.
-              </Point>
-            </div>
+                {pluriel ? 'ont été masquées' : 'a été masquée'} par défaut.
+              </p>
 
-            <div className="flex items-center justify-end gap-2 mt-6">
-              <button type="button" onClick={reporter} disabled={loading} className={secondaire}>
-                Plus tard
-              </button>
-              <button
-                type="button"
-                onClick={() => setEtape(2)}
-                className={principal}
-                style={{ backgroundColor: BLEU }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = BLEU_SOMBRE)}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = BLEU)}
-              >
-                Suivant →
-              </button>
-            </div>
+              <div className="mt-5">
+                <ApercuPage actives={actives} plafond={plafond} />
+              </div>
 
-            {/* L'autre issue, offerte dès l'explication : c'est là que la
-                question « et si je payais ? » se pose naturellement. */}
-            <div className="mt-6 -mx-6 -mb-5 px-6 py-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">
-              {/* Une seule ligne : elle disait la même chose en deux, et
-                  chaque ligne de trop pousse les boutons hors de l'écran. */}
-              <Link
-                href="/dashboard/abonnement"
-                className="block text-[15px] font-bold hover:underline"
-                style={{ color: BLEU }}
-              >
-                Garder vos {actives.length} prestations — offre {PLAN_LABELS[OFFRE_SANS_PLAFOND]} à {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois →
-              </Link>
-            </div>
-          </div>
-        )}
+              {/* Dit avant toute décision : c'est la crainte d'effacer qui fait
+                  qu'on n'ose pas trancher, et donc qu'on repousse. */}
+              <p className="text-[13px] text-slate-400 dark:text-slate-500 leading-relaxed mt-4">
+                Rien n’est effacé : vos rendez-vous, vos factures et votre historique restent intacts,
+                et une prestation en veille revient dès que vous changez d’offre.
+              </p>
 
-        {/* ── Écran 2 : le choix ───────────────────────────────────────── */}
-        {etape === 2 && (
-          <div className="bg-white dark:bg-slate-900 rounded-b-2xl px-5 pt-5 pb-5">
-            <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              {pluriel ? 'Les prestations déjà masquées sont cochées' : 'La prestation déjà masquée est cochée'}
-              {' '}d’avance. Touchez une autre carte pour changer.
-            </p>
-
-            <div className="space-y-2.5 mt-4">
-              {actives.map(svc => {
-                const retiree = choisies.includes(svc.id)
-                return (
-                  <button
-                    key={svc.id}
-                    type="button"
-                    onClick={() => basculer(svc.id)}
-                    aria-pressed={retiree}
-                    className={`w-full text-left flex items-center gap-3.5 p-4 rounded-2xl border-2 transition-all ${
-                      retiree
-                        ? 'border-slate-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/40'
-                        : 'bg-white dark:bg-slate-900'
-                    }`}
-                    style={retiree ? undefined : { borderColor: BLEU }}
-                  >
-                    {/* La sélection ne « coche » pas, elle ÉTEINT : la carte
-                        choisie se grise et son nom se barre. Le laveur voit le
-                        résultat de son clic, pas une case de plus à interpréter. */}
-                    <span
-                      className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center border-2 ${
-                        retiree ? 'border-slate-300 dark:border-slate-600' : 'border-transparent'
-                      }`}
-                      style={retiree ? undefined : { backgroundColor: BLEU }}
-                    >
-                      {!retiree && (
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className={`block text-base font-bold truncate ${
-                        retiree ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-slate-100'
-                      }`}>
-                        {svc.name}
-                      </span>
-                      <span className="block text-sm text-slate-400 dark:text-slate-500 mt-0.5">
-                        {svc.price}€ · {svc.duration_minutes} min
-                      </span>
-                    </span>
-                    <span
-                      className={`shrink-0 ${SURTITRE} ${retiree ? 'text-slate-400 dark:text-slate-500' : ''}`}
-                      style={retiree ? undefined : { color: BLEU }}
-                    >
-                      {retiree ? 'retirée' : 'en ligne'}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {error && <p className="text-sm font-medium text-red-600 dark:text-red-400 mt-5">{error}</p>}
-
-            <div className="flex items-center justify-between gap-3 mt-6">
-              <span className="text-sm font-bold text-slate-400 dark:text-slate-500">
-                {choisies.length} / {aRanger} {pluriel ? 'retirées' : 'retirée'}
-              </span>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setEtape(1)} disabled={loading} className={secondaire}>
-                  ← Retour
+              <div className="flex items-center justify-end gap-1 mt-6">
+                <button type="button" onClick={reporter} disabled={loading} className={secondaire}>
+                  Plus tard
                 </button>
                 <button
                   type="button"
-                  onClick={confirmer}
-                  disabled={!pret || loading}
+                  onClick={() => setEtape(2)}
                   className={principal}
-                  style={{ backgroundColor: pret && !loading ? BLEU : '#94a3b8' }}
+                  style={{ backgroundColor: BLEU }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = BLEU_SOMBRE)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = BLEU)}
                 >
-                  {loading ? 'Enregistrement…' : 'Confirmer'}
+                  Choisir
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+
+              {/* L'autre issue. N'offrir que la mise en veille reviendrait à
+                  faire croire qu'il faut forcément renoncer à quelque chose. */}
+              <div className="-mx-6 -mb-6 mt-5 px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl bg-slate-50/60 dark:bg-slate-950/30">
+                <Link
+                  href="/dashboard/abonnement"
+                  className="block text-sm font-bold hover:underline"
+                  style={{ color: BLEU }}
+                >
+                  Tout garder — offre {PLAN_LABELS[OFFRE_SANS_PLAFOND]} à {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois →
+                </Link>
+              </div>
+            </>
+          )}
+
+          {/* ── Écran 2 : le choix ───────────────────────────────────────── */}
+          {etape === 2 && (
+            <>
+              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15]">
+                {pluriel ? 'Lesquelles retirer' : 'Laquelle retirer'} de votre page ?
+              </h2>
+              <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
+                {pluriel ? 'Les prestations déjà masquées sont sélectionnées' : 'La prestation déjà masquée est sélectionnée'}.
+                Touchez une autre carte pour changer.
+              </p>
+
+              <div className="space-y-2 mt-5">
+                {actives.map(svc => {
+                  const retiree = choisies.includes(svc.id)
+                  return (
+                    <button
+                      key={svc.id}
+                      type="button"
+                      onClick={() => basculer(svc.id)}
+                      aria-pressed={retiree}
+                      className={`w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.99] ${
+                        retiree
+                          ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+                      }`}
+                    >
+                      {/* La sélection ÉTEINT au lieu de cocher : la carte
+                          choisie se grise et son nom se barre. Le laveur voit le
+                          résultat de son clic, pas une case de plus à décoder. */}
+                      <span
+                        className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center border-2 transition-colors duration-150 ease-out ${
+                          retiree ? 'border-slate-300 dark:border-slate-600' : 'border-transparent'
+                        }`}
+                        style={retiree ? undefined : { backgroundColor: BLEU }}
+                      >
+                        {!retiree && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-[15px] font-semibold truncate ${
+                          retiree ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-slate-100'
+                        }`}>
+                          {svc.name}
+                        </span>
+                        <span className="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                          {svc.price}€ · {svc.duration_minutes} min
+                        </span>
+                      </span>
+                      <span className={`shrink-0 ${SURTITRE} text-slate-400 dark:text-slate-500`}>
+                        {retiree ? 'retirée' : ''}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {error && <p className="text-sm font-medium text-red-600 dark:text-red-400 mt-4">{error}</p>}
+
+              <div className="flex items-center justify-between gap-3 mt-6">
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                  {choisies.length} / {aRanger} {pluriel ? 'retirées' : 'retirée'}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => setEtape(1)} disabled={loading} className={secondaire}>
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmer}
+                    disabled={!pret || loading}
+                    className={principal}
+                    style={{ backgroundColor: pret && !loading ? BLEU : '#cbd5e1' }}
+                  >
+                    {loading ? 'Enregistrement…' : 'Confirmer'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
