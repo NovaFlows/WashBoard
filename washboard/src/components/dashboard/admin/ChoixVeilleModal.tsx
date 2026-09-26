@@ -21,20 +21,25 @@ type PrestationChoisissable = {
 const OFFRES: Plan[] = ['decouverte', 'starter', 'pro', 'business']
 const OFFRE_SANS_PLAFOND = OFFRES.find(p => SERVICE_QUOTA[p] === null) ?? 'starter'
 
-/** Fenêtre qui fait choisir au laveur les prestations à mettre en veille quand
- *  il en a plus que son offre n'en affiche.
+function Etape({ n }: { n: 1 | 2 }) {
+  return (
+    <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
+      Étape {n} sur 2
+    </span>
+  )
+}
+
+/** Fenêtre en deux temps : on explique, puis on propose.
  *
- *  Elle répond à trois questions, dans l'ordre où il se les pose :
+ *  Mélanger les deux — l'explication au-dessus d'une liste à cocher — faisait
+ *  qu'on ne lisait ni l'une ni l'autre : l'œil tombe sur les cases, coche, et
+ *  passe. Or le laveur doit d'abord comprendre que sa page a DÉJÀ changé, sans
+ *  qu'il l'ait décidé. Séparer en deux écrans force ce temps de lecture, et le
+ *  bouton « Suivant » devient l'accusé de réception de l'explication.
  *
- *    1. POURQUOI MAINTENANT ? Elle nomme l'offre et sa limite. Une fenêtre qui
- *       surgit sans dire d'où elle vient se referme sans être lue.
- *    2. QU'EST-CE QUI SE PASSE DÉJÀ ? Sa page de réservation n'affiche plus
- *       tout son catalogue — c'est un fait accompli, pas une menace. Le dire
- *       en titre change la nature de la demande : ce n'est plus « faites un
- *       sacrifice », c'est « reprenez la main sur un choix fait à votre place ».
- *    3. QUELLES SONT MES OPTIONS ? Mettre une prestation en veille, ou changer
- *       d'offre. N'offrir que la première revient à lui faire croire qu'il
- *       doit forcément renoncer à quelque chose.
+ *  L'écran 1 donne aussi les DEUX issues : retirer une prestation, ou changer
+ *  d'offre. N'en présenter qu'une revient à faire croire qu'il faut forcément
+ *  renoncer à quelque chose.
  *
  *  Et pourquoi le laisser choisir plutôt que d'éteindre les plus récentes : sa
  *  prestation la plus rentable peut être la dernière ajoutée. Choisir au hasard
@@ -50,12 +55,14 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, onValider, 
   loading: boolean
   error: string | null
 }) {
+  const [etape, setEtape] = useState<1 | 2>(1)
+
   // Au-delà du plafond, ce sont les dernières de la liste que la page masque
   // déjà (voir `prestationsAffichees`). On part donc de l'état RÉEL : le laveur
   // n'a rien à faire s'il est d'accord, et tout à changer sinon. Une liste vide
   // l'obligerait à reconstituer lui-même ce qui se passe aujourd'hui.
-  const dejaMasquees = actives.slice(plafond).map(s => s.id)
-  const [choisies, setChoisies] = useState<string[]>(dejaMasquees)
+  const masqueesAujourdhui = actives.slice(plafond)
+  const [choisies, setChoisies] = useState<string[]>(masqueesAujourdhui.map(s => s.id))
 
   function basculer(id: string) {
     setChoisies(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
@@ -63,33 +70,124 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, onValider, 
 
   const pret = choisies.length === aRanger
   const nomOffreSup = PLAN_LABELS[OFFRE_SANS_PLAFOND]
+  const pluriel = aRanger > 1
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="w-full max-w-lg max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl">
+  const cadre = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm'
+  const boite = 'w-full max-w-lg max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl'
 
-        {/* ── ① Pourquoi cette fenêtre s'ouvre ─────────────────────────── */}
-        <div className="p-6 pb-5 border-b border-slate-100 dark:border-slate-800">
-          <span className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 mb-3">
-            Offre {PLAN_LABELS[offre]}
-          </span>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
-            Votre page de réservation n’affiche que {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-            L’offre {PLAN_LABELS[offre]} en montre {plafond} au maximum. Faute de choix de votre part,
-            {aRanger > 1 ? ' les dernières ajoutées sont déjà invisibles' : ' la dernière ajoutée est déjà invisible'}
-            {' '}pour vos clients.{' '}
-            <strong className="text-slate-700 dark:text-slate-200">Vous pouvez reprendre la main.</strong>
-          </p>
+  // ── Écran 1 : ce qui se passe, et pourquoi ────────────────────────────────
+  if (etape === 1) {
+    return (
+      <div className={cadre}>
+        <div className={boite}>
+          <div className="p-6 pb-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <span className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+                Offre {PLAN_LABELS[offre]}
+              </span>
+              <Etape n={1} />
+            </div>
+
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
+              Votre page de réservation n’affiche que {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length}
+            </h2>
+
+            <dl className="mt-5 space-y-4">
+              <div>
+                <dt className="text-sm font-semibold text-slate-800 dark:text-slate-200">Pourquoi ?</dt>
+                <dd className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                  L’offre {PLAN_LABELS[offre]} affiche {plafond} prestation{plafond > 1 ? 's' : ''} au
+                  maximum sur votre page de réservation. Vous en avez {actives.length}.
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  Ce qui se passe aujourd’hui
+                </dt>
+                <dd className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                  Faute de choix de votre part,{' '}
+                  {masqueesAujourdhui.length > 0 && (
+                    <>
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {masqueesAujourdhui.map(s => `« ${s.name} »`).join(', ')}
+                      </strong>{' '}
+                    </>
+                  )}
+                  {pluriel ? 'sont déjà invisibles' : 'est déjà invisible'} pour vos clients.
+                  Ce n’est pas vous qui l’avez décidé : c’est ce qui se passe par défaut.
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-sm font-semibold text-slate-800 dark:text-slate-200">Rien n’est effacé</dt>
+                <dd className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                  {/* Dit avant toute décision : c'est la crainte d'effacer qui
+                      fait qu'on n'ose pas trancher, et donc qu'on repousse. */}
+                  Vos rendez-vous passés, vos factures et l’historique de vos clients restent intacts.
+                  Une prestation mise en veille revient dès que vous changez d’offre.
+                </dd>
+              </div>
+            </dl>
+
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={onFermer}
+                className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                Plus tard
+              </button>
+              <button
+                type="button"
+                onClick={() => setEtape(2)}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                Suivant →
+              </button>
+            </div>
+          </div>
+
+          {/* L'autre issue, offerte dès l'explication : c'est là que la
+              question « et si je payais ? » se pose naturellement. */}
+          <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Vous préférez garder vos {actives.length} prestations en ligne ?
+            </p>
+            <Link
+              href="/dashboard/abonnement"
+              className="inline-block mt-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Passer à l’offre {nomOffreSup} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois →
+            </Link>
+          </div>
         </div>
+      </div>
+    )
+  }
 
-        {/* ── ② Le choix, en partant de l'état réel ────────────────────── */}
-        <div className="p-6 pb-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-3">
-            {aRanger > 1 ? `Les ${aRanger} à retirer de votre page` : 'Celle à retirer de votre page'}
+  // ── Écran 2 : le choix ────────────────────────────────────────────────────
+  return (
+    <div className={cadre}>
+      <div className={boite}>
+        <div className="p-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+              Offre {PLAN_LABELS[offre]}
+            </span>
+            <Etape n={2} />
+          </div>
+
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
+            {pluriel ? `Choisissez les ${aRanger} prestations à retirer` : 'Choisissez la prestation à retirer'}
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+            {pluriel ? 'Celles' : 'Celle'} qui {pluriel ? 'sont' : 'est'} déjà masquée{pluriel ? 's' : ''}
+            {' '}{pluriel ? 'sont' : 'est'} cochée{pluriel ? 's' : ''} d’avance. Changez si vous préférez en garder
+            {' '}{pluriel ? 'd’autres' : 'une autre'}.
           </p>
-          <div className="space-y-2">
+
+          <div className="space-y-2 mt-5">
             {actives.map((svc, i) => {
               const prise = choisies.includes(svc.id)
               const masqueeAujourdhui = i >= plafond
@@ -118,7 +216,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, onValider, 
                     <span className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{svc.name}</span>
                       {/* L'étiquette dit l'état ACTUEL, pas le résultat du clic :
-                          c'est ce qui rend le « pourquoi » vérifiable d'un coup d'œil. */}
+                          c'est ce qui rend l'explication vérifiable d'un coup d'œil. */}
                       <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
                         masqueeAujourdhui
                           ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
@@ -136,28 +234,20 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, onValider, 
             })}
           </div>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-4">
-            {/* Dit AVANT de cliquer : c'est la crainte d'effacer qui fait qu'on
-                n'ose pas trancher, et donc qu'on repousse. */}
-            <strong className="text-slate-700 dark:text-slate-200">Rien n’est effacé.</strong> Vos rendez-vous
-            passés, vos factures et l’historique de vos clients restent intacts. La prestation disparaît
-            seulement de votre page de réservation, et revient dès que vous changez d’offre.
-          </p>
+          {error && <p className="text-xs font-medium text-red-600 dark:text-red-400 mt-4">{error}</p>}
 
-          {error && <p className="text-xs font-medium text-red-600 dark:text-red-400 mt-3">{error}</p>}
-
-          <div className="flex items-center justify-between gap-3 mt-5">
+          <div className="flex items-center justify-between gap-3 mt-6">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              {choisies.length} sur {aRanger} {aRanger > 1 ? 'cochées' : 'cochée'}
+              {choisies.length} sur {aRanger} {pluriel ? 'cochées' : 'cochée'}
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={onFermer}
+                onClick={() => setEtape(1)}
                 disabled={loading}
                 className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-40"
               >
-                Plus tard
+                ← Retour
               </button>
               <button
                 type="button"
@@ -169,21 +259,6 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, onValider, 
               </button>
             </div>
           </div>
-        </div>
-
-        {/* ── ③ L'autre issue ──────────────────────────────────────────── */}
-        {/* Sans elle, la fenêtre ne propose qu'un renoncement — et c'est aussi
-            le moment où l'envie de payer est la plus forte. */}
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Vous préférez garder vos {actives.length} prestations en ligne ?
-          </p>
-          <Link
-            href="/dashboard/abonnement"
-            className="inline-block mt-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            Passer à l’offre {nomOffreSup} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois →
-          </Link>
         </div>
       </div>
     </div>
