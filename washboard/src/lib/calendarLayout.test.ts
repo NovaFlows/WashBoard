@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure,
+  getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure, cleStatut,
   type LayoutBooking,
 } from './calendarLayout'
 
@@ -177,5 +177,25 @@ describe('formatHeure', () => {
   })
   it('utilise le format 24 h', () => {
     expect(formatHeure(new Date('2026-09-07T14:30:00+02:00'))).toBe('14:30')
+  })
+})
+
+describe('cleStatut', () => {
+  it('renvoie le statut tel quel pour un rendez-vous non clôturé en retard', () => {
+    expect(cleStatut({ status: 'confirmed' })).toBe('confirmed')
+    expect(cleStatut({ status: 'pending' })).toBe('pending')
+    expect(cleStatut({ status: 'cancelled' })).toBe('cancelled')
+  })
+  it('un rendez-vous terminé sans closed_late reste "done"', () => {
+    expect(cleStatut({ status: 'done', closed_late: false })).toBe('done')
+    expect(cleStatut({ status: 'done', closed_late: null })).toBe('done')
+    expect(cleStatut({ status: 'done' })).toBe('done')
+  })
+  it('un rendez-vous terminé ET clôturé en retard porte "closed_late"', () => {
+    expect(cleStatut({ status: 'done', closed_late: true })).toBe('closed_late')
+  })
+  it('closed_late est ignoré sur un statut autre que "done"', () => {
+    expect(cleStatut({ status: 'confirmed', closed_late: true })).toBe('confirmed')
+    expect(cleStatut({ status: 'pending', closed_late: true })).toBe('pending')
   })
 })

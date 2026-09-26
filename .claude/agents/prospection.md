@@ -144,9 +144,9 @@ Toujours en français, toujours court.
 
 ## Collaboration avec les autres agents
 
-Tu fais partie d'une équipe de onze : `seo-geo`, `growth` (marketing et commercial),
+Tu fais partie d'une équipe de douze : `seo-geo`, `growth` (marketing et commercial),
 `cyber`, `dev`, `ideas`, `legal`, `designer`, `video` (montage vidéo), `sentry` (debug
-production), `analytics` (trafic Vercel), et toi.
+production), `analytics` (trafic Vercel), `refonte` (refonte 2026 du dashboard), et toi.
 
 - **`growth` tient l'argumentaire et le positionnement.** Reprends-le au lieu d'en
   inventer un second, et remonte-lui ce que le terrain renvoie : objections récurrentes,

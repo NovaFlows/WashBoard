@@ -5,6 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresForm from '@/components/dashboard/ParametresForm'
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
 import { computeSetupProgress } from '@/lib/setupProgress'
+import { resumeHoraires } from '@/lib/horaires'
 import { logger } from '@/lib/logger'
 
 export default async function ParametresPage() {
@@ -15,10 +16,13 @@ export default async function ParametresPage() {
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'parametres')
 
-  // Deux comptages seulement, en tête : on ne rapatrie pas les lignes elles-mêmes.
+  // Les prestations sont seulement comptées (en tête, sans rapatrier les lignes).
+  // Les plages d'ouverture, elles, sont lues : quelques lignes (trois colonnes) qui
+  // servent au comptage de la barre d'avancement ET à la phrase de résumé de la
+  // ligne « Horaires » de Plus (`resumeHoraires`) — une seule requête pour les deux.
   const [services, availabilities] = await Promise.all([
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
-    supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
+    supabase.from('availabilities').select('day_of_week, start_time, end_time').eq('washer_id', washer.id),
   ])
 
   // Un échec de lecture ne doit pas inventer un compte vide : le laveur verrait
@@ -29,7 +33,7 @@ export default async function ParametresPage() {
 
   const progress = computeSetupProgress({
     servicesCount: services.error ? 1 : (services.count ?? 0),
-    availabilitiesCount: availabilities.error ? 1 : (availabilities.count ?? 0),
+    availabilitiesCount: availabilities.error ? 1 : (availabilities.data?.length ?? 0),
     baseAddress: washer.base_address ?? null,
     phone: washer.phone ?? null,
     logoUrl: washer.logo_url ?? null,
@@ -42,7 +46,7 @@ export default async function ParametresPage() {
   })
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Paramètres</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gérez vos informations et votre page client</p>
@@ -50,7 +54,17 @@ export default async function ParametresPage() {
       <div className="mb-4">
         <SetupProgressBar progress={progress} />
       </div>
-      <ParametresForm washer={washer} email={user.email ?? ''} />
+      {/* servicesCount : réutilise le comptage déjà fait juste au-dessus pour
+          la barre d'avancement — aucune requête ajoutée. `undefined` si la
+          lecture a échoué (voir le commentaire plus haut) : ParametresFormV2
+          affiche alors la ligne « Prestations et prix » sans nombre plutôt
+          qu'un zéro inventé. */}
+      <ParametresForm
+        washer={washer}
+        email={user.email ?? ''}
+        servicesCount={services.error ? undefined : (services.count ?? 0)}
+        resumeHoraires={availabilities.error ? undefined : resumeHoraires(availabilities.data ?? [])}
+      />
     </DashboardShell>
   )
 }

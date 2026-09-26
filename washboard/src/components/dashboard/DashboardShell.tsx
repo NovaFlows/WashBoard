@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
+import { BarreBasV2 } from './BarreBasV2'
+import { SupportBadgesContext } from './SupportBadgesContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
@@ -10,6 +12,7 @@ import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
 import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
+import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -25,6 +28,12 @@ type Props = {
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
   cancelsAt?: string | null
+  // Refonte 2026, passe 4 : `washer.beta_refonte`, tel quel — `undefined`
+  // tant que la colonne n'existe pas en base (SQL pas encore passé),
+  // `null`/`false`/absent pour un laveur qui n'a pas rejoint le bêta. Les
+  // trois valent « pas de barre du bas », jamais une erreur (voir
+  // `betaRefonte` ci-dessous, converti en booléen strict).
+  betaRefonte?: boolean | null
 }
 
 function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
@@ -256,13 +265,24 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Barre du bas (refonte 2026, passe 4) : uniquement dans la PWA installée
+  // (usePwaStandalone — la FORME du châssis change, une nav en plus apparaît,
+  // donc le hook plutôt que la classe CSS `wb-pwa`, voir globals.css) ET
+  // seulement pour un laveur qui a rejoint le bêta. `!!betaRefonte` absorbe
+  // `undefined` (colonne absente), `null` et `false` de la même façon : rien
+  // ne s'affiche, jamais d'erreur. Le menu latéral (Sidebar, juste en dessous)
+  // n'est JAMAIS conditionné par ces deux variables : il reste le filet de
+  // secours tant que les passes 5 et 6 ne sont pas faites.
+  const isPwa = usePwaStandalone()
+  const showBarreBas = isPwa && !!betaRefonte
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
-  // (Sidebar) et le bouton ☰ juste en dessous, qui doivent montrer le même
-  // nombre — sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
-  // jamais le compteur.
+  // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
+  // nombre, sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
+  // jamais le compteur — et, dans la PWA en bêta où ni l'un ni l'autre
+  // n'existe plus, l'écran « Plus » (via SupportBadgesContext).
   const unreadSupportCount = useSupportUnreadBadge()
   // Pendant équipe : nombre de messages de laveurs non lus par l'équipe.
   // Appelé pour tout compte (voir useSupportUnreadTeamBadge) — silencieux et
@@ -274,21 +294,99 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Chiffre unique affiché sur le bouton ☰ : la somme des deux compteurs,
   // voir `libelleBoutonMenu` juste au-dessus pour le pourquoi.
   const menuBadgeCount = (unreadSupportCount ?? 0) + (unreadTeamCount ?? 0)
+  const supportBadges = useMemo(
+    () => ({ estEquipeSupport, unreadSupportCount, unreadTeamCount }),
+    [estEquipeSupport, unreadSupportCount, unreadTeamCount],
+  )
+
+  // Socle mobile (refonte 2026, passe 0) : pose sur <body> la classe qui
+  // neutralise le rebond de défilement (voir globals.css,
+  // `body.wb-dashboard-active`), tant que ce composant est monté. Même
+  // mécanisme que `wb-hide-fab` un peu plus bas dans ce fichier. Limité au
+  // dashboard : le reste du site (landing, blog, /book/[slug]) doit garder
+  // le tirer-pour-rafraîchir natif.
+  useEffect(() => {
+    document.body.classList.add('wb-dashboard-active')
+    return () => document.body.classList.remove('wb-dashboard-active')
+  }, [])
+
+  // La barre du bas flotte sur toute la largeur (left-3 right-3), au même
+  // coin que le bouton WhatsApp (data-wb-whatsapp-fab, bottom-right) : sans
+  // ça, la bulle resterait posée PAR-DESSUS la barre, au même titre que le
+  // panneau de question (voir globals.css, body.wb-hide-fab, et
+  // ClientProfileModalV2 qui utilise déjà exactement ce mécanisme).
+  useEffect(() => {
+    if (!showBarreBas) return
+    document.body.classList.add('wb-hide-fab')
+    return () => document.body.classList.remove('wb-hide-fab')
+  }, [showBarreBas])
+
+  // PWA en bêta : la barre d'état du téléphone prend le papier de la refonte, pour que le
+  // beige (ou le gris foncé) monte jusqu'en haut de l'écran (demande d'Alexandre, 2026-09-25).
+  //
+  // La couleur elle-même est écrite par le SERVEUR dans le HTML de la page (voir
+  // `generateViewport`, layout.tsx) : iOS ne lit `theme-color` qu'à ce moment-là, une balise
+  // posée ensuite par JavaScript n'était prise en compte qu'au changement d'onglet suivant.
+  // Comme le serveur ne peut pas savoir qu'on tourne dans l'application installée, c'est ce
+  // cookie qui le lui dit — il prend donc effet au lancement SUIVANT.
+  //
+  // Le cookie est RETIRÉ hors de l'application installée : sur Android, le navigateur et
+  // l'application partagent leurs cookies, et le site doit garder ses couleurs à lui.
+  useEffect(() => {
+    const base = 'wb_pwa_beta=; path=/; max-age=0; samesite=lax'
+    if (!isPwa || !showBarreBas) {
+      document.cookie = base
+      return
+    }
+    document.cookie = `wb_pwa_beta=1; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+    // Rien à changer dans la page en cours : Next réécrit ses propres balises `theme-color`
+    // (essayé, ça ne tient pas), et de toute façon iOS ne relit la couleur qu'au lancement.
+    // Changer de thème en séance se voit donc au lancement suivant, lui aussi.
+  }, [showBarreBas, isPwa])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        unreadSupportCount={unreadSupportCount}
-        estEquipeSupport={estEquipeSupport}
-        unreadTeamCount={unreadTeamCount}
-      />
+    // PWA en bêta : tout le fond de l'écran est le papier de la refonte (`--v2-color-fond`),
+    // pas seulement le rectangle que dessine chaque écran v2 — sinon les bords et le bas
+    // de la page restent gris-bleu autour d'un rectangle beige (signalé par Alexandre,
+    // 2026-09-25). Site et PWA sans bêta : inchangé.
+    <div
+      className={`min-h-screen overflow-x-hidden wb-dashboard-shell ${
+        showBarreBas ? 'bg-[color:var(--v2-color-fond)]' : 'bg-slate-50 dark:bg-slate-950'
+      }`}
+    >
+      {/* Menu latéral : retiré dans la PWA en bêta (refonte 2026, 2026-09-24),
+          où le bouton ☰ qui l'ouvre a disparu avec l'en-tête — le laisser
+          monté offrirait des liens focalisables au clavier sur un tiroir que
+          rien ne peut ouvrir. Tout ce qu'il donnait reste atteignable : les
+          5 destinations de la barre du bas, et « Plus » pour le reste (guide,
+          export et liens par réseau, assistance, abonnement, réglages, et
+          l'outil interne de l'équipe). Liste vérifiée page par page dans
+          TODO.md. Site et PWA sans bêta : inchangé, le menu reste monté. */}
+      {!showBarreBas && (
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          unreadSupportCount={unreadSupportCount}
+          estEquipeSupport={estEquipeSupport}
+          unreadTeamCount={unreadTeamCount}
+        />
+      )}
 
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+      {showBarreBas && <BarreBasV2 />}
+
+      {/* En-tête. Dans la PWA en bêta, la classe `wb-entete-beta` (posée dès
+          que le serveur sait que le laveur est dans le bêta) le réduit, par
+          CSS et sans flash, à ses seuls bandeaux : la rangée ☰ / titre /
+          badge de plan / déconnexion / thème (`wb-entete-barre`) est masquée,
+          et le bloc perd son statut collant, son fond et son filet — voir
+          globals.css. Les bandeaux (fin d'essai, paiement, résiliation,
+          annonce) restent : information commerciale, ils ne sont jamais
+          retirés. Ailleurs (site, PWA sans bêta), aucune de ces règles ne
+          s'applique et l'en-tête est identique à celui d'avant. */}
+      <header className={`bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10${betaRefonte ? ' wb-entete-beta' : ''}`}>
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
         <AppBetaBanner />
-        <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+        <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -353,10 +451,26 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </div>
       </header>
 
-      <main id="main-content" className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden">
-        {children}
+      <main
+        id="main-content"
+        className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden"
+        // La barre du bas flotte par-dessus le contenu (position: fixed) :
+        // sans réserve explicite, elle couvrirait les dernières lignes d'une
+        // longue page. `pb-24`/`sm:pb-6` ci-dessus suffisaient au bouton
+        // WhatsApp seul ; la barre est plus haute (66px + 14px d'écart + encoche)
+        // et s'affiche aussi sur grand écran (PWA installée sur ordinateur),
+        // où `sm:pb-6` (24px) ne suffit pas — d'où ce style qui prend le pas
+        // sur les deux classes Tailwind quand la barre est affichée.
+        style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 8px + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
+        <SupportBadgesContext.Provider value={supportBadges}>
+          {children}
+        </SupportBadgesContext.Provider>
       </main>
 
+      {/* Retiré dans la PWA en bêta : posé sous la barre du bas, il allongeait la page de
+          plus d'un écran de vide et passait sous la barre (2026-09-25). */}
+      {!showBarreBas && (
       <footer className="max-w-3xl mx-auto px-3 sm:px-4 pb-6 text-center">
         <p className="text-xs text-slate-400 dark:text-slate-600">
           Créé par{' '}
@@ -370,16 +484,21 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           </a>
         </p>
       </footer>
+      )}
 
       {/* Bouton WhatsApp flottant. data-wb-whatsapp-fab : accroche pour le
           masquer (globals.css) pendant qu'un panneau de question est ouvert —
-          les deux se disputent le coin bas-droit au même z-index. */}
+          les deux se disputent le coin bas-droit au même z-index.
+          Le bottom en calc() ci-dessous décale le bouton au-dessus de la
+          zone d'encoche/barre d'accueil (safe-area-inset-bottom) au lieu de
+          se faire chevaucher par elle — sans viewportFit=cover (layout.tsx)
+          cette variable vaudrait 0 et la ligne ne changerait rien. */}
       <a
         href="https://wa.me/33684140438"
         target="_blank"
         rel="noopener noreferrer"
         data-wb-whatsapp-fab
-        className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold p-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105"
+        className="fixed right-3 sm:right-6 z-50 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold p-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg shadow-green-500/30 transition-all hover:scale-105 bottom-[calc(1rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))]"
         aria-label="Contacter le support WhatsApp"
       >
         <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">

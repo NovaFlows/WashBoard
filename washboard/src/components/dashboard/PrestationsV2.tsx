@@ -1,0 +1,557 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
+import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
+import { usePrestationsV2 } from '@/hooks/usePrestationsV2'
+import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
+import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
+import { CarteListe, Chevron, Ligne } from '@/components/dashboard/ParametresFormV2'
+import FeuillePrestationV2 from '@/components/dashboard/FeuillePrestationV2'
+import FeuilleCategorieV2 from '@/components/dashboard/FeuilleCategorieV2'
+import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
+import FeuilleCreneauxV2 from '@/components/dashboard/FeuilleCreneauxV2'
+import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
+import { ConfirmationSuppression, Constat, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
+import { estReservable } from '@/lib/prestation'
+import {
+  detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
+  type FormulairePrestation, type ModeleCategorie,
+} from '@/lib/prestationForm'
+import { formatDureeFr, minVehiclePrice } from '@/lib/pricing'
+import { resumeZone } from '@/lib/zoneForm'
+import {
+  prestationExemple, prixLePlusBas, resumeCreneaux,
+  type ChampsCreneaux, type ReglagesCreneaux,
+} from '@/lib/creneauxForm'
+import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
+
+// « Prestations et prix » — refonte 2026, destination NEUVE de « Plus » (la
+// maquette n'a aucun écran pour gérer les prestations ; Alexandre, 2026-09-24 :
+// « avec le même design que les autres pages et les mêmes fonctionnalités
+// qu'avant la refonte »). Réservé à la PWA installée (voir Prestations.tsx, le
+// garde-fou : le site est renvoyé vers `/dashboard/admin#prestations`, l'écran
+// v1 `PrestationsManager`, inchangé).
+//
+// Ce que l'écran configure, c'est ce que le client final voit sur la page de
+// réservation (`StepService`, `StepOptions`) : le chemin qui rapporte l'argent.
+// Toute la logique de saisie vient de `lib/prestationForm.ts` (testée), les
+// appels de `lib/prestationsApi.ts`, l'état de `usePrestationsV2` — cet écran et
+// ses feuilles ne contiennent que de la présentation et du câblage.
+//
+// Toute la ligne d'une prestation ouvre son édition : pas de boutons Modifier /
+// Supprimer en série. La suppression se fait depuis la feuille d'édition, avec
+// une confirmation (plus de `confirm()` natif).
+//
+// 2026-09-25 — deux réglages de l'ancien onglet Identité rejoignent cet écran
+// (décision d'Alexandre) : la zone d'intervention et les créneaux intelligents.
+// Ils sont ici parce qu'ils décrivent la même chose que les prix : ce que le client
+// final voit et peut réserver — pour qui, où, et à quel prix. Le site, lui,
+// continue de les régler dans `admin/IdentiteForm.tsx`, inchangé.
+//
+// Deux vues (Alexandre, 2026-09-25 : « trois entrées, et Prestations mène à une
+// page où il n'y a que les prestations ») : l'accueil, avec trois lignes
+// (Prestations, Zone d'intervention, Créneaux intelligents), et la liste
+// `?vue=prestations`. Zone et créneaux ouvrent leur feuille depuis l'accueil.
+
+type FeuilleOuverte =
+  | { quoi: 'prestation'; service: Service | null; formulaire: FormulairePrestation }
+  | { quoi: 'categorie'; categorie: ServiceCategory | null }
+  | { quoi: 'zone' }
+  | { quoi: 'creneaux' }
+  | null
+
+type Suppression =
+  | { quoi: 'prestation'; service: Service }
+  | { quoi: 'categorie'; categorie: ServiceCategory; nbPrestations: number }
+  | null
+
+type Props = {
+  services: Service[]
+  categories: ServiceCategory[]
+  availabilities: Availability[]
+  /** La lecture des prestations ou des catégories a échoué : on n'affiche PAS un
+   *  écran vide (le laveur le prendrait pour son état réel et referait sa
+   *  configuration, doublons à la clé). */
+  lectureIncomplete: boolean
+  /** `washers.zone_config` — la zone d'intervention, réglée par la feuille `#zone`. */
+  zone: ZoneConfig
+  /** `washers.base_address` : proposée d'un tap dans la feuille Zone, jamais
+   *  fusionnée avec `zone_config.center_address` (deux adresses distinctes). */
+  adresseDeBase: string | null
+  creneaux: ReglagesCreneaux
+}
+
+/** Titre de section en phrase, gris. `nombre` est facultatif : les sections
+ *  « Où vous intervenez » et « Créneaux intelligents » n'ont rien à compter. */
+export function Section({
+  titre: intitule, nombre, ancre, action, children,
+}: {
+  titre: string
+  nombre?: number
+  ancre?: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="mt-[22px] scroll-mt-20" id={ancre}>
+      <div className="flex items-center justify-between gap-3 pb-1.5">
+        <h2 className={`flex min-w-0 items-center gap-2 px-0.5 text-[19px] leading-tight ${titre}`}>
+          <span className="truncate">{intitule}</span>
+          {typeof nombre === 'number' && (
+            <span
+              className={`inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-color-surface)] px-2 text-[13px] ${corpsFort} tabular-nums text-[color:var(--v2-color-gris)]`}
+              style={{ boxShadow: 'inset 0 0 0 1px var(--v2-filet-fort)' }}
+            >
+              {nombre}
+            </span>
+          )}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// Ligne de prestation. Glissée vers la gauche (doigt), elle révèle un bouton rouge
+// « Supprimer » avec sa poubelle, qui ouvre la même confirmation que le lien de la
+// feuille d'édition : une suppression reste un geste à confirmer (elle échoue d'ailleurs
+// si des réservations utilisent la prestation, et la confirmation le dit).
+function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+  service: Service
+  categorie: ServiceCategory | undefined
+  onOuvrir: () => void
+  ouverte: boolean
+  onOuvrirLigne: () => void
+  onFermerLigne: () => void
+  onSupprimer: () => void
+}) {
+  const prix = prixListe(service)
+  const reservable = estReservable(service)
+  const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
+    ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
+  })
+  return (
+    <li ref={refLigne} className="relative overflow-hidden">
+      {/* Derrière la ligne : cachée tant que la ligne n'est pas glissée, et retirée de
+          l'ordre de tabulation (l'action reste joignable par la feuille d'édition). */}
+      <button
+        type="button"
+        onClick={onSupprimer}
+        tabIndex={ouverte ? 0 : -1}
+        aria-hidden={!ouverte}
+        aria-label={`Supprimer ${service.name}`}
+        className={`absolute inset-y-1.5 right-0 flex flex-col items-center justify-center gap-1 rounded-[12px] text-[12px] text-white ${corpsFort}`}
+        style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
+      >
+        <Trash2 size={20} strokeWidth={2} aria-hidden />
+        Supprimer
+      </button>
+      <div
+        {...poignee}
+        style={styleContenu}
+        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+      >
+        <button
+          type="button"
+          onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
+          className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className={`truncate text-[15.5px] ${nom}`}>{service.name}</span>
+            <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              {reservable ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
+            </span>
+            {!reservable && (
+              <span className="flex items-start gap-2">
+                <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-rouge)' }} aria-hidden />
+                <span className={`text-[12.5px] leading-snug ${corpsFort} text-[color:var(--v2-color-encre)]`}>
+                  Invisible pour vos clients : aucun type
+                </span>
+              </span>
+            )}
+          </span>
+          <span className={`shrink-0 text-right text-[15.5px] ${corpsFort} tabular-nums`}>
+            {prix.des && <span className={`mr-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès</span>}
+            {prix.montant}
+          </span>
+          <Chevron />
+        </button>
+      </div>
+    </li>
+  )
+}
+
+export default function PrestationsV2({
+  services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
+  zone: zoneServeur, adresseDeBase, creneaux: creneauxServeur,
+}: Props) {
+  const router = useRouter()
+  const p = usePrestationsV2(servicesServeur, categoriesServeur)
+  const { services, categories } = p
+  // Zone et créneaux : l'état local suit la base dès qu'une écriture réussit, sans
+  // attendre le rechargement — la phrase de la ligne change tout de suite.
+  const [zone, setZone] = useState(zoneServeur)
+  const [creneaux, setCreneaux] = useState(creneauxServeur)
+  // Arrivée par un lien de l'accueil de l'app (`#zone`, `#creneaux`) : on ouvre
+  // directement la feuille visée. Cet écran ne se monte qu'après le garde-fou de
+  // `Prestations.tsx`, donc toujours dans le navigateur.
+  const [feuille, setFeuille] = useState<FeuilleOuverte>(() => {
+    const ancre = window.location.hash
+    if (ancre === '#zone') return { quoi: 'zone' }
+    if (ancre === '#creneaux') return { quoi: 'creneaux' }
+    return null
+  })
+  const [suppression, setSuppression] = useState<Suppression>(null)
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false)
+  const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
+  // Une seule ligne de prestation glissée (bouton « Supprimer » visible) à la fois.
+  const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
+
+  const categorieDe = (id: string | null) => categories.find(c => c.id === id)
+  const sansCategorie = services.filter(s => !categories.some(c => c.id === s.category_id))
+  const vide = categories.length === 0 && services.length === 0
+
+  const ouvrirNouvellePrestation = () => setFeuille({ quoi: 'prestation', service: null, formulaire: formulaireNeuf(categories) })
+  const ouvrirPrestation = (s: Service) => { setLigneOuverte(null); setFeuille({ quoi: 'prestation', service: s, formulaire: formulaireDepuisService(s) }) }
+  const supprimerDepuisLigne = (s: Service) => { setLigneOuverte(null); demanderSuppression({ quoi: 'prestation', service: s }) }
+  const fermerLigne = () => setLigneOuverte(null)
+  const fermerFeuille = () => setFeuille(null)
+
+  async function enregistrerPrestation(form: FormulairePrestation): Promise<string | null> {
+    if (feuille?.quoi !== 'prestation') return null
+    const message = feuille.service
+      ? await p.modifierPrestation(feuille.service.id, form)
+      : await p.creerPrestation(form)
+    if (!message) setFeuille(null)
+    return message
+  }
+
+  async function enregistrerCategorie(nomCategorie: string, types: ServiceCategory['types']): Promise<string | null> {
+    if (feuille?.quoi !== 'categorie') return null
+    if (feuille.categorie) {
+      const message = await p.modifierCategorie(feuille.categorie.id, nomCategorie, types)
+      if (!message) setFeuille(null)
+      return message
+    }
+    const r = await p.creerCategorie(nomCategorie, types)
+    if (!r.ok) return r.message
+    setFeuille(null)
+    return null
+  }
+
+  // État vide, un tap (voir PrestationsEtatVideV2 — retirable). Catégorie créée
+  // avec les types du modèle, puis directement la feuille de la première
+  // prestation. Si la création échoue, rien n'est créé : l'erreur est dite sur
+  // place. Si c'est ENSUITE l'enregistrement de la prestation qui échoue (ou
+  // qu'on annule), la catégorie existe déjà : elle est visible dans la liste,
+  // avec « Ajouter une prestation » — pas d'objet orphelin invisible.
+  async function creerDepuisModele(modele: ModeleCategorie): Promise<string | null> {
+    const r = await p.creerCategorie(modele.name, typesDepuisModele(modele))
+    if (!r.ok) return r.message
+    setFeuille({ quoi: 'prestation', service: null, formulaire: formulaireNeuf([r.data]) })
+    return null
+  }
+
+  function demanderSuppression(s: Suppression) {
+    setSuppressionErreur(null)
+    setSuppression(s)
+  }
+
+  async function confirmerSuppression() {
+    if (!suppression || suppressionEnCours) return
+    setSuppressionEnCours(true)
+    setSuppressionErreur(null)
+    const message = suppression.quoi === 'prestation'
+      ? await p.supprimerPrestation(suppression.service.id)
+      : await p.supprimerCategorie(suppression.categorie.id)
+    setSuppressionEnCours(false)
+    if (message) { setSuppressionErreur(message); return }
+    setSuppression(null)
+    setFeuille(null)
+  }
+
+  // Un seul `PATCH /api/washer` par feuille : plusieurs champs doivent être
+  // valides ensemble (un rayon sans adresse, une remise sans son type n'ont
+  // pas de sens). En cas d'échec la feuille reste ouverte, avec la saisie.
+  async function enregistrerZone(config: ZoneConfig): Promise<string | null> {
+    const r = await enregistrerZoneCreneaux({ zone_config: config })
+    if (!r.ok) return r.message
+    setZone(config)
+    setFeuille(null)
+    router.refresh()
+    return null
+  }
+
+  async function enregistrerCreneaux(champs: ChampsCreneaux): Promise<string | null> {
+    const r = await enregistrerZoneCreneaux(champs)
+    if (!r.ok) return r.message
+    setCreneaux(prev => ({
+      actif: champs.smart_slot_enabled,
+      // Éteindre n'envoie que l'interrupteur : le reste garde sa valeur.
+      proximite: champs.smart_slot_radius_minutes ?? prev.proximite,
+      type: champs.smart_slot_discount_type ?? prev.type,
+      valeur: champs.smart_slot_discount_value ?? prev.valeur,
+    }))
+    setFeuille(null)
+    router.refresh()
+    return null
+  }
+
+  const prestationsPrix = services.map(s => ({ nom: s.name, prix: minVehiclePrice(s) }))
+  const ligneZone = resumeZone(zone)
+
+  const peutAjouterPrestation = categories.length > 0
+
+  // Deux vues : l'accueil de « Prestations et prix » (trois entrées) et la liste des
+  // prestations. `?vue=prestations` est une vraie adresse : le geste « retour » du
+  // téléphone ramène à l'accueil, comme n'importe quelle application.
+  const vueListe = useSearchParams().get('vue') === 'prestations'
+
+  const enteteListe = (
+    <div className="flex items-center gap-1 pb-2">
+      <Link
+        href="/dashboard/parametres/prestations"
+        aria-label="Retour à Prestations et prix"
+        className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+      >
+        <ChevronLeft size={22} strokeWidth={2} />
+      </Link>
+      <div className="min-w-0 flex-1">
+        <h1 className={`text-[24px] leading-none ${titre}`}>Prestations</h1>
+        {!lectureIncomplete && (
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            {sousTitrePrestations(services.length, categories.length)}
+          </p>
+        )}
+      </div>
+      {!lectureIncomplete && peutAjouterPrestation && (
+        <button
+          type="button"
+          onClick={ouvrirNouvellePrestation}
+          aria-label="Ajouter une prestation"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
+          style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
+        >
+          <Plus size={22} strokeWidth={2.4} aria-hidden />
+        </button>
+      )}
+    </div>
+  )
+
+  const enteteAccueil = (
+    <div className="flex items-center gap-1 pb-2">
+      <Link
+        href="/dashboard/parametres"
+        aria-label="Retour à Plus"
+        className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+      >
+        <ChevronLeft size={22} strokeWidth={2} />
+      </Link>
+      <h1 className={`text-[24px] leading-none ${titre}`}>Prestations et prix</h1>
+    </div>
+  )
+
+  const resumePrestations = lectureIncomplete
+    ? 'À recharger : la lecture a échoué'
+    : sousTitrePrestations(services.length, categories.length)
+
+  const accueil = (
+    <div className="mt-2">
+      <CarteListe>
+        <ul className="divide-y divide-[color:var(--v2-filet)]">
+          <LigneDeuxNiveaux
+            label="Prestations"
+            valeur={resumePrestations}
+            ton={lectureIncomplete ? 'ambre' : undefined}
+            onClick={() => router.push('/dashboard/parametres/prestations?vue=prestations')}
+          />
+          <LigneDeuxNiveaux
+            label="Zone d’intervention"
+            valeur={ligneZone.texte}
+            ton={ligneZone.ton}
+            onClick={() => setFeuille({ quoi: 'zone' })}
+          />
+          <LigneDeuxNiveaux
+            label="Créneaux intelligents"
+            valeur={resumeCreneaux(creneaux)}
+            onClick={() => setFeuille({ quoi: 'creneaux' })}
+          />
+        </ul>
+      </CarteListe>
+    </div>
+  )
+
+  return (
+    <div
+      className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]`}
+    >
+      {vueListe ? enteteListe : enteteAccueil}
+
+      {!vueListe ? accueil : lectureIncomplete ? (
+        <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-4">
+          <Constat ton="ambre" role="status">
+            Vos prestations n’ont pas pu être lues. Rien n’a été modifié. Rechargez la page avant d’y toucher : un écran vide
+            ici ne veut pas dire que vous n’avez rien configuré.
+          </Constat>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className={`${BOUTON} mt-4 w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
+            style={PRESSION}
+          >
+            Recharger la page
+          </button>
+        </div>
+      ) : vide ? (
+        <>
+          <PrestationsEtatVideV2
+            onModele={creerDepuisModele}
+            onAutre={() => setFeuille({ quoi: 'categorie', categorie: null })}
+          />
+        </>
+      ) : (
+        <>
+          {!peutAjouterPrestation && (
+            <p className={`mt-1 px-0.5 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              Créez d’abord une catégorie : elle liste ce que vos clients peuvent choisir (Voiture avec Citadine, Berline, SUV…).
+            </p>
+          )}
+
+          {categories.map(cat => {
+            const deLaCategorie = services.filter(s => s.category_id === cat.id)
+            return (
+              <Section
+                key={cat.id}
+                titre={cat.name}
+                nombre={deLaCategorie.length}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setFeuille({ quoi: 'categorie', categorie: cat })}
+                    aria-label={`Modifier la catégorie ${cat.name}`}
+                    className={`-mr-2 flex min-h-11 shrink-0 items-center px-2 text-[14.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
+                  >
+                    Modifier
+                  </button>
+                }
+              >
+                <CarteListe>
+                  {deLaCategorie.length === 0 ? (
+                    <p className={`py-3.5 text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                      Aucune prestation dans cette catégorie.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-[color:var(--v2-filet)]">
+                      {deLaCategorie.map(s => (
+                        <LignePrestation key={s.id} service={s} categorie={cat} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
+                      ))}
+                    </ul>
+                  )}
+                </CarteListe>
+              </Section>
+            )
+          })}
+
+          {sansCategorie.length > 0 && (
+            <Section titre="Sans catégorie" nombre={sansCategorie.length}>
+              <CarteListe>
+                <ul className="divide-y divide-[color:var(--v2-filet)]">
+                  {sansCategorie.map(s => (
+                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
+                  ))}
+                </ul>
+              </CarteListe>
+            </Section>
+          )}
+
+          <div className="mt-[22px]">
+            <CarteListe>
+              <Ligne label="+ Ajouter une catégorie" onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
+            </CarteListe>
+          </div>
+        </>
+      )}
+
+      {feuille?.quoi === 'prestation' && (
+        <FeuillePrestationV2
+          service={feuille.service}
+          formulaireInitial={feuille.formulaire}
+          categories={categories}
+          services={services}
+          availabilities={availabilities}
+          onEnregistrer={enregistrerPrestation}
+          onSupprimer={feuille.service ? () => demanderSuppression({ quoi: 'prestation', service: feuille.service! }) : undefined}
+          // Sous une confirmation, Échap et la poignée ne ferment que la confirmation.
+          onClose={suppression ? () => {} : fermerFeuille}
+        />
+      )}
+      {feuille?.quoi === 'categorie' && (
+        <FeuilleCategorieV2
+          categorie={feuille.categorie}
+          services={services}
+          onEnregistrer={enregistrerCategorie}
+          onSupprimer={feuille.categorie
+            ? () => demanderSuppression({
+                quoi: 'categorie',
+                categorie: feuille.categorie!,
+                nbPrestations: services.filter(s => s.category_id === feuille.categorie!.id).length,
+              })
+            : undefined}
+          onClose={suppression ? () => {} : fermerFeuille}
+        />
+      )}
+
+      {feuille?.quoi === 'zone' && (
+        <FeuilleZoneV2
+          zone={zone}
+          adresseDeBase={adresseDeBase}
+          onEnregistrer={enregistrerZone}
+          onClose={fermerFeuille}
+        />
+      )}
+      {feuille?.quoi === 'creneaux' && (
+        <FeuilleCreneauxV2
+          reglages={creneaux}
+          prestation={prestationExemple(prestationsPrix)}
+          prixLePlusBas={prixLePlusBas(prestationsPrix)}
+          onEnregistrer={enregistrerCreneaux}
+          onClose={fermerFeuille}
+        />
+      )}
+
+      {suppression?.quoi === 'prestation' && (
+        <ConfirmationSuppression
+          titre={`Supprimer “${suppression.service.name}” ?`}
+          texte="Elle disparaît de votre page de réservation."
+          enCours={suppressionEnCours}
+          erreur={suppressionErreur}
+          onConfirmer={confirmerSuppression}
+          onClose={() => setSuppression(null)}
+        />
+      )}
+      {suppression?.quoi === 'categorie' && (
+        <ConfirmationSuppression
+          titre={`Supprimer “${suppression.categorie.name}” ?`}
+          texte={
+            suppression.nbPrestations === 0
+              ? 'Aucune prestation n’y est rattachée.'
+              : `Ses ${suppression.nbPrestations} prestation${suppression.nbPrestations > 1 ? 's' : ''} resteront, sans catégorie.`
+          }
+          remarque={
+            suppression.nbPrestations === 0
+              ? undefined
+              : 'Leurs types resteront cochés, mais vos clients ne verront plus leurs noms : rattachez-les d’abord à une autre catégorie si vous voulez les garder lisibles.'
+          }
+          enCours={suppressionEnCours}
+          erreur={suppressionErreur}
+          onConfirmer={confirmerSuppression}
+          onClose={() => setSuppression(null)}
+        />
+      )}
+    </div>
+  )
+}

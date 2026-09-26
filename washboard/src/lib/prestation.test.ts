@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { estReservable, champsManquants, messageManques, dureeValide, DUREE_MAX_MINUTES } from './prestation'
+import {
+  estReservable, champsManquants, messageManques, dureeValide, DUREE_MAX_MINUTES,
+  estRefusCleEtrangere, CODE_PG_CLE_ETRANGERE, ERREUR_PRESTATION_RESERVEE, ERREUR_SANS_TYPE,
+} from './prestation'
 
 const complete = { name: 'Lavage complet', price: '80', duration_minutes: '90', vehicle_types: ['SUV'] }
 
@@ -91,5 +94,30 @@ describe('messageManques', () => {
 
   it('« duree_max » est ignoré au milieu d’une vraie liste de manques', () => {
     expect(messageManques(['nom', 'duree_max'])).toBe('Pour enregistrer, il manque le nom.')
+  })
+})
+
+describe('estRefusCleEtrangere', () => {
+  it('reconnaît le refus Postgres 23503 renvoyé par Supabase', () => {
+    expect(estRefusCleEtrangere({ code: CODE_PG_CLE_ETRANGERE, message: 'update or delete on table "services" violates foreign key constraint' })).toBe(true)
+  })
+
+  it('ne confond pas avec une autre erreur de base', () => {
+    expect(estRefusCleEtrangere({ code: '23505' })).toBe(false)
+    expect(estRefusCleEtrangere({ code: 'PGRST116' })).toBe(false)
+  })
+
+  it('tolère tout ce qui n’est pas un objet d’erreur', () => {
+    expect(estRefusCleEtrangere(null)).toBe(false)
+    expect(estRefusCleEtrangere(undefined)).toBe(false)
+    expect(estRefusCleEtrangere('23503')).toBe(false)
+    expect(estRefusCleEtrangere({})).toBe(false)
+  })
+})
+
+describe('messages de refus', () => {
+  it('le refus « réservée » ne conseille pas de retirer les types : une prestation sans type est refusée', () => {
+    expect(ERREUR_PRESTATION_RESERVEE).not.toMatch(/retirez/i)
+    expect(ERREUR_SANS_TYPE).toMatch(/au moins un type/)
   })
 })

@@ -78,6 +78,18 @@ export function layoutDayBookings<T extends LayoutBooking>(bookings: T[]): Place
   })
 }
 
+export type StatutClef = 'pending' | 'confirmed' | 'cancelled' | 'done' | 'closed_late'
+
+/** Ce que le rendez-vous AFFICHE, qui n'est pas toujours son statut en base :
+ *  clôturé en retard, il porte « Délai dépassé » plutôt que « Terminé ».
+ *  Purement visuel : la compta et les factures ne regardent que `status`.
+ *  Extrait de `CalendrierDashboard.tsx` (passe 7 de la refonte 2026) pour que
+ *  la vue jour/semaine/mois (v1) et l'agenda du jour (v2) partagent le même
+ *  calcul plutôt que d'en avoir chacune leur copie. */
+export function cleStatut(b: { status: 'pending' | 'confirmed' | 'cancelled' | 'done'; closed_late?: boolean | null }): StatutClef {
+  return b.closed_late && b.status === 'done' ? 'closed_late' : b.status
+}
+
 /** Deux dates tombent-elles le même jour (calendrier local) ? */
 export function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()

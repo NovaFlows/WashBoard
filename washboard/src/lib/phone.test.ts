@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness } from './phone'
+import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness, whatsappDigits } from './phone'
 
 // Cette normalisation porte une règle anti-abus : sans forme canonique, la
 // contrainte d'unicité en base laisserait passer trois comptes d'essai avec le
@@ -141,5 +141,36 @@ describe('isPhoneExemptFromUniqueness', () => {
     process.env.PHONE_UNIQUENESS_EXEMPT = 'nimporte quoi'
     expect(isPhoneExemptFromUniqueness('pas un numero')).toBe(false)
     expect(isPhoneExemptFromUniqueness(null)).toBe(false)
+  })
+})
+
+// Extraite de contact.ts (openWhatsapp) le 2026-09-24 — comportement à
+// préserver au chiffre près, y compris ce qui la distingue de
+// normalizePhone : elle ne valide rien, un numéro imparfait produit quand
+// même un lien plutôt que rien.
+describe('whatsappDigits', () => {
+  it('remplace le 0 initial français par 33', () => {
+    expect(whatsappDigits('0612345678')).toBe('33612345678')
+  })
+
+  it('nettoie espaces, points et tirets avant de préfixer', () => {
+    expect(whatsappDigits('06 12 34 56 78')).toBe('33612345678')
+    expect(whatsappDigits('06.12.34.56.78')).toBe('33612345678')
+    expect(whatsappDigits('06-12-34-56-78')).toBe('33612345678')
+  })
+
+  it('laisse un numéro déjà en 33 tel quel', () => {
+    expect(whatsappDigits('+33612345678')).toBe('33612345678')
+    expect(whatsappDigits('33612345678')).toBe('33612345678')
+  })
+
+  it('ne valide rien, contrairement à normalizePhone : un numéro étranger ou un fixe reste utilisable', () => {
+    expect(whatsappDigits('+32470123456')).toBe('32470123456')
+    expect(whatsappDigits('0123456789')).toBe('33123456789')
+  })
+
+  it('ne renvoie jamais null : une saisie vide ou incomplète donne une chaîne, pas une erreur', () => {
+    expect(whatsappDigits('')).toBe('')
+    expect(whatsappDigits('061234567')).toBe('3361234567')
   })
 })

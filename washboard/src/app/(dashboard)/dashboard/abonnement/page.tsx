@@ -20,6 +20,7 @@ export default async function AbonnementPage() {
       grandfathered={washer.grandfathered}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
+      betaRefonte={washer.beta_refonte}
     >
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Abonnement</h1>

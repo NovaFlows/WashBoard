@@ -139,3 +139,451 @@ body {
 body.wb-hide-fab [data-wb-whatsapp-fab] {
   display: none;
 }
+
+/* Barre du bas de la PWA (refonte 2026) : la bulle WhatsApp flotte au même coin
+   et se poserait par-dessus l'onglet « Plus ». Elle est masquée tant que la
+   barre existe, par la barre elle-même. Le mécanisme `wb-hide-fab` ci-dessus
+   ne suffit pas : chaque panneau qui l'utilise le RETIRE à sa fermeture, y
+   compris quand c'est la barre qui l'avait posé — la bulle réapparaissait donc
+   après la première fiche fermée. */
+body:has(.wb-barre-bas-verre) [data-wb-whatsapp-fab] {
+  display: none;
+}
+
+/* ── Socle mobile (refonte 2026, passe 0) ──────────────────────────────────
+   Ce qui sépare « un site dans un navigateur » d'une app installée. html et
+   body sont communs à TOUT le site — dashboard, landing, blog, et le flux de
+   réservation public /book/[slug] qu'on ne doit pas toucher. Chaque règle
+   posée ici a été vérifiée sans effet visible sur les pages publiques ;
+   celles qui en auraient un sont réservées au dashboard (voir plus bas).
+
+   Le viewport-fit=cover et l'interactive-widget qui rendent le reste possible
+   sont dans l'export `viewport` de layout.tsx, pas ici (pas de <meta> en
+   double). */
+html {
+  /* Supprime le flash gris/bleu que Safari iOS et Chrome Android posent sur
+     tout élément tapé qui a un gestionnaire de clic — sans changer aucune
+     couleur de fond, juste ce voile temporaire au toucher. */
+  -webkit-tap-highlight-color: transparent;
+  /* Empêche iOS de regrossir le texte tout seul au passage en paysage. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* touch-action seul (sans user-select) : supprime le délai ~300ms avant un
+   tap et le double-tap-zoom involontaire sur un bouton ou un lien. Posé
+   globalement — aucun risque pour un lien d'article de blog, ça ne touche
+   pas à la sélection de texte. */
+button, a {
+  touch-action: manipulation;
+}
+
+/* user-select: none seulement sur les boutons, partout : un bouton n'a
+   jamais de libellé qu'on cherche à copier, et ça évite la sélection
+   accidentelle au tap prolongé (et le menu « Copier » qui l'accompagne sur
+   iOS, d'où -webkit-touch-callout). Sur les <a>, la même règle est réservée
+   au dashboard juste en dessous : un lien dans un article de blog ou sur la
+   page de réservation doit rester sélectionnable et copiable — c'est du
+   contenu, pas un contrôle. */
+button {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ── Réservé au tableau de bord ─────────────────────────────────────────── */
+
+/* `wb-dashboard-active` est posée sur <body> par DashboardShell tant qu'un
+   écran du dashboard est monté (même mécanisme que `wb-hide-fab` ci-dessus).
+   Neutralise le rebond de défilement en haut de page : utile dans le
+   dashboard pour ne pas déclencher un rechargement accidentel en tirant vers
+   le bas une liste (clients, factures...). Le reste du site — en particulier
+   /book/[slug] — doit garder le tirer-pour-rafraîchir natif du navigateur,
+   d'où le scope sur cette classe plutôt que sur html/body directement.
+
+   Axe VERTICAL seulement (`-y`). Le raccourci `overscroll-behavior: none`
+   coupait aussi l'axe horizontal, et c'est cet axe que le navigateur utilise
+   pour le geste « retour » depuis le bord gauche de l'écran (iPhone comme
+   Android) : dans la PWA installée, glisser depuis le bord ne revenait plus à la
+   page précédente (signalé par Alexandre, 2026-09-24). */
+body.wb-dashboard-active {
+  overscroll-behavior-y: none;
+}
+
+/* Liens de navigation du dashboard (menu, en-tête, bouton WhatsApp...) : ce
+   sont des contrôles, pas du contenu à sélectionner. `wb-dashboard-shell` est
+   posée sur le conteneur racine de DashboardShell. */
+.wb-dashboard-shell a {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Remarque : les champs de saisie (16px sous 767px, plus haut dans ce
+   fichier) et les états :hover (Tailwind v4 les enveloppe déjà dans
+   @media (hover: hover) and (pointer: fine) par défaut) répondent déjà aux
+   deux points restants du socle — rien à ajouter ici. */
+
+/* ── `wb-pwa` — la refonte v2 n'existe que dans la PWA installée ───────────
+   Décision d'Alexandre (2026-09-22) : le site (navigateur classique, mobile
+   ou ordinateur) reste v1 sans exception ; seule la PWA installée en mode
+   standalone voit la direction v2. `wb-pwa` est posée sur <html> par un
+   script synchrone dans layout.tsx (`beforeInteractive`, avant toute
+   peinture — il n'existe pas d'équivalent "cookie lu côté serveur" pour
+   `display-mode: standalone`, contrairement à la classe `dark`).
+
+   Deux mécanismes, pas un seul — ne pas les confondre :
+   - Un écran qui ne change que de couleurs/espacements/rayons (pas de JSX
+     différent) peut se contenter d'un sélecteur `html.wb-pwa …` ici, ou de
+     la variante Tailwind arbitraire `[html.wb-pwa_&]:…` côté composant.
+     Zéro flash : la classe est posée avant le premier rendu.
+   - Un écran dont la FORME change (ex. ClientProfileModal : carte v1 vs
+     feuille v2) a besoin d'un vrai branchement JSX — voir le hook React
+     `usePwaStandalone()` (src/hooks/usePwaStandalone.ts). Un flash v1→v2
+     bref au montage y est accepté (mêmes contraintes que ThemeToggle /
+     NotificationsToggle, aucun équivalent serveur possible ici).
+   Premier usage réel (2026-09-24) : l'en-tête du tableau de bord disparaît
+   dans la PWA en bêta (voir le bloc `wb-entete-beta` juste en dessous). Les
+   écrans Clients et fiche client, eux, ont une structure trop différente de
+   la v1 pour du CSS seul — voir ClientsView.tsx et ClientProfileModal.tsx. */
+
+/* ── En-tête du tableau de bord — retiré dans la PWA en bêta ──────────────
+   Demande d'Alexandre (2026-09-24) : « supprime le header, on est en mode
+   vraiment ressembler à une app ». DashboardShell pose `wb-entete-beta` sur
+   le <header> quand `washer.beta_refonte` est vrai (connu du serveur), et
+   `wb-entete-barre` sur la rangée ☰ / WashBoard / badge de plan /
+   déconnexion / thème. Sans la classe `wb-pwa` (site, PWA sans bêta) rien
+   de tout ça ne s'applique : l'en-tête est exactement celui d'avant.
+
+   Pourquoi du CSS plutôt que le hook `usePwaStandalone()` : la classe existe
+   avant la première peinture, donc aucun flash « en-tête puis plus
+   d'en-tête » — un saut de mise en page bien plus visible que celui d'un
+   simple ajout de barre en bas.
+
+   Ce qui RESTE dans le <header> : les bandeaux TrialBanner (fin d'essai,
+   paiement en retard, résiliation) et AppBetaBanner. Ils ne sont pas retirés
+   (information commerciale) ; le <header> perd seulement son statut « collant »,
+   son fond et son filet : il devient un simple bloc en flux normal en haut de
+   page, et vide (hauteur nulle) quand aucun bandeau n'a rien à dire. */
+html.wb-pwa .wb-entete-beta {
+  position: static;
+  background: transparent;
+  border-bottom-width: 0;
+}
+html.wb-pwa .wb-entete-beta .wb-entete-barre {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants
+   ──────────────────────────────────────────────────────────────────────────
+   Rien ici n'est appliqué à un sélecteur existant : ces variables ne
+   produisent aucun changement visuel tant qu'un écran ne les consomme pas
+   explicitement (passes suivantes, écran par écran). Objectif de cette passe :
+   vérifier la convention, le mécanisme de thème, et le poids réel d'Archivo.
+
+   Convention de nommage retenue : préfixe `--v2-` (grep facile, élimine toute
+   collision avec `--background`/`--foreground`/`--font-geist-*`, et signale
+   sans ambiguïté qu'une variable appartient à la refonte tant qu'elle
+   coexiste avec v1), puis `--v2-<catégorie>-<nom>`. Les noms de couleur
+   reprennent le vocabulaire français de la planche Système (fond, surface,
+   encre, gris...) plutôt que des noms génériques (bg, fg, muted...) : c'est
+   ce vocabulaire que l'équipe utilise à l'oral et dans la maquette, la
+   correspondance code ↔ planche reste directe. Le thème suit le mécanisme
+   RÉEL du projet — classe `.dark` posée sur <html> depuis un cookie lu
+   serveur (`ThemeProvider`, pas next-themes malgré la dépendance présente
+   dans package.json) — exactement le procédé déjà utilisé par
+   `--background`/`--foreground` juste au-dessus : une valeur dans `:root`,
+   une redéfinition dans `.dark` seulement quand la valeur change réellement
+   entre les deux thèmes (sinon elle est simplement héritée de `:root`).
+
+   Source : planche Système de la maquette v2, `specs/20_Systeme.txt` +
+   `page_20.png` (référence @claude.ai/artifact/N5vHJDAgqgRatmxMmDaoCF,
+   copie locale). Les valeurs marquées [mesuré] ont été vérifiées par
+   échantillonnage de pixel sur `page_17.png` (écran de référence en sombre,
+   1109×2400 → 390×844 CSS, facteur 2,8436) car la planche Système ne montre
+   que les jetons du thème clair — voir le compte rendu de la passe pour le
+   détail des écarts constatés avec la fiche de décisions de l'agent. */
+
+:root {
+  /* Couleurs — planche Système, panneau "Couleurs" (thème clair, confirmé) */
+  --v2-color-fond: #F6F5F3;
+  --v2-color-surface: #FFFFFF;
+  --v2-color-encre: #16161A;
+  --v2-color-gris: #6B6B76;
+  --v2-color-accent: #2B59FF;
+  --v2-color-vert: #127A4B;
+  --v2-color-ambre: #9A5B00;
+  --v2-color-rouge: #B3261E;
+  /* Encre atténuée — barres des graphiques de Chiffres quand une autre barre
+     est mise en avant. Dérivée de l'encre du thème (donc juste en clair ET en
+     sombre, sans second jeton à maintenir) ; `--v2-filet-fort` (10 % d'encre)
+     est trop pâle pour porter une valeur à lire. */
+  --v2-color-encre-pale: color-mix(in srgb, var(--v2-color-encre) 30%, transparent);
+
+  /* Filets — le premier (.06) était déjà confirmé (panneau "Densité",
+     lignes de liste). Le second (.10) est CONFIRMÉ à cette passe (refonte
+     2026, passe 2) : les pastilles de filtre de l'écran Clients
+     (`specs/03_Clients.txt`, page_03.png) utilisent exactement ce bord —
+     échantillonnage au pixel du contour de la pastille "Pros" (non
+     sélectionnée) contre le fond papier : rgb(223,222,220) mesuré, contre
+     rgb(224,223,221) calculé pour fond #F6F5F3 mélangé à 10% de noir
+     22,22,26. Le doute levé, le commentaire "[non confirmé]" est retiré. */
+  --v2-filet: rgba(22, 22, 26, .06);
+  --v2-filet-fort: rgba(22, 22, 26, .10);
+
+  /* Rayons — planche Système, panneau "Composants" */
+  --v2-radius-surface: 16px;
+  --v2-radius-carte: 14px;
+  --v2-radius-bouton: 13px;
+  --v2-radius-feuille: 26px; /* haut uniquement — border-top-*-radius côté composant */
+  /* CORRIGÉ à la passe 2 : posé à 9999px (pilule pleine hauteur/2) à la
+     passe 1, d'après la fiche de décisions de l'agent. La planche Système
+     écrit littéralement "pilule 17" (panneau Composants, `specs/20_Systeme.txt`
+     ligne "rayon : ... feuille 26 en haut · pilule 17") — un rayon FIXE, pas
+     une formule. Mesuré sur l'écran Clients (page_03.png) : la pastille
+     "Tous" fait ≈36,7px de haut à x=60 (scan vertical, transition fond→noir
+     à y≈137,6 puis retour au fond à y≈174,3), donc hauteur/2 ≈ 18,3 — à
+     1,3px de 17, un écart imperceptible à cette taille précise. Les deux
+     formulations ne divergeraient qu'au-delà d'une pilule de ~34px de haut
+     (note déjà relevée à la passe 1) ; passé cette taille (le bouton de
+     filtre est ici remonté à 44px de haut pour la cible tactile, voir
+     ClientsView.tsx), un rayon fixe de 17 donne un rectangle très arrondi
+     mais plus tout à fait une gélule parfaite, alors que 9999 forcerait un
+     demi-cercle quelle que soit la hauteur — la planche tranche pour un
+     rayon fixe, donc pilule ≠ toujours pleine-hauteur/2. */
+  --v2-radius-pilule: 17px;
+
+  /* Densité — planche Système, panneau "Densité" */
+  --v2-space-gouttiere: 20px;
+  --v2-space-section-min: 22px;
+  --v2-space-section-max: 26px;
+  --v2-space-ligne-min: 11px;
+  --v2-space-ligne-max: 13px;
+
+  /* Mouvement — planche Système, panneau "Mouvement" */
+  --v2-ease-out: cubic-bezier(.23, 1, .32, 1);
+  --v2-ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --v2-ease-sheet: cubic-bezier(.32, .72, 0, 1);
+  --v2-duration-press: 120ms;   /* pression bouton · scale(.97) */
+  --v2-duration-sheet: 320ms;   /* feuille client */
+  --v2-duration-stagger: 40ms;  /* décalage entre lignes au chargement d'une liste */
+  /* Pas de jeton pour le changement d'onglet : la planche est explicite,
+     "aucune animation" — un onglet est touché cent fois par jour. */
+
+  /* Typographie — Archivo variable. La famille de police elle-même est
+     exposée par next/font dans layout.tsx (--font-archivo), pas ici : ce
+     bloc ne fixe QUE les réglages de graisse/largeur/tracking par rôle,
+     à consommer explicitement écran par écran. Rien n'est appliqué ici.
+     Écart avec la fiche de décisions : elle simplifie "Corps 450/largeur
+     100" en une seule ligne ; la planche montre deux corps distincts
+     ("Corps 15/550 et 14/450 · largeur 100") — un corps "fort" à 550 et un
+     corps normal à 450, tous deux largeur 100. Les deux sont repris. */
+  --v2-type-hero-poids: 650;
+  --v2-type-hero-largeur: 118%;
+  --v2-type-hero-tracking: -0.045em;
+  --v2-type-titre-poids: 650;
+  --v2-type-titre-largeur: 108%;
+  --v2-type-titre-tracking: -0.025em;
+  --v2-type-nom-poids: 550;
+  --v2-type-nom-largeur: 100%;
+  --v2-type-corps-fort-poids: 550;  /* corps 15px/550, planche Système */
+  --v2-type-corps-poids: 450;       /* corps 14px/450, planche Système */
+  --v2-type-corps-largeur: 100%;
+  /* Chiffres : font-variant-numeric: tabular-nums — propriété statique, pas
+     un jeton ; à poser directement sur les chiffres héros le moment venu. */
+
+  /* Verre de châssis (refonte 2026, passe 4) — première utilisation réelle de
+     cette matière (passes 2 et 3 n'en avaient pas besoin : la liste Clients et
+     la feuille client sont des surfaces opaques, voir la fiche de décisions
+     "le verre est un matériau de châssis, jamais de contenu"). Valeurs
+     [mesurées] sur la barre du bas de l'écran Aujourd'hui,
+     `project/Main.dc.html` (référence @claude.ai/artifact/N5vHJDAgqgRatmxMmDaoCF) :
+     voile blanc 50%→26%, flou 34px + saturation 220%, bordure blanche 70%,
+     arête spéculaire interne 92% en haut. L'en-tête de ce même artboard utilise
+     un voile différent (66%→42%) — pas repris ici : l'en-tête du dashboard
+     reste en v1 tant que la passe 8 (Aujourd'hui) n'est pas faite, seule la
+     barre du bas est concernée par cette passe. */
+  --v2-verre-haut: rgba(255, 255, 255, .5);
+  --v2-verre-bas: rgba(255, 255, 255, .26);
+  --v2-verre-flou: blur(34px) saturate(220%);
+  --v2-verre-bordure: rgba(255, 255, 255, .70);
+  --v2-verre-arete: rgba(255, 255, 255, .92);        /* inset haut — l'arête qui "fait verre" */
+  --v2-verre-arete-basse: rgba(22, 22, 26, .05);      /* inset bas, discret */
+  --v2-verre-ombre: 0 10px 34px rgba(22, 22, 26, .14), 0 2px 8px rgba(22, 22, 26, .04);
+}
+
+.dark {
+  /* Couleurs sombres — la planche Système ne montre QUE le thème clair.
+     Valeurs [mesurées] par échantillonnage de pixel sur l'écran de
+     référence sombre (page_17.png, voir en-tête de section) ; comparées à
+     la fiche de décisions de l'agent, qui les donnait déjà (accord dans
+     la limite de l'arrondi PDF→PNG, ±1 sur un canal 8 bits) :
+       fond    #0E0E11 mesuré #0e0e10 (confirmé aussi par le <meta
+               theme-color> de la planche, seule valeur sombre qu'elle donne)
+       surface #17171B mesuré #17161b (carte "Garage Renault Mérignac")
+       encre   #F3F3F5 mesuré #f2f2f4 (chiffre "09:00")
+       gris    #9A9AA4 mesuré #9d9ca3 (texte "18 min de route") — la fiche
+               listait "Gris #6B6B76 / #9A9AA4" sans dire lequel est sombre ;
+               la mesure tranche : #6B6B76 est la valeur claire (confirmée
+               sur la planche), #9A9AA4 est sa contrepartie sombre.
+     Accent et Vert ont été mesurés IDENTIQUES au clair (accent #2c58ff,
+     vert #137a4b mesurés contre #2B59FF / #127A4B) : une seule couleur
+     d'action et des statuts qui ne changent pas de teinte entre les thèmes,
+     cohérent avec "une seule couleur d'action" de la planche. Ambre et
+     Rouge n'ont pas pu être échantillonnés (absents de cet écran de
+     référence) : laissés hérités du clair par hypothèse, non vérifiés. */
+  --v2-color-fond: #0E0E11;
+  --v2-color-surface: #17171B;
+  --v2-color-encre: #F3F3F5;
+  --v2-color-gris: #9A9AA4;
+
+  /* Filet sombre — [mesuré] sur le filet interne d'une carte (page_17.png,
+     entre deux rendez-vous) : #2e2d32 sur fond de carte #17171b, ce qui
+     correspond à du blanc 10% mélangé (calcul : 23+0,10×(255-23) ≈ 46 →
+     #2e2e32, à 1 près de la mesure). Confirme la valeur "filets blanc .10"
+     de la fiche de décisions — mais c'est une opacité DIFFÉRENTE du filet
+     clair (.06) pour le même rôle (ligne de liste), pas un simple
+     retournement de teinte : à signaler, pas à corriger seul. */
+  --v2-filet: rgba(255, 255, 255, .10);
+
+  /* --v2-filet-fort sombre — [EXTRAPOLÉ, NON MESURÉ] : aucun artboard sombre
+     de l'écran Clients n'existe dans la maquette exportée (seul l'accueil,
+     Sombre.dc.html/page_17, est fourni en sombre — pas de pastille de filtre
+     dessus à échantillonner). Valeur posée par défaut à la passe 2 pour que
+     les pastilles de filtre restent visibles en sombre (sans redéfinition
+     ici, elles hériteraient de rgba(22,22,26,.10) — un trait presque noir
+     sur un fond presque noir, invisible) : même ratio que --v2-filet
+     clair→sombre (.06→.10, ×1,67) appliqué à --v2-filet-fort clair (.10) →
+     .10×1,67 ≈ .17, arrondi à .16. À vérifier dès qu'un artboard sombre de
+     l'écran Clients (ou d'un autre écran à pastilles) existera. */
+  --v2-filet-fort: rgba(255, 255, 255, .16);
+
+  /* Verre de châssis sombre — [EXTRAPOLÉ, NON MESURÉ], même réserve que
+     --v2-filet-fort ci-dessus : aucun artboard sombre ne montre la barre du
+     bas (Sombre.dc.html est un écran Aujourd'hui sans nav visible dans
+     l'export dont dispose cet agent). Un voile blanc à ces opacités sur un
+     fond quasi noir (#0E0E11) ferait une plaque grise plate plutôt qu'un
+     verre — on teinte donc le voile avec la couleur de surface sombre
+     (#17171B) au lieu du blanc, en gardant le même ratio d'opacité que la
+     version claire. Bordure et arête restent claires (rim light), plus
+     discrètes qu'en clair — même logique que --v2-filet clair→sombre. À
+     vérifier dès qu'un artboard sombre avec barre du bas existera. */
+  --v2-verre-haut: rgba(23, 23, 27, .55);
+  --v2-verre-bas: rgba(23, 23, 27, .30);
+  --v2-verre-bordure: rgba(255, 255, 255, .14);
+  --v2-verre-arete: rgba(255, 255, 255, .10);
+  --v2-verre-arete-basse: rgba(0, 0, 0, .30);
+  --v2-verre-ombre: 0 10px 34px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .20);
+}
+/* ── Fin jetons v2 (passe 1, corrigés/complétés passes 2–4) ─────────────── */
+
+/* ── Graphiques de Chiffres v2 — barre qui pousse depuis sa ligne de zéro ────
+   Consommée par GraphiqueBarres.tsx (PWA installée uniquement). 260 ms,
+   `--v2-ease-out`, jamais d'ease-in ; la barre part de la ligne de zéro
+   (`transform-origin` posé en ligne : en bas pour un gain, en haut pour une
+   perte). Coupée entièrement sous `prefers-reduced-motion`. */
+@keyframes v2-barre-pousse {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.v2-barre {
+  animation: v2-barre-pousse 260ms var(--v2-ease-out) both;
+  transition: background-color 120ms var(--v2-ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-barre { animation: none; transition: none; }
+}
+
+/* ── Barre du bas v2 (refonte 2026, passe 4) ────────────────────────────────
+   Classe dédiée plutôt que des utilitaires Tailwind arbitraires : la valeur
+   `box-shadow` combine une ombre portée ET deux arêtes internes (inset) dans
+   la même déclaration — illisible et fragile à échapper caractère par
+   caractère en syntaxe crochets. Consommée par BarreBasV2.tsx, affichée
+   uniquement dans la PWA installée avec `washer.beta_refonte` actif (voir
+   DashboardShell.tsx) — jamais sur le site. */
+.wb-barre-bas-verre {
+  background: linear-gradient(180deg, var(--v2-verre-haut), var(--v2-verre-bas));
+  backdrop-filter: var(--v2-verre-flou);
+  -webkit-backdrop-filter: var(--v2-verre-flou);
+  border: 1px solid var(--v2-verre-bordure);
+  box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
+}
+
+/* Fin trait qui se dessine autour de la barre du bas pendant qu'une page se charge (voir
+   BarreBasV2.tsx, ContourChargement). Sous `prefers-reduced-motion` : pas de course, le
+   contour apparaît d'un coup. */
+@media (prefers-reduced-motion: reduce) {
+  .wb-contour-trait { transition: none !important; }
+}
+
+/* Vue du mois de l'agenda (PWA) : quand un jour est choisi, l'agenda du jour
+   apparaît en fondu sous les rangées du mois qui s'écartent (voir MoisV2.tsx).
+   Coupé sous `prefers-reduced-motion`. */
+@keyframes v2-agenda-arrivee {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.wb-agenda-arrivee { animation: v2-agenda-arrivee 520ms var(--v2-ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .wb-agenda-arrivee { animation: none; }
+}
+
+/* PWA en bêta : le papier de la refonte couvre tout l'écran, y compris derrière les
+   encoches, le rebond et ce qui dépasse du contenu (voir DashboardShell). La barre du
+   bas est le repère : elle n'existe que dans ce mode. */
+html:has(.wb-barre-bas-verre),
+body:has(.wb-barre-bas-verre) {
+  background-color: var(--v2-color-fond);
+}
+
+/* ── Écran de lancement de la PWA installée ─────────────────────────────────
+   Tant que l'application n'a pas démarré dans le navigateur (`wb-pret`, posée par
+   MarqueurPret), un écran plein (papier de la refonte + logo, comme les images de
+   lancement iOS de `public/splash`) recouvre tout : plus de fond noir prolongé quand la
+   connexion est mauvaise, plus de page v1 entrevue avant la v2. Uniquement en
+   standalone (`wb-pwa`) : le site n'est pas concerné. Le thème est celui de l'app
+   (classe `dark` posée par le serveur). Règle de secours : sans démarrage au bout de
+   10 s, l'écran s'efface de lui-même et laisse voir la page. */
+html.wb-pwa:not(.wb-pret) body {
+  visibility: hidden;
+  animation: wb-lancement-secours 0s linear 10s forwards;
+}
+html.wb-pwa:not(.wb-pret) body::before,
+html.wb-pwa:not(.wb-pret) body::after {
+  content: '';
+  visibility: visible;
+  position: fixed;
+  z-index: 2147483000;
+  animation: wb-lancement-secours-ecran 0s linear 10s forwards;
+}
+html.wb-pwa:not(.wb-pret) body::before {
+  inset: 0;
+  background: var(--v2-color-fond);
+}
+html.wb-pwa:not(.wb-pret) body::after {
+  top: 50%;
+  left: 50%;
+  width: 88px;
+  height: 88px;
+  margin: -44px 0 0 -44px;
+  border-radius: 22.5%;
+  background: url('/icon-512.png') center / cover no-repeat;
+}
+@keyframes wb-lancement-secours { to { visibility: visible; } }
+@keyframes wb-lancement-secours-ecran { to { visibility: hidden; } }
+
+/* Sortie en fondu : la page est révélée dessous, l'écran de lancement s'efface dessus (la
+   classe `wb-pret` le retire ensuite pour de bon). */
+html.wb-pwa.wb-lancement-fin:not(.wb-pret) body {
+  visibility: visible;
+  animation: none;
+}
+html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::before,
+html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after {
+  animation: wb-lancement-fondu 260ms ease-out forwards;
+}
+@keyframes wb-lancement-fondu { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::before,
+  html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after { animation-duration: 1ms; }
+}

@@ -177,7 +177,7 @@ export default async function FacturesPage({
   const manques = infosFacturationManquantes(washer)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <div className="mb-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Factures</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

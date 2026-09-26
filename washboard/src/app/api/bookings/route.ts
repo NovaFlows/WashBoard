@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
@@ -66,6 +67,18 @@ const BookingSchema = z.object({
   })).optional(),
   travel_fee: z.number().min(0).optional().default(0),
 })
+
+/** Le laveur connecté, s'il y en a un. Une réservation publique n'a pas de session : ce n'est
+ *  pas une erreur, et surtout pas un motif de refus. */
+async function utilisateurConnecte() {
+  try {
+    const session = await createSessionClient()
+    const { data: { user } } = await session.auth.getUser()
+    return user
+  } catch {
+    return null
+  }
+}
 
 export const POST = withErrorHandling('bookings.create', async (req: Request) => {
   // ── Anti-spam #1 : rate-limit par IP ────────────────────────────────────
@@ -149,7 +162,14 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   const supabase = createAdminClient()
 
   // L'auteur est-il le laveur lui-même ? (réservation manuelle = autorisée à forcer)
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  //
+  // Lu sur la SESSION du navigateur, pas sur le client admin : celui-ci n'a pas de session,
+  // `auth.getUser()` y renvoyait donc toujours `null`. Résultat, le laveur qui saisissait un
+  // rendez-vous depuis son propre agenda était traité comme un visiteur anonyme, et se voyait
+  // refuser un créneau hors de ses horaires, un jour de congé ou une date passée — sur son
+  // planning à lui (signalé par Alexandre, 2026-09-26). Les contrôles restent entiers pour
+  // tous les autres : c'est bien la session du propriétaire de la fiche qui les lève.
+  const authUser = await utilisateurConnecte()
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([

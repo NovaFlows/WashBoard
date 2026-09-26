@@ -9,10 +9,12 @@ export default async function GuidePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const washer = await washerDuUtilisateur(
-    supabase, user.id, 'guide',
-    'name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at',
-  )
+  // Colonnes par défaut ('*', voir washerCourant.ts) plutôt que la liste
+  // explicite d'avant (refonte 2026, passe 4) : `washer.beta_refonte` doit
+  // rester lisible ici pour que la barre du bas s'affiche sur cette page
+  // aussi, et une liste de colonnes nommées une à une casserait dès qu'on y
+  // ajoute une colonne qui n'existe pas encore en base.
+  const washer = await washerDuUtilisateur(supabase, user.id, 'guide')
 
   return (
     <DashboardShell
@@ -23,6 +25,7 @@ export default async function GuidePage() {
       grandfathered={washer.grandfathered}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
+      betaRefonte={washer.beta_refonte}
     >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-8">

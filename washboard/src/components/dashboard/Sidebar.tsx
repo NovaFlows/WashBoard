@@ -118,7 +118,12 @@ export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport,
         onClick={onClose}
       />
 
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-30 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {/* Le padding-bottom ajouté à cette aside réserve la place de la barre
+          d'accueil sur iPhone : le tiroir occupe toute la hauteur de l'écran,
+          son pied (Paramètres / réseaux sociaux, ou « Support équipe »)
+          touche donc cette zone sans rien pour le prévenir — socle mobile,
+          passe 0. */}
+      <aside className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-30 transform transition-transform duration-300 ease-in-out flex flex-col pb-[env(safe-area-inset-bottom)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header sidebar */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">

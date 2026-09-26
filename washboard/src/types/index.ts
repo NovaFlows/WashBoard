@@ -56,6 +56,14 @@ export type Washer = {
   facture_taux_tva?: number
   facture_numero_tva?: string | null
   facture_prochain_numero?: number
+  // Drapeau de la refonte 2026 (passe 4) : autorise la barre du bas v2 en
+  // plus du menu latéral, dans la PWA installée uniquement (voir
+  // usePwaStandalone). `undefined` tant que la colonne `beta_refonte`
+  // n'existe pas en base (le SQL n'est pas encore passé), `null`/`false`
+  // pour un laveur qui n'a pas encore rejoint le bêta — les trois valent
+  // « éteint », jamais une erreur. Même convention que `dashboard_widgets`
+  // un peu plus haut.
+  beta_refonte?: boolean | null
 }
 
 export type ServiceAddon = {

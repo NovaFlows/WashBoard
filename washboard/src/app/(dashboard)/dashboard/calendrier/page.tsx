@@ -60,7 +60,7 @@ export default async function CalendrierPage() {
   }
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       {/* useSearchParams (lecture de ?rdv=, quand on arrive depuis une
           notification) exige une limite Suspense, sinon le build échoue. */}
       <Suspense fallback={null}>
@@ -72,6 +72,8 @@ export default async function CalendrierPage() {
           categories={categories ?? []}
           washerId={washer.id}
           facturationPrete={infosFacturationManquantes(washer).length === 0}
+          // Un booléen, jamais le jeton : tout ce qui passe ici est sérialisé dans la page.
+          googleAgendaConnecte={!!washer.google_refresh_token}
         />
       </Suspense>
     </DashboardShell>

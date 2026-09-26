@@ -1,0 +1,1052 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import type { Washer } from '@/types'
+import Link from 'next/link'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
+import { hasFeature } from '@/lib/plan'
+import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
+import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
+import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
+import { FacturationCard } from '@/components/dashboard/FacturationCard'
+
+// Réglages, présentation v1 — le site (navigateur classique, mobile ou
+// ordinateur) affiche ce contenu SANS EXCEPTION, décision d'Alexandre du
+// 2026-09-22 (voir `.claude/agents/refonte.md`, « v1 sur le site, v2
+// seulement dans la PWA installée »). Ce fichier reprend à l'identique le
+// contenu de `ParametresForm.tsx` avant la passe 6 de la refonte : deux
+// onglets (Général / Page client), toute la logique de réglages du laveur.
+//
+// Seul ajout par rapport à l'ancien fichier : l'id `lien-reservation` posé
+// sur la carte « Votre lien de réservation » (ClientTab, plus bas). Un id
+// HTML n'a aucun effet visuel — la présentation reste pixel pour pixel — il
+// sert uniquement de cible d'ancrage pour ParametresFormV2.tsx (le nouvel
+// écran « Plus »), qui renvoie ici pour éditer le lien et le personnaliser
+// par réseau tant que ces réglages n'ont pas leur propre écran v2.
+//
+// Cette page reste aussi accessible directement, via la nouvelle route
+// `/dashboard/parametres/tout` (voir ce dossier) : le point d'entrée
+// « tous les réglages », qui rend ce même composant sans passer par le
+// branchement v1/v2 — utile pour atteindre depuis la PWA les réglages qui
+// n'ont pas encore de ligne dédiée dans le nouveau menu « Plus » (email,
+// mot de passe, notifications, accès support, zone de danger...).
+
+type Props = {
+  washer: Washer
+  email: string
+}
+
+type Tab = 'general' | 'client'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[+0-9 ().-]{6,20}$/
+
+export default function ParametresFormV1({ washer, email }: Props) {
+  const [tab, setTab] = useState<Tab>('general')
+
+  return (
+    <div>
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6 w-fit">
+        {(['general', 'client'] as Tab[]).map(t => (
+          <button
+            key={t}
+            data-testid={`parametres-tab-${t}`}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === t
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            {t === 'general' ? 'Général' : 'Page client'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'general' && <GeneralTab washer={washer} email={email} />}
+      {tab === 'client' && <ClientTab washer={washer} />}
+    </div>
+  )
+}
+
+/* ── Onglet Général ── */
+function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
+  const router = useRouter()
+  const [name, setName] = useState(washer.name)
+  const [phone, setPhone] = useState(washer.phone ?? '')
+  const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
+  const [baseAddress, setBaseAddress] = useState(washer.base_address ?? '')
+  const [tiers, setTiers] = useState<{ max_minutes: number; fee: number }[]>(washer.travel_fee_tiers ?? [])
+  const [tierDraft, setTierDraft] = useState({ max_minutes: '', fee: '' })
+  const [tierErr, setTierErr] = useState<string | null>(null)
+  const [travelFeeMode, setTravelFeeMode] = useState<'base' | 'previous'>(washer.travel_fee_mode ?? 'base')
+  const [reviewEnabled, setReviewEnabled] = useState(washer.review_enabled ?? true)
+  const [reviewUrl, setReviewUrl] = useState(washer.google_review_url ?? '')
+  const [reviewDelay, setReviewDelay] = useState(String(washer.review_delay_hours ?? 3))
+  const [reviewChannel, setReviewChannel] = useState<'email' | 'sms'>(washer.review_channel ?? 'email')
+  const [smsSender, setSmsSender] = useState(washer.sms_sender ?? '')
+  const [followupEnabled, setFollowupEnabled] = useState(washer.followup_enabled ?? false)
+  const [followupDelayDays, setFollowupDelayDays] = useState(String(washer.followup_delay_days ?? 90))
+  const [followupMessage, setFollowupMessage] = useState(washer.followup_message ?? '')
+  const [followupMsg, setFollowupMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [followupLoading, setFollowupLoading] = useState(false)
+  const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+
+  const [reviewMsg, setReviewMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [smsTestMsg, setSmsTestMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [smsTestLoading, setSmsTestLoading] = useState(false)
+
+  async function saveFollowup(e: React.FormEvent) {
+    e.preventDefault()
+    setFollowupMsg(null)
+    if (followupEnabled && !followupMessage.trim()) {
+      setFollowupMsg({ ok: false, text: 'Rédigez un message de relance ou désactivez la fonctionnalité' })
+      return
+    }
+    setFollowupLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        followup_enabled: followupEnabled,
+        followup_delay_days: Math.max(1, parseInt(followupDelayDays) || 90),
+        followup_message: followupMessage.trim() || null,
+      }),
+    })
+    setFollowupMsg(res.ok ? { ok: true, text: 'Réglages enregistrés' } : { ok: false, text: 'Erreur lors de la mise à jour' })
+    if (res.ok) router.refresh()
+    setFollowupLoading(false)
+  }
+
+  const [newEmail, setNewEmail] = useState(email)
+  const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [emailLoading, setEmailLoading] = useState(false)
+
+  const [currentPwd, setCurrentPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdMsg, setPwdMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [pwdLoading, setPwdLoading] = useState(false)
+
+  const supabase = createClient()
+
+  const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+  const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+  const canTeam = hasFeature(washer, 'multi_laveurs')
+
+  function addTier() {
+    const mins = parseInt(tierDraft.max_minutes)
+    const fee  = parseFloat(tierDraft.fee)
+    setTierErr(null)
+    if (isNaN(mins) || mins <= 0) { setTierErr('La durée doit être un nombre de minutes positif'); return }
+    if (isNaN(fee) || fee < 0) { setTierErr('Le frais doit être positif ou nul'); return }
+    setTiers(prev => [...prev.filter(t => t.max_minutes !== mins), { max_minutes: mins, fee }].sort((a, b) => a.max_minutes - b.max_minutes))
+    setTierDraft({ max_minutes: '', fee: '' })
+  }
+
+  function removeTier(mins: number) {
+    setTiers(prev => prev.filter(t => t.max_minutes !== mins))
+  }
+
+  async function saveProfile(e: React.FormEvent) {
+    e.preventDefault()
+    setProfileMsg(null)
+    if (!name.trim()) { setProfileMsg({ ok: false, text: "Le nom de l'entreprise est requis" }); return }
+    if (phone.trim() && !PHONE_RE.test(phone.trim())) { setProfileMsg({ ok: false, text: 'Numéro de téléphone invalide' }); return }
+    setProfileLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        phone,
+        team_size: Math.max(1, parseInt(teamSize) || 1),
+        base_address: baseAddress.trim() || null,
+        travel_fee_tiers: tiers,
+        travel_fee_mode: travelFeeMode,
+      }),
+    })
+    if (res.ok) {
+      setProfileMsg({ ok: true, text: 'Profil mis à jour' })
+      router.refresh()
+    } else {
+      setProfileMsg({ ok: false, text: 'Erreur lors de la mise à jour' })
+    }
+    setProfileLoading(false)
+  }
+
+  async function saveReview(e: React.FormEvent) {
+    e.preventDefault()
+    setReviewMsg(null)
+    if (reviewEnabled && !reviewUrl.trim()) {
+      setReviewMsg({ ok: false, text: "Renseignez votre lien d'avis Google ou désactivez l'envoi" })
+      return
+    }
+    setReviewLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        review_enabled: reviewEnabled,
+        google_review_url: reviewUrl.trim() || null,
+        review_delay_hours: Math.max(0, parseInt(reviewDelay) || 0),
+        review_channel: reviewChannel,
+        sms_sender: smsSender.trim() || null,
+      }),
+    })
+    setReviewMsg(res.ok ? { ok: true, text: 'Réglages enregistrés' } : { ok: false, text: 'Erreur lors de la mise à jour' })
+    if (res.ok) router.refresh()
+    setReviewLoading(false)
+  }
+
+  async function saveEmail(e: React.FormEvent) {
+    e.preventDefault()
+    setEmailMsg(null)
+    if (!EMAIL_RE.test(newEmail.trim())) { setEmailMsg({ ok: false, text: 'Adresse email invalide' }); return }
+    setEmailLoading(true)
+    // Changer l'email revient à changer l'identifiant de connexion : même
+    // exigence de preuve que pour le mot de passe.
+    if (!await motDePasseActuelValide()) {
+      setEmailMsg({ ok: false, text: 'Saisissez votre mot de passe actuel dans la section ci-dessous pour confirmer' })
+      setEmailLoading(false)
+      return
+    }
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    setEmailMsg(error
+      ? { ok: false, text: 'Erreur : ' + error.message }
+      : { ok: true, text: 'Un email de confirmation a été envoyé' }
+    )
+    setEmailLoading(false)
+  }
+
+  /** Vérifie que la personne devant l'écran connaît le mot de passe actuel.
+   *
+   *  Sans cela, quiconque tombe sur une session ouverte peut changer le mot de
+   *  passe et l'email, et verrouiller le véritable propriétaire hors de son
+   *  compte. Le champ existait dans le code mais n'était relié à rien —
+   *  signalé par un audit externe le 2026-09-05.
+   *
+   *  Le cas qui rend ce contrôle indispensable : l'accès support. Un laveur
+   *  qui nous ouvre son compte une heure ne nous autorise pas à en changer les
+   *  identifiants. */
+  async function motDePasseActuelValide(): Promise<boolean> {
+    if (!currentPwd) return false
+    const { error } = await supabase.auth.signInWithPassword({ email, password: currentPwd })
+    return !error
+  }
+
+  async function savePassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPwd !== confirmPwd) {
+      setPwdMsg({ ok: false, text: 'Les mots de passe ne correspondent pas' })
+      return
+    }
+    if (newPwd.length < 6) {
+      setPwdMsg({ ok: false, text: 'Minimum 6 caractères' })
+      return
+    }
+    setPwdLoading(true)
+    setPwdMsg(null)
+    if (!await motDePasseActuelValide()) {
+      setPwdMsg({ ok: false, text: 'Mot de passe actuel incorrect' })
+      setPwdLoading(false)
+      return
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPwd })
+    if (!error) { setCurrentPwd(''); setNewPwd(''); setConfirmPwd('') }
+    setPwdMsg(error
+      ? { ok: false, text: 'Erreur : ' + error.message }
+      : { ok: true, text: 'Mot de passe mis à jour' }
+    )
+    setPwdLoading(false)
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Profil */}
+      <Card id="profil" title="Mon profil" icon={User}>
+        <form onSubmit={saveProfile} noValidate className="space-y-4">
+          <div>
+            <label className={labelClass}>Nom de l&apos;entreprise</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Téléphone</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Adresse de départ (pour le calcul de déplacement)</label>
+            <AddressAutocomplete
+              value={baseAddress}
+              onChange={setBaseAddress}
+              placeholder="12 rue de la Paix, 75001 Paris"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Frais de déplacement par durée</label>
+            <div className="space-y-2 mb-3">
+              {tiers.length === 0 && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">Aucun frais de déplacement configuré.</p>
+              )}
+              {tiers.map(t => (
+                <div key={t.max_minutes} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 text-slate-700 dark:text-slate-300">
+                    Jusqu&apos;à {t.max_minutes} min → <strong>{t.fee}€</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeTier(t.max_minutes)}
+                    className="text-red-400 hover:text-red-600 dark:hover:text-red-300 text-xs px-2 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 items-end">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Durée max (min)</p>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="30"
+                  value={tierDraft.max_minutes}
+                  onChange={e => setTierDraft(d => ({ ...d, max_minutes: e.target.value }))}
+                  className={`${inputClass} w-28`}
+                />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Frais (€)</p>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  placeholder="15"
+                  value={tierDraft.fee}
+                  onChange={e => setTierDraft(d => ({ ...d, fee: e.target.value }))}
+                  className={`${inputClass} w-24`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={addTier}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-colors"
+              >
+                + Ajouter
+              </button>
+            </div>
+            {tierErr && <p className="text-xs text-red-500 mt-2">{tierErr}</p>}
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+              Les frais sont calculés automatiquement selon la durée de trajet.
+            </p>
+          </div>
+
+          {tiers.length > 0 && (
+            <div>
+              <label className={labelClass}>Calculer le trajet depuis</label>
+              <div className="flex flex-col gap-2">
+                {([
+                  { value: 'base',     label: 'Mon siège (adresse de départ)',      desc: 'Toujours calculé depuis votre adresse fixe' },
+                  { value: 'previous', label: 'Le RDV précédent de la journée',     desc: 'Calcul depuis le dernier client — plus précis pour les tournées' },
+                ] as const).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      travelFeeMode === opt.value
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="travel_fee_mode"
+                      value={opt.value}
+                      checked={travelFeeMode === opt.value}
+                      onChange={() => setTravelFeeMode(opt.value)}
+                      className="mt-0.5 accent-blue-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{opt.label}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className={labelClass}>Nombre de laveurs</label>
+            {canTeam ? (
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={teamSize}
+                  onChange={e => setTeamSize(e.target.value)}
+                  onBlur={() => {
+                    const v = parseInt(teamSize)
+                    setTeamSize(String(isNaN(v) || v < 1 ? 1 : v))
+                  }}
+                  className={`${inputClass} w-24`}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {parseInt(teamSize) <= 1 ? 'Aucun chevauchement de RDV' : `Jusqu'à ${teamSize} RDV simultanés`}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <input type="number" value={1} disabled className={`${inputClass} w-24 opacity-50 cursor-not-allowed`} />
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  La gestion d&apos;équipe (RDV simultanés) fait partie du plan Pro.{' '}
+                  <Link href="/dashboard/abonnement" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Voir les offres</Link>
+                </p>
+              </div>
+            )}
+          </div>
+          <Feedback msg={profileMsg} />
+          <SaveButton loading={profileLoading} />
+        </form>
+      </Card>
+
+      {/* Facturation — informations portées sur les factures aux clients */}
+      <FacturationCard washer={washer} />
+
+      {/* Avis Google — suivi client */}
+      <Card id="avis" title="Avis Google" icon={Star}>
+        <form onSubmit={saveReview} noValidate className="space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
+            Envoyez automatiquement un email à vos clients après un lavage terminé pour leur demander un avis Google.
+          </p>
+
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Demande d&apos;avis automatique</span>
+            <button
+              type="button"
+              onClick={() => setReviewEnabled(v => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${reviewEnabled ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${reviewEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </label>
+
+          <div>
+            <label className={labelClass}>Canal d&apos;envoi</label>
+            <div className="flex gap-2">
+              {(['email', 'sms'] as const).map(c => {
+                const isSms = c === 'sms'
+                const disabled = isSms && !hasFeature(washer, 'avis_sms')
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => !disabled && setReviewChannel(c)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      reviewChannel === c
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : disabled
+                          ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                    }`}
+                  >
+                    {c === 'email' ? 'Email' : 'SMS'}
+                    {disabled && <span className="ml-1 text-xs">(Pro)</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Lien d&apos;avis Google</label>
+            <input
+              type="url"
+              value={reviewUrl}
+              onChange={e => setReviewUrl(e.target.value)}
+              placeholder="https://g.page/r/..."
+              className={inputClass}
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+              Depuis votre fiche Google Business → <strong>Demander des avis</strong> → copiez le lien à partager.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Délai avant l&apos;envoi</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={168}
+                value={reviewDelay}
+                onChange={e => setReviewDelay(e.target.value)}
+                className={`${inputClass} w-24`}
+              />
+              <span className="text-sm text-slate-500 dark:text-slate-400">heures après « terminé »</span>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+              Conseillé : 3h (le temps que le client profite du résultat).
+            </p>
+          </div>
+
+          {hasFeature(washer, 'avis_sms') && (
+            <>
+              <div>
+                <label className={labelClass}>Expéditeur SMS</label>
+                <input
+                  type="text"
+                  value={smsSender}
+                  onChange={e => setSmsSender(e.target.value.slice(0, 20))}
+                  placeholder={washer.name.slice(0, 11)}
+                  className={inputClass}
+                  maxLength={20}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                  Nom affiché sur le SMS du client. Max 11 caractères (ex. <strong>KookiClean</strong>) ou votre numéro de téléphone.
+                </p>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  disabled={smsTestLoading}
+                  onClick={async () => {
+                    setSmsTestMsg(null)
+                    setSmsTestLoading(true)
+                    const res = await fetch('/api/test-sms', { method: 'POST' })
+                    const json = await res.json()
+                    setSmsTestMsg(res.ok
+                      ? { ok: true, text: 'SMS envoyé sur votre téléphone !' }
+                      : { ok: false, text: json.error ?? 'Erreur' }
+                    )
+                    setSmsTestLoading(false)
+                  }}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors border border-slate-200 dark:border-slate-700"
+                >
+                  {smsTestLoading ? 'Envoi…' : 'Envoyer un SMS test'}
+                </button>
+                {smsTestMsg && (
+                  <p className={`text-xs mt-2 ${smsTestMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                    {smsTestMsg.text}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          <Feedback msg={reviewMsg} />
+          <SaveButton loading={reviewLoading} />
+        </form>
+      </Card>
+
+      {/* Relances clients — Pro+ uniquement */}
+      {hasFeature(washer, 'followup') && (
+        <Card id="relances" title="Relances clients" icon={Hourglass}>
+          <form onSubmit={saveFollowup} noValidate className="space-y-4">
+            <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
+              Envoyez automatiquement un message à vos clients quand ils n&apos;ont pas repris rendez-vous depuis un certain temps.
+            </p>
+
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Relances automatiques</span>
+              <button
+                type="button"
+                onClick={() => setFollowupEnabled(v => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${followupEnabled ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${followupEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </label>
+
+            <div>
+              <label className={labelClass}>Délai avant relance</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={730}
+                  value={followupDelayDays}
+                  onChange={e => setFollowupDelayDays(e.target.value)}
+                  className={`${inputClass} w-24`}
+                />
+                <span className="text-sm text-slate-500 dark:text-slate-400">jours sans nouveau RDV</span>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                Ex : 90 jours → le client reçoit un message 3 mois après son dernier lavage.
+              </p>
+            </div>
+
+            <div>
+              <label className={labelClass}>Message de relance</label>
+              <textarea
+                value={followupMessage}
+                onChange={e => setFollowupMessage(e.target.value.slice(0, 500))}
+                placeholder={`Bonjour {{nom}}, ça fait un moment ! Vous voulez reprendre un lavage ? Réservez directement ici : [votre lien]`}
+                rows={4}
+                className={`${inputClass} resize-none`}
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">{'{{nom}}'}</code> sera remplacé par le prénom du client.
+                {followupMessage.length > 0 && <span className="ml-2">{followupMessage.length}/500</span>}
+              </p>
+            </div>
+
+            <Feedback msg={followupMsg} />
+            <SaveButton loading={followupLoading} />
+          </form>
+        </Card>
+      )}
+
+      {/* Email */}
+      <Card title="Adresse email" icon={Mail}>
+        <form onSubmit={saveEmail} noValidate className="space-y-4">
+          <div>
+            <label className={labelClass}>Email</label>
+            <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required className={inputClass} />
+          </div>
+          <Feedback msg={emailMsg} />
+          <SaveButton loading={emailLoading} label="Changer l'email" />
+        </form>
+      </Card>
+
+      {/* Mot de passe */}
+      <Card title="Mot de passe" icon={Lock}>
+        <form onSubmit={savePassword} noValidate className="space-y-4">
+          <div>
+            {/* Ce champ manquait : le changement de mot de passe se faisait sans
+                aucune preuve d'identité. */}
+            <label className={labelClass}>Mot de passe actuel</label>
+            <input type="password" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} placeholder="Votre mot de passe actuel" required autoComplete="current-password" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Nouveau mot de passe</label>
+            <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min. 6 caractères" required className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Confirmer</label>
+            <input type="password" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} placeholder="••••••••" required className={inputClass} />
+          </div>
+          <Feedback msg={pwdMsg} />
+          <SaveButton loading={pwdLoading} label="Changer le mot de passe" />
+        </form>
+      </Card>
+
+      {/* Notifications sur le téléphone */}
+      <NotificationsToggle />
+
+      {/* Accès temporaire du support, ouvert et refermé par le laveur */}
+      <SupportAccessPanel />
+
+      {/* Zone de danger */}
+      <DangerZone washer={washer} />
+    </div>
+  )
+}
+
+/* ── Zone de danger : désactivation / suppression de compte ── */
+function DangerZone({ washer }: { washer: Washer }) {
+  const router = useRouter()
+  const status = washer.account_status ?? 'active'
+  const [busy, setBusy]               = useState(false)
+  const [err, setErr]                 = useState<string | null>(null)
+  const [showDelete, setShowDelete]   = useState(false)
+  const [confirmName, setConfirmName] = useState('')
+
+  const [now] = useState(() => Date.now())
+  const daysLeft = washer.deletion_scheduled_at
+    ? Math.max(0, 30 - Math.floor((now - new Date(washer.deletion_scheduled_at).getTime()) / (1000 * 60 * 60 * 24)))
+    : 30
+
+  async function call(action: 'deactivate' | 'reactivate' | 'delete', confirm_name?: string) {
+    setBusy(true); setErr(null)
+    const res = await fetch('/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, confirm_name }),
+    })
+    const json = await res.json().catch(() => null)
+    setBusy(false)
+    if (!res.ok) { setErr(json?.error ?? 'Une erreur est survenue'); return }
+    setShowDelete(false); setConfirmName('')
+    router.refresh()
+  }
+
+  // ── Compte en cours de suppression ──
+  if (status === 'pending_deletion') {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-red-300 dark:border-red-800 shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2"><Hourglass size={15} strokeWidth={2} />Suppression programmée</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">
+          Votre compte sera <strong>définitivement supprimé dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</strong>.
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Toutes vos données (clients, rendez-vous, comptabilité) seront effacées. Votre page de réservation est déjà masquée.
+        </p>
+        {err && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{err}</p>}
+        <button onClick={() => call('reactivate')} disabled={busy}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+          {busy ? '...' : 'Annuler la suppression'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Compte désactivé ──
+  if (status === 'deactivated') {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-300 dark:border-amber-800 shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-2"><PauseCircle size={15} strokeWidth={2} />Compte désactivé</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.
+        </p>
+        {err && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{err}</p>}
+        <button onClick={() => call('reactivate')} disabled={busy}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+          {busy ? '...' : 'Réactiver mon compte'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Compte actif : désactiver / supprimer ──
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-red-200 dark:border-red-900/50 shadow-sm p-5">
+      <h2 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2"><AlertTriangle size={15} strokeWidth={2} />Zone de danger</h2>
+
+      <div className="flex items-start justify-between gap-4 flex-wrap pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex-1 min-w-[12rem]">
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Désactiver mon compte</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masque votre page de réservation. Réversible à tout moment, vos données sont conservées.</p>
+        </div>
+        <button onClick={() => call('deactivate')} disabled={busy}
+          className="px-4 py-2 border-2 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-40 transition-colors shrink-0">
+          Désactiver
+        </button>
+      </div>
+
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex-1 min-w-[12rem]">
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Supprimer définitivement</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Efface votre compte et toutes vos données après 30 jours. Irréversible passé ce délai.</p>
+        </div>
+        <button
+          data-testid="delete-account-open"
+          onClick={() => { setShowDelete(true); setErr(null); setConfirmName('') }}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors shrink-0">
+          Supprimer
+        </button>
+      </div>
+
+      {err && !showDelete && <p className="text-xs text-red-600 dark:text-red-400 mt-3">{err}</p>}
+
+      {/* Modal de confirmation */}
+      {showDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !busy && setShowDelete(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Supprimer définitivement le compte</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+              Cette action programme la suppression de votre compte et de <strong>toutes vos données</strong> (clients, rendez-vous, comptabilité, prestations). Vous avez <strong>30 jours</strong> pour annuler avant l&apos;effacement définitif.
+            </p>
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 mb-4">
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Si vous avez un abonnement en cours, pensez à le résilier avant la prochaine échéance pour éviter d&apos;être prélevé.
+              </p>
+            </div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+              Pour confirmer, tapez le nom de votre entreprise : <strong className="text-slate-800 dark:text-slate-200">{washer.name}</strong>
+            </label>
+            <input
+              type="text"
+              value={confirmName}
+              onChange={e => setConfirmName(e.target.value)}
+              placeholder={washer.name}
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 mb-2"
+            />
+            {err && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{err}</p>}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => call('delete', confirmName)}
+                disabled={busy || confirmName.trim().toLowerCase() !== washer.name.trim().toLowerCase()}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
+              >
+                {busy ? 'Suppression...' : 'Supprimer mon compte'}
+              </button>
+              <button onClick={() => setShowDelete(false)} disabled={busy}
+                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-semibold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Onglet Page client ── */
+// Les endroits où un laveur publie son lien. Liste unique : elle sert à la
+// fenêtre de confirmation ET au rappel qui reste affiché ensuite, et les deux
+// doivent dire la même chose.
+const LIEUX_A_METTRE_A_JOUR = [
+  'Instagram', 'Facebook', 'Fiche Google', 'Site internet', 'Cartes de visite', 'QR codes',
+]
+
+function ClientTab({ washer }: { washer: Washer }) {
+  const router = useRouter()
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // Sans `https://`, qui n'apprend rien et mange une ligne entière sur mobile.
+  const domaine = origin.replace(/^https?:\/\//, '')
+  const [slug, setSlug] = useState(washer.slug)
+  const [slugMsg, setSlugMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [slugLoading, setSlugLoading] = useState(false)
+  // Retenu après un changement réussi : la boîte de confirmation disparaît dès
+  // qu'on clique, alors que le travail de remplacement des liens, lui, reste à
+  // faire. Le rappel doit donc survivre à la fenêtre.
+  const [ancienLien, setAncienLien] = useState<string | null>(null)
+  // Le nouveau lien en attente de confirmation, ou null si la fenêtre est fermée.
+  const [confirmSlug, setConfirmSlug] = useState<string | null>(null)
+
+  // Échap referme la fenêtre : sur ordinateur c'est le réflexe, et sans ça le
+  // seul moyen de renoncer est de viser « Annuler ».
+  useEffect(() => {
+    if (!confirmSlug) return
+    const auClavier = (e: KeyboardEvent) => { if (e.key === 'Escape') setConfirmSlug(null) }
+    window.addEventListener('keydown', auClavier)
+    return () => window.removeEventListener('keydown', auClavier)
+  }, [confirmSlug])
+
+  async function saveSlug() {
+    const s = slug.trim().toLowerCase()
+    setSlugMsg(null)
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
+      setSlugMsg({ ok: false, text: '3 à 40 caractères : minuscules, chiffres et tirets (pas au début ni à la fin).' })
+      return
+    }
+    if (s === washer.slug) { setSlugMsg({ ok: true, text: 'Lien inchangé' }); return }
+
+    // Ce lien est déjà en circulation : dans une bio Instagram, sur un site,
+    // sur des cartes de visite, dans des QR codes imprimés. Le changer n'est
+    // pas un réglage de plus, c'est une rupture — et rien ne redirige l'ancien
+    // vers le nouveau. D'où la confirmation, avec ce que ça implique.
+    setConfirmSlug(s)
+  }
+
+  async function appliquerSlug() {
+    const s = confirmSlug
+    if (!s) return
+    const ancien = `${origin}/book/${washer.slug}`
+    setConfirmSlug(null)
+    setSlugLoading(true)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: s }),
+    })
+    const json = await res.json().catch(() => null)
+    setSlugLoading(false)
+    if (!res.ok) { setSlugMsg({ ok: false, text: json?.error ?? 'Erreur lors de la mise à jour' }); return }
+    setAncienLien(ancien)
+    router.refresh()
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* id="lien-reservation" : cible d'ancrage utilisée par ParametresFormV2
+          (écran « Plus » de la refonte 2026, PWA uniquement) pour ses lignes
+          « Mon lien » et « Un lien par réseau ». N'a aucun effet visuel. */}
+      <Card id="lien-reservation" title="Votre lien de réservation" icon={Link2}>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+          Personnalisez le lien que vous partagez à vos clients. Une fois modifié,
+          l&apos;ancien lien ne fonctionne plus — pensez-y s&apos;il est déjà publié quelque part.
+        </p>
+        <div className="flex items-stretch gap-2">
+          <div className="flex items-center flex-1 border border-slate-300 dark:border-slate-600 rounded-xl overflow-hidden bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-blue-500">
+            <span className="px-3 text-sm text-slate-400 dark:text-slate-500 select-none whitespace-nowrap border-r border-slate-200 dark:border-slate-700">/book/</span>
+            <input
+              value={slug}
+              onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              placeholder="mon-entreprise"
+              className="flex-1 min-w-0 px-3 py-2.5 text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={saveSlug}
+            disabled={slugLoading}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shrink-0"
+          >
+            {slugLoading ? '...' : 'Enregistrer'}
+          </button>
+        </div>
+        <Feedback msg={slugMsg} />
+
+        {ancienLien && (
+          <div className="mt-3 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Lien mis à jour — il reste à le remplacer ailleurs
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-1 leading-relaxed">
+              <span className="font-mono line-through break-all">{ancienLien.replace(/^https?:\/\//, '')}</span> ne
+              fonctionne plus. Pensez à le remplacer :
+            </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {LIEUX_A_METTRE_A_JOUR.map(lieu => (
+                <span
+                  key={lieu}
+                  className="text-[11px] font-medium px-2 py-1 rounded-lg bg-white/70 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/25"
+                >
+                  {lieu}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-3">
+          <span className="text-sm text-blue-600 dark:text-blue-400 font-mono flex-1 truncate">{origin}/book/{washer.slug}</span>
+          <button
+            onClick={() => navigator.clipboard.writeText(`${origin}/book/${washer.slug}`)}
+            className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0"
+          >
+            Copier
+          </button>
+        </div>
+
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-4 mb-2">
+          Un lien par réseau, pour savoir d&apos;où viennent vos clients dans le CRM
+        </p>
+        <TrafficSourceLinks baseUrl={`${origin}/book/${washer.slug}`} />
+
+        {confirmSlug && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setConfirmSlug(null)}
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="titre-changer-lien"
+              className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 dark:border-slate-700 p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 id="titre-changer-lien" className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">
+                Changer votre lien de réservation ?
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                L&apos;ancien cessera de fonctionner immédiatement. Les clients qui
+                l&apos;utiliseront tomberont sur une page « introuvable ».
+              </p>
+
+              {/* Avant / après, l'un sous l'autre : une URL ne tient pas sur une
+                  demi-largeur de téléphone sans se couper n'importe où. */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700 overflow-hidden mb-4">
+                <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-0.5">Actuel</p>
+                  <p className="text-xs font-mono text-slate-400 dark:text-slate-500 line-through break-all">
+                    {domaine}/book/{washer.slug}
+                  </p>
+                </div>
+                <div className="px-3 py-2.5 bg-blue-50/70 dark:bg-blue-500/10">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-0.5">Nouveau</p>
+                  <p className="text-xs font-mono font-medium text-blue-700 dark:text-blue-300 break-all">
+                    {domaine}/book/{confirmSlug}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
+                À remplacer partout où vous l&apos;avez publié :
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-5">
+                {LIEUX_A_METTRE_A_JOUR.map(lieu => (
+                  <span
+                    key={lieu}
+                    className="text-[11px] font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/25"
+                  >
+                    {lieu}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmSlug(null)}
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={appliquerSlug}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  Changer le lien
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card title="Personnalisation de la page client" icon={Palette}>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Configurez votre logo, votre message d&apos;accueil, vos prestations et vos disponibilités.
+        </p>
+        <Link
+          href="/dashboard/admin"
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurer ma page client
+        </Link>
+      </Card>
+    </div>
+  )
+}
+
+/* ── Composants utilitaires ── */
+function Card({ id, title, icon: Icon, children }: { id?: string; title: string; icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    // `scroll-mt` : sans marge, l'en-tete fixe recouvre le titre de la section
+    // vers laquelle on vient de sauter, et on croit avoir atterri au mauvais
+    // endroit.
+    <div id={id} className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+        <Icon size={16} strokeWidth={2} className="text-slate-400 dark:text-slate-500" />{title}
+      </h2>
+      {children}
+    </div>
+  )
+}
+
+function Feedback({ msg }: { msg: { ok: boolean; text: string } | null }) {
+  if (!msg) return null
+  return (
+    <p className={`text-sm font-medium ${msg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+      {msg.ok ? '✓ ' : '✕ '}{msg.text}
+    </p>
+  )
+}
+
+function SaveButton({ loading, label = 'Enregistrer' }: { loading: boolean; label?: string }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading}
+      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
+    >
+      {loading ? 'Enregistrement...' : label}
+    </button>
+  )
+}
