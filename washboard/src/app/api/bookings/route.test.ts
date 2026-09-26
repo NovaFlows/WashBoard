@@ -17,6 +17,8 @@ let plan: {
   countJour: number
   rpc: Reponse
   utilisateur: unknown
+  /** Session du navigateur (cookies) — distincte du client admin, qui n'en a jamais. */
+  session: unknown
 }
 
 function nouveauBuilder(table: string) {
@@ -50,6 +52,11 @@ const fauxClient = {
 }
 
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxClient }))
+// Session du navigateur : distincte du client admin (qui n'en a pas). C'est elle qui décide
+// si l'auteur est le laveur lui-même, donc libre de forcer ses propres horaires.
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({ auth: { getUser: async () => ({ data: { user: plan.session } }) } }),
+}))
 vi.mock('@/lib/email', () => ({
   sendBookingRequest: vi.fn(async () => {}),
   sendWasherNotification: vi.fn(async () => {}),
@@ -97,6 +104,7 @@ beforeEach(() => {
   plan = {
     countJour: 0,
     utilisateur: null,
+    session: null,
     rpc: { data: { id: 'ok' }, error: null },
     tables: {
       washers: { data: {
@@ -192,7 +200,7 @@ describe('POST /api/bookings — page « proposition »', () => {
   it('refuse même au laveur lui-même', async () => {
     // Le bouton n'existe pas dans l'interface, mais la route reste appelable
     // directement : le refus doit tenir sans dépendre du navigateur.
-    plan.utilisateur = { id: 'user-1' }
+    plan.session = { id: 'user-1' }
     avecWasher({ is_preview: true })
     const { res } = await poster()
     expect(res.status).toBe(403)
@@ -202,6 +210,36 @@ describe('POST /api/bookings — page « proposition »', () => {
   it('laisse passer une page normale', async () => {
     avecWasher({ is_preview: false })
     expect((await poster()).res.status).toBe(201)
+  })
+})
+
+describe('POST /api/bookings — le laveur qui saisit son propre rendez-vous', () => {
+  // Il connaît son métier : un lavage à 3 h du matin, un jour de congé ou daté d'hier est un
+  // rattrapage légitime, pas une anomalie. La session (cookies) est ce qui l'identifie.
+  // Le client admin, lui, ne rend jamais d'utilisateur : c'est la session qui compte.
+  beforeEach(() => { plan.utilisateur = null; plan.session = { id: 'user-1' } })
+
+  it('accepte un créneau hors de ses horaires', async () => {
+    const { res } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+
+  it('accepte un jour où il est en congé', async () => {
+    plan.tables.availabilities = { data: [{ day_of_week: 1, start_time: '09:00', end_time: '18:00' }], error: null }
+    const { res } = await poster()
+    expect(res.status).toBe(201)
+  })
+
+  it('accepte une date déjà passée', async () => {
+    const { res } = await poster({ scheduled_at: '2026-09-01T08:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+
+  it('ne lève RIEN pour la session d un autre laveur', async () => {
+    plan.session = { id: 'quelqu-un-dautre' }
+    const { res, body } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/horaires/)
   })
 })
 

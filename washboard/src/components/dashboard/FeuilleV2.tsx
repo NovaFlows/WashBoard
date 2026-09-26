@@ -124,7 +124,12 @@ export function Feuille({
         className={`relative flex w-full max-h-[92dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
           visible ? 'translate-y-0 sm:scale-100 sm:opacity-100' : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
         }`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
+        // `pan-y` : dans une feuille, le doigt ne fait que défiler vers le haut ou le bas.
+        // Ni pincement pour zoomer, ni glissement latéral — une fiche zoomée puis décalée sur
+        // le côté est désagréable et donne l'impression que l'application est cassée (signalé
+        // par Alexandre, 2026-09-26). Le reste de l'application garde le zoom : on ne prive
+        // personne d'agrandir son planning.
+        style={{ touchAction: 'pan-y', transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
         {/* Bande du haut (poignée + titre) : zone de tirage pour fermer la feuille. */}
         <div className="shrink-0" {...glisser.poignee}>
@@ -152,7 +157,9 @@ export function Feuille({
         </div>
 
         <div
-          className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4"
+          // `overflow-x-hidden` : sans lui, un seul champ trop large (un `select` au contenu
+          // long sur iPhone) rendrait toute la feuille déplaçable latéralement.
+          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pt-4 [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full"
           style={{ paddingBottom: pied ? 16 : 'calc(env(safe-area-inset-bottom) + 20px)' }}
         >
           {children}
