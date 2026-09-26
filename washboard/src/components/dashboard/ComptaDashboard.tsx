@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getMondayOf } from '@/lib/dateUtils'
+import { CATEGORIES_DEPENSE } from '@/lib/depenses'
 import { formatPrice } from '@/lib/pricing'
 import {
   getPeriodRange, navigatePeriod, isCurrentPeriod, type PeriodType,
@@ -32,16 +33,11 @@ type MonthSummary = {
   expenses: number
 }
 
-// Exporté pour ChiffresArgent.tsx (refonte 2026, passe 5) : mêmes catégories
-// et libellés que l'écran Comptabilité existant, pour ne pas faire diverger
-// les deux présentations d'une même donnée.
-export const CATEGORIES = [
-  { value: 'carburant',  label: 'Carburant' },
-  { value: 'produits',   label: 'Produits' },
-  { value: 'equipement', label: 'Équipement' },
-  { value: 'abonnement', label: 'Abonnements' },
-  { value: 'autre',      label: 'Autre' },
-]
+// Les catégories vivent dans `lib/depenses.ts` depuis le 2026-09-26 : l'écran
+// « Dépenses » de la PWA s'en sert aussi, et une liste dupliquée finirait par
+// diverger. Réexportée ici pour ne rien changer aux imports existants.
+export { CATEGORIES_DEPENSE as CATEGORIES } from '@/lib/depenses'
+const CATEGORIES = CATEGORIES_DEPENSE
 
 const CAT_COLORS: Record<string, string> = {
   carburant:  'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',

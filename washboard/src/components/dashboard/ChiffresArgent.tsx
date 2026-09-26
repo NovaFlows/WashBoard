@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/GraphiqueBarres'
-import { CATEGORIES } from '@/components/dashboard/ComptaDashboard'
+import { libelleCategorie } from '@/lib/depenses'
 import { deplacer, formaterJour, libelleComparaison, plageDe, type PeriodeChiffres, type PeriodType } from '@/lib/chiffresPeriode'
 import { finitAvant, premierJourDeDonnee, serieArgent, totauxArgent, type ReservationArgent } from '@/lib/chiffresArgent'
 import { ecartRelatif } from '@/lib/crmStats'
@@ -230,7 +230,9 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
           <div>
             <div className="flex items-baseline justify-between px-0.5 pb-2">
               <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Dépenses</span>
-              <Link href="/dashboard/compta" className={`text-[12.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
+              {/* Écran v2 (2026-09-26) : « + Ajouter un frais » tombait sur l'ancienne page de
+                  comptabilité, en plein milieu de la PWA refaite. */}
+              <Link href="/dashboard/chiffres/depenses" className={`text-[12.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
                 + Ajouter un frais
               </Link>
             </div>
@@ -246,7 +248,7 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
                       <span className="flex-1 min-w-0 flex flex-col gap-px">
                         <span className={`text-[14.5px] ${corpsFort} truncate`}>{e.label}</span>
                         <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                          {CATEGORIES.find(c => c.value === e.category)?.label ?? e.category} · {new Date(e.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          {libelleCategorie(e.category)} · {new Date(e.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         </span>
                       </span>
                       <span className={`text-[14.5px] ${corpsFort} tabular-nums shrink-0`}>{euros(Number(e.amount))}</span>
