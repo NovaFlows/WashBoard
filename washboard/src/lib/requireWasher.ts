@@ -18,6 +18,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type WasherContext = {
   supabase: SupabaseClient
   washerId: string
+  /** Lien public du laveur. Lu ici parce que les routes qui modifient ses
+   *  prestations, ses horaires ou ses catégories doivent vider le cache de sa
+   *  page de réservation — sans rouvrir une lecture pour ce seul champ. */
+  slug: string | null
 }
 
 /** Renvoie le laveur connecté, ou la réponse d'erreur à retourner tel quel. */
@@ -31,7 +35,7 @@ export async function requireWasher(): Promise<
   }
 
   const { data: washer, error } = await supabase
-    .from('washers').select('id').eq('user_id', user.id).single()
+    .from('washers').select('id, slug').eq('user_id', user.id).single()
 
   if (error || !washer) {
     // Un échec de lecture ne doit pas laisser passer : sans certitude sur
@@ -39,5 +43,12 @@ export async function requireWasher(): Promise<
     return { ok: false, response: NextResponse.json({ error: 'Profil introuvable' }, { status: 404 }) }
   }
 
-  return { ok: true, ctx: { supabase, washerId: washer.id as string } }
+  return {
+    ok: true,
+    ctx: {
+      supabase,
+      washerId: washer.id as string,
+      slug: (washer.slug as string | null) ?? null,
+    },
+  }
 }

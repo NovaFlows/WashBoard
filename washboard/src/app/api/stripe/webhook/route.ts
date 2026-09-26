@@ -4,6 +4,7 @@ import { getStripe, planFromPriceId } from '@/lib/stripe'
 import { mapStripeStatus, stripeCancelToIso, stripePeriodEndToIso } from '@/lib/subscription'
 import { withErrorHandling } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
+import { revaliderPageReservation } from '@/lib/revaliderPageReservation'
 import { notifierEquipe } from '@/lib/push'
 import { formatEuros } from '@/lib/plan'
 import type Stripe from 'stripe'
@@ -68,10 +69,17 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
         plan,
         subscription_status:    'active',
         cancels_at:             null,
-      }).eq('id', washerId).select('name').maybeSingle()
+      }).eq('id', washerId).select('name, slug').maybeSingle()
       if (error) { logger.error('stripe.webhook.checkout_completed.db', { washerId }, error); dbError = error }
       else {
         logger.info('stripe.webhook.checkout_completed', { washerId, plan })
+        // Un laveur dont la page était suspendue vient de payer : elle doit
+        // rouvrir maintenant, pas à la fin de la fenêtre de cache. C'est le
+        // seul événement Stripe qui débloque une page — les autres (échec de
+        // paiement, résiliation) n'ont d'effet qu'après 30 jours de délai de
+        // grâce, une bascule liée à l'heure que seule la revalidation
+        // périodique peut voir venir.
+        revaliderPageReservation(laveur?.slug, 'stripe.checkout_completed')
         // Un client qui paie est l'événement que l'équipe veut voir passer.
         // Attendue, et non lancée dans le vide : Vercel coupe la fonction dès la
         // réponse renvoyée. `notifierEquipe` ne lève jamais — un raté de

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
+import { revaliderPageReservation } from '@/lib/revaliderPageReservation'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
@@ -52,7 +53,9 @@ export async function PATCH(request: NextRequest) {
   // consommait des SMS facturés à WashBoard sans jamais passer au plan Pro.
   // Signalé par un audit externe le 2026-09-05.
   const { data: profil, error: profilError } = await supabase
-    .from('washers').select('plan, grandfathered, facture_prochain_numero').eq('user_id', user.id).single()
+    // `slug` : le lien AVANT modification. Il faut vider le cache de l'ancienne
+    // adresse comme de la nouvelle quand le laveur change son lien.
+    .from('washers').select('plan, grandfathered, facture_prochain_numero, slug').eq('user_id', user.id).single()
 
   if (profilError || !profil) {
     // Sans certitude sur le plan, on ne débloque rien : laisser passer
@@ -262,5 +265,16 @@ export async function PATCH(request: NextRequest) {
     }
     return errorResponse('washer.patch.db', error)
   }
+
+  // Cache de la page publique vidé tout de suite : un laveur qui change son
+  // tarif et recharge son lien doit voir le nouveau, pas celui d'il y a trois
+  // minutes — sans quoi il croit que l'enregistrement a échoué.
+  revaliderPageReservation(profil.slug, 'washer.patch')
+  // L'ancienne adresse aussi, quand il vient de changer de lien : sans ça, elle
+  // continuerait à servir sa page jusqu'à la fin de la fenêtre de cache.
+  if (typeof updates.slug === 'string' && updates.slug !== profil.slug) {
+    revaliderPageReservation(updates.slug, 'washer.patch.nouveau_lien')
+  }
+
   return NextResponse.json({ success: true })
 }

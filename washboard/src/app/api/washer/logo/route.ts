@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
+import { revaliderPageReservation } from '@/lib/revaliderPageReservation'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -46,12 +47,17 @@ export async function POST(request: NextRequest) {
 
   const { data: { publicUrl } } = createAdminClient().storage.from('logos').getPublicUrl(fileName)
 
-  const { error: updateError } = await supabase
+  // `.select('slug')` : le lien du laveur revient dans la même écriture,
+  // pour vider le cache de sa page publique sans une lecture de plus.
+  const { data: fiche, error: updateError } = await supabase
     .from('washers')
     .update({ logo_url: publicUrl })
     .eq('user_id', user.id)
+    .select('slug')
+    .maybeSingle()
 
   if (updateError) return errorResponse('washer.logo.post.db', updateError)
+  revaliderPageReservation(fiche?.slug, 'washer.logo')
 
   return NextResponse.json({ url: publicUrl })
 }

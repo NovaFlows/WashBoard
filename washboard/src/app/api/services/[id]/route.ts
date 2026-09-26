@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
+import { revaliderPageReservation } from '@/lib/revaliderPageReservation'
 import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX } from '@/lib/prestation'
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const auth = await requireWasher()
   if (!auth.ok) return auth.response
-  const { supabase, washerId } = auth.ctx
+  const { supabase, washerId, slug } = auth.ctx
 
   const body = await request.json()
   if (body.vehicle_types !== undefined && !estReservable(body)) {
@@ -28,6 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { error } = await supabase.from('services').update(updates).eq('id', id).eq('washer_id', washerId)
   if (error) return errorResponse('services.id.patch.db', error)
+  revaliderPageReservation(slug, 'services.id.patch')
   return NextResponse.json({ success: true })
 }
 
@@ -35,9 +37,10 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   const auth = await requireWasher()
   if (!auth.ok) return auth.response
-  const { supabase, washerId } = auth.ctx
+  const { supabase, washerId, slug } = auth.ctx
 
   const { error } = await supabase.from('services').delete().eq('id', id).eq('washer_id', washerId)
   if (error) return errorResponse('services.id.delete.db', error)
+  revaliderPageReservation(slug, 'services.id.delete')
   return NextResponse.json({ success: true })
 }

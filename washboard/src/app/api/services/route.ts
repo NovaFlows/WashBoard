@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
+import { revaliderPageReservation } from '@/lib/revaliderPageReservation'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX } from '@/lib/prestation'
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const { data: washer, error: errWasher } = await supabase
-    .from('washers').select('id').eq('user_id', user.id).single()
+    .from('washers').select('id, slug').eq('user_id', user.id).single()
 
   if (errWasher) logger.error('services.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
@@ -43,5 +44,6 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return errorResponse('services.post.db', error)
+  revaliderPageReservation(washer.slug, 'services.post')
   return NextResponse.json({ data })
 }

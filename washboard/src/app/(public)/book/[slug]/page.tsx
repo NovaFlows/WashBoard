@@ -15,6 +15,25 @@ type Props = {
   params: Promise<{ slug: string }>
 }
 
+// Page mise en cache, rendue une fois puis servie depuis le CDN.
+//
+// Ce qu'elle affiche — prestations, tarifs, horaires, logo, couleurs — ne
+// change que quand le laveur y touche, quelques fois par semaine au plus. Elle
+// était pourtant reconstruite pour chaque visiteur : 418 rendus en une soirée
+// sur une seule page, le 2026-09-25. Les disponibilités, elles, ne sont plus
+// dans ce rendu (voir `/api/booking-availability`) — plus rien ici n'a besoin
+// d'être frais à la seconde.
+//
+// Cinq minutes, et pas une heure : c'est le délai maximum pendant lequel une
+// page pourrait rester réservable après la fin de l'abonnement de son laveur,
+// ou rester bloquée juste après son paiement. L'heure courante est lue au rendu
+// (`graceEnded`), et aucun cache ne peut la réévaluer tout seul.
+//
+// Les modifications du laveur, elles, n'attendent pas cette fenêtre : chaque
+// route qui touche à cette page la vide aussitôt — voir
+// `lib/revaliderPageReservation`.
+export const revalidate = 300
+
 // Les colonnes de la fiche, énumérées plutôt que `select('*')` : charger
 // l'objet entier ferait transiter des secrets (jeton Google, identifiants
 // Stripe) par une page publique, en comptant sur le fait qu'on ne les
