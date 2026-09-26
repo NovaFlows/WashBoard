@@ -7,6 +7,7 @@ import { hasFeature, PLAN_LABELS } from '@/lib/plan'
 import { nombreActifs } from '@/lib/messagesAutomatiques'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
+import { infosFacturationManquantes } from '@/lib/facture'
 
 // « Plus » — refonte 2026, passe 6. Présentation v2 de l'écran de réglages,
 // réservée à la PWA installée en mode standalone (voir ParametresForm.tsx, le
@@ -164,7 +165,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
   const domaine = origin.replace(/^https?:\/\//, '')
   const lienReservation = `${domaine}/book/${washer.slug}`
 
-  const canTeam = hasFeature(washer, 'multi_laveurs')
   // Ce qui part VRAIMENT : un avis « activé » sans lien Google, ou une relance
   // sans message, ne part pas (le cron les traite sans rien envoyer) — compter
   // « 2 actifs » ici alors que l'écran Messages automatiques en montre 1 serait
@@ -256,10 +256,15 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
               refonte.md) et un seul message de relance personnalisable,
               aucune notion de modèles multiples. Pas construite plutôt
               qu'approximée — voir TODO.md. */}
+          {/* « Mon profil » (2026-09-26, demande d'Alexandre) : remplace la ligne « Équipe »,
+              qui ne menait qu'au nombre de laveurs de l'ancien formulaire. On y renseigne
+              désormais l'entreprise, le statut porté sur les factures et les identifiants —
+              le nombre de laveurs y est resté. */}
           <Ligne
-            label="Équipe"
-            valeur={canTeam ? `${washer.team_size} laveur${washer.team_size > 1 ? 's' : ''}` : 'Pro'}
-            href="/dashboard/parametres/tout#profil"
+            label="Mon profil"
+            sousLabel="Entreprise, factures"
+            valeur={infosFacturationManquantes(washer).length > 0 ? 'À compléter' : undefined}
+            href="/dashboard/parametres/profil"
           />
           {/* « Mes liens » : le lien de réservation et un lien par réseau, dans le
               design de l'app (2026-09-25, demande d'Alexandre). Remplace la ligne
