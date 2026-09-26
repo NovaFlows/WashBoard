@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
 import { ChoixVeilleModal } from './ChoixVeilleModal'
+import type { Plan } from '@/lib/plan'
 import { champsManquants, estReservable, estEnVeille, aMettreEnVeille, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
 import { joursDureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
@@ -402,7 +403,7 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
   )
 }
 
-export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities, plafond = null }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]; plafond?: number | null }) {
+export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities, plafond = null, offre = 'decouverte' }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]; plafond?: number | null; offre?: Plan }) {
   const [categories, setCategories] = useState(initialCategories)
   const [services, setServices] = useState(initialServices)
   const [showAdd, setShowAdd] = useState(false)
@@ -697,6 +698,7 @@ export default function PrestationsManager({ services: initialServices, categori
             actives={actives}
             plafond={plafond}
             aRanger={aRanger}
+            offre={offre}
             loading={loading}
             error={error}
             onFermer={() => setRepousse(true)}

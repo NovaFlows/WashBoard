@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { quotaPrestations } from '@/lib/plan'
+import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COLONNE_INCONNUE } from '@/lib/compterPrestations'
 import { RappelPrestationsEnVeille } from '@/components/dashboard/RappelPrestationsEnVeille'
@@ -63,7 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       {children}
       {aRanger > 0 && (
-        <RappelPrestationsEnVeille actives={actives} plafond={plafond} aRanger={aRanger} />
+        <RappelPrestationsEnVeille actives={actives} plafond={plafond} aRanger={aRanger} offre={planEffectif(washer)} />
       )}
     </>
   )

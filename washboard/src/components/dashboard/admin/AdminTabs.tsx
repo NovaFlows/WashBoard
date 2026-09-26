@@ -6,7 +6,7 @@ import type { Washer, Service, ServiceCategory, Availability, Unavailability } f
 import IdentiteForm from './IdentiteForm'
 import PrestationsManager from './PrestationsManager'
 import DisponibilitesManager from './DisponibilitesManager'
-import { quotaPrestations } from '@/lib/plan'
+import { quotaPrestations, planEffectif } from '@/lib/plan'
 
 type Tab = 'identite' | 'prestations' | 'disponibilites'
 
@@ -88,7 +88,7 @@ export default function AdminTabs({ washer, services, categories, availabilities
       {tab === 'identite'       && <IdentiteForm washer={washer} />}
       {/* Ancres de defilement : les onglets Prestations et Disponibilites
           n'ont pas de section interne a cibler, on ancre leur contenu entier. */}
-      {tab === 'prestations'    && <div id="prestations" className="scroll-mt-24"><PrestationsManager services={services} categories={categories} availabilities={availabilities} plafond={plafondPrestations} /></div>}
+      {tab === 'prestations'    && <div id="prestations" className="scroll-mt-24"><PrestationsManager services={services} categories={categories} availabilities={availabilities} plafond={plafondPrestations} offre={planEffectif(washer)} /></div>}
       {tab === 'disponibilites' && <div id="disponibilites" className="scroll-mt-24"><DisponibilitesManager availabilities={availabilities} unavailabilities={unavailabilities} teamSize={washer.team_size ?? 1} /></div>}
     </div>
   )

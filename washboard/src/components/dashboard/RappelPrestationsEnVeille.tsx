@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChoixVeilleModal } from '@/components/dashboard/admin/ChoixVeilleModal'
+import type { Plan } from '@/lib/plan'
 
 /** Pose la question dès l'arrivée sur le tableau de bord, et pas seulement
  *  dans l'onglet Prestations.
@@ -16,10 +17,11 @@ import { ChoixVeilleModal } from '@/components/dashboard/admin/ChoixVeilleModal'
  *  retenu d'une connexion à l'autre. Tant qu'il n'a pas choisi, c'est le
  *  système qui tranche à sa place — le lui rappeler à chaque passage vaut
  *  mieux que de le laisser croire que tout est en ligne. */
-export function RappelPrestationsEnVeille({ actives, plafond, aRanger }: {
+export function RappelPrestationsEnVeille({ actives, plafond, aRanger, offre }: {
   actives: { id: string; name: string; price: number; duration_minutes: number }[]
   plafond: number
   aRanger: number
+  offre: Plan
 }) {
   const router = useRouter()
   const [repousse, setRepousse] = useState(false)
@@ -59,6 +61,7 @@ export function RappelPrestationsEnVeille({ actives, plafond, aRanger }: {
       actives={actives}
       plafond={plafond}
       aRanger={aRanger}
+      offre={offre}
       loading={loading}
       error={error}
       onFermer={() => setRepousse(true)}
