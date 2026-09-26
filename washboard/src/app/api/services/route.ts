@@ -4,6 +4,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX } from '@/lib/prestation'
 import { quotaPrestations, quotaDepasse, PLAN_LABELS, planEffectif } from '@/lib/plan'
+import { compterPrestationsActives } from '@/lib/compterPrestations'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
@@ -26,12 +27,8 @@ export async function POST(request: NextRequest) {
   const plafondCatalogue = quotaPrestations(washer)
   if (plafondCatalogue !== null) {
     // Seules les prestations ACTIVES occupent une place : celles mises en
-    // veille sont conservees mais invisibles, elles ne consomment rien.
-    const { count, error: errCount } = await supabase
-      .from('services')
-      .select('id', { count: 'exact', head: true })
-      .eq('washer_id', washer.id)
-      .eq('en_veille', false)
+    // veille sont conservées mais invisibles, elles ne consomment rien.
+    const { count, error: errCount } = await compterPrestationsActives(supabase, washer.id)
 
     // Un comptage illisible refuse : sans le nombre, le plafond ne veut plus
     // rien dire, et laisser passer reviendrait à le supprimer en silence.

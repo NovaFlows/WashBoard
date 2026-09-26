@@ -3,6 +3,7 @@ import { errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
 import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX, erreurTropDActives } from '@/lib/prestation'
 import { quotaPrestations, quotaDepasse } from '@/lib/plan'
+import { compterPrestationsActives } from '@/lib/compterPrestations'
 import { logger } from '@/lib/logger'
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -38,12 +39,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const plafond = quotaPrestations(washer)
     if (plafond !== null) {
-      const { count, error: errCount } = await supabase
-        .from('services')
-        .select('id', { count: 'exact', head: true })
-        .eq('washer_id', washerId)
-        .eq('en_veille', false)
-        .neq('id', id)   // celle qu'on reactive n'est pas encore comptee
+      // `id` est exclu du comptage : la prestation qu'on reactive n'est pas
+      // encore active, la compter reviendrait a lui refuser sa propre place.
+      const { count, error: errCount } = await compterPrestationsActives(supabase, washerId, id)
 
       if (errCount) {
         logger.error('services.id.patch.count_failed', { washerId }, errCount)

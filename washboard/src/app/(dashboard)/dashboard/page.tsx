@@ -11,6 +11,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
 import { hasFeature, quotaPrestations } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
+import { COLONNE_INCONNUE } from '@/lib/compterPrestations'
 import { RappelPrestationsEnVeille } from '@/components/dashboard/RappelPrestationsEnVeille'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
@@ -310,8 +311,14 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: true })
 
     if (error) {
-      // Migration pas encore passee, ou lecture en panne : on ne montre rien.
-      logger.warn('dashboard.prestations_veille.read_failed', { washerId: washer.id }, error)
+      // Colonne inconnue = migration 005 pas encore passee. C'est un etat
+      // connu, pas une anomalie : on n'affiche simplement pas la fenetre, et
+      // SURTOUT on ne journalise rien. Un avertissement ici remontait en
+      // bandeau « Console Error » rouge a chaque chargement du tableau de bord,
+      // ce qui fait passer un cas prevu pour une panne.
+      if ((error as { code?: string }).code !== COLONNE_INCONNUE) {
+        logger.warn('dashboard.prestations_veille.read_failed', { washerId: washer.id }, error)
+      }
     } else {
       prestationsActives = (data ?? []).filter(estVisibleParLesClients)
     }
