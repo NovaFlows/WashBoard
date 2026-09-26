@@ -441,6 +441,21 @@
 
 ## 🛡️ Prod-grade (observabilité + non-régression)
 
+- [ ] **Un test unitaire tombe par intermittence, jamais le meme signale.**
+      Constate deux fois le 2026-09-25/26 : `Tests 1 failed | 1169 passed`. Vitest
+      n'a pas imprime lequel (le bloc « Failed Tests » etait absent de la sortie),
+      et **quatre executions consecutives ensuite sont passees au vert**.
+  - Les deux occurrences ont eu lieu pendant que `npm run dev` **recompilait en
+    parallele** (fichiers sources modifies juste avant). Piste la plus probable :
+    un test qui lit un fichier pendant sa reecriture — `AGENTS.md` est reecrit a
+    chaque demarrage de `next dev`, et `blog.test.ts` / `guide.test.ts` lisent du
+    contenu.
+  - À faire la prochaine fois qu'il tombe : relancer aussitot avec
+    `npx vitest run --reporter=verbose` pour avoir le nom, sans rien changer
+    d'autre entre-temps.
+  - Non bloquant : la suite est verte des qu'elle tourne seule, y compris en
+    integration continue ou aucun serveur de developpement ne tourne.
+
 - [x] 2026-07-02 — **Socle prod mis en place** (commit 9342092) :
   - `lib/logger.ts` : logs structurés JSON (filtrables Vercel par event/level).
   - `lib/apiError.ts` : `AppError` + `withErrorHandling` + `errorResponse` →

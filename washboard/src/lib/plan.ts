@@ -419,9 +419,19 @@ export function hasFeature(w: AbonnementInfo | null | undefined, feature: Featur
   return RANK[planEffectif(w)] >= RANK[MIN_PLAN[feature]]
 }
 
+/** L'offre minimale qui ouvre cette fonctionnalité.
+ *
+ *  Exposée en plus du libellé : un écran qui propose de changer d'offre a
+ *  besoin du PRIX et de ce qu'elle contient, pas seulement de son nom. Sans
+ *  ça, le laveur lit « offre Starter », doit aller chercher ailleurs combien
+ *  ça coûte, et la plupart n'y vont pas. */
+export function requiredPlan(feature: Feature): Plan {
+  return MIN_PLAN[feature]
+}
+
 // Libellé du plan minimum requis pour une fonctionnalité (pour les invites d'upgrade).
 export function requiredPlanLabel(feature: Feature): string {
-  return PLAN_LABELS[MIN_PLAN[feature]]
+  return PLAN_LABELS[requiredPlan(feature)]
 }
 
 // ── Lecture des quotas ─────────────────────────────────────────────────────

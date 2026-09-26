@@ -12,7 +12,7 @@ import {
 } from '@/lib/listeFactures'
 import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
-import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { hasFeature } from '@/lib/plan'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { ApercuFactures } from '@/components/dashboard/ApercusVerrouilles'
 
@@ -129,8 +129,8 @@ export default async function FacturesPage({
           </div>
           <UpgradePrompt
             title="Éditez des factures conformes"
-            description="Mentions légales, SIRET, TVA, numérotation continue : des factures que votre comptable accepte. Disponible à partir de l’offre Pro."
-            planLabel={requiredPlanLabel('facturation')}
+            description="Mentions légales, SIRET, TVA, numérotation continue : des factures que votre comptable accepte."
+            feature="facturation"
             apercu={<ApercuFactures />}
           />
         </div>
