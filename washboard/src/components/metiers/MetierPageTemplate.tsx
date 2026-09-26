@@ -202,9 +202,13 @@ export default function MetierPageTemplate({
         <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Pour aller plus loin</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-10">
-            Nos articles {THEME_LABEL[theme].toLowerCase()}
+            {articles.length > 1 ? 'Nos articles' : 'Notre article'} {THEME_LABEL[theme].toLowerCase()}
           </h2>
-          <ul className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
+          {/* Un seul article ne remplit pas une grille à deux colonnes sans
+              paraître abandonnée : on la réserve à partir de deux articles,
+              et on limite la largeur du cas à un seul pour qu'il ne s'étire
+              pas sur toute la largeur de la page. */}
+          <ul className={articles.length > 1 ? 'grid sm:grid-cols-2 gap-x-10 gap-y-8' : 'max-w-xl'}>
             {articles.map(a => (
               <li key={a.slug}>
                 <Link href={`/blog/${a.slug}`} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 rounded-lg">

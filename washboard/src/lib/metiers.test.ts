@@ -28,9 +28,13 @@ describe('metierPageForTheme', () => {
     expect(metierPageForTheme('auto')).toEqual({ theme: 'auto', slug: 'logiciel-lavage-auto' })
   })
 
+  it('retrouve aussi la page canapés & textiles', () => {
+    expect(metierPageForTheme('textiles')).toEqual({ theme: 'textiles', slug: 'logiciel-nettoyage-canape' })
+  })
+
   it('renvoie undefined pour un thème sans page, sans lever', () => {
-    // Les métiers pas encore écrits (vitres, textiles, ménage, piscine,
-    // extérieur, général) doivent rester sans lien sur la landing.
+    // Les métiers pas encore écrits (vitres, ménage, piscine, extérieur,
+    // général) doivent rester sans lien sur la landing.
     expect(metierPageForTheme('vitres')).toBeUndefined()
   })
 })

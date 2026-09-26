@@ -20,12 +20,13 @@ export type MetierPageMeta = {
   slug: string
 }
 
-// Une entrée par page métier publiée. Les cinq autres métiers de la landing
-// (vitres, textiles, ménage, piscine) et le sixième thème du blog (extérieur)
+// Une entrée par page métier publiée. Les trois autres métiers de la landing
+// (vitres, ménage, piscine) et le sixième thème du blog (extérieur)
 // rejoindront cette liste au fur et à mesure, chacun avec sa page écrite à la
 // main — jamais générée automatiquement, le fond avant la technique.
 export const METIER_PAGES: MetierPageMeta[] = [
   { theme: 'auto', slug: 'logiciel-lavage-auto' },
+  { theme: 'textiles', slug: 'logiciel-nettoyage-canape' },
 ]
 
 /** Page métier déjà publiée pour ce thème, s'il y en a une. */
