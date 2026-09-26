@@ -39,3 +39,37 @@ export async function sendSms({ to, content, sender = 'WashBoard' }: { to: strin
     throw new Error(`Brevo SMS error ${res.status}: ${body}`)
   }
 }
+
+/** En dessous, il est temps de recharger.
+ *
+ *  150 SMS = le quota mensuel d'un seul laveur au plan Pro. Sous ce seuil, un
+ *  client qui passe au Pro pourrait épuiser le solde à lui seul dans le mois. */
+export const SEUIL_SMS_BAS = 150
+
+/** Crédits SMS restants chez Brevo, ou `null` si le solde est illisible.
+ *
+ *  Pourquoi cette fonction existe : les crédits SMS sont prépayés et se
+ *  vident sans prévenir. Le 2026-09-15 à 12 h, le solde est tombé à zéro en
+ *  plein envoi — la moitié d'un lot est partie, l'autre non, et personne ne
+ *  l'a su avant le 26. Un solde affiché tous les matins rend la panne visible
+ *  AVANT qu'elle arrive.
+ *
+ *  Ne lève jamais : un solde illisible ne doit pas faire échouer ce qui
+ *  l'affiche. L'appelant distingue « 0 crédit » (panne réelle) de `null`
+ *  (information manquante) — les confondre ferait crier au loup. */
+export async function soldeSms(): Promise<number | null> {
+  const apiKey = process.env.BREVO_API_KEY
+  if (!apiKey) return null
+
+  try {
+    const res = await fetch('https://api.brevo.com/v3/account', {
+      headers: { 'api-key': apiKey, accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    const compte = await res.json() as { plan?: { type?: string; credits?: number }[] }
+    const sms = (compte.plan ?? []).find(p => p.type === 'sms')
+    return typeof sms?.credits === 'number' ? sms.credits : null
+  } catch {
+    return null
+  }
+}

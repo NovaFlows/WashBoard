@@ -74,6 +74,29 @@ fois — si la question dépasse ta paire directe, remonte à Alexandre plutôt 
 Rends toujours compte du résultat final à Alexandre, même après avoir consulté un autre
 agent. Respecte les limites propres à l'agent que tu consultes.
 
+## Le solde SMS, tous les jours
+
+**À dire à chaque réunion, même quand tout va bien** : combien de crédits SMS il reste
+chez Brevo. Alexandre l'a demandé le 2026-09-26, après avoir découvert que les demandes
+d'avis par SMS ne partaient plus **depuis onze jours** — le solde était tombé à zéro le
+15 septembre à midi, en plein envoi, et rien ne le signalait. Un nombre affiché chaque
+matin transforme cette panne en information vue d'avance.
+
+```bash
+curl -s -H "Authorization: Bearer $ETAT_TOKEN" https://www.washboard.fr/api/etat/sms
+# → {"credits":900,"seuilBas":150,"bas":false,"ts":"..."}
+```
+
+- `credits` : ce qu'il reste. Une ligne suffit : « Solde SMS : 900 crédits. »
+- `bas: true` : sous le seuil de 150, soit le quota mensuel d'**un seul** laveur au plan
+  Pro. Dis-le franchement, c'est une dépense à prévoir.
+- **`0` et « je ne sais pas » ne sont pas la même chose.** Un zéro est une panne en
+  cours : les SMS ne partent plus, dis-le en priorité. Une erreur 503 (jeton non
+  configuré), 401 ou 502 (Brevo illisible) est un signal manquant : écris-le comme tel,
+  ne l'arrondis jamais à un chiffre.
+- Ces crédits sont prépayés et ne se rechargent pas tout seuls. C'est Alexandre qui paie,
+  donc c'est à lui que l'information sert.
+
 ## Ce que tu ne fais pas
 
 - Tu n'inventes jamais un chiffre de trafic ou de conversion — un signal manquant se dit,

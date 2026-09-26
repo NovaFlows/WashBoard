@@ -17,6 +17,17 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **Poser `ETAT_TOKEN` pour que le solde SMS remonte dans la réunion du matin.**
+      Deux gestes, tous deux pour Alexandre : (1) ajouter la variable `ETAT_TOKEN` (une
+      chaîne aléatoire quelconque) dans Vercel, environnement Production ; (2) donner la
+      même valeur à l'environnement de la routine cloud qui tient la réunion. Sans elle,
+      `GET /api/etat/sms` répond 503 et l'agent `analytics` écrit « signal manquant »
+      plutôt qu'un chiffre inventé — rien ne casse, mais l'information manque.
+  - Pourquoi : le 2026-09-15 à 12 h, les crédits SMS Brevo sont tombés à zéro **en plein
+    envoi**. Les demandes d'avis par SMS ont cessé de partir et personne ne l'a su avant
+    le 2026-09-26, onze jours plus tard. Le jeton ne sert qu'à lire ce solde : il n'ouvre
+    ni les envois (`CRON_SECRET`) ni le compte Brevo (`BREVO_API_KEY`, qui peut dépenser).
+
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
       cycle. Projects will be restricted from 05 Oct, 2026 if your organization remains over

@@ -6,10 +6,25 @@ import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/li
 import type { Plan } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
+import { notifierEquipe } from '@/lib/push'
 
 // Envoie les demandes d'avis Google dont l'heure programmée est passée.
 // Appelée régulièrement (toutes les heures) par un planificateur externe
 // (cron-job.org) ou Vercel Cron, avec l'en-tête « Authorization: Bearer <CRON_SECRET> ».
+
+/** Combien de temps on continue de réessayer un envoi en échec.
+ *
+ *  Avant, `review_request_sent_at` était posé à la fin de CHAQUE tour, même
+ *  quand l'envoi avait échoué : la demande était classée « envoyée » et plus
+ *  jamais rejouée. Le 2026-09-15, les crédits SMS de Brevo se sont épuisés et
+ *  7 demandes ont été perdues ainsi, sans que personne ne le voie.
+ *
+ *  Mais réessayer indéfiniment ne vaut pas mieux : une adresse invalide
+ *  rejouerait toutes les heures pour toujours. Passé ce délai, on abandonne —
+ *  une demande d'avis qui arrive trois jours après la prestation n'a de toute
+ *  façon plus d'intérêt. */
+const FENETRE_RATTRAPAGE_MS = 48 * 60 * 60 * 1000
+
 export async function GET(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -24,7 +39,9 @@ export async function GET(request: NextRequest) {
 
   let dueQuery = admin
     .from('bookings')
-    .select('id, client_name, client_email, client_phone, washer_id, status')
+    // `review_request_at` est lu pour connaître l'âge de la demande : au-delà
+    // de la fenêtre de rattrapage, on cesse de réessayer.
+    .select('id, client_name, client_email, client_phone, washer_id, status, review_request_at')
     .is('review_request_sent_at', null)
     .not('review_request_at', 'is', null)
     .limit(200)
@@ -44,8 +61,17 @@ export async function GET(request: NextRequest) {
   // quota dépassé) laissait le job répondre « ok » avec 0 envoi, donc passer
   // totalement inaperçue.
   let failed = 0
+  // Demandes abandonnées faute d'avoir pu partir dans la fenêtre.
+  let abandonnees = 0
+  // La première cause d'échec, telle quelle : c'est elle qui part dans la
+  // notification. « Brevo SMS error 402: not enough credit » dit tout de
+  // suite quoi faire ; « 3 envois en échec » envoie fouiller les journaux.
+  let premiereCause: string | null = null
 
   for (const b of due ?? []) {
+    // Passe à `true` si l'envoi de CETTE demande a échoué : elle ne sera alors
+    // pas marquée comme traitée, et repassera à l'exécution suivante.
+    let echecEnvoi = false
     if (b.status === 'cancelled' || !b.client_email) {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
       continue
@@ -83,6 +109,8 @@ export async function GET(request: NextRequest) {
         emailSent++
       } catch (e) {
         failed++
+        echecEnvoi = true
+        premiereCause ??= e instanceof Error ? e.message : String(e)
         logger.error('cron.reviews.email_failed', { bookingId: b.id }, e)
       }
     } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
@@ -115,14 +143,50 @@ export async function GET(request: NextRequest) {
             smsSent++
           } catch (e) {
             failed++
+            echecEnvoi = true
+            premiereCause ??= e instanceof Error ? e.message : String(e)
             logger.error('cron.reviews.sms_failed', { bookingId: b.id }, e)
           }
         }
       }
     }
 
+    // Le marquage n'est plus inconditionnel : une demande dont l'envoi a
+    // échoué reste en attente et repassera à l'exécution suivante — sauf si
+    // elle est trop vieille, auquel cas on l'abandonne pour de bon.
+    const trop_vieille = !test.enabled
+      && !!b.review_request_at
+      && Date.now() - Date.parse(b.review_request_at) > FENETRE_RATTRAPAGE_MS
+
+    if (echecEnvoi && !trop_vieille) {
+      logger.warn('cron.reviews.reportee', { bookingId: b.id })
+      continue
+    }
+    if (echecEnvoi) {
+      abandonnees++
+      logger.error('cron.reviews.abandonnee', { bookingId: b.id, programmee: b.review_request_at })
+    }
+
     await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
   }
 
-  return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, processed: (due ?? []).length, test: test.enabled })
+  // Une panne d'envoi ne doit plus se découvrir onze jours plus tard.
+  // `tag` fixe : les notifications successives se remplacent sur le téléphone
+  // au lieu de s'empiler heure après heure tant que la panne dure.
+  if (failed > 0) {
+    await notifierEquipe({
+      title: "⚠️ Demandes d'avis en échec",
+      body: [
+        `${failed} envoi${failed > 1 ? 's' : ''} en échec`,
+        premiereCause ? `Cause : ${premiereCause.slice(0, 160)}` : null,
+        abandonnees > 0
+          ? `${abandonnees} abandonnée${abandonnees > 1 ? 's' : ''} (trop ancienne${abandonnees > 1 ? 's' : ''})`
+          : 'Nouvelle tentative à la prochaine exécution.',
+      ].filter(Boolean).join('\n'),
+      url: '/dashboard',
+      tag: 'envois-avis-echec',
+    })
+  }
+
+  return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, abandonnees, processed: (due ?? []).length, test: test.enabled })
 }

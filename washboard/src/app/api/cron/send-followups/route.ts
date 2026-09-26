@@ -5,6 +5,7 @@ import { sendSms } from '@/lib/sms'
 import { graceEnded } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
+import { notifierEquipe } from '@/lib/push'
 import { repartirParClient, decisionPlusRecents } from '@/lib/relances'
 
 // `followup_sent_at` = relance TRAITÉE : envoyée, ou devenue inutile (voir
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
   // totalement inaperçue.
   let failed = 0
   let clos = 0
+  let premiereCause: string | null = null
 
   for (const washer of washers ?? []) {
     // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
@@ -123,6 +125,9 @@ export async function GET(request: NextRequest) {
           .eq('id', booking.id)
       } catch (e) {
         failed++
+        // La cause telle quelle, pour la notification : « not enough credit »
+        // dit quoi faire, « 3 échecs » envoie fouiller les journaux.
+        premiereCause ??= e instanceof Error ? e.message : String(e)
         logger.error('cron.followups.send_failed', { bookingId: booking.id }, e)
       }
     }
@@ -140,6 +145,23 @@ export async function GET(request: NextRequest) {
       if (errClore) logger.error('cron.send-followups.close_failed', { washerId: washer.id, nombre: paquet.length }, errClore)
       else clos += paquet.length
     }
+  }
+
+  // Ici, un envoi en échec restait déjà candidat pour la prochaine exécution
+  // (`followup_sent_at` n'est posé qu'après un envoi réussi) — mais sans que
+  // personne ne l'apprenne. `tag` fixe : les notifications se remplacent au
+  // lieu de s'empiler tant que la panne dure.
+  if (failed > 0) {
+    await notifierEquipe({
+      title: '⚠️ Relances en échec',
+      body: [
+        `${failed} relance${failed > 1 ? 's' : ''} non envoyée${failed > 1 ? 's' : ''}`,
+        premiereCause ? `Cause : ${premiereCause.slice(0, 160)}` : null,
+        'Nouvelle tentative à la prochaine exécution.',
+      ].filter(Boolean).join('\n'),
+      url: '/dashboard',
+      tag: 'envois-relance-echec',
+    })
   }
 
   return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, clos, test: test.enabled })
