@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendReviewRequest } from '@/lib/email'
-import { sendSms } from '@/lib/sms'
+import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
 import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/lib/plan'
 import type { Plan } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
@@ -133,7 +133,9 @@ export async function GET(request: NextRequest) {
 
         if ((count ?? 0) < quota) {
           try {
-            const sender = (washer.sms_sender ?? washer.name).slice(0, 11)
+            // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
+            // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
+            const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
             // Le nom du laveur est DANS le texte, et pas seulement dans
             // l'expéditeur : en France, un nom d'expéditeur non enregistré est
             // remplacé par celui du compte d'envoi. Vérifié le 2026-09-26 —

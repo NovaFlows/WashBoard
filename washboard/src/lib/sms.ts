@@ -11,7 +11,25 @@ export function normalizePhone(raw: string): string | null {
   return null
 }
 
-export async function sendSms({ to, content, sender = 'WashBoard' }: { to: string; content: string; sender?: string }): Promise<void> {
+/** L'expéditeur affiché quand le laveur n'en a pas d'approuvé à lui.
+ *
+ *  Brevo n'accepte QUE des identifiants d'expéditeur approuvés à l'avance, et
+ *  remplace silencieusement tout autre valeur par celui par défaut du compte.
+ *  Vérifié le 2026-09-26 : nous envoyions « Kooki Clean », les clients
+ *  recevaient « Nova » — l'identifiant approuvé s'écrit « KookiClean », sans
+ *  espace, et la moindre différence suffit à déclencher le remplacement.
+ *
+ *  D'où ce repli sur un identifiant unique et approuvé, au lieu du nom du
+ *  laveur : un nom d'entreprise quelconque n'est par définition jamais
+ *  approuvé, donc toujours remplacé. Le nom du laveur, lui, est écrit dans le
+ *  CORPS du message — le seul endroit que personne ne peut réécrire.
+ *
+ *  ⚠️ Doit rester identique à un identifiant approuvé dans le compte Brevo.
+ *  Le changer ici sans l'avoir fait approuver là-bas ramène le remplacement
+ *  silencieux. */
+export const EXPEDITEUR_SMS_DEFAUT = 'WashBoard'
+
+export async function sendSms({ to, content, sender = EXPEDITEUR_SMS_DEFAUT }: { to: string; content: string; sender?: string }): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) throw new Error('BREVO_API_KEY manquant')
 

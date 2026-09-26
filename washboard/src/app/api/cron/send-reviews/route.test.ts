@@ -61,6 +61,9 @@ vi.mock('@/lib/email', () => ({
 }))
 let dernierSms: { to: string; sender: string; content: string } | null = null
 vi.mock('@/lib/sms', () => ({
+  // La vraie constante, pas une valeur inventée : le test doit échouer si
+  // l'identifiant approuvé change sans que Brevo soit mis à jour.
+  EXPEDITEUR_SMS_DEFAUT: 'WashBoard',
   sendSms: async (p: { to: string; sender: string; content: string }) => {
     dernierSms = p
     if (plan.smsEchoue) throw new Error('Brevo SMS error 402: not enough credit')
@@ -123,6 +126,15 @@ describe('GET /api/cron/send-reviews', () => {
     expect(dernierSms!.content).toContain('https://g.page/x')
     // Sous 160 caractères : au-delà, le message compte double chez l'opérateur.
     expect(dernierSms!.content.length).toBeLessThanOrEqual(160)
+  })
+
+  it('se rabat sur l identifiant approuvé, jamais sur le nom du laveur', async () => {
+    // Un nom d'entreprise quelconque n'est jamais un identifiant approuvé chez
+    // Brevo : l'envoyer revient à laisser Brevo le remplacer en silence.
+    plan.washer.sms_sender = null
+    await GET(requete())
+    expect(dernierSms!.sender).toBe('WashBoard')
+    expect(dernierSms!.sender).not.toBe('Kooki Clean')
   })
 
   it('NE marque PAS la demande quand le SMS échoue', async () => {
