@@ -50,6 +50,10 @@ const COLONNES = [
   { header: 'Lien public', key: 'lien', width: 34 },
   { header: 'Inscrit le', key: 'inscrit', width: 12 },
   { header: 'Dernière connexion', key: 'connexion', width: 17 },
+  // Modification faite par le laveur lui-meme. Volontairement distincte de la
+  // connexion : un laveur peut ouvrir l'appli sans rien changer, et une ecriture
+  // du cron ou de Stripe ne doit pas le faire passer pour actif.
+  { header: 'Dernière modif', key: 'modif', width: 17 },
   { header: 'Presta.', key: 'prestations', width: 8 },
   { header: 'Créneaux', key: 'creneaux', width: 9 },
   { header: 'Logo', key: 'logo', width: 6 },
@@ -114,7 +118,7 @@ async function lireClients() {
 
   const { data: fiches, error: e2 } = await admin
     .from('washers')
-    .select('id, user_id, name, slug, phone, logo_url, trial_ends_at, subscription_status, created_at, is_preview')
+    .select('id, user_id, name, slug, phone, logo_url, trial_ends_at, subscription_status, created_at, profile_updated_at, is_preview')
     // Les pages « proposition » sont des vitrines construites pour des
     // prospects qui n'ont pas de compte : elles vivent dans la meme table que
     // les vrais laveurs (une seule base), mais ce ne sont pas des clients et
@@ -154,6 +158,7 @@ async function lireClients() {
       lien: `washboard.fr/book/${w.slug}`,
       inscrit: w.created_at,
       connexion: u?.last_sign_in_at ?? null,
+      modif: w.profile_updated_at ?? null,
       abonnement: w.subscription_status,
       jours, logo: !!w.logo_url,
       prestations: await compte('services'),
@@ -199,6 +204,7 @@ async function ecrire(clients, nettoyer) {
       tel: c.tel, email: c.email, lien: c.lien,
       inscrit: frDate(c.inscrit),
       connexion: fr(c.connexion) || 'jamais',
+      modif: fr(c.modif) || 'jamais',
       prestations: c.prestations ?? '?',
       creneaux: c.creneaux ?? '?',
       logo: c.logo ? 'oui' : 'non',
@@ -212,8 +218,12 @@ async function ecrire(clients, nettoyer) {
       showErrorMessage: true, errorTitle: 'Prénom invalide',
       error: `Choisissez ${PRENOMS.join(', ')} — ou laissez vide.`,
     }
-    ligne.getCell(15).alignment = { wrapText: true, vertical: 'top' }
-    ligne.getCell(16).alignment = { wrapText: true, vertical: 'top' }
+    // Position calculee, pas ecrite en dur : ajouter une colonne au milieu
+    // decalait silencieusement le retour a la ligne sur les mauvaises cellules.
+    for (const k of ['action', 'notes']) {
+      ligne.getCell(COLONNES.findIndex(c => c.key === k) + 1)
+        .alignment = { wrapText: true, vertical: 'top' }
+    }
   }
 
   // Un client n'est plus un prospect : sinon on l'appelle deux fois, une fois

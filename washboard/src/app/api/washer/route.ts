@@ -247,6 +247,17 @@ export async function PATCH(request: NextRequest) {
     updates.zone_config = config
   }
 
+  // Horodate l'action DU LAVEUR. `updated_at` ne peut pas jouer ce rôle : la
+  // base le réécrit à chaque UPDATE de la ligne, donc aussi quand le cron pose
+  // `trial_reminder_sent_at` ou quand le webhook Stripe change l'abonnement.
+  // Résultat, une fiche « modifiée hier » pouvait ne rien devoir au laveur —
+  // c'est ce qui a rendu la colonne inexploitable pour le suivi client.
+  // Posé seulement s'il y a quelque chose à écrire : un formulaire renvoyé sans
+  // le moindre champ valide n'est pas une modification.
+  if (Object.keys(updates).length > 0) {
+    updates.profile_updated_at = new Date().toISOString()
+  }
+
   const { error } = await supabase
     .from('washers')
     .update(updates)
