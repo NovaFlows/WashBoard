@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeTravelFee } from '@/lib/travelFee'
 import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
@@ -19,7 +18,10 @@ export async function GET(req: Request) {
     return Response.json({ fee: 0 })
   }
 
-  const supabase = await createClient()
-  const fee = await computeTravelFee(supabase, washer_id, address, scheduled_at, createAdminClient())
+  // Client admin, et pas celui de la session : la fiche du laveur n'est plus
+  // lisible par la clé publique depuis l'audit du 2026-09-05, et un visiteur
+  // anonyme recevait donc « aucun frais » quels que soient les paliers réglés.
+  // Rien ne sort d'ici qu'un nombre — aucune donnée du laveur n'est exposée.
+  const fee = await computeTravelFee(createAdminClient(), washer_id, address, scheduled_at)
   return Response.json({ fee })
 }

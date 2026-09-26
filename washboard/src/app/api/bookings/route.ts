@@ -325,7 +325,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Calcul des frais de déplacement (mode base ou RDV précédent)
   const computed_travel_fee = bookingData.address
-    ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at, admin)
+    ? await computeTravelFee(admin, bookingData.washer_id, bookingData.address, bookingData.scheduled_at)
     : (travel_fee ?? 0)
 
   // ── Prix : recalculé intégralement côté serveur ────────────────────────
