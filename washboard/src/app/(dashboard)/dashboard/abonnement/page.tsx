@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AbonnementPanel from '@/components/dashboard/AbonnementPanel'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { planEffectif, doitChoisirFormule, quotaReservations, quotaPrestations, debutDuMoisParis } from '@/lib/plan'
+import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutDuMoisParis } from '@/lib/plan'
 import { logger } from '@/lib/logger'
 
 export default async function AbonnementPage() {
@@ -57,7 +57,7 @@ export default async function AbonnementPage() {
         subscriptionEndsAt={washer.subscription_ends_at ?? null}
         plan={planEffectif(washer)}
         doitChoisir={doitChoisirFormule(washer)}
-        grandfathered={washer.grandfathered ?? false}
+        grandfathered={accesComplet(washer)}
         plafondReservations={plafondReservations}
         reservationsCeMois={resaCeMois?.error ? null : resaCeMois?.count ?? null}
         plafondPrestations={plafondPrestations}

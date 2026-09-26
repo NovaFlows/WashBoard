@@ -57,7 +57,34 @@ function Jauge({ titre, utilise, plafond, unite }: {
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, plan, grandfathered }: { status: string; plan: Plan; grandfathered: boolean }) {
+  if (grandfathered) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full">
+        <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+        Accès complet
+      </span>
+    )
+  }
+
+  // Sur l'offre gratuite, l'abonnement n'est pas « expiré » : il n'y en a pas.
+  //
+  // Sans ce cas, un laveur retombé sur Découverte à la fin de son essai lisait
+  // « Expiré — votre accès est suspendu » en rouge, alors que sa page de
+  // réservation fonctionne et que c'est précisément ce qu'on lui promet. Le
+  // ton disait l'inverse du produit.
+  // La condition ne regarde PAS le statut de paiement : on ne peut pas être
+  // « abonné actif » et sur l'offre gratuite en même temps. Si les deux se
+  // présentent, c'est l'offre qui dit la vérité de ce que le laveur obtient.
+  if (plan === 'decouverte') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-full">
+        <span className="w-2 h-2 bg-slate-400 rounded-full" />
+        Offre Découverte — gratuite
+      </span>
+    )
+  }
+
   if (status === 'active') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full">
@@ -97,9 +124,13 @@ export default function AbonnementPanel({
 
   // Les clients historiques ne sont sur aucune carte de la grille : leur tarif
   // est celui qu'ils paient depuis le début, pas celui de leur clé de plan.
+  // Le tarif suit l'offre EFFECTIVE. Il lisait auparavant le drapeau « client
+  // historique » lu brut en base : un compte simulé sur Découverte affichait
+  // donc « 49€/mois » à côté d'une jauge « 24 / 5 », deux informations qui se
+  // contredisaient sur le même écran.
   const currentPrice = grandfathered
     ? PLAN_PRICES[PLAN_HISTORIQUE]
-    : PLAN_CARDS.find(c => c.key === plan)?.price ?? PLAN_PRICES.decouverte
+    : PLAN_PRICES[plan] ?? PLAN_PRICES.decouverte
 
   const owed = subscriptionStatus === 'active' ? 0 : monthsOwed(subscriptionEndsAt, trialEndsAt, new Date(now))
   const dueMonths = Math.max(1, owed)
@@ -138,7 +169,7 @@ export default function AbonnementPanel({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Statut actuel</p>
-            <StatusBadge status={subscriptionStatus} />
+            <StatusBadge status={subscriptionStatus} plan={plan} grandfathered={grandfathered} />
           </div>
           <div className="text-right">
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Tarif</p>
@@ -162,7 +193,7 @@ export default function AbonnementPanel({
           </div>
         )}
 
-        {subscriptionStatus === 'active' && (
+        {subscriptionStatus === 'active' && (plan !== 'decouverte' || grandfathered) && (
           <div className="mt-4 p-3 rounded-xl text-sm font-medium bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
             Votre abonnement est actif. Merci de votre confiance !
           </div>
