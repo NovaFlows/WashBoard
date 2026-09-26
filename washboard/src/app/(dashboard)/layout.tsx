@@ -1,14 +1,14 @@
-import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { quotaPrestations } from '@/lib/plan'
+import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COLONNE_INCONNUE } from '@/lib/compterPrestations'
 import { COOKIE_REPORT } from '@/app/api/prestations/reporter/route'
+import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
 
 /** Enveloppe commune à tout le tableau de bord.
  *
- *  Elle ne sert aujourd'hui qu'à une chose : envoyer le laveur choisir quelles
+ *  Elle ne sert aujourd'hui qu'à une chose : demander au laveur quelles
  *  prestations garder en ligne, quand il en a plus que son offre n'en affiche.
  *
  *  Pourquoi ici et pas sur la seule page d'accueil : le laveur n'arrive pas
@@ -18,9 +18,9 @@ import { COOKIE_REPORT } from '@/app/api/prestations/reporter/route'
  *  seulement ne lui serait jamais arrivée, alors que sa page de réservation
  *  n'affiche déjà plus tout son catalogue.
  *
- *  Une redirection plutôt qu'une fenêtre : une boîte posée au milieu d'un
- *  tableau de bord se referme d'un réflexe, sans être lue. « Plus tard » reste
- *  toujours possible, sinon ce serait une porte fermée.
+ *  « Plus tard » reste toujours possible, sinon ce serait une porte fermée —
+ *  et il pose un cookie, sans quoi la fenêtre resurgirait au premier clic dans
+ *  le menu.
  *
  *  Coût : une lecture de la fiche laveur par page, sur un index (`user_id`).
  *  Les offres sans plafond — Pro, Business, clients historiques — s'arrêtent
@@ -55,7 +55,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // refuserait. Voir `compterPrestations` pour le même raisonnement côté API.
   const { data: services, error } = await supabase
     .from('services')
-    .select('id, vehicle_types, en_veille')
+    .select('id, name, price, duration_minutes, vehicle_types, en_veille')
+    .order('created_at', { ascending: true })
     .eq('washer_id', washer.id)
 
   // Migration en attente ou vraie panne : dans les deux cas on laisse passer.
@@ -64,7 +65,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (error) return <>{children}</>
 
   const actives = (services ?? []).filter(estVisibleParLesClients)
-  if (aMettreEnVeille(actives.length, plafond) > 0) redirect('/prestations-a-choisir')
+  const aRanger = aMettreEnVeille(actives.length, plafond)
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {aRanger > 0 && (
+        <ChoixVeilleModal
+          actives={actives}
+          plafond={plafond}
+          aRanger={aRanger}
+          offre={planEffectif(washer)}
+        />
+      )}
+    </>
+  )
 }
