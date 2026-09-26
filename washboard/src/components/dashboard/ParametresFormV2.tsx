@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
+import FeuilleNotificationsV2, { resumeNotifications } from '@/components/dashboard/FeuilleNotificationsV2'
+import { useNotificationsPush } from '@/hooks/useNotificationsPush'
 import Link from 'next/link'
 import type { Washer } from '@/types'
 import { hasFeature, PLAN_LABELS } from '@/lib/plan'
@@ -161,6 +164,11 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
   // SupportBadgesContext) — ce sont eux que portait le menu latéral et le
   // bouton ☰, disparus de la PWA en bêta.
   const { estEquipeSupport, unreadSupportCount, unreadTeamCount } = useSupportBadges()
+  // Les notifications n'avaient aucune entrée dans l'app : elles ne vivaient que sur l'ancien
+  // formulaire complet (Alexandre, 2026-09-26).
+  const { etat: etatNotifications } = useNotificationsPush()
+  const [feuilleNotifications, setFeuilleNotifications] = useState(false)
+  const notifications = resumeNotifications(etatNotifications)
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const domaine = origin.replace(/^https?:\/\//, '')
   const lienReservation = `${domaine}/book/${washer.slug}`
@@ -212,34 +220,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
           </a>
         </div>
 
-        <div className="flex items-center gap-2.5 py-3">
-          <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-            <span className={`text-[13px] ${corpsFort}`}>Mon lien</span>
-            <span
-              className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] truncate`}
-              style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-            >
-              {lienReservation}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => navigator.clipboard.writeText(`${origin}/book/${washer.slug}`)}
-            className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13px] ${corpsFort} shrink-0`}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--v2-color-encre)' }} aria-hidden>
-              <path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 1 0-5.7-5.7l-1.4 1.4" />
-              <path d="M13.5 10.5a4 4 0 0 0-5.7 0L5 13.3a4 4 0 1 0 5.7 5.7l1.4-1.4" />
-            </svg>
-            Copier
-          </button>
-        </div>
-
-        <Ligne
-          label="Un lien par réseau"
-          sousLabel="Instagram, TikTok, Facebook, Google"
-          href="/dashboard/parametres/tout#lien-reservation"
-        />
       </CarteListe>
 
       {/* De temps en temps */}
@@ -271,7 +251,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
               « Export et liens par réseau », qui menait à l'ancien écran CRM
               (`/dashboard/crm`, toujours en v1 sur le site). L'export Excel des
               réservations n'a plus d'entrée dans la PWA : voir TODO.md. */}
-          <Ligne label="Mes liens" href="/dashboard/parametres/liens" />
+          <Ligne label="Mes liens" sousLabel="Réservation, réseaux" href="/dashboard/parametres/liens" />
         </CarteListe>
       </div>
 
@@ -321,6 +301,16 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
           />
           {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
               menu latéral (et par un lien discret dans l'assistance). */}
+          <Ligne
+            label="Notifications"
+            valeur={notifications.texte || undefined}
+            signal={notifications.ton === 'ambre'
+              ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
+              : undefined}
+            onClick={() => setFeuilleNotifications(true)}
+          />
+          {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
+              menu latéral (et par un lien discret dans l'assistance). */}
           <Ligne label="Guide d’utilisation" href="/dashboard/guide" />
           <Ligne
             label="Aide et assistance"
@@ -362,6 +352,8 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
       >
         Tous les réglages
       </Link>
+
+      {feuilleNotifications && <FeuilleNotificationsV2 onClose={() => setFeuilleNotifications(false)} />}
 
       <DiagnosticPwa />
     </div>
