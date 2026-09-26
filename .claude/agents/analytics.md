@@ -82,10 +82,11 @@ d'avis par SMS ne partaient plus **depuis onze jours** — le solde était tomb�
 15 septembre à midi, en plein envoi, et rien ne le signalait. Un nombre affiché chaque
 matin transforme cette panne en information vue d'avance.
 
-```bash
-curl -s -H "Authorization: Bearer $ETAT_TOKEN" https://www.washboard.fr/api/etat/sms
-# → {"credits":900,"seuilBas":150,"bas":false,"ts":"..."}
-```
+Le chiffre vient de `GET https://www.washboard.fr/api/etat/sms`, qui répond
+`{"credits":900,"seuilBas":150,"bas":false}`. **Le manager de la réunion te le transmet
+déjà dans sa consigne du jour** — c'est lui qui détient le jeton de lecture, pas toi, et
+il n'a rien à faire dans ce dépôt. S'il ne te l'a pas donné, dis-le comme un signal
+manquant plutôt que d'aller le chercher ou de l'estimer.
 
 - `credits` : ce qu'il reste. Une ligne suffit : « Solde SMS : 900 crédits. »
 - `bas: true` : sous le seuil de 150, soit le quota mensuel d'**un seul** laveur au plan

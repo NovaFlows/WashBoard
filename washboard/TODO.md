@@ -17,16 +17,22 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Poser `ETAT_TOKEN` pour que le solde SMS remonte dans la réunion du matin.**
-      Deux gestes, tous deux pour Alexandre : (1) ajouter la variable `ETAT_TOKEN` (une
-      chaîne aléatoire quelconque) dans Vercel, environnement Production ; (2) donner la
-      même valeur à l'environnement de la routine cloud qui tient la réunion. Sans elle,
-      `GET /api/etat/sms` répond 503 et l'agent `analytics` écrit « signal manquant »
-      plutôt qu'un chiffre inventé — rien ne casse, mais l'information manque.
+- [x] 2026-09-26 — **Le solde SMS remonte dans la réunion du matin.** `ETAT_TOKEN` posé
+      dans Vercel (Production) par Alexandre, et le jeton transmis à la routine
+      « WashBoard — réunion d'équipe quotidienne » (`trig_01CGNjYVC3qi9SxHn6D1HCFU`).
+      Vérifié en production : `GET /api/etat/sms` rend `{"credits":900,"seuilBas":150}`.
   - Pourquoi : le 2026-09-15 à 12 h, les crédits SMS Brevo sont tombés à zéro **en plein
     envoi**. Les demandes d'avis par SMS ont cessé de partir et personne ne l'a su avant
     le 2026-09-26, onze jours plus tard. Le jeton ne sert qu'à lire ce solde : il n'ouvre
     ni les envois (`CRON_SECRET`) ni le compte Brevo (`BREVO_API_KEY`, qui peut dépenser).
+  - **Dette assumée** : le jeton est écrit en clair dans le texte de la routine, faute
+    d'avoir pu le poser en variable d'environnement — l'API de mise à jour exige un champ
+    `session_request.worker` de forme inconnue. Conséquence : il apparaît dans les
+    journaux d'exécution de chaque réunion. À déplacer dans les variables de
+    l'environnement `env_01BsRLUGWgwbHSKi7rn6wGvB` dès que c'est faisable depuis
+    l'interface. Le jour où le jeton est régénéré dans Vercel, **penser à le remplacer
+    aussi dans la routine**, sinon le rapport dira « signal manquant » sans autre indice.
+  - Rappel : ne jamais committer sa valeur ici — le dépôt est partagé (Ryan, Yanis).
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
