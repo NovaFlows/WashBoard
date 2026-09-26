@@ -322,36 +322,26 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   }, [showBarreBas])
 
   // PWA en bêta : la barre d'état du téléphone prend le papier de la refonte, pour que le
-  // beige monte jusqu'en haut de l'écran (demande d'Alexandre, 2026-09-25). `layout.tsx` pose
-  // `theme-color` en blanc / ardoise pour le site ; ici on INSÈRE, en tête du <head>, une
-  // balise à nous (la première qui correspond l'emporte), qui suit le thème choisi DANS
-  // l'application. Insérée plutôt que modifiée : sur iPhone, changer l'attribut d'une balise
-  // existante n'était pris en compte qu'après un changement d'onglet (constaté le 2026-09-26),
-  // alors qu'une balise nouvelle l'est tout de suite. Elle reste d'une page à l'autre (chaque
-  // page a sa coque) ; le script de `layout.tsx` la repose dès la première image aux
-  // lancements suivants grâce au repère `wb-beta-pwa`. Retirée si le compte n'est plus en bêta.
+  // beige (ou le gris foncé) monte jusqu'en haut de l'écran (demande d'Alexandre, 2026-09-25).
+  //
+  // La couleur elle-même est écrite par le SERVEUR dans le HTML de la page (voir
+  // `generateViewport`, layout.tsx) : iOS ne lit `theme-color` qu'à ce moment-là, une balise
+  // posée ensuite par JavaScript n'était prise en compte qu'au changement d'onglet suivant.
+  // Comme le serveur ne peut pas savoir qu'on tourne dans l'application installée, c'est ce
+  // cookie qui le lui dit — il prend donc effet au lancement SUIVANT.
+  //
+  // Le cookie est RETIRÉ hors de l'application installée : sur Android, le navigateur et
+  // l'application partagent leurs cookies, et le site doit garder ses couleurs à lui.
   useEffect(() => {
-    const existante = document.querySelector<HTMLMetaElement>('meta[data-wb-beta]')
-    if (!showBarreBas) {
-      if (isPwa) {
-        existante?.remove()
-        try { window.localStorage.removeItem('wb-beta-pwa') } catch { /* rien à retirer */ }
-      }
+    const base = 'wb_pwa_beta=; path=/; max-age=0; samesite=lax'
+    if (!isPwa || !showBarreBas) {
+      document.cookie = base
       return
     }
-    const racine = document.documentElement
-    const meta = existante ?? document.createElement('meta')
-    if (!existante) {
-      meta.name = 'theme-color'
-      meta.setAttribute('data-wb-beta', '')
-    }
-    const poser = () => { meta.content = racine.classList.contains('dark') ? '#0E0E11' : '#F6F5F3' }
-    poser()
-    if (!existante) document.head.prepend(meta)
-    try { window.localStorage.setItem('wb-beta-pwa', '1') } catch { /* repère perdu : pas grave */ }
-    const observateur = new MutationObserver(poser)
-    observateur.observe(racine, { attributes: true, attributeFilter: ['class'] })
-    return () => observateur.disconnect()
+    document.cookie = `wb_pwa_beta=1; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+    // Rien à changer dans la page en cours : Next réécrit ses propres balises `theme-color`
+    // (essayé, ça ne tient pas), et de toute façon iOS ne relit la couleur qu'au lancement.
+    // Changer de thème en séance se voit donc au lancement suivant, lui aussi.
   }, [showBarreBas, isPwa])
 
   return (

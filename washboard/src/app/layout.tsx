@@ -21,20 +21,7 @@ import MarqueurPret from "@/components/ui/MarqueurPret";
 const PWA_DETECT_SCRIPT = `(function(){try{
   var s = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
-  if (s) {
-    document.documentElement.classList.add('wb-pwa');
-    // Barre d'état : le papier de la refonte dès la première image, pour les comptes en bêta
-    // (repère posé par DashboardShell) — voir le commentaire de DashboardShell.
-    try {
-      if (window.localStorage.getItem('wb-beta-pwa') === '1' && !document.querySelector('meta[data-wb-beta]')) {
-        var m = document.createElement('meta');
-        m.name = 'theme-color';
-        m.setAttribute('data-wb-beta', '');
-        m.content = document.documentElement.classList.contains('dark') ? '#0E0E11' : '#F6F5F3';
-        document.head.insertBefore(m, document.head.firstChild);
-      }
-    } catch(e){}
-  }
+  if (s) document.documentElement.classList.add('wb-pwa');
 }catch(e){}})();`;
 
 const geistSans = Geist({
@@ -73,21 +60,35 @@ const archivo = Archivo({
 //   le clavier s'ouvre sur Chrome Android (déjà le comportement par défaut
 //   sur iOS) : un champ en bas d'écran reste visible au-dessus du clavier au
 //   lieu d'être masqué dessous.
-// Les couleurs de theme-color restent en v1 (#ffffff / #0f172a) : les écrans
-// actuels sont encore habillés en v1, les poser en v2 (#F6F5F3 / #0E0E11)
-// maintenant ferait jurer la barre de statut avec un en-tête blanc pur / une
-// surface slate-900 sur CHAQUE écran jusqu'à la bascule des jetons (passe 1
-// puis écran par écran). À revoir quand les premiers écrans passent en v2.
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  interactiveWidget: "resizes-content",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)",  color: "#0f172a" },
-  ],
-};
+// Les couleurs de theme-color restent en v1 (#ffffff / #0f172a) partout SAUF dans la PWA
+// installée d'un compte en bêta, où elles prennent le papier de la refonte pour que le beige
+// (ou le gris foncé) monte jusqu'à la barre d'état du téléphone.
+//
+// Décidé ici, CÔTÉ SERVEUR, à partir du cookie `wb_pwa_beta` posé par DashboardShell : c'est
+// le seul moyen fiable. iOS lit `theme-color` dans le HTML qu'on lui sert, au lancement ; une
+// balise posée ensuite par JavaScript n'était prise en compte qu'au changement d'onglet suivant
+// (constaté par Alexandre les 25 et 26 septembre 2026, bandeau ardoise au-dessus de l'écran).
+// Le serveur, lui, ne peut pas détecter `display-mode: standalone` — d'où le cookie, qui prend
+// effet au lancement suivant.
+const COULEUR_BETA = { clair: "#F6F5F3", sombre: "#0E0E11" } as const;
+
+export async function generateViewport(): Promise<Viewport> {
+  const jar = await cookies();
+  const sombre = jar.get("theme")?.value === "dark";
+  const betaPwa = jar.get("wb_pwa_beta")?.value === "1";
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    interactiveWidget: "resizes-content",
+    themeColor: betaPwa
+      ? COULEUR_BETA[sombre ? "sombre" : "clair"]
+      : [
+          { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+          { media: "(prefers-color-scheme: dark)",  color: "#0f172a" },
+        ],
+  };
+}
 
 // Écrans de lancement de l'application installée sur iPhone (le noir qu'iOS montre tant que
 // la première page n'est pas arrivée, long avec une mauvaise connexion). iOS n'en choisit
