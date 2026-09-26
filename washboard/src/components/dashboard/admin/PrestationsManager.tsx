@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
-import { ChoixVeilleModal } from './ChoixVeilleModal'
-import type { Plan } from '@/lib/plan'
 import { champsManquants, estReservable, estEnVeille, aMettreEnVeille, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
 import { joursDureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
@@ -403,7 +401,7 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
   )
 }
 
-export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities, plafond = null, offre = 'decouverte' }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]; plafond?: number | null; offre?: Plan }) {
+export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities, plafond = null }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]; plafond?: number | null }) {
   const [categories, setCategories] = useState(initialCategories)
   const [services, setServices] = useState(initialServices)
   const [showAdd, setShowAdd] = useState(false)
@@ -412,38 +410,8 @@ export default function PrestationsManager({ services: initialServices, categori
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // La fenetre s'ouvre d'elle-meme tant que le laveur depasse son plafond.
-  // `repousse` ne vit que le temps de la visite : on ne retient PAS son
-  // « Plus tard » d'une session a l'autre. Le choix est reel — sa page
-  // n'affiche deja que les premieres — et le lui rappeler a chaque passage
-  // vaut mieux que de le laisser croire que tout est en ligne.
-  const [repousse, setRepousse] = useState(false)
-
   const actives = services.filter(sv => !estEnVeille(sv))
   const aRanger = aMettreEnVeille(actives.length, plafond)
-
-  /** Met en veille les prestations choisies dans la fenetre, d'un coup. */
-  async function mettreEnVeille(ids: string[]) {
-    setError(null)
-    setLoading(true)
-    // En serie et non en parallele : le serveur compte les prestations actives
-    // a chaque appel, et deux requetes simultanees liraient le meme compte.
-    for (const id of ids) {
-      const res = await fetch(`/api/services/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ en_veille: true }),
-      })
-      if (!res.ok) {
-        const corps = await res.json().catch(() => ({}))
-        setError(corps.error ?? 'Impossible de mettre cette prestation en veille')
-        setLoading(false)
-        return
-      }
-      setServices(prev => prev.map(x => (x.id === id ? { ...x, en_veille: true } : x)))
-    }
-    setLoading(false)
-  }
 
   /** Met en veille ou reactive. L'etat local suit tout de suite : sans ca, le
    *  laveur clique et ne voit rien bouger jusqu'au rechargement — il reclique,
@@ -607,7 +575,7 @@ export default function PrestationsManager({ services: initialServices, categori
             </p>
             <button
               type="button"
-              onClick={() => setRepousse(false)}
+              onClick={() => { window.location.href = '/prestations-a-choisir' }}
               className="mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors"
             >
               Choisir maintenant
@@ -692,19 +660,6 @@ export default function PrestationsManager({ services: initialServices, categori
             )}
           </div>
         ))}
-
-        {aRanger > 0 && !repousse && plafond !== null && (
-          <ChoixVeilleModal
-            actives={actives}
-            plafond={plafond}
-            aRanger={aRanger}
-            offre={offre}
-            loading={loading}
-            error={error}
-            onFermer={() => setRepousse(true)}
-            onValider={async ids => { await mettreEnVeille(ids) }}
-          />
-        )}
 
         {showAdd && (
           <ServiceForm
