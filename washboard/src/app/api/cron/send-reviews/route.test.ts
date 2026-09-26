@@ -59,8 +59,12 @@ vi.mock('@/lib/cronRequest', () => ({
 vi.mock('@/lib/email', () => ({
   sendReviewRequest: async () => { if (plan.emailEchoue) throw new Error('Resend indisponible') },
 }))
+let dernierSms: { to: string; sender: string; content: string } | null = null
 vi.mock('@/lib/sms', () => ({
-  sendSms: async () => { if (plan.smsEchoue) throw new Error('Brevo SMS error 402: not enough credit') },
+  sendSms: async (p: { to: string; sender: string; content: string }) => {
+    dernierSms = p
+    if (plan.smsEchoue) throw new Error('Brevo SMS error 402: not enough credit')
+  },
 }))
 vi.mock('@/lib/push', () => ({
   notifierEquipe: async (p: { title?: string; body?: string; tag?: string }) => { notifications.push(p) },
@@ -79,6 +83,7 @@ const RESERVATION = {
 
 beforeEach(() => {
   ecritures = []
+  dernierSms = null
   notifications.length = 0
   plan = {
     due: [{ ...RESERVATION }],
@@ -107,6 +112,17 @@ describe('GET /api/cron/send-reviews', () => {
     expect(body.failed).toBe(0)
     expect(marquages()).toHaveLength(1)
     expect(ecritures.some(e => 'review_sms_sent_at' in e.valeurs)).toBe(true)
+  })
+
+  it('nomme le laveur DANS le texte, pas seulement dans l expéditeur', async () => {
+    // En France, un expéditeur non enregistré est remplacé par celui du compte
+    // (« Nova » le 2026-09-26, alors qu'on demandait « Kooki Clean »). Sans le
+    // nom dans le corps, le client reçoit un message anonyme avec un lien.
+    await GET(requete())
+    expect(dernierSms!.content).toContain('Kooki Clean')
+    expect(dernierSms!.content).toContain('https://g.page/x')
+    // Sous 160 caractères : au-delà, le message compte double chez l'opérateur.
+    expect(dernierSms!.content.length).toBeLessThanOrEqual(160)
   })
 
   it('NE marque PAS la demande quand le SMS échoue', async () => {

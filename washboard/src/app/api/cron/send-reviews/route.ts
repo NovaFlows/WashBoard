@@ -134,10 +134,16 @@ export async function GET(request: NextRequest) {
         if ((count ?? 0) < quota) {
           try {
             const sender = (washer.sms_sender ?? washer.name).slice(0, 11)
+            // Le nom du laveur est DANS le texte, et pas seulement dans
+            // l'expéditeur : en France, un nom d'expéditeur non enregistré est
+            // remplacé par celui du compte d'envoi. Vérifié le 2026-09-26 —
+            // nous avions demandé « Kooki Clean », le client a reçu « Nova ».
+            // Un SMS anonyme avec un lien, c'est un spam aux yeux du client :
+            // il ne clique pas, et c'est le laveur qui en paie le prix.
             await sendSms({
               to: b.client_phone,
               sender,
-              content: `Bonjour ${b.client_name}, merci pour votre confiance ! Pouvez-vous laisser un avis sur notre travail ? ${washer.google_review_url}`,
+              content: `Bonjour ${b.client_name}, ici ${washer.name}. Merci pour votre confiance ! Un avis nous aiderait beaucoup : ${washer.google_review_url}`,
             })
             await admin.from('bookings').update({ review_sms_sent_at: nowIso }).eq('id', b.id)
             smsSent++
