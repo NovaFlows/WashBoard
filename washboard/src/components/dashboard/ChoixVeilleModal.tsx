@@ -197,9 +197,8 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Écran 1 : ce qui se passe, et pourquoi ───────────────────── */}
           {etape === 1 && (
             <>
-              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15]">
-                {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length} seulement
-                <br />sont en ligne
+              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] text-balance">
+                {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length} seulement sont en ligne
               </h2>
 
               <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed mt-3">
@@ -243,12 +242,20 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
               {/* L'autre issue. N'offrir que la mise en veille reviendrait à
                   faire croire qu'il faut forcément renoncer à quelque chose. */}
               <div className="-mx-6 -mb-6 mt-5 px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl bg-slate-50/60 dark:bg-slate-950/30">
+                {/* Deux lignes VOULUES plutot qu'une phrase qui deborde : sur
+                    un petit telephone, la ligne unique repassait a la ligne et
+                    laissait la fleche seule en dessous, ce qui se lit comme un
+                    bloc casse. L'espace insecable avant la fleche l'empeche
+                    d'etre orpheline quelle que soit la largeur. */}
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Vous préférez tout garder ?
+                </p>
                 <Link
                   href="/dashboard/abonnement"
-                  className="block text-sm font-bold hover:underline"
+                  className="block text-sm font-bold hover:underline mt-0.5"
                   style={{ color: BLEU }}
                 >
-                  Tout garder — offre {PLAN_LABELS[OFFRE_SANS_PLAFOND]} à {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois →
+                  Offre {PLAN_LABELS[OFFRE_SANS_PLAFOND]} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois{' '}→
                 </Link>
               </div>
             </>
@@ -257,7 +264,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Écran 2 : le choix ───────────────────────────────────────── */}
           {etape === 2 && (
             <>
-              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15]">
+              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] text-balance">
                 {pluriel ? 'Lesquelles retirer' : 'Laquelle retirer'} de votre page ?
               </h2>
               <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
