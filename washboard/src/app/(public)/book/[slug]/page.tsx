@@ -1,4 +1,4 @@
-import { cache } from 'react'
+import { cache, Suspense } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -135,40 +135,43 @@ export default async function BookingPage({ params }: Props) {
   // navigateur : ni le SIRET ni l'adresse n'ont à figurer sur une page publique.
   const facturationPrete = infosFacturationManquantes(washer).length === 0
 
-  const { data: services } = await admin
-    .from('services')
-    .select('*')
-    .eq('washer_id', washer.id)
-    // Sans tri, PostgREST rend les lignes dans l'ordre du stockage : il change
-    // apres une modification et n'a aucune raison de suivre celui du laveur.
-    // Le tableau de bord trie deja par created_at — le laveur rangeait donc ses
-    // prestations dans un ordre que ses clients ne voyaient pas.
-    .order('created_at')
-
-  const { data: categories } = await admin
-    .from('service_categories')
-    .select('*')
-    .eq('washer_id', washer.id)
-    .order('display_order')
-
-  const { data: availabilities } = await admin
-    .from('availabilities')
-    .select('*')
-    .eq('washer_id', washer.id)
-
-  // Les rendez-vous à venir et les congés ne sont PLUS lus ici : le formulaire
-  // les demande à `GET /api/booking-availability` dès que le visiteur touche la
-  // page. Ils ne servent qu'à l'étape des créneaux, que la grande majorité des
-  // visiteurs n'atteint jamais — et la liste des rendez-vous grandit sans fin.
-  // Le motif de sécurité d'origine n'a pas bougé : la RLS interdit ces tables au
-  // visiteur, la lecture passe par le service-role, et seules des données NON
-  // personnelles (horaire + durée) atteignent le navigateur.
+  // Les trois lectures ci-dessous ne dépendent que de `washer.id`, déjà connu :
+  // aucune n'a besoin du résultat d'une autre. Elles partaient auparavant en
+  // série (trois allers-retours Supabase l'un après l'autre) ; parties en
+  // parallèle, leur latence ne s'additionne plus. Mesuré dans l'audit du
+  // 2026-09-21 : ça ne représentait qu'une petite partie du TTFB de 2,3 s de
+  // cette page, la majorité venait de l'appel externe vers le site du laveur
+  // (voir plus bas).
+  const [{ data: services }, { data: categories }, { data: availabilities }] = await Promise.all([
+    admin
+      .from('services')
+      .select('*')
+      .eq('washer_id', washer.id)
+      // Sans tri, PostgREST rend les lignes dans l'ordre du stockage : il change
+      // apres une modification et n'a aucune raison de suivre celui du laveur.
+      // Le tableau de bord trie deja par created_at — le laveur rangeait donc ses
+      // prestations dans un ordre que ses clients ne voyaient pas.
+      .order('created_at'),
+    admin
+      .from('service_categories')
+      .select('*')
+      .eq('washer_id', washer.id)
+      .order('display_order'),
+    // Les rendez-vous à venir et les congés ne sont PLUS lus ici : le formulaire
+    // les demande à `GET /api/booking-availability` dès que le visiteur touche
+    // la page. Ils ne servent qu'à l'étape des créneaux, que la grande majorité
+    // des visiteurs n'atteint jamais — et la liste des rendez-vous grandit sans
+    // fin. Le motif de sécurité d'origine n'a pas bougé : la RLS interdit ces
+    // tables au visiteur, la lecture passe par le service-role, et seules des
+    // données NON personnelles (horaire + durée) atteignent le navigateur.
+    admin
+      .from('availabilities')
+      .select('*')
+      .eq('washer_id', washer.id),
+  ])
 
   const bgStyle = getBgStyle(washer.background_theme)
   const themed  = !!bgStyle
-
-  const reviewData = washer.website_url ? await scrapeWebsiteReviews(washer.website_url) : { reviews: [] }
-  const hasReviews = reviewData.reviews.length > 0 || !!reviewData.aggregate
 
   return (
     <>
@@ -251,10 +254,16 @@ export default async function BookingPage({ params }: Props) {
           accent={washer.brand_color ?? '#2563eb'}
         />
 
-        {hasReviews && (
-          <div className="mt-6">
-            <ReviewsCarousel reviews={reviewData.reviews} aggregate={reviewData.aggregate} themed={themed} />
-          </div>
+        {washer.website_url && (
+          // L'appel externe vers le site du laveur (voir `scrapeWebsiteReviews`)
+          // peut prendre jusqu'à 5 s sur un cache froid, contre un site tiers
+          // qu'on ne maîtrise pas. Le rendu de l'essentiel (services, prix,
+          // disponibilités) n'a pas à l'attendre : ce bloc est streamé à part,
+          // sans skeleton (`fallback={null}`) puisqu'il n'occupe qu'un espace
+          // secondaire, sous le formulaire de réservation.
+          <Suspense fallback={null}>
+            <ReviewsSection websiteUrl={washer.website_url} themed={themed} />
+          </Suspense>
         )}
 
         {washer.phone && (
@@ -275,5 +284,20 @@ export default async function BookingPage({ params }: Props) {
       </main>
     </div>
     </>
+  )
+}
+
+/** Composant serveur asynchrone séparé pour permettre le streaming (`Suspense`
+ *  dans `BookingPage`) : React peut envoyer le reste de la page pendant que
+ *  cet appel externe est encore en vol. */
+async function ReviewsSection({ websiteUrl, themed }: { websiteUrl: string; themed: boolean }) {
+  const reviewData = await scrapeWebsiteReviews(websiteUrl)
+  const hasReviews = reviewData.reviews.length > 0 || !!reviewData.aggregate
+  if (!hasReviews) return null
+
+  return (
+    <div className="mt-6">
+      <ReviewsCarousel reviews={reviewData.reviews} aggregate={reviewData.aggregate} themed={themed} />
+    </div>
   )
 }

@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/dashboard/', '/api/', '/login', '/register'],
+      disallow: ['/dashboard/', '/api/', '/login'],
     },
     sitemap: 'https://www.washboard.fr/sitemap.xml',
   }

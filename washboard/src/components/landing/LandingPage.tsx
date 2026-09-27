@@ -606,23 +606,36 @@ export default function LandingPage() {
               className="relative max-w-[380px] mx-auto lg:max-w-none lg:mx-0 pb-10 sm:pb-14 lg:pb-16"
             >
               <div className="wb-hero-shot rounded-2xl overflow-hidden">
+                {/* `priority` : ces deux images sont dans le hero, donc déjà
+                    visibles au premier écran. Sans elle, Next.js les charge en
+                    lazy comme n'importe quelle image plus bas sur la page —
+                    l'espace réservé par `width`/`height` ne suffit pas à lui
+                    seul, mesuré en conditions dégradées (4G lente + CPU x4) :
+                    le bloc image restait quasi vide (~40px) jusqu'à ce que le
+                    chargement démarre, puis sautait à sa taille réelle
+                    (~270px) une fois l'image récupérée — la source du CLS de
+                    0,155 relevé le 2026-09-21. */}
                 <Image
                   src="/landing/calendrier-clair.webp" alt="Le calendrier WashBoard, avec les créneaux groupés marqués d une étoile"
                   width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto dark:hidden"
+                  priority
                 />
                 <Image
                   src="/landing/calendrier-sombre.webp" alt="Le calendrier WashBoard, avec les créneaux groupés marqués d une étoile"
                   width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto hidden dark:block"
+                  priority
                 />
               </div>
               <div className="wb-hero-shot absolute -bottom-2 -left-4 sm:-left-6 w-[42%] max-w-[190px] rounded-2xl overflow-hidden">
                 <Image
                   src="/landing/reservation-clair.webp" alt="La page de réservation WashBoard, côté client, sur téléphone"
                   width={600} height={1000} sizes="190px" className="w-full h-auto dark:hidden"
+                  priority
                 />
                 <Image
                   src="/landing/reservation-sombre.webp" alt="La page de réservation WashBoard, côté client, sur téléphone"
                   width={600} height={1000} sizes="190px" className="w-full h-auto hidden dark:block"
+                  priority
                 />
               </div>
             </motion.div>
@@ -1144,6 +1157,14 @@ export default function LandingPage() {
               src="/tuto.mp4"
               controls
               playsInline
+              preload="none"
+              // Pas de `poster` : aucune image existante dans public/ ne
+              // correspond à une vraie vignette de cette vidéo (les captures
+              // de landing/ sont au mauvais format — écran de téléphone ou
+              // calendrier — pas un cadre 16/9 représentatif). `preload="none"`
+              // seul évite déjà le téléchargement silencieux des métadonnées
+              // par défaut du navigateur ; le fond `#09111E` occupe l'espace
+              // réservé par `aspectRatio` en attendant un clic.
               className="w-full block"
               style={{ aspectRatio: '16/9', background: '#09111E' }}
             />

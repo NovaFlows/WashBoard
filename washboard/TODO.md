@@ -52,27 +52,38 @@
 
 - [ ] **Audit post-lancement du 2026-09-21 (liste « 20 points à vérifier » vue sur TikTok).**
       Fait par Ryan, en lecture seule, sur www.washboard.fr et le code à jour. **15 points
-      déjà en place, 5 restent.** Ordre prévu par Ryan : la vitesse d'abord (session
-      suivante).
-  - [ ] **1. Vitesse de chargement.** Mesuré en 4G lente, sur un téléphone moyen (CPU ×4) :
-        blog LCP 1,3 s (très bon), accueil LCP 2,3 s (bon), **page de réservation LCP 3,1 s,
-        dont 2,3 s d'attente du serveur (TTFB)** — c'est la page que voient les clients des
-        laveurs. Une seule mesure : la refaire d'abord pour écarter un démarrage à froid.
-        Sur l'accueil, **CLS 0,155** (seuil 0,1) : le contenu bouge pendant le chargement.
-        PageSpeed Insights n'a pas pu être utilisé (quota Google épuisé ce jour-là).
-        Agent : `dev`.
+      déjà en place, 5 restent, 2 faits (1 et 3, ci-dessous).** Ordre prévu par Ryan : la
+      vitesse d'abord (fait le 2026-09-28), puis contraste, CGU/CGV.
+  - [x] **1. Vitesse de chargement — fait le 2026-09-28 (agent `dev`, revérifié).** Deux
+        causes réelles trouvées par profiling direct, pas de supposition : sur la page de
+        réservation, les requêtes Supabase (`services`, `service_categories`,
+        `availabilities`) étaient séquentielles → regroupées en un seul `Promise.all` ; et
+        `scrapeWebsiteReviews` (appel externe vers le site du laveur, jusqu'à 5 s) bloquait
+        tout le rendu → extrait dans un composant serveur séparé, streamé via
+        `<Suspense fallback={null}>` pendant que le reste de la page part déjà. Mesures de
+        `dev` : LCP 3,5-4,9 s → 2,0-2,3 s, chargement total ~19 s → ~8 s. Sur l'accueil, le
+        CLS (0,155) venait des 4 images du hero (`calendrier-clair/sombre`,
+        `reservation-clair/sombre`) chargées en lazy sans réserver leur espace → `priority`
+        ajouté aux 4 (vérifié : 4 `<link rel="preload" as="image">` dans le `<head>` du
+        rendu). Framer Motion (`whileInView`) écarté comme cause par `dev`, mesure à
+        l'appui. Vidéo `tuto.mp4` passée en `preload="none"` (pas de `poster` disponible).
+        Effet de bord accepté, pas un bug : `priority` s'applique aux deux variantes
+        clair/sombre d'une image (une seule visible via CSS), donc double le poids
+        téléchargé pour la variante invisible — cohérent avec le principe du site
+        (bascule clair/sombre en CSS, pas en JS), non corrigé.
   - [ ] **2. Contraste des couleurs.** axe-core, WCAG AA, mode clair : 6 à 12 éléments en
         échec par page publique. Cause principale : `text-slate-400` (#90a1b9) sur fond
         blanc = **2,63:1** (minimum 4,5:1) — pied de page, dates d'articles, petites
         mentions, liens légaux. Aussi `#62748e` sur fonds bleutés (4,3:1) et l'onglet actif
         de la page de réservation (`#0ea5e9` sur `#ecf8fd`, 2,56:1). `/signup` et `/login`
         passent. Lié à « Accessibilité » dans 🟢 Polish. Agent : `designer`.
-  - [ ] **3. Image de prévisualisation de la page d'accueil.** Le blog (une image par
-        article) et les pages de réservation (logo du laveur) en ont une ; **l'accueil
-        n'a ni `og:image` ni `twitter:image`**, alors que `twitter:card` vaut
-        `summary_large_image`. C'est le lien le plus partagé. Ajouter
-        `src/app/opengraph-image.tsx` sur le modèle de `src/app/blog/opengraph-image.tsx`.
-        Agent : `designer` pour le visuel.
+  - [x] **3. Image de prévisualisation de la page d'accueil — fait le 2026-09-28.**
+        `src/app/opengraph-image.tsx` créé (titre, capture d'écran réelle du calendrier),
+        au passage la même chose ajoutée sur `/logiciel-lavage-auto`,
+        `/logiciel-nettoyage-canape` et `/meilleur-logiciel-lavage-auto` (absentes du
+        périmètre initial, trouvées manquantes en même temps). Aussi corrigé : l'image du
+        blog était restée sur l'ancien positionnement pré-recentrage automobile (voir
+        [[project_washboard_seo_landing]]).
   - [ ] **4. CGU.** Pas de page. Ryan : à faire. Agent : `legal`.
   - [ ] **5. Acceptation des CGV à l'inscription.** Les CGV existent, mais `/signup` ne
         demande pas de les accepter (ni la politique de confidentialité) : sans trace
@@ -80,10 +91,13 @@
         (impayé, résiliation contestée). Case à cocher + date d'acceptation enregistrée.
         À faire avec le point 4 (une seule case pour CGU et CGV). Agents : `legal` pour le
         texte, `dev`, relecture `cyber` (ça touche l'inscription).
-  - Détails mineurs relevés : `/login`, `/signup` et la page 404 reprennent le titre de
-    l'accueil ; `robots.txt` bloque `/register`, qui n'existe pas (la route est `/signup`) ;
+  - Détails mineurs relevés : ~~`/login`, `/signup` et la page 404 reprennent le titre de
+    l'accueil~~ **corrigé le 2026-09-28** (titres dédiés : « Connexion | WashBoard »,
+    « Inscription | WashBoard », « Page introuvable | WashBoard ») ; ~~`robots.txt` bloque
+    `/register`, qui n'existe pas~~ **corrigé** (entrée morte retirée) ;
     `/confidentialite` ne cite pas la mesure d'audience (Vercel Analytics, sans cookie) ;
-    la vidéo `tuto.mp4` (14 Mo) de l'accueil n'a ni `poster` ni `preload="none"` ;
+    ~~la vidéo `tuto.mp4` (14 Mo) de l'accueil n'a ni `poster` ni `preload="none"`~~
+    **`preload="none"` ajouté** (toujours pas de `poster`, aucun visuel dispo) ;
     5 libellés différents pour le même bouton d'inscription.
   - **Déjà en place, inutile de revérifier** : page RGPD (`/confidentialite`), aucune clé
     secrète dans le code envoyé au navigateur (1,3 Mo analysés, `.env` hors git), HTTPS
