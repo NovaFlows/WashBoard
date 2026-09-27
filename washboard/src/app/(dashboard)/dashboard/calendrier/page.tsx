@@ -59,6 +59,7 @@ export default async function CalendrierPage() {
   // oublierait la règle afficherait le vrai nom du client. À cet endroit,
   // l'oubli est impossible — la donnée n'existe déjà plus.
   const seuil = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const visibles = masquerVerrouillees(bookings ?? [], seuil).filter(b => !b.verrouillee)
 
   // Congés, prestations et catégories : en échec, le calendrier affiche une
   // journée libre et des listes vides — donc un laveur qui pourrait accepter un
@@ -74,8 +75,13 @@ export default async function CalendrierPage() {
       {/* useSearchParams (lecture de ?rdv=, quand on arrive depuis une
           notification) exige une limite Suspense, sinon le build échoue. */}
       <Suspense fallback={null}>
+        {/* Les réservations verrouillées ne figurent PAS dans l'agenda : une
+            grille horaire ne sait pas placer un rendez-vous dont on cache
+            l'heure, et l'y poser la révélerait. Le laveur les retrouve sur son
+            accueil, avec le nom et le jour. Elles sont en attente et il ne peut
+            pas les confirmer : son agenda ne perd donc aucun engagement réel. */}
         <CalendrierDashboard
-          bookings={masquerVerrouillees(bookings ?? [], seuil)}
+          bookings={visibles}
           unavailabilities={unavailabilities ?? []}
           teamSize={washer.team_size ?? 1}
           services={services ?? []}

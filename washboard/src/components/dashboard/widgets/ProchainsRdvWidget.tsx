@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { formatHeure } from '@/lib/dateUtils'
+import { jourSeul } from '@/lib/reservationsVerrouillees'
 
 // Ce qui arrive APRÈS aujourd'hui — distinct du widget Aujourd'hui, avec
 // lequel il ferait sinon doublon. Trois rendez-vous suffisent : c'est un
@@ -10,6 +11,8 @@ export type ProchainRdv = {
   id: string
   client_name: string
   scheduled_at: string
+  /** Reservation au-dela du quota : nom et jour seulement. */
+  verrouillee?: boolean
   services: { name: string } | null
 }
 
@@ -36,7 +39,10 @@ export function ProchainsRdvWidget({ bookings }: { bookings: ProchainRdv[] }) {
                     {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                   <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-                    {formatHeure(date)}
+                    {/* Verrouillee : le jour suffit. L'heure permettrait d'honorer
+                      le rendez-vous sans jamais payer — il suffirait
+                      d'attendre sur place. */}
+                  {b.verrouillee ? jourSeul(b.scheduled_at) : formatHeure(date)}
                   </span>
                   <span className="text-sm text-slate-800 dark:text-slate-200 truncate min-w-0">
                     {b.client_name}

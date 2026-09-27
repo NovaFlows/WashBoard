@@ -9,8 +9,9 @@ import { debutDuMoisParis } from '@/lib/plan'
 // laveur perdait un lavage sans même savoir qu'on l'avait sollicité.
 //
 // Désormais la réservation est enregistrée normalement. Ce qui est plafonné,
-// c'est ce que le laveur en VOIT : au-delà de son quota, il sait qu'une demande
-// est arrivée, sans le nom, sans le téléphone, sans l'adresse et sans l'heure.
+// c'est ce que le laveur en VOIT : au-delà de son quota, il connaît LE NOM et
+// LE JOUR, rien d'autre. Assez pour savoir qu'un vrai client l'attend, trop peu
+// pour le joindre ou pour honorer le rendez-vous sans rien payer.
 // La pression change de camp : elle pèse sur celui qui peut y remédier.
 //
 // Rien n'est écrit en base pour marquer ces réservations, et c'est voulu : le
@@ -35,13 +36,21 @@ export function estVerrouillee(r: Datee | null | undefined, seuil: string | null
   return t > s
 }
 
-/** Ce qu'on montre à la place d'une réservation verrouillée.
+/** Ce qu'une réservation verrouillée laisse voir, et ce qu'elle retient.
+ *
+ *  Le laveur garde LE NOM et LE JOUR. C'est assez pour savoir qu'un vrai
+ *  client l'attend — donc pour avoir envie de le joindre — et trop peu pour le
+ *  joindre. Tout masquer, nom compris, rendait la demande abstraite : une ligne
+ *  « Réservation bloquée » ne donne envie de rien.
+ *
+ *  Ce qui part : le téléphone, l'email, l'adresse, le montant, le détail des
+ *  véhicules, et L'HEURE. L'heure parce qu'elle suffit à honorer le rendez-vous
+ *  sans rien payer — il suffirait d'attendre sur place.
  *
  *  Le masquage se fait ICI, au sortir de la base, et jamais dans les écrans :
- *  un composant qui oublierait la règle afficherait le vrai nom du client. À
- *  cet endroit, l'oubli est impossible — la donnée n'existe déjà plus. */
+ *  un composant qui oublierait la règle afficherait le vrai numéro. À cet
+ *  endroit, l'oubli est impossible — la donnée n'existe déjà plus. */
 const MASQUE = {
-  client_name: 'Réservation bloquée',
   client_email: null,
   client_phone: null,
   address: null,
@@ -54,10 +63,23 @@ const MASQUE = {
   billing_address: null,
 } as const
 
+/** Le jour d'un rendez-vous, sans son heure, à l'heure de Paris.
+ *
+ *  Renvoyé à part plutôt qu'écrasé dans `scheduled_at` : la date complète sert
+ *  encore au calcul des créneaux et à l'ordre d'affichage. La remplacer par un
+ *  minuit ferait sauter le rendez-vous en tête de journée et fausserait les
+ *  disponibilités. */
+export function jourSeul(quand: string | null | undefined): string | null {
+  if (!quand) return null
+  const d = new Date(quand)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('fr-FR', {
+    timeZone: 'Europe/Paris', weekday: 'long', day: 'numeric', month: 'long',
+  })
+}
+
 /** Remplace, dans une liste lue en base, tout ce qu'une réservation
- *  verrouillée ne doit pas laisser voir. L'heure et la date restent : le laveur
- *  doit pouvoir constater qu'un créneau est pris, sinon il promettrait le même
- *  à quelqu'un d'autre. */
+ *  verrouillée ne doit pas laisser voir. */
 export function masquerVerrouillees<T extends Datee>(
   reservations: T[],
   seuil: string | null,

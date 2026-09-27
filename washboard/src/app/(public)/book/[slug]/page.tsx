@@ -6,7 +6,7 @@ import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
-import { graceEnded, hasFeature, quotaPrestations } from '@/lib/plan'
+import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
@@ -89,7 +89,13 @@ export default async function BookingPage({ params }: Props) {
 
   // Abonnement expiré depuis plus de 30 jours : page de réservation suspendue
   // grandfathered n'exempte pas du paiement — s'ils ne paient pas, on bloque aussi
+  // Les comptes qui suivent la règle 2026 ne sont JAMAIS suspendus : leur essai
+  // terminé les fait retomber sur Découverte, pas dehors. Sans cette exception,
+  // la page affichait « momentanément suspendue » alors que la route de
+  // réservation, elle, acceptait la demande — deux vérités contradictoires sur
+  // le même compte, et un client perdu pour rien.
   const isBlocked = washer.subscription_status !== 'active'
+    && !suitRetourGratuit(washer)
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)
 
   if (isBlocked) {
@@ -284,7 +290,16 @@ export default async function BookingPage({ params }: Props) {
           </div>
         )}
 
-        {washer.phone && (
+        {/* ── Contact direct : seulement sur une offre sans plafond ────────
+            Sur une offre plafonnée, le laveur ne voit ni le téléphone ni
+            l'adresse des réservations au-delà de son quota. Lui laisser un
+            bouton WhatsApp sur sa page annulait tout : le client écrivait, le
+            laveur répondait, et il récupérait par ce biais ce qu'on venait de
+            masquer. Le bouton revient dès que l'offre n'a plus de plafond.
+            À ne pas confondre avec l'écran « page suspendue » plus haut, qui
+            garde son bouton d'appel : là, contacter le prestataire est la
+            seule chose qui reste à faire. */}
+        {washer.phone && quotaReservations(washer) === null && (
           <div className="mt-6 flex justify-center">
             <a
               href={`https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`}

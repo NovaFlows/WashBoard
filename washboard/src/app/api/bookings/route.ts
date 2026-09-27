@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
+import { sendBookingRequest, sendWasherNotification, sendWasherBookingLocked } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
@@ -504,17 +504,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // suffirait d'ouvrir sa boite mail.
     if (washerEmail && auDelaDuQuota) {
       emailJobs.push(
-        sendWasherNotification({
+        sendWasherBookingLocked({
           to: washerEmail,
           washerName: washer.name,
-          clientName: 'Réservation bloquée',
-          clientEmail: '',
-          clientPhone: '',
-          serviceName: 'Passez à l’offre supérieure pour voir cette réservation',
-          address: '',
+          clientName: bookingData.client_name,
           scheduledAt: bookingData.scheduled_at,
-          bookedPrice: 0,
-          bookingId: id,
         }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
       )
     } else if (washerEmail) {
@@ -548,10 +542,13 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     emailJobs.push(
       notifierLaveur(bookingData.washer_id, auDelaDuQuota ? {
         // Meme regle que l'email : on annonce, on ne raconte pas.
-        title: '🔒 Nouvelle réservation bloquée',
+        // Le nom et le jour, rien de plus. Le telephone, l'adresse et l'heure
+        // restent masques : c'est ce qu'on vend.
+        title: '🔒 Nouvelle réservation',
         body: [
-          'Une demande est arrivée sur votre page.',
-          'Passez à l’offre supérieure pour voir qui, quand et où.',
+          `👤 ${bookingData.client_name}`,
+          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })}`,
+          'Changez d’offre pour voir l’heure et les coordonnées.',
         ].join('\n'),
         url: '/dashboard/abonnement',
         tag: `booking-${id}`,

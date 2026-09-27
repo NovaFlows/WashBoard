@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { estVerrouillee, masquerVerrouillees } from './reservationsVerrouillees'
+import { estVerrouillee, masquerVerrouillees, jourSeul } from './reservationsVerrouillees'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Au-delà du quota mensuel, la réservation est acceptée mais le laveur n'en
@@ -70,20 +70,37 @@ describe('masquerVerrouillees', () => {
     expect(b.verrouillee).toBe(false)
   })
 
-  it('efface tout ce qui identifie ou localise le client', () => {
+  it('efface de quoi joindre le client, mais garde son NOM', () => {
+    // Le nom reste : c'est ce qui rend la demande réelle. « Réservation
+    // bloquée » ne donne envie de rien, « Nadia Costa » si.
     const c = masquerVerrouillees(liste, SEUIL)[2]
     expect(c.verrouillee).toBe(true)
-    expect(c.client_name).toBe('Réservation bloquée')
+    expect(c.client_name).toBe('Nadia Costa')
     expect(c.client_phone).toBeNull()
     expect(c.address).toBeNull()
   })
 
-  it('garde la date et l’heure du rendez-vous', () => {
-    // Sans elles, le laveur promettrait le même créneau à quelqu'un d'autre.
-    // Un créneau occupé n'apprend rien sur le client.
+  it('garde la date brute, que les écrans réduisent au jour', () => {
+    // `scheduled_at` n'est pas écrasé : il sert encore à trier et au calcul
+    // des créneaux. C'est `jourSeul` qui retire l'heure à l'affichage — la
+    // remplacer ici par un minuit ferait sauter le rendez-vous en tête de
+    // journée et fausserait les disponibilités.
     const c = masquerVerrouillees(liste, SEUIL)[2]
     expect(c.scheduled_at).toBe('2026-10-03T09:00:00.000Z')
     expect(c.id).toBe('c')
+  })
+
+  it('réduit l’affichage au jour, sans l’heure', () => {
+    // L'heure suffirait à honorer le rendez-vous sans jamais payer : il
+    // suffirait d'attendre sur place.
+    const jour = jourSeul('2026-10-03T09:00:00.000Z')
+    expect(jour).toMatch(/3 octobre/)
+    expect(jour).not.toMatch(/\d{1,2}:\d{2}|11h|09h/)
+  })
+
+  it('ne rend aucun jour pour une date absente ou illisible', () => {
+    expect(jourSeul(null)).toBeNull()
+    expect(jourSeul('pas une date')).toBeNull()
   })
 
   it('ne masque rien quand l’offre n’a pas de plafond', () => {

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatHeure } from '@/lib/dateUtils'
+import { jourSeul } from '@/lib/reservationsVerrouillees'
 
 // Aujourd'hui, par défaut — mais navigable au jour précédent ou suivant, sans
 // quitter l'accueil. Le jour de départ (aujourd'hui) est rendu côté serveur,
@@ -19,6 +20,8 @@ export type RdvDuJour = {
   id: string
   client_name: string
   scheduled_at: string
+  /** Reservation au-dela du quota : nom et jour seulement. */
+  verrouillee?: boolean
   services: { name: string } | null
   status: string
 }
@@ -119,7 +122,10 @@ export function AujourdhuiWidget({ bookings, dateDuJour }: { bookings: RdvDuJour
               >
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUT_DOT[b.status] ?? 'bg-slate-300'}`} aria-hidden="true" />
                 <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-                  {formatHeure(new Date(b.scheduled_at))}
+                  {/* Verrouillee : le jour suffit. L'heure permettrait d'honorer
+                      le rendez-vous sans jamais payer — il suffirait
+                      d'attendre sur place. */}
+                  {b.verrouillee ? jourSeul(b.scheduled_at) : formatHeure(new Date(b.scheduled_at))}
                 </span>
                 <span className="text-sm text-slate-800 dark:text-slate-200 truncate min-w-0">
                   {b.client_name}

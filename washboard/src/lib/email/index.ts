@@ -474,6 +474,68 @@ type SendWasherNotificationParams = {
   bookingId: string
 }
 
+/** Email au laveur pour une réservation au-delà de son quota.
+ *
+ *  Un gabarit à part plutôt qu'une option de plus sur l'email complet : celui-ci
+ *  compose le téléphone, l'adresse, le montant et l'heure à une dizaine
+ *  d'endroits. Y ajouter des « si masqué » un peu partout, c'est garantir qu'un
+ *  jour l'un d'eux sera oublié — et un seul oubli suffit à tout révéler.
+ *
+ *  Le laveur apprend LE NOM et LE JOUR. Assez pour savoir qu'un vrai client
+ *  l'attend, trop peu pour le joindre ou pour se présenter au rendez-vous. */
+export async function sendWasherBookingLocked({ to, washerName, clientName, scheduledAt, appUrl }: {
+  to: string
+  washerName: string
+  clientName: string
+  scheduledAt: string
+  appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  // Le jour, jamais l'heure : l'heure suffirait a honorer le rendez-vous sans
+  // rien payer.
+  const jour = new Date(scheduledAt).toLocaleDateString('fr-FR', {
+    timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long',
+  })
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Nouvelle réservation — ${escapeHtml(clientName)}`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+    <div style="background:#0B1828;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réservation</h1>
+      <p style="margin:0;color:#94a3b8;font-size:13px;">Elle dépasse votre offre actuelle</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(washerName)}</strong>,</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:22px;">
+        <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(clientName)}</p>
+        <p style="margin:0;font-size:14px;color:#64748b;">${jour}</p>
+      </div>
+      <p style="margin:0 0 22px;font-size:14px;color:#475569;line-height:1.6;">
+        Son téléphone, son adresse et l'heure du rendez-vous sont masqués : cette réservation
+        dépasse ce que votre offre affiche ce mois-ci. Changez d'offre pour la débloquer —
+        et toutes les suivantes avec.
+      </p>
+      <div style="text-align:center;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Débloquer cette réservation →
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 export async function sendWasherNotification(params: SendWasherNotificationParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
 

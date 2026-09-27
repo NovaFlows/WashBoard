@@ -66,6 +66,7 @@ vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxClient }))
 vi.mock('@/lib/email', () => ({
   sendBookingRequest: vi.fn(async () => {}),
   sendWasherNotification: vi.fn(async () => {}),
+  sendWasherBookingLocked: vi.fn(async () => {}),
 }))
 vi.mock('@/lib/push', () => ({ notifierLaveur: vi.fn(async () => {}) }))
 vi.mock('@/lib/travelFee', () => ({ computeTravelFee: vi.fn(async () => 0) }))
@@ -74,7 +75,7 @@ vi.mock('@/lib/googleMaps', () => ({ getMapsApiKey: () => 'cle-test' }))
 // Recuperes apres les `vi.mock` : ce que le laveur RECOIT est au coeur du
 // verrouillage, un test qui ne lirait que le code HTTP passerait a cote.
 const { notifierLaveur } = vi.mocked(await import('@/lib/push'))
-const { sendWasherNotification } = vi.mocked(await import('@/lib/email'))
+const { sendWasherNotification, sendWasherBookingLocked } = vi.mocked(await import('@/lib/email'))
 
 const { RETOUR_GRATUIT_POUR_COMPTES_CREES_DES } = await import('@/lib/plan')
 const { POST } = await import('./route')
@@ -113,6 +114,7 @@ beforeEach(() => {
   rpcAppels.length = 0
   notifierLaveur.mockClear()
   sendWasherNotification.mockClear()
+  sendWasherBookingLocked.mockClear()
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-09-09T09:00:00Z'))
   plan = {
@@ -442,15 +444,17 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
   })
 
   describe('ce que le laveur apprend', () => {
-    it('reçoit une notification MUETTE au-delà du quota', async () => {
-      // Sans ça, le masquage des écrans ne servirait à rien : il suffirait de
-      // regarder la notification pour avoir le nom et l'heure.
+    it('nomme le client mais tait l’heure, au-delà du quota', async () => {
+      // Le nom rend la demande réelle ; l'heure permettrait d'honorer le
+      // rendez-vous sans jamais payer — il suffirait d'attendre sur place.
       avecWasher({ plan: 'decouverte' })
       plan.countMois = 5
       await poster()
       const envoi = notifierLaveur.mock.calls.at(-1)![1]
-      expect(envoi.title).toMatch(/bloquée/i)
-      expect(envoi.body).not.toMatch(/Jean Test/)
+      expect(envoi.body).toMatch(/Jean Test/)
+      expect(envoi.body).toMatch(/vendredi 11 septembre/)
+      expect(envoi.body).not.toMatch(/\d{1,2}:\d{2}/)
+      expect(envoi.body).not.toMatch(/Auxerre|Colbert/)
       expect(envoi.url).toBe('/dashboard/abonnement')
     })
 
@@ -463,14 +467,17 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       expect(envoi.url).toMatch(/calendrier/)
     })
 
-    it('reçoit un email MUET au-delà du quota', async () => {
+    it('reçoit un email dédié, sans adresse ni téléphone', async () => {
+      // Gabarit à part : l'email complet compose le téléphone, l'adresse et le
+      // montant à une dizaine d'endroits, un seul oubli révélerait tout.
       avecWasher({ plan: 'decouverte' })
       plan.countMois = 5
       await poster()
-      const envoi = sendWasherNotification.mock.calls.at(-1)![0]
-      expect(envoi.clientName).toBe('Réservation bloquée')
-      expect(envoi.clientPhone).toBe('')
-      expect(envoi.address).toBe('')
+      expect(sendWasherNotification).not.toHaveBeenCalled()
+      const envoi = sendWasherBookingLocked.mock.calls.at(-1)![0]
+      expect(envoi.clientName).toBe('Jean Test')
+      expect(Object.keys(envoi)).not.toContain('clientPhone')
+      expect(Object.keys(envoi)).not.toContain('address')
     })
 
     it('reçoit un email COMPLET dans le quota', async () => {
@@ -489,20 +496,20 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
     it('accepte la quinzième, en clair', async () => {
       plan.countMois = 14
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].body).toMatch(/Jean Test/)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toMatch(/calendrier/)
     })
 
     it('accepte la seizième, masquée', async () => {
       plan.countMois = 15
       const { res } = await poster()
       expect(res.status).toBe(201)
-      expect(notifierLaveur.mock.calls.at(-1)![1].title).toMatch(/bloquée/i)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toBe('/dashboard/abonnement')
     })
 
     it('n’est pas plafonné à 30 — c’est bien 15 qui a été retenu', async () => {
       plan.countMois = 20
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].title).toMatch(/bloquée/i)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toBe('/dashboard/abonnement')
     })
   })
 
@@ -512,7 +519,7 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
         avecWasher({ plan: offre })
         plan.countMois = 5000
         await poster()
-        expect(notifierLaveur.mock.calls.at(-1)![1].body, offre).toMatch(/Jean Test/)
+        expect(notifierLaveur.mock.calls.at(-1)![1].url, offre).toMatch(/calendrier/)
       }
     })
 
@@ -520,14 +527,14 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       avecWasher({ plan: 'decouverte', grandfathered: true })
       plan.countMois = 5000
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].body).toMatch(/Jean Test/)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toMatch(/calendrier/)
     })
 
     it('traite un ancien plan « essentiel » comme le Pro', async () => {
       avecWasher({ plan: 'essentiel' })
       plan.countMois = 5000
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].body).toMatch(/Jean Test/)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toMatch(/calendrier/)
     })
   })
 
@@ -542,7 +549,7 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       plan.erreurCountMois = { message: 'RLS' }
       const { res } = await poster()
       expect(res.status).toBe(201)
-      expect(notifierLaveur.mock.calls.at(-1)![1].body).toMatch(/Jean Test/)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toMatch(/calendrier/)
     })
 
     it('n’interroge pas le compteur mensuel pour une offre sans plafond', async () => {
@@ -551,14 +558,14 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       avecWasher({ plan: 'pro' })
       plan.erreurCountMois = { message: 'si cette lecture avait lieu, elle masquerait' }
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].body).toMatch(/Jean Test/)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toMatch(/calendrier/)
     })
 
     it('traite un plan inconnu en base comme l’offre gratuite', async () => {
       avecWasher({ plan: 'offre_fantome' })
       plan.countMois = 5
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].title).toMatch(/bloquée/i)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toBe('/dashboard/abonnement')
     })
   })
 
@@ -576,7 +583,7 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       avecWasher({ plan: 'decouverte', subscription_status: 'active' })
       plan.countMois = 5
       await poster()
-      expect(notifierLaveur.mock.calls.at(-1)![1].title).toMatch(/bloquée/i)
+      expect(notifierLaveur.mock.calls.at(-1)![1].url).toBe('/dashboard/abonnement')
     })
   })
 })
@@ -632,7 +639,7 @@ describe('POST /api/bookings — fin d’essai selon l’âge du compte', () => 
     plan.countMois = 5
     const { res } = await poster()
     expect(res.status).toBe(201)
-    expect(notifierLaveur.mock.calls.at(-1)![1].title).toMatch(/bloquée/i)
+    expect(notifierLaveur.mock.calls.at(-1)![1].url).toBe('/dashboard/abonnement')
   })
 
   it('ne coupe RIEN à un compte neuf, quel que soit son statut', async () => {
