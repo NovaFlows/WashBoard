@@ -11,7 +11,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
 import { hasFeature, quotaReservations, planEffectif } from '@/lib/plan'
 import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
-import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
@@ -231,8 +231,8 @@ export default async function DashboardPage() {
   // (en attente, confirmés, chiffre d'affaires) restent entiers : le laveur a
   // le droit de savoir COMBIEN de demandes il a reçues, c'est même l'argument
   // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
-  const seuilVerrou = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
-  const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilVerrou)
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilsVerrou)
   // Le compte porte sur les rendez-vous À VENIR : un client bloqué dont la date
   // est passée n'est plus une occasion à saisir, seulement un regret. Compter
   // les regrets ne fait pas vendre, ça décourage.
@@ -247,7 +247,7 @@ export default async function DashboardPage() {
   // que la capture a montrée — et proposé « Clôturer » un rendez-vous dont le
   // laveur ne sait ni où ni pour qui il a lieu.
   const aVenirOuvertes = aVenirVisible.filter(b => !b.verrouillee)
-  const passesOuverts = masquerVerrouillees(passes, seuilVerrou).filter(b => !b.verrouillee)
+  const passesOuverts = masquerVerrouillees(passes, seuilsVerrou).filter(b => !b.verrouillee)
   const all = [...aVenirOuvertes, ...passesOuverts]
 
   // Aujourd'hui, à l'heure de Paris — calculé sur `aVenir` (déjà en main, déjà

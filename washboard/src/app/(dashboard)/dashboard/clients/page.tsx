@@ -8,7 +8,7 @@ import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations, planEffectif, offreQuiCouvre } from '@/lib/plan'
 import { CarteBloquees } from '@/components/dashboard/ReservationsBloquees'
-import { seuilVerrouillage, masquerVerrouillees, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -41,18 +41,20 @@ export default async function ClientsPage() {
   // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
   // au-dessus, avec le nom flouté et le jour.
-  const seuil = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
-  // L'offre proposée dépend du VOLUME du mois, pas du fait d'être bloqué : à
-  // sept réservations sur une offre plafonnée à cinq, le Starter suffit et
-  // coûte trente euros de moins que le Pro. Le comptage n'a lieu que s'il y a
-  // quelque chose à débloquer.
-  const volumeDuMois = seuil === null ? null : await compterReservationsDuMois(supabase, washer.id)
-  const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
-  const marquees = masquerVerrouillees(bookings, seuil)
+  const seuils = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const marquees = masquerVerrouillees(bookings, seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
   const bloquees = marquees
     .filter(b => b.verrouillee)
     .map(b => ({ id: b.id as string, client_name: b.client_name as string | null, scheduled_at: b.scheduled_at as string }))
+
+  // L'offre proposée dépend du VOLUME du mois, pas du simple fait d'être
+  // bloqué : à sept réservations sur une offre plafonnée à cinq, le Starter
+  // suffit et coûte trente euros de moins que le Pro. Le comptage n'a lieu que
+  // s'il y a quelque chose à débloquer — sinon c'est une requête pour rien sur
+  // chaque affichage de la page.
+  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDuMois(supabase, washer.id)
+  const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
 
 
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST

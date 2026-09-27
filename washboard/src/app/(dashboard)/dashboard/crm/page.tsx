@@ -4,7 +4,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmView from '@/components/dashboard/CrmView'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
-import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
@@ -64,8 +64,8 @@ export default async function CrmPage() {
   // sinon le laveur récupérait ici, en deux clics, exactement ce que l'accueil
   // et le calendrier viennent de lui cacher. Elles restent comptées sur la
   // page Clients, nom flouté et jour seul.
-  const seuilVerrou = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
-  const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilVerrou).filter(b => !b.verrouillee)
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 
   const since = new Date()
   since.setDate(since.getDate() - FUNNEL_HISTORY_DAYS)

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { estVerrouillee, masquerVerrouillees, jourSeul } from './reservationsVerrouillees'
+import {
+  estVerrouillee, masquerVerrouillees, jourSeul, moisParis, seuilsDepuisDates,
+} from './reservationsVerrouillees'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Au-delà du quota mensuel, la réservation est acceptée mais le laveur n'en
@@ -8,7 +10,8 @@ import { estVerrouillee, masquerVerrouillees, jourSeul } from './reservationsVer
 // gratuitement ce qu'on vend.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SEUIL = '2026-09-20T10:00:00.000Z'
+const INSTANT = '2026-09-20T10:00:00.000Z'
+const SEUIL = { '2026-09': INSTANT }
 
 describe('estVerrouillee', () => {
   it('verrouille ce qui arrive APRÈS le seuil', () => {
@@ -20,7 +23,7 @@ describe('estVerrouillee', () => {
     // Le seuil est la dernière réservation comprise dans le quota : elle est
     // donc visible. La verrouiller reviendrait à en offrir une de moins que ce
     // que la grille annonce.
-    expect(estVerrouillee({ created_at: SEUIL }, SEUIL)).toBe(false)
+    expect(estVerrouillee({ created_at: INSTANT }, SEUIL)).toBe(false)
   })
 
   it('laisse passer tout ce qui précède', () => {
@@ -30,6 +33,7 @@ describe('estVerrouillee', () => {
   it('ne verrouille rien quand il n’y a pas de seuil', () => {
     // Offre sans plafond, ou mois pas encore rempli.
     expect(estVerrouillee({ created_at: '2030-01-01T00:00:00.000Z' }, null)).toBe(false)
+    expect(estVerrouillee({ created_at: '2030-01-01T00:00:00.000Z' }, {})).toBe(false)
   })
 
   it('ne verrouille rien sans date de création', () => {
@@ -42,7 +46,7 @@ describe('estVerrouillee', () => {
 
   it('ne verrouille rien sur une date illisible', () => {
     expect(estVerrouillee({ created_at: 'pas une date' }, SEUIL)).toBe(false)
-    expect(estVerrouillee({ created_at: SEUIL }, 'pas une date')).toBe(false)
+    expect(estVerrouillee({ created_at: INSTANT }, { '2026-09': 'pas une date' })).toBe(false)
   })
 
   it('compare des INSTANTS, pas des chaînes', () => {
@@ -58,7 +62,7 @@ describe('estVerrouillee', () => {
 describe('masquerVerrouillees', () => {
   const liste = [
     { id: 'a', created_at: '2026-09-01T08:00:00.000Z', client_name: 'Claire Martin', client_phone: '0611111111', address: '3 rue Colbert', scheduled_at: '2026-10-01T09:00:00.000Z' },
-    { id: 'b', created_at: SEUIL,                      client_name: 'Marc Petit',    client_phone: '0622222222', address: '9 rue Gambetta', scheduled_at: '2026-10-02T09:00:00.000Z' },
+    { id: 'b', created_at: INSTANT,                      client_name: 'Marc Petit',    client_phone: '0622222222', address: '9 rue Gambetta', scheduled_at: '2026-10-02T09:00:00.000Z' },
     { id: 'c', created_at: '2026-09-25T09:00:00.000Z', client_name: 'Nadia Costa',   client_phone: '0633333333', address: '12 rue du Parc', scheduled_at: '2026-10-03T09:00:00.000Z' },
   ]
 
@@ -118,5 +122,78 @@ describe('masquerVerrouillees', () => {
 
   it('rend une liste vide sur une liste vide', () => {
     expect(masquerVerrouillees([], SEUIL)).toEqual([])
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// La faille du 1ᵉʳ du mois. Un seuil unique ne portait que sur le mois en
+// cours : au changement de mois, tout ce qui était masqué redevenait lisible.
+// Il suffisait d'attendre pour obtenir gratuitement ce qu'on vend.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('le verrou ne saute pas au changement de mois', () => {
+  const SEUILS = { '2026-09': '2026-09-20T10:00:00.000Z' }
+
+  it('garde verrouillée une réservation de septembre, jugée en octobre', () => {
+    // C'était la fuite : en octobre, cette réservation était comparée au seuil
+    // d'octobre (inexistant ou postérieur) et repassait en clair.
+    expect(estVerrouillee({ created_at: '2026-09-25T09:00:00.000Z' }, SEUILS)).toBe(true)
+  })
+
+  it('ne verrouille pas octobre avec le seuil de septembre', () => {
+    // Le mois repart à zéro : les premières réservations d'octobre sont dans
+    // le quota, même si elles suivent le seuil de septembre dans le temps.
+    expect(estVerrouillee({ created_at: '2026-10-02T09:00:00.000Z' }, SEUILS)).toBe(false)
+  })
+
+  it('juge chaque mois sur SON propre seuil', () => {
+    const deuxMois = { '2026-09': '2026-09-20T10:00:00.000Z', '2026-10': '2026-10-08T10:00:00.000Z' }
+    expect(estVerrouillee({ created_at: '2026-10-07T09:00:00.000Z' }, deuxMois)).toBe(false)
+    expect(estVerrouillee({ created_at: '2026-10-09T09:00:00.000Z' }, deuxMois)).toBe(true)
+  })
+})
+
+describe('moisParis', () => {
+  it('rattache à l’heure de Paris, pas à UTC', () => {
+    // Le 1ᵉʳ octobre à 0 h 30 en France, c'est encore le 30 septembre à
+    // 22 h 30 en UTC. Se tromper de mois ferait juger cette réservation sur un
+    // quota de septembre déjà épuisé, et la masquerait à tort.
+    expect(moisParis('2026-09-30T22:30:00.000Z')).toBe('2026-10')
+    expect(moisParis('2026-09-30T20:30:00.000Z')).toBe('2026-09')
+  })
+
+  it('ne rend rien pour une date absente ou illisible', () => {
+    expect(moisParis(null)).toBeNull()
+    expect(moisParis('pas une date')).toBeNull()
+  })
+})
+
+describe('seuilsDepuisDates', () => {
+  it('prend la N-ième réservation de CHAQUE mois', () => {
+    const dates = [
+      '2026-09-01T08:00:00.000Z', '2026-09-05T08:00:00.000Z', '2026-09-09T08:00:00.000Z',
+      '2026-10-02T08:00:00.000Z', '2026-10-04T08:00:00.000Z',
+    ]
+    // Quota de 2 : le seuil est la 2ᵉ de chaque mois.
+    expect(seuilsDepuisDates(dates, 2)).toEqual({
+      '2026-09': '2026-09-05T08:00:00.000Z',
+      '2026-10': '2026-10-04T08:00:00.000Z',
+    })
+  })
+
+  it('ne donne pas de seuil à un mois qui n’a pas atteint son plafond', () => {
+    // Trois réservations, plafond de cinq : rien n'est masqué ce mois-là.
+    const dates = ['2026-09-01T08:00:00.000Z', '2026-09-05T08:00:00.000Z', '2026-09-09T08:00:00.000Z']
+    expect(seuilsDepuisDates(dates, 5)).toEqual({})
+  })
+
+  it('rend une table vide sur un quota nul ou négatif', () => {
+    expect(seuilsDepuisDates(['2026-09-01T08:00:00.000Z'], 0)).toEqual({})
+    expect(seuilsDepuisDates(['2026-09-01T08:00:00.000Z'], -1)).toEqual({})
+  })
+
+  it('ignore une date illisible sans fausser le comptage du mois', () => {
+    const dates = ['2026-09-01T08:00:00.000Z', 'pas une date', '2026-09-05T08:00:00.000Z']
+    expect(seuilsDepuisDates(dates, 2)).toEqual({ '2026-09': '2026-09-05T08:00:00.000Z' })
   })
 })

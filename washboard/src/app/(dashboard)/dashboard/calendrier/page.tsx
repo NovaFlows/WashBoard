@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations } from '@/lib/plan'
-import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 
 export default async function CalendrierPage() {
   const supabase = await createClient()
@@ -58,8 +58,8 @@ export default async function CalendrierPage() {
   // Le masquage se fait ICI, au sortir de la base : un composant qui
   // oublierait la règle afficherait le vrai nom du client. À cet endroit,
   // l'oubli est impossible — la donnée n'existe déjà plus.
-  const seuil = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
-  const visibles = masquerVerrouillees(bookings ?? [], seuil).filter(b => !b.verrouillee)
+  const seuils = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const visibles = masquerVerrouillees(bookings ?? [], seuils).filter(b => !b.verrouillee)
 
   // Congés, prestations et catégories : en échec, le calendrier affiche une
   // journée libre et des listes vides — donc un laveur qui pourrait accepter un
