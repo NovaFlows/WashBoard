@@ -202,22 +202,25 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
   }
 
-  // ── Quota mensuel de réservations (offre Découverte et Starter) ──────────
+  // ── Quota mensuel : au-delà, on accepte quand même ──────────────────────
   //
-  // C'est la limite qui fait la différence entre les offres : sans elle, la
-  // grille tarifaire n'est qu'une page de vente. Elle est vérifiée ICI, côté
-  // serveur, parce que la page de réservation est publique et que le formulaire
-  // du navigateur ne protège rien.
+  // La réservation N'EST PLUS REFUSÉE. Refuser faisait payer au client la
+  // limite d'un logiciel qu'il n'a pas choisi : il repartait, et le laveur
+  // perdait un lavage sans même savoir qu'on l'avait sollicité.
   //
-  // Le laveur lui-même est compté et bloqué comme les autres : si la saisie
-  // manuelle échappait au plafond, l'offre gratuite serait illimitée en
-  // pratique — il suffirait de saisir les rendez-vous à la main.
+  // Ce qui est plafonné, c'est ce que le laveur en VOIT. Au-delà du quota il
+  // sait qu'une demande est arrivée, sans le nom, sans le téléphone, sans
+  // l'adresse — voir `lib/reservationsVerrouillees`. La pression pèse sur
+  // celui qui peut y remédier, pas sur son client.
   //
-  // Les rendez-vous annulés ne comptent pas : un client qui se décommande ne
-  // doit pas consommer le quota du laveur. Le compte porte sur le mois civil
-  // parisien de CRÉATION, pas sur la date du rendez-vous : c'est l'usage du
-  // logiciel qu'on facture, pas le remplissage de l'agenda.
+  // Rien n'est écrit pour marquer ces réservations : le verrouillage se déduit
+  // du quota en cours, donc un changement d'offre ouvre tout d'un coup.
+  //
+  // Le compte porte sur le mois civil parisien de CRÉATION, pas sur la date du
+  // rendez-vous : c'est l'usage du logiciel qui est plafonné, pas le
+  // remplissage de l'agenda. Les rendez-vous annulés ne comptent pas.
   const plafondMensuel = quotaReservations(washer)
+  let auDelaDuQuota = false
   if (plafondMensuel !== null) {
     const { count: moisCount, error: errMois } = await admin
       .from('bookings')
@@ -226,38 +229,24 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       .neq('status', 'cancelled')
       .gte('created_at', debutDuMoisParis().toISOString())
 
-    // À l'inverse du plafond anti-spam, un comptage illisible REFUSE. Laisser
-    // passer reviendrait à offrir les réservations illimitées à toute la base
-    // le jour où cette requête échoue, et personne ne s'en apercevrait.
+    // Un comptage illisible ne bloque plus rien — il n'y a plus rien à
+    // bloquer. Au pire, la réservation s'affiche en clair chez un laveur qui
+    // aurait dû la voir masquée : on préfère cette erreur-là à l'inverse, qui
+    // lui cacherait un vrai rendez-vous.
     if (errMois) {
       logger.error('bookings.quotaMensuel.read_failed',
         { washerId: bookingData.washer_id }, errMois)
-      return Response.json(
-        { error: 'Impossible de vérifier les disponibilités. Merci de réessayer dans un instant.' },
-        { status: 503 },
-      )
-    }
-
-    if (quotaDepasse(plafondMensuel, moisCount ?? 0)) {
-      logger.warn('bookings.quota_mensuel_atteint', {
+    } else if (quotaDepasse(plafondMensuel, moisCount ?? 0)) {
+      auDelaDuQuota = true
+      logger.info('bookings.au_dela_du_quota', {
         washerId: bookingData.washer_id,
         plan: washer?.plan ?? null,
         plafond: plafondMensuel,
         utilisees: moisCount ?? 0,
       })
-      return Response.json(
-        {
-          // Deux messages : le client extérieur n'a pas à savoir que le laveur
-          // est sur une offre limitée, le laveur si — c'est à lui d'agir.
-          error: isOwner
-            ? `Vous avez atteint les ${plafondMensuel} réservations par mois de l’offre ${PLAN_LABELS[planEffectif(washer)]}. Passez à l’offre supérieure pour continuer.`
-            : 'Ce prestataire ne peut plus accepter de réservation en ligne ce mois-ci. Contactez-le directement.',
-          quota: { plafond: plafondMensuel, utilisees: moisCount ?? 0 },
-        },
-        { status: 403 },
-      )
     }
   }
+
   // Durée réellement bloquée par ce rendez-vous. Calculée ici parce qu'elle
   // sert deux fois : au contrôle des horaires, puis à l'enregistrement de la
   // fin du créneau en base (colonne `ends_at`, cf. réservation atomique).
@@ -510,7 +499,25 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     ]
 
-    if (washerEmail) {
+    // Au-dela du quota, le laveur est PREVENU sans rien apprendre : lui envoyer
+    // le nom et le telephone par email viderait le masquage de son sens, il
+    // suffirait d'ouvrir sa boite mail.
+    if (washerEmail && auDelaDuQuota) {
+      emailJobs.push(
+        sendWasherNotification({
+          to: washerEmail,
+          washerName: washer.name,
+          clientName: 'Réservation bloquée',
+          clientEmail: '',
+          clientPhone: '',
+          serviceName: 'Passez à l’offre supérieure pour voir cette réservation',
+          address: '',
+          scheduledAt: bookingData.scheduled_at,
+          bookedPrice: 0,
+          bookingId: id,
+        }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
+      )
+    } else if (washerEmail) {
       emailJobs.push(
         sendWasherNotification({
           to: washerEmail,
@@ -539,7 +546,17 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // iPhone sans l'application installée. L'email reste le canal fiable.
     const quand = new Date(bookingData.scheduled_at)
     emailJobs.push(
-      notifierLaveur(bookingData.washer_id, {
+      notifierLaveur(bookingData.washer_id, auDelaDuQuota ? {
+        // Meme regle que l'email : on annonce, on ne raconte pas.
+        title: '🔒 Nouvelle réservation bloquée',
+        body: [
+          'Une demande est arrivée sur votre page.',
+          'Passez à l’offre supérieure pour voir qui, quand et où.',
+        ].join('\n'),
+        url: '/dashboard/abonnement',
+        tag: `booking-${id}`,
+        bookingId: id,
+      } : {
         // Les emoji servent de repères : le laveur retrouve la ligne qu'il
         // cherche (qui ? quoi ? quand ?) sans lire la notification en entier,
         // souvent d'un coup d'œil entre deux voitures. Un seul par ligne,

@@ -6,11 +6,15 @@ import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { quotaReservations } from '@/lib/plan'
+import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
 // partent vers le navigateur — ni notes internes, ni contenu des factures.
-const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, status, closed_late, booked_price, is_professional, company_name, services(name, price, duration_minutes)'
+// `created_at` sert au verrouillage des reservations hors quota : sans lui,
+// la regle ne peut rien trancher et l'annuaire les afficherait toutes.
+const COLONNES = 'id, created_at, client_name, client_email, client_phone, address, scheduled_at, status, closed_late, booked_price, is_professional, company_name, services(name, price, duration_minutes)'
 
 export default async function ClientsPage() {
   const supabase = await createClient()
@@ -32,10 +36,18 @@ export default async function ClientsPage() {
   // Sans trace, un fichier vide ne se distinguerait pas d'un laveur sans client.
   if (error) logger.error('clients.bookings.fetch_failed', { washerId: washer.id }, error)
 
+  // Réservations au-delà du quota : elles n'ont pas de client à afficher, donc
+  // elles sortent de l'annuaire. Y laisser « Réservation bloquée » créerait une
+  // fiche fantôme, sans téléphone ni historique, que le laveur ouvrirait pour
+  // rien. Le masquage se fait au sortir de la base, jamais dans les écrans.
+  const seuil = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const visibles = masquerVerrouillees(bookings, seuil).filter(b => !b.verrouillee)
+
+
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST
   // renvoie un objet : une réservation n'a qu'une prestation. On accepte les
   // deux formes plutôt que de forcer le type.
-  const lignes: ClientBooking[] = bookings.map(b => ({
+  const lignes: ClientBooking[] = visibles.map(b => ({
     ...b,
     services: (Array.isArray(b.services) ? b.services[0] : b.services) ?? null,
   }))

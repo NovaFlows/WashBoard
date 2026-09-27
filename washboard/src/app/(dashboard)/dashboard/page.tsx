@@ -9,7 +9,8 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, quotaReservations } from '@/lib/plan'
+import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
@@ -219,6 +220,19 @@ export default async function DashboardPage() {
     welcomeMessage: washer.welcome_message ?? null,
   })
 
+  // ── Réservations au-delà du quota : visibles, mais muettes ──────────────
+  //
+  // Le masquage se fait ICI, au sortir de la base : un composant qui oublierait
+  // la règle afficherait le vrai nom du client. À cet endroit, l'oubli est
+  // impossible — la donnée n'existe déjà plus.
+  //
+  // Seules les listes de rendez-vous passent par le masque. Les comptages
+  // (en attente, confirmés, chiffre d'affaires) restent entiers : le laveur a
+  // le droit de savoir COMBIEN de demandes il a reçues, c'est même l'argument
+  // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
+  const seuilVerrou = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilVerrou)
+
   const passes = historique.data ?? []
   const all = [...(aVenir ?? []), ...passes]
 
@@ -226,12 +240,12 @@ export default async function DashboardPage() {
   // trié par heure croissante), sans requête de plus. Ne montre que ce qui
   // reste à faire : un rendez-vous déjà clôturé n'a plus rien à demander.
   const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
-  const rdvAujourdhui = (aVenir ?? []).filter(
+  const rdvAujourdhui = aVenirVisible.filter(
     b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
   // Après aujourd'hui, pour ne pas doublonner le widget ci-dessus : les trois
   // prochains, dans l'ordre où `aVenir` est déjà trié.
-  const rdvProchains = (aVenir ?? [])
+  const rdvProchains = aVenirVisible
     .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
     .slice(0, 3)
 
