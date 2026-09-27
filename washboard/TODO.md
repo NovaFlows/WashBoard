@@ -35,6 +35,18 @@
       ALTER TABLE support_questions ADD COLUMN IF NOT EXISTS hidden_for_washer_at timestamptz;
       GRANT SELECT, UPDATE (hidden_for_washer_at) ON support_questions TO authenticated;
       ```
+- [ ] **Supabase (SQL Editor) — table `documents` (devis et factures écrits à la main)**, sans
+      laquelle l'écran Chiffres › « Devis et factures à la main » ne peut rien enregistrer. Le SQL
+      complet (table, compteur `devis_prochain_numero`, RLS, GRANT, fonction `emettre_document`)
+      a été donné dans la conversation du 2026-09-27. À passer en même temps la vérification du
+      format des numéros existants :
+      ```sql
+      select facture_numero from bookings
+       where facture_numero is not null
+       order by facture_emise_le desc limit 3;
+      ```
+      Si ce n'est pas `F-AAAA-NNNN`, le dire avant d'appliquer : la fonction doit produire le
+      même format, sinon la suite des factures se casse en deux.
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
@@ -42,6 +54,17 @@
 ---
 
 ## 🔴 Priorité haute
+
+- [ ] **Les factures écrites à la main ne comptent pas encore dans le chiffre d'affaires.**
+      Depuis le 2026-09-27, un laveur peut facturer un chantier hors réservation
+      (`/dashboard/chiffres/documents`). Ces factures apparaissent dans leur écran, mais
+      l'« Encaissé » de Chiffres › Argent, lui, est calculé à partir des seules réservations
+      terminées (`serieArgent`, `chiffresArgent.ts`) : son CA est donc sous-évalué du montant
+      de ces factures, sans que rien ne le signale. À faire : charger les documents de genre
+      `facture` dans `chiffres/page.tsx`, les projeter en `ReservationArgent` (date = émission,
+      montant = `contenu.totaux.ttc`) et les additionner à la série — avec un test qui fixe la
+      règle, parce que c'est de l'argent. Même question pour la liste `/dashboard/factures`,
+      qui ne montre aujourd'hui que les factures de rendez-vous et les factures importées.
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
