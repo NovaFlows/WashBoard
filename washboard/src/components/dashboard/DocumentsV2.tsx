@@ -7,8 +7,10 @@ import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
 import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
 import {
-  devisExpire, libelleGenre, libelleStatut, tonStatut, type Document, type GenreDocument,
+  devisExpire, libelleGenre, libelleStatut, messageWhatsapp, tonStatut,
+  type Document, type GenreDocument,
 } from '@/lib/documents'
+import { whatsappDigits } from '@/lib/phone'
 import {
   creerDocument, envoyerDocument, facturerDevis, lireDocuments, repondreDevis, supprimerDevis,
 } from '@/lib/documentsApi'
@@ -51,9 +53,10 @@ function Pastille({ document: d, aujourdhui }: { document: Document; aujourdhui:
 
 /** Ce qu'on peut encore faire d'un document, une fois ouvert. */
 function FeuilleActions({
-  document: d, occupe, onEnvoyer, onRepondre, onFacturer, onSupprimer, onClose,
+  document: d, nomLaveur, occupe, onEnvoyer, onRepondre, onFacturer, onSupprimer, onClose,
 }: {
   document: Document
+  nomLaveur: string
   occupe: boolean
   onEnvoyer: () => void
   onRepondre: (statut: 'accepte' | 'refuse') => void
@@ -75,6 +78,28 @@ function FeuilleActions({
         >
           Télécharger le PDF
         </a>
+        {/* WhatsApp d'abord : c'est par là que les clients des laveurs répondent. Le PDF n'y
+            est pas joint mais lié — `wa.me` ne sait pas joindre un fichier. */}
+        {d.contenu.client.telephone && (
+          <button
+            type="button"
+            onClick={() => {
+              const lien = `${window.location.origin}/api/documents/${d.id}/pdf`
+              const texte = messageWhatsapp(d, lien, nomLaveur)
+              window.open(
+                `https://wa.me/${whatsappDigits(d.contenu.client.telephone!)}?text=${encodeURIComponent(texte)}`,
+                '_blank', 'noopener',
+              )
+            }}
+            className={`${secondaire} gap-2`}
+            style={PRESSION}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.3 4.7 4.84-1.27A9.9 9.9 0 1 0 12.04 2m0 1.8a8.1 8.1 0 1 1-4.1 15.09l-.29-.17-2.87.75.77-2.8-.19-.3A8.1 8.1 0 0 1 12.04 3.8m-3.2 4c-.15 0-.4.06-.61.29-.21.23-.8.79-.8 1.92s.82 2.23.94 2.38c.11.15 1.6 2.55 3.94 3.47 1.95.77 2.35.62 2.77.58.42-.04 1.36-.55 1.55-1.09.19-.54.19-1 .14-1.1-.06-.09-.21-.15-.44-.27-.23-.11-1.36-.67-1.57-.75-.21-.08-.36-.11-.51.12-.15.23-.59.74-.72.9-.13.15-.26.17-.49.06-.23-.12-.97-.36-1.85-1.14-.68-.61-1.15-1.36-1.28-1.59-.13-.23-.01-.35.1-.47.1-.1.23-.27.34-.4.11-.14.15-.23.23-.38.08-.16.04-.29-.02-.4-.06-.12-.51-1.25-.71-1.71-.17-.41-.35-.41-.5-.42z" />
+            </svg>
+            Envoyer sur WhatsApp
+          </button>
+        )}
         <button type="button" onClick={onEnvoyer} disabled={occupe} className={secondaire} style={PRESSION}>
           {d.envoye_le ? 'Renvoyer par email' : 'Envoyer par email'}
         </button>
@@ -126,7 +151,11 @@ function FeuilleActions({
   )
 }
 
-export default function DocumentsV2({ prestations }: { prestations: { id: string; name: string; price: number }[] }) {
+export default function DocumentsV2({ prestations, nomLaveur }: {
+  prestations: { id: string; name: string; price: number }[]
+  /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
+  nomLaveur: string
+}) {
   const [aujourdhui] = useState(() => aujourdhuiParis(Date.now()))
   const [documents, setDocuments] = useState<Document[] | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -312,6 +341,7 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
       {ouvert && (
         <FeuilleActions
           document={ouvert}
+          nomLaveur={nomLaveur}
           occupe={occupe}
           onEnvoyer={() => void agir(() => envoyerDocument(ouvert.id), 'Envoyé au client.')}
           onRepondre={statut => void agir(

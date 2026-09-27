@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Feuille, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
@@ -121,6 +121,14 @@ export default function FeuilleDocumentV2({
   const [remise, setRemise] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const refErreur = useRef<HTMLDivElement>(null)
+
+  // Le formulaire est long : un refus affiché tout en bas, alors qu'on est resté en haut sur
+  // le champ fautif, donne un bouton « Créer » qui semble ne rien faire. On amène le message
+  // sous les yeux (même défaut que le bouton « Continuer » de la couleur de marque, 2026-09-26).
+  useEffect(() => {
+    if (erreur) refErreur.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [erreur])
 
   const devis = saisie.genre === 'devis'
   const modifier = (champs: Partial<SaisieDocument>) => {
@@ -206,8 +214,18 @@ export default function FeuilleDocumentV2({
             aria-label="Email du client"
             className={`${CHAMP} mt-2`}
           />
+          <input
+            type="tel"
+            inputMode="tel"
+            value={saisie.clientTelephone}
+            onChange={e => modifier({ clientTelephone: e.target.value })}
+            placeholder="06 12 34 56 78"
+            aria-label="Téléphone du client"
+            className={`${CHAMP} mt-2`}
+          />
           <p className={`mt-1.5 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Sans email, le document se télécharge mais ne peut pas être envoyé d’ici.
+            Le téléphone sert à envoyer le document sur WhatsApp, l’email à l’envoyer d’ici.
+            Sans l’un ni l’autre, il reste téléchargeable.
           </p>
           <input
             type="text"
@@ -361,7 +379,9 @@ export default function FeuilleDocumentV2({
           <span className={`text-[22px] ${corpsFort} tabular-nums`}>{euros.format(total)}</span>
         </div>
 
-        {erreur && <div className="mt-3" aria-live="polite"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+        <div ref={refErreur} aria-live="polite">
+          {erreur && <div className="mt-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+        </div>
       </form>
     </Feuille>
   )

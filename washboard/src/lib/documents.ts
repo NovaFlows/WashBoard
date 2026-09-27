@@ -1,3 +1,4 @@
+import { isValidPhone, normalizePhone } from '@/lib/phone'
 import {
   arrondi, nomLegalAffiche, normaliserNumeroTva, normaliserSiret, totauxFacture,
   type FactureContenu, type LigneFacture, type RegimeTva, type StatutJuridique,
@@ -58,6 +59,9 @@ export type SaisieDocument = {
   genre: GenreDocument
   clientNom: string
   clientEmail: string
+  /** Numéro du client : c'est par lui que le devis part sur WhatsApp, le canal réel des
+   *  laveurs (demande d'Alexandre, 2026-09-27). Facultatif — on peut aussi n'avoir qu'un mail. */
+  clientTelephone: string
   /** Adresse de facturation du client. À défaut, le lieu de la prestation. */
   clientAdresse: string
   professionnel: boolean
@@ -158,12 +162,59 @@ export function totalDocument(saisie: SaisieDocument): number {
 
 // ── Contrôles ──────────────────────────────────────────────────────────────
 
+const texte = (v: unknown) => (typeof v === 'string' ? v : '')
+const nombre = (v: unknown) => {
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+const jour = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
+
+/** Une saisie sûre à partir de n'importe quoi.
+ *
+ *  Le corps d'une requête est écrit par le navigateur : il peut arriver incomplet (un ancien
+ *  bundle après une mise en ligne), mal typé, ou hostile. Sans ce passage, la validation
+ *  travaillait sur des champs supposés présents et une seule clé manquante faisait répondre
+ *  500 — une panne — là où il fallait un refus clair. Les champs inconnus sont ignorés : le
+ *  document ne porte que ce que le domaine connaît. */
+export function normaliserSaisie(brut: unknown): SaisieDocument {
+  const o = (brut ?? {}) as Record<string, unknown>
+  const lignes = Array.isArray(o.lignes) ? o.lignes : []
+  return {
+    genre: o.genre === 'facture' ? 'facture' : 'devis',
+    clientNom: texte(o.clientNom),
+    clientEmail: texte(o.clientEmail),
+    clientTelephone: texte(o.clientTelephone),
+    clientAdresse: texte(o.clientAdresse),
+    professionnel: o.professionnel === true,
+    entreprise: texte(o.entreprise),
+    siret: texte(o.siret),
+    date: jour(o.date),
+    lieu: texte(o.lieu),
+    lignes: lignes.slice(0, 50).map(l => {
+      const x = (l ?? {}) as Record<string, unknown>
+      return {
+        designation: texte(x.designation),
+        quantite: Math.trunc(nombre(x.quantite)),
+        prixUnitaireTtc: nombre(x.prixUnitaireTtc),
+      }
+    }),
+    remiseTtc: nombre(o.remiseTtc),
+    valableJusquau: jour(o.valableJusquau),
+    note: texte(o.note),
+  }
+}
+
 /** Ce qui empêche d'émettre, formulé pour le laveur — une phrase, la première qui bloque.
  *  `null` quand tout est bon. */
 export function validerDocument(saisie: SaisieDocument, aujourdhui: string): string | null {
   if (!saisie.clientNom.trim()) return 'Indiquez le nom du client.'
   if (saisie.professionnel && !saisie.entreprise.trim()) {
     return 'Indiquez le nom de l’entreprise du client, ou décochez « professionnel ».'
+  }
+  if (saisie.clientTelephone.trim() && !isValidPhone(saisie.clientTelephone)) {
+    // Un chiffre de travers et le devis part chez un inconnu : mieux vaut refuser la saisie
+    // que d'envoyer un prix à quelqu'un d'autre.
+    return 'Le numéro de téléphone du client n’est pas valide.'
   }
   const lignes = saisie.lignes.filter(ligneRemplie)
   if (lignes.length === 0) return 'Ajoutez au moins une ligne (désignation et prix).'
@@ -193,6 +244,35 @@ export function validerDocument(saisie: SaisieDocument, aujourdhui: string): str
     return 'Indiquez la date de la prestation.'
   }
   return null
+}
+
+// ── WhatsApp ───────────────────────────────────────────────────────────────
+
+/** Le message qui part sur WhatsApp avec le lien du document.
+ *
+ *  C'est le canal réel des laveurs : leurs clients répondent sur WhatsApp, pas par email.
+ *  Le PDF n'est pas joint mais lié — `wa.me` ne sait pas joindre un fichier, et le lien sert
+ *  toujours la dernière version. */
+export function messageWhatsapp(
+  d: Pick<Document, 'genre' | 'numero' | 'contenu'>,
+  lienPdf: string,
+  nomLaveur: string,
+): string {
+  const devis = d.genre === 'devis'
+  const montant = `${d.contenu.totaux.ttc.toFixed(2).replace('.', ',')} €`
+  const lignes = [
+    `Bonjour ${d.contenu.client.nom},`,
+    '',
+    devis
+      ? `Voici votre devis n° ${d.numero} d'un montant de ${montant}.`
+      : `Voici votre facture n° ${d.numero} d'un montant de ${montant}.`,
+  ]
+  if (devis && d.contenu.valableJusquau) {
+    const [a, m, j] = d.contenu.valableJusquau.split('-')
+    lignes.push(`Ce prix reste valable jusqu'au ${j}/${m}/${a}.`)
+  }
+  lignes.push('', lienPdf, '', nomLaveur)
+  return lignes.join('\n')
 }
 
 /** L'envoi par email demande une adresse ; le reste du document peut très bien vivre sans
@@ -244,6 +324,9 @@ export function construireDocument(saisie: SaisieDocument, v: VendeurFacturable)
     client: {
       nom: saisie.clientNom.trim(),
       email: saisie.clientEmail.trim(),
+      // Rangé sous sa forme canonique (10 chiffres) : c'est elle qui sert à joindre le
+      // client, et deux écritures du même numéro ne doivent pas faire deux clients.
+      telephone: normalizePhone(saisie.clientTelephone) ?? (saisie.clientTelephone.trim() || null),
       professionnel: pro,
       entreprise: pro ? saisie.entreprise.trim() || null : null,
       siren: /^\d{9}$/.test(sirenClient) ? sirenClient : null,
@@ -270,6 +353,7 @@ export function saisieDepuisContenu(contenu: FactureContenu, genre: GenreDocumen
     genre,
     clientNom: contenu.client.nom,
     clientEmail: contenu.client.email ?? '',
+    clientTelephone: contenu.client.telephone ?? '',
     clientAdresse: contenu.client.adresseFacturation,
     professionnel: contenu.client.professionnel,
     entreprise: contenu.client.entreprise ?? '',
@@ -291,7 +375,7 @@ export function saisieDepuisContenu(contenu: FactureContenu, genre: GenreDocumen
 export function saisieNeuve(genre: GenreDocument, aujourdhui: string): SaisieDocument {
   return {
     genre,
-    clientNom: '', clientEmail: '', clientAdresse: '',
+    clientNom: '', clientEmail: '', clientTelephone: '', clientAdresse: '',
     professionnel: false, entreprise: '', siret: '',
     date: genre === 'facture' ? aujourdhui : null,
     lieu: '',

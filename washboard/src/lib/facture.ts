@@ -166,6 +166,9 @@ export type FactureContenu = {
   client: {
     nom: string
     email: string
+    /** Absent des factures de réservation (le téléphone y vit sur la réservation). Porté par
+     *  les documents écrits à la main : c'est par lui qu'un devis part sur WhatsApp. */
+    telephone?: string | null
     professionnel: boolean
     entreprise: string | null
     siren: string | null

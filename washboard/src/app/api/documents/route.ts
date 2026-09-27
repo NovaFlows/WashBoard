@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
-import { construireDocument, validerDocument, type SaisieDocument } from '@/lib/documents'
+import { construireDocument, normaliserSaisie, validerDocument } from '@/lib/documents'
 import { infosFacturationManquantes, phraseManques, type VendeurFacturable } from '@/lib/facture'
 import { aujourdhuiParis } from '@/lib/chiffresPeriode'
 
@@ -60,11 +60,13 @@ export async function POST(req: NextRequest) {
   if (ctx.erreur) return ctx.erreur
   const washer = ctx.washer!
 
-  const corps = await req.json().catch(() => null) as { saisie?: SaisieDocument; devisId?: string } | null
-  const saisie = corps?.saisie
-  if (!saisie || (saisie.genre !== 'devis' && saisie.genre !== 'facture')) {
+  const corps = await req.json().catch(() => null) as { saisie?: unknown; devisId?: string } | null
+  if (!corps?.saisie || typeof corps.saisie !== 'object') {
     return NextResponse.json({ error: 'Document invalide' }, { status: 400 })
   }
+  // Le corps vient du navigateur : on ne lui fait pas confiance sur la FORME non plus. Un
+  // champ manquant doit donner un refus clair, pas une panne.
+  const saisie = normaliserSaisie(corps.saisie)
 
   const refus = validerDocument(saisie, aujourdhuiParis(Date.now()))
   if (refus) return NextResponse.json({ error: refus }, { status: 400 })

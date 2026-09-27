@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   construireDocument, dateDansNJours, devisExpire, libelleStatut, lignesDocument,
-  saisieDepuisContenu, saisieNeuve, tonStatut, totalDocument, validerDocument, validerEnvoi,
+  messageWhatsapp, saisieDepuisContenu, saisieNeuve, tonStatut, totalDocument,
+  validerDocument, validerEnvoi,
   VALIDITE_DEVIS_JOURS, type SaisieDocument,
 } from '@/lib/documents'
 import type { VendeurFacturable } from '@/lib/facture'
@@ -22,6 +23,7 @@ const saisie = (p: Partial<SaisieDocument> = {}): SaisieDocument => ({
   ...saisieNeuve('facture', AUJOURDHUI),
   clientNom: 'Marie Martin',
   clientEmail: 'marie@example.com',
+  clientTelephone: '06 12 34 56 78',
   clientAdresse: '3 allée des Roses, 95000 Cergy',
   lieu: '3 allée des Roses, 95000 Cergy',
   lignes: [{ designation: 'Nettoyage canapé 3 places', quantite: 1, prixUnitaireTtc: 120 }],
@@ -255,5 +257,53 @@ describe('libellés de statut', () => {
     expect(tonStatut({ genre: 'devis', statut: 'envoye' })).toBe('gris')
     expect(tonStatut({ genre: 'devis', statut: 'refuse' })).toBe('gris')
     expect(tonStatut({ genre: 'facture', statut: 'emis' })).toBe('vert')
+  })
+})
+
+describe('téléphone du client', () => {
+  it('est rangé sous sa forme canonique, quelle que soit l’écriture', () => {
+    for (const ecriture of ['06 12 34 56 78', '+33612345678', '06.12.34.56.78', '0033612345678']) {
+      expect(construireDocument(saisie({ clientTelephone: ecriture }), vendeur).client.telephone)
+        .toBe('0612345678')
+    }
+  })
+
+  it('absent quand il n’est pas saisi — un devis peut n’avoir qu’un email', () => {
+    expect(construireDocument(saisie({ clientTelephone: '' }), vendeur).client.telephone).toBeNull()
+    expect(validerDocument(saisie({ clientTelephone: '' }), AUJOURDHUI)).toBeNull()
+  })
+
+  it('refuse un numéro impossible : un chiffre de travers enverrait le devis à un inconnu', () => {
+    expect(validerDocument(saisie({ clientTelephone: '06 12 34 56' }), AUJOURDHUI))
+      .toMatch(/téléphone/)
+  })
+
+  it('suit le client quand le devis devient facture', () => {
+    const contenu = construireDocument(devis(), vendeur)
+    expect(saisieDepuisContenu(contenu, 'facture').clientTelephone).toBe('0612345678')
+  })
+})
+
+describe('messageWhatsapp', () => {
+  const document = (genre: 'devis' | 'facture', numero: string) => ({
+    genre, numero,
+    contenu: construireDocument(genre === 'devis' ? devis() : saisie(), vendeur),
+  })
+
+  it('annonce le devis, son montant, sa validité et porte le lien', () => {
+    const texte = messageWhatsapp(document('devis', 'D-00003'), 'https://washboard.fr/api/documents/x/pdf', 'AutoNettoyage')
+
+    expect(texte).toContain('Bonjour Marie Martin,')
+    expect(texte).toContain('devis n° D-00003')
+    expect(texte).toContain('120,00 €')
+    expect(texte).toContain('valable jusqu’au 27/10/2026'.replace('’', "'"))
+    expect(texte).toContain('https://washboard.fr/api/documents/x/pdf')
+    expect(texte.endsWith('AutoNettoyage')).toBe(true)
+  })
+
+  it('une facture ne parle pas de validité : rien n’expire, c’est dû', () => {
+    const texte = messageWhatsapp(document('facture', 'F-00015'), 'https://washboard.fr/x', 'AutoNettoyage')
+    expect(texte).toContain('facture n° F-00015')
+    expect(texte).not.toMatch(/valable/)
   })
 })

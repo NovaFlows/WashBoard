@@ -70,6 +70,7 @@ const SAISIE = {
   genre: 'facture' as const,
   clientNom: 'Marie Martin',
   clientEmail: 'marie@example.com',
+  clientTelephone: '06 12 34 56 78',
   clientAdresse: '3 allée des Roses, 95000 Cergy',
   professionnel: false,
   entreprise: '',
@@ -144,6 +145,21 @@ describe('POST /api/documents — ce que le navigateur ne décide pas', () => {
   it('n’attribue jamais le numéro lui-même : il vient de la fonction SQL', async () => {
     await POST(requete({ saisie: { ...SAISIE, numero: 'F-99999' } }))
     expect(inserts[0].numero).toBeUndefined()
+  })
+
+  it('un corps incomplet donne un refus clair, pas une panne', async () => {
+    // Un ancien bundle après une mise en ligne, ou un curieux : la route ne doit pas
+    // répondre 500 parce qu'il manque une clé.
+    for (const saisie of [{}, { genre: 'devis' }, { clientNom: 'Marie', lignes: 'pas un tableau' }]) {
+      const res = await POST(requete({ saisie }))
+      expect(res.status).toBe(400)
+    }
+    expect(inserts).toHaveLength(0)
+  })
+
+  it('ne garde que ce que le domaine connaît', async () => {
+    await POST(requete({ saisie: { ...SAISIE, statut: 'transforme', washer_id: 'un-autre' } }))
+    expect(inserts[0]).toMatchObject({ washer_id: 'washer-1', statut: 'emis' })
   })
 })
 

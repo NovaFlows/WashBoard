@@ -14,7 +14,10 @@ import DocumentsV2 from '@/components/dashboard/DocumentsV2'
 // états, jamais de flash de contenu v2 côté site.
 type Statut = 'verification' | 'pwa' | 'site'
 
-export default function Documents({ prestations }: { prestations: { id: string; name: string; price: number }[] }) {
+export default function Documents({ prestations, nomLaveur }: {
+  prestations: { id: string; name: string; price: number }[]
+  nomLaveur: string
+}) {
   const router = useRouter()
   const [statut, setStatut] = useState<Statut>('verification')
 
@@ -28,5 +31,5 @@ export default function Documents({ prestations }: { prestations: { id: string; 
 
   if (statut !== 'pwa') return null
 
-  return <DocumentsV2 prestations={prestations} />
+  return <DocumentsV2 prestations={prestations} nomLaveur={nomLaveur} />
 }

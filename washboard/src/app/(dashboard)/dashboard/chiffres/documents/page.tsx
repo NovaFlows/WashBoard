@@ -36,7 +36,10 @@ export default async function DocumentsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Documents prestations={(prestations ?? []).map(p => ({ id: p.id, name: p.name, price: Number(p.price) }))} />
+      <Documents
+        prestations={(prestations ?? []).map(p => ({ id: p.id, name: p.name, price: Number(p.price) }))}
+        nomLaveur={washer.name}
+      />
     </DashboardShell>
   )
 }
