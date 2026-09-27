@@ -69,7 +69,18 @@ const problemes: MetierProblem[] = [
 const fonctionnalites: MetierFeature[] = [
   {
     titre: 'Un prix et une durée par prestation, par véhicule',
-    desc: 'Chaque prestation (extérieur, complet, intérieur…) a son propre prix et sa propre durée, bloqués tels quels dans ton agenda. Tu peux aussi définir un tarif différent selon le type de véhicule choisi par le client — citadine, berline, SUV, utilitaire — pour ne plus sous-facturer les plus grands.',
+    desc: (
+      <>
+        Chaque prestation (extérieur, complet, intérieur…) a son propre prix et sa propre durée,
+        bloqués tels quels dans ton agenda. Tu peux aussi définir un tarif différent selon le type de
+        véhicule choisi par le client — citadine, berline, SUV, utilitaire — pour ne plus sous-facturer
+        les plus grands. C&apos;est l&apos;un des écarts les plus nets avec un simple outil de prise de
+        rendez-vous généraliste — voir notre{' '}
+        <Link href="/meilleur-logiciel-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+          comparatif des outils de gestion pour laveur auto
+        </Link>.
+      </>
+    ),
   },
   {
     titre: 'Des options par véhicule, pas par commande',

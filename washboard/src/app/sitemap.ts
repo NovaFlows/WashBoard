@@ -37,6 +37,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     })),
+    // Page comparatif ("meilleur-logiciel-lavage-auto") : notre contenu,
+    // aucune donnée de laveur, pas de date honnête disponible — même raison
+    // que les pages métier ci-dessus.
+    {
+      url: `${SITE_URL}/meilleur-logiciel-lavage-auto`,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
     // Page catégorie ("logiciel-services-a-domicile") : retirée du sitemap
     // au recentrage automobile de 2026-09 — elle est passée en
     // `robots: { index: false }` (voir le commentaire de son fichier), donc
