@@ -97,7 +97,7 @@ beforeEach(() => {
     utilisateur: { id: 'user-1' },
     washer: { data: WASHER, error: null },
     insert: { data: { id: 'doc-1' }, error: null },
-    rpc: { data: [{ numero: 'F-2026-0004' }], error: null },
+    rpc: { data: [{ numero: 'F-00015' }], error: null },
   }
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'info').mockImplementation(() => {})
@@ -107,7 +107,7 @@ describe('POST /api/documents — chemin nominal', () => {
   it('émet la facture et rend son numéro', async () => {
     const res = await POST(requete({ saisie: SAISIE }))
     expect(res.status).toBe(201)
-    expect(await res.json()).toEqual({ id: 'doc-1', numero: 'F-2026-0004' })
+    expect(await res.json()).toEqual({ id: 'doc-1', numero: 'F-00015' })
     expect(inserts).toHaveLength(1)
     expect(inserts[0]).toMatchObject({ washer_id: 'washer-1', genre: 'facture', statut: 'emis' })
   })
@@ -142,7 +142,7 @@ describe('POST /api/documents — ce que le navigateur ne décide pas', () => {
   })
 
   it('n’attribue jamais le numéro lui-même : il vient de la fonction SQL', async () => {
-    await POST(requete({ saisie: { ...SAISIE, numero: 'F-2026-9999' } }))
+    await POST(requete({ saisie: { ...SAISIE, numero: 'F-99999' } }))
     expect(inserts[0].numero).toBeUndefined()
   })
 })

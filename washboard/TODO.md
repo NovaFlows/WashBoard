@@ -38,15 +38,10 @@
 - [ ] **Supabase (SQL Editor) — table `documents` (devis et factures écrits à la main)**, sans
       laquelle l'écran Chiffres › « Devis et factures à la main » ne peut rien enregistrer. Le SQL
       complet (table, compteur `devis_prochain_numero`, RLS, GRANT, fonction `emettre_document`)
-      a été donné dans la conversation du 2026-09-27. À passer en même temps la vérification du
-      format des numéros existants :
-      ```sql
-      select facture_numero from bookings
-       where facture_numero is not null
-       order by facture_emise_le desc limit 3;
-      ```
-      Si ce n'est pas `F-AAAA-NNNN`, le dire avant d'appliquer : la fonction doit produire le
-      même format, sinon la suite des factures se casse en deux.
+      a été donné dans la conversation du 2026-09-27. Format des numéros vérifié ce jour-là en
+      production : `F-00014` — préfixe + compteur sur cinq chiffres, **sans l'année**. La
+      fonction `emettre_document` doit produire exactement cette forme (`D-` pour les devis),
+      sinon la suite des factures se casse en deux.
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.

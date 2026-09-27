@@ -17,6 +17,11 @@ import {
  *  réservation — d'où deux compteurs distincts en base, et jamais de numéro attribué ici (la
  *  fonction SQL `emettre_document` est seule à le faire, sous verrou).
  *
+ *  Format des numéros, vérifié en production le 2026-09-27 : `F-00014`, c'est-à-dire le
+ *  préfixe et le compteur du laveur sur cinq chiffres, SANS l'année. Les devis suivent la même
+ *  forme avec `D-`. Une suite qui changerait de forme en cours de route serait une suite
+ *  cassée : rien, ici ni ailleurs, ne doit fabriquer un numéro autrement.
+ *
  *  Tout ce fichier est pur : aucune base, aucun réseau. Le contenu produit est un
  *  `FactureContenu`, le même qu'une facture de réservation — c'est ce qui permet au PDF, à la
  *  liste des factures et aux chiffres de ne rien savoir de la différence. */

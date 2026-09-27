@@ -85,9 +85,9 @@ beforeEach(() => {
   plan = {
     utilisateur: { id: 'user-1' },
     washer: { data: WASHER, error: null },
-    devis: { data: { id: 'devis-1', genre: 'devis', statut: 'accepte', numero: 'D-2026-0002', contenu: CONTENU_DEVIS, facture_id: null }, error: null },
+    devis: { data: { id: 'devis-1', genre: 'devis', statut: 'accepte', numero: 'D-00002', contenu: CONTENU_DEVIS, facture_id: null }, error: null },
     insert: { data: { id: 'facture-1' }, error: null },
-    rpc: { data: [{ numero: 'F-2026-0004' }], error: null },
+    rpc: { data: [{ numero: 'F-00015' }], error: null },
   }
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'info').mockImplementation(() => {})
@@ -97,7 +97,7 @@ describe('POST /api/documents/[id]/facturer', () => {
   it('crée la facture et rend son numéro', async () => {
     const res = await appel()
     expect(res.status).toBe(201)
-    expect(await res.json()).toEqual({ id: 'facture-1', numero: 'F-2026-0004' })
+    expect(await res.json()).toEqual({ id: 'facture-1', numero: 'F-00015' })
     expect(inserts[0]).toMatchObject({ genre: 'facture', statut: 'emis', devis_id: 'devis-1' })
   })
 
@@ -123,7 +123,7 @@ describe('POST /api/documents/[id]/facturer', () => {
   })
 
   it('un devis déjà transformé rend sa facture sans en consommer une seconde', async () => {
-    plan.devis = { data: { id: 'devis-1', genre: 'devis', statut: 'transforme', numero: 'D-2026-0002', contenu: CONTENU_DEVIS, facture_id: 'facture-1' }, error: null }
+    plan.devis = { data: { id: 'devis-1', genre: 'devis', statut: 'transforme', numero: 'D-00002', contenu: CONTENU_DEVIS, facture_id: 'facture-1' }, error: null }
     const res = await appel()
     expect(await res.json()).toEqual({ id: 'facture-1', deja: true })
     expect(inserts).toHaveLength(0)
@@ -131,7 +131,7 @@ describe('POST /api/documents/[id]/facturer', () => {
   })
 
   it('refuse de facturer une facture', async () => {
-    plan.devis = { data: { id: 'f-1', genre: 'facture', statut: 'emis', numero: 'F-2026-0003', contenu: CONTENU_DEVIS, facture_id: null }, error: null }
+    plan.devis = { data: { id: 'f-1', genre: 'facture', statut: 'emis', numero: 'F-00014', contenu: CONTENU_DEVIS, facture_id: null }, error: null }
     const res = await appel()
     expect(res.status).toBe(400)
     expect(inserts).toHaveLength(0)

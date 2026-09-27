@@ -72,10 +72,10 @@ async function rendre(genre: 'devis' | 'facture', numero: string) {
 
 describe('FacturePDF', () => {
   it('imprime un devis : titre, validité, case « bon pour accord »', async () => {
-    const texte = texteDuPdf(await rendre('devis', 'D-2026-0003'))
+    const texte = texteDuPdf(await rendre('devis', 'D-00003'))
 
     expect(texte).toContain('Devis')
-    expect(texte).toContain('D-2026-0003')
+    expect(texte).toContain('D-00003')
     expect(texte).toContain('Valable jusqu')
     expect(texte).toContain('27 octobre 2026')
     expect(texte).toContain('Bon pour accord')
@@ -90,10 +90,10 @@ describe('FacturePDF', () => {
   }, 30_000)
 
   it('imprime une facture écrite à la main, avec ses mentions à elle', async () => {
-    const texte = texteDuPdf(await rendre('facture', 'F-2026-0004'))
+    const texte = texteDuPdf(await rendre('facture', 'F-00015'))
 
     expect(texte).toContain('Facture')
-    expect(texte).toContain('F-2026-0004')
+    expect(texte).toContain('F-00015')
     expect(texte).not.toContain('Bon pour accord')
     expect(texte).not.toContain('Valable jusqu')
   }, 30_000)
@@ -101,7 +101,7 @@ describe('FacturePDF', () => {
   it('nomme la remise « Remise », pas « Remise créneau optimisé »', async () => {
     // Le créneau optimisé n'existe que sur une réservation : ce libellé-là sur un devis
     // écrit à la main parlerait au client d'une mécanique qu'il n'a jamais vue.
-    const texte = texteDuPdf(await rendre('devis', 'D-2026-0003'))
+    const texte = texteDuPdf(await rendre('devis', 'D-00003'))
     expect(texte).toContain('Remise')
     expect(texte).not.toContain('optimis')
   }, 30_000)
@@ -115,7 +115,7 @@ describe('FacturePDF', () => {
       // Le contenu d'une facture de rendez-vous ne porte pas de `genre` : c'est le cas de
       // toutes celles déjà émises en base, elles doivent continuer à s'afficher comme avant.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      createElement(FacturePDF, { numero: 'F-2026-0001', emiseLe: '2026-09-20T15:00:00.000Z', contenu: { ...contenu, genre: undefined } }) as any,
+      createElement(FacturePDF, { numero: 'F-00014', emiseLe: '2026-09-20T15:00:00.000Z', contenu: { ...contenu, genre: undefined } }) as any,
     )
     const texte = texteDuPdf(buffer)
 
