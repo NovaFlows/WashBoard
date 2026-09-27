@@ -79,16 +79,21 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
 
 // Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
 // PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans l'Essentiel ce qui est Pro.
+// Ordre demandé par Ryan le 2026-09-27 : la facturation remonte près du haut
+// de la grille (déjà mise en avant dans l'encart phare juste au-dessus, elle
+// mérite aussi sa place ici) ; les créneaux intelligents, eux, redescendent
+// après les statistiques puisqu'ils ont désormais leur propre section dédiée
+// plus bas sur la page ; déplacement et appli/notifications sont intervertis.
 const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
   { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
-  { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.' },
-  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
-  { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
-  { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
-  { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
-  { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
   { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue) émise à chaque prestation terminée, envoyée par email à tes clients pros et accessible aux particuliers depuis leur confirmation. Import de tes anciennes factures. Tu factures des entreprises ? La facturation électronique deviendra obligatoire pour toi le 1ᵉʳ septembre 2027 — on suit le sujet de près et on te tiendra informé bien avant.' },
+  { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
+  { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
+  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
+  { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
+  { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.' },
+  { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
   { titre: 'Avis Google automatiques', desc: 'Une demande d’avis par email après chaque prestation terminée. Par SMS en formule Pro (150 par mois).' },
   { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', pro: true },
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
