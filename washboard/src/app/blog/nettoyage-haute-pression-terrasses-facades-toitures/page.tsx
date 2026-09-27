@@ -208,8 +208,8 @@ export default function Page() {
           Les photos avant, pendant et après, prises systématiquement, sont votre protection en cas
           de litige et votre publicité entière. Votre RC pro doit couvrir les biens confiés et
           les dommages aux tiers, avec un plafond cohérent avec une façade ou une toiture — les
-          points à vérifier sont détaillés dans{' '}
-          <A href="/blog/assurance-laveur-auto-mobile">notre article sur l&apos;assurance</A>.
+          points à vérifier, propres au travail en hauteur et sous pression, sont détaillés dans{' '}
+          <A href="/blog/assurance-nettoyage-haute-pression">notre article sur l&apos;assurance</A>.
         </P>
 
         <H2>5. La saison et la tournée</H2>
@@ -273,10 +273,10 @@ export default function Page() {
 
         <AlsoRead
           items={[
+            { href: '/blog/assurance-nettoyage-haute-pression', label: 'Quelle assurance pour le nettoyage haute pression : terrasses, façades, toitures' },
             { href: '/blog/entretien-piscine-domicile-lancer-activite', label: 'Entretien de piscines à domicile : lancer une activité qui tourne toute l’année' },
             { href: '/blog/devenir-laveur-de-vitres-independant', label: 'Devenir laveur de vitres indépendant : tarifs, matériel, clients' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
-            { href: '/blog/assurance-laveur-auto-mobile', label: 'Quelle assurance pour un laveur auto mobile' },
           ]}
         />
       </article>
