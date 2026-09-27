@@ -422,11 +422,35 @@ donc tronqué) et dans le balisage.
       domicile | WashBoard » (580 px) ; balisage FAQPage + WebSite ; cible et
       six métiers dans le premier écran ; « tout-en-un » dans un titre ; les
       créneaux groupés érigés en différenciateur.
-- [ ] **P1 — en cours.** `/logiciel-lavage-auto` est construite et sert de
-      gabarit (`MetierPageTemplate.tsx`, `lib/metiers.ts`). **Restent cinq
-      métiers** : vitres, textiles/canapés, ménage, piscines, et le choix de
-      traiter ou non `exterieur` (terrasses/façades) qui a des articles mais
-      aucune carte sur la landing.
+- [ ] **P1 — 2,5 points sur 5** (état au 2026-09-27). Le cahier en liste cinq :
+      pages métiers, page « logiciel services à domicile », FAQ plus
+      sémantique, données structurées, maillage interne.
+  - [x] **Données structurées** : faites en P0 (Organization, SoftwareApplication,
+        AggregateOffer, WebSite, FAQPage, BreadcrumbList).
+  - [x] **Page catégorie `/logiciel-services-a-domicile`** : publiée. C'est le
+        **hub de maillage** — elle pointe vers les pages métier existantes, et
+        une carte devient un lien toute seule le jour où sa page sort
+        (`metierPageForTheme`). Elle vise volontairement un champ **plus large**
+        que l'accueil (« prestataires / prestations / interventions à
+        domicile ») pour ne pas entrer en concurrence avec lui : deux pages du
+        même site sur la même requête, Google en choisit une et les deux en
+        ressortent affaiblies. `<title>` mesuré à 546 px.
+  - [ ] **Pages métiers : 2 sur 7.** Faites : `/logiciel-lavage-auto` (gabarit
+        de référence), `/logiciel-nettoyage-canape`. Possibles ensuite :
+        **vitres** et **terrasses/façades** (prestation ponctuelle). **Ménage et
+        piscines sont bloqués par le produit**, pas par le SEO — voir l'entrée
+        « rendez-vous récurrent » dans 🟡 Roadmap produit.
+  - [ ] **Maillage interne : à moitié.** landing → page métier ✅, page métier →
+        articles ✅, page catégorie → pages métier ✅. **Manque : article → page
+        métier — aucun des 14 articles ne pointe vers une page métier.** Une
+        page qui ne reçoit aucun lien interne est une impasse pour le robot.
+  - [ ] **FAQ plus sémantique** : la FAQ est centralisée (`lib/faq.ts`, source
+        unique affichage + JSON-LD) et balisée, mais trois questions du cahier
+        manquent encore sur l'accueil : activité multiservices / plusieurs
+        catégories, facturation des déplacements, usage sur téléphone.
+  - Reste aussi, hors cahier : la carte **« Terrasses, façades & toitures »**
+    absente de « Pour quels métiers ? » (6 cartes au lieu de 7) alors que le
+    thème `exterieur` a déjà deux articles.
   - Se recopie sans effort : le gabarit, le maillage vers les articles du même
     thème, l'ajout au sitemap, le lien depuis la section « Pour quels métiers ».
   - **S'écrit à la main pour chaque métier** : les trois contraintes réelles du
@@ -451,7 +475,7 @@ donc tronqué) et dans le balisage.
 
 **Le sitemap n'est pas un levier de classement**, seulement une liste de
 découverte. Ce qui compte est le nombre de questions différentes auxquelles le
-site répond : 16 adresses au départ, 20 aujourd'hui. Les fausses dates
+site répond : 16 adresses au départ, 23 aujourd'hui. Les fausses dates
 `lastModified` (recalculées à chaque requête sur trois URLs) ont été retirées.
 
 **L'annuaire : tranché, ne pas rouvrir sans nouvel élément.** CarnetWash a 112
@@ -1325,6 +1349,17 @@ rien à faire, mais que le projet reste globalement sain.
       équipe / un testeur, ou des migrations risquées. Inutile avant.
 
 ## 🟢 Polish / UX
+
+- [ ] **Le rayon des créneaux groupés : l'interface s'arrête à 30 min, l'API en
+      accepte 60.** `IdentiteForm.tsx` affiche un curseur `min=5 max=30 step=5`,
+      alors que `api/washer/route.ts` borne la valeur à `[5, 60]`. Un laveur ne
+      peut donc pas régler au-delà de 30 depuis l'application. Ça a fait mentir
+      trois pages publiques, qui annonçaient « réglable de 5 à 60 » : elles
+      disent maintenant « de 5 à 30 » (`logiciel-services-a-domicile`,
+      `logiciel-lavage-auto`, `logiciel-nettoyage-canape`). **Si le curseur est
+      un jour remonté à 60, ces trois pages sont à remettre à jour en même
+      temps** ; s'il est volontaire, c'est l'API qu'il faut resserrer pour que
+      les deux bornes disent la même chose. Relevé le 2026-09-27.
 
 - [ ] **Les boutons + et − de la réservation disent « véhicule » à un lecteur
       d'écran, quel que soit le métier.** `StepService.tsx` : `aria-label`
