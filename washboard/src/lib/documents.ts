@@ -256,14 +256,16 @@ export const nomFichierDocument = (d: { genre: string; numero: string | null }) 
 
 // ── WhatsApp ───────────────────────────────────────────────────────────────
 
-/** Le message qui part sur WhatsApp avec le lien du document.
+/** Le message qui accompagne le document sur WhatsApp.
  *
  *  C'est le canal réel des laveurs : leurs clients répondent sur WhatsApp, pas par email.
- *  Le PDF n'est pas joint mais lié — `wa.me` ne sait pas joindre un fichier, et le lien sert
- *  toujours la dernière version. */
+ *  `lienPdf` est `null` quand le fichier PART AVEC le message (partage natif) : le lien
+ *  n'aurait alors rien à faire là, le client a le PDF sous les yeux (Alexandre, 2026-09-27).
+ *  Il n'est fourni que pour le repli `wa.me`, qui ne transporte que du texte — sans lien, le
+ *  client recevrait un message sans son devis. */
 export function messageWhatsapp(
   d: Pick<Document, 'genre' | 'numero' | 'contenu'>,
-  lienPdf: string,
+  lienPdf: string | null,
   nomLaveur: string,
 ): string {
   const devis = d.genre === 'devis'
@@ -279,7 +281,8 @@ export function messageWhatsapp(
     const [a, m, j] = d.contenu.valableJusquau.split('-')
     lignes.push(`Ce prix reste valable jusqu'au ${j}/${m}/${a}.`)
   }
-  lignes.push('', lienPdf, '', nomLaveur)
+  if (lienPdf) lignes.push('', lienPdf)
+  lignes.push('', nomLaveur)
   return lignes.join('\n')
 }
 

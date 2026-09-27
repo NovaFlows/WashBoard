@@ -290,19 +290,29 @@ describe('messageWhatsapp', () => {
     contenu: construireDocument(genre === 'devis' ? devis() : saisie(), vendeur),
   })
 
-  it('annonce le devis, son montant, sa validité et porte le lien', () => {
-    const texte = messageWhatsapp(document('devis', 'D-00003'), 'https://washboard.fr/api/documents/x/pdf', 'AutoNettoyage')
+  it('annonce le devis, son montant et sa validité', () => {
+    const texte = messageWhatsapp(document('devis', 'D-00003'), null, 'AutoNettoyage')
 
     expect(texte).toContain('Bonjour Marie Martin,')
     expect(texte).toContain('devis n° D-00003')
     expect(texte).toContain('120,00 €')
     expect(texte).toContain('valable jusqu’au 27/10/2026'.replace('’', "'"))
-    expect(texte).toContain('https://washboard.fr/api/documents/x/pdf')
     expect(texte.endsWith('AutoNettoyage')).toBe(true)
   })
 
+  it('aucune URL quand le PDF part avec le message : le client l’a sous les yeux', () => {
+    const texte = messageWhatsapp(document('devis', 'D-00003'), null, 'AutoNettoyage')
+    expect(texte).not.toMatch(/https?:\/\//)
+  })
+
+  it('l’URL n’apparaît que pour le repli wa.me, qui ne transporte que du texte', () => {
+    // Sans elle, le client recevrait un message sans son devis.
+    const texte = messageWhatsapp(document('devis', 'D-00003'), 'https://washboard.fr/x/pdf', 'AutoNettoyage')
+    expect(texte).toContain('https://washboard.fr/x/pdf')
+  })
+
   it('une facture ne parle pas de validité : rien n’expire, c’est dû', () => {
-    const texte = messageWhatsapp(document('facture', 'F-00015'), 'https://washboard.fr/x', 'AutoNettoyage')
+    const texte = messageWhatsapp(document('facture', 'F-00015'), null, 'AutoNettoyage')
     expect(texte).toContain('facture n° F-00015')
     expect(texte).not.toMatch(/valable/)
   })

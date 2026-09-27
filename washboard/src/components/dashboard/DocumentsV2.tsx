@@ -85,20 +85,20 @@ function FeuilleActions({
             type="button"
             onClick={async () => {
               const lien = `${window.location.origin}/api/documents/${d.id}/pdf`
-              const texte = messageWhatsapp(d, lien, nomLaveur)
               // D'abord le partage natif : il envoie le VRAI fichier, que le laveur dépose
               // dans WhatsApp, Messages ou Mail depuis la feuille de partage de son
-              // téléphone. À défaut (ordinateur, navigateur trop ancien), le lien wa.me,
-              // qui ne sait transporter qu'un message.
+              // téléphone. Le message n'y porte PAS de lien : le client a le PDF avec.
               const partage = await partagerPdf(
                 lien,
                 nomFichierDocument({ genre: d.genre, numero: d.numero ?? '' }),
-                texte,
+                messageWhatsapp(d, null, nomLaveur),
                 `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim(),
               )
               if (partage) return
+              // Repli (ordinateur, navigateur trop ancien) : `wa.me` ne transporte qu'un
+              // message, le lien y est donc indispensable — sinon le client n'a rien.
               window.open(
-                `https://wa.me/${whatsappDigits(d.contenu.client.telephone!)}?text=${encodeURIComponent(texte)}`,
+                `https://wa.me/${whatsappDigits(d.contenu.client.telephone!)}?text=${encodeURIComponent(messageWhatsapp(d, lien, nomLaveur))}`,
                 '_blank', 'noopener',
               )
             }}
