@@ -24,8 +24,15 @@ import type { Theme } from '@/lib/blog'
 // le title, lui, en avait — un décalage qui affaiblit le signal envoyé aux
 // moteurs. Garder ce premier slogan porteur de mots-clés (nettoyage,
 // detailing, auto, à domicile) si l'ordre change à nouveau.
+//
+// « Court » n'est pas cosmétique : une première version à 59 caractères
+// ("L'indispensable du nettoyage et detailing auto à domicile.") passait sur
+// 4 lignes en desktop et chevauchait le paragraphe du dessous — le conteneur
+// a une hauteur FIXE (h-[4em] / h-[3em] plus bas), calibrée sur les trois
+// slogans d'origine (23 à 48 caractères). Rester sous ~48 caractères, la
+// longueur du plus long des trois, garde le rendu dans les clous.
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
-  { pre: "L'indispensable du nettoyage et ", hl: 'detailing auto à domicile.', post: '' },
+  { pre: 'Nettoyage, detailing auto. ', hl: 'À domicile.', post: '' },
   { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
   { pre: 'Réservation, planning, factures. ', hl: 'Un seul outil.', post: '' },
