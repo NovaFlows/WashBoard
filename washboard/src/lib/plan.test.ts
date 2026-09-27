@@ -7,7 +7,7 @@ import {
   TEAM_SIZE_INCLUS, PLAN_ESSAI, PLAN_HISTORIQUE,
   RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, COMPTES_TEST_RETOUR_GRATUIT,
   suitRetourGratuit, essaiTermineSansFormule,
-  planEffectif, doitChoisirFormule,
+  planEffectif, doitChoisirFormule, offreQuiCouvre,
   type Plan, type Feature,
 } from './plan'
 
@@ -732,5 +732,55 @@ describe('simulation d’offre en local', () => {
     expect(doitChoisirFormule(PRO_PAYANT)).toBe(false)
     expect(hasFeature(HISTORIQUE, 'compta')).toBe(true)
     expect(quotaReservations(PRO_PAYANT)).toBeNull()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quelle offre proposer à un laveur dont des clients sont cachés. Proposer
+// trop cher fait fuir ; proposer trop petit promet un déblocage qui n'aura pas
+// lieu. Les deux erreurs coûtent un client, pas la même façon.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('offreQuiCouvre', () => {
+  it('propose la MOINS CHÈRE qui couvre le volume du mois', () => {
+    // Sept réservations sur Découverte (5) : le Starter (15) suffit. Lui
+    // vendre le Pro à 49 € pour deux clients cachés, c'est le perdre.
+    expect(offreQuiCouvre('decouverte', 7)).toBe('starter')
+    expect(offreQuiCouvre('decouverte', 15)).toBe('starter')
+  })
+
+  it('monte dès que le volume dépasse le palier intermédiaire', () => {
+    expect(offreQuiCouvre('decouverte', 16)).toBe('pro')
+    expect(offreQuiCouvre('decouverte', 120)).toBe('pro')
+  })
+
+  it('ne propose jamais une offre inférieure ou égale à l’actuelle', () => {
+    // Un laveur au Starter qui déborde n'a rien à faire du Starter.
+    expect(offreQuiCouvre('starter', 7)).toBe('pro')
+    expect(offreQuiCouvre('starter', 40)).toBe('pro')
+  })
+
+  it('renvoie l’offre actuelle quand il n’y a rien au-dessus', () => {
+    // Business : l'écran ne s'affiche pas, rien à vendre.
+    expect(offreQuiCouvre('business', 500)).toBe('business')
+  })
+
+  it('propose l’offre sans plafond quand le volume est inconnu', () => {
+    // Un comptage raté ne doit pas faire promettre un déblocage impossible :
+    // seule l'offre sans plafond tient la promesse à coup sûr.
+    expect(offreQuiCouvre('decouverte', null)).toBe('pro')
+    expect(offreQuiCouvre('starter', null)).toBe('pro')
+  })
+
+  it('l’offre proposée couvre vraiment le volume annoncé', () => {
+    // Le contrat que le bouton signe : après le changement, plus rien n'est
+    // caché. Vérifié sur toute la plage, pas sur trois cas choisis.
+    for (const actuel of ['decouverte', 'starter'] as Plan[]) {
+      for (let volume = 1; volume <= 60; volume++) {
+        const proposee = offreQuiCouvre(actuel, volume)
+        const plafond = BOOKING_QUOTA[proposee]
+        if (plafond !== null) expect(plafond).toBeGreaterThanOrEqual(volume)
+      }
+    }
   })
 })

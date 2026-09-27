@@ -125,3 +125,28 @@ export async function seuilVerrouillage(
   if (error || !data?.length) return null
   return data[0].created_at as string
 }
+
+/** Combien de réservations ce mois-ci, plafond compris.
+ *
+ *  Sert à choisir l'offre à proposer : c'est ce volume-là qu'elle doit couvrir.
+ *  Le compte porte sur les mêmes lignes que `seuilVerrouillage` — même mois,
+ *  mêmes annulations écartées — sinon les deux se contrediraient.
+ *
+ *  `null` en cas d'erreur, et jamais zéro : un zéro inventé ferait proposer la
+ *  plus petite offre à quelqu'un qui en déborde. */
+export async function compterReservationsDuMois(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  washerId: string,
+  now: Date = new Date(),
+): Promise<number | null> {
+  const { count, error } = await supabase
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('washer_id', washerId)
+    .neq('status', 'cancelled')
+    .gte('created_at', debutDuMoisParis(now).toISOString())
+
+  if (error || count === null || count === undefined) return null
+  return count
+}

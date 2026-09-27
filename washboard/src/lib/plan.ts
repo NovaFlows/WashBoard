@@ -442,6 +442,35 @@ export function quotaReservations(w: AbonnementInfo | null | undefined): number 
   return BOOKING_QUOTA[planEffectif(w)]
 }
 
+/** La MOINS CHÈRE des offres supérieures qui couvre le volume du mois.
+ *
+ *  Un laveur à sept réservations sur une offre plafonnée à cinq n'a pas besoin
+ *  du Pro : le Starter, à dix euros de moins, lui rend déjà ses deux clients
+ *  cachés. Proposer systématiquement l'offre sans plafond fait passer l'écran
+ *  pour ce qu'il ne doit pas être — une caisse enregistreuse. On propose ce
+ *  qu'il lui faut ; s'il lui en faut plus, il montera plus tard, et il le fera
+ *  de meilleure grâce.
+ *
+ *  Le plafond doit couvrir CE QUI EST DÉJÀ ARRIVÉ (`quota >= volume`), parce
+ *  que le bouton promet de débloquer ces clients-là. Sans certitude sur le
+ *  volume, on renvoie l'offre sans plafond : mieux vaut proposer trop que
+ *  promettre un déblocage qui n'aurait pas lieu.
+ *
+ *  Renvoie l'offre actuelle quand il n'y a rien au-dessus. */
+export function offreQuiCouvre(actuel: Plan, reservationsCeMois: number | null): Plan {
+  const superieures = PLANS.filter(p => RANK[p] > RANK[actuel])
+  if (superieures.length === 0) return actuel
+
+  const sansPlafond = superieures.find(p => BOOKING_QUOTA[p] === null)
+  if (reservationsCeMois === null) return sansPlafond ?? superieures[superieures.length - 1]
+
+  const couvre = superieures.find(p => {
+    const q = BOOKING_QUOTA[p]
+    return q === null || q >= reservationsCeMois
+  })
+  return couvre ?? superieures[superieures.length - 1]
+}
+
 /** Prestations autorisées au catalogue, `null` si illimité. */
 export function quotaPrestations(w: AbonnementInfo | null | undefined): number | null {
   if (w?.grandfathered && !simulationActive()) return null

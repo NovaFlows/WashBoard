@@ -6,9 +6,9 @@ import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { quotaReservations, planEffectif } from '@/lib/plan'
+import { quotaReservations, planEffectif, offreQuiCouvre } from '@/lib/plan'
 import { CarteBloquees } from '@/components/dashboard/ReservationsBloquees'
-import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
+import { seuilVerrouillage, masquerVerrouillees, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -42,6 +42,12 @@ export default async function ClientsPage() {
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
   // au-dessus, avec le nom flouté et le jour.
   const seuil = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
+  // L'offre proposée dépend du VOLUME du mois, pas du fait d'être bloqué : à
+  // sept réservations sur une offre plafonnée à cinq, le Starter suffit et
+  // coûte trente euros de moins que le Pro. Le comptage n'a lieu que s'il y a
+  // quelque chose à débloquer.
+  const volumeDuMois = seuil === null ? null : await compterReservationsDuMois(supabase, washer.id)
+  const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
   const marquees = masquerVerrouillees(bookings, seuil)
   const visibles = marquees.filter(b => !b.verrouillee)
   const bloquees = marquees
@@ -60,7 +66,7 @@ export default async function ClientsPage() {
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <div className="max-w-3xl mx-auto space-y-4">
-        <CarteBloquees bloquees={bloquees} offre={planEffectif(washer)} />
+        <CarteBloquees bloquees={bloquees} offre={planEffectif(washer)} proposee={offreProposee} />
       </div>
       <ClientsView bookings={lignes} />
     </DashboardShell>

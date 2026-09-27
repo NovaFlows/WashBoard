@@ -5,12 +5,6 @@ import { jourSeul } from '@/lib/reservationsVerrouillees'
 const BLEU = '#1651E8'
 const SURTITRE = 'text-[11px] font-black uppercase tracking-[0.22em]'
 
-/** Première offre qui lève le plafond de réservations. Calculée plutôt
- *  qu'écrite en dur : déplacer les réservations illimitées d'un palier à
- *  l'autre ne doit pas laisser ces écrans proposer la mauvaise offre. */
-const OFFRES: Plan[] = ['decouverte', 'starter', 'pro', 'business']
-const OFFRE_ILLIMITEE = OFFRES.find(p => BOOKING_QUOTA[p] === null) ?? 'pro'
-
 export type Bloquee = {
   id: string
   client_name: string | null
@@ -78,11 +72,19 @@ export function BandeauBloquees({ nombre, offre }: { nombre: number; offre: Plan
  *  Le compte seul reste abstrait. Voir trois lignes, trois formes de noms,
  *  trois dates — c'est ce qui transforme « j'ai raté des clients » en « j'ai
  *  raté CES clients-là ». */
-export function CarteBloquees({ bloquees, offre }: { bloquees: Bloquee[]; offre: Plan }) {
-  if (bloquees.length === 0) return null
+export function CarteBloquees({ bloquees, offre, proposee }: {
+  bloquees: Bloquee[]
+  offre: Plan
+  /** L'offre à proposer. Calculée par `offreQuiCouvre` au niveau de la page :
+   *  la moins chère qui couvre le volume du mois, pas forcément la plus grosse.
+   *  Un laveur à sept réservations se voit proposer le Starter, pas le Pro. */
+  proposee: Plan
+}) {
+  if (bloquees.length === 0 || proposee === offre) return null
 
-  const nom = PLAN_LABELS[OFFRE_ILLIMITEE]
-  const prix = PLAN_PRICES[OFFRE_ILLIMITEE]
+  const nom = PLAN_LABELS[proposee]
+  const prix = PLAN_PRICES[proposee]
+  const plafondPropose = BOOKING_QUOTA[proposee]
 
   // Quatre lignes, pas trente. Une liste qui descend sans fin cesse d'être une
   // occasion manquée pour devenir un mur : on arrête de la lire, et le bouton
@@ -139,9 +141,14 @@ export function CarteBloquees({ bloquees, offre }: { bloquees: Bloquee[]; offre:
           Voir {bloquees.length > 1 ? 'ces clients' : 'ce client'} — offre {nom} à {prix}€/mois
         </Link>
         {/* Dit ici plutôt que découvert après coup : personne ne paie pour
-            quelque chose dont il ignore l'étendue. */}
+            quelque chose dont il ignore l'étendue. Une offre qui a encore un
+            plafond annonce lequel — sinon le laveur croirait avoir acheté
+            l'illimité et se retrouverait bloqué une deuxième fois, cette
+            fois-ci après avoir payé. */}
         <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-2">
-          Débloque aussi toutes les réservations à venir.
+          {plafondPropose === null
+            ? 'Débloque aussi toutes les réservations à venir.'
+            : `Jusqu’à ${plafondPropose} réservations par mois.`}
         </p>
       </div>
     </div>
