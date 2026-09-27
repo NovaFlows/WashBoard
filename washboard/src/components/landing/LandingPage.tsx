@@ -134,10 +134,26 @@ const ETAPES_CRENEAUX = [
   { titre: 'Les créneaux proches ressortent', desc: 'Les horaires sous ton seuil (5 à 30 minutes) sont mis en avant au client, avec ta remise si tu en as réglé une.' },
 ]
 
-// Les 6 étapes que couvre le même outil, du premier clic du client à son
-// retour. Sert à rendre visible la catégorie « tout-en-un » du produit
-// (cahier des charges P0) sans dupliquer la section Fonctionnalités.
-const FLUX_TOUT_EN_UN = ['Réservation', 'Planning', 'Intervention', 'Client', 'Suivi', 'Fidélisation']
+// Développé le 2026-09-27 (Ryan : « c'est vraiment le cœur du truc, le
+// tout-en-un »), puis refait le même jour : la première version listait ce
+// que fait chaque étape (Réservation, Client, Fidélisation...) — mais c'est
+// exactement ce que disent déjà l'encart Facturation juste en dessous et la
+// grille « Et tout le reste » plus bas (Ryan : « une répétition de ce qu'il
+// y a juste en dessous »). Le vrai argument tout-en-un n'est pas la liste des
+// fonctionnalités, déjà faite ailleurs — c'est qu'une seule donnée traverse
+// toutes les étapes sans ressaisie. Ce parcours le montre avec UN exemple fil
+// rouge (même cliente, même prix, du premier clic à la relance) plutôt qu'un
+// inventaire. Prix et compteur de visites sont illustratifs, comme le mockup
+// déjà utilisé plus bas pour les créneaux groupés — pas des chiffres
+// commerciaux (voir lib/plan.ts pour ceux-là).
+const PARCOURS_TOUT_EN_UN = [
+  'Mardi 14h : Sophie B. réserve un lavage complet sur ta page — 45€, elle choisit elle-même son créneau.',
+  'Le rendez-vous tombe directement dans ton agenda du mardi, sans que tu aies rien à recopier.',
+  'Tu interviens chez elle à l’heure prévue : l’adresse et la prestation viennent de sa réservation, rien à ressaisir.',
+  'Sa fiche client s’actualise toute seule : c’est sa 3ᵉ visite, 135€ dépensés chez toi au total.',
+  'Tu marques le rendez-vous « Terminé » : la facture des 45€ part directement, une demande d’avis Google suit.',
+  'Si elle ne revient pas d’ici 3 mois, une relance repart vers elle sans que tu aies à t’en souvenir (Pro).',
+]
 
 // Métiers de la section « Pour qui ? ». WashBoard n'en impose aucun : le
 // laveur crée ses catégories et prestations, la liste sert d'exemples.
@@ -742,17 +758,20 @@ export default function LandingPage() {
             se met à jour, WashBoard s&apos;occupe du suivi puis de le faire revenir — un seul outil du
             premier clic à la fidélisation, jamais un logiciel différent à chaque étape.
           </p>
-          <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-3">
-            {FLUX_TOUT_EN_UN.map((etape, i) => (
-              <div key={etape} className="flex items-center gap-2">
-                <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
-                  {etape}
-                </span>
-                {i < FLUX_TOUT_EN_UN.length - 1 && (
-                  <svg aria-hidden className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                )}
+          {/* Une frise, pas une grille : la grille est déjà prise par
+              FONCTIONNALITES plus bas, et une deuxième grille aurait
+              renforcé l'impression de répétition plutôt que de la corriger. */}
+          <p className="mt-10 text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-6">Exemple, du premier clic à la relance</p>
+          <div className="max-w-2xl space-y-0">
+            {PARCOURS_TOUT_EN_UN.map((etape, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="flex flex-col items-center shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] mt-2" />
+                  {i < PARCOURS_TOUT_EN_UN.length - 1 && (
+                    <span className="w-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                  )}
+                </div>
+                <p className="pb-6 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{etape}</p>
               </div>
             ))}
           </div>
