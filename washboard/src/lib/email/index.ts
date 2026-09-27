@@ -456,10 +456,10 @@ export async function sendFacture(params: SendFactureParams) {
 
 // ── Email 6 : devis ou facture écrits à la main ───────────────────────────
 //
-// Envoyé à la demande du laveur, depuis l'écran « Devis et factures ». Le document n'est pas
-// joint mais lié : le lien public (l'identifiant du document fait jeton) sert toujours la
-// dernière version, et un PDF en pièce jointe fait tomber le message dans les indésirables
-// chez une partie des messageries.
+// Envoyé à la demande du laveur, depuis l'écran « Devis et factures ». Le PDF part en PIÈCE
+// JOINTE (demande d'Alexandre, 2026-09-27 : un client veut recevoir le document, pas un lien
+// à aller chercher), ET le lien reste dans le message : la pièce jointe se perd dans un fil
+// de discussion, le lien sert toujours la dernière version.
 type SendDocumentParams = {
   to: string
   clientName: string
@@ -473,6 +473,8 @@ type SendDocumentParams = {
   montantTtc: number
   /** Devis : jusqu'à quand le prix tient, déjà mis en forme (« 27 octobre 2026 »). */
   valableJusquau?: string | null
+  /** Le PDF lui-même, joint au message. */
+  piece?: { nom: string; contenu: Buffer } | null
   appUrl?: string
 }
 
@@ -489,6 +491,7 @@ export async function sendDocument(params: SendDocumentParams) {
     to: params.to,
     ...(params.washerEmail ? { replyTo: params.washerEmail } : {}),
     subject: `${titre} ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
+    ...(params.piece ? { attachments: [{ filename: params.piece.nom, content: params.piece.contenu }] } : {}),
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -509,9 +512,10 @@ export async function sendDocument(params: SendDocumentParams) {
       ${devis && params.valableJusquau
         ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.6;background:#f8fafc;border-left:3px solid #1651E8;padding:10px 14px;">Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.</p>`
         : ''}
+      <p style="margin:0 0 16px;font-size:13px;color:#475569;">Le PDF est joint à ce message.</p>
       <a href="${escapeHtml(url)}"
          style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
-        Télécharger ${devis ? 'le devis' : 'la facture'} (PDF)
+        Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne
       </a>
     </div>
     <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">

@@ -5,6 +5,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Feuille, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
+import AdresseV2 from '@/components/dashboard/AdresseV2'
 import { montantNombre } from '@/lib/depenses'
 import {
   dateDansNJours, ligneVide, saisieNeuve, totalDocument, validerDocument,
@@ -227,14 +228,16 @@ export default function FeuilleDocumentV2({
             Le téléphone sert à envoyer le document sur WhatsApp, l’email à l’envoyer d’ici.
             Sans l’un ni l’autre, il reste téléchargeable.
           </p>
-          <input
-            type="text"
-            value={saisie.clientAdresse}
-            onChange={e => modifier({ clientAdresse: e.target.value })}
-            placeholder="3 allée des Roses, 95000 Cergy"
-            aria-label="Adresse du client"
-            className={`${CHAMP} mt-2`}
-          />
+          {/* Même champ d'adresse que le reste de la PWA (`AdresseV2`) : suggestions Google
+              en ligne, sous le champ, pour ne pas être rognées par la feuille qui défile. */}
+          <div className="mt-2">
+            <AdresseV2
+              id="document-adresse-client"
+              valeur={saisie.clientAdresse}
+              onChange={v => modifier({ clientAdresse: v })}
+              placeholder="Adresse du client"
+            />
+          </div>
           <button
             type="button"
             aria-pressed={saisie.professionnel}
@@ -337,14 +340,14 @@ export default function FeuilleDocumentV2({
               className={CHAMP}
             />
           </label>
-          <input
-            type="text"
-            value={saisie.lieu}
-            onChange={e => modifier({ lieu: e.target.value })}
-            placeholder="Lieu (facultatif)"
-            aria-label="Lieu de la prestation"
-            className={`${CHAMP} mt-2`}
-          />
+          <div className="mt-2">
+            <AdresseV2
+              id="document-lieu"
+              valeur={saisie.lieu}
+              onChange={v => modifier({ lieu: v })}
+              placeholder="Lieu de la prestation (facultatif)"
+            />
+          </div>
         </Bloc>
 
         {devis && (

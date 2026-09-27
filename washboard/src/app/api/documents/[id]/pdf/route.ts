@@ -1,9 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { renderToBuffer } from '@react-pdf/renderer'
-import { createElement } from 'react'
-import FacturePDF from '@/components/pdf/FacturePDF'
+import { nomFichierDocument, rendreDocumentPdf } from '@/lib/pdfDocument'
 import type { FactureContenu } from '@/lib/facture'
-import { logoPourPdf } from '@/lib/logoFacture'
 import { logger } from '@/lib/logger'
 
 // Le PDF d'un devis ou d'une facture écrits à la main. Même gabarit que les factures de
@@ -23,21 +20,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (error) logger.error('documents.pdf.read_failed', { documentId: id }, error)
   if (!document?.numero) return new Response('Not found', { status: 404 })
 
-  const contenu = document.contenu as FactureContenu
-  const buffer = await renderToBuffer(createElement(FacturePDF, {
+  const rendable = {
+    genre: document.genre as string,
     numero: document.numero as string,
-    emiseLe: document.emis_le as string,
-    contenu,
-    logo: await logoPourPdf(contenu.vendeur.logoUrl),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any)
-
-  const nomFichier = `${document.genre === 'devis' ? 'devis' : 'facture'}-${document.numero}.pdf`
+    emis_le: document.emis_le as string,
+    contenu: document.contenu as FactureContenu,
+  }
+  const buffer = await rendreDocumentPdf(rendable)
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${nomFichier}"`,
+      'Content-Disposition': `attachment; filename="${nomFichierDocument(rendable)}"`,
       'Cache-Control': 'no-store',
       // Même raison que pour les factures de réservation : le lien est public, et un client
       // qui le colle quelque part rendrait sinon le document — SIRET, adresses, montants —

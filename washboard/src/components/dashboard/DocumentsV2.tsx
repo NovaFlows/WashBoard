@@ -7,8 +7,8 @@ import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
 import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
 import {
-  devisExpire, libelleGenre, libelleStatut, messageWhatsapp, tonStatut,
-  type Document, type GenreDocument,
+  devisExpire, libelleGenre, libelleStatut, messageWhatsapp, nomFichierDocument, partagerPdf,
+  tonStatut, type Document, type GenreDocument,
 } from '@/lib/documents'
 import { whatsappDigits } from '@/lib/phone'
 import {
@@ -83,9 +83,20 @@ function FeuilleActions({
         {d.contenu.client.telephone && (
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const lien = `${window.location.origin}/api/documents/${d.id}/pdf`
               const texte = messageWhatsapp(d, lien, nomLaveur)
+              // D'abord le partage natif : il envoie le VRAI fichier, que le laveur dépose
+              // dans WhatsApp, Messages ou Mail depuis la feuille de partage de son
+              // téléphone. À défaut (ordinateur, navigateur trop ancien), le lien wa.me,
+              // qui ne sait transporter qu'un message.
+              const partage = await partagerPdf(
+                lien,
+                nomFichierDocument({ genre: d.genre, numero: d.numero ?? '' }),
+                texte,
+                `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim(),
+              )
+              if (partage) return
               window.open(
                 `https://wa.me/${whatsappDigits(d.contenu.client.telephone!)}?text=${encodeURIComponent(texte)}`,
                 '_blank', 'noopener',
@@ -97,7 +108,7 @@ function FeuilleActions({
             <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.3 4.7 4.84-1.27A9.9 9.9 0 1 0 12.04 2m0 1.8a8.1 8.1 0 1 1-4.1 15.09l-.29-.17-2.87.75.77-2.8-.19-.3A8.1 8.1 0 0 1 12.04 3.8m-3.2 4c-.15 0-.4.06-.61.29-.21.23-.8.79-.8 1.92s.82 2.23.94 2.38c.11.15 1.6 2.55 3.94 3.47 1.95.77 2.35.62 2.77.58.42-.04 1.36-.55 1.55-1.09.19-.54.19-1 .14-1.1-.06-.09-.21-.15-.44-.27-.23-.11-1.36-.67-1.57-.75-.21-.08-.36-.11-.51.12-.15.23-.59.74-.72.9-.13.15-.26.17-.49.06-.23-.12-.97-.36-1.85-1.14-.68-.61-1.15-1.36-1.28-1.59-.13-.23-.01-.35.1-.47.1-.1.23-.27.34-.4.11-.14.15-.23.23-.38.08-.16.04-.29-.02-.4-.06-.12-.51-1.25-.71-1.71-.17-.41-.35-.41-.5-.42z" />
             </svg>
-            Envoyer sur WhatsApp
+            Envoyer le PDF (WhatsApp…)
           </button>
         )}
         <button type="button" onClick={onEnvoyer} disabled={occupe} className={secondaire} style={PRESSION}>

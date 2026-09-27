@@ -4,9 +4,14 @@ import { logger } from '@/lib/logger'
 import { sendDocument } from '@/lib/email'
 import { validerEnvoi } from '@/lib/documents'
 import type { FactureContenu } from '@/lib/facture'
+import { nomFichierDocument, rendreDocumentPdf } from '@/lib/pdfDocument'
 import { FUSEAU } from '@/lib/dateUtils'
 
 // Envoi du devis ou de la facture au client, par email, à la demande du laveur.
+//
+// Le PDF est JOINT au message (Alexandre, 2026-09-27) : un client veut recevoir son devis,
+// pas un lien à aller chercher. Le lien reste dans le corps — une pièce jointe se perd dans
+// un fil de discussion, le lien sert toujours la dernière version.
 //
 // Le statut ne passe à « envoyé » que si Resend a accepté le message : afficher « envoyé »
 // sur un envoi qui a échoué ferait attendre au laveur une réponse qui ne viendra jamais.
@@ -27,7 +32,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: document, error } = await supabase
     .from('documents')
-    .select('id, genre, statut, numero, contenu')
+    .select('id, genre, statut, numero, contenu, emis_le')
     .eq('id', id)
     .eq('washer_id', washer.id)
     .maybeSingle()
@@ -42,8 +47,25 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const refus = validerEnvoi(contenu)
   if (refus) return NextResponse.json({ error: refus }, { status: 400 })
 
+  const rendable = {
+    genre: document.genre as string,
+    numero: document.numero as string,
+    emis_le: document.emis_le as string,
+    contenu,
+  }
+
   try {
+    // Un PDF qui ne se rend pas ne doit pas empêcher l'envoi : le message part avec son lien,
+    // et le client a quand même son document.
+    let piece: { nom: string; contenu: Buffer } | null = null
+    try {
+      piece = { nom: nomFichierDocument(rendable), contenu: await rendreDocumentPdf(rendable) }
+    } catch (e) {
+      logger.error('documents.envoyer.pdf_failed', { documentId: id }, e)
+    }
+
     const { error: errEnvoi } = await sendDocument({
+      piece,
       to: contenu.client.email,
       clientName: contenu.client.entreprise || contenu.client.nom,
       washerName: washer.name,

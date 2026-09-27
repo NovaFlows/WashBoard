@@ -246,6 +246,14 @@ export function validerDocument(saisie: SaisieDocument, aujourdhui: string): str
   return null
 }
 
+/** Le nom sous lequel le client retrouvera le fichier dans ses téléchargements.
+ *
+ *  Ici, et non près du rendu du PDF : le navigateur en a besoin pour le partage natif, et
+ *  `lib/pdfDocument.ts` tire `sharp` (module natif, serveur uniquement) — l'y laisser faisait
+ *  échouer toute la compilation côté navigateur. */
+export const nomFichierDocument = (d: { genre: string; numero: string | null }) =>
+  `${d.genre === 'devis' ? 'devis' : 'facture'}-${d.numero ?? ''}.pdf`
+
 // ── WhatsApp ───────────────────────────────────────────────────────────────
 
 /** Le message qui part sur WhatsApp avec le lien du document.
@@ -273,6 +281,30 @@ export function messageWhatsapp(
   }
   lignes.push('', lienPdf, '', nomLaveur)
   return lignes.join('\n')
+}
+
+/** Le PDF lui-même, prêt à être partagé par l'appareil (WhatsApp, Messages, Mail…).
+ *
+ *  `wa.me` ne sait pas joindre de fichier : un lien seul obligeait le client à aller
+ *  chercher son devis (Alexandre, 2026-09-27). Le partage natif, lui, envoie le VRAI PDF —
+ *  c'est ce que fait l'iPhone quand on partage depuis une app. Rend `false` quand l'appareil
+ *  ne sait pas partager un fichier : l'appelant retombe alors sur le lien `wa.me`. */
+export async function partagerPdf(
+  lienPdf: string, nomFichier: string, texte: string, titre: string,
+): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.share || !navigator.canShare) return false
+  try {
+    const reponse = await fetch(lienPdf)
+    if (!reponse.ok) return false
+    const fichier = new File([await reponse.blob()], nomFichier, { type: 'application/pdf' })
+    if (!navigator.canShare({ files: [fichier] })) return false
+    await navigator.share({ files: [fichier], text: texte, title: titre })
+    return true
+  } catch (e) {
+    // Un partage annulé par l'utilisateur lève aussi : ce n'est pas un échec à rattraper
+    // en ouvrant WhatsApp derrière son dos.
+    return (e as Error)?.name === 'AbortError'
+  }
 }
 
 /** L'envoi par email demande une adresse ; le reste du document peut très bien vivre sans
