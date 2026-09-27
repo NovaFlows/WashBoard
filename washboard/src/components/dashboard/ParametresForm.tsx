@@ -482,16 +482,26 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             <>
               <div>
                 <label className={labelClass}>Expéditeur SMS</label>
+                {/* Le champ acceptait 20 caractères et l'envoi tronquait à 11 :
+                    « AutoNettoyage » partait en « AutoNettoya », un nom coupé que
+                    l'opérateur remplaçait par un autre, sans rien dire. On borne
+                    donc la saisie à ce qui est réellement envoyable. */}
                 <input
                   type="text"
                   value={smsSender}
-                  onChange={e => setSmsSender(e.target.value.slice(0, 20))}
-                  placeholder={washer.name.slice(0, 11)}
+                  onChange={e => setSmsSender(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 11))}
+                  placeholder={washer.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 11)}
                   className={inputClass}
-                  maxLength={20}
+                  maxLength={11}
                 />
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-                  Nom affiché sur le SMS du client. Max 11 caractères (ex. <strong>KookiClean</strong>) ou votre numéro de téléphone.
+                  Nom affiché sur le SMS du client. <strong>11 caractères maximum</strong>,
+                  lettres et chiffres uniquement — ni espace, ni accent, ni tiret
+                  (ex. <strong>KookiClean</strong>). C&apos;est une règle des opérateurs :
+                  un nom qui ne la respecte pas est remplacé à l&apos;arrivée.
+                  {smsSender.length >= 11 && (
+                    <> <span className="text-amber-600 dark:text-amber-400">Limite atteinte.</span></>
+                  )}
                 </p>
               </div>
 

@@ -269,6 +269,38 @@ describe('PATCH /api/washer — champs non modifiables', () => {
   })
 })
 
+describe('PATCH /api/washer — expéditeur SMS', () => {
+  // Cas réel du 2026-09-27 : « AutoNettoyage » (13 car.) était accepté, puis
+  // tronqué à l'envoi en « AutoNettoya ». L'opérateur remplaçait ce nom coupé
+  // par un autre, et le laveur ne comprenait pas pourquoi ses SMS ne portaient
+  // pas le nom affiché dans ses réglages.
+  it('refuse un nom trop long au lieu de le tronquer', async () => {
+    const { res, body } = await patch({ sms_sender: 'AutoNettoyage' })
+    expect(res.status).toBe(400)
+    expect(body.error).toContain('13 caractères')
+    expect(updates).toHaveLength(0)
+  })
+
+  it('refuse un espace, un tiret ou un accent', async () => {
+    for (const nom of ['Kooki Clean', 'Auto-Net', 'Propreté']) {
+      updates.length = 0
+      const { res } = await patch({ sms_sender: nom })
+      expect(res.status, nom).toBe(400)
+      expect(updates).toHaveLength(0)
+    }
+  })
+
+  it('accepte un nom conforme, et le vide', async () => {
+    const { res } = await patch({ sms_sender: 'KookiClean' })
+    expect(res.status).toBe(200)
+    expect(updates[0].sms_sender).toBe('KookiClean')
+
+    updates.length = 0
+    await patch({ sms_sender: '  ' })
+    expect(updates[0].sms_sender).toBeNull()
+  })
+})
+
 describe('PATCH /api/washer — horodatage de la modification du laveur', () => {
   it('pose profile_updated_at quand le laveur change quelque chose', async () => {
     const avant = Date.now()

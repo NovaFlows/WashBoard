@@ -157,7 +157,31 @@ export async function PATCH(request: NextRequest) {
   if (review_delay_hours !== undefined) updates.review_delay_hours = Math.min(168, Math.max(0, Math.floor(Number(review_delay_hours)) || 0))
   if (google_review_url !== undefined) updates.google_review_url = google_review_url?.trim() || null
   if (review_channel !== undefined && ['email', 'sms'].includes(review_channel)) updates.review_channel = review_channel
-  if (sms_sender !== undefined) updates.sms_sender = sms_sender?.trim().slice(0, 20) || null
+  // Expéditeur SMS : refusé plutôt que tronqué.
+  //
+  // La règle vient des opérateurs français, pas de nous : 11 caractères,
+  // lettres et chiffres uniquement. Tout le reste est remplacé à l'arrivée par
+  // l'expéditeur du compte d'envoi, sans prévenir personne.
+  //
+  // Le champ acceptait jusqu'ici 20 caractères et le code tronquait à 11 au
+  // moment de l'envoi. Le 2026-09-27, « AutoNettoyage » (13) est ainsi parti en
+  // « AutoNettoya » — un nom coupé, approuvé nulle part, donc remplacé. Le
+  // laveur voyait son nom correctement enregistré dans ses réglages et recevait
+  // ses SMS sous un autre nom, sans aucune explication.
+  if (sms_sender !== undefined) {
+    const expediteur = String(sms_sender ?? '').trim()
+    if (expediteur && !/^[A-Za-z0-9]{1,11}$/.test(expediteur)) {
+      return NextResponse.json(
+        {
+          error: expediteur.length > 11
+            ? `« ${expediteur} » fait ${expediteur.length} caractères : les opérateurs en acceptent 11 au maximum. Essayez une version plus courte.`
+            : 'L\'expéditeur ne peut contenir que des lettres et des chiffres — ni espace, ni tiret, ni accent, ni apostrophe.',
+        },
+        { status: 400 },
+      )
+    }
+    updates.sms_sender = expediteur || null
+  }
   if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
   if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))
   if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
