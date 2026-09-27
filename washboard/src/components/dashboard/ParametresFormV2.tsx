@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
-import FeuilleNotificationsV2, { resumeNotifications } from '@/components/dashboard/FeuilleNotificationsV2'
+import { resumeNotifications } from '@/components/dashboard/FeuilleNotificationsV2'
 import { useNotificationsPush } from '@/hooks/useNotificationsPush'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
@@ -78,7 +78,7 @@ export function Chevron() {
 // troncature que UnreadCountBadge (« 9+ ») — un « 47 » n'apprend rien de plus
 // qu'un « beaucoup » à quelqu'un qui n'a pas ouvert ses messages. `null`/`0` :
 // rien ne s'affiche, jamais un « 0 non lu ».
-function NonLus({ count }: { count: number | null | undefined }) {
+export function NonLus({ count }: { count: number | null | undefined }) {
   if (!count || count <= 0) return null
   return (
     <span className={`inline-flex items-center gap-1.5 text-[12.5px] ${corpsFort} shrink-0`} style={{ color: 'var(--v2-color-accent)' }}>
@@ -176,7 +176,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
   // La carte « Configuration de votre compte » se met de côté depuis elle-même ; c'est ici
   // qu'on la retrouve, sinon elle serait perdue (Alexandre, 2026-09-27).
   const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
-  const [feuilleNotifications, setFeuilleNotifications] = useState(false)
   const notifications = resumeNotifications(etatNotifications)
 
   // Ce qui part VRAIMENT : un avis « activé » sans lien Google, ou une relance
@@ -305,51 +304,21 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
         </CarteListe>
       </div>
 
-      {/* Réglages — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27).
-          Séparé de « Mon compte », qui ne garde que l'abonnement et la déconnexion : un
-          laveur qui cherche comment éteindre une notification ou passer en sombre ne
-          cherche pas sa facturation. */}
-      <div>
-        <TitreSection>Réglages</TitreSection>
-        <CarteListe>
-          <Ligne
-            label="Apparence"
-            valeur={theme === 'dark' ? 'Sombre' : 'Clair'}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            chevron={false}
-          />
-          <Ligne
-            label="Notifications"
-            valeur={notifications.texte || undefined}
-            signal={notifications.ton === 'ambre'
-              ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
-              : undefined}
-            onClick={() => setFeuilleNotifications(true)}
-          />
-          {/* Toujours visible ICI, même quand la carte est masquée : c'est le seul chemin
-              pour la faire revenir. */}
-          <Ligne
-            label="Barre de configuration"
-            valeur={carteCachee === '1' ? 'Masquée' : 'Affichée'}
-            onClick={() => setCarteCachee(carteCachee === '1' ? null : '1')}
-            chevron={false}
-          />
-          {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
-              menu latéral (et par un lien discret dans l'assistance). */}
-          <Ligne label="Guide d’utilisation" href="/dashboard/guide" />
-          <Ligne
-            label="Aide et assistance"
-            href="/dashboard/assistance"
-            signal={<NonLus count={unreadSupportCount} />}
-          />
-        </CarteListe>
-      </div>
-
       {/* Mon compte */}
       <div>
         <TitreSection>Mon compte</TitreSection>
         <CarteListe>
           <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" />
+          {/* Une seule ligne, et tout ce qui règle l'application derrière (Alexandre,
+              2026-09-27) : apparence, notifications, barre de configuration, guide, aide,
+              et l'ancien formulaire complet. */}
+          <Ligne
+            label="Réglages"
+            signal={notifications.ton === 'ambre' || unreadSupportCount
+              ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
+              : undefined}
+            href="/dashboard/parametres/reglages"
+          />
           <form action="/api/auth/logout" method="POST" className="flex items-center min-h-[46px] py-1.5">
             <button type="submit" className={`text-[15px] ${corps} text-left`} style={{ color: 'var(--v2-color-rouge)' }}>
               Déconnexion
@@ -377,16 +346,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
         </div>
       )}
 
-      {/* Filet de secours (voir le commentaire en tête de fichier) : email,
-          mot de passe, notifications, accès support, zone de danger. */}
-      <Link
-        href="/dashboard/parametres/tout"
-        className={`flex items-center justify-center px-1 h-11 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}
-      >
-        Tous les réglages
-      </Link>
 
-      {feuilleNotifications && <FeuilleNotificationsV2 onClose={() => setFeuilleNotifications(false)} />}
 
       <DiagnosticPwa />
     </div>

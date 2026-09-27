@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresForm from '@/components/dashboard/ParametresForm'
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
+import { EnteteParametres } from '@/components/dashboard/EnteteParametres'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { resumeHorairesCourt } from '@/lib/horaires'
 import { logger } from '@/lib/logger'
@@ -47,10 +48,7 @@ export default async function ParametresPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Paramètres</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gérez vos informations et votre page client</p>
-      </div>
+      <EnteteParametres />
       <div className="mb-4">
         <SetupProgressBar progress={progress} />
       </div>
