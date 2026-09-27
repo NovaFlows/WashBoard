@@ -117,6 +117,15 @@ describe('POST /api/documents/[id]/facturer', () => {
     expect(contenu.valableJusquau).toBeNull()
   })
 
+  it('date la prestation du jour quand le devis n’en portait pas', async () => {
+    // Le devis chiffrait un travail à planifier. Sans ça, la facture sortait avec
+    // « Date à convenir » — constaté sur la vraie base le 2026-09-27.
+    expect((CONTENU_DEVIS.prestation.date)).toBeNull()
+    await appel()
+    const contenu = inserts[0].contenu as typeof CONTENU_DEVIS
+    expect(contenu.prestation.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
   it('marque le devis « facturé » et le relie à sa facture', async () => {
     await appel()
     expect(majs).toContainEqual({ statut: 'transforme', facture_id: 'facture-1' })

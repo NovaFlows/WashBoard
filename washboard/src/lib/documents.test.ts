@@ -121,6 +121,12 @@ describe('validerDocument', () => {
     expect(validerDocument(devis({ lignes }), AUJOURDHUI)).toMatch(/devis à 0/i)
   })
 
+  it('refuse une facture sans date de prestation, jamais un devis', () => {
+    // « Date à convenir » sur une facture ne veut rien dire : elle constate un travail fait.
+    expect(validerDocument(saisie({ date: null }), AUJOURDHUI)).toMatch(/date de la prestation/)
+    expect(validerDocument(devis({ date: null }), AUJOURDHUI)).toBeNull()
+  })
+
   it('refuse un devis sans validité, ou déjà périmé', () => {
     expect(validerDocument(devis({ valableJusquau: null }), AUJOURDHUI)).toMatch(/valable/)
     expect(validerDocument(devis({ valableJusquau: '2026-09-01' }), AUJOURDHUI)).toMatch(/déjà passée/)
@@ -220,9 +226,19 @@ describe('saisieDepuisContenu — transformer un devis accepté en facture', () 
     expect(contenuFacture.totaux.ttc).toBe(contenuDevis.totaux.ttc)
   })
 
-  it('reste valide après reprise : ce qui passe en devis passe en facture', () => {
-    const contenu = construireDocument(devis(), vendeur)
-    expect(validerDocument(saisieDepuisContenu(contenu, 'facture'), AUJOURDHUI)).toBeNull()
+  it('un devis sans date reprise en facture réclame une date — c’est la route qui la pose', () => {
+    // Le devis chiffrait un travail à planifier ; la facture, elle, constate un travail fait.
+    // `/api/documents/[id]/facturer` met le jour de l'émission à défaut : sans ça, la facture
+    // sortirait avec « Date à convenir » (constaté sur la vraie base le 2026-09-27).
+    const reprise = saisieDepuisContenu(construireDocument(devis(), vendeur), 'facture')
+    expect(reprise.date).toBeNull()
+    expect(validerDocument(reprise, AUJOURDHUI)).toMatch(/date de la prestation/)
+    expect(validerDocument({ ...reprise, date: AUJOURDHUI }, AUJOURDHUI)).toBeNull()
+  })
+
+  it('un devis déjà daté garde sa date en devenant facture', () => {
+    const contenu = construireDocument(devis({ date: '2026-10-05' }), vendeur)
+    expect(saisieDepuisContenu(contenu, 'facture').date).toBe('2026-10-05')
   })
 })
 

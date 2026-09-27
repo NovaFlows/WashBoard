@@ -186,6 +186,11 @@ export function validerDocument(saisie: SaisieDocument, aujourdhui: string): str
   if (saisie.genre === 'devis') {
     if (!saisie.valableJusquau) return 'Indiquez jusqu’à quand votre prix reste valable.'
     if (saisie.valableJusquau < aujourdhui) return 'La date de validité est déjà passée.'
+  } else if (!saisie.date) {
+    // Une facture dit quand la prestation a eu lieu — c'est une mention attendue, et
+    // « Date à convenir » sur une facture ne veut rien dire. Un devis, lui, chiffre
+    // souvent un travail qui n'a pas encore de date.
+    return 'Indiquez la date de la prestation.'
   }
   return null
 }

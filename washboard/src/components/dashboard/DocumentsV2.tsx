@@ -131,7 +131,10 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
   const [documents, setDocuments] = useState<Document[] | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [nouveau, setNouveau] = useState<GenreDocument | null>(null)
-  const [ouvert, setOuvert] = useState<Document | null>(null)
+  // L'ouverture retient un IDENTIFIANT, pas une copie du document : après « Accepté », la
+  // feuille doit proposer « Transformer en facture », pas répéter le choix déjà fait. Avec une
+  // copie figée, elle montrait l'état d'avant l'action (constaté le 2026-09-27, en base réelle).
+  const [ouvertId, setOuvertId] = useState<string | null>(null)
   const [occupe, setOccupe] = useState(false)
   const [suppression, setSuppression] = useState<Document | null>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
@@ -147,17 +150,24 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
 
   useEffect(() => { void charger() }, [charger])
 
-  /** Une action sur le document ouvert : la phrase d'échec s'affiche dans la feuille, qui
-   *  reste ouverte ; un succès referme et recharge. */
-  async function agir(action: () => Promise<{ ok: true } | { ok: false; message: string }>, succes: string) {
+  /** Une action sur le document ouvert.
+   *
+   *  `fermer` dit si le geste est terminé : noter la réponse du client ne l'est pas — la
+   *  facture se fait dans la foulée, dans la même feuille, qui se met à jour toute seule
+   *  puisqu'elle relit la liste. Transformer, envoyer ou supprimer, si. */
+  async function agir(
+    action: () => Promise<{ ok: true } | { ok: false; message: string }>,
+    succes: string,
+    { fermer = true } = {},
+  ) {
     if (occupe) return
     setOccupe(true)
     setErreur(null)
     const r = await action()
     setOccupe(false)
-    if (!r.ok) { setErreur(r.message); setOuvert(null); return }
+    if (!r.ok) { setErreur(r.message); setOuvertId(null); return }
     setMessage(succes)
-    setOuvert(null)
+    if (fermer) setOuvertId(null)
     await charger()
   }
 
@@ -174,6 +184,8 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
 
   const devis = (documents ?? []).filter(d => d.genre === 'devis')
   const factures = (documents ?? []).filter(d => d.genre === 'facture')
+  // Toujours relu dans la liste : la feuille ne peut pas montrer un état périmé.
+  const ouvert = (documents ?? []).find(d => d.id === ouvertId) ?? null
 
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
@@ -249,7 +261,7 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
                     <li key={d.id}>
                       <button
                         type="button"
-                        onClick={() => setOuvert(d)}
+                        onClick={() => { setMessage(null); setOuvertId(d.id) }}
                         className="flex min-h-[62px] w-full items-center gap-3 py-2.5 text-left"
                       >
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -300,10 +312,13 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
           onRepondre={statut => void agir(
             () => repondreDevis(ouvert.id, statut),
             statut === 'accepte' ? 'Devis accepté. Vous pouvez le transformer en facture.' : 'Devis marqué refusé.',
+            // La feuille reste ouverte : « Transformer en facture » y prend la place des deux
+            // boutons de réponse, et c'est le geste suivant.
+            { fermer: statut === 'refuse' },
           )}
           onFacturer={() => void agir(() => facturerDevis(ouvert.id), 'Facture créée depuis le devis.')}
-          onSupprimer={() => { setSuppressionErreur(null); setSuppression(ouvert); setOuvert(null) }}
-          onClose={() => setOuvert(null)}
+          onSupprimer={() => { setSuppressionErreur(null); setSuppression(ouvert); setOuvertId(null) }}
+          onClose={() => setOuvertId(null)}
         />
       )}
 

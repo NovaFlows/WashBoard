@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { saisieDepuisContenu, construireDocument } from '@/lib/documents'
+import { aujourdhuiParis } from '@/lib/chiffresPeriode'
 import { infosFacturationManquantes, phraseManques, type FactureContenu, type VendeurFacturable } from '@/lib/facture'
 
 // « Transformer en facture » : le geste qui donne son intérêt au devis.
@@ -61,6 +62,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const saisie = saisieDepuisContenu(devis.contenu as FactureContenu, 'facture')
+  // Un devis chiffre souvent un travail sans date. Une facture, elle, dit quand la prestation
+  // a eu lieu : à défaut, c'est le jour où on facture — on ne facture pas ce qui n'est pas fait.
+  if (!saisie.date) saisie.date = aujourdhuiParis(Date.now())
   const contenu = construireDocument(saisie, vendeur)
   const admin = createAdminClient()
 
