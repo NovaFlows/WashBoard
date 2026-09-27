@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import GuideContent from '@/components/dashboard/GuideContent'
+import Guide from '@/components/dashboard/Guide'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 export default async function GuidePage() {
@@ -27,6 +28,7 @@ export default async function GuidePage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
+      <Guide v1={
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Guide de démarrage</h1>
@@ -49,6 +51,7 @@ export default async function GuidePage() {
           }
         />
       </div>
+      } />
     </DashboardShell>
   )
 }

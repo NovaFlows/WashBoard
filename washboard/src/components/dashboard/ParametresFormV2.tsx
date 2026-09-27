@@ -305,23 +305,18 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
         </CarteListe>
       </div>
 
-      {/* Mon compte */}
+      {/* Réglages — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27).
+          Séparé de « Mon compte », qui ne garde que l'abonnement et la déconnexion : un
+          laveur qui cherche comment éteindre une notification ou passer en sombre ne
+          cherche pas sa facturation. */}
       <div>
-        <TitreSection>Mon compte</TitreSection>
+        <TitreSection>Réglages</TitreSection>
         <CarteListe>
-          <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" />
           <Ligne
             label="Apparence"
             valeur={theme === 'dark' ? 'Sombre' : 'Clair'}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             chevron={false}
-          />
-          {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
-              menu latéral (et par un lien discret dans l'assistance). */}
-          <Ligne
-            label="Barre de configuration"
-            valeur={carteCachee === '1' ? 'Masquée' : 'Affichée'}
-            onClick={() => setCarteCachee(carteCachee === '1' ? null : '1')}
           />
           <Ligne
             label="Notifications"
@@ -331,6 +326,14 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
               : undefined}
             onClick={() => setFeuilleNotifications(true)}
           />
+          {/* Toujours visible ICI, même quand la carte est masquée : c'est le seul chemin
+              pour la faire revenir. */}
+          <Ligne
+            label="Barre de configuration"
+            valeur={carteCachee === '1' ? 'Masquée' : 'Affichée'}
+            onClick={() => setCarteCachee(carteCachee === '1' ? null : '1')}
+            chevron={false}
+          />
           {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
               menu latéral (et par un lien discret dans l'assistance). */}
           <Ligne label="Guide d’utilisation" href="/dashboard/guide" />
@@ -339,6 +342,14 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
             href="/dashboard/assistance"
             signal={<NonLus count={unreadSupportCount} />}
           />
+        </CarteListe>
+      </div>
+
+      {/* Mon compte */}
+      <div>
+        <TitreSection>Mon compte</TitreSection>
+        <CarteListe>
+          <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" />
           <form action="/api/auth/logout" method="POST" className="flex items-center min-h-[46px] py-1.5">
             <button type="submit" className={`text-[15px] ${corps} text-left`} style={{ color: 'var(--v2-color-rouge)' }}>
               Déconnexion
