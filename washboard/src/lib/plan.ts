@@ -373,7 +373,12 @@ export const PLAN_CARDS: PlanCard[] = [
   {
     key: 'starter', name: 'Starter', price: 19,
     tagline: 'Pour remplir son planning sans y penser.',
+    // Chaque offre payante s'ouvre sur « Tout le … » : sans cette ligne, un
+    // laveur qui compare quatre colonnes croit que passer au Starter lui FAIT
+    // PERDRE l'agenda et les fiches clients, puisqu'ils n'y sont plus écrits.
+    // Le Business le disait déjà ; les deux autres ne le disaient pas.
     features: [
+      'Tout le Découverte',
       '15 réservations par mois',
       'Catalogue de prestations illimité',
       'Page de réservation personnalisée (logo, couleurs)',
@@ -385,6 +390,7 @@ export const PLAN_CARDS: PlanCard[] = [
     key: 'pro', name: 'Pro', price: 49, highlight: true,
     tagline: 'Pour vivre de son activité.',
     features: [
+      'Tout le Starter',
       'Réservations illimitées',
       'Créneaux intelligents et frais de déplacement',
       'Comptabilité et facturation conforme (SIRET, TVA)',

@@ -6,7 +6,10 @@ import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import { buildClientProfile, type ClientBooking } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
 import { formatPhone } from '@/lib/phone'
+import { formatEuros } from '@/lib/plan'
 import { FUSEAU } from '@/lib/dateUtils'
+import { jourSeul } from '@/lib/reservationsVerrouillees'
+import Link from 'next/link'
 
 // Fichier clients du laveur : chacun de ses clients, sa dernière prestation, et
 // une recherche pour le retrouver vite — typiquement au téléphone, quand un
@@ -22,7 +25,25 @@ function dateCourte(iso: string, maintenant: number): string {
   })
 }
 
-export default function ClientsView({ bookings }: { bookings: ClientBooking[] }) {
+/** Un client venu au-delà du quota. Pas d'email : il n'entre donc pas dans le
+ *  regroupement de l'annuaire, qui se fait par email — les rassembler y
+ *  produirait une seule fiche fantôme portant tous les noms. Ils ont leur
+ *  propre ligne, DANS la même liste. */
+export type ClientBloque = { id: string; client_name: string | null; scheduled_at: string }
+
+export default function ClientsView({ bookings, bloques = [], offreDeblocage = 'Pro', montantBloque = 0 }: {
+  bookings: ClientBooking[]
+  /** Clients masqués par le plafond de l'offre. Rendus floutés, en tête de la
+   *  MÊME liste : dans un encadré à part, au-dessus, ils se lisaient comme une
+   *  publicité et se sautaient comme une publicité (retour de test). */
+  bloques?: ClientBloque[]
+  /** Nom de l'offre qui les débloque — « Starter », « Pro ». */
+  offreDeblocage?: string
+  /** Total en euros des lavages masqués. Dit sous le titre plutôt que dans un
+   *  encadré : « 3 750 € » se compare tout seul au prix de l'abonnement, et un
+   *  laveur compte des lavages, pas des lignes. */
+  montantBloque?: number
+}) {
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
   const [maintenant] = useState(() => Date.now())
@@ -32,6 +53,11 @@ export default function ClientsView({ bookings }: { bookings: ClientBooking[] })
   const clients = useMemo(() => listeClients(bookings, new Date(maintenant)), [bookings, maintenant])
   const affiches = useMemo(() => rechercherClients(clients, recherche), [clients, recherche])
   const fiche = ouvert ? buildClientProfile(bookings, ouvert) : null
+  // Les masqués comptent dans le total : ce sont de vrais clients, c'est même
+  // tout l'argument. En revanche ils disparaissent dès qu'une recherche est en
+  // cours — on n'a ni leur téléphone ni leur email, rien sur quoi chercher.
+  const total = clients.length + bloques.length
+  const bloquesAffiches = recherche.trim() ? [] : bloques
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -40,11 +66,17 @@ export default function ClientsView({ bookings }: { bookings: ClientBooking[] })
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           {clients.length === 0
             ? 'Vos clients apparaîtront ici dès leur première réservation.'
-            : `${clients.length} client${clients.length > 1 ? 's' : ''}, du plus récent au plus ancien`}
+            : `${total} client${total > 1 ? 's' : ''}, du plus récent au plus ancien`}
         </p>
+        {bloques.length > 0 && (
+          <p className="text-sm font-bold mt-1 text-[#1651E8]">
+            {bloques.length} masqué{bloques.length > 1 ? 's' : ''}
+            {montantBloque > 0 && ` · ${formatEuros(montantBloque)} € de lavages`}
+          </p>
+        )}
       </div>
 
-      {clients.length > 0 && (
+      {total > 0 && (
         <>
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
@@ -79,8 +111,11 @@ export default function ClientsView({ bookings }: { bookings: ClientBooking[] })
             </p>
           )}
 
-          {affiches.length > 0 && (
+          {(affiches.length > 0 || bloquesAffiches.length > 0) && (
             <ul aria-label="Liste des clients" className={`${carte} divide-y divide-slate-100 dark:divide-slate-800`}>
+              {bloquesAffiches.map(b => (
+                <LigneBloquee key={b.id} bloque={b} offre={offreDeblocage} />
+              ))}
               {affiches.map(c => (
                 <LigneClient key={c.email} client={c} maintenant={maintenant} onOuvrir={() => setOuvert(c.email)} />
               ))}
@@ -142,6 +177,54 @@ function LigneClient({ client: c, maintenant, onOuvrir }: { client: ResumeClient
           <span className="block text-[11px] text-slate-400 dark:text-slate-500">lavage{c.honoredCount > 1 ? 's' : ''}</span>
         </span>
       </button>
+    </li>
+  )
+}
+
+/** Une ligne d'annuaire qu'on ne peut pas ouvrir.
+ *
+ *  Même gabarit que `LigneClient` — même pastille, même hiérarchie, même
+ *  hauteur — pour qu'elle se lise comme une fiche de plus et non comme un
+ *  encart publicitaire. Ce qui manque est remplacé par des barres grises, pas
+ *  par des valeurs inventées : un faux numéro sous un flou reste un faux
+ *  numéro, et le jour où quelqu'un retire le flou, c'est la crédibilité de
+ *  tout l'écran qui tombe.
+ *
+ *  Le flou est décoratif. La vraie protection est en amont : téléphone, email,
+ *  adresse et montant ne sont jamais chargés (voir `masquerVerrouillees`). */
+function LigneBloquee({ bloque, offre }: { bloque: ClientBloque; offre: string }) {
+  return (
+    <li className="relative">
+      <div className="w-full flex items-start gap-3 px-4 py-3 blur-[4px] select-none pointer-events-none" aria-hidden>
+        <span className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0 mt-0.5" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+            {bloque.client_name || 'Client'}
+          </span>
+          <span className="block h-3 w-40 max-w-full rounded bg-slate-200 dark:bg-slate-700 mt-1.5" />
+          <span className="block text-xs mt-1.5 text-slate-700 dark:text-slate-300">
+            <span className="text-slate-400 dark:text-slate-500">Réservation le </span>
+            {jourSeul(bloque.scheduled_at) ?? '—'}
+          </span>
+        </span>
+        <span className="shrink-0 h-3 w-8 rounded bg-slate-200 dark:bg-slate-700 mt-1" />
+      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-white/55 dark:bg-slate-900/60 px-4">
+        <svg className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        {/* Un lien, pas un bouton plein. Répété sur quarante lignes, un aplat
+            bleu redevenait exactement ce qu'on voulait éviter : un mur de
+            publicité qu'on cesse de voir. Le cadenas porte le message, le lien
+            donne la sortie. */}
+        <Link
+          href="/dashboard/abonnement"
+          className="text-xs font-bold text-[#1651E8] hover:underline"
+        >
+          Débloquer avec le plan {offre}
+        </Link>
+      </div>
     </li>
   )
 }

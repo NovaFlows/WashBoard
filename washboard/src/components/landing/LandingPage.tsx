@@ -909,11 +909,18 @@ export default function LandingPage() {
                 className={`relative flex flex-col rounded-2xl p-6 sm:p-8 ${featured ? 'border border-white/[0.08]' : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'}`}
                 style={featured ? { background: 'linear-gradient(135deg, #0B1828 0%, #0D2248 100%)' } : undefined}
               >
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  {featured ? (
-                    <span className="bg-[#1651E8] text-white text-xs font-bold px-4 py-1.5 rounded-full">Le plus populaire</span>
-                  ) : null}
-                </div>
+                {/* Dans la carte, en haut à droite — plus à cheval sur son bord.
+                    À cheval, la moitié du badge flottait dans un écart de 24 px
+                    et frôlait la carte du dessus : sur téléphone, où les cartes
+                    s'empilent, il donnait l'impression d'une étiquette décollée
+                    entre deux offres. Ici il ne déborde de rien, et les prix des
+                    quatre cartes restent alignés — un badge inséré dans le flux
+                    aurait poussé la carte Pro vers le bas toute seule. */}
+                {featured && (
+                  <span className="absolute top-4 right-4 bg-[#1651E8] text-white text-[11px] font-bold px-3 py-1 rounded-full">
+                    Le plus populaire
+                  </span>
+                )}
                 <p className={`text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{card.name}</p>
                 <p className={`text-4xl font-black mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
                   {card.price === 0 ? 'Gratuit' : (

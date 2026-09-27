@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, planEffectif, doitChoisirFormule, accesComplet, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, requiredPlan, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
@@ -294,6 +294,21 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     trial_ends_at: trialEndsAt,
   }
   const offreEffective = planEffectif(fiche)
+
+  // Ce que l'offre actuelle ne couvre pas, signalé dans le menu par le nom de
+  // l'offre qui l'ouvre. Avant, ces entrées étaient identiques aux autres : on
+  // cliquait, on tombait sur un mur, et rien n'avait prévenu. Le badge le dit
+  // d'avance, et l'entrée reste cliquable — c'est en voyant l'aperçu qu'on a
+  // envie de l'offre, pas en butant sur une porte fermée.
+  const badgesOffre = Object.fromEntries(
+    ([
+      ['/dashboard/crm', 'crm'],
+      ['/dashboard/compta', 'compta'],
+      ['/dashboard/factures', 'facturation'],
+    ] as [string, Feature][])
+      .filter(([, f]) => !hasFeature(fiche, f))
+      .map(([href, f]) => [href, PLAN_LABELS[requiredPlan(f)]]),
+  )
   const complet = accesComplet(fiche)
   const choisirFormule = doitChoisirFormule(fiche)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -322,6 +337,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         unreadSupportCount={unreadSupportCount}
         estEquipeSupport={estEquipeSupport}
         unreadTeamCount={unreadTeamCount}
+        badgesOffre={badgesOffre}
       />
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">

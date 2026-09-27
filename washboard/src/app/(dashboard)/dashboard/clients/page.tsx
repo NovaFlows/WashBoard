@@ -6,8 +6,7 @@ import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { quotaReservations, planEffectif, offreQuiCouvre } from '@/lib/plan'
-import { CarteBloquees } from '@/components/dashboard/ReservationsBloquees'
+import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDuMois, montantVerrouille } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
@@ -68,10 +67,12 @@ export default async function ClientsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
-      <div className="max-w-3xl mx-auto space-y-4">
-        <CarteBloquees bloquees={bloquees} offre={planEffectif(washer)} proposee={offreProposee} montant={montantBloque} />
-      </div>
-      <ClientsView bookings={lignes} />
+      <ClientsView
+        bookings={lignes}
+        bloques={bloquees}
+        offreDeblocage={PLAN_LABELS[offreProposee]}
+        montantBloque={montantBloque}
+      />
     </DashboardShell>
   )
 }

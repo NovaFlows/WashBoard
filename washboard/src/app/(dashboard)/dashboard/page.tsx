@@ -9,7 +9,7 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
-import { hasFeature, quotaReservations, planEffectif } from '@/lib/plan'
+import { hasFeature, quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
 import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
 import { JaugeReservations } from '@/components/dashboard/JaugeReservations'
 import { seuilsVerrouillage, masquerVerrouillees, montantVerrouille, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
@@ -247,18 +247,26 @@ export default async function DashboardPage() {
   // à compter, et ce serait une requête pour rien à chaque affichage.
   const plafondMensuel = quotaReservations(washer)
   const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDuMois(supabase, washer.id)
+  // L'offre nommée sur les cartes floutées : la moins chère qui couvre le
+  // volume du mois. Écrire « Pro » en dur ferait payer trente euros de plus à
+  // un laveur que le Starter suffisait à débloquer.
+  const offreDeblocage = PLAN_LABELS[offreQuiCouvre(planEffectif(washer), utiliseesCeMois)]
 
   const passes = historique.data ?? []
 
-  // Les réservations verrouillées ne rejoignent PAS l'agenda. « Il n'a pas
-  // accès au calendrier » : elles vivent dans le bandeau, qui les compte, et
-  // sur la page Clients, qui montre le nom flouté et le jour. Les laisser ici
-  // aurait donné l'heure exacte et le prix dans une carte ordinaire — la fuite
-  // que la capture a montrée — et proposé « Clôturer » un rendez-vous dont le
-  // laveur ne sait ni où ni pour qui il a lieu.
+  // Les réservations verrouillées RESTENT dans la liste « À venir », à leur
+  // place, rendues en carte floutée avec un cadenas (voir CarteVerrouillee).
+  // Elles en avaient d'abord été retirées, et un encadré à part les annonçait
+  // au-dessus : au test, cet encadré se lisait comme une publicité et se
+  // sautait comme une publicité. À sa place dans la liste, la carte se lit
+  // pour ce qu'elle est — un rendez-vous qui manque.
+  //
+  // Aucune fuite pour autant : le flou n'est qu'une décoration, c'est
+  // `masquerVerrouillees` qui a déjà retiré l'heure, le prix, le téléphone et
+  // l'adresse bien avant d'arriver ici.
   const aVenirOuvertes = aVenirVisible.filter(b => !b.verrouillee)
   const passesOuverts = masquerVerrouillees(passes, seuilsVerrou).filter(b => !b.verrouillee)
-  const all = [...aVenirOuvertes, ...passesOuverts]
+  const all = [...aVenirVisible, ...passesOuverts]
 
   // Aujourd'hui, à l'heure de Paris — calculé sur `aVenir` (déjà en main, déjà
   // trié par heure croissante), sans requête de plus. Ne montre que ce qui
@@ -359,6 +367,7 @@ export default async function DashboardPage() {
         washerId={washer.id}
         facturationPrete={infosFacturationManquantes(washer).length === 0}
         historiqueTronque={passes.length === HISTORIQUE_AFFICHE}
+        offreDeblocage={offreDeblocage}
       >
         {/* Passés en enfants de BookingList : lui seul peut placer « à venir »,
             widgets et historique dans une même grille, réagencée par zone

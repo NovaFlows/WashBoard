@@ -214,31 +214,60 @@ export default async function BookingPage({ params }: Props) {
           : 'border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
       }>
         <div className="w-full px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={washer.name}
-                className="w-12 h-12 rounded-xl object-cover"
-              />
-            ) : (
-              <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold select-none ${
-                themed
-                  ? 'bg-white/10 border-white/20 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
-              }`}>
-                {washer.name.charAt(0).toUpperCase()}
+          {/* ── Qui signe cette page ────────────────────────────────────────
+              Sur une offre payante, le laveur : son logo, son nom. Sur
+              l'offre gratuite, WashBoard : notre logo et notre nom, exactement
+              ce que la grille tarifaire annonce (« page aux couleurs
+              WashBoard »).
+
+              L'initiale du laveur dans un carré gris ne signait rien : ni lui,
+              puisqu'il n'a pas choisi cette identité, ni nous. Son nom, lui,
+              n'a pas disparu — il reste juste en dessous, en titre de page,
+              là où le client le lit de toute façon avant de réserver. */}
+          {personnalisee ? (
+            <div className="flex items-center gap-3">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={washer.name}
+                  className="w-12 h-12 rounded-xl object-cover"
+                />
+              ) : (
+                <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold select-none ${
+                  themed
+                    ? 'bg-white/10 border-white/20 text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {washer.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className={`text-2xl font-extrabold leading-none tracking-tight ${themed ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
+                  {washer.name}
+                </p>
+                <p className={`text-xs mt-1 leading-none ${themed ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {washer.welcome_message || 'Réservation en ligne'}
+                </p>
               </div>
-            )}
-            <div>
-              <p className={`text-2xl font-extrabold leading-none tracking-tight ${themed ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
-                {washer.name}
-              </p>
-              <p className={`text-xs mt-1 leading-none ${themed ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
-                {washer.welcome_message || 'Réservation en ligne'}
-              </p>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/LogoWashBoard.png"
+                alt=""
+                aria-hidden
+                className="w-10 h-10 object-contain"
+              />
+              <div>
+                <p className="text-2xl font-extrabold leading-none tracking-tight text-slate-900 dark:text-slate-100">
+                  WashBoard
+                </p>
+                <p className="text-xs mt-1 leading-none text-slate-400 dark:text-slate-500">
+                  {washer.welcome_message || 'Réservation en ligne'}
+                </p>
+              </div>
+            </div>
+          )}
           {!themed && <ThemeToggle large />}
         </div>
       </header>

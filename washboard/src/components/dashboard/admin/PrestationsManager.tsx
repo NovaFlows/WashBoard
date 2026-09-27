@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
@@ -412,6 +414,11 @@ export default function PrestationsManager({ services: initialServices, categori
 
   const actives = services.filter(sv => !estEnVeille(sv))
   const aRanger = aMettreEnVeille(actives.length, plafond)
+  // Catalogue plein : on n'ouvre plus le formulaire. Le serveur refusait déjà
+  // (403), mais après avoir laissé tout remplir — nom, prix, durée, types de
+  // véhicules — pour finir sur un message d'erreur. Dire non avant de faire
+  // travailler quelqu'un pour rien, c'est la moindre des politesses.
+  const catalogueComplet = plafond !== null && actives.length >= plafond
 
   /** Met en veille ou reactive. L'etat local suit tout de suite : sans ca, le
    *  laveur clique et ne voit rien bouger jusqu'au rechargement — il reclique,
@@ -689,12 +696,30 @@ export default function PrestationsManager({ services: initialServices, categori
         )}
 
         {!showAdd && editId === null && categories.length > 0 && (
-          <button
-            onClick={startAdd}
-            className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-sm font-medium transition-colors"
-          >
-            + Ajouter une prestation
-          </button>
+          catalogueComplet ? (
+            <div className="w-full py-4 px-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                Catalogue complet — {plafond} prestations sur votre offre
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Passez à l’offre Starter pour un catalogue illimité, ou modifiez
+                une prestation existante.
+              </p>
+              <Link
+                href="/dashboard/abonnement"
+                className="inline-block mt-3 px-4 py-2 rounded-xl bg-[#1651E8] text-white text-sm font-semibold transition-transform active:scale-[0.97]"
+              >
+                Voir les offres
+              </Link>
+            </div>
+          ) : (
+            <button
+              onClick={startAdd}
+              className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-sm font-medium transition-colors"
+            >
+              + Ajouter une prestation
+            </button>
+          )
         )}
       </div>
     </div>
