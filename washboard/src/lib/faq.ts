@@ -13,9 +13,14 @@
 // lit maintenant `freeMonthsLabel()` : le jour où la formule change, la
 // réponse change avec elle.
 
-import { freeMonthsLabel } from '@/lib/plan'
+import { freeMonthsLabel, PLAN_CARDS } from '@/lib/plan'
 
 export type FaqItem = { q: string; a: string }
+
+// Dérivé de PLAN_CARDS, jamais recopié : le prix de l'Essentiel affiché ici
+// suit son propre changement, comme freeMonthsLabel() plus bas — voir le
+// commentaire de fichier.
+const essentielPrice = PLAN_CARDS.find(c => c.key === 'essentiel')!.price
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
@@ -27,8 +32,16 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Non. En 10 minutes tu as ta page de réservation avec tes services, tes horaires et ta zone.',
   },
   {
+    q: 'Les frais de déplacement sont calculés comment ?',
+    a: 'Tu définis tes propres paliers de prix selon la durée du trajet en voiture, calculée automatiquement via Google Maps. Le point de départ, c\'est soit ton adresse de base, soit ton dernier rendez-vous du jour — à toi de choisir dans tes paramètres.',
+  },
+  {
     q: 'Ça marche pour d\'autres métiers que le lavage auto ?',
     a: 'Oui. Tu crées tes propres catégories et prestations, avec leurs durées et leurs prix : ménage, canapés, vitres, piscines… WashBoard n\'impose aucun métier.',
+  },
+  {
+    q: 'Je peux faire du lavage auto et du ménage en même temps, avec un seul compte ?',
+    a: 'Oui. Ce ne sont pas deux offres séparées : dans tes paramètres, tu ajoutes autant de catégories que tu veux, chacune avec ses propres prestations, durées et prix. Tes clients réservent sur la même page, quel que soit ce qu\'ils demandent.',
   },
   {
     q: 'Comment mes clients trouvent ma page ?',
@@ -39,8 +52,12 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui, par email à chaque réservation. Et si tu installes WashBoard sur ton téléphone, aussi en notification (en bêta).',
   },
   {
+    q: 'Je peux utiliser WashBoard uniquement depuis mon téléphone ?',
+    a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, en formule Pro). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
+  },
+  {
     q: 'Que se passe-t-il après le mois gratuit ?',
-    a: 'Tu choisis de continuer à 49€/mois ou non. Ton compte est suspendu sans frais si tu arrêtes. Aucune carte n\'est demandée pendant l\'essai.',
+    a: `Tu choisis de continuer à ${essentielPrice}€/mois ou non. Ton compte est suspendu sans frais si tu arrêtes. Aucune carte n'est demandée pendant l'essai.`,
   },
   {
     q: 'Je peux arrêter quand je veux ?',
