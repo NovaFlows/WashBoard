@@ -234,13 +234,17 @@ export default function ClientProfileModalV2({
               Les adresses au-delà de la première (déjà dans le sous-titre)
               s'ajoutent ici : le cas d'un professionnel à plusieurs sites. */}
           <div className={`mt-4 space-y-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            <a
-              href={`mailto:${profile.email}`}
-              className="flex items-center gap-2 transition-colors hover:text-[color:var(--v2-color-encre)]"
-            >
-              <Mail size={14} className="shrink-0" aria-hidden />
-              <span className="truncate">{profile.email}</span>
-            </a>
+            {/* Un client né d'un devis n'a parfois qu'un téléphone : une enveloppe sans
+                adresse serait un lien mort. */}
+            {profile.email && (
+              <a
+                href={`mailto:${profile.email}`}
+                className="flex items-center gap-2 transition-colors hover:text-[color:var(--v2-color-encre)]"
+              >
+                <Mail size={14} className="shrink-0" aria-hidden />
+                <span className="truncate">{profile.email}</span>
+              </a>
+            )}
             {profile.addresses.slice(1).map(a => (
               <p key={a} className="flex items-start gap-2">
                 <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden />
@@ -287,8 +291,45 @@ export default function ClientProfileModalV2({
             </div>
           )}
 
+          {/* Devis et factures écrits à la main. Ils ne sont pas des rendez-vous et n'ont donc
+              rien à faire dans l'historique ci-dessous : les y mêler ferait passer un devis
+              pour une prestation faite (Alexandre, 2026-09-27). */}
+          {profile.documents.length > 0 && (
+            <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-4">
+              <h3 className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
+                Devis et factures
+              </h3>
+              <ul className="mt-1.5">
+                {profile.documents.map(d => (
+                  <li key={d.id} className="flex items-baseline justify-between gap-2 py-1.5">
+                    <span className="min-w-0">
+                      <span className={`text-[14px] ${nom}`}>
+                        {d.genre === 'devis' ? 'Devis' : 'Facture'} {d.numero ?? ''}
+                      </span>
+                      <span className={`ml-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                        {dateCourte(d.emis_le ?? d.created_at, maintenant)}
+                      </span>
+                    </span>
+                    <a
+                      href={`/api/documents/${d.id}/pdf`}
+                      className={`shrink-0 text-[13px] ${corpsFort}`}
+                      style={{ color: 'var(--v2-color-accent)' }}
+                    >
+                      PDF
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-1">
             <h3 className="sr-only">Historique</h3>
+            {profile.bookings.length === 0 && (
+              <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                Aucun rendez-vous pour l’instant : ce client est né d’un document écrit à la main.
+              </p>
+            )}
             <ol>
               {profile.bookings.map((b: ClientBooking, i) => {
                 const s = STATUT[statutAffiche(b)]

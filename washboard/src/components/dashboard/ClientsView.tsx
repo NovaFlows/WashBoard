@@ -1,7 +1,7 @@
 'use client'
 
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
-import type { ClientBooking } from '@/lib/clientProfile'
+import type { ClientBooking, ClientDocument } from '@/lib/clientProfile'
 import ClientsViewV1 from '@/components/dashboard/ClientsViewV1'
 import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 
@@ -17,7 +17,14 @@ import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 // Import unique et stable pour tout le reste du dashboard : la page
 // /dashboard/clients continue d'importer ClientsView sans rien savoir du
 // branchement.
-export default function ClientsView({ bookings }: { bookings: ClientBooking[] }) {
+export default function ClientsView({ bookings, documents }: {
+  bookings: ClientBooking[]
+  /** Devis et factures écrits à la main. Ils n'existent que dans la PWA : le site garde sa
+   *  liste tirée des seules réservations, donc V1 ne les reçoit pas. */
+  documents?: ClientDocument[]
+}) {
   const isPwa = usePwaStandalone()
-  return isPwa ? <ClientsViewV2 bookings={bookings} /> : <ClientsViewV1 bookings={bookings} />
+  return isPwa
+    ? <ClientsViewV2 bookings={bookings} documents={documents} />
+    : <ClientsViewV1 bookings={bookings} />
 }

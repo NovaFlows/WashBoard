@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { ClientBooking } from './clientProfile'
+import type { ClientBooking, ClientDocument } from './clientProfile'
 import { listeClients, rechercherClients } from './listeClients'
 
 const MAINTENANT = new Date('2026-09-15T12:00:00Z')
@@ -104,5 +104,62 @@ describe('rechercherClients', () => {
 
   it('recherche vide : tous les clients', () => {
     expect(rechercherClients(clients, '   ')).toHaveLength(2)
+  })
+})
+
+describe('clients nés d’un devis ou d’une facture écrits à la main', () => {
+  const doc = (p: Partial<ClientDocument> & { nom?: string; email?: string; tel?: string; ttc?: number }): ClientDocument => ({
+    id: p.id ?? 'd1',
+    genre: p.genre ?? 'devis',
+    numero: p.numero ?? 'D-00001',
+    statut: p.statut ?? 'emis',
+    emis_le: p.emis_le ?? '2026-09-20T10:00:00.000Z',
+    created_at: p.created_at ?? '2026-09-20T10:00:00.000Z',
+    contenu: {
+      client: {
+        nom: p.nom ?? 'Madame Leroy',
+        email: p.email ?? '',
+        telephone: p.tel ?? '0612345678',
+        professionnel: false,
+        entreprise: null,
+        adresseFacturation: '3 allée des Roses, 95000 Cergy',
+      },
+      totaux: { ttc: p.ttc ?? 90 },
+    },
+  })
+
+  it('fait apparaître quelqu’un qui n’a jamais réservé', () => {
+    const clients = listeClients([], MAINTENANT, [doc({})])
+    expect(clients).toHaveLength(1)
+    expect(clients[0].name).toBe('Madame Leroy')
+    expect(clients[0].phone).toBe('0612345678')
+    expect(clients[0].documentsCount).toBe(1)
+  })
+
+  it('sans documents, la liste est exactement celle d’avant', () => {
+    expect(listeClients([], MAINTENANT, [])).toEqual(listeClients([], MAINTENANT))
+  })
+
+  it('un devis ne vaut pas chiffre d’affaires : il n’engage encore personne', () => {
+    const c = listeClients([], MAINTENANT, [doc({ genre: 'devis', ttc: 500 })])[0]
+    expect(c.totalRevenue).toBe(0)
+    expect(c.honoredCount).toBe(0)
+  })
+
+  it('une facture écrite à la main, si : c’est un travail fait et payé', () => {
+    const c = listeClients([], MAINTENANT, [doc({ genre: 'facture', numero: 'F-00015', ttc: 120 })])[0]
+    expect(c.totalRevenue).toBe(120)
+    expect(c.honoredCount).toBe(1)
+  })
+
+  it('rejoint le client existant quand l’email est le même, sans le dédoubler', () => {
+    const reservations = [rdv({ client_email: 'marie@exemple.fr', client_name: 'Marie' })]
+    const clients = listeClients(reservations, MAINTENANT, [doc({ email: 'MARIE@Exemple.fr', tel: '' })])
+    expect(clients).toHaveLength(1)
+    expect(clients[0].documentsCount).toBe(1)
+  })
+
+  it('un contact sans email ni téléphone n’est pas un client : on ne peut pas le joindre', () => {
+    expect(listeClients([], MAINTENANT, [doc({ email: '', tel: '' })])).toHaveLength(0)
   })
 })

@@ -4,7 +4,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ClientsView from '@/components/dashboard/ClientsView'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
-import type { ClientBooking } from '@/lib/clientProfile'
+import type { ClientBooking, ClientDocument } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // Fichier clients : tiré des réservations, un client par email (voir
@@ -32,6 +32,18 @@ export default async function ClientsPage() {
   // Sans trace, un fichier vide ne se distinguerait pas d'un laveur sans client.
   if (error) logger.error('clients.bookings.fetch_failed', { washerId: washer.id }, error)
 
+  // Les devis et factures écrits à la main font naître des clients qui n'ont jamais réservé
+  // (Alexandre, 2026-09-27). La RLS limite déjà la lecture à ce laveur ; le filtre explicite
+  // est là pour que la requête reste juste si la policy change un jour.
+  const { data: documents, error: errDocuments } = await supabase
+    .from('documents')
+    .select('id, genre, numero, statut, emis_le, created_at, contenu')
+    .eq('washer_id', washer.id)
+    .order('created_at', { ascending: false })
+    .limit(500)
+  // Sans eux la liste reste celle des réservations : dégradée, pas cassée.
+  if (errDocuments) logger.warn('clients.documents.fetch_failed', { washerId: washer.id }, errDocuments)
+
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST
   // renvoie un objet : une réservation n'a qu'une prestation. On accepte les
   // deux formes plutôt que de forcer le type.
@@ -42,7 +54,7 @@ export default async function ClientsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <ClientsView bookings={lignes} />
+      <ClientsView bookings={lignes} documents={(documents ?? []) as unknown as ClientDocument[]} />
     </DashboardShell>
   )
 }

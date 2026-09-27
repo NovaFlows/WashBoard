@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
-import { buildClientProfile, type ClientBooking } from '@/lib/clientProfile'
+import { buildClientProfile, type ClientBooking, type ClientDocument } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
 import { FUSEAU } from '@/lib/dateUtils'
 
@@ -87,7 +87,12 @@ function pastilleDroite(c: ResumeClient, maintenant: number): { texte: string; c
 
 type Filtre = 'tous' | 'pros'
 
-export default function ClientsViewV2({ bookings }: { bookings: ClientBooking[] }) {
+export default function ClientsViewV2({ bookings, documents = [] }: {
+  bookings: ClientBooking[]
+  /** Devis et factures écrits à la main : ils font naître des clients qui n'ont jamais
+   *  réservé (Alexandre, 2026-09-27 — « un client comme un autre »). */
+  documents?: ClientDocument[]
+}) {
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
   const [maintenant] = useState(() => Date.now())
@@ -95,14 +100,17 @@ export default function ClientsViewV2({ bookings }: { bookings: ClientBooking[] 
   const [filtre, setFiltre] = useState<Filtre>('tous')
   const [ouvert, setOuvert] = useState<string | null>(null)
 
-  const clients = useMemo(() => listeClients(bookings, new Date(maintenant)), [bookings, maintenant])
+  const clients = useMemo(
+    () => listeClients(bookings, new Date(maintenant), documents),
+    [bookings, documents, maintenant],
+  )
   const pros = useMemo(() => clients.filter(c => c.isProfessional).length, [clients])
   const parFiltre = useMemo(
     () => (filtre === 'pros' ? clients.filter(c => c.isProfessional) : clients),
     [clients, filtre],
   )
   const affiches = useMemo(() => rechercherClients(parFiltre, recherche), [parFiltre, recherche])
-  const fiche = ouvert ? buildClientProfile(bookings, ouvert) : null
+  const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents) : null
 
   return (
     <div
@@ -177,7 +185,7 @@ export default function ClientsViewV2({ bookings }: { bookings: ClientBooking[] 
           {affiches.length > 0 && (
             <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
               {affiches.map(c => (
-                <LigneClient key={c.email} client={c} maintenant={maintenant} onOuvrir={() => setOuvert(c.email)} />
+                <LigneClient key={c.cle} client={c} maintenant={maintenant} onOuvrir={() => setOuvert(c.cle)} />
               ))}
             </ul>
           )}
