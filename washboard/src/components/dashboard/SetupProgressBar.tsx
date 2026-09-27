@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import type { SetupProgress } from '@/lib/setupProgress'
 
 // Avancement de la configuration, en tête des réglages.
@@ -25,6 +28,10 @@ const MAX_AFFICHES = 4
 const SEUIL_BLEU = 75
 
 export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
+  // Chaque réglage vit à deux endroits : l'ancien écran sur le site, le nouveau dans
+  // l'application installée. Sans ce choix, un tap depuis la PWA faisait sortir le laveur
+  // de l'application refaite (Alexandre, 2026-09-27).
+  const isPwa = usePwaStandalone()
   const alerte = progress.missing.some(m => m.blocking) && progress.percent < SEUIL_BLEU
   const affiches = progress.missing.slice(0, MAX_AFFICHES)
   const reste = progress.missing.length - affiches.length
@@ -70,7 +77,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           {affiches.map(item => (
             <li key={item.key}>
               <Link
-                href={item.href}
+                href={isPwa ? item.hrefV2 : item.href}
                 className="group flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors"
               >
                 <span
