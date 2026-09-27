@@ -42,6 +42,14 @@ export type MetierPageTemplateProps = {
    *  que ça coûte" — uniquement sur la page catégorie, hub de maillage vers
    *  les pages métier. Absente (undefined) sur une page métier classique. */
   metiers?: MetierCovered[]
+  /** Encart "Voir le comparatif", juste après "Ce que ça coûte" — seulement
+   *  si ce métier a une page comparatif publiée (P2 du cahier des charges).
+   *  Absent (undefined) : rien ne s'affiche, comme aujourd'hui sur les
+   *  métiers qui n'en ont pas encore. Un lien vers un comparatif enterré au
+   *  milieu d'un paragraphe de fonctionnalité ne suffit pas à le rendre
+   *  trouvable : ceci lui donne une vraie place, visible sans avoir à lire
+   *  toute la page. */
+  comparatif?: { href: string; titre: string; texte: string }
   faq: FaqItem[]
   ctaTitre: string
   ctaTexte: string
@@ -112,6 +120,7 @@ export default function MetierPageTemplate({
   fonctionnalitesIntro,
   fonctionnalites,
   metiers,
+  comparatif,
   faq,
   ctaTitre,
   ctaTexte,
@@ -268,6 +277,29 @@ export default function MetierPageTemplate({
           </p>
         </div>
       </section>
+
+      {/* ── Voir le comparatif — encart visible, pas un lien enterré dans un
+          paragraphe : voir le commentaire de la prop `comparatif` plus haut. ── */}
+      {comparatif && (
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
+          <Link
+            href={comparatif.href}
+            className="group flex items-center justify-between gap-4 sm:gap-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-6 sm:p-8 hover:border-[#1651E8]/40 dark:hover:border-[#6A9FFF]/40 transition-colors"
+          >
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white group-hover:text-[#1651E8] dark:group-hover:text-[#6A9FFF] transition-colors">
+                {comparatif.titre}
+              </p>
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                {comparatif.texte}
+              </p>
+            </div>
+            <svg aria-hidden className="w-5 h-5 shrink-0 text-slate-300 dark:text-slate-600 group-hover:text-[#1651E8] dark:group-hover:text-[#6A9FFF] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </section>
+      )}
 
       {/* ── Pour aller plus loin — automatique, filtré par thème (ou, sans
           thème, les derniers articles tous métiers confondus) ── */}

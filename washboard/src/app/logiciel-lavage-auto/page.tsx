@@ -188,6 +188,11 @@ export default function Page() {
         fonctionnalitesTitre="Fait pour le lavage auto, pas pour n'importe quel métier"
         fonctionnalitesIntro="Les mêmes fonctionnalités que WashBoard propose à tous ses métiers, réglées pour les contraintes du lavage auto mobile."
         fonctionnalites={fonctionnalites}
+        comparatif={{
+          href: '/meilleur-logiciel-lavage-auto',
+          titre: 'WashBoard, Calendly ou un simple carnet ? Le comparatif.',
+          texte: 'Poste par poste, ce qui change vraiment entre gérer à la main, un outil de prise de rendez-vous généraliste, et un logiciel pensé pour le lavage auto.',
+        }}
         faq={faqItems}
         ctaTitre="Tu laves, WashBoard gère le reste."
         ctaTexte="Ta page de réservation en ligne en 10 minutes, et ton premier mois offert."
