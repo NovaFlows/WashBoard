@@ -37,16 +37,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     })),
-    // Page catégorie ("logiciel-services-a-domicile") : hub de maillage vers
-    // les pages métier, pas une page métier elle-même (elle ne va donc pas
-    // dans METIER_PAGES, qui piloterait alors un lien à tort depuis les cartes
-    // "Pour qui ?" de la landing). Même priorité que les pages métier, même
-    // absence de `lastModified` pour la même raison.
-    {
-      url: `${SITE_URL}/logiciel-services-a-domicile`,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
+    // Page catégorie ("logiciel-services-a-domicile") : retirée du sitemap
+    // au recentrage automobile de 2026-09 — elle est passée en
+    // `robots: { index: false }` (voir le commentaire de son fichier), donc
+    // la lister ici enverrait un signal contradictoire à Google. La page
+    // reste en ligne, seulement plus référencée nulle part.
     {
       url: `${SITE_URL}/blog`,
       // La date du dernier article publié : la page de liste change quand un

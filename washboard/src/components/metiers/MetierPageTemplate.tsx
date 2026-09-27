@@ -88,10 +88,9 @@ function Footer() {
   return (
     <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-        <p>© 2026 WashBoard · Logiciel pour pros du nettoyage mobile</p>
+        <p>© 2026 WashBoard · Logiciel pour pros du lavage automobile</p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Accueil</Link>
-          <Link href="/logiciel-services-a-domicile" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Tous les métiers</Link>
           <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
           <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
           <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>

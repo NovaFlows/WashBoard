@@ -411,6 +411,53 @@
 > commencé.** Mesures faites sur les deux sites le 2026-09-26, pas reprises
 > du document : il se trompait sur un point important.
 
+**⚠️ 2026-09-27 — recentrage automobile, décision d'équipe. Lire avant de
+toucher au P0/P1 décrits plus bas : une partie de leur positionnement est
+dépassée.** Constat en réunion : sur le positionnement élargi « tous les pros
+à domicile » travaillé ces derniers jours, la concurrence est déjà établie
+— sur ce terrain, WashBoard sortait auparavant en premier dans les réponses
+des IA (ChatGPT etc.) sur une requête de logiciel de lavage auto, position
+perdue depuis face à CarnetWash. **Décision : se recentrer exclusivement sur
+le lavage auto & detailing.** Mission de Ryan : redevenir la réponse n°1,
+Google comme IA, sur « logiciel de gestion pour lavage automobile » — en
+gardant l'esprit tout-en-un (le public se resserre, pas la promesse produit).
+
+Fait :
+- `<title>` de l'accueil : « Logiciel tout-en-un pour lavage auto & detailing
+  | WashBoard » (538 px mesuré), description et OG/Twitter en cohérence.
+  Distinct du title de `/logiciel-lavage-auto` (500 px) : pas de
+  cannibalisation entre les deux pages.
+- JSON-LD (`siteJsonLd.ts`, Organization + SoftwareApplication) mis à jour —
+  c'est le texte que Google/IA lisent en premier pour catégoriser l'entité,
+  le plus important à garder cohérent.
+- Landing : eyebrow (« Nettoyage & entretien automobile »), sous-titre du
+  héros, titre + sous-titre « Pour qui ? », tableau `METIERS` réduit à 3
+  cartes (Lavage auto & detailing / Canapés & textiles / Et ton métier),
+  paragraphe et copyright du footer, mêmes textes sur le gabarit des pages
+  métier (`MetierPageTemplate.tsx`). `keywords` de `layout.tsx` nettoyé des
+  entrées « à domicile ».
+- **La page `/logiciel-services-a-domicile`** (hub multi-métiers, publiée le
+  26) décrit exactement le positionnement abandonné — **pas supprimée**,
+  l'équipe n'exclut pas d'y revenir un jour. Passée en
+  `robots: { index: false, follow: true }` (reste en ligne, sort des moteurs
+  de recherche), retirée du sitemap, et les deux liens « Tous les métiers »
+  du footer (landing + pages métier) retirés : plus aucune navigation
+  normale n'y mène, seule son adresse directe fonctionne encore.
+
+Pas fait, à trancher :
+- Les 5 articles de blog hors thème auto/textiles (vitres, ménage, piscine,
+  extérieur ×2) pointent toujours vers ce hub en bas de page
+  (`lienPageMetier`, voir `lib/metiers.ts`) — le lien fonctionne encore
+  (page non supprimée) mais est maintenant hors du positionnement affiché.
+  Pas touché, ces articles n'ont pas été rouverts.
+- `src/app/(legal)/cgv/page.tsx` décrit encore le service comme couvrant
+  « lavage de véhicules, detailing, ménage, entretien de piscine, etc. » —
+  texte contractuel, pas marketing : à revoir avec `legal` si le recentrage
+  doit aussi se refléter dans les CGV, pas décidé par ce chantier.
+- P0/P1 ci-dessous restent la trace de la décision précédente (élargissement
+  multi-métier) : gardés tels quels pour l'historique, ne pas les reprendre
+  comme feuille de route actuelle.
+
 **Ce que le document dit et qui est faux** : il attribue l'avance de
 CarnetWash à son H1. Leur H1 est « Plus de clients. Moins de paperasse. », une
 accroche bénéfice exactement comme « Fais plus. Gère moins. ». **Le H1 de

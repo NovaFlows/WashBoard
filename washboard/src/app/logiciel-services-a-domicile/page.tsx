@@ -19,12 +19,16 @@ function hrefMetier(theme: Theme): string | undefined {
 // elle pointe vers les pages métier déjà publiées, sans qu'aucune ne pointe
 // vers elle en retour par ce mécanisme automatique.
 //
-// Distincte de l'accueil (title "Logiciel de gestion nettoyage et entretien à
-// domicile") par le champ sémantique visé : "services à domicile",
-// "prestations à domicile", "prestataires à domicile" — la structure du
-// métier (on se déplace chez le client) plutôt que la nature de l'activité
-// (nettoyage, entretien). Les deux pages ne doivent jamais répondre à la même
-// requête.
+// Recentrage 2026-09 : décision d'équipe de revenir sur le positionnement
+// "tous les pros à domicile" pour se concentrer sur l'automobile — voir
+// TODO.md. Cette page décrit exactement le positionnement abandonné
+// (multi-métier) et est donc hors contexte avec le reste du site tel qu'il
+// est aujourd'hui. Elle n'est pas supprimée : l'équipe n'exclut pas d'y
+// revenir plus tard. En attendant, `robots: { index: false }` la retire des
+// moteurs de recherche, et aucun lien du site ne pointe plus vers elle (les
+// deux liens "Tous les métiers" du footer ont été retirés) — un visiteur ne
+// peut plus tomber dessus par la navigation normale, elle reste seulement
+// accessible par son adresse directe.
 //
 // Chaque affirmation ci-dessous est vérifiée dans le code avant d'être écrite,
 // pas seulement plausible :
@@ -68,6 +72,10 @@ const url = `${SITE_URL}/logiciel-services-a-domicile`
 export const metadata: Metadata = {
   title,
   description,
+  // Recentrage 2026-09 (voir le commentaire de fichier plus haut) : la page
+  // reste en ligne mais sort des moteurs de recherche. `follow` reste vrai,
+  // les liens sortants vers les pages métier n'ont pas à être pénalisés.
+  robots: { index: false, follow: true },
   alternates: { canonical: url },
   openGraph: {
     type: 'website',

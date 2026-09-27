@@ -69,11 +69,13 @@ export const metadata: Metadata = {
   // qui décrivaient la même idée deux fois (ex. "outil gestion lavage auto"
   // et "logiciel lavage auto"), et de "detailing" seul — trop ambigu pris
   // isolément, il peut laisser croire que WashBoard est un service de
-  // detailing plutôt qu'un logiciel pour les pros qui en font. Rien
-  // n'a été ajouté : ces champs ne sont plus lus par Google, seulement par
-  // certains systèmes tiers, donc on corrige ce qui est faux/redondant sans
-  // tenter d'en tirer un gain de référencement.
-  keywords: ["laveur auto mobile", "logiciel lavage auto", "logiciel detailing", "réservation lavage voiture", "logiciel nettoyage à domicile", "logiciel entretien à domicile", "WashBoard"],
+  // detailing plutôt qu'un logiciel pour les pros qui en font. Ces champs ne
+  // sont plus lus par Google, seulement par certains systèmes tiers, donc on
+  // les garde cohérents avec le positionnement affiché sans en attendre de
+  // gain de référencement. Recentrage 2026-09 : "logiciel nettoyage à
+  // domicile" et "logiciel entretien à domicile" retirés (plus le
+  // positionnement affiché), remplacés par des variantes automobile.
+  keywords: ["laveur auto mobile", "logiciel lavage auto", "logiciel gestion lavage automobile", "logiciel detailing", "réservation lavage voiture", "WashBoard"],
   authors: [{ name: "WashBoard" }],
   creator: "WashBoard",
   metadataBase: new URL("https://www.washboard.fr"),

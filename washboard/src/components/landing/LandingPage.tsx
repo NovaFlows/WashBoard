@@ -557,7 +557,7 @@ export default function LandingPage() {
                 className="text-base sm:text-lg text-slate-600 dark:text-white/65 mb-8 max-w-lg leading-relaxed"
               >
                 Le logiciel de gestion des pros qui se déplacent chez leurs clients&nbsp;:
-                lavage auto mobile, detailing, canapés.
+                lavage automobile, detailing, canapés & textiles.
                 Réservation en ligne, créneaux groupés.
               </motion.p>
               <motion.div
@@ -719,7 +719,7 @@ export default function LandingPage() {
             L&apos;essentiel. Sans le reste.
           </h2>
           <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Un seul outil pour le pro du nettoyage à domicile : la réservation, l&apos;agenda, les clients
+            Un seul outil pour le pro du lavage automobile : la réservation, l&apos;agenda, les clients
             et les comptes. Pas dix logiciels qui ne se parlent pas.
           </p>
         </FadeUp>
@@ -1200,7 +1200,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 text-center">
           <p className="text-xs text-slate-400 leading-relaxed">
-            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien à domicile</strong> — lavage de véhicules, detailing, ménage, entretien de piscine et bien d&apos;autres. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants du service à domicile en France.
+            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien automobile</strong> — lavage de véhicules, detailing, canapés & textiles. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants qui se déplacent chez leurs clients en France.
           </p>
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">
@@ -1234,7 +1234,7 @@ export default function LandingPage() {
               <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
             </div>
-            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel pour pros du nettoyage mobile · Tous droits réservés</p>
+            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel pour pros du lavage automobile · Tous droits réservés</p>
             {/* `flex-wrap` : la rangée se mesurait 366 px de contenu dans une
                 fenêtre de 390 px, donc déjà rognée sur un téléphone, et le
                 lien « Tous les métiers » la portait à 421 px — « Connexion »
@@ -1243,7 +1243,6 @@ export default function LandingPage() {
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
               <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
               <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
-              <Link href="/logiciel-services-a-domicile" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Tous les métiers</Link>
               <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
               <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
               <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
