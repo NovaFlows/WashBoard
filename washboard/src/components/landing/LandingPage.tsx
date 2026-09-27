@@ -886,33 +886,69 @@ export default function LandingPage() {
       {/* ── Créneaux groupés — argument retiré de l'encart phare (repris par la
           facturation) mais qui méritait de garder une vraie place : mécanisme
           détaillé juste avant la section ROI, qui en donne le résultat chiffré.
-          Contenu adapté de l'ancien encart (voir git 8bb98f2), avec un
-          habillage de section normale et non plus le dégradé sombre réservé à
-          la facturation. */}
+          Habillage propre : carte neutre (pas le dégradé cyan/marine réservé à
+          la facturation), avec un mockup d'agenda à côté du texte plutôt qu'un
+          simple bloc de paragraphes. Mockup construit à la main (mêmes chiffres
+          vérifiés que le texte), pas une capture — la remise reste optionnelle
+          dans l'exemple : un des deux créneaux rapprochés n'en a pas. */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-10">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Créneaux groupés</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
             Deux rendez-vous proches, un trajet en moins.
           </h2>
-          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-            Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à tes
-            rendez-vous déjà prévus ce jour-là — pas à un découpage de quartier sur une carte. En dessous du
-            seuil que tu règles toi-même, de 5 à 30 minutes de route, les horaires juste avant ou juste après
-            un rendez-vous existant sont mis en avant au client, avec la remise que tu as réglée si tu en as
-            réglé une — en euros ou en pourcentage, à toi de choisir.
-          </p>
         </FadeUp>
         <FadeUp>
-          <div className="flex items-start gap-3 max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-5 sm:p-6">
-            <svg aria-hidden className="w-5 h-5 mt-0.5 shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Même si tu n&apos;actives pas les créneaux groupés, WashBoard ne propose jamais à un client un
-              horaire que le trajet réel rendrait injoignable entre deux rendez-vous prévus le même jour :
-              cette vérification tourne à chaque réservation.
-            </p>
+          <div className="border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center">
+            <div>
+              <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 text-sm sm:text-base">
+                Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à tes
+                rendez-vous déjà prévus ce jour-là — pas à un découpage de quartier sur une carte. En dessous du
+                seuil que tu règles toi-même, de 5 à 30 minutes de route, les horaires juste avant ou juste après
+                un rendez-vous existant sont mis en avant au client, avec la remise que tu as réglée si tu en as
+                réglé une — en euros ou en pourcentage, à toi de choisir.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-emerald-500 dark:text-emerald-400 font-bold">
+                <svg aria-hidden className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Une protection qui tourne même sans remise activée
+              </div>
+              <p className="mt-4 text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                WashBoard ne propose jamais à un client un horaire que le trajet réel rendrait injoignable
+                entre deux rendez-vous prévus le même jour — cette vérification tourne à chaque réservation.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] p-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-black text-slate-400 dark:text-white/40 uppercase tracking-wider">
+                  Bordeaux Sud — aujourd&apos;hui
+                </p>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 shrink-0">Seuil : 15 min</span>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
+                  { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€' },
+                  { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart' },
+                  { time: '14:00', label: 'Lucie M. — Pack famille', type: 'normal' },
+                ].map((item) => (
+                  <div
+                    key={item.time}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#1651E8]/8 dark:bg-[#6A9FFF]/10' : 'bg-slate-100/70 dark:bg-white/[0.03]'}`}
+                  >
+                    <span className="text-xs font-mono text-slate-400 dark:text-white/40 shrink-0">{item.time}</span>
+                    <span className="text-xs text-slate-600 dark:text-white/80 flex-1 truncate">{item.label}</span>
+                    {item.type === 'smart' && (
+                      <span className="text-xs font-bold text-[#1651E8] dark:text-[#6A9FFF] shrink-0">{item.note ?? 'proche'}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[10px] text-slate-400 dark:text-white/30 leading-relaxed">
+                Exemple illustratif — la remise est optionnelle, tu peux ne jamais l&apos;activer.
+              </p>
+            </div>
           </div>
         </FadeUp>
       </section>
@@ -924,14 +960,33 @@ export default function LandingPage() {
             <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
               {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
                   assez de clients pour en publier une, et l'afficher comme un
-                  constat serait trompeur. */}
+                  constat serait trompeur. Le calcul lui-même (2 x 22 = +40) est
+                  mis en scène visuellement, pas un graphique qui suggérerait une
+                  donnée mesurée dans le temps. */}
               <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">Exemple de calcul</p>
               <p className="text-7xl sm:text-8xl lg:text-[9rem] font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
                 +40
               </p>
-              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-2">rendez-vous en plus par mois</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
-                Si les créneaux groupés te font caser 2 rendez-vous de plus par jour, sur 22 jours ouvrés.
+              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-8">rendez-vous en plus par mois</p>
+
+              <div className="inline-flex flex-wrap items-center gap-3 sm:gap-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 px-5 py-4 sm:px-7 sm:py-5">
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">2</p>
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />de plus / jour</p>
+                </div>
+                <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">×</span>
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">22</p>
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">jours ouvrés<br />par mois</p>
+                </div>
+                <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">=</span>
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">+40</p>
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />par mois</p>
+                </div>
+              </div>
+
+              <p className="mt-6 text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
                 Un ordre de grandeur, pas une promesse : tout dépend de ta zone et de ta demande.
               </p>
             </div>
