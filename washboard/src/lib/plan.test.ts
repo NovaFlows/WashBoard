@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
   formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
@@ -677,6 +677,19 @@ describe('simulation d’offre en local', () => {
   const PRO_PAYANT = { plan: 'pro', grandfathered: false, subscription_status: 'active' }
   const HISTORIQUE = { plan: 'pro', grandfathered: true }
 
+  // L'environnement est ÉPINGLÉ, pas hérité.
+  //
+  // Ces tests décrivent le comportement de la simulation quand elle est
+  // active, ce qui n'arrive qu'en dehors de la production. Sans cette ligne,
+  // ils passaient en local (vitest tourne en `NODE_ENV=test`) et échouaient
+  // chez Vercel, dont la commande de build exécute `npm run test` avec
+  // `NODE_ENV=production` : la simulation y est inerte, donc `planEffectif`
+  // rend l'offre réelle et les trois attentes tombent. Build de
+  // prévisualisation en échec le 2026-09-27, pour cette seule raison.
+  //
+  // Le test qui vérifie l'inertie, lui, repose `NODE_ENV` sur 'production' de
+  // son côté : le dernier appel gagne.
+  beforeEach(() => { vi.stubEnv('NODE_ENV', 'development') })
   afterEach(() => { vi.unstubAllEnvs() })
 
   it('ne fait rien tant qu’aucune variable n’est posée — l’état livré', () => {
