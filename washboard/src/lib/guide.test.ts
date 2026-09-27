@@ -92,15 +92,36 @@ describe('intégrité du contenu', () => {
 
   it('tous les liens internes pointent vers une page du dashboard connue', () => {
     // Un lien mort dans le guide envoie l'utilisateur sur un 404 : on verrouille
-    // la liste des destinations valides.
+    // la liste des destinations valides. L'ancre est ignorée ici — c'est
+    // `lienV2.test.ts` qui vérifie qu'elle mène quelque part dans l'application.
     const PAGES = [
       '/dashboard', '/dashboard/crm', '/dashboard/calendrier', '/dashboard/compta',
       '/dashboard/admin', '/dashboard/parametres', '/dashboard/abonnement', '/dashboard/guide',
-      '/dashboard/clients', '/dashboard/factures',
+      '/dashboard/clients', '/dashboard/factures', '/dashboard/parametres/tout',
     ]
     const liens = allEntries.flatMap(e => [...e.answer.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map(m => m[1]))
     expect(liens.length).toBeGreaterThan(0)
-    for (const href of liens) expect(PAGES).toContain(href)
+    for (const href of liens) expect(PAGES).toContain(href.split('#')[0])
+  })
+
+  it('aucune réponse ne décrit la navigation de WashBoard', () => {
+    // Le même texte est lu depuis le site et depuis l'application refaite, qui n'ont ni les
+    // mêmes écrans ni les mêmes noms : « Réglages de la page, onglet Prestations » était faux
+    // pour un lecteur sur deux (Alexandre, 2026-09-27). On nomme la chose, le lien sait où
+    // c'est. Restent permis : les onglets du NAVIGATEUR.
+    const INTERDITS = [
+      /onglet (?!privé|du navigateur)/i,
+      /carte « /,
+      /Réglages de la page/,
+      /\[Paramètres\]/,
+      /\[Comptabilité\]/,
+      /\[CRM\]/,
+    ]
+    for (const entry of allEntries) {
+      for (const interdit of INTERDITS) {
+        expect(`${entry.id} — ${entry.question} ${entry.answer}`).not.toMatch(interdit)
+      }
+    }
   })
 
   it('aucun lien mal formé ne reste en texte brut', () => {

@@ -15,7 +15,9 @@ export function NotificationsToggle() {
   if (etat === 'chargement') return null
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
+    // id="notifications" : cible du guide, qui écrit ses liens avec les ancres du site
+    // (voir `lib/lienV2.ts`, qui les traduit pour l'application).
+    <div id="notifications" className="scroll-mt-24 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Notifications</h3>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
         Soyez prévenu sur votre téléphone dès qu&apos;un client réserve, sans attendre l&apos;email.

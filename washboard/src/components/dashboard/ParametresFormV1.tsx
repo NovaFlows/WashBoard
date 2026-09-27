@@ -607,8 +607,9 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
         </Card>
       )}
 
-      {/* Email */}
-      <Card title="Adresse email" icon={Mail}>
+      {/* Email. id="compte" : cible du guide pour « changer mon email ou mon mot de passe »
+          (les deux cartes se suivent) — voir `lib/lienV2.ts` pour l'équivalent v2. */}
+      <Card id="compte" title="Adresse email" icon={Mail}>
         <form onSubmit={saveEmail} noValidate className="space-y-4">
           <div>
             <label className={labelClass}>Email</label>
@@ -997,7 +998,7 @@ function ClientTab({ washer }: { washer: Washer }) {
         )}
       </Card>
 
-      <Card title="Personnalisation de la page client" icon={Palette}>
+      <Card id="personnalisation" title="Personnalisation de la page client" icon={Palette}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Configurez votre logo, votre message d&apos;accueil, vos prestations et vos disponibilités.
         </p>

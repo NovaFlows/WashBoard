@@ -24,12 +24,17 @@ const CORRESPONDANCES: Record<string, string> = {
   '/dashboard/compta': '/dashboard/chiffres',
   '/dashboard/crm': '/dashboard/chiffres',
 
-  // Réglages : l'ancien formulaire géant s'est rangé en écrans.
+  // Réglages : l'ancien formulaire géant s'est rangé en écrans. Les ancres qui visent une
+  // feuille (`#facturation`, `#notifications`) la font ouvrir à l'arrivée — l'écran d'après
+  // les lit dans `window.location.hash`.
   '/dashboard/parametres#profil': '/dashboard/parametres/profil',
-  '/dashboard/parametres#facturation': '/dashboard/parametres/profil',
+  '/dashboard/parametres#compte': '/dashboard/parametres/profil',
+  '/dashboard/parametres#facturation': '/dashboard/parametres/profil#facturation',
   '/dashboard/parametres#avis': '/dashboard/parametres/messages',
   '/dashboard/parametres#relances': '/dashboard/parametres/messages',
   '/dashboard/parametres#lien-reservation': '/dashboard/parametres/liens',
+  '/dashboard/parametres#personnalisation': '/dashboard/parametres/apparence',
+  '/dashboard/parametres#notifications': '/dashboard/parametres/reglages#notifications',
 }
 
 export function lienV2(href: string): string {

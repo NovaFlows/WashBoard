@@ -42,7 +42,12 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
   // Copie locale : la ligne change tout de suite après un enregistrement réussi, sans attendre
   // le rechargement de la page (`router.refresh()`, lancé en plus pour le reste de l'écran).
   const [fiche, setFiche] = useState(washer)
-  const [feuille, setFeuille] = useState<Feuille>(null)
+  // Arrivée par un lien du guide (`#facturation`, « que dois-je remplir pour facturer ? ») :
+  // la feuille visée s'ouvre d'office. Cet écran ne se monte qu'après le garde-fou de
+  // `Profil.tsx`, donc toujours dans le navigateur.
+  const [feuille, setFeuille] = useState<Feuille>(
+    () => (window.location.hash === '#facturation' ? 'facturation' : null),
+  )
 
   const fermer = () => setFeuille(null)
 

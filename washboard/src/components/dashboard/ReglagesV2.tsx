@@ -27,7 +27,13 @@ import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 export default function ReglagesV2() {
   const { theme, setTheme } = useTheme()
   const { etat: etatNotifications } = useNotificationsPush()
-  const [feuilleNotifications, setFeuilleNotifications] = useState(false)
+  // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office, sinon le
+  // laveur atterrit sur un écran de réglages et doit re-chercher la ligne qu'on lui promettait.
+  // Cet écran ne se monte qu'après le garde-fou de `Reglages.tsx`, donc toujours dans le
+  // navigateur — `window` existe.
+  const [feuilleNotifications, setFeuilleNotifications] = useState(
+    () => window.location.hash === '#notifications',
+  )
   const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
   const { unreadSupportCount } = useSupportBadges()
   const notifications = resumeNotifications(etatNotifications)
