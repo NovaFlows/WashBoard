@@ -450,10 +450,22 @@ Pas fait, à trancher :
   (`lienPageMetier`, voir `lib/metiers.ts`) — le lien fonctionne encore
   (page non supprimée) mais est maintenant hors du positionnement affiché.
   Pas touché, ces articles n'ont pas été rouverts.
-- `src/app/(legal)/cgv/page.tsx` décrit encore le service comme couvrant
-  « lavage de véhicules, detailing, ménage, entretien de piscine, etc. » —
-  texte contractuel, pas marketing : à revoir avec `legal` si le recentrage
-  doit aussi se refléter dans les CGV, pas décidé par ce chantier.
+- **CGV : tranché, ne pas rouvrir.** `src/app/(legal)/cgv/page.tsx` décrit
+  encore le service comme couvrant « lavage de véhicules, detailing, ménage,
+  entretien de piscine, etc. » — passé en revue par `legal` le 2026-09-27.
+  Verdict : risque nul aujourd'hui, l'objet du contrat est l'abonnement au
+  **logiciel** (pas la prestation du laveur), le « etc. » n'a jamais été une
+  liste fermée, et les CGV restent plus larges que le marketing — jamais
+  l'inverse. Le client réel `kookii-clean` (ménage) reste couvert sans
+  ambiguïté. Trois pistes proposées (statu quo / généraliser encore plus /
+  resserrer sur l'auto, déconseillée) ; **Ryan a choisi de ne pas y
+  toucher.** Ne pas relancer cette question sans un nouvel élément (ex. un
+  vrai avis d'avocat, ou une décision de fermer durablement la porte aux
+  autres métiers).
+  - Point à part relevé au passage, sans lien avec le recentrage : le
+    `NOM LÉGAL` en section 1 des CGV est toujours un placeholder — l'entité
+    n'existe pas encore juridiquement, donc les CGV ne sont pas encore
+    opposables en l'état. À traiter le jour où la structure est créée.
 - P0/P1 ci-dessous restent la trace de la décision précédente (élargissement
   multi-métier) : gardés tels quels pour l'historique, ne pas les reprendre
   comme feuille de route actuelle.
