@@ -3,8 +3,10 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
-import { buildClientProfile, type ClientBooking, type ClientDocument } from '@/lib/clientProfile'
+import { buildClientProfile, type ClientBooking, type ClientDocument, type ClientReglages } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
+import { clientsARelancer, type LigneARelancer, type ReglagesRelance } from '@/lib/clientsARelancer'
+import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 
 // Fichier clients du laveur, présentation v2 — réservée à la PWA installée en
@@ -16,6 +18,11 @@ import { FUSEAU } from '@/lib/dateUtils'
 // (listeClients, rechercherClients, buildClientProfile, le calcul de
 // `maintenant`, l'ouverture de la fiche) n'a pas bougé : seule la
 // présentation change, et elle n'est pas dupliquée avec ClientsViewV1.tsx.
+//
+// Onglet « À relancer » (2026-09-28, proposition de Yanis discutée avec Alexandre) : premier
+// morceau d'un vrai CRM, avant les prospects et les fiches entreprise (voir le compte rendu de
+// la discussion). Tout son calcul vit dans `lib/clientsARelancer.ts`, qui réutilise la règle
+// exacte du cron de relance — cet écran ne fait qu'afficher.
 
 // Rôle "corps" (14/450) et "corps fort" (15/550), largeur 100 — planche
 // Système. Les tailles en px viennent de `specs/03_Clients.txt` (position et
@@ -85,13 +92,30 @@ function pastilleDroite(c: ResumeClient, maintenant: number): { texte: string; c
   }
 }
 
-type Filtre = 'tous' | 'pros'
+type Filtre = 'tous' | 'pros' | 'relancer'
 
-export default function ClientsViewV2({ bookings, documents = [] }: {
+/** `ClientBooking` porte déjà tout ce que `RdvMessage` demande (voir son en-tête) — sauf
+ *  `client_email` non nullable, alors que le formulaire de réservation ne l'exige pas toujours
+ *  d'après son type. Une chaîne vide s'exclut d'elle-même du regroupement par client. */
+function versRdvMessage(b: ClientBooking): RdvMessage {
+  return {
+    id: b.id, client_name: b.client_name, client_email: b.client_email || null, client_phone: b.client_phone,
+    scheduled_at: b.scheduled_at, created_at: b.created_at ?? b.scheduled_at, status: b.status,
+    is_professional: b.is_professional, company_name: b.company_name, services: b.services,
+    followup_sent_at: b.followup_sent_at,
+  }
+}
+
+export default function ClientsViewV2({ bookings, documents = [], reglages = [], reglagesMessages }: {
   bookings: ClientBooking[]
   /** Devis et factures écrits à la main : ils font naître des clients qui n'ont jamais
    *  réservé (Alexandre, 2026-09-27 — « un client comme un autre »). */
   documents?: ClientDocument[]
+  /** « Ne plus contacter », écrit à la main (2026-09-28). */
+  reglages?: ClientReglages[]
+  /** Réglages de relance du laveur : sans eux, pas d'onglet « À relancer » (bookings passés
+   *  sans cette prop dans les autres écrans qui réutilisent ClientsViewV2 — aucun aujourd'hui). */
+  reglagesMessages?: ReglagesRelance
 }) {
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
@@ -101,16 +125,22 @@ export default function ClientsViewV2({ bookings, documents = [] }: {
   const [ouvert, setOuvert] = useState<string | null>(null)
 
   const clients = useMemo(
-    () => listeClients(bookings, new Date(maintenant), documents),
-    [bookings, documents, maintenant],
+    () => listeClients(bookings, new Date(maintenant), documents, reglages),
+    [bookings, documents, reglages, maintenant],
   )
   const pros = useMemo(() => clients.filter(c => c.isProfessional).length, [clients])
+  const aRelancer: LigneARelancer[] = useMemo(
+    () => reglagesMessages
+      ? clientsARelancer(bookings.map(versRdvMessage), reglagesMessages, reglages, maintenant)
+      : [],
+    [bookings, reglagesMessages, reglages, maintenant],
+  )
   const parFiltre = useMemo(
     () => (filtre === 'pros' ? clients.filter(c => c.isProfessional) : clients),
     [clients, filtre],
   )
   const affiches = useMemo(() => rechercherClients(parFiltre, recherche), [parFiltre, recherche])
-  const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents) : null
+  const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglages) : null
 
   return (
     <div
@@ -119,43 +149,55 @@ export default function ClientsViewV2({ bookings, documents = [] }: {
       <div>
         <h1 className={`text-[21px] ${titre}`}>Clients</h1>
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1`}>
-          {clients.length === 0
-            ? 'Vos clients apparaîtront ici dès leur première réservation.'
-            : pros > 0
-              ? <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''} · {pros} pro{pros > 1 ? 's' : ''}</span>
-              : <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''}</span>}
+          {filtre === 'relancer' ? (
+            <span className="tabular-nums">{aRelancer.length} client{aRelancer.length > 1 ? 's' : ''} pas revenu{aRelancer.length > 1 ? 's' : ''}</span>
+          ) : clients.length === 0 ? (
+            'Vos clients apparaîtront ici dès leur première réservation.'
+          ) : pros > 0 ? (
+            <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''} · {pros} pro{pros > 1 ? 's' : ''}</span>
+          ) : (
+            <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''}</span>
+          )}
         </p>
       </div>
 
       {clients.length > 0 && (
         <>
-          <div className="relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--v2-color-gris)] pointer-events-none" aria-hidden />
-            <input
-              id="recherche-clients"
-              type="search"
-              inputMode="search"
-              value={recherche}
-              onChange={e => setRecherche(e.target.value)}
-              placeholder="Nom, téléphone, adresse"
-              aria-label="Rechercher un client"
-              autoComplete="off"
-              className={`w-full h-11 pl-11 pr-11 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40 [&::-webkit-search-cancel-button]:hidden`}
-            />
-            {recherche && (
-              <button
-                type="button"
-                onClick={() => setRecherche('')}
-                aria-label="Effacer la recherche"
-                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          {filtre !== 'relancer' && (
+            <div className="relative">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--v2-color-gris)] pointer-events-none" aria-hidden />
+              <input
+                id="recherche-clients"
+                type="search"
+                inputMode="search"
+                value={recherche}
+                onChange={e => setRecherche(e.target.value)}
+                placeholder="Nom, téléphone, adresse"
+                aria-label="Rechercher un client"
+                autoComplete="off"
+                className={`w-full h-11 pl-11 pr-11 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40 [&::-webkit-search-cancel-button]:hidden`}
+              />
+              {recherche && (
+                <button
+                  type="button"
+                  onClick={() => setRecherche('')}
+                  aria-label="Effacer la recherche"
+                  className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-2 overflow-x-auto">
-            {(['tous', 'pros'] as const).map(f => (
+            {([
+              ['tous', 'Tous'],
+              ['pros', 'Pros'],
+              // Le laveur qui n'a pas encore réglé de relance a quand même le droit de voir qui
+              // n'est pas revenu : voir le mode « pas de relance programmée » de clientsARelancer.
+              ...(reglagesMessages ? [['relancer', 'À relancer'] as const] : []),
+            ] as const).map(([f, libelle]) => (
               <button
                 key={f}
                 type="button"
@@ -167,27 +209,43 @@ export default function ClientsViewV2({ bookings, documents = [] }: {
                     : 'bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] border border-[color:var(--v2-filet-fort)]'
                 }`}
               >
-                {f === 'tous' ? 'Tous' : 'Pros'}
+                {libelle}
               </button>
             ))}
           </div>
 
-          {(recherche.trim() || affiches.length === 0) && (
-            <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
-              {affiches.length === 0
-                ? recherche.trim()
-                  ? `Aucun client ne correspond à « ${recherche.trim()} ».`
-                  : 'Aucun client professionnel pour l’instant.'
-                : `${affiches.length} client${affiches.length > 1 ? 's' : ''} trouvé${affiches.length > 1 ? 's' : ''}`}
-            </p>
-          )}
+          {filtre === 'relancer' ? (
+            aRelancer.length === 0 ? (
+              <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                Tous vos clients sont revenus, ou n’ont pas encore de quoi être relancés.
+              </p>
+            ) : (
+              <ul aria-label="Clients à relancer" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+                {aRelancer.map(l => (
+                  <LigneARelancerVue key={l.cle} ligne={l} onOuvrir={() => setOuvert(l.cle)} />
+                ))}
+              </ul>
+            )
+          ) : (
+            <>
+              {(recherche.trim() || affiches.length === 0) && (
+                <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
+                  {affiches.length === 0
+                    ? recherche.trim()
+                      ? `Aucun client ne correspond à « ${recherche.trim()} ».`
+                      : 'Aucun client professionnel pour l’instant.'
+                    : `${affiches.length} client${affiches.length > 1 ? 's' : ''} trouvé${affiches.length > 1 ? 's' : ''}`}
+                </p>
+              )}
 
-          {affiches.length > 0 && (
-            <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-              {affiches.map(c => (
-                <LigneClient key={c.cle} client={c} maintenant={maintenant} onOuvrir={() => setOuvert(c.cle)} />
-              ))}
-            </ul>
+              {affiches.length > 0 && (
+                <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+                  {affiches.map(c => (
+                    <LigneClient key={c.cle} client={c} maintenant={maintenant} onOuvrir={() => setOuvert(c.cle)} />
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </>
       )}
@@ -226,6 +284,46 @@ function LigneClient({ client: c, maintenant, onOuvrir }: { client: ResumeClient
 
         <span className={`shrink-0 text-right text-[12.5px] ${corpsFort} tabular-nums ${pastille.couleur}`}>
           {pastille.texte}
+        </span>
+      </button>
+    </li>
+  )
+}
+
+/** Couleur du statut : rouge pour ce qui attend un appel maintenant, gris pour ce qui n'attend
+ *  plus d'action automatique (relance déjà partie, client qui ne veut plus), vert sinon —
+ *  une relance programmée est une bonne nouvelle en soi, elle n'a pas besoin d'un appel. */
+function couleurStatut(l: LigneARelancer): string {
+  if (l.urgent) return 'text-[color:var(--v2-color-rouge)]'
+  if (l.nePlusContacter || l.statut.startsWith('Relancé')) return 'text-[color:var(--v2-color-gris)]'
+  return 'text-[color:var(--v2-color-vert)]'
+}
+
+function LigneARelancerVue({ ligne: l, onOuvrir }: { ligne: LigneARelancer; onOuvrir: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOuvrir}
+        aria-label={`Voir la fiche de ${l.nom}`}
+        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+      >
+        <span className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
+          {initiales(l.nom)}
+        </span>
+
+        <span className="flex-1 min-w-0">
+          <span className={`block text-[15px] ${nom} truncate`}>{l.nom}</span>
+          <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5 truncate`}>
+            {l.detail}
+          </span>
+        </span>
+
+        <span className="shrink-0 flex flex-col items-end gap-0.5">
+          <span className={`text-[12.5px] ${corpsFort} tabular-nums text-[color:var(--v2-color-gris)]`}>
+            {l.jours} j
+          </span>
+          <span className={`text-[11.5px] ${corpsFort} ${couleurStatut(l)}`}>{l.statut}</span>
         </span>
       </button>
     </li>

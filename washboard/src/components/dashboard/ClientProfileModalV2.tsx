@@ -6,6 +6,7 @@ import type { ClientBooking, ClientProfile } from '@/lib/clientProfile'
 import { FUSEAU } from '@/lib/dateUtils'
 import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
+import { marquerNePlusContacter } from '@/lib/clientsApi'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
 // une carte centrée (ordinateur), réservée à la PWA installée en mode
@@ -23,6 +24,13 @@ import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTa
 // pro, des devis et factures. Rien de tout ça n'est inventé ici — voir le
 // compte rendu de la passe pour la liste précise et ce qu'il faudrait
 // construire.
+//
+// « Ne plus contacter » (2026-09-28, proposition de Yanis discutée avec Alexandre) : premier
+// morceau du menu d'options qui manquait ci-dessus. Une simple ligne pour l'instant, pas encore
+// un menu — les autres actions (tâche, fusion, export RGPD) demandent des tables qui n'existent
+// pas encore (voir le compte rendu de la discussion). Écrit directement ici plutôt que remonté
+// par une prop : la feuille est le seul endroit qui connaît la clé du client (`profile.cle`) et
+// se rouvre elle-même après écriture, elle n'a besoin de prévenir personne d'autre.
 
 // Rôles de police — mêmes constantes que ClientsViewV2.tsx (passe 2), plus
 // `hero` pour les trois chiffres de la fiche (planche Système : "chiffre
@@ -79,6 +87,24 @@ export default function ClientProfileModalV2({
   useBloquerDefilement()
   const glisser = useGlisserPourFermer(onClose)
   const focusPrecedent = useRef<HTMLElement | null>(null)
+
+  // Optimiste : le laveur voit le changement tout de suite, la feuille reste ouverte — c'est un
+  // aller-retour qu'il fait sans quitter la fiche, pas une saisie qu'on valide. Un échec revient
+  // à l'état d'avant et le dit.
+  const [nePlusContacter, setNePlusContacter] = useState(profile.nePlusContacter)
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function basculerNePlusContacter() {
+    if (enCours) return
+    const cible = !nePlusContacter
+    setEnCours(true)
+    setErreur(null)
+    setNePlusContacter(cible)
+    const r = await marquerNePlusContacter(profile.cle, cible)
+    setEnCours(false)
+    if (!r.ok) { setNePlusContacter(!cible); setErreur(r.message) }
+  }
 
   // Entrée animée : un cran après le montage pour que le navigateur parte
   // bien de l'état initial (translate-y-full / opacity-0) avant de
@@ -290,6 +316,24 @@ export default function ClientProfileModalV2({
               </a>
             </div>
           )}
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => void basculerNePlusContacter()}
+              disabled={enCours}
+              className={`text-[12.5px] ${corpsFort} underline disabled:opacity-50`}
+              style={{ color: nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}
+            >
+              {nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter ce client'}
+            </button>
+            {nePlusContacter && (
+              <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                Il ne recevra plus ni relance, ni demande d’avis. Vous pouvez toujours l’appeler ou lui écrire vous-même.
+              </p>
+            )}
+            {erreur && <p className={`mt-1 text-[12px] ${corps} text-[color:var(--v2-color-rouge)]`} role="alert">{erreur}</p>}
+          </div>
 
           {/* Devis et factures écrits à la main. Ils ne sont pas des rendez-vous et n'ont donc
               rien à faire dans l'historique ci-dessous : les y mêler ferait passer un devis

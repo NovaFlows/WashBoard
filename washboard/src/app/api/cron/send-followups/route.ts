@@ -6,10 +6,18 @@ import { graceEnded } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
 import { repartirParClient, decisionPlusRecents } from '@/lib/relances'
+import { cleClient } from '@/lib/clientProfile'
 
-// `followup_sent_at` = relance TRAITÉE : envoyée, ou devenue inutile (voir
-// lib/relances.ts). Sans cette marque sur les rendez-vous écartés, ils restaient
+// `followup_sent_at` = relance TRAITÉE : envoyée, devenue inutile (voir
+// lib/relances.ts), OU le client a demandé qu'on le laisse tranquille (table `clients`,
+// réglage du 2026-09-28). Sans cette marque sur les rendez-vous écartés, ils restaient
 // candidats pour toujours et encombraient le lot de 500.
+//
+// Écart connu, assumé : `messagesAutomatiques.ts` (écran « Messages automatiques ») ne
+// connaît pas ce réglage et peut donc afficher, pendant sa fenêtre de 7 jours, un client
+// opposé comme « relance envoyée » — la marque est bien la même dans les deux cas, rien ne
+// les distingue sans lire `clients.ne_plus_contacter`. Aucun message n'est réellement
+// envoyé : seul le libellé de l'écran serait trompeur, pas l'envoi.
 const LOT_CLOTURE = 100
 
 export async function GET(request: NextRequest) {
@@ -73,10 +81,28 @@ export async function GET(request: NextRequest) {
     // Un seul message par client ; ses rendez-vous plus anciens sont clos.
     const { porteurs, aClore } = repartirParClient(candidates)
 
+    // Qui a demandé qu'on le laisse tranquille (table `clients`, réglage du 2026-09-28) : un
+    // seul aller-retour pour tout le laveur, pas un par candidat.
+    const { data: refus, error: errRefus } = await admin
+      .from('clients')
+      .select('cle')
+      .eq('washer_id', washer.id)
+      .eq('ne_plus_contacter', true)
+    if (errRefus) logger.error('cron.send-followups.refus.read_failed', { washerId: washer.id }, errRefus)
+    const clesRefusees = new Set((refus ?? []).map(r => r.cle))
+
     const channel = washer.review_channel ?? 'email'
 
     for (const booking of porteurs) {
       const clientEmail = booking.client_email
+
+      // Une relance TRAITÉE, comme n'importe quel rendez-vous devenu inutile — sinon ce
+      // candidat resterait éligible pour toujours et reviendrait charger le lot chaque jour.
+      if (clesRefusees.has(cleClient(booking.client_email, booking.client_phone))) {
+        aClore.push(booking.id)
+        continue
+      }
+
       // Les plus proches d'abord : s'il existe un rendez-vous passé, il est dans
       // les premiers lus.
       const { data: plusRecents, error: errRecents } = await admin

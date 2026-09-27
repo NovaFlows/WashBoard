@@ -19,6 +19,12 @@
 // Les documents sont un paramètre FACULTATIF : sans eux, cette fiche se calcule
 // exactement comme avant (le CRM du site, `chiffresClients`, « Proposer ce
 // créneau » n'en passent pas et ne bougent donc pas d'un chiffre).
+//
+// Depuis le 2026-09-28 (proposition de Yanis, discutée avec Alexandre), un client peut aussi
+// porter des RÉGLAGES écrits à la main — pour l'instant un seul : « ne plus contacter »,
+// stocké table `clients` (SQL donné dans la conversation du 2026-09-28). Même principe que les
+// documents : un paramètre FACULTATIF (`reglages`), une ligne par client SEULEMENT si quelque
+// chose a été réglé — son absence vaut « rien de particulier », le comportement d'aujourd'hui.
 
 export type ClientBooking = {
   id: string
@@ -33,6 +39,18 @@ export type ClientBooking = {
   is_professional: boolean
   company_name: string | null
   services: { name: string; price: number; duration_minutes: number } | null
+  /** Facultatifs : absents des listes qui n'en ont pas l'usage (le fichier clients « simple »,
+   *  les tests). Nécessaires pour reproduire la décision de relance (`lib/messagesAutomatiques.ts`) — voir
+   *  `clientsARelancer.ts`, seul endroit qui les lit. */
+  created_at?: string
+  followup_sent_at?: string | null
+}
+
+/** Un réglage écrit à la main sur un client — table `clients`, SQL donné le 2026-09-28.
+ *  Facultatif partout : son absence vaut « rien de particulier ». */
+export type ClientReglages = {
+  cle: string
+  nePlusContacter: boolean
 }
 
 /** Ce qu'un document apporte à une fiche client. Forme minimale voulue : elle évite de faire
@@ -66,6 +84,8 @@ const cleDocument = (d: ClientDocument) =>
 const dateDocument = (d: ClientDocument) => d.emis_le ?? d.created_at
 
 export type ClientProfile = {
+  /** Ce qui identifie le client pour le réécrire — voir `ResumeClient.cle`, même règle. */
+  cle: string
   email: string
   /** Nom de la réservation la plus récente : c'est la graphie la plus à jour. */
   name: string
@@ -87,6 +107,8 @@ export type ClientProfile = {
   lastVisit: string | null
   /** Jours depuis le dernier rendez-vous honoré — sert à repérer qui relancer. */
   daysSinceLastVisit: number | null
+  /** A demandé à ne plus être contacté : les crons de relance et d'avis doivent l'exclure. */
+  nePlusContacter: boolean
 }
 
 const isHonored = (b: ClientBooking) => b.status === 'confirmed' || b.status === 'done'
@@ -97,6 +119,7 @@ export function buildClientProfile(
   email: string,
   now: Date = new Date(),
   documents: ClientDocument[] = [],
+  reglages: ClientReglages[] = [],
 ): ClientProfile | null {
   const key = email.trim().toLowerCase()
   const mine = bookings
@@ -141,6 +164,8 @@ export function buildClientProfile(
   const prestations = honored.length + facturesFaites.length
 
   return {
+    cle: key,
+    nePlusContacter: reglages.find(r => r.cle === key)?.nePlusContacter ?? false,
     ...identite,
     phone: mine.find(b => b.client_phone)?.client_phone
       ?? siens.find(d => d.contenu.client.telephone)?.contenu.client.telephone

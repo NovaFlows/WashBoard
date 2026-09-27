@@ -6,10 +6,14 @@ import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/li
 import type { Plan } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
+import { cleClient } from '@/lib/clientProfile'
 
 // Envoie les demandes d'avis Google dont l'heure programmée est passée.
 // Appelée régulièrement (toutes les heures) par un planificateur externe
 // (cron-job.org) ou Vercel Cron, avec l'en-tête « Authorization: Bearer <CRON_SECRET> ».
+//
+// Respecte `clients.ne_plus_contacter` depuis le 2026-09-28 (réglage écrit depuis la fiche
+// client, voir `ClientProfileModalV2.tsx`) — même exclusion que le cron de relance.
 export async function GET(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -66,6 +70,21 @@ export async function GET(request: NextRequest) {
 
     // Accès coupé après la grâce de 30 jours : plus de demandes d'avis envoyées en son nom
     if (washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
+      await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
+      continue
+    }
+
+    // Le client a demandé qu'on le laisse tranquille (table `clients`, réglage du 2026-09-28) :
+    // ni relance, ni demande d'avis. « Traitée » comme les autres cas écartés ci-dessus.
+    const { data: refus, error: errRefus } = await admin
+      .from('clients')
+      .select('id')
+      .eq('washer_id', b.washer_id)
+      .eq('cle', cleClient(b.client_email, b.client_phone))
+      .eq('ne_plus_contacter', true)
+      .maybeSingle()
+    if (errRefus) logger.error('cron.send-reviews.refus.read_failed', { bookingId: b.id }, errRefus)
+    if (refus) {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
       continue
     }

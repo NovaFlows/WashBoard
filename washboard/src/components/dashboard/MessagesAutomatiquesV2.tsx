@@ -31,8 +31,15 @@ import {
 //    et « pas de réponse », non — la base ne les connaît pas.
 //
 // COUPÉ, faute de donnée : le lien « passer » (aucun moyen d'annuler l'envoi d'un
-// message précis), la section « clients écartés et pourquoi » (aucune trace
-// d'opposition à être contacté ; le reste se déduirait mal), le canal WhatsApp.
+// message précis), le canal WhatsApp.
+//
+// « Ne plus contacter » A une trace depuis le 2026-09-28 (table `clients`, proposition de
+// Yanis) — mais son fichier vit dans « Clients », pas ici : c'est là qu'on choisit un client
+// précis, cet écran-ci règle les DEUX automatismes pour tout le monde. Conséquence non
+// corrigée : un client opposé dont un rendez-vous vient d'être clos peut apparaître ici, dans
+// « Parti », comme si sa relance avait été envoyée — `followup_sent_at` ne distingue pas les
+// deux cas (voir `api/cron/send-followups`). Aucun message n'est réellement envoyé, seul ce
+// libellé serait trompeur.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`

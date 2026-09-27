@@ -50,6 +50,38 @@
       Rien d'autre à faire : les GRANT de `documents` portent sur la table entière
       (`grant select, update, delete on public.documents to authenticated`), pas colonne par
       colonne, et la policy d'`update` vaut déjà pour ce champ.
+- [ ] **Supabase (SQL Editor) — table `clients` (réglages écrits à la main)**, sans laquelle
+      « Ne plus contacter » dans la Fiche client répond une erreur et l'onglet « À relancer »
+      de Clients ne reflète jamais un opt-out. Premier morceau d'un vrai CRM, proposé par Yanis
+      (canevas partagé le 2026-09-28) et discuté avec Alexandre le même jour :
+      ```sql
+      create table public.clients (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        cle text not null,
+        ne_plus_contacter boolean not null default false,
+        notes text,
+        cree_le timestamptz not null default now(),
+        maj_le timestamptz not null default now(),
+        unique (washer_id, cle)
+      );
+
+      alter table public.clients enable row level security;
+
+      create policy "clients_select" on public.clients
+        for select using (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "clients_insert" on public.clients
+        for insert with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "clients_update" on public.clients
+        for update using (washer_id in (select id from public.washers where user_id = auth.uid()));
+
+      grant select, insert, update on public.clients to authenticated;
+      grant all on public.clients to service_role;
+      ```
+      `notes` est ajoutée tout de suite bien que rien ne l'écrive encore : le prochain morceau du
+      CRM (fiche entreprise, tâches) en aura besoin, mieux vaut une seule migration que deux.
+      `service_role` reçoit tout : les deux crons (`send-followups`, `send-reviews`) lisent
+      cette table avec le client admin pour exclure les clients opposés.
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
@@ -2213,6 +2245,44 @@ rien à faire, mais que le projet reste globalement sain.
         VAPID et `SUPPORT_ADMIN_EMAILS` vérifiées, `E2E_CLEANUP_ENABLED` absente.
 
 ## 🟡 Roadmap produit
+
+- **Un vrai CRM de suivi client** — Yanis (l'associé d'Alexandre) a proposé cinq écrans dans un
+  canevas partagé le 2026-09-28 : Prospects (avant la première réservation), À relancer, Fiche
+  client (timeline), Fiche entreprise (plusieurs sites/contacts, délai de paiement), et un menu
+  d'options (tâche, fusion de doublons, « ne plus contacter », export/anonymisation RGPD).
+  Discuté avec Alexandre le même jour : le vrai obstacle n'est pas l'écran, c'est qu'aujourd'hui
+  un « client » n'est qu'un CALCUL (`lib/clientProfile.ts`, tiré des réservations et documents à
+  la volée) — rien ne peut s'y écrire. Presque tout ce que Yanis propose suppose une fiche
+  qu'on peut relire ET réécrire.
+  - [x] 2026-09-28 — **Premier morceau, tranché par Alexandre : le socle + « à relancer » +
+        « ne plus contacter »** plutôt que les prospects ou tout d'un coup. Table `clients`
+        (SQL ci-dessus, section « à faire par Alexandre »), overlay facultatif sur
+        `buildClientProfile`/`listeClients` (même principe que les documents). Onglet
+        **« À relancer »** dans Clients (`lib/clientsARelancer.ts`) : réutilise TEL QUEL le calcul
+        du cron (`lib/messagesAutomatiques.ts`, `relanceActive`/`momentRelance`) plutôt que de le
+        refaire à côté — seul ajout, l'exclusion des clients opposés. **« Ne plus contacter »**
+        dans la Fiche client (`ClientProfileModalV2.tsx`), câblé dans les DEUX crons
+        (`send-followups`, `send-reviews`) : c'est le premier moyen, pour un laveur, d'exclure UN
+        client précis des messages automatiques (avant, seul un interrupteur global existait).
+        Écart connu et documenté en tête de `api/cron/send-followups/route.ts` et de
+        `MessagesAutomatiquesV2.tsx` : `followup_sent_at` ne distingue pas « relance envoyée » de
+        « client opposé, rendez-vous clos sans envoi » — l'écran Messages automatiques peut donc
+        afficher un libellé trompeur pendant sa fenêtre de 7 jours, mais **aucun message n'est
+        réellement envoyé** dans les deux cas.
+  - [ ] **Prospects** : pas encore construit. Piste retenue en discussion — faire naître un
+        prospect automatiquement quand un DEVIS est écrit pour quelqu'un qui n'a jamais réservé
+        (`FeuilleDocumentV2.tsx`), plus une capture manuelle (« + Prospect » après un appel).
+        Nécessite un vrai statut (prospect → client) et une date de conversion, que la table
+        `clients` ne porte pas encore.
+  - [ ] **Fiche entreprise** (plusieurs sites, plusieurs contacts, délai de paiement) : jugé
+        représentatif par Alexandre (fréquent chez ses laveurs, pas un cas isolé de Yanis) — donc
+        à construire, pas à simplifier. Demande des tables `entreprises`/`sites`/`contacts` liées
+        à `clients`, pas seulement des colonnes en plus.
+  - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
+        documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
+  - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
+        droit à l'effacement, montants conservés pour la compta légale) — à faire vérifier le
+        libellé exact par l'agent `legal` avant de le construire.
 
 - [x] 2026-09-17 — **Livré par Ryan** (`56836f2`). Tables `support_questions` /
       `support_messages` **créées à la main dans Supabase** ce jour-là, SQL donné dans la

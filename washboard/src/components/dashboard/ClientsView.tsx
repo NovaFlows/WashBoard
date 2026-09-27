@@ -1,7 +1,8 @@
 'use client'
 
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
-import type { ClientBooking, ClientDocument } from '@/lib/clientProfile'
+import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
+import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import ClientsViewV1 from '@/components/dashboard/ClientsViewV1'
 import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 
@@ -17,14 +18,19 @@ import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 // Import unique et stable pour tout le reste du dashboard : la page
 // /dashboard/clients continue d'importer ClientsView sans rien savoir du
 // branchement.
-export default function ClientsView({ bookings, documents }: {
+export default function ClientsView({ bookings, documents, reglages, reglagesMessages }: {
   bookings: ClientBooking[]
   /** Devis et factures écrits à la main. Ils n'existent que dans la PWA : le site garde sa
    *  liste tirée des seules réservations, donc V1 ne les reçoit pas. */
   documents?: ClientDocument[]
+  /** « Ne plus contacter », écrit à la main (2026-09-28). Même raison de rester hors de V1 que
+   *  les documents : c'est un réglage de la refonte, sans écran ni case dans l'ancien formulaire. */
+  reglages?: ClientReglages[]
+  /** Nécessaire à l'onglet « À relancer » de V2 (`clientsARelancer.ts`) ; V1 n'a pas cet onglet. */
+  reglagesMessages?: ReglagesRelance
 }) {
   const isPwa = usePwaStandalone()
   return isPwa
-    ? <ClientsViewV2 bookings={bookings} documents={documents} />
+    ? <ClientsViewV2 bookings={bookings} documents={documents} reglages={reglages} reglagesMessages={reglagesMessages} />
     : <ClientsViewV1 bookings={bookings} />
 }

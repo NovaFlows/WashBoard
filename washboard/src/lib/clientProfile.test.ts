@@ -99,6 +99,25 @@ describe('buildClientProfile', () => {
     expect(p.addresses).toEqual(['Nouvelle', 'Ancienne'])
   })
 
+  it('nePlusContacter vaut faux par défaut, et suit le réglage écrit pour cette clé', () => {
+    const sansReglage = buildClientProfile([mk({})], 'alex@example.com')!
+    expect(sansReglage.nePlusContacter).toBe(false)
+    expect(sansReglage.cle).toBe('alex@example.com')
+
+    const avecReglage = buildClientProfile(
+      [mk({})], 'alex@example.com', new Date(), [],
+      [{ cle: 'alex@example.com', nePlusContacter: true }],
+    )!
+    expect(avecReglage.nePlusContacter).toBe(true)
+
+    // Un réglage sur UN AUTRE client ne déteint pas.
+    const autreClient = buildClientProfile(
+      [mk({})], 'alex@example.com', new Date(), [],
+      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true }],
+    )!
+    expect(autreClient.nePlusContacter).toBe(false)
+  })
+
   it('récupère un téléphone même absent de la réservation la plus récente', () => {
     const p = buildClientProfile([
       mk({ id: 'recent', client_phone: '', scheduled_at: '2026-08-01T09:00:00Z' }),

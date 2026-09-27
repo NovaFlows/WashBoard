@@ -70,6 +70,17 @@ describe('listeClients', () => {
   it('ignore une réservation sans email', () => {
     expect(listeClients([rdv({ client_email: '  ' })], MAINTENANT)).toHaveLength(0)
   })
+
+  it('nePlusContacter vaut faux par défaut, et suit le réglage écrit pour cette clé', () => {
+    const [sans] = listeClients([rdv({ client_email: 'julie@exemple.fr' })], MAINTENANT)
+    expect(sans.nePlusContacter).toBe(false)
+
+    const [avec] = listeClients(
+      [rdv({ client_email: 'julie@exemple.fr' })], MAINTENANT, [],
+      [{ cle: 'julie@exemple.fr', nePlusContacter: true }],
+    )
+    expect(avec.nePlusContacter).toBe(true)
+  })
 })
 
 describe('rechercherClients', () => {

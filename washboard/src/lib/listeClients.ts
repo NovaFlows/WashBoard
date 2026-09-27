@@ -9,7 +9,7 @@
 // écrits à la main — « un client comme un autre » (Alexandre). Les documents
 // sont facultatifs : sans eux, la liste est exactement celle d'avant.
 
-import { buildClientProfile, cleClient, type ClientBooking, type ClientDocument } from './clientProfile'
+import { buildClientProfile, cleClient, type ClientBooking, type ClientDocument, type ClientReglages } from './clientProfile'
 
 export type RendezVousCourt = { service: string; date: string }
 
@@ -35,6 +35,8 @@ export type ResumeClient = {
   activite: string
   /** Nombre de devis et factures écrits à la main pour ce client. */
   documentsCount: number
+  /** A demandé à ne plus être contacté (table `clients`, SQL du 2026-09-28). */
+  nePlusContacter: boolean
 }
 
 const cle = (email: string) => email.trim().toLowerCase()
@@ -45,6 +47,7 @@ export function listeClients(
   bookings: ClientBooking[],
   now: Date = new Date(),
   documents: ClientDocument[] = [],
+  reglages: ClientReglages[] = [],
 ): ResumeClient[] {
   const parClient = new Map<string, ClientBooking[]>()
   for (const b of bookings) {
@@ -72,7 +75,7 @@ export function listeClients(
     const sesDocuments = parDocument.get(email) ?? []
     // Chaque groupe ne contient que ce client : la fiche se calcule sans
     // reparcourir toutes les réservations.
-    const p = buildClientProfile(siens, email, now, sesDocuments)
+    const p = buildClientProfile(siens, email, now, sesDocuments, reglages)
     if (!p) continue
     const t = now.getTime()
     const faites = p.bookings.filter(b =>
@@ -99,6 +102,7 @@ export function listeClients(
         ?? p.documents[0]?.created_at
         ?? new Date(0).toISOString(),
       documentsCount: p.documents.length,
+      nePlusContacter: p.nePlusContacter,
     })
   }
 
