@@ -16,7 +16,16 @@ import { metierPageForTheme } from '@/lib/metiers'
 import type { Theme } from '@/lib/blog'
 
 // Slogans courts et uniformes — pas de saut de layout
+//
+// Le premier est celui rendu au premier chargement (`useState(0)` plus bas) :
+// c'est LUI que Google et les IA lisent comme <h1>, le rendu HTML n'attend
+// pas la rotation JS. Ajouté le 2026-09-28 pour cette raison précise : le
+// H1 ne portait auparavant aucun mot-clé ("Fais plus. Gère moins."), quand
+// le title, lui, en avait — un décalage qui affaiblit le signal envoyé aux
+// moteurs. Garder ce premier slogan porteur de mots-clés (nettoyage,
+// detailing, auto, à domicile) si l'ordre change à nouveau.
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
+  { pre: "L'indispensable du nettoyage et ", hl: 'detailing auto à domicile.', post: '' },
   { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
   { pre: 'Réservation, planning, factures. ', hl: 'Un seul outil.', post: '' },
