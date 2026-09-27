@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('tarifs-lavage-auto-domicile')!
@@ -203,7 +204,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Savoir ce que vous gagnez vraiment">
+        <Cta
+          title="Savoir ce que vous gagnez vraiment"
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard suit votre chiffre d&apos;affaires par prestation, calcule automatiquement les
           frais de déplacement selon la distance, et vous montre ce que rapporte réellement chaque
           journée. Plus besoin d&apos;estimer à la fin du mois.

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('tarifs-menage-domicile-auto-entrepreneur')!
@@ -238,7 +239,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Vos clients réguliers, dans un agenda qui tient">
+        <Cta
+          title="Vos clients réguliers, dans un agenda qui tient"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, vous voyez votre semaine en un coup d&apos;œil, chaque client a sa fiche
           et son historique, la facture s&apos;envoie en un clic, et un nouveau client réserve seul
           dans les créneaux que vous ouvrez — avec une remise s&apos;il choisit un créneau proche

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('nettoyage-canape-domicile-lancer-activite')!
@@ -208,7 +209,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Relancez chaque client au bon moment">
+        <Cta
+          title="Relancez chaque client au bon moment"
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard garde l&apos;historique de chaque client — quelle prestation, quelle date, quel
           montant — vous signale ceux qui ne sont pas revenus, et peut leur envoyer une relance
           automatiquement. Vos clients réservent seuls sur votre lien, et la demande d&apos;avis

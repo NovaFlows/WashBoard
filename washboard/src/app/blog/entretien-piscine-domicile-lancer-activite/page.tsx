@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('entretien-piscine-domicile-lancer-activite')!
@@ -248,7 +249,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Chaque piscine, son historique et sa facture">
+        <Cta
+          title="Chaque piscine, son historique et sa facture"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, chaque client a sa fiche avec l&apos;historique de tous ses passages et
           leur montant, la facture s&apos;envoie depuis votre téléphone, et votre chiffre
           d&apos;affaires se lit par mois pour suivre la saison. Les nouveaux clients réservent

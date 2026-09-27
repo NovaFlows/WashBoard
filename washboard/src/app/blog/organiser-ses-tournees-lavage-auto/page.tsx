@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('organiser-ses-tournees-lavage-auto')!
@@ -178,7 +179,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Des tournées groupées, sans y penser">
+        <Cta
+          title="Des tournées groupées, sans y penser"
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard regroupe automatiquement les rendez-vous par quartier, calcule les temps de
           trajet entre deux prestations et ne propose au client que les créneaux réellement
           tenables. Vous roulez moins, vous lavez plus.

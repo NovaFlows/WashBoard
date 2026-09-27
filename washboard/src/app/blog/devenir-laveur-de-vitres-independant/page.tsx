@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devenir-laveur-de-vitres-independant')!
@@ -239,7 +240,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Votre tournée dans un seul agenda">
+        <Cta
+          title="Votre tournée dans un seul agenda"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, vos commerces et vos particuliers sont dans le même agenda, chaque client
           a sa fiche avec l&apos;historique de ses passages et une alerte quand il n&apos;est pas
           revenu, et les particuliers réservent seuls sur votre lien — avec une remise quand ils

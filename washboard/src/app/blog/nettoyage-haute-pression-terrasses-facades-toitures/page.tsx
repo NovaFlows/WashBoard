@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('nettoyage-haute-pression-terrasses-facades-toitures')!
@@ -264,7 +265,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Des chantiers groupés par quartier">
+        <Cta
+          title="Des chantiers groupés par quartier"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, chaque demande arrive avec l&apos;adresse et la prestation choisie, les
           frais de déplacement se calculent selon la distance, le client est incité à réserver près
           d&apos;un chantier déjà prévu, et la facture part depuis votre téléphone entre deux
