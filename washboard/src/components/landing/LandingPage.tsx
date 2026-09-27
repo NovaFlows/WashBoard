@@ -77,10 +77,7 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
   )
 }
 
-// Une entrée de la grille « Et tout le reste, dans le même outil. ». Isolée
-// dans son propre composant car elle est désormais rendue trois fois (une
-// par palier responsive, voir plus bas) : la garder à un seul endroit évite
-// que les trois versions divergent avec le temps.
+// Une entrée de la grille « Et tout le reste, dans le même outil. ».
 function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boolean } }) {
   return (
     <FadeItem>
@@ -107,7 +104,7 @@ function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boo
 const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
   { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
-  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue) émise à chaque prestation terminée, envoyée par email à tes clients pros et accessible aux particuliers depuis leur confirmation. Import de tes anciennes factures. Tu factures des entreprises ? La facturation électronique deviendra obligatoire pour toi le 1ᵉʳ septembre 2027 — on suit le sujet de près et on te tiendra informé bien avant.' },
+  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue), envoyée automatiquement à tes clients pros dès qu’une prestation est terminée. Détail juste au-dessus.' },
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
   { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
   { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
@@ -120,23 +117,21 @@ const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', pro: true },
 ]
 
-// La grille « Et tout le reste, dans le même outil. » utilisait une grille
-// CSS classique, qui verrouille la hauteur de toute une ligne sur sa cellule
-// la plus haute : le texte de Facturation, nettement plus long que ses
-// voisines, étirait sa ligne entière et laissait un vide sous les deux
-// autres colonnes. Demande de Ryan le 2026-09-27 : remonter chaque colonne
-// indépendamment sans toucher au texte ni à la position de Facturation.
-// Solution : 3 (desktop) ou 2 (tablette) colonnes en empilement libre,
-// chacune remplie par un tour de table sur l'ordre existant de la liste, au
-// lieu d'une grille où toutes les cellules d'une même ligne se répondent.
-const FONCTIONNALITES_COL3 = [0, 1, 2].map(reste => FONCTIONNALITES.filter((_, i) => i % 3 === reste))
-const FONCTIONNALITES_COL2 = [0, 1].map(reste => FONCTIONNALITES.filter((_, i) => i % 2 === reste))
-
 // Les trois étapes de « Comment ça marche ».
 const ETAPES = [
   { titre: 'Crée ton compte', desc: 'Un mois offert, sans carte bancaire.' },
   { titre: 'Configure ta page', desc: 'Tes prestations, tes prix, tes horaires et ta zone. Compte une dizaine de minutes.' },
   { titre: 'Partage ton lien', desc: 'Instagram, TikTok, Google, ton site : les réservations arrivent dans ton agenda.' },
+]
+
+// Les trois étapes du mécanisme des créneaux groupés, sous l'encart dégradé.
+// Reprend en schéma ce que le paragraphe de la section décrit déjà en prose,
+// dans le même esprit que ETAPES ci-dessus. Demande de Ryan le 2026-09-27 :
+// la section « une info toute seule » manquait d'un déroulé concret.
+const ETAPES_CRENEAUX = [
+  { titre: 'Le client réserve', desc: 'Il indique son adresse en réservant, comme pour n’importe quel rendez-vous — rien à cocher de ton côté.' },
+  { titre: 'WashBoard compare les trajets', desc: 'L’adresse est comparée, via Google Maps, au trajet réel jusqu’à tous tes rendez-vous déjà prévus ce jour-là.' },
+  { titre: 'Les créneaux proches ressortent', desc: 'Les horaires sous ton seuil (5 à 30 minutes) sont mis en avant au client, avec ta remise si tu en as réglé une.' },
 ]
 
 // Les 6 étapes que couvre le même outil, du premier clic du client à son
@@ -841,29 +836,18 @@ export default function LandingPage() {
             Et tout le reste, dans le même outil.
           </h3>
         </FadeUp>
-        {/* Colonnes indépendantes (empilement libre), pas une grille classique
-            : voir le commentaire au-dessus de FONCTIONNALITES_COL3/COL2 pour
-            le pourquoi. Une version par palier, affichée ou masquée en CSS,
-            car le regroupement par colonne change d'un palier à l'autre. */}
-        <div className="sm:hidden">
-          <FadeGroup className="flex flex-col gap-8">
-            {FONCTIONNALITES.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
-          </FadeGroup>
-        </div>
-        <div className="hidden sm:grid sm:grid-cols-2 lg:hidden gap-x-10">
-          {FONCTIONNALITES_COL2.map((colonne, i) => (
-            <FadeGroup key={i} className="flex flex-col gap-8">
-              {colonne.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
-            </FadeGroup>
-          ))}
-        </div>
-        <div className="hidden lg:grid lg:grid-cols-3 gap-x-10">
-          {FONCTIONNALITES_COL3.map((colonne, i) => (
-            <FadeGroup key={i} className="flex flex-col gap-8">
-              {colonne.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
-            </FadeGroup>
-          ))}
-        </div>
+        {/* Grille classique : chaque ligne s'aligne d'une colonne à l'autre,
+            garanti par construction. Un essai précédent avait éclaté cette
+            grille en 3 colonnes indépendantes pour effacer le vide que
+            laissait la longue description de Facturation — ça a bien effacé
+            le vide, mais désaligné toutes les lignes suivantes (Facturation
+            traînait en retard sur ses voisines). Revenu à une grille simple :
+            le vrai problème était la longueur du texte de Facturation dans
+            CETTE liste, raccourci ci-dessus (le détail complet reste dans
+            l'encart juste au-dessus, rien n'est perdu). */}
+        <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+          {FONCTIONNALITES.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
+        </FadeGroup>
       </section>
 
       {/* ── Le produit en vrai ── */}
@@ -991,6 +975,53 @@ export default function LandingPage() {
               </div>
               <p className="mt-3 text-[10px] text-white/30 leading-relaxed">
                 Exemple illustratif — la remise est optionnelle, tu peux ne jamais l&apos;activer.
+              </p>
+            </div>
+          </div>
+        </FadeUp>
+
+        {/* Approfondissement du mécanisme ci-dessus, en registre normal (pas
+            de dégradé sombre) : le fond dégradé reste réservé à l'argument
+            phare, ces deux blocs sont un développement, pas une répétition.
+            Ajout demandé par Ryan le 2026-09-27. */}
+        <div className="mt-14 sm:mt-16">
+          <FadeUp className="mb-10">
+            <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le mécanisme</p>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              Comment WashBoard repère un créneau proche.
+            </h3>
+          </FadeUp>
+          <FadeGroup className="grid sm:grid-cols-3 gap-8 sm:gap-10">
+            {ETAPES_CRENEAUX.map((e, i) => (
+              <FadeItem key={e.titre}>
+                <span className="text-4xl sm:text-5xl font-black text-[#1651E8]/25 leading-none">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <p className="mt-3 font-bold text-slate-900 dark:text-white">{e.titre}</p>
+                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{e.desc}</p>
+              </FadeItem>
+            ))}
+          </FadeGroup>
+        </div>
+
+        <FadeUp className="mt-14 sm:mt-16">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Un exemple concret</p>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-6 sm:p-8 grid sm:grid-cols-[1fr_auto_1fr] gap-6 sm:gap-8 items-center">
+            <div>
+              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Sans créneaux groupés</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Martin D. réserve un lavage extérieur à 9h à Bordeaux Sud. Lucie M. réserve un pack famille à
+                14h, à l’autre bout de la zone. Rien ne relie les deux rendez-vous : un aller-retour complet
+                s’intercale entre eux dans la journée.
+              </p>
+            </div>
+            <span aria-hidden className="hidden sm:block text-2xl font-black text-slate-300 dark:text-slate-700 justify-self-center">→</span>
+            <div>
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wider mb-2">Avec créneaux groupés</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Sophie B. réserve en ligne : parmi les horaires proposés, 10h ressort parce que son adresse est
+                à quelques minutes de route du rendez-vous de Martin D. à 9h. Elle choisit ce créneau, avec une
+                remise puisque tu en as réglé une sur ce cas de figure — un trajet en moins dans ta journée.
               </p>
             </div>
           </div>
