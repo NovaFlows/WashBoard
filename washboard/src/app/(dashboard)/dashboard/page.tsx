@@ -11,7 +11,8 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
 import { hasFeature, quotaReservations, planEffectif } from '@/lib/plan'
 import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
-import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
+import { JaugeReservations } from '@/components/dashboard/JaugeReservations'
+import { seuilsVerrouillage, masquerVerrouillees, montantVerrouille, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
@@ -237,6 +238,15 @@ export default async function DashboardPage() {
   // est passée n'est plus une occasion à saisir, seulement un regret. Compter
   // les regrets ne fait pas vendre, ça décourage.
   const nbBloquees = aVenirVisible.filter(b => b.verrouillee).length
+  // Le montant se calcule sur la liste BRUTE : `masquerVerrouillees` efface
+  // justement le prix. On somme d'abord, on masque ensuite.
+  const montantBloque = montantVerrouille(aVenir ?? [], seuilsVerrou)
+
+  // La jauge s'affiche en permanence, pas seulement une fois le mur atteint.
+  // Le comptage n'a lieu que sur une offre plafonnée : ailleurs il n'y a rien
+  // à compter, et ce serait une requête pour rien à chaque affichage.
+  const plafondMensuel = quotaReservations(washer)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDuMois(supabase, washer.id)
 
   const passes = historique.data ?? []
 
@@ -321,7 +331,12 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
-      <BandeauBloquees nombre={nbBloquees} offre={planEffectif(washer)} />
+      <JaugeReservations
+        utilisees={utiliseesCeMois ?? 0}
+        quota={utiliseesCeMois === null ? null : plafondMensuel}
+        offre={planEffectif(washer)}
+      />
+      <BandeauBloquees nombre={nbBloquees} offre={planEffectif(washer)} montant={montantBloque} />
       <DemarrageCard progress={progress} />
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">

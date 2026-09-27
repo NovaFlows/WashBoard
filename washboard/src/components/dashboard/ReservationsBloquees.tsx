@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PLAN_LABELS, PLAN_PRICES, BOOKING_QUOTA, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_PRICES, BOOKING_QUOTA, formatEuros, type Plan } from '@/lib/plan'
 import { jourSeul } from '@/lib/reservationsVerrouillees'
 
 const BLEU = '#1651E8'
@@ -37,7 +37,13 @@ function NomFloute({ nom }: { nom: string | null }) {
  *  Placé en haut du tableau de bord, comme les « 5 personnes ont vu votre
  *  profil » des grandes applications. Il ne raconte rien, il compte — et un
  *  compte qui monte tout seul est le meilleur argument de vente qu'on ait. */
-export function BandeauBloquees({ nombre, offre }: { nombre: number; offre: Plan }) {
+export function BandeauBloquees({ nombre, offre, montant = 0 }: {
+  nombre: number
+  offre: Plan
+  /** Total des lavages masqués, en euros. Zéro quand le prix est inconnu : on
+   *  retombe alors sur le seul décompte, jamais sur un montant inventé. */
+  montant?: number
+}) {
   if (nombre <= 0) return null
 
   return (
@@ -52,13 +58,18 @@ export function BandeauBloquees({ nombre, offre }: { nombre: number; offre: Plan
         {nombre}
       </span>
       <span className="flex-1 min-w-0">
+        {/* Le montant passe devant le décompte quand on le connaît : « 195 € »
+            se compare tout seul aux 19 € de l'abonnement, « 3 clients » non. */}
         <span className="block text-sm font-bold text-slate-900 dark:text-slate-100">
-          {nombre > 1 ? 'nouveaux clients' : 'nouveau client'} en attente
+          {montant > 0
+            ? `${formatEuros(montant)} € de lavages en attente`
+            : `${nombre > 1 ? 'nouveaux clients' : 'nouveau client'} en attente`}
         </span>
         {/* Deux lignes plutôt qu'une coupée : `truncate` rendait « Votre offre
             Découverte n'en affiche pa… » sur un téléphone, une phrase qui
             s'arrête avant de dire ce qu'elle voulait dire. */}
         <span className="block text-xs text-slate-500 dark:text-slate-400 leading-snug">
+          {montant > 0 && `${nombre} client${nombre > 1 ? 's' : ''} · `}
           Votre offre {PLAN_LABELS[offre]} ne les affiche pas
         </span>
       </span>
@@ -72,9 +83,12 @@ export function BandeauBloquees({ nombre, offre }: { nombre: number; offre: Plan
  *  Le compte seul reste abstrait. Voir trois lignes, trois formes de noms,
  *  trois dates — c'est ce qui transforme « j'ai raté des clients » en « j'ai
  *  raté CES clients-là ». */
-export function CarteBloquees({ bloquees, offre, proposee }: {
+export function CarteBloquees({ bloquees, offre, proposee, montant = 0 }: {
   bloquees: Bloquee[]
   offre: Plan
+  /** Total des lavages masqués, en euros. Zéro = prix inconnu, on n'affiche
+   *  alors aucun montant plutôt qu'un chiffre faux. */
+  montant?: number
   /** L'offre à proposer. Calculée par `offreQuiCouvre` au niveau de la page :
    *  la moins chère qui couvre le volume du mois, pas forcément la plus grosse.
    *  Un laveur à sept réservations se voit proposer le Starter, pas le Pro. */
@@ -110,6 +124,13 @@ export function CarteBloquees({ bloquees, offre, proposee }: {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Ils ont réservé, votre offre {PLAN_LABELS[offre]} ne les affiche pas.
           </p>
+          {montant > 0 && (
+            // Sous le titre et pas dedans : le décompte reste la promesse
+            // (« ces clients-là »), le montant en est la conséquence chiffrée.
+            <p className="text-sm font-black mt-1" style={{ color: BLEU }}>
+              {formatEuros(montant)} € de lavages
+            </p>
+          )}
         </div>
       </div>
 

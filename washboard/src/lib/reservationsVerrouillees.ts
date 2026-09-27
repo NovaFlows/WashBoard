@@ -231,3 +231,37 @@ export async function compterReservationsDuMois(
   if (error || count === null || count === undefined) return null
   return count
 }
+
+/** Ce que les réservations verrouillées représentent en euros.
+ *
+ *  « 3 nouveaux clients en attente » ne dit rien à un laveur : il compte des
+ *  lavages, pas des lignes. « 195 € que vous ne voyez pas » se comprend sans
+ *  réfléchir, et se compare tout seul aux 19 € ou 49 € de l'abonnement. C'est
+ *  le même fait, dans la langue de celui qui le lit.
+ *
+ *  Le calcul se fait sur la liste BRUTE, avant masquage : `masquerVerrouillees`
+ *  efface justement `booked_price`. On somme donc ici, puis on masque.
+ *
+ *  Le prix retenu est celui effectivement réservé ; à défaut, celui de la
+ *  prestation. Une réservation sans prix connu compte pour zéro plutôt que de
+ *  faire échouer le total : mieux vaut annoncer un montant prudent qu'un
+ *  montant faux — un chiffre gonflé qui se dégonfle au paiement, c'est la
+ *  confiance qui part avec. */
+type Chiffree = Datee & {
+  booked_price?: number | null
+  services?: { price?: number | null } | { price?: number | null }[] | null
+}
+
+export function montantVerrouille(
+  reservations: readonly Chiffree[],
+  seuils: SeuilsParMois | null | undefined,
+): number {
+  let total = 0
+  for (const r of reservations) {
+    if (!estVerrouillee(r, seuils)) continue
+    const service = Array.isArray(r.services) ? r.services[0] : r.services
+    const prix = r.booked_price ?? service?.price ?? 0
+    if (typeof prix === 'number' && Number.isFinite(prix)) total += prix
+  }
+  return total
+}

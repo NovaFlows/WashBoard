@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   estVerrouillee, masquerVerrouillees, jourSeul, moisParis, seuilsDepuisDates,
+  montantVerrouille,
 } from './reservationsVerrouillees'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,5 +196,58 @@ describe('seuilsDepuisDates', () => {
   it('ignore une date illisible sans fausser le comptage du mois', () => {
     const dates = ['2026-09-01T08:00:00.000Z', 'pas une date', '2026-09-05T08:00:00.000Z']
     expect(seuilsDepuisDates(dates, 2)).toEqual({ '2026-09': '2026-09-05T08:00:00.000Z' })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le montant masqué. « 3 clients » ne dit rien à un laveur ; « 195 € » se
+// compare tout seul au prix de l'abonnement. Encore faut-il que le chiffre
+// soit juste : un montant gonflé qui se dégonfle au paiement coûte la
+// confiance, pas seulement une vente.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('montantVerrouille', () => {
+  const S = { '2026-09': '2026-09-20T10:00:00.000Z' }
+
+  it('ne compte QUE les réservations verrouillées', () => {
+    const liste = [
+      { created_at: '2026-09-01T08:00:00.000Z', booked_price: 40 },  // dans le quota
+      { created_at: '2026-09-25T08:00:00.000Z', booked_price: 65 },  // verrouillée
+      { created_at: '2026-09-26T08:00:00.000Z', booked_price: 90 },  // verrouillée
+    ]
+    expect(montantVerrouille(liste, S)).toBe(155)
+  })
+
+  it('retombe sur le prix de la prestation quand le prix réservé manque', () => {
+    const liste = [
+      { created_at: '2026-09-25T08:00:00.000Z', booked_price: null, services: { price: 50 } },
+      // PostgREST rend parfois la jointure sous forme de tableau.
+      { created_at: '2026-09-26T08:00:00.000Z', services: [{ price: 30 }] },
+    ]
+    expect(montantVerrouille(liste, S)).toBe(80)
+  })
+
+  it('compte zéro plutôt que de fausser le total quand aucun prix n’est connu', () => {
+    const liste = [
+      { created_at: '2026-09-25T08:00:00.000Z', booked_price: null, services: null },
+      { created_at: '2026-09-26T08:00:00.000Z', booked_price: 65 },
+    ]
+    expect(montantVerrouille(liste, S)).toBe(65)
+  })
+
+  it('rend zéro sans seuil — rien n’est verrouillé, rien n’est dû', () => {
+    const liste = [{ created_at: '2026-09-25T08:00:00.000Z', booked_price: 65 }]
+    expect(montantVerrouille(liste, null)).toBe(0)
+    expect(montantVerrouille([], S)).toBe(0)
+  })
+
+  it('juge chaque réservation sur le mois qui est le sien', () => {
+    // Même faille que pour le masquage : octobre ne doit pas être compté avec
+    // le seuil de septembre, ni septembre échapper au sien.
+    const liste = [
+      { created_at: '2026-09-25T08:00:00.000Z', booked_price: 65 },   // verrouillée
+      { created_at: '2026-10-02T08:00:00.000Z', booked_price: 100 },  // mois neuf
+    ]
+    expect(montantVerrouille(liste, S)).toBe(65)
   })
 })

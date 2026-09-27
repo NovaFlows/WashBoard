@@ -8,7 +8,7 @@ import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations, planEffectif, offreQuiCouvre } from '@/lib/plan'
 import { CarteBloquees } from '@/components/dashboard/ReservationsBloquees'
-import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDuMois, montantVerrouille } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -42,6 +42,7 @@ export default async function ClientsPage() {
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
   // au-dessus, avec le nom flouté et le jour.
   const seuils = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const montantBloque = montantVerrouille(bookings, seuils)
   const marquees = masquerVerrouillees(bookings, seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
   const bloquees = marquees
@@ -68,7 +69,7 @@ export default async function ClientsPage() {
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <div className="max-w-3xl mx-auto space-y-4">
-        <CarteBloquees bloquees={bloquees} offre={planEffectif(washer)} proposee={offreProposee} />
+        <CarteBloquees bloquees={bloquees} offre={planEffectif(washer)} proposee={offreProposee} montant={montantBloque} />
       </div>
       <ClientsView bookings={lignes} />
     </DashboardShell>
