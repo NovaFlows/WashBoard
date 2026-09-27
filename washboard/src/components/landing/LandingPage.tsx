@@ -19,7 +19,7 @@ import type { Theme } from '@/lib/blog'
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
   { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
-  { pre: 'Un quartier, un trajet, ', hl: 'trois lavages.', post: '' },
+  { pre: 'Réservation, planning, factures. ', hl: 'Un seul outil.', post: '' },
 ]
 
 // Icônes des réseaux sociaux du pied de page : voir
@@ -719,51 +719,49 @@ export default function LandingPage() {
           </div>
         </FadeUp>
 
-        {/* Feature phare */}
+        {/* Feature phare — la facturation, pas un différenciateur face à la
+            concurrence (d'autres outils facturent aussi), mais la preuve la
+            plus concrète du tout-en-un : pas de logiciel de facturation à
+            payer et à raccorder en plus. Contenu repris de l'ancienne section
+            « Facturation » plus bas (id déplacé ici, section retirée pour ne
+            pas répéter le même texte deux fois sur la page). */}
         <FadeUp className="mb-4">
           <div
+            id="facturation"
             style={{ background: 'linear-gradient(135deg, #0B1828 0%, #0D2248 55%, #0B1828 100%)' }}
-            className="border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
+            className="scroll-mt-20 border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
           >
             <div>
               <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Ce qui fait la différence</p>
               <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">
-                Créneaux groupés au temps de trajet
+                La facturation, sans outil en plus
               </h3>
               <p className="text-white/75 leading-relaxed mb-6 text-sm sm:text-base">
-                Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à
-                tes rendez-vous déjà prévus ce jour-là — pas au découpage d&apos;un quartier sur une carte.
-                À moins d&apos;un quart d&apos;heure de route de l&apos;un d&apos;eux — le seuil se règle dans tes
-                paramètres — les horaires juste avant ou après sont mis en avant, avec la remise que tu as
-                réglée si tu en as réglé une.
+                Dès qu&apos;un rendez-vous passe en « Terminé », WashBoard émet la facture avec tes mentions
+                obligatoires — SIRET, régime de TVA, numérotation continue attribuée par le système, sans
+                trou ni doublon — et l&apos;envoie automatiquement par email à ton client pro. Le particulier,
+                lui, la retrouve sur son lien de confirmation. Tes anciennes factures s&apos;importent en PDF
+                ou en photo, et se rangent au même endroit que les nouvelles.
               </p>
               <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold">
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                Un trajet en moins entre deux rendez-vous proches
+                Un outil de facturation en moins
               </div>
               <p className="mt-4 text-xs text-white/50 leading-relaxed">
-                Et même sans remise activée, WashBoard ne propose jamais un horaire que le trajet réel
-                rendrait injoignable entre deux rendez-vous.
+                Elle sort du même outil que ton agenda et ton CRM — pas de compte à ouvrir ni de logiciel
+                à payer en plus.
               </p>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-4 space-y-1.5">
-              <p className="text-xs font-black text-white/40 uppercase tracking-wider mb-4">Bordeaux Sud — aujourd&apos;hui</p>
-              {[
-                { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
-                { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€ optimisé' },
-                { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart', note: '−5€ optimisé' },
-                { time: '14:00', label: 'Lucie M. — Pack famille', type: 'normal' },
-              ].map((item) => (
-                <div key={item.time} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#00C4D4]/10' : 'bg-white/[0.03]'}`}>
-                  <span className="text-xs font-mono text-white/40 shrink-0">{item.time}</span>
-                  <span className="text-xs text-white/80 flex-1 truncate">{item.label}</span>
-                  {item.type === 'smart' && (
-                    <span className="text-xs font-bold text-[#00C4D4] shrink-0">{item.note}</span>
-                  )}
-                </div>
-              ))}
+            <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-3 sm:p-4">
+              <div className="rounded-lg overflow-hidden">
+                <Image
+                  src="/landing/facture-demo.webp"
+                  alt="Une facture WashBoard : SIRET, TVA, numéro continu et détail de la prestation"
+                  width={1100} height={980} sizes="(min-width: 640px) 380px, 90vw" className="w-full h-auto"
+                />
+              </div>
             </div>
           </div>
         </FadeUp>
@@ -856,45 +854,6 @@ export default function LandingPage() {
             className="max-w-[280px] mx-auto lg:mx-0 w-full"
             sizes="280px"
           />
-        </div>
-      </section>
-
-      {/* ── Facturation ── */}
-      <section id="facturation" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
-        <FadeUp className="mb-12">
-          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Facturation</p>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
-            La facture part toute seule.
-          </h2>
-          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Dès qu&apos;un rendez-vous passe en « Terminé », WashBoard émet la facture avec tes mentions
-            obligatoires — SIRET, régime de TVA, numérotation continue attribuée par le système, sans
-            trou ni doublon — et l&apos;envoie à ton client. Tu n&apos;as rien à recopier,
-            rien à numéroter à la main.
-          </p>
-        </FadeUp>
-        <div className="grid lg:grid-cols-[400px_minmax(0,1fr)] gap-10 items-start">
-          <Capture
-            clair="/landing/facture-demo.webp" sombre="/landing/facture-demo.webp" largeur={1100} hauteur={980}
-            alt="Une facture WashBoard : SIRET, TVA, numéro continu et détail de la prestation"
-            legende="Facture de démonstration (données fictives), telle que WashBoard la produit : ton logo, tes mentions obligatoires et un numéro attribué automatiquement."
-            className="max-w-[400px] mx-auto lg:mx-0 w-full"
-            sizes="(min-width: 1024px) 400px, 90vw"
-          />
-          <FadeGroup className="space-y-6">
-            <FadeItem>
-              <p className="font-bold text-slate-900 dark:text-white">Un numéro qui ne saute jamais</p>
-              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">La numérotation est attribuée par le système, pas par toi : une suite continue, sans trou ni doublon, même si tu émets une facture plus tard.</p>
-            </FadeItem>
-            <FadeItem>
-              <p className="font-bold text-slate-900 dark:text-white">Tes anciennes factures au même endroit</p>
-              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">Celles que tu faisais avant WashBoard s’importent en PDF ou en photo, et se rangent dans le même onglet que les nouvelles.</p>
-            </FadeItem>
-            <FadeItem>
-              <p className="font-bold text-slate-900 dark:text-white">Le client pro reçoit la sienne par email</p>
-              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">Il en a besoin pour sa comptabilité. Le particulier, lui, retrouve la sienne depuis son lien de confirmation.</p>
-            </FadeItem>
-          </FadeGroup>
         </div>
       </section>
 
