@@ -422,7 +422,7 @@ donc tronqué) et dans le balisage.
       domicile | WashBoard » (580 px) ; balisage FAQPage + WebSite ; cible et
       six métiers dans le premier écran ; « tout-en-un » dans un titre ; les
       créneaux groupés érigés en différenciateur.
-- [ ] **P1 — 2,5 points sur 5** (état au 2026-09-27). Le cahier en liste cinq :
+- [ ] **P1 — 3 points sur 5** (état au 2026-09-27). Le cahier en liste cinq :
       pages métiers, page « logiciel services à domicile », FAQ plus
       sémantique, données structurées, maillage interne.
   - [x] **Données structurées** : faites en P0 (Organization, SoftwareApplication,
@@ -440,10 +440,14 @@ donc tronqué) et dans le balisage.
         **vitres** et **terrasses/façades** (prestation ponctuelle). **Ménage et
         piscines sont bloqués par le produit**, pas par le SEO — voir l'entrée
         « rendez-vous récurrent » dans 🟡 Roadmap produit.
-  - [ ] **Maillage interne : à moitié.** landing → page métier ✅, page métier →
-        articles ✅, page catégorie → pages métier ✅. **Manque : article → page
-        métier — aucun des 14 articles ne pointe vers une page métier.** Une
-        page qui ne reçoit aucun lien interne est une impasse pour le robot.
+  - [x] **Maillage interne.** landing → page métier, page métier → articles,
+        page catégorie → pages métier, et depuis le 2026-09-27 **article → page
+        métier** : les 14 articles ont un lien en bas, dans l'encart de fin
+        (`Cta`), vers la page de leur métier si elle existe, vers la page
+        catégorie sinon. Adresse **et** texte du lien viennent de
+        `lienPageMetier` (`lib/metiers.ts`) : le jour où une page vitres sort,
+        il suffit de l'ajouter à `METIER_PAGES` avec son `cible`, l'article
+        vitres change de destination et de texte tout seul.
   - [ ] **FAQ plus sémantique** : la FAQ est centralisée (`lib/faq.ts`, source
         unique affichage + JSON-LD) et balisée, mais trois questions du cahier
         manquent encore sur l'accueil : activité multiservices / plusieurs
@@ -451,6 +455,20 @@ donc tronqué) et dans le balisage.
   - Reste aussi, hors cahier : la carte **« Terrasses, façades & toitures »**
     absente de « Pour quels métiers ? » (6 cartes au lieu de 7) alors que le
     thème `exterieur` a déjà deux articles.
+  - [ ] **À trancher (Ryan / Alexandre) : le blog vouvoie, le reste du site
+        tutoie.** Relevé le 2026-09-27. 13 des 14 articles vouvoient, de 11 à
+        60 fois chacun — tous écrits avant ce chantier (26 août – 20
+        septembre), quand la règle « le site tutoie » n'existait pas encore.
+        Le 14e (`assurance-nettoyage-haute-pression`), écrit pendant le
+        chantier, vouvoyait aussi : il a été passé au tutoiement. Visible
+        surtout dans l'encart de fin d'article, où le texte dit « vos clients »
+        juste au-dessus d'un bouton « Lancer **mon** mois gratuit » et d'un
+        lien vers une page métier qui tutoie. Deux options : (a) tout passer
+        au tutoiement, un article à la fois, en relisant chacun — gros travail
+        de rédaction, pas un chercher-remplacer (conjugaisons, impératifs en
+        « -ez » qui ne contiennent pas « vous ») ; (b) assumer un blog en
+        registre plus formel que le produit. **Rien n'a été touché en
+        attendant la décision.**
   - Se recopie sans effort : le gabarit, le maillage vers les articles du même
     thème, l'ajout au sitemap, le lien depuis la section « Pour quels métiers ».
   - **S'écrit à la main pour chaque métier** : les trois contraintes réelles du
