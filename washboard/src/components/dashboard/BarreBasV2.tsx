@@ -14,22 +14,29 @@ import { usePathname, useRouter } from 'next/navigation'
 // filet de secours, à cause du bug des six pages orphelines de la première
 // version du CRM.
 //
-// Les 5 destinations de la maquette (`project/Main.dc.html`, nav du bas) —
-// Aujourd'hui · Agenda · Clients · Chiffres · Plus — n'ont pas toutes une
-// route dédiée à ce stade de la refonte (passe 6 « Plus / réglages » pas
-// encore faite). Mapping :
-//   Aujourd'hui → /dashboard        (déjà la page d'accueil)
+// Les 5 places de la barre, depuis le 2026-09-27 (demande d'Alexandre) :
+//
+//   Aujourd'hui · Agenda · [ + ] · Clients · Plus
+//
+// « Chiffres » a quitté la barre pour « Plus » : on le consulte, on n'y va pas dix fois par
+// jour. La place libérée revient au geste qu'on fait vraiment sur le terrain — écrire un devis
+// ou une facture — d'où le bouton du milieu, qui ouvre directement la saisie.
+//
+// Le milieu n'est donc PAS une destination : c'est une action. Il ne s'allume pas, la pastille
+// ne s'y arrête jamais, et les quatre onglets portent leur propre numéro de colonne (0, 1, 3, 4)
+// pour la laisser glisser par-dessus.
+//
+// Mapping :
+//   Aujourd'hui → /dashboard
 //   Agenda      → /dashboard/calendrier
-//   Clients     → /dashboard/clients (déjà en v2 depuis la passe 2)
-//   Chiffres    → /dashboard/chiffres (passe 5 : fusion CRM + Comptabilité,
-//                 3 onglets Argent/Acquisition/Clients — voir Chiffres.tsx.
-//                 /dashboard/crm et /dashboard/compta restent inchangés et
-//                 joignables par le menu latéral)
-//   Plus        → /dashboard/parametres (interimaire, deviendra "Plus" à la
-//                 passe 6 — arbitrage à signaler si une autre priorité se
-//                 dessine avant)
+//   +           → /dashboard/chiffres/documents?nouveau=1 (la feuille s'ouvre à l'arrivée)
+//   Clients     → /dashboard/clients
+//   Plus        → /dashboard/parametres (Chiffres y a sa ligne)
+const CENTRE_HREF = '/dashboard/chiffres/documents?nouveau=1'
+
 const DESTINATIONS = [
   {
+    colonne: 0,
     href: '/dashboard',
     label: 'Aujourd’hui',
     actif: (p: string) => p === '/dashboard',
@@ -40,6 +47,7 @@ const DESTINATIONS = [
     ),
   },
   {
+    colonne: 1,
     href: '/dashboard/calendrier',
     label: 'Agenda',
     actif: (p: string) => p.startsWith('/dashboard/calendrier'),
@@ -51,6 +59,7 @@ const DESTINATIONS = [
     ),
   },
   {
+    colonne: 3,
     href: '/dashboard/clients',
     label: 'Clients',
     actif: (p: string) => p.startsWith('/dashboard/clients'),
@@ -64,20 +73,12 @@ const DESTINATIONS = [
     ),
   },
   {
-    href: '/dashboard/chiffres',
-    label: 'Chiffres',
-    actif: (p: string) => p.startsWith('/dashboard/chiffres'),
-    icone: (actif: boolean) => (
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actif ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 20h16" />
-        <path d="M7 20v-6M12 20V6M17 20v-9" />
-      </svg>
-    ),
-  },
-  {
+    colonne: 4,
     href: '/dashboard/parametres',
     label: 'Plus',
-    actif: (p: string) => p.startsWith('/dashboard/parametres'),
+    // Chiffres vit maintenant dans Plus : la barre l'y allume aussi, sinon la pastille
+    // disparaîtrait pendant qu'on consulte ses chiffres.
+    actif: (p: string) => p.startsWith('/dashboard/parametres') || p.startsWith('/dashboard/chiffres'),
     icone: (actif: boolean) => (
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actif ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="5" cy="12" r="1.4" />
@@ -231,7 +232,7 @@ export function BarreBasV2() {
     } catch { /* stockage refusé : on chauffe, sans mémoire */ }
     if (dejaFait) return
     let vivant = true
-    const cibles = DESTINATIONS.map(d => d.href).filter(h => h !== pathname)
+    const cibles = [...DESTINATIONS.map(d => d.href), CENTRE_HREF].filter(h => h !== pathname)
     const timer = setTimeout(async () => {
       for (const href of cibles) {
         if (!vivant) return
@@ -260,9 +261,12 @@ export function BarreBasV2() {
     return () => clearTimeout(t)
   }, [enAttente])
 
-  const indexActif = DESTINATIONS.findIndex(dest =>
+  const actifCourant = DESTINATIONS.find(dest =>
     enAttente ? dest.href === enAttente : dest.actif(pathname ?? ''),
   )
+  // Colonne de la pastille — pas l'index dans la liste : le milieu est une action, il n'a
+  // pas de destination, et les quatre onglets occupent les colonnes 0, 1, 3 et 4.
+  const colonneActive = actifCourant?.colonne ?? -1
 
   return (
     <nav
@@ -288,8 +292,8 @@ export function BarreBasV2() {
         className="absolute top-[5px] bottom-[5px] left-[5px] rounded-[28px] bg-[color:var(--v2-color-surface)] shadow-[0_2px_6px_rgba(22,22,26,.14)] transition-[transform,opacity] duration-[260ms] motion-reduce:transition-none"
         style={{
           width: 'calc((100% - 18px) / 5)',
-          transform: `translateX(calc(${Math.max(indexActif, 0)} * (100% + 2px)))`,
-          opacity: indexActif >= 0 ? 1 : 0,
+          transform: `translateX(calc(${Math.max(colonneActive, 0)} * (100% + 2px)))`,
+          opacity: colonneActive >= 0 ? 1 : 0,
           transitionTimingFunction: 'var(--v2-ease-out)',
         }}
       />
@@ -303,6 +307,9 @@ export function BarreBasV2() {
             href={dest.href}
             aria-current={actif ? 'page' : undefined}
             onClick={() => { if (!dest.actif(pathname ?? '')) setAttente({ href: dest.href, depuis: pathname ?? '' }) }}
+            // Colonne explicite : le bouton du milieu occupe la 3e, les onglets se rangent
+            // autour de lui sans dépendre de leur ordre d'écriture.
+            style={{ gridColumnStart: dest.colonne + 1 }}
             // Le fond de l'onglet actif est porté par la pastille qui glisse
             // (voir plus haut) ; l'onglet ne change que de couleur et de graisse.
             className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-[28px] text-[10.5px] select-none ${
@@ -316,6 +323,25 @@ export function BarreBasV2() {
           </Link>
         )
       })}
+
+      {/* Le geste, au milieu : écrire un devis ou une facture. Il est posé en colonne 3 de la
+          grille — la place qu'occupait « Chiffres » — et n'est pas un onglet : pas de pastille,
+          pas d'état actif, il emmène directement à la saisie. */}
+      <Link
+        href={CENTRE_HREF}
+        aria-label="Nouveau devis ou facture"
+        onClick={() => setAttente({ href: CENTRE_HREF, depuis: pathname ?? '' })}
+        className="relative z-10 col-start-3 row-start-1 flex items-center justify-center select-none"
+      >
+        <span
+          className="flex h-[46px] w-[46px] items-center justify-center rounded-full text-white shadow-[0_2px_8px_rgba(22,22,26,.22)] transition-transform active:scale-[.92] motion-reduce:transition-none"
+          style={{ background: 'var(--v2-color-accent)' }}
+        >
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </span>
+      </Link>
     </nav>
   )
 }

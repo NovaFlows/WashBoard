@@ -223,6 +223,17 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
 
       </CarteListe>
 
+      {/* L'argent. Nouvelle section du 2026-09-27 : « Chiffres » a quitté la barre du bas
+          (sa place y revient au bouton « + », qui ouvre la saisie d'un devis ou d'une
+          facture) et atterrit ici, avec la liste des documents écrits à la main. */}
+      <div>
+        <TitreSection>L’argent</TitreSection>
+        <CarteListe>
+          <Ligne label="Chiffres" sousLabel="Argent, acquisition, clients" href="/dashboard/chiffres" />
+          <Ligne label="Devis et factures" sousLabel="Écrits à la main" href="/dashboard/chiffres/documents" />
+        </CarteListe>
+      </div>
+
       {/* De temps en temps */}
       <div>
         <TitreSection>De temps en temps</TitreSection>

@@ -130,7 +130,12 @@ export default function DocumentsV2({ prestations }: { prestations: { id: string
   const [aujourdhui] = useState(() => aujourdhuiParis(Date.now()))
   const [documents, setDocuments] = useState<Document[] | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [nouveau, setNouveau] = useState<GenreDocument | null>(null)
+  // Le « + » de la barre du bas arrive avec `?nouveau=1` : il emmène à la SAISIE, pas à la
+  // liste — c'est le geste qu'on vient faire. Lu une seule fois, à l'ouverture : refermer la
+  // feuille ne doit pas la rouvrir, et l'adresse garde son paramètre sans conséquence.
+  const [nouveau, setNouveau] = useState<GenreDocument | null>(
+    () => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('nouveau') ? 'devis' : null),
+  )
   // L'ouverture retient un IDENTIFIANT, pas une copie du document : après « Accepté », la
   // feuille doit proposer « Transformer en facture », pas répéter le choix déjà fait. Avec une
   // copie figée, elle montrait l'état d'avant l'action (constaté le 2026-09-27, en base réelle).
