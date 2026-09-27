@@ -294,7 +294,12 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // Retour de Google (`?google=ok|erreur|sans-jeton`) : la feuille s'ouvre d'elle-même
   // pour dire ce qui s'est passé.
   const issueGoogle = issueDepuisParametre(searchParams.get('google'))
-  const [feuilleGoogle, setFeuilleGoogle] = useState(issueGoogle !== null)
+  // `?google=ouvrir` : on arrive d'un raccourci de la configuration, la feuille s'ouvre
+  // directement sur l'état de la connexion (Alexandre, 2026-09-27). Les autres valeurs sont
+  // les issues du retour OAuth, qui portent en plus un message.
+  const [feuilleGoogle, setFeuilleGoogle] = useState(
+    issueGoogle !== null || searchParams.get('google') === 'ouvrir',
+  )
   const rdvApplique = useRef(false)
 
   useEffect(() => {

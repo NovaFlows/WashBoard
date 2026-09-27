@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
 import FeuilleNotificationsV2, { resumeNotifications } from '@/components/dashboard/FeuilleNotificationsV2'
 import { useNotificationsPush } from '@/hooks/useNotificationsPush'
+import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
+import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 import Link from 'next/link'
 import type { Washer } from '@/types'
 import { hasFeature, PLAN_LABELS } from '@/lib/plan'
@@ -171,6 +173,9 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
   // Les notifications n'avaient aucune entrée dans l'app : elles ne vivaient que sur l'ancien
   // formulaire complet (Alexandre, 2026-09-26).
   const { etat: etatNotifications } = useNotificationsPush()
+  // La carte « Configuration de votre compte » se met de côté depuis elle-même ; c'est ici
+  // qu'on la retrouve, sinon elle serait perdue (Alexandre, 2026-09-27).
+  const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
   const [feuilleNotifications, setFeuilleNotifications] = useState(false)
   const notifications = resumeNotifications(etatNotifications)
 
@@ -313,6 +318,11 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
           />
           {/* Le guide n'avait plus d'entrée : il n'était atteignable que par le
               menu latéral (et par un lien discret dans l'assistance). */}
+          <Ligne
+            label="Barre de configuration"
+            valeur={carteCachee === '1' ? 'Masquée' : 'Affichée'}
+            onClick={() => setCarteCachee(carteCachee === '1' ? null : '1')}
+          />
           <Ligne
             label="Notifications"
             valeur={notifications.texte || undefined}

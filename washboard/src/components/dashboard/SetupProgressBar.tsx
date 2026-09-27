@@ -2,6 +2,11 @@
 
 import Link from 'next/link'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
+import {
+  CLE_CARTE_CACHEE, CLE_MASQUES, ecrireMasques, lireMasques, nettoyerMasques, nombreMasques,
+  peutEtreMasque, phraseMasques, reglagesAffiches,
+} from '@/lib/reglagesMasques'
 import type { SetupProgress } from '@/lib/setupProgress'
 
 // Avancement de la configuration, en tête des réglages.
@@ -32,9 +37,24 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
   // l'application installée. Sans ce choix, un tap depuis la PWA faisait sortir le laveur
   // de l'application refaite (Alexandre, 2026-09-27).
   const isPwa = usePwaStandalone()
+  const [brutMasques, setMasques] = usePreferenceLocale(CLE_MASQUES)
+  const [cachee, setCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
+
+  // Un réglage fait entre-temps ne reste pas dans la liste des écartés.
+  const masques = nettoyerMasques(progress.missing, lireMasques(brutMasques))
+  const restants = reglagesAffiches(progress.missing, masques)
+  const ecartes = nombreMasques(progress.missing, masques)
+
   const alerte = progress.missing.some(m => m.blocking) && progress.percent < SEUIL_BLEU
-  const affiches = progress.missing.slice(0, MAX_AFFICHES)
-  const reste = progress.missing.length - affiches.length
+  const affiches = restants.slice(0, MAX_AFFICHES)
+  const reste = restants.length - affiches.length
+
+  /** Ouvrir un réglage facultatif sans le remplir vaut « pas pour moi » : on l'écarte au
+   *  moment du tap. S'il le fait quand même, il sortira des manques tout seul. */
+  const ecarter = (cle: string) => setMasques(ecrireMasques([...masques, cle]))
+
+  // La carte entière peut être mise de côté (le laveur la retrouve depuis « Plus »).
+  if (cachee === '1') return null
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
@@ -78,6 +98,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
             <li key={item.key}>
               <Link
                 href={isPwa ? item.hrefV2 : item.href}
+                onClick={() => { if (peutEtreMasque(item)) ecarter(item.key) }}
                 className="group flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors"
               >
                 <span
@@ -105,6 +126,28 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           et {reste} autre{reste > 1 ? 's' : ''} réglage{reste > 1 ? 's' : ''} facultatif{reste > 1 ? 's' : ''}
         </p>
       )}
+
+      {/* Ce qui explique l'écart à 100 % quand la liste est vide : sans cette ligne, le
+          laveur verrait « 85 % » et plus rien à faire. */}
+      {ecartes > 0 && (
+        <button
+          type="button"
+          onClick={() => setMasques(null)}
+          className="mt-2.5 text-xs text-slate-400 dark:text-slate-500 underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300"
+        >
+          {phraseMasques(ecartes)} · revoir
+        </button>
+      )}
+
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setCachee('1')}
+          className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+        >
+          Masquer
+        </button>
+      </div>
     </div>
   )
 }

@@ -156,7 +156,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.googleCalendarConnected,
       blocking: false, essential: false,
       href: '/dashboard/admin#agenda',
-      hrefV2: '/dashboard/calendrier',
+      hrefV2: '/dashboard/calendrier?google=ouvrir',
     },
     {
       key: 'smartSlot',

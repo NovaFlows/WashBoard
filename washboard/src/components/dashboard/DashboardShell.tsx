@@ -12,6 +12,7 @@ import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
 import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
+import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 
 type Props = {
@@ -174,15 +175,25 @@ function AppBetaBanner() {
   )
 }
 
+// Fermer le bandeau d'essai le fermait pour CETTE page seulement : chaque écran rend son
+// propre châssis, et il revenait au changement d'onglet (Alexandre, 2026-09-27). Le choix est
+// donc retenu sur l'appareil, et repéré par ce que le bandeau ANNONCE — « 23 jours restants ».
+// Il se rouvre de lui-même quand ce repère change, c'est-à-dire quand un jour tombe : le
+// laveur n'a pas à le revoir dix fois par jour, mais il ne peut pas non plus l'oublier
+// jusqu'à l'expiration.
+const CLE_BANDEAU_ESSAI = 'wb-bandeau-essai'
+
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null }) {
-  const [dismissed, setDismissed] = useState(false)
+  const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
 
-  if (dismissed) return null
+  /** Rend le bandeau, ou rien s'il a déjà été fermé pour ce repère. */
+  const bandeau = (repere: string, contenu: (fermer: () => void) => React.ReactElement) =>
+    (ferme === repere ? null : contenu(() => setFerme(repere)))
 
   // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
   if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
-    return (
+    return bandeau(`resilie-${cancelsAt}`, fermer => (
       <div className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-b border-red-200 dark:border-red-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
         <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
           <span>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</span>
@@ -190,9 +201,9 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
             Réactiver →
           </Link>
         </div>
-        <DismissButton onDismiss={() => setDismissed(true)} />
+        <DismissButton onDismiss={fermer} />
       </div>
-    )
+    ))
   }
 
   if (!subscriptionStatus || subscriptionStatus === 'active') return null
@@ -214,7 +225,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 
     // Carte enregistrée, facturation différée
     if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
-      return (
+      return bandeau(`carte-${daysLeft}`, fermer => (
         <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
           <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
             <span>
@@ -224,9 +235,9 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
               Gérer →
             </Link>
           </div>
-          <DismissButton onDismiss={() => setDismissed(true)} />
+          <DismissButton onDismiss={fermer} />
         </div>
-      )
+      ))
     }
 
     if (daysLeft <= 0) {
@@ -240,7 +251,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       )
     }
 
-    return (
+    return bandeau(`essai-${daysLeft}`, fermer => (
       <div className={`text-sm font-semibold py-2.5 px-3 flex items-center gap-2 ${
         isUrgent
           ? 'bg-orange-500 text-white'
@@ -257,9 +268,9 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
             Voir l&apos;abonnement →
           </Link>
         </div>
-        <DismissButton onDismiss={() => setDismissed(true)} />
+        <DismissButton onDismiss={fermer} />
       </div>
-    )
+    ))
   }
 
   return null
