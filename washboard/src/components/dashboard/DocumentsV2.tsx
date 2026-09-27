@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, Plus } from 'lucide-react'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
@@ -171,11 +172,22 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
   const [documents, setDocuments] = useState<Document[] | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   // Le « + » de la barre du bas arrive avec `?nouveau=1` : il emmène à la SAISIE, pas à la
-  // liste — c'est le geste qu'on vient faire. Lu une seule fois, à l'ouverture : refermer la
-  // feuille ne doit pas la rouvrir, et l'adresse garde son paramètre sans conséquence.
-  const [nouveau, setNouveau] = useState<GenreDocument | null>(
-    () => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('nouveau') ? 'devis' : null),
-  )
+  // liste — c'est le geste qu'on vient faire.
+  //
+  // C'est l'ADRESSE qui dit si la feuille est ouverte, pas un état lu une fois au montage :
+  // quand on était déjà sur cet écran, retaper le « + » ne changeait pas l'adresse, rien ne
+  // se remontait, et le bouton semblait mort (Alexandre, 2026-09-27). Refermer la feuille
+  // retire donc le paramètre, pour que le tap suivant soit bien une navigation.
+  const router = useRouter()
+  const chemin = usePathname()
+  const ouvertParUrl = useSearchParams().get('nouveau') !== null
+  const [nouveau, setNouveau] = useState<GenreDocument | null>(null)
+  const feuilleNouveau = nouveau ?? (ouvertParUrl ? 'devis' : null)
+
+  function fermerNouveau() {
+    setNouveau(null)
+    if (ouvertParUrl) router.replace(chemin ?? '/dashboard/chiffres/documents', { scroll: false })
+  }
   // L'ouverture retient un IDENTIFIANT, pas une copie du document : après « Accepté », la
   // feuille doit proposer « Transformer en facture », pas répéter le choix déjà fait. Avec une
   // copie figée, elle montrait l'état d'avant l'action (constaté le 2026-09-27, en base réelle).
@@ -333,11 +345,11 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
         </>
       )}
 
-      {nouveau && (
+      {feuilleNouveau && (
         <FeuilleDocumentV2
           aujourdhui={aujourdhui}
           prestations={prestations}
-          genreInitial={nouveau}
+          genreInitial={feuilleNouveau}
           onEnregistrer={async saisie => {
             const r = await creerDocument(saisie)
             if (!r.ok) return r.message
@@ -345,7 +357,7 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
             await charger()
             return null
           }}
-          onClose={() => setNouveau(null)}
+          onClose={fermerNouveau}
         />
       )}
 

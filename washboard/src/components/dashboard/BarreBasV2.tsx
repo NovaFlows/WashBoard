@@ -330,7 +330,13 @@ export function BarreBasV2() {
       <Link
         href={CENTRE_HREF}
         aria-label="Nouveau devis ou facture"
-        onClick={() => setAttente({ href: CENTRE_HREF, depuis: pathname ?? '' })}
+        // Déjà sur l'écran : la feuille s'ouvre sur place, il n'y a pas de page à attendre.
+        // Allumer le contour de chargement ferait tourner un trait pour rien.
+        onClick={() => {
+          if (!pathname?.startsWith('/dashboard/chiffres/documents')) {
+            setAttente({ href: CENTRE_HREF, depuis: pathname ?? '' })
+          }
+        }}
         className="relative z-10 col-start-3 row-start-1 flex items-center justify-center select-none"
       >
         <span
