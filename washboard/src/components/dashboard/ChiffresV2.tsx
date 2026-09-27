@@ -8,6 +8,7 @@ import ChiffresAcquisition from '@/components/dashboard/ChiffresAcquisition'
 import ChiffresClients from '@/components/dashboard/ChiffresClients'
 import SelecteurPeriodeV2 from '@/components/dashboard/SelecteurPeriodeV2'
 import { aujourdhuiParis, type PeriodeChiffres } from '@/lib/chiffresPeriode'
+import type { FactureManuelle } from '@/lib/chiffresArgent'
 
 // « Chiffres » — refonte 2026, passe 5. Fusionne l'ancien CRM
 // (visiteurs/entonnoir/sources, aujourd'hui /dashboard/crm) et la
@@ -57,6 +58,9 @@ const ONGLETS: { cle: Onglet; libelle: string }[] = [
 
 export type ChiffresProps = {
   bookings: ChiffresBooking[]
+  /** Factures écrites à la main et marquées payées : elles complètent l'encaissé de l'onglet
+   *  Argent, et n'entrent nulle part ailleurs (l'onglet Clients compte les réservations). */
+  facturesManuelles?: FactureManuelle[]
   events: ChiffresEvent[]
   websiteHost?: string
   hasCompta: boolean
@@ -70,7 +74,7 @@ export type ChiffresProps = {
 }
 
 export default function ChiffresV2({
-  bookings, events, websiteHost, hasCompta, comptaPlanLabel, facturesCount,
+  bookings, facturesManuelles, events, websiteHost, hasCompta, comptaPlanLabel, facturesCount,
   evenementsDepuis, reservationsIncompletes, evenementsIncomplets,
 }: ChiffresProps) {
   const [onglet, setOnglet] = useState<Onglet>('argent')
@@ -117,6 +121,7 @@ export default function ChiffresV2({
           comptaPlanLabel={comptaPlanLabel}
           facturesCount={facturesCount}
           bookings={bookings}
+          facturesManuelles={facturesManuelles}
           periode={periode}
           maintenant={maintenant}
           reservationsIncompletes={reservationsIncompletes}

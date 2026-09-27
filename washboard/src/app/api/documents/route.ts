@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   const genre = req.nextUrl.searchParams.get('genre')
   let requete = ctx.supabase!
     .from('documents')
-    .select('id, genre, statut, numero, contenu, emis_le, envoye_le, valable_jusquau, repondu_le, facture_id, devis_id, created_at')
+    .select('id, genre, statut, numero, contenu, emis_le, envoye_le, valable_jusquau, repondu_le, paye_le, facture_id, devis_id, created_at')
     .eq('washer_id', ctx.washer!.id)
     .order('created_at', { ascending: false })
     .limit(200)

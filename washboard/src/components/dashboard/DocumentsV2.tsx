@@ -9,11 +9,12 @@ import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/Pr
 import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
 import {
   devisExpire, libelleGenre, libelleStatut, messageWhatsapp, nomFichierDocument, partagerPdf,
-  tonStatut, type Document, type GenreDocument,
+  tonStatut, totalDocument, type Document, type GenreDocument,
 } from '@/lib/documents'
 import { whatsappDigits } from '@/lib/phone'
 import {
-  creerDocument, envoyerDocument, facturerDevis, lireDocuments, repondreDevis, supprimerDevis,
+  creerDocument, envoyerDocument, facturerDevis, lireDocuments, marquerPayee, repondreDevis,
+  supprimerDevis,
 } from '@/lib/documentsApi'
 import { aujourdhuiParis } from '@/lib/chiffresPeriode'
 
@@ -31,6 +32,12 @@ import { aujourdhuiParis } from '@/lib/chiffresPeriode'
 // Les factures de rendez-vous restent où elles sont (`/dashboard/factures`) : elles naissent
 // toutes seules quand un rendez-vous passe à « Terminé », et n'ont rien à faire dans un écran
 // dont le sujet est « ce que j'écris à la main ».
+//
+// PAYÉE OU PAS (2026-09-27). Une facture à la main n'est pas de l'argent reçu : le chantier
+// facturé à une entreprise se règle par virement, plus tard. Toute facture qui naît ici pose
+// donc la question tout de suite (`FeuillePaiement`), et seules les payées entrent dans
+// l'« Encaissé » de Chiffres. Ne pas répondre vaut « pas encore » : on ne compte jamais d'argent
+// qu'on n'a pas. Le rendez-vous, lui, est payé sur place — la question ne s'y pose pas.
 
 const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
 
@@ -52,9 +59,53 @@ function Pastille({ document: d, aujourdhui }: { document: Document; aujourdhui:
   )
 }
 
+/** La question posée dès qu'une facture naît : l'argent est-il déjà là ?
+ *
+ *  Demandée tout de suite, parce que c'est le moment où le laveur le sait (Alexandre,
+ *  2026-09-27 : « quand un devis se transforme en facture on met un pop up payé ou pas encore
+ *  payé »). « Pas encore » n'est pas un abandon : la facture attend dans la liste avec sa
+ *  pastille ambre, et son bouton « Marquer payée » la fait entrer dans l'encaissé le jour où
+ *  le virement tombe. Fermer la feuille sans répondre revient à « pas encore » — le défaut
+ *  prudent, celui qui ne compte pas d'argent qu'on n'a pas. */
+function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
+  numero: string | null
+  montant: number
+  occupe: boolean
+  onRepondre: (paye: boolean) => void
+  onClose: () => void
+}) {
+  const secondaire = `${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`
+  return (
+    <Feuille
+      titre={`Facture ${numero ?? ''}`.trim()}
+      sousTitre={`${euros.format(montant)} · déjà payée ?`}
+      onClose={onClose}
+    >
+      <div className="flex flex-col gap-2.5">
+        <button
+          type="button"
+          onClick={() => onRepondre(true)}
+          disabled={occupe}
+          className={`${BOUTON} w-full text-white`}
+          style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
+        >
+          Oui, encaissée
+        </button>
+        <button type="button" onClick={() => onRepondre(false)} disabled={occupe} className={secondaire} style={PRESSION}>
+          Pas encore
+        </button>
+        <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+          Seules les factures encaissées comptent dans vos chiffres. Une facture en attente reste
+          dans votre liste, et vous la marquerez payée le jour où l’argent arrive.
+        </p>
+      </div>
+    </Feuille>
+  )
+}
+
 /** Ce qu'on peut encore faire d'un document, une fois ouvert. */
 function FeuilleActions({
-  document: d, nomLaveur, occupe, onEnvoyer, onRepondre, onFacturer, onSupprimer, onClose,
+  document: d, nomLaveur, occupe, onEnvoyer, onRepondre, onFacturer, onPayer, onSupprimer, onClose,
 }: {
   document: Document
   nomLaveur: string
@@ -62,6 +113,7 @@ function FeuilleActions({
   onEnvoyer: () => void
   onRepondre: (statut: 'accepte' | 'refuse') => void
   onFacturer: () => void
+  onPayer: (paye: boolean) => void
   onSupprimer: () => void
   onClose: () => void
 }) {
@@ -153,10 +205,38 @@ function FeuilleActions({
         )}
 
         {!devis && (
-          <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Une facture émise ne se modifie ni ne se supprime : sa numérotation doit rester
-            continue. Une erreur se corrige par un avoir.
-          </p>
+          <>
+            {/* Le geste qui fait entrer l'argent dans Chiffres — et le seul. */}
+            {d.paye_le ? (
+              <>
+                <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
+                  Encaissée le {jourCourt(d.paye_le)} · comptée dans vos chiffres
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onPayer(false)}
+                  disabled={occupe}
+                  className={`h-11 self-start text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)] underline`}
+                >
+                  Finalement, pas encore payée
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onPayer(true)}
+                disabled={occupe}
+                className={`${BOUTON} w-full text-white`}
+                style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
+              >
+                Marquer payée
+              </button>
+            )}
+            <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              Une facture émise ne se modifie ni ne se supprime : sa numérotation doit rester
+              continue. Une erreur se corrige par un avoir.
+            </p>
+          </>
         )}
       </div>
     </Feuille>
@@ -192,6 +272,8 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
   // feuille doit proposer « Transformer en facture », pas répéter le choix déjà fait. Avec une
   // copie figée, elle montrait l'état d'avant l'action (constaté le 2026-09-27, en base réelle).
   const [ouvertId, setOuvertId] = useState<string | null>(null)
+  // La facture qui vient de naître et dont on ne sait pas encore si elle est payée.
+  const [paiement, setPaiement] = useState<{ id: string; numero: string | null; montant: number } | null>(null)
   const [occupe, setOccupe] = useState(false)
   const [suppression, setSuppression] = useState<Document | null>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
@@ -225,6 +307,37 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
     if (!r.ok) { setErreur(r.message); setOuvertId(null); return }
     setMessage(succes)
     if (fermer) setOuvertId(null)
+    await charger()
+  }
+
+  /** Le devis devient facture, puis la question du paiement. Écrit à la main plutôt que passé
+   *  par `agir` : il faut l'identifiant de la facture née pour pouvoir la marquer payée. */
+  async function facturer(devis: Document) {
+    if (occupe) return
+    setOccupe(true)
+    setErreur(null)
+    const r = await facturerDevis(devis.id)
+    setOccupe(false)
+    if (!r.ok) { setErreur(r.message); setOuvertId(null); return }
+    setMessage(`Facture ${r.data.numero ?? ''} créée depuis le devis.`.replace('  ', ' '))
+    setOuvertId(null)
+    await charger()
+    // `deja` : la facture existait (double tap) — sa situation de paiement est déjà connue.
+    if (!r.data.deja) {
+      setPaiement({ id: r.data.id, numero: r.data.numero, montant: devis.contenu.totaux.ttc })
+    }
+  }
+
+  /** Payée, ou plus payée. Le seul drapeau qui décide de l'entrée dans l'« Encaissé ». */
+  async function payer(id: string, paye: boolean) {
+    if (occupe) return
+    setOccupe(true)
+    setErreur(null)
+    const r = await marquerPayee(id, paye)
+    setOccupe(false)
+    setPaiement(null)
+    if (!r.ok) { setErreur(r.message); return }
+    setMessage(paye ? 'Facture encaissée : elle compte dans vos chiffres.' : 'Facture remise en attente de paiement.')
     await charger()
   }
 
@@ -355,6 +468,11 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
             if (!r.ok) return r.message
             setMessage(`${libelleGenre(saisie.genre)} ${r.data.numero ?? ''} créé${saisie.genre === 'facture' ? 'e' : ''}.`)
             await charger()
+            // Une facture écrite directement pose la même question qu'une facture née d'un
+            // devis : l'argent est-il déjà là ? Même feuille, même défaut prudent.
+            if (saisie.genre === 'facture') {
+              setPaiement({ id: r.data.id, numero: r.data.numero, montant: totalDocument(saisie) })
+            }
             return null
           }}
           onClose={fermerNouveau}
@@ -374,9 +492,24 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
             // boutons de réponse, et c'est le geste suivant.
             { fermer: statut === 'refuse' },
           )}
-          onFacturer={() => void agir(() => facturerDevis(ouvert.id), 'Facture créée depuis le devis.')}
+          onFacturer={() => void facturer(ouvert)}
+          onPayer={paye => void payer(ouvert.id, paye)}
           onSupprimer={() => { setSuppressionErreur(null); setSuppression(ouvert); setOuvertId(null) }}
           onClose={() => setOuvertId(null)}
+        />
+      )}
+
+      {paiement && (
+        <FeuillePaiement
+          numero={paiement.numero}
+          montant={paiement.montant}
+          occupe={occupe}
+          onRepondre={paye => {
+            // « Pas encore » n'écrit rien : la colonne est déjà nulle à la naissance.
+            if (paye) void payer(paiement.id, true)
+            else setPaiement(null)
+          }}
+          onClose={() => setPaiement(null)}
         />
       )}
 

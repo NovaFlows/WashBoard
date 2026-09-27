@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { exchangeCode } from '@/lib/google-calendar'
 import { logger } from '@/lib/logger'
-import { STATE_COOKIE } from '../route'
-import { destinationRetourGoogle, retourVersAgenda } from '@/lib/googleAgendaRetour'
+import { STATE_COOKIE, destinationRetourGoogle, retourVersAgenda } from '@/lib/googleAgendaRetour'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 

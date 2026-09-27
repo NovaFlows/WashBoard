@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  construireDocument, dateDansNJours, devisExpire, libelleStatut, lignesDocument,
+  construireDocument, dateDansNJours, devisExpire, estPayee, libelleStatut, lignesDocument,
   messageWhatsapp, saisieDepuisContenu, saisieNeuve, tonStatut, totalDocument,
   validerDocument, validerEnvoi,
   VALIDITE_DEVIS_JOURS, type SaisieDocument,
@@ -245,18 +245,33 @@ describe('saisieDepuisContenu — transformer un devis accepté en facture', () 
 })
 
 describe('libellés de statut', () => {
-  it('dit la même chose différemment pour un devis et pour une facture', () => {
-    expect(libelleStatut({ genre: 'devis', statut: 'envoye' })).toBe('En attente de réponse')
-    expect(libelleStatut({ genre: 'facture', statut: 'envoye' })).toBe('Envoyée')
-    expect(libelleStatut({ genre: 'devis', statut: 'transforme' })).toBe('Facturé')
+  it('sur un devis, la question est « où en est la réponse »', () => {
+    expect(libelleStatut({ genre: 'devis', statut: 'envoye', paye_le: null })).toBe('En attente de réponse')
+    expect(libelleStatut({ genre: 'devis', statut: 'transforme', paye_le: null })).toBe('Facturé')
+  })
+
+  it('sur une facture, la question est « ai-je été payé »', () => {
+    // Le paiement passe devant l'envoi : une facture envoyée et impayée, ce que le laveur veut
+    // lire dans sa liste, c'est qu'il attend son argent (Alexandre, 2026-09-27).
+    expect(libelleStatut({ genre: 'facture', statut: 'envoye', paye_le: null })).toBe('À encaisser')
+    expect(libelleStatut({ genre: 'facture', statut: 'emis', paye_le: null })).toBe('À encaisser')
+    expect(libelleStatut({ genre: 'facture', statut: 'envoye', paye_le: '2026-09-27T10:00:00Z' })).toBe('Encaissée')
   })
 
   it('l’ambre ne signale que ce qui attend une action du laveur', () => {
     // Un devis accepté et pas encore facturé : c'est de l'argent qui dort.
-    expect(tonStatut({ genre: 'devis', statut: 'accepte' })).toBe('ambre')
-    expect(tonStatut({ genre: 'devis', statut: 'envoye' })).toBe('gris')
-    expect(tonStatut({ genre: 'devis', statut: 'refuse' })).toBe('gris')
-    expect(tonStatut({ genre: 'facture', statut: 'emis' })).toBe('vert')
+    expect(tonStatut({ genre: 'devis', statut: 'accepte', paye_le: null })).toBe('ambre')
+    expect(tonStatut({ genre: 'devis', statut: 'envoye', paye_le: null })).toBe('gris')
+    expect(tonStatut({ genre: 'devis', statut: 'refuse', paye_le: null })).toBe('gris')
+    // Une facture impayée aussi : elle attend un encaissement.
+    expect(tonStatut({ genre: 'facture', statut: 'emis', paye_le: null })).toBe('ambre')
+    expect(tonStatut({ genre: 'facture', statut: 'emis', paye_le: '2026-09-27T10:00:00Z' })).toBe('vert')
+  })
+
+  it('un devis n’est jamais « payé », même si la colonne porte une date', () => {
+    expect(estPayee({ genre: 'devis', paye_le: '2026-09-27T10:00:00Z' })).toBe(false)
+    expect(estPayee({ genre: 'facture', paye_le: '2026-09-27T10:00:00Z' })).toBe(true)
+    expect(estPayee({ genre: 'facture', paye_le: null })).toBe(false)
   })
 })
 

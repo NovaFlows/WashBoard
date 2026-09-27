@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { finitAvant, premierJourDeDonnee, serieArgent, totauxArgent, type FraisArgent, type ReservationArgent } from './chiffresArgent'
+import {
+  encaissementsDesFactures, finitAvant, premierJourDeDonnee, serieArgent, totauxArgent,
+  type FactureManuelle, type FraisArgent, type ReservationArgent,
+} from './chiffresArgent'
 import { plageDe, type PeriodeChiffres } from './chiffresPeriode'
 import { revenuNet } from './pricing'
 
@@ -255,5 +258,73 @@ describe('premierJourDeDonnee / finitAvant', () => {
     expect(finitAvant(P('mois', '2026-08-10'), null)).toBe(false)
     expect(plageDe(P('semaine', '2026-09-07')).fin).toBe('2026-09-13')
     expect(finitAvant(P('semaine', '2026-09-07'), '2026-09-14')).toBe(true)
+  })
+})
+
+describe('encaissementsDesFactures — les factures écrites à la main', () => {
+  const facture = (p: Partial<FactureManuelle>): FactureManuelle => ({
+    paye_le: '2026-09-30T10:00:00Z', emis_le: '2026-09-22T08:00:00Z', jour: '2026-09-23', ttc: 150, ...p,
+  })
+
+  it('seules les factures PAYÉES comptent', () => {
+    expect(encaissementsDesFactures([facture({ paye_le: null })])).toEqual([])
+    expect(encaissementsDesFactures([facture({})])).toHaveLength(1)
+  })
+
+  it('elles comptent au jour de la prestation, pas au jour où le laveur a tapé « payée »', () => {
+    // Facture du 23 septembre encaissée le 30 : l'argent appartient au travail du 23. C'est
+    // ainsi que se comportent déjà les rendez-vous, comptés le jour du créneau même clôturés
+    // en retard.
+    const [ligne] = encaissementsDesFactures([facture({ jour: '2026-09-23', paye_le: '2026-09-30T10:00:00Z' })])
+    expect(ligne.scheduled_at).toBe('2026-09-23T12:00:00.000Z')
+    expect(ligne.status).toBe('done')
+    expect(ligne.booked_price).toBe(150)
+    // Jamais de remise « créneau optimisé » sur une facture à la main : elle n'a pas de créneau.
+    expect(ligne.is_smart_slot).toBe(false)
+  })
+
+  it('à défaut de date de prestation, le jour d’émission', () => {
+    const [ligne] = encaissementsDesFactures([facture({ jour: null, emis_le: '2026-09-22T08:00:00Z' })])
+    expect(ligne.scheduled_at).toBe('2026-09-22T12:00:00.000Z')
+  })
+
+  it('le montant peut arriver en chaîne (PostgREST rend du texte sur ->>)', () => {
+    expect(encaissementsDesFactures([facture({ ttc: '249.90' })])[0].booked_price).toBe(249.9)
+  })
+
+  it('une facture sans date ni montant exploitable est écartée, pas comptée à zéro', () => {
+    expect(encaissementsDesFactures([facture({ jour: null, emis_le: null })])).toEqual([])
+    expect(encaissementsDesFactures([facture({ ttc: null })])).toEqual([])
+    expect(encaissementsDesFactures([facture({ ttc: 'abc' })])).toEqual([])
+  })
+
+  it('elles s’additionnent aux rendez-vous dans la même barre et dans le total', () => {
+    // Mardi 22 : 110 € de rendez-vous. Une facture à la main payée, datée du mardi, ajoute 150 €.
+    const lignes = [...SEMAINE, ...encaissementsDesFactures([facture({ jour: '2026-09-22', ttc: 150 })])]
+    const s = serieArgent(P('semaine', '2026-09-24'), lignes, [], Date.parse('2026-09-24T12:00:00Z'))
+    expect(s.points.map(p => p.encaisse)).toEqual([60, 260, 0, 100, 0, 0, 0])
+    expect(s.encaisse).toBe(420)
+    expect(somme(s.points.map(p => p.encaisse))).toBe(s.encaisse)
+    // La période précédente voit la même définition : les deux calculs restent d'accord.
+    expect(totauxArgent(P('semaine', '2026-09-24'), lignes, []).encaisse).toBe(s.encaisse)
+  })
+
+  it('une facture payée hors période ne déborde pas dessus', () => {
+    const lignes = [...SEMAINE, ...encaissementsDesFactures([facture({ jour: '2026-10-05' })])]
+    const s = serieArgent(P('semaine', '2026-09-24'), lignes, [], Date.parse('2026-09-24T12:00:00Z'))
+    expect(s.encaisse).toBe(270)
+  })
+
+  it('une facture payée suffit à ce que la période ne soit plus « vide »', () => {
+    // Sans elle, l'écran affichait « Aucun rendez-vous terminé ni frais sur cette période »
+    // alors que de l'argent était bel et bien rentré.
+    const s = serieArgent(
+      P('mois', '2026-11-10'),
+      encaissementsDesFactures([facture({ jour: '2026-11-03' })]),
+      [],
+      Date.parse('2026-11-30T12:00:00Z'),
+    )
+    expect(s.vide).toBe(false)
+    expect(s.encaisse).toBe(150)
   })
 })

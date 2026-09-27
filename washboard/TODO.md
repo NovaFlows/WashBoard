@@ -35,13 +35,21 @@
       ALTER TABLE support_questions ADD COLUMN IF NOT EXISTS hidden_for_washer_at timestamptz;
       GRANT SELECT, UPDATE (hidden_for_washer_at) ON support_questions TO authenticated;
       ```
-- [ ] **Supabase (SQL Editor) — table `documents` (devis et factures écrits à la main)**, sans
-      laquelle l'écran Chiffres › « Devis et factures à la main » ne peut rien enregistrer. Le SQL
-      complet (table, compteur `devis_prochain_numero`, RLS, GRANT, fonction `emettre_document`)
-      a été donné dans la conversation du 2026-09-27. Format des numéros vérifié ce jour-là en
-      production : `F-00014` — préfixe + compteur sur cinq chiffres, **sans l'année**. La
-      fonction `emettre_document` doit produire exactement cette forme (`D-` pour les devis),
-      sinon la suite des factures se casse en deux.
+- [x] 2026-09-27 — **Supabase (SQL Editor) — table `documents` (devis et factures écrits à la
+      main)**, sans laquelle l'écran Chiffres › « Devis et factures à la main » ne peut rien
+      enregistrer. Le SQL complet (table, compteur `devis_prochain_numero`, RLS, GRANT, fonction
+      `emettre_document`) a été donné dans la conversation du 2026-09-27, et vérifié en
+      production le même jour (D-00001 → F-00015). Format des numéros : `F-00014` — préfixe +
+      compteur sur cinq chiffres, **sans l'année** ; `emettre_document` doit produire exactement
+      cette forme (`D-` pour les devis), sinon la suite des factures se casse en deux.
+- [ ] **Supabase (SQL Editor) — colonne de paiement des factures à la main**, sans laquelle le
+      bouton « Marquer payée » répond une erreur et l'« Encaissé » reste incomplet :
+      ```sql
+      alter table public.documents add column if not exists paye_le timestamptz;
+      ```
+      Rien d'autre à faire : les GRANT de `documents` portent sur la table entière
+      (`grant select, update, delete on public.documents to authenticated`), pas colonne par
+      colonne, et la policy d'`update` vaut déjà pour ce champ.
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
@@ -50,16 +58,21 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **Les factures écrites à la main ne comptent pas encore dans le chiffre d'affaires.**
-      Depuis le 2026-09-27, un laveur peut facturer un chantier hors réservation
-      (`/dashboard/chiffres/documents`). Ces factures apparaissent dans leur écran, mais
-      l'« Encaissé » de Chiffres › Argent, lui, est calculé à partir des seules réservations
-      terminées (`serieArgent`, `chiffresArgent.ts`) : son CA est donc sous-évalué du montant
-      de ces factures, sans que rien ne le signale. À faire : charger les documents de genre
-      `facture` dans `chiffres/page.tsx`, les projeter en `ReservationArgent` (date = émission,
-      montant = `contenu.totaux.ttc`) et les additionner à la série — avec un test qui fixe la
-      règle, parce que c'est de l'argent. Même question pour la liste `/dashboard/factures`,
-      qui ne montre aujourd'hui que les factures de rendez-vous et les factures importées.
+- [x] 2026-09-27 — **Les factures écrites à la main comptent dans le chiffre d'affaires**, mais
+      seulement PAYÉES (choix d'Alexandre : « quand un devis se transforme en facture on met un
+      pop up payé ou pas encore payé ; si c'est payé ça va dans l'encaissé, sinon on met un
+      bouton payé »). Colonne `documents.paye_le`, question posée à la naissance de toute
+      facture (`FeuillePaiement` dans `DocumentsV2.tsx`), bouton « Marquer payée » ensuite,
+      projection en lignes d'encaissement par `encaissementsDesFactures` (`chiffresArgent.ts`).
+      Elles comptent au jour de la PRESTATION, pas au jour du paiement — comme un rendez-vous
+      clôturé en retard, qui compte le jour de son créneau.
+- [ ] **La liste `/dashboard/factures` ignore les factures écrites à la main** — et c'est le
+      trou comptable qui reste. Les deux sortes partagent LE MÊME compteur : une suite réelle
+      peut être `F-00014` (rendez-vous), `F-00015` et `F-00016` (à la main), `F-00017`
+      (rendez-vous), alors que la liste n'affiche que les premières et les dernières. Une suite
+      de factures ne peut pas avoir de trous. À faire : y ajouter les documents de genre
+      `facture` (avec leur PDF, `/api/documents/:id/pdf`) pour que la suite se relise d'un bout
+      à l'autre. Écran encore v1 : à traiter en même temps que sa refonte.
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing

@@ -7,6 +7,7 @@ import { normalizeHost } from '@/lib/funnelStats'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import type { FactureManuelle } from '@/lib/chiffresArgent'
 
 // Refonte 2026, passe 5 — « Chiffres » fusionne l'ancien CRM (/dashboard/crm)
 // et la Comptabilité (/dashboard/compta) en une seule destination à 3 onglets
@@ -42,6 +43,25 @@ export default async function ChiffresPage() {
   )
   if (bookingsError) logger.warn('chiffres.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
 
+  // Les factures écrites à la main que le laveur a marquées PAYÉES : de l'argent reçu, comme
+  // un rendez-vous terminé. Sans elles, l'« Encaissé » était faux du montant de tout ce qui
+  // est facturé hors réservation, et rien ne le signalait (Alexandre, 2026-09-27). Les
+  // impayées ne comptent pas — c'est tout l'objet du drapeau ; les devis, jamais.
+  //
+  // Du contenu figé on n'extrait que le jour et le montant : les mentions légales du laveur et
+  // de ses clients n'ont aucune raison de voyager jusqu'au navigateur.
+  const { data: facturesManuelles, error: facturesManuellesError } = await supabase
+    .from('documents')
+    .select('paye_le, emis_le, jour:contenu->prestation->>date, ttc:contenu->totaux->>ttc')
+    .eq('washer_id', washer.id)
+    .eq('genre', 'facture')
+    .not('paye_le', 'is', null)
+    .order('paye_le', { ascending: false })
+    .limit(2000)
+  if (facturesManuellesError) {
+    logger.warn('chiffres.documents.fetch_failed', { washerId: washer.id }, facturesManuellesError)
+  }
+
   const since = new Date()
   since.setDate(since.getDate() - FUNNEL_HISTORY_DAYS)
 
@@ -76,6 +96,7 @@ export default async function ChiffresPage() {
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <Chiffres
         bookings={bookings ?? []}
+        facturesManuelles={(facturesManuelles ?? []) as unknown as FactureManuelle[]}
         events={funnelEvents ?? []}
         websiteHost={websiteHost}
         hasCompta={hasFeature(washer, 'compta')}

@@ -6,7 +6,8 @@
 // mélanger sur un même écran :
 //   - Comptabilité (`/api/compta/revenue`, ici) : `status = 'done'` seulement,
 //     au prix réellement encaissé net de la remise « créneau optimisé »
-//     (`revenuNet` de `pricing.ts`) ;
+//     (`revenuNet` de `pricing.ts`), PLUS les factures écrites à la main que
+//     le laveur a marquées payées (`encaissementsDesFactures`, plus bas) ;
 //   - CRM (`crmStats.ts`, onglet Clients) : `confirmed` + `done`, au prix
 //     `booked_price ?? services.price` — le prévisionnel accepté compte.
 // L'encaissé affiché ET chaque barre du graphique passent par `revenuNet` :
@@ -33,6 +34,57 @@ export type ReservationArgent = {
   is_smart_slot?: boolean | null
 }
 
+/** Une facture écrite à la main (table `documents`), telle que Chiffres la lit.
+ *
+ *  Volontairement plate : la page n'extrait du contenu figé que le jour et le montant
+ *  (`contenu->prestation->>date`, `contenu->totaux->>ttc`). Envoyer le contenu entier au
+ *  navigateur ferait voyager les mentions légales du laveur et celles de chaque client pour
+ *  deux nombres. Les `->>` de PostgREST rendent du texte, d'où le type de `ttc`. */
+export type FactureManuelle = {
+  /** `null` tant que l'argent n'est pas rentré : elle ne compte alors pas. */
+  paye_le: string | null
+  emis_le: string | null
+  /** Jour de la prestation, `YYYY-MM-DD`. */
+  jour: string | null
+  ttc: number | string | null
+}
+
+/** Les factures à la main PAYÉES, projetées en lignes d'encaissement.
+ *
+ *  Deux décisions, toutes deux volontaires :
+ *
+ *  - SEULES les payées comptent. Une facture émise n'est pas de l'argent reçu — le chantier
+ *    facturé à une entreprise se règle par virement, plus tard. Le laveur dit quand il a été
+ *    payé (Alexandre, 2026-09-27) ; l'« Encaissé » mérite son nom.
+ *  - elles comptent au jour de la PRESTATION, pas au jour où le laveur a tapé « Payée ».
+ *    C'est ainsi que se comportent déjà les rendez-vous, comptés le jour du créneau même
+ *    clôturés en retard ; l'argent tombe donc dans le mois où le travail a été fait, ce que
+ *    veut une comptabilité. À défaut de date de prestation (jamais, une facture en exige une),
+ *    le jour d'émission.
+ *
+ *  Le montant est le TTC du document : c'est ce que le client paie, exactement comme
+ *  `booked_price` pour une réservation. Passer par `ReservationArgent` évite de dupliquer le
+ *  découpage en créneaux et les bornes de période — la somme des barres reste le total. */
+export function encaissementsDesFactures(factures: FactureManuelle[]): ReservationArgent[] {
+  const lignes: ReservationArgent[] = []
+  for (const f of factures) {
+    if (!f.paye_le) continue
+    const jour = f.jour ?? f.emis_le?.slice(0, 10) ?? null
+    if (!jour) continue
+    const ttc = Number(f.ttc)
+    if (!Number.isFinite(ttc) || ttc === 0) continue
+    lignes.push({
+      // Midi UTC : la facture reste le même jour à Paris, comme les factures importées.
+      status: 'done',
+      scheduled_at: `${jour}T12:00:00.000Z`,
+      booked_price: ttc,
+      smart_discount: null,
+      is_smart_slot: false,
+    })
+  }
+  return lignes
+}
+
 /** Une dépense, telle que `/api/expenses` la renvoie (le montant peut arriver
  *  en chaîne selon le type de la colonne). */
 export type FraisArgent = { date: string; amount: number | string }
@@ -55,7 +107,8 @@ export type SerieArgent = {
   encaisse: number
   depense: number
   resultat: number
-  /** Rendez-vous terminés comptés dans la période. */
+  /** Encaissements comptés dans la période : rendez-vous terminés, et factures à la main
+   *  payées (projetées en lignes par `encaissementsDesFactures`). */
   nbTermines: number
   /** Les frais sont-ils répartis dans les barres ? Faux en vue « jour ». */
   fraisParCreneau: boolean

@@ -19,7 +19,9 @@ export async function lireDocuments(): Promise<ResultatApi<Document[]>> {
   return { ok: true, data: json?.documents ?? [] }
 }
 
-type Emission = { id: string; numero: string | null }
+/** `deja` : la facture existait déjà (deux taps sur « Transformer »), aucun numéro n'a été
+ *  consommé — l'écran ne doit alors pas reposer la question du paiement. */
+type Emission = { id: string; numero: string | null; deja?: boolean }
 
 export async function creerDocument(saisie: SaisieDocument): Promise<ResultatApi<Emission>> {
   const r = await appeler('enregistrer', 'POST', '/api/documents', { saisie })
@@ -34,6 +36,13 @@ export async function facturerDevis(id: string): Promise<ResultatApi<Emission>> 
 
 export async function repondreDevis(id: string, statut: 'accepte' | 'refuse'): Promise<ResultatApi<null>> {
   const r = await appeler('enregistrer', 'PATCH', `/api/documents/${id}`, { statut })
+  return r.ok ? { ok: true, data: null } : r
+}
+
+/** Dit qu'une facture a été payée — ou reprend le mot, en cas de faute de frappe. C'est ce seul
+ *  drapeau qui la fait entrer dans l'« Encaissé » de Chiffres. */
+export async function marquerPayee(id: string, paye: boolean): Promise<ResultatApi<null>> {
+  const r = await appeler('enregistrer', 'PATCH', `/api/documents/${id}`, { paye })
   return r.ok ? { ok: true, data: null } : r
 }
 

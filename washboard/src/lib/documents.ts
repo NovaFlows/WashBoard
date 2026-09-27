@@ -89,20 +89,39 @@ export type Document = {
   envoye_le: string | null
   valable_jusquau: string | null
   repondu_le: string | null
+  /** Quand l'argent est rentré (facture seulement). `null` = pas encore encaissée.
+   *
+   *  Une facture émise n'est PAS de l'argent reçu : un chantier facturé à une entreprise se
+   *  paie par virement, des semaines plus tard. C'est ce que règle cette colonne — et elle
+   *  seule décide de ce qui entre dans l'« Encaissé » de Chiffres (Alexandre, 2026-09-27 :
+   *  « si c'est payé ça va dans l'encaissé, sinon on met un bouton payé »).
+   *
+   *  Un rendez-vous, lui, est encaissé sur place quand il passe à « Terminé » : la question ne
+   *  se pose pas pour les factures de réservation. */
+  paye_le: string | null
   facture_id: string | null
   devis_id: string | null
   created_at: string
 }
 
+/** Une facture dont l'argent est rentré. Un devis n'est jamais « payé » : il ne réclame rien. */
+export const estPayee = (d: Pick<Document, 'genre' | 'paye_le'>) =>
+  d.genre === 'facture' && !!d.paye_le
+
 // ── Libellés ───────────────────────────────────────────────────────────────
 
 export const libelleGenre = (g: GenreDocument) => (g === 'devis' ? 'Devis' : 'Facture')
 
-/** Ce que la liste affiche, du point de vue du laveur : « où en est ce document ». */
-export function libelleStatut(d: Pick<Document, 'genre' | 'statut'>): string {
+/** Ce que la liste affiche, du point de vue du laveur : « où en est ce document ».
+ *
+ *  Sur une facture, la question n'est pas « est-elle partie » mais « ai-je été payé » : le
+ *  paiement prend donc le pas sur l'envoi. Une facture envoyée et impayée se lit « À
+ *  encaisser », pas « Envoyée » — c'est ce que le laveur cherche dans sa liste. */
+export function libelleStatut(d: Pick<Document, 'genre' | 'statut' | 'paye_le'>): string {
+  if (d.genre === 'facture') return d.paye_le ? 'Encaissée' : 'À encaisser'
   switch (d.statut) {
-    case 'emis': return d.genre === 'devis' ? 'À envoyer' : 'Émise'
-    case 'envoye': return d.genre === 'devis' ? 'En attente de réponse' : 'Envoyée'
+    case 'emis': return 'À envoyer'
+    case 'envoye': return 'En attente de réponse'
     case 'accepte': return 'Accepté'
     case 'refuse': return 'Refusé'
     case 'transforme': return 'Facturé'
@@ -110,12 +129,14 @@ export function libelleStatut(d: Pick<Document, 'genre' | 'statut'>): string {
 }
 
 /** Le ton de la pastille. L'ambre ne signale que ce qui attend une action du laveur — un devis
- *  accepté qu'il n'a pas encore facturé, un brouillon oublié. Le vert, ce qui est abouti. */
-export function tonStatut(d: Pick<Document, 'genre' | 'statut'>): 'gris' | 'ambre' | 'vert' {
+ *  accepté qu'il n'a pas encore facturé, une facture qu'il n'a pas encore encaissée. Le vert,
+ *  ce qui est abouti. */
+export function tonStatut(d: Pick<Document, 'genre' | 'statut' | 'paye_le'>): 'gris' | 'ambre' | 'vert' {
+  if (d.genre === 'facture') return d.paye_le ? 'vert' : 'ambre'
   if (d.statut === 'accepte') return 'ambre'
   if (d.statut === 'refuse') return 'gris'
   if (d.statut === 'transforme') return 'vert'
-  return d.genre === 'facture' ? 'vert' : 'gris'
+  return 'gris'
 }
 
 // ── Dates ──────────────────────────────────────────────────────────────────

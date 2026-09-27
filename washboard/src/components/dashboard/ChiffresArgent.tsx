@@ -6,7 +6,10 @@ import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/GraphiqueBarres'
 import { libelleCategorie } from '@/lib/depenses'
 import { deplacer, formaterJour, libelleComparaison, plageDe, type PeriodeChiffres, type PeriodType } from '@/lib/chiffresPeriode'
-import { finitAvant, premierJourDeDonnee, serieArgent, totauxArgent, type ReservationArgent } from '@/lib/chiffresArgent'
+import {
+  encaissementsDesFactures, finitAvant, premierJourDeDonnee, serieArgent, totauxArgent,
+  type FactureManuelle, type ReservationArgent,
+} from '@/lib/chiffresArgent'
 import { ecartRelatif } from '@/lib/crmStats'
 
 // Onglet « Argent » de Chiffres (refonte 2026, passe 5, repris au 2026-09-24
@@ -22,9 +25,11 @@ import { ecartRelatif } from '@/lib/crmStats'
 //   `chiffresArgent.ts` à partir des réservations que la page a déjà chargées
 //   (`bookings`, lues page par page : jamais tronquées), avec la définition de
 //   la Comptabilité (terminé seulement, net de remise — `revenuNet`) et les
-//   jours de Paris. La somme des barres est donc le chiffre « Encaissé », par
-//   construction. `/api/compta/revenue` n'est plus appelée d'ici : elle borne
-//   la période en UTC (voir l'en-tête de `chiffresArgent.ts`) ;
+//   jours de Paris, PLUS les factures écrites à la main marquées payées
+//   (`facturesManuelles`, projetées par `encaissementsDesFactures` : même
+//   liste, même calcul). La somme des barres est donc le chiffre « Encaissé »,
+//   par construction. `/api/compta/revenue` n'est plus appelée d'ici : elle
+//   borne la période en UTC (voir l'en-tête de `chiffresArgent.ts`) ;
 // - les DÉPENSES viennent de `/api/expenses?start&end`, la même route que la
 //   Comptabilité, pour la période ET la précédente (l'écart). Les frais ont
 //   une date, pas d'heure : en vue « Jour », les barres montrent l'encaissé
@@ -78,11 +83,13 @@ async function lireFrais(debut: string, fin: string): Promise<Expense[] | null> 
   return (json.expenses ?? []) as Expense[]
 }
 
-export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCount, bookings, periode, maintenant, reservationsIncompletes }: {
+export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCount, bookings, facturesManuelles, periode, maintenant, reservationsIncompletes }: {
   hasCompta: boolean
   comptaPlanLabel: string
   facturesCount: number
   bookings: ReservationArgent[]
+  /** Factures écrites à la main et marquées payées (voir `encaissementsDesFactures`). */
+  facturesManuelles?: FactureManuelle[]
   periode: PeriodeChiffres
   maintenant: number
   reservationsIncompletes?: boolean
@@ -123,14 +130,23 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
 
   const premierJour = useMemo(() => premierJourDeDonnee(bookings), [bookings])
 
+  // Tout ce qui est rentré : les rendez-vous terminés ET les factures écrites à la main que le
+  // laveur a marquées payées, projetées en lignes d'encaissement. Une seule liste, donc un seul
+  // calcul — le total, les barres et l'écart avec la période précédente restent d'accord entre
+  // eux par construction.
+  const encaissements = useMemo(
+    () => [...bookings, ...encaissementsDesFactures(facturesManuelles ?? [])],
+    [bookings, facturesManuelles],
+  )
+
   const serie = useMemo(
-    () => (reponse && reponse.cle === cle && !reponse.erreur ? serieArgent(periode, bookings, reponse.frais, maintenant) : null),
-    [reponse, cle, periode, bookings, maintenant],
+    () => (reponse && reponse.cle === cle && !reponse.erreur ? serieArgent(periode, encaissements, reponse.frais, maintenant) : null),
+    [reponse, cle, periode, encaissements, maintenant],
   )
 
   const totauxPrecedents = useMemo(
-    () => (reponse?.fraisPrecedents ? totauxArgent(precedente, bookings, reponse.fraisPrecedents) : null),
-    [reponse, precedente, bookings],
+    () => (reponse?.fraisPrecedents ? totauxArgent(precedente, encaissements, reponse.fraisPrecedents) : null),
+    [reponse, precedente, encaissements],
   )
 
   const points: PointBarre[] = useMemo(() => (serie?.points ?? []).map(pt => ({

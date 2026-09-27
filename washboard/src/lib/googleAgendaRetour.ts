@@ -9,6 +9,14 @@
 
 export const SUFFIXE_RETOUR_AGENDA = '.agenda'
 
+/** Cookie httpOnly qui porte le `state` attendu au retour de Google.
+ *
+ *  Ici et non dans la route de départ : un fichier `route.ts` ne peut exporter que ses
+ *  gestionnaires et les réglages que Next connaît. Le `export const STATE_COOKIE` qui y vivait
+ *  faisait échouer la vérification de types de `next build` (« Property 'STATE_COOKIE' is
+ *  incompatible with index signature ») — pas `tsc`, qui ne voit pas ces contraintes. */
+export const STATE_COOKIE = 'wb_gcal_state'
+
 export function etatConnexionGoogle(jetonAleatoire: string, versAgenda: boolean): string {
   return versAgenda ? `${jetonAleatoire}${SUFFIXE_RETOUR_AGENDA}` : jetonAleatoire
 }
