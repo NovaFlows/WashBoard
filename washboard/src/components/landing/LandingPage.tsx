@@ -149,9 +149,6 @@ const FLUX_TOUT_EN_UN = ['Réservation', 'Planning', 'Intervention', 'Client', '
 const METIERS: { titre: string; desc: string; theme?: Theme }[] = [
   { titre: 'Lavage auto & detailing', desc: 'Intérieur, extérieur, rénovation, par véhicule ou en pack.', theme: 'auto' },
   { titre: 'Canapés & textiles', desc: 'Canapés, matelas, tapis et moquettes, chez le client.', theme: 'textiles' },
-  { titre: 'Ménage à domicile', desc: 'Ménage régulier ou ponctuel, remise en état.', theme: 'menage' },
-  { titre: 'Vitres', desc: 'Chez les particuliers comme sur les vitrines des commerces.', theme: 'vitres' },
-  { titre: 'Piscines', desc: 'Entretien régulier, mise en route et hivernage.', theme: 'piscine' },
   { titre: 'Et ton métier', desc: 'Catégories, prestations, durées et prix : tout se configure.' },
 ]
 
@@ -543,7 +540,7 @@ export default function LandingPage() {
                 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.5 } } }}
                 className="text-xs font-black text-[#1651E8] dark:text-[#00C4D4] uppercase tracking-[0.22em] mb-8"
               >
-                Nettoyage & entretien mobile
+                Nettoyage & entretien automobile
               </motion.p>
               <motion.h1
                 variants={{ hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
@@ -560,7 +557,7 @@ export default function LandingPage() {
                 className="text-base sm:text-lg text-slate-600 dark:text-white/65 mb-8 max-w-lg leading-relaxed"
               >
                 Le logiciel de gestion des pros qui se déplacent chez leurs clients&nbsp;:
-                lavage auto, detailing, canapés, ménage, vitres, piscines.
+                lavage auto mobile, detailing, canapés.
                 Réservation en ligne, créneaux groupés.
               </motion.p>
               <motion.div
@@ -665,13 +662,18 @@ export default function LandingPage() {
         <FadeUp className="mb-12">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Pour qui ?</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
-            Tous les pros qui se déplacent chez leurs clients.
+            Le logiciel des pros du lavage auto et du detailing.
           </h2>
           <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Tu crées tes propres catégories et prestations : WashBoard s&apos;adapte à ton métier, pas l&apos;inverse.
+            Une activité annexe comme les canapés, ou un métier voisin ? Tu crées tes propres catégories et prestations&nbsp;: WashBoard s&apos;adapte à ton métier, pas l&apos;inverse.
           </p>
         </FadeUp>
-        <FadeGroup className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+        {/* 3 cartes seulement depuis le recentrage automobile (METIERS) :
+            grid-cols-3 partout cassait chaque mot sur un mobile étroit
+            (360px, testé), chaque colonne ne faisant plus qu'une centaine de
+            pixels. 1 colonne sur mobile, 3 à partir de la tablette — pas
+            besoin d'un palier à 2 colonnes intermédiaire pour 3 éléments. */}
+        <FadeGroup className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
           {METIERS.map((m) => {
             // Seuls les métiers avec une page publiée (@/lib/metiers) sont
             // cliquables : un lien vers une page qui n'existe pas dessert plus

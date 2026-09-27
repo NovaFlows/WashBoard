@@ -28,21 +28,25 @@ export const viewport: Viewport = {
   ],
 };
 
-// Le <title> place la catégorie avant la marque ("Logiciel de gestion..."
+// Le <title> place la catégorie avant la marque ("Logiciel tout-en-un..."
 // plutôt que "WashBoard — ...") : c'est ce que Google affiche en premier
 // dans les résultats, et ce sur quoi il juge la pertinence par rapport à la
 // requête tapée. Mesuré au pixel (canvas 2D, police Arial 20px — celle que
-// Google utilise pour le titre du résultat sur desktop) : 580px, sous la
-// limite de troncature généralement admise autour de 600px. L'ancien title
-// ("WashBoard — L'outil de gestion...") mesurait 733px, largement tronqué.
+// Google utilise pour le titre du résultat sur desktop) : 538px, sous la
+// limite de troncature généralement admise autour de 600px.
 //
-// « nettoyage ET entretien » : les deux mots comptent. Un laveur auto et un
-// nettoyeur de canapés font du nettoyage, mais l'entretien de piscines et de
-// terrasses n'en est pas — et ce sont des métiers que WashBoard sert déjà.
-// Une version sans « entretien » tenait en 541px, mais rétrécissait le
-// positionnement pour 39px gagnés.
+// Recentrage 2026-09 : décision d'équipe de revenir sur l'élargissement
+// "pros à domicile" (nettoyage/entretien tous métiers) pour se concentrer
+// exclusivement sur l'automobile (lavage auto & detailing), le terrain où
+// WashBoard était cité en premier par les IA avant que ce positionnement
+// large ne le fasse perdre au profit d'un concurrent plus spécialisé.
+// "tout-en-un" reste explicite dans le titre : le public ciblé se resserre
+// (auto uniquement), pas la promesse produit (réservation, planning,
+// facturation, CRM dans un seul outil). Distinct du title de
+// /logiciel-lavage-auto ("Logiciel de gestion pour laveur auto mobile |
+// WashBoard", 500px) : les deux pages ne se cannibalisent pas.
 export const metadata: Metadata = {
-  title: "Logiciel de gestion nettoyage et entretien à domicile | WashBoard",
+  title: "Logiciel tout-en-un pour lavage auto & detailing | WashBoard",
   manifest: "/manifest.webmanifest",
   applicationName: "WashBoard",
   icons: {
@@ -60,7 +64,7 @@ export const metadata: Metadata = {
     title: "WashBoard",
     statusBarStyle: "default",
   },
-  description: "Le logiciel tout-en-un des pros du nettoyage et de l'entretien à domicile (lavage auto, detailing, ménage, entretien de piscine...) : page de réservation en ligne, agenda, suivi clients et comptabilité. Essai gratuit d'un mois, sans carte bancaire.",
+  description: "Le logiciel tout-en-un des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation. Essai gratuit d'un mois, sans carte bancaire.",
   // Nettoyée le 2026-09-26 : retrait des doublons "outil X" / "logiciel X"
   // qui décrivaient la même idée deux fois (ex. "outil gestion lavage auto"
   // et "logiciel lavage auto"), et de "detailing" seul — trop ambigu pris
@@ -79,13 +83,13 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://www.washboard.fr",
     siteName: "WashBoard",
-    title: "Logiciel de gestion nettoyage et entretien à domicile | WashBoard",
-    description: "Le logiciel de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
+    title: "Logiciel tout-en-un pour lavage auto & detailing | WashBoard",
+    description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. Un mois offert, sans carte bancaire.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Logiciel de gestion nettoyage et entretien à domicile | WashBoard",
-    description: "Le logiciel de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne, agenda, clients et comptabilité. Un mois offert, sans carte bancaire.",
+    title: "Logiciel tout-en-un pour lavage auto & detailing | WashBoard",
+    description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. Un mois offert, sans carte bancaire.",
   },
   robots: {
     index: true,
