@@ -17,7 +17,7 @@ import type { FaqItem } from '@/components/blog/Prose'
 //   (optionsParVehicule, dureeTotale, prixOptions)
 // - frais de déplacement par palier de trajet, depuis le point de départ ou
 //   le dernier rendez-vous : src/lib/travelFee.ts
-// - créneaux au temps de trajet réel, seuil de 15 min par défaut (5 à 60
+// - créneaux au temps de trajet réel, seuil de 15 min par défaut (5 à 30
 //   configurable) : src/app/api/slots/smart/route.ts, src/lib/slots.ts,
 //   src/components/dashboard/admin/IdentiteForm.tsx
 // - multi-laveurs réservé à la formule Pro : src/lib/plan.ts (MIN_PLAN)
@@ -122,7 +122,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Comment fonctionnent les créneaux optimisés pour un laveur auto ?',
     answer:
-      'WashBoard compare l’adresse d’un client qui réserve au temps de trajet réel jusqu’à tes rendez-vous déjà prévus ce jour-là, et met en avant les horaires les plus proches — pas un découpage de quartier sur une carte. Le seuil se règle dans tes paramètres (15 minutes par défaut, réglable de 5 à 60), avec une remise optionnelle que tu définis toi-même.',
+      'WashBoard compare l’adresse d’un client qui réserve au temps de trajet réel jusqu’à tes rendez-vous déjà prévus ce jour-là, et met en avant les horaires les plus proches — pas un découpage de quartier sur une carte. Le seuil se règle dans tes paramètres (15 minutes par défaut, réglable de 5 à 30), avec une remise optionnelle que tu définis toi-même.',
   },
   {
     question: 'Puis-je gérer plusieurs véhicules dans une même réservation ?',

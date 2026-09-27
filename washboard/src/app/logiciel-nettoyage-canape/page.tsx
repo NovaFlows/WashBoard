@@ -26,7 +26,7 @@ import type { FaqItem } from '@/components/blog/Prose'
 //   élément)
 // - frais de déplacement par palier de trajet, depuis le point de départ ou
 //   le dernier rendez-vous : src/lib/travelFee.ts
-// - créneaux au temps de trajet réel, seuil de 15 min par défaut (5 à 60
+// - créneaux au temps de trajet réel, seuil de 15 min par défaut (5 à 30
 //   configurable) : src/app/api/slots/smart/route.ts, src/lib/slots.ts —
 //   mécanisme générique, pas propre au lavage auto
 // - historique et ancienneté du dernier passage par client : src/lib/
