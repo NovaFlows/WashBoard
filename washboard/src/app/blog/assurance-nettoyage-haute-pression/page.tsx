@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('assurance-nettoyage-haute-pression')!
@@ -30,22 +31,22 @@ const faq: FaqItem[] = [
   {
     question: 'La RC pro est-elle obligatoire pour un nettoyage haute pression ?',
     answer:
-      'Le nettoyage extérieur (terrasses, façades, toitures) n’est pas une profession réglementée : la RC pro n’y est pas imposée par la loi. Elle est en revanche indispensable en pratique : sans elle, une tuile cassée ou une infiltration après un démoussage sont à votre charge, et la plupart des syndics et des agences immobilières exigent une attestation avant de vous confier un contrat.',
+      'Le nettoyage extérieur (terrasses, façades, toitures) n’est pas une profession réglementée : la RC pro n’y est pas imposée par la loi. Elle est en revanche indispensable en pratique : sans elle, une tuile cassée ou une infiltration après un démoussage sont à ta charge, et la plupart des syndics et des agences immobilières exigent une attestation avant de te confier un contrat.',
   },
   {
     question: 'Le nettoyage d’une toiture est-il couvert par la garantie décennale ?',
     answer:
-      'En général non : le démoussage et l’application d’un hydrofuge sont considérés comme de l’entretien courant, exclu du champ de la garantie décennale, laquelle couvre les dommages qui compromettent la solidité ou l’étanchéité d’un ouvrage causés par des travaux de construction. La frontière se déplace si votre prestation s’étend à de la réparation ou à des travaux d’étanchéité : vérifiez alors avec votre assureur avant de facturer ce type de mission.',
+      'En général non : le démoussage et l’application d’un hydrofuge sont considérés comme de l’entretien courant, exclu du champ de la garantie décennale, laquelle couvre les dommages qui compromettent la solidité ou l’étanchéité d’un ouvrage causés par des travaux de construction. La frontière se déplace si ta prestation s’étend à de la réparation ou à des travaux d’étanchéité : vérifie alors avec ton assureur avant de facturer ce type de mission.',
   },
   {
     question: 'Que couvre la garantie « biens confiés » sur ce métier ?',
     answer:
-      'Contrairement au lavage auto, où elle couvre un véhicule, elle doit ici couvrir le bâtiment sur lequel vous intervenez : une tuile cassée, une infiltration, un enduit qui se décolle. Le nom exact de cette garantie varie selon les assureurs (« biens confiés élargis », « dommages aux existants ») ; demandez explicitement si un dommage au bâtiment lui-même est couvert, pas seulement les objets que vous transportez.',
+      'Contrairement au lavage auto, où elle couvre un véhicule, elle doit ici couvrir le bâtiment sur lequel tu interviens : une tuile cassée, une infiltration, un enduit qui se décolle. Le nom exact de cette garantie varie selon les assureurs (« biens confiés élargis », « dommages aux existants ») ; demande explicitement si un dommage au bâtiment lui-même est couvert, pas seulement les objets que tu transportes.',
   },
   {
     question: 'Faut-il une autorisation pour installer un échafaudage sur le trottoir ?',
     answer:
-      'Oui. Dès qu’un échafaudage touche ou surplombe le domaine public (trottoir, chaussée), son installation est soumise à une autorisation préalable de la mairie — un permis de stationnement s’il repose simplement au sol, une permission de voirie s’il est ancré. La demande se dépose en général une dizaine de jours avant le montage ; l’installer sans autorisation expose à une amende et peut sortir votre assurance de son cadre en cas d’accident.',
+      'Oui. Dès qu’un échafaudage touche ou surplombe le domaine public (trottoir, chaussée), son installation est soumise à une autorisation préalable de la mairie — un permis de stationnement s’il repose simplement au sol, une permission de voirie s’il est ancré. La demande se dépose en général une dizaine de jours avant le montage ; l’installer sans autorisation expose à une amende et peut sortir ton assurance de son cadre en cas d’accident.',
   },
   {
     question: 'Que se passe-t-il si je tombe pendant un chantier en hauteur, en tant qu’indépendant ?',
@@ -55,7 +56,7 @@ const faq: FaqItem[] = [
   {
     question: 'Combien coûte une assurance pour ce métier ?',
     answer:
-      'Il n’existe pas de tarif moyen fiable à citer : le coût dépend de votre chiffre d’affaires déclaré, de la part de toiture dans votre activité, des plafonds choisis et de l’assureur. Le risque étant plus élevé qu’en simple lavage auto (hauteur, dommages potentiels au bâti), les cotisations le sont généralement aussi. Demandez plusieurs devis en décrivant précisément votre activité, toiture comprise ou non.',
+      'Il n’existe pas de tarif moyen fiable à citer : le coût dépend de ton chiffre d’affaires déclaré, de la part de toiture dans ton activité, des plafonds choisis et de l’assureur. Le risque étant plus élevé qu’en simple lavage auto (hauteur, dommages potentiels au bâti), les cotisations le sont généralement aussi. Demande plusieurs devis en décrivant précisément ton activité, toiture comprise ou non.',
   },
 ]
 
@@ -66,13 +67,13 @@ export default function Page() {
       <article>
         <ArticleHeader
           article={article}
-          intro="Une tuile cassée ne se voit pas tout de suite ; une infiltration, encore moins. Le nettoyage haute pression déplace le risque du véhicule vers le bâtiment, et rien ne vous prévient que votre contrat d'assurance ne suit pas automatiquement ce changement. Voici ce qui change par rapport à une simple assurance de lavage, ce que couvre — ou non — votre RC pro sur un toit, et ce que la Sécu ne rembourse pas si vous tombez."
+          intro="Une tuile cassée ne se voit pas tout de suite ; une infiltration, encore moins. Le nettoyage haute pression déplace le risque du véhicule vers le bâtiment, et rien ne te prévient que ton contrat d'assurance ne suit pas automatiquement ce changement. Voici ce qui change par rapport à une simple assurance de lavage, ce que couvre — ou non — ta RC pro sur un toit, et ce que la Sécu ne rembourse pas si tu tombes."
         />
 
         <Summary
           items={[
             'La RC pro n’est pas obligatoire légalement pour ce métier, mais elle est en pratique indispensable, et les syndics comme les agences l’exigent presque toujours avant de signer.',
-            'La garantie « biens confiés » doit ici couvrir le bâtiment (tuile, façade, gouttière), pas seulement un objet transporté — vérifiez que le contrat le dit explicitement.',
+            'La garantie « biens confiés » doit ici couvrir le bâtiment (tuile, façade, gouttière), pas seulement un objet transporté — vérifie que le contrat le dit explicitement.',
             'Un échafaudage qui touche ou surplombe le trottoir se déclare en mairie avant le montage (autorisation de voirie) : l’oublier expose à une amende, et parfois à sortir du cadre de l’assurance.',
             'Démoussage et hydrofuge sont en général de l’entretien courant, hors garantie décennale — la frontière change si la prestation devient de la réparation ou de l’étanchéité.',
             'Un indépendant n’a pas de régime accident du travail : une chute est indemnisée comme une maladie ordinaire, avec un délai de carence et une condition de revenu.',
@@ -83,7 +84,7 @@ export default function Page() {
           <p>
             <strong>Cet article n&apos;est pas un conseil d&apos;assurance.</strong>{' '}Les garanties,
             exclusions et tarifs varient d&apos;un assureur à l&apos;autre et changent dans le temps.
-            Il vous donne les points à vérifier dans votre contrat ; c&apos;est le contrat, et lui
+            Il te donne les points à vérifier dans ton contrat ; c&apos;est le contrat, et lui
             seul, qui fait foi. Faites confirmer chaque point par écrit avant de signer.
           </p>
         </Callout>
@@ -92,11 +93,11 @@ export default function Page() {
         <Table
           head={['Contrat', 'Ce qu’il couvre ici', 'Indispensable ?']}
           rows={[
-            ['RC professionnelle + biens confiés', 'Dommages au client, aux tiers, et au bâtiment sur lequel vous intervenez (tuile, façade, gouttière)', 'Oui'],
-            ['Assurance du véhicule à usage pro', 'Votre véhicule et le matériel à bord (nettoyeur, tuyaux, produits) pendant les tournées', 'Oui'],
+            ['RC professionnelle + biens confiés', 'Dommages au client, aux tiers, et au bâtiment sur lequel tu interviens (tuile, façade, gouttière)', 'Oui'],
+            ['Assurance du véhicule à usage pro', 'Ton véhicule et le matériel à bord (nettoyeur, tuyaux, produits) pendant les tournées', 'Oui'],
             ['Protection juridique', 'Les frais en cas de litige avec un client, un syndic ou un voisin', 'Recommandée'],
-            ['Garantie décennale', 'Les dommages qui compromettent la solidité ou l’étanchéité d’un ouvrage — rarement engagée pour du nettoyage, à vérifier si votre offre s’étend à la réparation', 'Selon l’activité'],
-            ['Prévoyance / garantie accidents de la vie', 'Un revenu ou un capital si vous tombez et ne pouvez plus travailler', 'À envisager dès le premier chantier en hauteur'],
+            ['Garantie décennale', 'Les dommages qui compromettent la solidité ou l’étanchéité d’un ouvrage — rarement engagée pour du nettoyage, à vérifier si ton offre s’étend à la réparation', 'Selon l’activité'],
+            ['Prévoyance / garantie accidents de la vie', 'Un revenu ou un capital si tu tombes et ne peux plus travailler', 'À envisager dès le premier chantier en hauteur'],
           ]}
         />
 
@@ -104,16 +105,16 @@ export default function Page() {
         <P>
           Sur une voiture, le pire scénario est un cuir taché ou une carrosserie rayée : quelques
           centaines d&apos;euros, rarement plus. Sur un chantier extérieur, le pire scénario touche
-          le bâtiment lui-même — et l&apos;écart de coût change ce que doit couvrir votre contrat.
+          le bâtiment lui-même — et l&apos;écart de coût change ce que doit couvrir ton contrat.
         </P>
         <Table
-          head={['Dommage', 'Coût de réparation (ordre de grandeur)', 'Qui doit vous couvrir']}
+          head={['Dommage', 'Coût de réparation (ordre de grandeur)', 'Qui doit te couvrir']}
           rows={[
             ['Tuile cassée en marchant sur le toit', '15 – 40 € la tuile, plus la main-d’œuvre d’un couvreur', 'Biens confiés, plafond par sinistre'],
             ['Infiltration après un démoussage trop agressif', 'Plusieurs milliers d’euros (isolant, plafond intérieur)', 'Biens confiés, avec un plafond qui suit'],
             ['Enduit ou peinture de façade qui se décolle sous la pression', '1 000 à plusieurs milliers d’euros de reprise', 'Biens confiés + dommages aux existants'],
             ['Vitre ou carrosserie du voisin touchée par une projection', 'Quelques centaines d’euros, plus la franchise', 'RC pro « dommages aux tiers »'],
-            ['Chute du prestataire depuis un toit ou un échafaudage', 'Arrêt de travail, frais médicaux', 'Vous : prévoyance, pas la RC pro'],
+            ['Chute du prestataire depuis un toit ou un échafaudage', 'Arrêt de travail, frais médicaux', 'Toi : prévoyance, pas la RC pro'],
           ]}
         />
         <P>
@@ -143,7 +144,7 @@ export default function Page() {
             quelques centaines comme pour une carrosserie.
           </li>
           <li>
-            <strong>La franchise.</strong>{' '}Ce qui reste à votre charge à chaque sinistre, souvent
+            <strong>La franchise.</strong>{' '}Ce qui reste à ta charge à chaque sinistre, souvent
             plus élevée sur ce type de contrat que sur une RC pro de lavage auto.
           </li>
           <li>
@@ -152,7 +153,7 @@ export default function Page() {
           </li>
           <li>
             <strong>L&apos;étendue exacte de la garantie.</strong>{' '}Couvre-t-elle seulement
-            l&apos;élément sur lequel vous travailliez (la partie de toiture démoussée), ou aussi les
+            l&apos;élément sur lequel tu travaillais (la partie de toiture démoussée), ou aussi les
             dommages induits ailleurs — l&apos;infiltration qui abîme un plafond intérieur, deux
             pièces plus loin ? C&apos;est souvent là que se joue un refus d&apos;indemnisation.
           </li>
@@ -174,10 +175,10 @@ export default function Page() {
           blessé.
         </P>
         <P>
-          Si vous louez une nacelle ou un échafaudage plutôt que de l&apos;acheter, vérifiez qui
+          Si tu loues une nacelle ou un échafaudage plutôt que de l&apos;acheter, vérifie qui
           assure quoi : le contrat de location précise en général si le loueur couvre l&apos;engin
-          lui-même, et vous laisse la responsabilité de son usage. Ne partez pas du principe que la
-          location inclut une assurance de votre activité.
+          lui-même, et te laisse la responsabilité de son usage. Ne pars pas du principe que la
+          location inclut une assurance de ton activité.
         </P>
 
         <H2>4. La décennale : pourquoi elle ne s&apos;applique presque jamais ici (et quand ça change)</H2>
@@ -190,14 +191,14 @@ export default function Page() {
           propriétaire.
         </P>
         <P>
-          La frontière se déplace si votre offre s&apos;étend à de la réparation — remplacement de
+          La frontière se déplace si ton offre s&apos;étend à de la réparation — remplacement de
           tuiles, reprise d&apos;étanchéité. Ce type de prestation s&apos;apparente alors à des
-          travaux du bâtiment, et l&apos;assureur peut exiger une garantie décennale avant de vous
-          couvrir. Si vous envisagez d&apos;aller au-delà du nettoyage et du traitement, posez la
-          question à votre assureur avant de facturer la première prestation de ce type.
+          travaux du bâtiment, et l&apos;assureur peut exiger une garantie décennale avant de te
+          couvrir. Si tu envisages d&apos;aller au-delà du nettoyage et du traitement, pose la
+          question à ton assureur avant de facturer la première prestation de ce type.
         </P>
 
-        <H2>5. Vous, en cas de chute : ce que couvre la Sécu, ce qu&apos;elle ne couvre pas</H2>
+        <H2>5. Toi, en cas de chute : ce que couvre la Sécu, ce qu&apos;elle ne couvre pas</H2>
         <P>
           Un salarié qui tombe sur un chantier relève du régime accident du travail : prise en
           charge des soins, indemnités journalières dès le lendemain, sans condition de revenu
@@ -212,13 +213,13 @@ export default function Page() {
           C&apos;est ce qui pousse beaucoup de laveurs qui travaillent en hauteur à souscrire une
           prévoyance ou une garantie accidents de la vie en complément : un capital ou un revenu
           additionnel en cas d&apos;incapacité, sur un métier où l&apos;arrêt peut durer plus
-          longtemps qu&apos;une entorse. Le tarif dépend de votre âge et de votre état de santé
-          déclaré ; comparez plusieurs devis plutôt que de vous fier au premier proposé.
+          longtemps qu&apos;une entorse. Le tarif dépend de ton âge et de ton état de santé
+          déclaré ; compare plusieurs devis plutôt que de te fier au premier proposé.
         </P>
 
         <H2>Avant de signer : la liste des questions</H2>
         <P>
-          Posez-les par écrit et gardez les réponses. Un assureur sérieux y répond sans détour.
+          Pose-les par écrit et garde les réponses. Un assureur sérieux y répond sans détour.
         </P>
         <UL>
           <li>
@@ -233,15 +234,18 @@ export default function Page() {
         </UL>
         <P>
           Ces vérifications prennent une heure. C&apos;est l&apos;heure la mieux investie avant un
-          chantier en hauteur : elle protège votre matériel, le bâtiment de votre client, et vous.
+          chantier en hauteur : elle protège ton matériel, le bâtiment de ton client, et toi.
         </P>
 
         <Faq items={faq} />
 
-        <Cta title="Chaque chantier, avec l'adresse et l'historique sous la main">
+        <Cta
+          title="Chaque chantier, avec l'adresse et l'historique sous la main"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, chaque rendez-vous garde l&apos;adresse du chantier, la prestation choisie
           et l&apos;heure. Le jour où un syndic demande une preuve d&apos;intervention, ou où un
-          dommage est signalé après coup, vous retrouvez l&apos;historique complet depuis votre
+          dommage est signalé après coup, tu retrouves l&apos;historique complet depuis ton
           téléphone.
         </Cta>
 
