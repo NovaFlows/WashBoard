@@ -958,6 +958,27 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟡 Roadmap produit
 
+- [ ] **Le rendez-vous récurrent n'existe pas — et c'est ce qui ferme les métiers
+      les plus nombreux.** Relevé le 2026-09-27 en préparant les pages métiers.
+  - **Constat, vérifié dans le code** : `lib/materializeRecurring.ts` ne concerne
+    que les **dépenses** de comptabilité (`api/expenses`, `api/compta/year-summary`).
+    Aucune réservation ne se répète : rien dans `types/index.ts` ni dans le schéma.
+    Il n'existe pas non plus de **devis**.
+  - **Ce que ça coûte** : une femme de ménage avec douze clients hebdomadaires
+    ressaisit douze rendez-vous chaque semaine. Idem pour l'entretien de piscine
+    en saison. Le produit sert donc très bien les métiers à prestation ponctuelle
+    (lavage auto, canapés, terrasses) et mal les métiers récurrents.
+  - **Conséquence déjà prise en compte** : les pages métiers de référencement
+    s'arrêtent volontairement aux métiers ponctuels. Publier
+    « logiciel pour le ménage à domicile » reviendrait à attirer ces pros sur leur
+    besoin numéro un, celui qu'on ne couvre pas — et à les perdre en une semaine.
+    Voir la section « Référencement de la landing » plus haut.
+  - **Pourquoi ça mérite un arbitrage d'Alexandre** : le ménage à domicile est de
+    loin le métier le plus nombreux du secteur. C'est probablement la
+    fonctionnalité qui ouvrirait le plus grand marché, et elle conditionne à la
+    fois la roadmap produit et la suite du référencement.
+
+
 - [x] 2026-09-17 — **Livré par Ryan** (`56836f2`). Tables `support_questions` /
       `support_messages` **créées à la main dans Supabase** ce jour-là, SQL donné dans la
       conversation (pas de fichier de migration). Testé de bout en bout en local contre la
@@ -1304,6 +1325,17 @@ rien à faire, mais que le projet reste globalement sain.
       équipe / un testeur, ou des migrations risquées. Inutile avant.
 
 ## 🟢 Polish / UX
+
+- [ ] **Les boutons + et − de la réservation disent « véhicule » à un lecteur
+      d'écran, quel que soit le métier.** `StepService.tsx` : `aria-label`
+      « Ajouter un véhicule (type) » / « Retirer un véhicule (type) », y compris
+      pour un canapé, une vitre ou une piscine. Invisible à l'œil, audible par
+      un client non-voyant — et ça concerne tous les métiers non-auto, c'est-à-dire
+      le positionnement que la landing défend désormais. Le reste du composant
+      gère déjà le cas (le bloc « modèle du véhicule » ne s'affiche que si le
+      panier contient un vrai type véhicule, voir `isVehicleType`) : il ne manque
+      que le libellé. Relevé le 2026-09-27.
+
 
 - [x] ~~**Bouton désactivé indistinguable d'un bouton actif en thème sombre.**~~
       **Classé sans suite le 2026-09-06.** Relevé par `designer` en réunion d'équipe : le
