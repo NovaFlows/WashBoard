@@ -1105,9 +1105,15 @@ export default function LandingPage() {
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
             </div>
             <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel pour pros du nettoyage mobile · Tous droits réservés</p>
-            <div className="flex gap-4 text-xs text-slate-400">
+            {/* `flex-wrap` : la rangée se mesurait 366 px de contenu dans une
+                fenêtre de 390 px, donc déjà rognée sur un téléphone, et le
+                lien « Tous les métiers » la portait à 421 px — « Connexion »
+                coupé à gauche, « Confidentialité » à droite. Même motif que le
+                pied de page des pages métier (MetierPageTemplate). */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
               <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
               <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
+              <Link href="/logiciel-services-a-domicile" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Tous les métiers</Link>
               <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
               <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
               <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>

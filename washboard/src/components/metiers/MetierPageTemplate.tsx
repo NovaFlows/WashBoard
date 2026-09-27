@@ -15,11 +15,20 @@ import { Faq, type FaqItem } from '@/components/blog/Prose'
 
 export type MetierProblem = { titre: string; desc: React.ReactNode }
 export type MetierFeature = { titre: string; desc: React.ReactNode }
+/** Une carte de la section "Les métiers couverts" — hub de maillage vers les
+ *  pages métier publiées. `href` reste absent tant qu'aucune page n'existe
+ *  pour ce métier : la carte s'affiche alors sans lien, plutôt que vers une
+ *  page qui n'existe pas. */
+export type MetierCovered = { titre: string; desc: React.ReactNode; href?: string }
 
 export type MetierPageTemplateProps = {
   /** Thème `blog.ts` du métier : pilote le maillage automatique vers les
-   *  articles ("Pour aller plus loin"). */
-  theme: Theme
+   *  articles ("Pour aller plus loin").
+   *
+   *  Optionnel : absent sur la page catégorie ("logiciel-services-a-domicile"),
+   *  qui ne représente aucun métier précis et ne doit donc favoriser aucun
+   *  thème dans son maillage — voir plus bas. */
+  theme?: Theme
   /** Court libellé au-dessus du H1 (repris de la section "Pour qui ?" de la landing). */
   eyebrow: string
   h1: string
@@ -29,6 +38,10 @@ export type MetierPageTemplateProps = {
   fonctionnalitesTitre: string
   fonctionnalitesIntro?: string
   fonctionnalites: MetierFeature[]
+  /** Section "Les métiers couverts", entre "Comment WashBoard répond" et "Ce
+   *  que ça coûte" — uniquement sur la page catégorie, hub de maillage vers
+   *  les pages métier. Absente (undefined) sur une page métier classique. */
+  metiers?: MetierCovered[]
   faq: FaqItem[]
   ctaTitre: string
   ctaTexte: string
@@ -78,6 +91,7 @@ function Footer() {
         <p>© 2026 WashBoard · Logiciel pour pros du nettoyage mobile</p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Accueil</Link>
+          <Link href="/logiciel-services-a-domicile" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Tous les métiers</Link>
           <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
           <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
           <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
@@ -98,16 +112,21 @@ export default function MetierPageTemplate({
   fonctionnalitesTitre,
   fonctionnalitesIntro,
   fonctionnalites,
+  metiers,
   faq,
   ctaTitre,
   ctaTexte,
 }: MetierPageTemplateProps) {
-  // Automatique : ajouter un article à ARTICLES avec ce thème suffit à
-  // l'afficher ici, sans toucher cette page. Les plus récemment mis à jour
-  // d'abord, comme sur /blog.
-  const articles = ARTICLES
-    .filter(a => a.theme === theme)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  // Avec un thème (page métier) : les articles de ce thème, les plus
+  // récemment mis à jour d'abord, comme sur /blog — ajouter un article à
+  // ARTICLES avec ce thème suffit à l'afficher ici, sans toucher cette page.
+  //
+  // Sans thème (page catégorie, aucun métier précis) : les 6 articles les
+  // plus récemment mis à jour tous thèmes confondus, pour ne favoriser aucun
+  // métier dans ce maillage-là.
+  const articles = theme
+    ? ARTICLES.filter(a => a.theme === theme).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    : [...ARTICLES].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6)
 
   const prix = [...PLAN_CARDS].sort((a, b) => a.price - b.price)
 
@@ -174,6 +193,60 @@ export default function MetierPageTemplate({
         </div>
       </section>
 
+      {/* ── Les métiers couverts — hub de maillage, uniquement sur la page
+          catégorie ("metiers" fourni) ── */}
+      {metiers && metiers.length > 0 && (
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Les métiers couverts</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-10">
+            Un même outil, réglé pour chaque métier
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
+            {metiers.map((m, i) => {
+              // Une carte cliquable doit se voir comme telle : au repos, rien
+              // ne la distinguait d'une carte dont la page n'existe pas
+              // encore. Même repère "En savoir plus →" que les cartes métier
+              // de la landing, déjà en production.
+              const contenu = (
+                <>
+                  <p className="font-bold text-slate-900 dark:text-white group-hover:text-[#1651E8] dark:group-hover:text-[#6A9FFF] transition-colors">
+                    {m.titre}
+                  </p>
+                  <div className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</div>
+                  {m.href && (
+                    <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF]">
+                      En savoir plus
+                      <svg aria-hidden className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  )}
+                </>
+              )
+              // Un nombre impair de cartes laisse un trou en bas à droite de la
+              // grille : la dernière occupe alors les deux colonnes, et son
+              // texte remplit la ligne au lieu de se tasser dans la moitié
+              // gauche. Se corrige tout seul quand une carte s'ajoute.
+              const pleineLargeur =
+                metiers.length % 2 === 1 && i === metiers.length - 1 ? 'sm:col-span-2' : ''
+              // Une carte ne devient un lien que si sa page métier existe déjà
+              // (voir metierPageForTheme) : pas de lien vers une page absente.
+              return m.href ? (
+                <Link
+                  key={m.titre}
+                  href={m.href}
+                  className={`group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 rounded-lg ${pleineLargeur}`}
+                >
+                  {contenu}
+                </Link>
+              ) : (
+                <div key={m.titre} className={pleineLargeur}>{contenu}</div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── Ce que ça coûte — dérivé de PLAN_CARDS, jamais recopié ── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
         <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Ce que ça coûte</p>
@@ -197,12 +270,15 @@ export default function MetierPageTemplate({
         </div>
       </section>
 
-      {/* ── Pour aller plus loin — automatique, filtré par thème ── */}
+      {/* ── Pour aller plus loin — automatique, filtré par thème (ou, sans
+          thème, les derniers articles tous métiers confondus) ── */}
       {articles.length > 0 && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Pour aller plus loin</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-10">
-            {articles.length > 1 ? 'Nos articles' : 'Notre article'} {THEME_LABEL[theme].toLowerCase()}
+            {theme
+              ? `${articles.length > 1 ? 'Nos articles' : 'Notre article'} ${THEME_LABEL[theme].toLowerCase()}`
+              : 'Nos derniers articles'}
           </h2>
           {/* Un seul article ne remplit pas une grille à deux colonnes sans
               paraître abandonnée : on la réserve à partir de deux articles,
