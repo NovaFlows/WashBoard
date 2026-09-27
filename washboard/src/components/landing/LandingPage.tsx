@@ -77,6 +77,26 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
   )
 }
 
+// Une entrée de la grille « Et tout le reste, dans le même outil. ». Isolée
+// dans son propre composant car elle est désormais rendue trois fois (une
+// par palier responsive, voir plus bas) : la garder à un seul endroit évite
+// que les trois versions divergent avec le temps.
+function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boolean } }) {
+  return (
+    <FadeItem>
+      <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+        {f.titre}
+        {f.pro && (
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#1651E8] dark:text-[#6A9FFF] border border-[#1651E8]/30 dark:border-[#6A9FFF]/30 rounded-md px-1.5 py-0.5">
+            Pro
+          </span>
+        )}
+      </p>
+      <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+    </FadeItem>
+  )
+}
+
 // Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
 // PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans l'Essentiel ce qui est Pro.
 // Ordre demandé par Ryan le 2026-09-27 : la facturation remonte près du haut
@@ -99,6 +119,18 @@ const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
   { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', pro: true },
 ]
+
+// La grille « Et tout le reste, dans le même outil. » utilisait une grille
+// CSS classique, qui verrouille la hauteur de toute une ligne sur sa cellule
+// la plus haute : le texte de Facturation, nettement plus long que ses
+// voisines, étirait sa ligne entière et laissait un vide sous les deux
+// autres colonnes. Demande de Ryan le 2026-09-27 : remonter chaque colonne
+// indépendamment sans toucher au texte ni à la position de Facturation.
+// Solution : 3 (desktop) ou 2 (tablette) colonnes en empilement libre,
+// chacune remplie par un tour de table sur l'ordre existant de la liste, au
+// lieu d'une grille où toutes les cellules d'une même ligne se répondent.
+const FONCTIONNALITES_COL3 = [0, 1, 2].map(reste => FONCTIONNALITES.filter((_, i) => i % 3 === reste))
+const FONCTIONNALITES_COL2 = [0, 1].map(reste => FONCTIONNALITES.filter((_, i) => i % 2 === reste))
 
 // Les trois étapes de « Comment ça marche ».
 const ETAPES = [
@@ -809,21 +841,29 @@ export default function LandingPage() {
             Et tout le reste, dans le même outil.
           </h3>
         </FadeUp>
-        <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
-          {FONCTIONNALITES.map((f) => (
-            <FadeItem key={f.titre}>
-              <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                {f.titre}
-                {f.pro && (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1651E8] dark:text-[#6A9FFF] border border-[#1651E8]/30 dark:border-[#6A9FFF]/30 rounded-md px-1.5 py-0.5">
-                    Pro
-                  </span>
-                )}
-              </p>
-              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
-            </FadeItem>
+        {/* Colonnes indépendantes (empilement libre), pas une grille classique
+            : voir le commentaire au-dessus de FONCTIONNALITES_COL3/COL2 pour
+            le pourquoi. Une version par palier, affichée ou masquée en CSS,
+            car le regroupement par colonne change d'un palier à l'autre. */}
+        <div className="sm:hidden">
+          <FadeGroup className="flex flex-col gap-8">
+            {FONCTIONNALITES.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
+          </FadeGroup>
+        </div>
+        <div className="hidden sm:grid sm:grid-cols-2 lg:hidden gap-x-10">
+          {FONCTIONNALITES_COL2.map((colonne, i) => (
+            <FadeGroup key={i} className="flex flex-col gap-8">
+              {colonne.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
+            </FadeGroup>
           ))}
-        </FadeGroup>
+        </div>
+        <div className="hidden lg:grid lg:grid-cols-3 gap-x-10">
+          {FONCTIONNALITES_COL3.map((colonne, i) => (
+            <FadeGroup key={i} className="flex flex-col gap-8">
+              {colonne.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
+            </FadeGroup>
+          ))}
+        </div>
       </section>
 
       {/* ── Le produit en vrai ── */}
@@ -883,48 +923,52 @@ export default function LandingPage() {
         </FadeGroup>
       </section>
 
-      {/* ── Créneaux groupés — argument retiré de l'encart phare (repris par la
-          facturation) mais qui méritait de garder une vraie place : mécanisme
-          détaillé juste avant la section ROI, qui en donne le résultat chiffré.
-          Habillage propre : carte neutre (pas le dégradé cyan/marine réservé à
-          la facturation), avec un mockup d'agenda à côté du texte plutôt qu'un
-          simple bloc de paragraphes. Mockup construit à la main (mêmes chiffres
-          vérifiés que le texte), pas une capture — la remise reste optionnelle
-          dans l'exemple : un des deux créneaux rapprochés n'en a pas. */}
+      {/* ── Créneaux groupés — reprend maintenant le même habillage (dégradé
+          marine, tag turquoise) que l'encart Facturation juste au-dessus.
+          Ryan revient sur le style neutre posé précédemment (voir l'ancien
+          historique) : les deux arguments doivent avoir le même poids
+          visuel. Le tag reprend l'ancien libellé de section (« Créneaux
+          groupés ») plutôt que de répéter « Ce qui fait la différence »
+          juste après la facturation. Mockup d'agenda inchangé dans son
+          contenu (mêmes chiffres vérifiés que le texte, remise optionnelle
+          sur un seul des deux créneaux rapprochés) : ses couleurs sont
+          désormais figées en teintes sombres, puisque le fond l'est en
+          permanence et ne suit plus le thème clair/sombre du visiteur. */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
-        <FadeUp className="mb-10">
-          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Créneaux groupés</p>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
-            Deux rendez-vous proches, un trajet en moins.
-          </h2>
-        </FadeUp>
         <FadeUp>
-          <div className="border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center">
+          <div
+            style={{ background: 'linear-gradient(135deg, #0B1828 0%, #0D2248 55%, #0B1828 100%)' }}
+            className="border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
+          >
             <div>
-              <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 text-sm sm:text-base">
+              <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Créneaux groupés</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">
+                Deux rendez-vous proches, un trajet en moins.
+              </h2>
+              <p className="text-white/75 leading-relaxed mb-6 text-sm sm:text-base">
                 Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à tes
                 rendez-vous déjà prévus ce jour-là — pas à un découpage de quartier sur une carte. En dessous du
                 seuil que tu règles toi-même, de 5 à 30 minutes de route, les horaires juste avant ou juste après
                 un rendez-vous existant sont mis en avant au client, avec la remise que tu as réglée si tu en as
                 réglé une — en euros ou en pourcentage, à toi de choisir.
               </p>
-              <div className="flex items-center gap-2 text-sm text-emerald-500 dark:text-emerald-400 font-bold">
+              <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold">
                 <svg aria-hidden className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 Une protection qui tourne même sans remise activée
               </div>
-              <p className="mt-4 text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+              <p className="mt-4 text-xs text-white/50 leading-relaxed">
                 WashBoard ne propose jamais à un client un horaire que le trajet réel rendrait injoignable
                 entre deux rendez-vous prévus le même jour — cette vérification tourne à chaque réservation.
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] p-4">
+            <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-3 sm:p-4">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-[11px] font-black text-slate-400 dark:text-white/40 uppercase tracking-wider">
+                <p className="text-[11px] font-black text-white/40 uppercase tracking-wider">
                   Bordeaux Sud — aujourd&apos;hui
                 </p>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 shrink-0">Seuil : 15 min</span>
+                <span className="text-[10px] font-bold text-white/40 shrink-0">Seuil : 15 min</span>
               </div>
               <div className="space-y-1.5">
                 {[
@@ -935,17 +979,17 @@ export default function LandingPage() {
                 ].map((item) => (
                   <div
                     key={item.time}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#1651E8]/8 dark:bg-[#6A9FFF]/10' : 'bg-slate-100/70 dark:bg-white/[0.03]'}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#6A9FFF]/10' : 'bg-white/[0.03]'}`}
                   >
-                    <span className="text-xs font-mono text-slate-400 dark:text-white/40 shrink-0">{item.time}</span>
-                    <span className="text-xs text-slate-600 dark:text-white/80 flex-1 truncate">{item.label}</span>
+                    <span className="text-xs font-mono text-white/40 shrink-0">{item.time}</span>
+                    <span className="text-xs text-white/80 flex-1 truncate">{item.label}</span>
                     {item.type === 'smart' && (
-                      <span className="text-xs font-bold text-[#1651E8] dark:text-[#6A9FFF] shrink-0">{item.note ?? 'proche'}</span>
+                      <span className="text-xs font-bold text-[#6A9FFF] shrink-0">{item.note ?? 'proche'}</span>
                     )}
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-[10px] text-slate-400 dark:text-white/30 leading-relaxed">
+              <p className="mt-3 text-[10px] text-white/30 leading-relaxed">
                 Exemple illustratif — la remise est optionnelle, tu peux ne jamais l&apos;activer.
               </p>
             </div>
