@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { formatHeure } from '@/lib/dateUtils'
-import { jourSeul } from '@/lib/reservationsVerrouillees'
 
 // Ce qui arrive APRÈS aujourd'hui — distinct du widget Aujourd'hui, avec
 // lequel il ferait sinon doublon. Trois rendez-vous suffisent : c'est un
@@ -39,10 +38,16 @@ export function ProchainsRdvWidget({ bookings }: { bookings: ProchainRdv[] }) {
                     {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                   <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-                    {/* Verrouillee : le jour suffit. L'heure permettrait d'honorer
-                      le rendez-vous sans jamais payer — il suffirait
-                      d'attendre sur place. */}
-                  {b.verrouillee ? jourSeul(b.scheduled_at) : formatHeure(date)}
+                    {/* Verrouillee : un cadenas a la place de l'heure. Le JOUR est deja
+                      donne ailleurs — colonne de gauche ici, titre du bloc
+                      pour « Aujourd'hui » — donc le repeter en toutes lettres
+                      dedoublait l'information ET poussait le nom du client hors
+                      du cadre. L'heure, elle, permettrait d'honorer le
+                      rendez-vous sans jamais payer : il suffirait d'attendre
+                      sur place. */}
+                  {b.verrouillee
+                    ? <span title="Heure masquée — changez d’offre pour la voir" aria-label="Heure masquée">🔒</span>
+                    : formatHeure(date)}
                   </span>
                   <span className="text-sm text-slate-800 dark:text-slate-200 truncate min-w-0">
                     {b.client_name}
