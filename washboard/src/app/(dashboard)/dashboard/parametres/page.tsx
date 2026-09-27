@@ -5,7 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresForm from '@/components/dashboard/ParametresForm'
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
 import { computeSetupProgress } from '@/lib/setupProgress'
-import { resumeHoraires } from '@/lib/horaires'
+import { resumeHorairesCourt } from '@/lib/horaires'
 import { logger } from '@/lib/logger'
 
 export default async function ParametresPage() {
@@ -63,7 +63,7 @@ export default async function ParametresPage() {
         washer={washer}
         email={user.email ?? ''}
         servicesCount={services.error ? undefined : (services.count ?? 0)}
-        resumeHoraires={availabilities.error ? undefined : resumeHoraires(availabilities.data ?? [])}
+        resumeHoraires={availabilities.error ? undefined : resumeHorairesCourt(availabilities.data ?? [])}
       />
     </DashboardShell>
   )

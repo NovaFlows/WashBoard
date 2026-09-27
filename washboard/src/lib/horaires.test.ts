@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   ERREUR_DATES_MANQUANTES, ERREUR_FIN_AVANT_DEBUT, ERREUR_FIN_DATE_AVANT_DEBUT, FERME, HEURES_CHOIX, JOURS_AFFICHES,
   analyserAjout, congesAVenir, erreurPeriode, erreurPlage, heureCourte, libelleJour, libellePlage, listeJours,
-  phraseEchecAjout, plagesDuJour, resumeHoraires, seRecouvrent, seTouchent, trierJours, unSeulALaFois,
+  phraseEchecAjout, plagesDuJour, resumeHoraires, resumeHorairesCourt, seRecouvrent, seTouchent, trierJours, unSeulALaFois,
   type Plage, type ResultatJour,
 } from './horaires'
 import { horaireAligne } from './bookingWindow'
@@ -335,5 +335,28 @@ describe('unSeulALaFois', () => {
     const garde = unSeulALaFois(action)
     await expect(garde()).rejects.toThrow('boum')
     expect(await garde()).toBe('ok')
+  })
+})
+
+describe('resumeHorairesCourt — la ligne du menu ne doit jamais déborder', () => {
+  it('garde le détail tant qu’il tient (un ou deux groupes)', () => {
+    expect(resumeHorairesCourt(semaine([1, 2, 3, 4, 5]))).toBe('Lun–Ven 8h–18h')
+    expect(resumeHorairesCourt([...semaine([1, 2, 3, 4, 5]), plage(6, '09:00', '12:00')]))
+      .toBe('Lun–Ven 8h–18h · Sam 9h–12h')
+  })
+
+  it('au-delà de deux groupes, annonce le nombre de jours ouverts', () => {
+    // Le cas réel : Lun 15h–18h · Mar–Ven 8h–18h · Sam 8h–23h30.
+    const semaineEclatee = [
+      plage(1, '15:00', '18:00'),
+      ...semaine([2, 3, 4, 5]),
+      plage(6, '08:00', '23:30'),
+    ]
+    expect(resumeHoraires(semaineEclatee)).toBe('Lun 15h–18h · Mar–Ven 8h–18h · Sam 8h–23h30')
+    expect(resumeHorairesCourt(semaineEclatee)).toBe('6 jours ouverts')
+  })
+
+  it('aucune plage : le même mot que le résumé complet', () => {
+    expect(resumeHorairesCourt([])).toBe('Aucun horaire')
   })
 })

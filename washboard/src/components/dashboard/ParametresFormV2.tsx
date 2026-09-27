@@ -106,9 +106,13 @@ type LigneProps = {
 export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true }: LigneProps) {
   const contenu = (
     <>
-      <span className={`flex-1 text-[15px] ${corps}`}>{label}</span>
-      {sousLabel && <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] shrink-0`}>{sousLabel}</span>}
-      {valeur && <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] shrink-0`}>{valeur}</span>}
+      {/* La valeur peut être longue (le résumé des horaires) : c'est elle qui rétrécit et se
+          termine par « … », jamais l'intitulé, et le chevron reste visible. Sans ça, la ligne
+          débordait de la carte et le texte se coupait au milieu d'un chiffre (2026-09-27). */}
+      <span className={`shrink-0 text-[15px] ${corps}`}>{label}</span>
+      {sousLabel && <span className={`min-w-0 flex-1 truncate text-right text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousLabel}</span>}
+      {valeur && <span className={`min-w-0 ${sousLabel ? 'shrink-0' : 'flex-1'} truncate text-right text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{valeur}</span>}
+      {!sousLabel && !valeur && <span className="flex-1" />}
       {signal}
       {chevron && <Chevron />}
     </>
@@ -169,9 +173,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
   const { etat: etatNotifications } = useNotificationsPush()
   const [feuilleNotifications, setFeuilleNotifications] = useState(false)
   const notifications = resumeNotifications(etatNotifications)
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const domaine = origin.replace(/^https?:\/\//, '')
-  const lienReservation = `${domaine}/book/${washer.slug}`
 
   // Ce qui part VRAIMENT : un avis « activé » sans lien Google, ou une relance
   // sans message, ne part pas (le cron les traite sans rien envoyer) — compter

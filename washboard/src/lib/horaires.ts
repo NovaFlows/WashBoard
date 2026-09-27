@@ -73,9 +73,10 @@ export function libelleJour(plages: Plage[], jour: number): string {
 /** « Lun–Ven 8h–18h · Sam 9h–12h ». Les jours CONSÉCUTIFS (dans l'ordre lundi →
  *  dimanche) qui ont exactement les mêmes plages sont regroupés ; un jour fermé
  *  interrompt la série. */
-export function resumeHoraires(plages: Plage[]): string {
-  type Groupe = { premier: number; dernier: number; plages: string; rang: number }
-  const groupes: Groupe[] = []
+type GroupeHoraire = { premier: number; dernier: number; plages: string; rang: number }
+
+function groupesHoraires(plages: Plage[]): GroupeHoraire[] {
+  const groupes: GroupeHoraire[] = []
   JOURS_AFFICHES.forEach((jour, rang) => {
     const duJour = plagesDuJour(plages, jour)
     if (duJour.length === 0) return
@@ -88,10 +89,28 @@ export function resumeHoraires(plages: Plage[]): string {
       groupes.push({ premier: jour, dernier: jour, plages: signature, rang })
     }
   })
-  if (groupes.length === 0) return 'Aucun horaire'
   return groupes
-    .map(g => `${NOMS_COURTS[g.premier]}${g.dernier === g.premier ? '' : `–${NOMS_COURTS[g.dernier]}`} ${g.plages}`)
-    .join(' · ')
+}
+
+const libelleGroupe = (g: GroupeHoraire) =>
+  `${NOMS_COURTS[g.premier]}${g.dernier === g.premier ? '' : `–${NOMS_COURTS[g.dernier]}`} ${g.plages}`
+
+export function resumeHoraires(plages: Plage[]): string {
+  const groupes = groupesHoraires(plages)
+  if (groupes.length === 0) return 'Aucun horaire'
+  return groupes.map(libelleGroupe).join(' · ')
+}
+
+/** Le même résumé, mais garanti court : une ligne de menu n'a pas la place de trois groupes
+ *  (« Lun 15h–18h · Mar–Ven 8h–18h · Sam 8h–23h30 » débordait et se faisait couper au milieu
+ *  d'un chiffre — signalé par Alexandre, 2026-09-27). Au-delà de deux groupes, on annonce le
+ *  nombre de jours ouverts : le détail est à un tap. */
+export function resumeHorairesCourt(plages: Plage[]): string {
+  const groupes = groupesHoraires(plages)
+  if (groupes.length === 0) return 'Aucun horaire'
+  if (groupes.length <= 2) return groupes.map(libelleGroupe).join(' · ')
+  const jours = JOURS_AFFICHES.filter(j => plagesDuJour(plages, j).length > 0).length
+  return `${jours} jours ouverts`
 }
 
 /** « lundi », « lundi et mardi », « lundi, mardi et mercredi ». */
