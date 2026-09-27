@@ -183,48 +183,55 @@ function LigneClient({ client: c, maintenant, onOuvrir }: { client: ResumeClient
 
 /** Une ligne d'annuaire qu'on ne peut pas ouvrir.
  *
- *  Même gabarit que `LigneClient` — même pastille, même hiérarchie, même
- *  hauteur — pour qu'elle se lise comme une fiche de plus et non comme un
- *  encart publicitaire. Ce qui manque est remplacé par des barres grises, pas
- *  par des valeurs inventées : un faux numéro sous un flou reste un faux
- *  numéro, et le jour où quelqu'un retire le flou, c'est la crédibilité de
- *  tout l'écran qui tombe.
+ *  Même gabarit que `LigneClient` pour qu'elle se lise comme une fiche de plus
+ *  et non comme un encart publicitaire. Ce qui reste LISIBLE : le nom et le
+ *  jour — assez pour savoir qu'un vrai client attend, trop peu pour le joindre
+ *  ou pour se présenter au rendez-vous. Ce qui manque est remplacé par des
+ *  barres grises floutées, jamais par des valeurs inventées : un faux numéro
+ *  sous un flou reste un faux numéro le jour où quelqu'un le retire, et c'est
+ *  la crédibilité de tout l'écran qui tombe avec.
  *
- *  Le flou est décoratif. La vraie protection est en amont : téléphone, email,
- *  adresse et montant ne sont jamais chargés (voir `masquerVerrouillees`). */
+ *  Le flou n'est qu'une décoration. La vraie protection est en amont :
+ *  téléphone, email, adresse, montant et HEURE ne sont jamais chargés (voir
+ *  `masquerVerrouillees`). */
 function LigneBloquee({ bloque, offre }: { bloque: ClientBloque; offre: string }) {
   return (
-    <li className="relative">
-      <div className="w-full flex items-start gap-3 px-4 py-3 blur-[4px] select-none pointer-events-none" aria-hidden>
-        <span className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0 mt-0.5" />
-        <span className="flex-1 min-w-0">
-          <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-            {bloque.client_name || 'Client'}
-          </span>
-          <span className="block h-3 w-40 max-w-full rounded bg-slate-200 dark:bg-slate-700 mt-1.5" />
-          <span className="block text-xs mt-1.5 text-slate-700 dark:text-slate-300">
-            <span className="text-slate-400 dark:text-slate-500">Réservation le </span>
-            {jourSeul(bloque.scheduled_at) ?? '—'}
-          </span>
-        </span>
-        <span className="shrink-0 h-3 w-8 rounded bg-slate-200 dark:bg-slate-700 mt-1" />
-      </div>
-
-      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-white/55 dark:bg-slate-900/60 px-4">
-        <svg className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+    <li className="flex items-start gap-3 px-4 py-3">
+      <span className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 text-slate-400 dark:text-slate-500">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
           <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
-        {/* Un lien, pas un bouton plein. Répété sur quarante lignes, un aplat
-            bleu redevenait exactement ce qu'on voulait éviter : un mur de
-            publicité qu'on cesse de voir. Le cadenas porte le message, le lien
-            donne la sortie. */}
+      </span>
+
+      <span className="flex-1 min-w-0">
+        {/* Le NOM, net. C'est lui qui rend la demande réelle : « Nadia Costa »
+            donne envie de rappeler, « Client masqué » ne donne envie de rien.
+            Et la DATE, au jour près. */}
+        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+          {bloque.client_name || 'Client'}
+        </span>
+
+        {/* Ce qui manque, en barres grises floutées : téléphone, email,
+            adresse. Jamais de fausse valeur — un faux numéro sous un flou
+            reste un faux numéro le jour où quelqu'un retire le flou. */}
+        <span className="block h-3 w-44 max-w-full rounded bg-slate-200 dark:bg-slate-700 blur-[3px] mt-1.5" aria-hidden />
+
+        <span className="block text-xs mt-1.5 text-slate-700 dark:text-slate-300">
+          <span className="text-slate-400 dark:text-slate-500">Réservation le </span>
+          {jourSeul(bloque.scheduled_at) ?? '—'}
+        </span>
+
+        {/* L'heure n'est pas affichée, et elle n'est même pas chargée : elle
+            suffirait à honorer le rendez-vous sans jamais payer. */}
         <Link
           href="/dashboard/abonnement"
-          className="text-xs font-bold text-[#1651E8] hover:underline"
+          className="inline-block text-xs font-bold text-[#1651E8] hover:underline mt-1"
         >
           Débloquer avec le plan {offre}
         </Link>
-      </div>
+      </span>
+
+      <span className="shrink-0 h-3 w-8 rounded bg-slate-200 dark:bg-slate-700 blur-[3px] mt-1.5" aria-hidden />
     </li>
   )
 }

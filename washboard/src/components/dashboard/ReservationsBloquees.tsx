@@ -19,8 +19,12 @@ export function BandeauBloquees({ nombre, offre, montant = 0 }: {
   if (nombre <= 0) return null
 
   return (
+    // Vers les CLIENTS, pas vers la page d'abonnement. Le bandeau annonce des
+    // gens ; il doit mener aux gens. Envoyer directement à la caisse, c'est
+    // demander de payer avant d'avoir montré pour quoi — on y va depuis la
+    // liste, une fois qu'on a vu les noms et les dates.
     <Link
-      href="/dashboard/abonnement"
+      href="/dashboard/clients"
       className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
     >
       <span
