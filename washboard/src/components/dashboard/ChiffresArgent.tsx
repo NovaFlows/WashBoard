@@ -259,14 +259,20 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
             </div>
           </div>
 
-          <Link href="/dashboard/factures" className="flex items-center justify-between px-1 h-11">
-            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Factures · {nombre.format(facturesCount)} émise{facturesCount > 1 ? 's' : ''}
-            </span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="text-[color:var(--v2-color-gris)]">
-              <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
-            </svg>
-          </Link>
+          {/* Deux portes différentes, et c'est voulu : les factures de rendez-vous naissent
+              toutes seules et se consultent ; les devis et factures écrits à la main se
+              créent (Alexandre, 2026-09-27). */}
+          {([
+            { href: '/dashboard/factures', texte: `Factures · ${nombre.format(facturesCount)} émise${facturesCount > 1 ? 's' : ''}` },
+            { href: '/dashboard/chiffres/documents', texte: 'Devis et factures à la main' },
+          ] as const).map(l => (
+            <Link key={l.href} href={l.href} className="flex items-center justify-between px-1 h-11">
+              <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{l.texte}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="text-[color:var(--v2-color-gris)]">
+                <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+              </svg>
+            </Link>
+          ))}
         </>
       )}
     </div>

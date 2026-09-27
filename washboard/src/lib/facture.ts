@@ -143,6 +143,10 @@ export type LigneFacture = {
  *  facture déjà émise ne les porte pas, et doit toujours s'afficher. */
 export type FactureContenu = {
   version: 1
+  /** Absent des factures de réservation, qui sont toutes des factures. Porté par les
+   *  documents écrits à la main (voir `lib/documents.ts`), où le même contenu sert un devis
+   *  ou une facture : c'est ce champ qui décide du titre et des mentions du PDF. */
+  genre?: 'devis' | 'facture'
   vendeur: {
     nomLegal: string
     nomCommercial: string
@@ -167,10 +171,16 @@ export type FactureContenu = {
     siren: string | null
     adresseFacturation: string
   }
-  prestation: { date: string; lieu: string; nature: 'Prestation de services' }
+  /** `date` est nulle quand la prestation n'est pas encore planifiée — le cas normal d'un
+   *  devis. Une facture de réservation en porte toujours une. */
+  prestation: { date: string | null; lieu: string; nature: 'Prestation de services' }
   lignes: LigneFacture[]
   remiseTtc: number
   totaux: { ht: number; tva: number; ttc: number }
+  /** Devis seulement : jusqu'à quand le prix engage le laveur (`YYYY-MM-DD`). */
+  valableJusquau?: string | null
+  /** Mot libre du laveur, imprimé sous les totaux (conditions, délai, accès au chantier). */
+  note?: string | null
 }
 
 export type ReservationFacturable = {

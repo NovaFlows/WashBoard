@@ -454,6 +454,75 @@ export async function sendFacture(params: SendFactureParams) {
   })
 }
 
+// ── Email 6 : devis ou facture écrits à la main ───────────────────────────
+//
+// Envoyé à la demande du laveur, depuis l'écran « Devis et factures ». Le document n'est pas
+// joint mais lié : le lien public (l'identifiant du document fait jeton) sert toujours la
+// dernière version, et un PDF en pièce jointe fait tomber le message dans les indésirables
+// chez une partie des messageries.
+type SendDocumentParams = {
+  to: string
+  clientName: string
+  washerName: string
+  /** Réponses du client (acceptation d'un devis, question) : elles doivent arriver au laveur,
+   *  pas dans le vide de `noreply@`. */
+  washerEmail?: string | null
+  genre: 'devis' | 'facture'
+  numero: string
+  documentId: string
+  montantTtc: number
+  /** Devis : jusqu'à quand le prix tient, déjà mis en forme (« 27 octobre 2026 »). */
+  valableJusquau?: string | null
+  appUrl?: string
+}
+
+export async function sendDocument(params: SendDocumentParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const appUrl = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const url = `${appUrl}/api/documents/${params.documentId}/pdf`
+  const devis = params.genre === 'devis'
+  const titre = devis ? 'Devis' : 'Facture'
+  const montant = `${params.montantTtc.toFixed(2).replace('.', ',')} €`
+
+  return resend.emails.send({
+    from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
+    to: params.to,
+    ...(params.washerEmail ? { replyTo: params.washerEmail } : {}),
+    subject: `${titre} ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651E8;padding:28px 40px;">
+      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">${titre} ${escapeHtml(params.numero)}</p>
+      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        ${devis
+          ? `Voici le devis demandé à <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`
+          : `Merci pour votre confiance. Voici la facture de <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`}
+      </p>
+      ${devis && params.valableJusquau
+        ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.6;background:#f8fafc;border-left:3px solid #1651E8;padding:10px 14px;">Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.</p>`
+        : ''}
+      <a href="${escapeHtml(url)}"
+         style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
+        Télécharger ${devis ? 'le devis' : 'la facture'} (PDF)
+      </a>
+    </div>
+    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 // ── Email 3 : notification nouvelle réservation au laveur ─────────────────
 type SendWasherNotificationParams = {
   to: string
