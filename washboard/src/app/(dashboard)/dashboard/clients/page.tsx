@@ -6,7 +6,8 @@ import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { quotaReservations } from '@/lib/plan'
+import { quotaReservations, planEffectif } from '@/lib/plan'
+import { CarteBloquees } from '@/components/dashboard/ReservationsBloquees'
 import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
@@ -36,12 +37,16 @@ export default async function ClientsPage() {
   // Sans trace, un fichier vide ne se distinguerait pas d'un laveur sans client.
   if (error) logger.error('clients.bookings.fetch_failed', { washerId: washer.id }, error)
 
-  // Réservations au-delà du quota : elles n'ont pas de client à afficher, donc
-  // elles sortent de l'annuaire. Y laisser « Réservation bloquée » créerait une
-  // fiche fantôme, sans téléphone ni historique, que le laveur ouvrirait pour
-  // rien. Le masquage se fait au sortir de la base, jamais dans les écrans.
+  // Réservations au-delà du quota. Elles ne rejoignent PAS l'annuaire : celui-ci
+  // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
+  // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
+  // au-dessus, avec le nom flouté et le jour.
   const seuil = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
-  const visibles = masquerVerrouillees(bookings, seuil).filter(b => !b.verrouillee)
+  const marquees = masquerVerrouillees(bookings, seuil)
+  const visibles = marquees.filter(b => !b.verrouillee)
+  const bloquees = marquees
+    .filter(b => b.verrouillee)
+    .map(b => ({ id: b.id as string, client_name: b.client_name as string | null, scheduled_at: b.scheduled_at as string }))
 
 
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST
@@ -54,6 +59,9 @@ export default async function ClientsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <div className="max-w-3xl mx-auto space-y-4">
+        <CarteBloquees bloquees={bloquees} offre={planEffectif(washer)} />
+      </div>
       <ClientsView bookings={lignes} />
     </DashboardShell>
   )

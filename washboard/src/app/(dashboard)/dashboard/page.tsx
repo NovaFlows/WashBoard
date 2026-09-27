@@ -9,7 +9,8 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
-import { hasFeature, quotaReservations } from '@/lib/plan'
+import { hasFeature, quotaReservations, planEffectif } from '@/lib/plan'
+import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
 import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
@@ -232,20 +233,33 @@ export default async function DashboardPage() {
   // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
   const seuilVerrou = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
   const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilVerrou)
+  // Le compte porte sur les rendez-vous À VENIR : un client bloqué dont la date
+  // est passée n'est plus une occasion à saisir, seulement un regret. Compter
+  // les regrets ne fait pas vendre, ça décourage.
+  const nbBloquees = aVenirVisible.filter(b => b.verrouillee).length
 
   const passes = historique.data ?? []
-  const all = [...(aVenir ?? []), ...passes]
+
+  // Les réservations verrouillées ne rejoignent PAS l'agenda. « Il n'a pas
+  // accès au calendrier » : elles vivent dans le bandeau, qui les compte, et
+  // sur la page Clients, qui montre le nom flouté et le jour. Les laisser ici
+  // aurait donné l'heure exacte et le prix dans une carte ordinaire — la fuite
+  // que la capture a montrée — et proposé « Clôturer » un rendez-vous dont le
+  // laveur ne sait ni où ni pour qui il a lieu.
+  const aVenirOuvertes = aVenirVisible.filter(b => !b.verrouillee)
+  const passesOuverts = masquerVerrouillees(passes, seuilVerrou).filter(b => !b.verrouillee)
+  const all = [...aVenirOuvertes, ...passesOuverts]
 
   // Aujourd'hui, à l'heure de Paris — calculé sur `aVenir` (déjà en main, déjà
   // trié par heure croissante), sans requête de plus. Ne montre que ce qui
   // reste à faire : un rendez-vous déjà clôturé n'a plus rien à demander.
   const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
-  const rdvAujourdhui = aVenirVisible.filter(
+  const rdvAujourdhui = aVenirOuvertes.filter(
     b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
   // Après aujourd'hui, pour ne pas doublonner le widget ci-dessus : les trois
   // prochains, dans l'ordre où `aVenir` est déjà trié.
-  const rdvProchains = aVenirVisible
+  const rdvProchains = aVenirOuvertes
     .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
     .slice(0, 3)
 
@@ -307,6 +321,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <BandeauBloquees nombre={nbBloquees} offre={planEffectif(washer)} />
       <DemarrageCard progress={progress} />
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">

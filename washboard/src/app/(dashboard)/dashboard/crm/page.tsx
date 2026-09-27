@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmView from '@/components/dashboard/CrmView'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
-import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
+import { seuilVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
@@ -58,6 +59,14 @@ export default async function CrmPage() {
   )
   if (bookingsError) logger.warn('crm.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
 
+  // Le CRM est la vue la plus complète qu'on ait sur un client : téléphone,
+  // adresse, historique. Les réservations au-delà du quota n'y entrent pas —
+  // sinon le laveur récupérait ici, en deux clics, exactement ce que l'accueil
+  // et le calendrier viennent de lui cacher. Elles restent comptées sur la
+  // page Clients, nom flouté et jour seul.
+  const seuilVerrou = await seuilVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilVerrou).filter(b => !b.verrouillee)
+
   const since = new Date()
   since.setDate(since.getDate() - FUNNEL_HISTORY_DAYS)
 
@@ -89,7 +98,7 @@ export default async function CrmPage() {
           les visites comme les réservations portent sur la même sélection. */}
       <CrmView
         events={funnelEvents ?? []}
-        bookings={bookings ?? []}
+        bookings={bookingsVisibles}
         websiteHost={websiteHost}
         accent={washer.brand_color ?? undefined}
       />
