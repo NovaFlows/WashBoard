@@ -82,7 +82,7 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
 const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
   { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
-  { titre: 'Créneaux intelligents', desc: 'Une remise proposée au client qui réserve juste à côté d’un rendez-vous déjà prévu.' },
+  { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.' },
   { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
   { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
@@ -876,6 +876,40 @@ export default function LandingPage() {
             </FadeItem>
           ))}
         </FadeGroup>
+      </section>
+
+      {/* ── Créneaux groupés — argument retiré de l'encart phare (repris par la
+          facturation) mais qui méritait de garder une vraie place : mécanisme
+          détaillé juste avant la section ROI, qui en donne le résultat chiffré.
+          Contenu adapté de l'ancien encart (voir git 8bb98f2), avec un
+          habillage de section normale et non plus le dégradé sombre réservé à
+          la facturation. */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-10">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Créneaux groupés</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Deux rendez-vous proches, un trajet en moins.
+          </h2>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à tes
+            rendez-vous déjà prévus ce jour-là — pas à un découpage de quartier sur une carte. En dessous du
+            seuil que tu règles toi-même, de 5 à 30 minutes de route, les horaires juste avant ou juste après
+            un rendez-vous existant sont mis en avant au client, avec la remise que tu as réglée si tu en as
+            réglé une — en euros ou en pourcentage, à toi de choisir.
+          </p>
+        </FadeUp>
+        <FadeUp>
+          <div className="flex items-start gap-3 max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-5 sm:p-6">
+            <svg aria-hidden className="w-5 h-5 mt-0.5 shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Même si tu n&apos;actives pas les créneaux groupés, WashBoard ne propose jamais à un client un
+              horaire que le trajet réel rendrait injoignable entre deux rendez-vous prévus le même jour :
+              cette vérification tourne à chaque réservation.
+            </p>
+          </div>
+        </FadeUp>
       </section>
 
       {/* ── ROI ── */}
