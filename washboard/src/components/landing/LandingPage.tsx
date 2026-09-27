@@ -639,6 +639,11 @@ export default function LandingPage() {
                 title: 'Tu estimes ton CA, tu ne le sais pas vraiment',
                 desc: 'Tu penses avoir fait 1 400€ cette semaine. Tu vérifies en fin de mois et c\'est rarement ce que tu pensais.',
               },
+              {
+                n: '04',
+                title: 'Un client qui ne revient pas, tu ne le vois pas passer',
+                desc: 'Pas d\'alerte, pas de relance : le client parti depuis 3 mois se noie dans les autres, jusqu\'à ce qu\'un concurrent le récupère avant toi.',
+              },
             ].map((pain) => (
               <FadeUp
                 key={pain.n}
@@ -1032,7 +1037,7 @@ export default function LandingPage() {
 
       {/* ── ROI ── */}
       <section className="border-t border-slate-100 dark:border-slate-800/50 py-24 sm:py-32">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 grid lg:grid-cols-[1fr_300px] gap-12 lg:gap-10 items-start">
           <FadeUp>
             <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
               {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
@@ -1067,6 +1072,38 @@ export default function LandingPage() {
                 Un ordre de grandeur, pas une promesse : tout dépend de ta zone et de ta demande.
               </p>
             </div>
+          </FadeUp>
+
+          {/* Carte compagne : la zone ne laissait que le calcul, seul dans un
+              conteneur large — beaucoup de vide à droite sur grand écran.
+              Le moment où quelqu'un se demande "est-ce que ça vaut le coup"
+              est justement celui où le comparatif (P2, meilleur-logiciel-
+              lavage-auto) a le plus de sens : ni un nouveau chiffre, ni un
+              développement du calcul déjà présent, juste un renvoi. */}
+          <FadeUp>
+            {/* Même traitement que la carte de gauche (bordure d'accent +
+                chiffre en avant) plutôt qu'un simple bloc de texte : les deux
+                cartes se répondent au lieu que l'une paraisse secondaire.
+                "7" est réel, pas inventé pour l'occasion — c'est le nombre de
+                lignes du tableau de meilleur-logiciel-lavage-auto. */}
+            <Link href="/meilleur-logiciel-lavage-auto" className="group block">
+              <div className="border-l-4 border-[#1651E8] dark:border-[#6A9FFF] pl-6">
+                <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.22em] mb-5">Tu hésites encore ?</p>
+                <p className="text-5xl sm:text-6xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-3">
+                  7
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">points comparés, poste par poste</p>
+                <p className="font-bold text-slate-900 dark:text-white group-hover:text-[#1651E8] dark:group-hover:text-[#6A9FFF] transition-colors mb-2">
+                  Ce qui change vraiment entre gérer à la main et un logiciel pensé pour le lavage auto
+                </p>
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF]">
+                  Voir le comparatif
+                  <svg aria-hidden className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </Link>
           </FadeUp>
         </div>
       </section>
