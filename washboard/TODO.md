@@ -2269,6 +2269,32 @@ rien à faire, mais que le projet reste globalement sain.
         « client opposé, rendez-vous clos sans envoi » — l'écran Messages automatiques peut donc
         afficher un libellé trompeur pendant sa fenêtre de 7 jours, mais **aucun message n'est
         réellement envoyé** dans les deux cas.
+  - [x] 2026-09-28 — **La fiche client se rapproche du canevas** (`333b91d`) : « son rythme »
+        (écart moyen entre deux visites) remplace le panier moyen tant qu'il y a assez
+        d'historique, timeline mélangée prestations/avis/relances (`lib/clientTimeline.ts`,
+        relance reproduite exactement, avis déduit — pas de note ni d'étoile inventée, WashBoard
+        n'a aucune API qui lirait un vrai avis Google), et menu « … » dans l'en-tête (une seule
+        entrée pour l'instant, « ne plus contacter »).
+  - [ ] **Bouton « + Rendez-vous » de la fiche client** : chantier à part, pas un ajout rapide.
+        Suppose de brancher l'écran Clients sur le formulaire de rendez-vous manuel de l'Agenda
+        (`RendezVousManuelV2.tsx`, `useRendezVousManuel.ts`), qui charge ses propres données
+        (services, capacité d'équipe restante, avertissement de faisabilité du trajet) —
+        aujourd'hui seulement disponibles sur l'écran Calendrier. `ManualBooking` a déjà tous les
+        champs d'identité (`client_name`, `client_email`, `client_phone`, `address`,
+        `is_professional`, `company_name`) : pré-remplir depuis une fiche est possible une fois
+        le formulaire atteignable depuis Clients — reste à décider comment (navigation vers
+        `/dashboard/calendrier` avec le client en paramètre, ou dupliquer une version plus légère
+        du formulaire pour Clients).
+  - [ ] **Relancer les devis sans réponse** — pas seulement les clients silencieux. Un devis
+        `envoyé` sans réponse (`repondu_le` toujours nul) depuis N jours, c'est de l'argent qui
+        dort ; la fiche entreprise du canevas le montre déjà (« Devis « 6 véhicules VO / mois »
+        en retard de 2 jours » › Faire). Généralisable à toute la liste Documents, pas qu'aux
+        pros. Coût de construction bas : la donnée existe déjà dans `documents`
+        (`statut`, `repondu_le`, `emis_le`), même genre de calcul pur que `clientsARelancer.ts`.
+  - [ ] **Notes libres sur un client**. La colonne `clients.notes` existe déjà en base (posée par
+        avance le 2026-09-28), il manque l'écran : un champ texte dans la fiche (ou dans le menu
+        « … »), pour noter ce qu'aucune donnée ne capture — « portail à code 1234 », « préfère le
+        samedi matin », « a un chien, prévenir avant de sonner ».
   - [ ] **Prospects** : pas encore construit. Piste retenue en discussion — faire naître un
         prospect automatiquement quand un DEVIS est écrit pour quelqu'un qui n'a jamais réservé
         (`FeuilleDocumentV2.tsx`), plus une capture manuelle (« + Prospect » après un appel).
@@ -2277,7 +2303,19 @@ rien à faire, mais que le projet reste globalement sain.
   - [ ] **Fiche entreprise** (plusieurs sites, plusieurs contacts, délai de paiement) : jugé
         représentatif par Alexandre (fréquent chez ses laveurs, pas un cas isolé de Yanis) — donc
         à construire, pas à simplifier. Demande des tables `entreprises`/`sites`/`contacts` liées
-        à `clients`, pas seulement des colonnes en plus.
+        à `clients`, pas seulement des colonnes en plus. Détail du canevas de Yanis (capture du
+        2026-09-28, écran « Clients > Fiche entreprise ») : en-tête avec le nom et « Client
+        depuis {mois} · N sites » ; trois chiffres héros — CA de l'année, nombre de véhicules,
+        délai de paiement en jours (un champ que `clients`/`entreprises` n'a pas encore) ; une
+        alerte quand un devis envoyé à cette entreprise dépasse son délai de réponse habituel
+        (« en retard de 2 jours » › bouton Faire — rejoint la relance de devis ci-dessus, mais
+        au niveau entreprise) ; boutons Appeler / + Devis ; une section **Contacts** (nom, rôle
+        libre — « Chef d'atelier », « Comptabilité » —, et ce que CE contact reçoit : réserve
+        les lavages, reçoit les factures) ; une section **Sites** (adresse + note libre par
+        site — « Parking arrière, point d'eau à droite », « Badge à demander à l'accueil, sans
+        eau uniquement » — donc un site n'est pas qu'une adresse, il porte des instructions
+        d'accès) ; une section **Derniers passages** (comme l'historique d'un particulier, mais
+        sans distinguer par quel site ou quel contact — à trancher si utile).
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
