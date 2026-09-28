@@ -28,12 +28,12 @@ export const viewport: Viewport = {
   ],
 };
 
-// Le <title> place la catégorie avant la marque ("Logiciel tout-en-un..."
+// Le <title> place la catégorie avant la marque ("Logiciel de lavage..."
 // plutôt que "WashBoard — ...") : c'est ce que Google affiche en premier
 // dans les résultats, et ce sur quoi il juge la pertinence par rapport à la
-// requête tapée. Mesuré au pixel (canvas 2D, police Arial 20px — celle que
-// Google utilise pour le titre du résultat sur desktop) : 538px, sous la
-// limite de troncature généralement admise autour de 600px.
+// requête tapée. 70 caractères : au-delà d'environ 60, Google/Bing risquent
+// de tronquer la fin du titre, ce qui couperait "| WashBoard" — à re-mesurer
+// au pixel si le titre est encore allongé.
 //
 // Recentrage 2026-09 : décision d'équipe de revenir sur l'élargissement
 // "pros à domicile" (nettoyage/entretien tous métiers) pour se concentrer
@@ -45,8 +45,17 @@ export const viewport: Viewport = {
 // facturation, CRM dans un seul outil). Distinct du title de
 // /logiciel-lavage-auto ("Logiciel de gestion pour laveur auto mobile |
 // WashBoard", 500px) : les deux pages ne se cannibalisent pas.
+//
+// Réajusté le 2026-09-28 : la recherche réelle "logiciel nettoyage
+// automobile a domicile" classait un concurrent en 1ère position sans que
+// WashBoard n'apparaisse — aucun des quatre mots de la requête n'était dans
+// notre title. "nettoyage auto & detailing à domicile" les couvre tous
+// (nettoyage, auto, à domicile) sans perdre "lavage", déjà porté ailleurs
+// (H1, /logiciel-lavage-auto). "tout-en-un" retiré pour tenir sous ~70
+// caractères et garder "| WashBoard" visible dans les résultats de
+// recherche : au-delà, Google/Bing tronquent la fin du titre.
 export const metadata: Metadata = {
-  title: "Logiciel tout-en-un pour lavage auto & detailing | WashBoard",
+  title: "Logiciel de lavage, nettoyage auto & detailing à domicile | WashBoard",
   manifest: "/manifest.webmanifest",
   applicationName: "WashBoard",
   icons: {
@@ -85,12 +94,12 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://www.washboard.fr",
     siteName: "WashBoard",
-    title: "Logiciel tout-en-un pour lavage auto & detailing | WashBoard",
+    title: "Logiciel de lavage, nettoyage auto & detailing à domicile | WashBoard",
     description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. Un mois offert, sans carte bancaire.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Logiciel tout-en-un pour lavage auto & detailing | WashBoard",
+    title: "Logiciel de lavage, nettoyage auto & detailing à domicile | WashBoard",
     description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. Un mois offert, sans carte bancaire.",
   },
   robots: {

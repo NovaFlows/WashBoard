@@ -18,7 +18,23 @@ import { ComparatifBesoins } from '@/components/ComparatifBesoins'
 import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 
 // Slogans courts et uniformes — pas de saut de layout
+//
+// Le premier est celui rendu au premier chargement (`useState(0)` plus bas) :
+// c'est LUI que Google et les IA lisent comme <h1>, le rendu HTML n'attend
+// pas la rotation JS. Ajouté le 2026-09-28 pour cette raison précise : le
+// H1 ne portait auparavant aucun mot-clé ("Fais plus. Gère moins."), quand
+// le title, lui, en avait — un décalage qui affaiblit le signal envoyé aux
+// moteurs. Garder ce premier slogan porteur de mots-clés (nettoyage,
+// detailing, auto, à domicile) si l'ordre change à nouveau.
+//
+// « Court » n'est pas cosmétique : une première version à 59 caractères
+// ("L'indispensable du nettoyage et detailing auto à domicile.") passait sur
+// 4 lignes en desktop et chevauchait le paragraphe du dessous — le conteneur
+// a une hauteur FIXE (h-[4em] / h-[3em] plus bas), calibrée sur les trois
+// slogans d'origine (23 à 48 caractères). Rester sous ~48 caractères, la
+// longueur du plus long des trois, garde le rendu dans les clous.
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
+  { pre: 'Nettoyage, detailing auto. ', hl: 'À domicile.', post: '' },
   { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
   { pre: 'Réservation, planning, factures. ', hl: 'Un seul outil.', post: '' },
