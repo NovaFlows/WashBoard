@@ -412,12 +412,16 @@ export default function PrestationsManager({ services: initialServices, categori
   const [form, setForm] = useState<FormData>(EMPTY)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  /** Message de plafond atteint, rendu comme une PROPOSITION et non comme une
-   *  erreur. Réactiver une prestation quand le catalogue est plein n'est pas
-   *  une faute du laveur : c'est le moment exact où l'offre supérieure lui
-   *  sert à quelque chose. Une bannière rouge le ferait renoncer ; une
-   *  proposition lui donne une porte. */
-  const [plafondCatalogue, setPlafondCatalogue] = useState<string | null>(null)
+  /** Refus de plafond, rendu comme une PROPOSITION et non comme une erreur.
+   *  Réactiver une prestation quand le catalogue est plein n'est pas une faute
+   *  du laveur : c'est le moment exact où l'offre supérieure lui sert à
+   *  quelque chose. Une bannière rouge le ferait renoncer ; une proposition
+   *  lui donne une porte — trois, en fait, dont une gratuite.
+   *
+   *  On retient la prestation VISÉE, pas seulement le message : sans elle,
+   *  impossible de proposer un échange, on ne saurait pas quoi réactiver une
+   *  fois la place libérée. */
+  const [refusPlafond, setRefusPlafond] = useState<{ message: string; cible: Service } | null>(null)
 
   const actives = services.filter(sv => !estEnVeille(sv))
   const aRanger = aMettreEnVeille(actives.length, plafond)
@@ -433,7 +437,7 @@ export default function PrestationsManager({ services: initialServices, categori
   async function basculerVeille(svc: Service) {
     const cible = !estEnVeille(svc)
     setError(null)
-    setPlafondCatalogue(null)
+    setRefusPlafond(null)
     setLoading(true)
     const res = await fetch(`/api/services/${svc.id}`, {
       method: 'PATCH',
@@ -446,10 +450,60 @@ export default function PrestationsManager({ services: initialServices, categori
       const corps = await res.json().catch(() => ({}))
       // 403 avec un quota : le catalogue est plein. Ce n'est pas une erreur à
       // signaler en rouge, c'est une offre à proposer.
-      if (res.status === 403 && corps.quota) setPlafondCatalogue(corps.error)
+      if (res.status === 403 && corps.quota) setRefusPlafond({ message: corps.error, cible: svc })
       else setError(corps.error ?? 'Impossible de modifier cette prestation')
     }
     setLoading(false)
+  }
+
+  /** Endort une prestation en ligne, puis remet la cible en service.
+   *
+   *  Dans CET ordre, et jamais l'inverse : réactiver d'abord échouerait, le
+   *  plafond étant justement atteint. C'est aussi pour ça que le serveur reste
+   *  la seule autorité — l'écran ne décide rien, il enchaîne deux demandes et
+   *  lit les réponses.
+   *
+   *  Si la seconde échoue, on remet la première en ligne. Sans ce retour en
+   *  arrière, le laveur perdrait une prestation sans en récupérer aucune :
+   *  il aurait cliqué « Échanger » et se retrouverait avec moins qu'avant. */
+  async function echangerVeille(idAEndormir: string): Promise<boolean> {
+    const cible = refusPlafond?.cible
+    if (!cible) return false
+    setError(null)
+
+    const endormir = await fetch(`/api/services/${idAEndormir}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ en_veille: true }),
+    })
+    if (!endormir.ok) {
+      const corps = await endormir.json().catch(() => ({}))
+      setError(corps.error ?? 'Impossible de mettre cette prestation en veille')
+      return false
+    }
+
+    const reveiller = await fetch(`/api/services/${cible.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ en_veille: false }),
+    })
+    if (!reveiller.ok) {
+      await fetch(`/api/services/${idAEndormir}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ en_veille: false }),
+      }).catch(() => {})
+      const corps = await reveiller.json().catch(() => ({}))
+      setError(corps.error ?? 'Impossible de réactiver cette prestation')
+      return false
+    }
+
+    setServices(prev => prev.map(x =>
+      x.id === idAEndormir ? { ...x, en_veille: true }
+      : x.id === cible.id  ? { ...x, en_veille: false }
+      : x,
+    ))
+    return true
   }
 
   function categoryName(id: string | null): string | null {
@@ -737,8 +791,14 @@ export default function PrestationsManager({ services: initialServices, categori
       {/* En fenêtre, plus en encadré : l'encadré vivait au milieu de la liste,
           sous le pouce, et après un clic sur « Réactiver » il apparaissait hors
           écran — on croyait que rien ne s'était passé. */}
-      {plafondCatalogue && (
-        <PlafondCatalogueModal message={plafondCatalogue} onFermer={() => setPlafondCatalogue(null)} />
+      {refusPlafond && (
+        <PlafondCatalogueModal
+          message={refusPlafond.message}
+          cible={{ id: refusPlafond.cible.id, name: refusPlafond.cible.name }}
+          actives={actives.map(sv => ({ id: sv.id, name: sv.name }))}
+          onEchanger={echangerVeille}
+          onFermer={() => setRefusPlafond(null)}
+        />
       )}
     </div>
   )
