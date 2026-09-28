@@ -61,7 +61,11 @@ const MIN_PLAN: Record<Feature, Plan> = {
   compta:                'pro',
   facturation:           'pro',
   creneaux_intelligents: 'pro',
-  frais_deplacement:     'pro',
+  // Ouvert dès l'offre gratuite : un laveur mobile qui se déplace à quinze
+  // kilomètres et ne peut pas le facturer perd de l'argent à chaque course.
+  // Lui vendre le droit de ne pas travailler à perte serait une drôle de
+  // façon de commencer une relation.
+  frais_deplacement:     'decouverte',
   followup:              'pro',
   multi_laveurs:         'business',
 }
@@ -462,6 +466,7 @@ export const PLAN_CARDS: PlanCard[] = [
       '5 réservations par mois',
       '3 prestations au catalogue',
       'Agenda et fiches clients',
+      'Frais de déplacement facturés au client',
       'Page de réservation aux couleurs WashBoard',
     ],
   },
@@ -487,7 +492,7 @@ export const PLAN_CARDS: PlanCard[] = [
     features: [
       'Tout le Starter',
       'Réservations illimitées',
-      'Créneaux intelligents et frais de déplacement',
+      'Créneaux intelligents',
       'Comptabilité et facturation conforme (SIRET, TVA)',
       'Avis Google automatiques — email et SMS (150/mois)',
       'Relances de suivi client',

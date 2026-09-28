@@ -31,13 +31,15 @@ const ACCES: Record<Plan, Record<Feature, boolean>> = {
   decouverte: {
     page_personnalisee: false, crm: false, ca_simple: false,
     avis_email: false, avis_sms: false, compta: false, facturation: false,
-    creneaux_intelligents: false, frais_deplacement: false, followup: false,
+    // Les frais de déplacement sont ouverts DÈS LE GRATUIT : un laveur mobile
+    // qui roule quinze kilomètres sans pouvoir les facturer travaille à perte.
+    creneaux_intelligents: false, frais_deplacement: true, followup: false,
     multi_laveurs: false,
   },
   starter: {
     page_personnalisee: true, crm: true, ca_simple: true,
     avis_email: false, avis_sms: false, compta: false, facturation: false,
-    creneaux_intelligents: false, frais_deplacement: false, followup: false,
+    creneaux_intelligents: false, frais_deplacement: true, followup: false,
     multi_laveurs: false,
   },
   pro: {
@@ -138,7 +140,7 @@ describe('requiredPlanLabel — l’offre à prendre pour débloquer', () => {
     expect(requiredPlanLabel('avis_sms')).toBe('Pro')
     expect(requiredPlanLabel('followup')).toBe('Pro')
     expect(requiredPlanLabel('creneaux_intelligents')).toBe('Pro')
-    expect(requiredPlanLabel('frais_deplacement')).toBe('Pro')
+    expect(requiredPlanLabel('frais_deplacement')).toBe('Découverte')
     expect(requiredPlanLabel('multi_laveurs')).toBe('Business')
   })
 

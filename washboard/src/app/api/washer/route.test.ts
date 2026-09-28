@@ -142,11 +142,13 @@ describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
       expect(updates).toHaveLength(0)
     })
 
-    it('refuse les paliers de frais de déplacement', async () => {
-      const { res, body } = await patch({ travel_fee_tiers: [{ max_minutes: 30, fee: 10 }] })
-      expect(res.status).toBe(403)
-      expect(body.error).toMatch(/Pro/)
-      expect(updates).toHaveLength(0)
+    it('ACCEPTE les paliers de frais de déplacement', async () => {
+      // Ouverts dès le gratuit : un laveur mobile qui roule quinze kilomètres
+      // sans pouvoir les facturer travaille à perte. Lui vendre le droit de ne
+      // pas perdre d'argent serait une drôle de façon de commencer.
+      const { res } = await patch({ travel_fee_tiers: [{ max_minutes: 30, fee: 10 }] })
+      expect(res.status).toBe(200)
+      expect(updates).toHaveLength(1)
     })
 
     it('refuse les avis Google, quel que soit le canal', async () => {
@@ -197,8 +199,9 @@ describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
     })
 
     it('refuse encore tout ce qui appartient au Pro', async () => {
+      // Les frais de déplacement n'y sont plus : ils sont ouverts dès le
+      // gratuit, donc le Starter les a forcément aussi.
       expect((await patch({ smart_slot_enabled: true })).res.status).toBe(403)
-      expect((await patch({ travel_fee_tiers: [{ max_minutes: 30, fee: 10 }] })).res.status).toBe(403)
       expect((await patch({ review_enabled: true })).res.status).toBe(403)
       expect((await patch({ followup_enabled: true })).res.status).toBe(403)
       expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(403)
