@@ -103,8 +103,10 @@
         for insert with check (washer_id in (select id from public.washers where user_id = auth.uid()));
       create policy "entreprises_update" on public.entreprises
         for update using (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "entreprises_delete" on public.entreprises
+        for delete using (washer_id in (select id from public.washers where user_id = auth.uid()));
 
-      grant select, insert, update on public.entreprises to authenticated;
+      grant select, insert, update, delete on public.entreprises to authenticated;
       grant all on public.entreprises to service_role;
 
       create table public.sites (

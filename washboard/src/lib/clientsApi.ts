@@ -34,6 +34,13 @@ export async function modifierEntreprise(
   return r.ok ? { ok: true, data: null } : r
 }
 
+/** Supprime une entreprise. Sans risque pour les réservations ni les factures : ses sites
+ *  disparaissent avec elle, ses contacts redeviennent de simples clients — voir la route. */
+export async function supprimerEntreprise(id: string): Promise<ResultatApi<null>> {
+  const r = await appeler('supprimer', 'DELETE', `/api/entreprises/${id}`)
+  return r.ok ? { ok: true, data: null } : r
+}
+
 export async function ajouterSite(entrepriseId: string, adresse: string, note: string): Promise<ResultatApi<{ id: string }>> {
   const r = await appeler('enregistrer', 'POST', `/api/entreprises/${entrepriseId}/sites`, { adresse, note })
   return r.ok ? { ok: true, data: (r.data ?? {}) as { id: string } } : r

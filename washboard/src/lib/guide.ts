@@ -165,6 +165,13 @@ export const GUIDE: GuideSection[] = [
         keywords: ['crm', 'clients', 'difference', 'statistiques', 'annuaire', 'entonnoir'],
       },
       {
+        id: 'pro-vs-entreprise',
+        question: 'Quelle différence entre un client « pro » et une « entreprise » ?',
+        answer:
+          "Ce ne sont pas la même chose, et elles ne se règlent pas au même endroit. « Professionnel » est une case cochée PAR LE CLIENT au moment de réserver, sur CE rendez-vous précis — c'est ce qui déclenche une vraie facture (avec SIRET et raison sociale) plutôt qu'un simple récapitulatif. Rien à faire de votre côté, c'est automatique. « Entreprise », c'est autre chose : un rattachement que VOUS faites, à la main, quand plusieurs personnes différentes travaillent pour le même compte — Karim qui réserve les lavages, Sophie qui reçoit les factures, par exemple. Une seule réservation ne peut pas deviner qu'ils sont liés : ouvrez la fiche de l'un d'eux dans [Clients](/dashboard/clients), menu « … », « Rattacher à une entreprise ». Vous retrouvez ensuite toutes vos entreprises depuis votre fichier [Clients](/dashboard/clients), avec tous leurs contacts, leurs sites (instructions d'accès comprises) et leur chiffre d'affaires cumulé. Un client pro solo — l'artisan qui coche juste la case pour sa facture — n'a besoin de rien de tout ça.",
+        keywords: ['pro', 'professionnel', 'entreprise', 'siret', 'contact', 'site', 'difference', 'rattacher'],
+      },
+      {
         id: 'avis',
         question: 'Comment demander des avis Google automatiquement ?',
         answer:

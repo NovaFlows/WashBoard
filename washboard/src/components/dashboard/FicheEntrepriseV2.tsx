@@ -10,7 +10,8 @@ import type { EntrepriseProfile, Site } from '@/lib/entrepriseProfile'
 import type { ResumeClient } from '@/lib/listeClients'
 import { rechercherClients } from '@/lib/listeClients'
 import {
-  ajouterSite, creerEntreprise, modifierEntreprise, modifierSite, rattacherEntreprise, supprimerSite,
+  ajouterSite, creerEntreprise, modifierEntreprise, modifierSite, rattacherEntreprise,
+  supprimerEntreprise, supprimerSite,
 } from '@/lib/clientsApi'
 import { FUSEAU } from '@/lib/dateUtils'
 
@@ -294,6 +295,7 @@ type SousFeuille =
   | { quoi: 'infos' }
   | { quoi: 'contact' }
   | { quoi: 'site'; site: Site | null }
+  | { quoi: 'supprimer' }
 
 export default function FicheEntrepriseV2({
   profil, clientsDisponibles, onOuvrirContact, onClose,
@@ -307,11 +309,24 @@ export default function FicheEntrepriseV2({
   const router = useRouter()
   const [maintenant] = useState(() => Date.now())
   const [feuille, setFeuille] = useState<SousFeuille | null>(null)
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false)
+  const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
   const { entreprise, sites, contacts, totalRevenue, vehicules, derniersPassages, devisEnAttente } = profil
 
   function apresEcriture() {
     setFeuille(null)
     router.refresh()
+  }
+
+  async function confirmerSuppression() {
+    if (suppressionEnCours) return
+    setSuppressionEnCours(true)
+    setSuppressionErreur(null)
+    const r = await supprimerEntreprise(entreprise.id)
+    setSuppressionEnCours(false)
+    if (!r.ok) { setSuppressionErreur(r.message); return }
+    router.refresh()
+    onClose()
   }
 
   // Premier contact joignable : c'est lui que le bouton Appeler compose, faute d'un contact
@@ -462,14 +477,35 @@ export default function FicheEntrepriseV2({
 
       {feuille?.quoi === 'options' && (
         <Feuille titre={entreprise.nom} onClose={() => setFeuille(null)}>
-          <button
-            type="button"
-            onClick={() => setFeuille({ quoi: 'infos' })}
-            className={`flex h-11 w-full items-center text-left text-[15px] ${corpsFort}`}
-          >
-            Modifier le nom et le délai de paiement
-          </button>
+          <div className="divide-y divide-[color:var(--v2-filet)]">
+            <button
+              type="button"
+              onClick={() => setFeuille({ quoi: 'infos' })}
+              className={`flex h-11 w-full items-center text-left text-[15px] ${corpsFort}`}
+            >
+              Modifier le nom et le délai de paiement
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeuille({ quoi: 'supprimer' })}
+              className={`flex h-11 w-full items-center text-left text-[15px] ${corpsFort}`}
+              style={{ color: 'var(--v2-color-rouge)' }}
+            >
+              Supprimer cette entreprise
+            </button>
+          </div>
         </Feuille>
+      )}
+
+      {feuille?.quoi === 'supprimer' && (
+        <ConfirmationSuppression
+          titre={`Supprimer « ${entreprise.nom} » ?`}
+          texte="Ses sites disparaissent avec elle. Ses contacts redeviennent de simples clients : ils gardent toutes leurs réservations et leurs documents, rien n'est supprimé de leur côté."
+          enCours={suppressionEnCours}
+          erreur={suppressionErreur}
+          onConfirmer={() => void confirmerSuppression()}
+          onClose={() => setFeuille(null)}
+        />
       )}
 
       {feuille?.quoi === 'infos' && (
