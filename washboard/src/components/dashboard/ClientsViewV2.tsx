@@ -11,7 +11,7 @@ import { buildClientProfile, type ClientBooking, type ClientDocument, type Clien
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
 import { clientsARelancer, type LigneARelancer, type ReglagesRelance } from '@/lib/clientsARelancer'
 import { buildEntrepriseProfile, type EntrepriseListItem } from '@/lib/entrepriseProfile'
-import { supprimerClient } from '@/lib/clientsApi'
+import { marquerNePlusContacter, supprimerClient, supprimerEntreprise } from '@/lib/clientsApi'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 
@@ -35,8 +35,18 @@ import { FUSEAU } from '@/lib/dateUtils'
 // `/api/clients/[cle]` DELETE. Ses réservations et ses documents ne sont pas touchés — un
 // client porte parfois une facture dont la numérotation ne doit jamais avoir de trou, que la
 // loi oblige à garder 10 ans, donc rien de tout ça ne peut disparaître. Il disparaît seulement
-// de ce fichier-ci. Retiré tout de suite de l'écran (`supprimesLocalement`, optimiste) sans
-// attendre le prochain chargement.
+// de ce fichier-ci.
+//
+// Même geste dans « À relancer », sens différent (Alexandre, 2026-09-28) : supprimer une ligne
+// là annule sa relance — « ne plus contacter » (même réglage que le menu de la fiche), pas un
+// masquage. La ligne ne disparaît donc pas : elle passe en « Ne veut plus », comme n'importe
+// quel client opposé (voir `clientsARelancer.ts`) — cohérent avec le fait qu'un client opposé
+// reste volontairement visible dans cette liste.
+//
+// `reglagesLocaux` porte les deux (masquer, ne plus contacter) en overlay sur `reglages`, pour
+// que l'écran change TOUT DE SUITE après un geste réussi, sans attendre le prochain chargement
+// des props serveur (`router.refresh()` part quand même, pour rester à jour si l'écran se
+// recompose plus tard).
 
 // Rôle "corps" (14/450) et "corps fort" (15/550), largeur 100 — planche
 // Système. Les tailles en px viennent de `specs/03_Clients.txt` (position et
@@ -142,18 +152,40 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [entrepriseOuverteId, setEntrepriseOuverteId] = useState<string | null>(null)
 
-  // « Supprimer » un client (glisser la ligne) — voir l'en-tête du fichier. `supprimesLocalement`
-  // le retire de l'écran tout de suite, sans attendre le prochain chargement des props serveur.
+  // Réglages écrits en overlay LOCAL, en plus de `reglages` (props serveur) — voir l'en-tête du
+  // fichier. Une seule structure pour les deux gestes de suppression (client, ligne à relancer).
+  const [reglagesLocaux, setReglagesLocaux] = useState<Map<string, Partial<Pick<ClientReglages, 'masque' | 'nePlusContacter'>>>>(new Map())
+  const reglagesEffectifs = useMemo(() => {
+    if (reglagesLocaux.size === 0) return reglages
+    const parCle = new Map(reglages.map(r => [r.cle, r]))
+    for (const [cle, override] of reglagesLocaux) {
+      const existant = parCle.get(cle) ?? { cle, nePlusContacter: false, masque: false }
+      parCle.set(cle, { ...existant, ...override })
+    }
+    return [...parCle.values()]
+  }, [reglages, reglagesLocaux])
+
   const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
-  const [supprimesLocalement, setSupprimesLocalement] = useState<Set<string>>(new Set())
   const [suppression, setSuppression] = useState<ResumeClient | null>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
 
-  const clients = useMemo(() => {
-    const tous = listeClients(bookings, new Date(maintenant), documents, reglages)
-    return supprimesLocalement.size === 0 ? tous : tous.filter(c => !supprimesLocalement.has(c.cle))
-  }, [bookings, documents, reglages, maintenant, supprimesLocalement])
+  // Ligne d'« À relancer » qu'on annule — même geste, sens différent (voir l'en-tête).
+  const [annulationRelance, setAnnulationRelance] = useState<LigneARelancer | null>(null)
+  const [annulationRelanceEnCours, setAnnulationRelanceEnCours] = useState(false)
+  const [annulationRelanceErreur, setAnnulationRelanceErreur] = useState<string | null>(null)
+
+  // Entreprise qu'on supprime depuis la liste (onglet « Entreprises ») — même geste, même
+  // conséquence sans risque que depuis sa fiche (voir FicheEntrepriseV2.tsx).
+  const [entreprisesSupprimeesLocalement, setEntreprisesSupprimeesLocalement] = useState<Set<string>>(new Set())
+  const [entrepriseASupprimer, setEntrepriseASupprimer] = useState<EntrepriseListItem | null>(null)
+  const [suppressionEntrepriseEnCours, setSuppressionEntrepriseEnCours] = useState(false)
+  const [suppressionEntrepriseErreur, setSuppressionEntrepriseErreur] = useState<string | null>(null)
+
+  const clients = useMemo(
+    () => listeClients(bookings, new Date(maintenant), documents, reglagesEffectifs),
+    [bookings, documents, reglagesEffectifs, maintenant],
+  )
   const pros = useMemo(() => clients.filter(c => c.isProfessional).length, [clients])
 
   async function confirmerSuppressionClient() {
@@ -163,8 +195,34 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
     const r = await supprimerClient(suppression.cle)
     setSuppressionEnCours(false)
     if (!r.ok) { setSuppressionErreur(r.message); return }
-    setSupprimesLocalement(s => new Set(s).add(suppression.cle))
+    setReglagesLocaux(m => new Map(m).set(suppression.cle, { ...m.get(suppression.cle), masque: true }))
     setSuppression(null)
+    setLigneOuverte(null)
+    router.refresh()
+  }
+
+  async function confirmerAnnulationRelance() {
+    if (!annulationRelance || annulationRelanceEnCours) return
+    setAnnulationRelanceEnCours(true)
+    setAnnulationRelanceErreur(null)
+    const r = await marquerNePlusContacter(annulationRelance.cle, true)
+    setAnnulationRelanceEnCours(false)
+    if (!r.ok) { setAnnulationRelanceErreur(r.message); return }
+    setReglagesLocaux(m => new Map(m).set(annulationRelance.cle, { ...m.get(annulationRelance.cle), nePlusContacter: true }))
+    setAnnulationRelance(null)
+    setLigneOuverte(null)
+    router.refresh()
+  }
+
+  async function confirmerSuppressionEntreprise() {
+    if (!entrepriseASupprimer || suppressionEntrepriseEnCours) return
+    setSuppressionEntrepriseEnCours(true)
+    setSuppressionEntrepriseErreur(null)
+    const r = await supprimerEntreprise(entrepriseASupprimer.id)
+    setSuppressionEntrepriseEnCours(false)
+    if (!r.ok) { setSuppressionEntrepriseErreur(r.message); return }
+    setEntreprisesSupprimeesLocalement(s => new Set(s).add(entrepriseASupprimer.id))
+    setEntrepriseASupprimer(null)
     setLigneOuverte(null)
     router.refresh()
   }
@@ -176,10 +234,16 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
     for (const e of entreprises) for (const c of e.contacts) m.set(c.cle, { id: e.id, nom: e.nom, role: c.role })
     return m
   }, [entreprises])
-  const entreprisesOptions = useMemo(() => entreprises.map(e => ({ id: e.id, nom: e.nom })), [entreprises])
-  const entrepriseOuverte = entrepriseOuverteId ? entreprises.find(e => e.id === entrepriseOuverteId) ?? null : null
+  const entreprisesAffichees = useMemo(
+    () => entreprisesSupprimeesLocalement.size === 0
+      ? entreprises
+      : entreprises.filter(e => !entreprisesSupprimeesLocalement.has(e.id)),
+    [entreprises, entreprisesSupprimeesLocalement],
+  )
+  const entreprisesOptions = useMemo(() => entreprisesAffichees.map(e => ({ id: e.id, nom: e.nom })), [entreprisesAffichees])
+  const entrepriseOuverte = entrepriseOuverteId ? entreprisesAffichees.find(e => e.id === entrepriseOuverteId) ?? null : null
   const entrepriseProfil = entrepriseOuverte
-    ? buildEntrepriseProfile(entrepriseOuverte, entrepriseOuverte.sites, entrepriseOuverte.contacts, bookings, documents, new Date(maintenant), reglages)
+    ? buildEntrepriseProfile(entrepriseOuverte, entrepriseOuverte.sites, entrepriseOuverte.contacts, bookings, documents, new Date(maintenant), reglagesEffectifs)
     : null
   // Candidats au rattachement : tout le monde sauf les contacts DÉJÀ dans l'entreprise ouverte
   // (un client lié à une AUTRE entreprise reste proposé — le réassigner est permis, juste pas
@@ -190,16 +254,16 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   )
   const aRelancer: LigneARelancer[] = useMemo(
     () => reglagesMessages
-      ? clientsARelancer(bookings.map(versRdvMessage), reglagesMessages, reglages, maintenant)
+      ? clientsARelancer(bookings.map(versRdvMessage), reglagesMessages, reglagesEffectifs, maintenant)
       : [],
-    [bookings, reglagesMessages, reglages, maintenant],
+    [bookings, reglagesMessages, reglagesEffectifs, maintenant],
   )
   const parFiltre = useMemo(
     () => (filtre === 'pros' ? clients.filter(c => c.isProfessional) : clients),
     [clients, filtre],
   )
   const affiches = useMemo(() => rechercherClients(parFiltre, recherche), [parFiltre, recherche])
-  const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglages) : null
+  const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglagesEffectifs) : null
 
   // La Fiche entreprise REMPLACE l'écran Clients (comme une destination à part), pas une
   // feuille par-dessus : c'est un fichier en soi (contacts, sites), pas le détail d'une ligne.
@@ -237,7 +301,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
           {filtre === 'relancer' ? (
             <span className="tabular-nums">{aRelancer.length} client{aRelancer.length > 1 ? 's' : ''} pas revenu{aRelancer.length > 1 ? 's' : ''}</span>
           ) : filtre === 'entreprises' ? (
-            <span className="tabular-nums">{entreprises.length} entreprise{entreprises.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{entreprisesAffichees.length} entreprise{entreprisesAffichees.length > 1 ? 's' : ''}</span>
           ) : clients.length === 0 ? (
             'Vos clients apparaîtront ici dès leur première réservation.'
           ) : pros > 0 ? (
@@ -287,7 +351,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
               // Masqué tant qu'aucune entreprise n'existe : un onglet vide n'aiderait personne
               // (Alexandre, 2026-09-28 — sans lui, une entreprise ne se retrouvait qu'en
               // rouvrant le contact qui a servi à la créer).
-              ...(entreprises.length > 0 ? [['entreprises', 'Entreprises'] as const] : []),
+              ...(entreprisesAffichees.length > 0 ? [['entreprises', 'Entreprises'] as const] : []),
             ] as const).map(([f, libelle]) => (
               <button
                 key={f}
@@ -313,31 +377,30 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
             ) : (
               <ul aria-label="Clients à relancer" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
                 {aRelancer.map(l => (
-                  <LigneARelancerVue key={l.cle} ligne={l} onOuvrir={() => setOuvert(l.cle)} />
+                  <LigneARelancerVue
+                    key={l.cle}
+                    ligne={l}
+                    onOuvrir={() => setOuvert(l.cle)}
+                    ouverte={ligneOuverte === l.cle}
+                    onOuvrirLigne={() => setLigneOuverte(l.cle)}
+                    onFermerLigne={() => setLigneOuverte(o => (o === l.cle ? null : o))}
+                    onSupprimer={() => { setAnnulationRelanceErreur(null); setAnnulationRelance(l) }}
+                  />
                 ))}
               </ul>
             )
           ) : filtre === 'entreprises' ? (
             <ul aria-label="Entreprises" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-              {entreprises.map(e => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    onClick={() => setEntrepriseOuverteId(e.id)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
-                  >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--v2-radius-carte)] text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
-                      {initiales(e.nom)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-[15px] ${nom} truncate`}>{e.nom}</span>
-                      <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
-                        {e.contacts.length} contact{e.contacts.length > 1 ? 's' : ''}
-                        {e.sites.length > 0 && ` · ${e.sites.length} site${e.sites.length > 1 ? 's' : ''}`}
-                      </span>
-                    </span>
-                  </button>
-                </li>
+              {entreprisesAffichees.map(e => (
+                <LigneEntreprise
+                  key={e.id}
+                  entreprise={e}
+                  onOuvrir={() => setEntrepriseOuverteId(e.id)}
+                  ouverte={ligneOuverte === e.id}
+                  onOuvrirLigne={() => setLigneOuverte(e.id)}
+                  onFermerLigne={() => setLigneOuverte(o => (o === e.id ? null : o))}
+                  onSupprimer={() => { setSuppressionEntrepriseErreur(null); setEntrepriseASupprimer(e) }}
+                />
               ))}
             </ul>
           ) : (
@@ -391,6 +454,30 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
           erreur={suppressionErreur}
           onConfirmer={() => void confirmerSuppressionClient()}
           onClose={() => setSuppression(null)}
+        />
+      )}
+
+      {annulationRelance && (
+        <ConfirmationSuppression
+          titre={`Ne plus relancer ${annulationRelance.nom} ?`}
+          texte="Il ne recevra plus ni relance, ni demande d’avis. Il reste dans votre fichier — vous pouvez toujours l’appeler ou lui écrire vous-même."
+          libelleAction="Ne plus relancer"
+          libelleEnCours="Enregistrement…"
+          enCours={annulationRelanceEnCours}
+          erreur={annulationRelanceErreur}
+          onConfirmer={() => void confirmerAnnulationRelance()}
+          onClose={() => setAnnulationRelance(null)}
+        />
+      )}
+
+      {entrepriseASupprimer && (
+        <ConfirmationSuppression
+          titre={`Supprimer « ${entrepriseASupprimer.nom} » ?`}
+          texte="Ses sites disparaissent avec elle. Ses contacts redeviennent de simples clients : ils gardent toutes leurs réservations et leurs documents, rien n'est supprimé de leur côté."
+          enCours={suppressionEntrepriseEnCours}
+          erreur={suppressionEntrepriseErreur}
+          onConfirmer={() => void confirmerSuppressionEntreprise()}
+          onClose={() => setEntrepriseASupprimer(null)}
         />
       )}
     </div>
@@ -473,33 +560,114 @@ function couleurStatut(l: LigneARelancer): string {
   return 'text-[color:var(--v2-color-vert)]'
 }
 
-function LigneARelancerVue({ ligne: l, onOuvrir }: { ligne: LigneARelancer; onOuvrir: () => void }) {
+function LigneARelancerVue({ ligne: l, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+  ligne: LigneARelancer
+  onOuvrir: () => void
+  ouverte: boolean
+  onOuvrirLigne: () => void
+  onFermerLigne: () => void
+  onSupprimer: () => void
+}) {
+  const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
+    ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
+  })
   return (
-    <li>
+    <li ref={refLigne} className="relative overflow-hidden">
+      {/* « Supprimer » ici annule la relance (« ne plus contacter ») — voir l'en-tête du
+          fichier : ce n'est pas un masquage, la ligne reste visible ensuite en « Ne veut plus ». */}
       <button
         type="button"
-        onClick={onOuvrir}
-        aria-label={`Voir la fiche de ${l.nom}`}
-        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+        onClick={onSupprimer}
+        tabIndex={ouverte ? 0 : -1}
+        aria-hidden={!ouverte}
+        aria-label={`Ne plus relancer ${l.nom}`}
+        className={`absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1 text-[12px] text-white ${corpsFort}`}
+        style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
-        <span className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
-          {initiales(l.nom)}
-        </span>
-
-        <span className="flex-1 min-w-0">
-          <span className={`block text-[15px] ${nom} truncate`}>{l.nom}</span>
-          <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5 truncate`}>
-            {l.detail}
-          </span>
-        </span>
-
-        <span className="shrink-0 flex flex-col items-end gap-0.5">
-          <span className={`text-[12.5px] ${corpsFort} tabular-nums text-[color:var(--v2-color-gris)]`}>
-            {l.jours} j
-          </span>
-          <span className={`text-[11.5px] ${corpsFort} ${couleurStatut(l)}`}>{l.statut}</span>
-        </span>
+        <Trash2 size={20} strokeWidth={2} aria-hidden />
+        Supprimer
       </button>
+      <div
+        {...poignee}
+        style={styleContenu}
+        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+      >
+        <button
+          type="button"
+          onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
+          aria-label={`Voir la fiche de ${l.nom}`}
+          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+        >
+          <span className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
+            {initiales(l.nom)}
+          </span>
+
+          <span className="flex-1 min-w-0">
+            <span className={`block text-[15px] ${nom} truncate`}>{l.nom}</span>
+            <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5 truncate`}>
+              {l.detail}
+            </span>
+          </span>
+
+          <span className="shrink-0 flex flex-col items-end gap-0.5">
+            <span className={`text-[12.5px] ${corpsFort} tabular-nums text-[color:var(--v2-color-gris)]`}>
+              {l.jours} j
+            </span>
+            <span className={`text-[11.5px] ${corpsFort} ${couleurStatut(l)}`}>{l.statut}</span>
+          </span>
+        </button>
+      </div>
+    </li>
+  )
+}
+
+function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+  entreprise: EntrepriseListItem
+  onOuvrir: () => void
+  ouverte: boolean
+  onOuvrirLigne: () => void
+  onFermerLigne: () => void
+  onSupprimer: () => void
+}) {
+  const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
+    ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
+  })
+  return (
+    <li ref={refLigne} className="relative overflow-hidden">
+      <button
+        type="button"
+        onClick={onSupprimer}
+        tabIndex={ouverte ? 0 : -1}
+        aria-hidden={!ouverte}
+        aria-label={`Supprimer ${e.nom}`}
+        className={`absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1 text-[12px] text-white ${corpsFort}`}
+        style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
+      >
+        <Trash2 size={20} strokeWidth={2} aria-hidden />
+        Supprimer
+      </button>
+      <div
+        {...poignee}
+        style={styleContenu}
+        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+      >
+        <button
+          type="button"
+          onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
+          className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+        >
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--v2-radius-carte)] text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
+            {initiales(e.nom)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={`block text-[15px] ${nom} truncate`}>{e.nom}</span>
+            <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
+              {e.contacts.length} contact{e.contacts.length > 1 ? 's' : ''}
+              {e.sites.length > 0 && ` · ${e.sites.length} site${e.sites.length > 1 ? 's' : ''}`}
+            </span>
+          </span>
+        </button>
+      </div>
     </li>
   )
 }

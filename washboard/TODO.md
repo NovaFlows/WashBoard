@@ -2414,7 +2414,9 @@ rien à faire, mais que le projet reste globalement sain.
         `lib/guide.ts`, entrée `pro-vs-entreprise`.
   - [x] 2026-09-28 — **Supprimer une entreprise** : sans risque pour les réservations ni les
         factures — ses sites disparaissent avec elle (cascade), ses contacts redeviennent de
-        simples clients (`entreprise_id` repasse à `null`). Depuis le menu « … » de sa fiche.
+        simples clients (`entreprise_id` repasse à `null`). Depuis le menu « … » de sa fiche,
+        ET en glissant sa ligne dans l'onglet « Entreprises » (même geste, ajouté le même jour
+        — Alexandre a buté sur son absence juste après avoir testé le menu).
   - [x] 2026-09-28 — **« Supprimer » un client, en glissant sa ligne vers la gauche dans
         Clients** (demande d'Alexandre — geste natif, comme sur iPhone, même mécanique que les
         dépenses et l'Assistance : `useLigneGlissante`). En réalité un MASQUAGE
@@ -2426,6 +2428,15 @@ rien à faire, mais que le projet reste globalement sain.
         (optimiste), sans attendre le prochain chargement. Pas construit : « démasquer » un
         client (annuler la suppression) — aucun écran ne le propose aujourd'hui, seule la
         colonne existe pour ça plus tard si besoin.
+  - [x] 2026-09-28 — **Même geste dans « À relancer », sens différent** (Alexandre : « il faut
+        aussi pouvoir supprimer dans relance ce qui annule la relance de ce client »). Glisser
+        une ligne là n'est PAS un masquage : c'est « ne plus contacter » (même réglage que le
+        menu de la fiche). La ligne ne disparaît donc pas, elle passe en « Ne veut plus » — un
+        client opposé reste volontairement visible dans cette liste (déjà le cas depuis la
+        construction de l'onglet). Un seul mécanisme d'overlay local (`reglagesLocaux`,
+        ClientsViewV2.tsx) porte maintenant les deux gestes (masquer, ne plus contacter), et
+        s'applique partout où `reglages` comptait avant — la fiche ouverte juste après reflète
+        déjà le changement, sans attendre `router.refresh()`.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
