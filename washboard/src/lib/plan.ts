@@ -312,7 +312,26 @@ export function suitRetourGratuit(
   return cree.getTime() >= new Date(RETOUR_GRATUIT_POUR_COMPTES_CREES_DES).getTime()
 }
 
-/** L'essai (ou la période payée) est terminé et aucune formule n'est réglée. */
+/** Jours de grâce accordés à un abonnement PAYANT qui s'arrête, avant la
+ *  bascule vers l'offre gratuite. Un essai qui se termine n'en a aucun — il
+ *  n'y a rien à retarder sur quelque chose qui n'a jamais été payé, et
+ *  retarder la bascule gratuite d'un essai reculerait sans raison le moment
+ *  où le laveur peut enfin réserver de nouveau sans y avoir été invité. */
+const JOURS_GRACE_ABONNEMENT_PAYANT = 30
+
+/** L'essai (ou la période payée) est terminé et aucune formule n'est réglée.
+ *
+ *  Deux échéances, deux traitements — vérifié le 2026-09-29 après une
+ *  question directe d'Alexandre, le code confondait les deux :
+ *
+ *  - un ESSAI qui se termine (`trial_ends_at` seul, jamais de
+ *    `subscription_ends_at`) : bascule IMMÉDIATE vers Découverte, sans délai.
+ *  - un ABONNEMENT PAYANT qui s'arrête (`subscription_ends_at` renseigné —
+ *    cette colonne n'est écrite QUE par le webhook Stripe, voir
+ *    stripe/webhook/route.ts : sa seule présence prouve qu'un abonnement réel
+ *    a existé) : délai de grâce de 30 jours avant la bascule, pour un client
+ *    qui payait déjà et dont la carte peut simplement avoir besoin d'être
+ *    mise à jour. */
 export function essaiTermineSansFormule(
   w: AbonnementInfo | null | undefined,
   now: Date = new Date(),
@@ -321,7 +340,16 @@ export function essaiTermineSansFormule(
   // `past_due` = prélèvement en échec, relance Stripe en cours : l'accès est
   // conservé le temps de la relance, on ne rétrograde pas quelqu'un qui paie.
   if (w?.subscription_status === 'active' || w?.subscription_status === 'past_due') return false
-  const fin = w?.subscription_ends_at ?? w?.trial_ends_at
+
+  if (w?.subscription_ends_at) {
+    const echeance = new Date(w.subscription_ends_at)
+    if (Number.isNaN(echeance.getTime())) return false
+    const finGrace = new Date(echeance)
+    finGrace.setDate(finGrace.getDate() + JOURS_GRACE_ABONNEMENT_PAYANT)
+    return now.getTime() > finGrace.getTime()
+  }
+
+  const fin = w?.trial_ends_at
   if (!fin) return false
   const echeance = new Date(fin)
   if (Number.isNaN(echeance.getTime())) return false
