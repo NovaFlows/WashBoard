@@ -3,6 +3,7 @@ import {
   estVerrouillee, masquerVerrouillees, jourSeul, moisParis, seuilsDepuisDates,
   montantVerrouille,
 } from './reservationsVerrouillees'
+import { PLAFOND_RESERVATIONS_APPLIQUE_DES } from './plan'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Au-delà du quota mensuel, la réservation est acceptée mais le laveur n'en
@@ -11,13 +12,13 @@ import {
 // gratuitement ce qu'on vend.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INSTANT = '2026-09-20T10:00:00.000Z'
+const INSTANT = '2026-09-25T10:00:00.000Z'
 const SEUIL = { '2026-09': INSTANT }
 
 describe('estVerrouillee', () => {
   it('verrouille ce qui arrive APRÈS le seuil', () => {
-    expect(estVerrouillee({ created_at: '2026-09-20T10:00:00.001Z' }, SEUIL)).toBe(true)
-    expect(estVerrouillee({ created_at: '2026-09-25T09:00:00.000Z' }, SEUIL)).toBe(true)
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.001Z' }, SEUIL)).toBe(true)
+    expect(estVerrouillee({ created_at: '2026-09-27T09:00:00.000Z' }, SEUIL)).toBe(true)
   })
 
   it('laisse passer la réservation qui EST le seuil', () => {
@@ -52,11 +53,11 @@ describe('estVerrouillee', () => {
 
   it('compare des INSTANTS, pas des chaînes', () => {
     // Postgres rend ses dates avec un nombre variable de décimales et un
-    // décalage explicite : « 2026-09-20T12:00:00+02:00 » est le même instant
+    // décalage explicite : « 2026-09-25T12:00:00+02:00 » est le même instant
     // que le seuil, écrit autrement. Une comparaison caractère par caractère
     // l'aurait cru postérieur (« 2 » > « 1 ») et l'aurait verrouillé à tort.
-    expect(estVerrouillee({ created_at: '2026-09-20T12:00:00+02:00' }, SEUIL)).toBe(false)
-    expect(estVerrouillee({ created_at: '2026-09-20T10:00:00.000000+00:00' }, SEUIL)).toBe(false)
+    expect(estVerrouillee({ created_at: '2026-09-25T12:00:00+02:00' }, SEUIL)).toBe(false)
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.000000+00:00' }, SEUIL)).toBe(false)
   })
 })
 
@@ -64,7 +65,7 @@ describe('masquerVerrouillees', () => {
   const liste = [
     { id: 'a', created_at: '2026-09-01T08:00:00.000Z', client_name: 'Claire Martin', client_phone: '0611111111', address: '3 rue Colbert', scheduled_at: '2026-10-01T09:00:00.000Z' },
     { id: 'b', created_at: INSTANT,                      client_name: 'Marc Petit',    client_phone: '0622222222', address: '9 rue Gambetta', scheduled_at: '2026-10-02T09:00:00.000Z' },
-    { id: 'c', created_at: '2026-09-25T09:00:00.000Z', client_name: 'Nadia Costa',   client_phone: '0633333333', address: '12 rue du Parc', scheduled_at: '2026-10-03T09:00:00.000Z' },
+    { id: 'c', created_at: '2026-09-27T09:00:00.000Z', client_name: 'Nadia Costa',   client_phone: '0633333333', address: '12 rue du Parc', scheduled_at: '2026-10-03T09:00:00.000Z' },
   ]
 
   it('laisse intactes les réservations comprises dans le quota', () => {
@@ -133,12 +134,12 @@ describe('masquerVerrouillees', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('le verrou ne saute pas au changement de mois', () => {
-  const SEUILS = { '2026-09': '2026-09-20T10:00:00.000Z' }
+  const SEUILS = { '2026-09': '2026-09-25T10:00:00.000Z' }
 
   it('garde verrouillée une réservation de septembre, jugée en octobre', () => {
     // C'était la fuite : en octobre, cette réservation était comparée au seuil
     // d'octobre (inexistant ou postérieur) et repassait en clair.
-    expect(estVerrouillee({ created_at: '2026-09-25T09:00:00.000Z' }, SEUILS)).toBe(true)
+    expect(estVerrouillee({ created_at: '2026-09-27T09:00:00.000Z' }, SEUILS)).toBe(true)
   })
 
   it('ne verrouille pas octobre avec le seuil de septembre', () => {
@@ -207,36 +208,36 @@ describe('seuilsDepuisDates', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('montantVerrouille', () => {
-  const S = { '2026-09': '2026-09-20T10:00:00.000Z' }
+  const S = { '2026-09': '2026-09-25T10:00:00.000Z' }
 
   it('ne compte QUE les réservations verrouillées', () => {
     const liste = [
       { created_at: '2026-09-01T08:00:00.000Z', booked_price: 40 },  // dans le quota
-      { created_at: '2026-09-25T08:00:00.000Z', booked_price: 65 },  // verrouillée
-      { created_at: '2026-09-26T08:00:00.000Z', booked_price: 90 },  // verrouillée
+      { created_at: '2026-09-27T08:00:00.000Z', booked_price: 65 },  // verrouillée
+      { created_at: '2026-09-28T08:00:00.000Z', booked_price: 90 },  // verrouillée
     ]
     expect(montantVerrouille(liste, S)).toBe(155)
   })
 
   it('retombe sur le prix de la prestation quand le prix réservé manque', () => {
     const liste = [
-      { created_at: '2026-09-25T08:00:00.000Z', booked_price: null, services: { price: 50 } },
+      { created_at: '2026-09-27T08:00:00.000Z', booked_price: null, services: { price: 50 } },
       // PostgREST rend parfois la jointure sous forme de tableau.
-      { created_at: '2026-09-26T08:00:00.000Z', services: [{ price: 30 }] },
+      { created_at: '2026-09-28T08:00:00.000Z', services: [{ price: 30 }] },
     ]
     expect(montantVerrouille(liste, S)).toBe(80)
   })
 
   it('compte zéro plutôt que de fausser le total quand aucun prix n’est connu', () => {
     const liste = [
-      { created_at: '2026-09-25T08:00:00.000Z', booked_price: null, services: null },
-      { created_at: '2026-09-26T08:00:00.000Z', booked_price: 65 },
+      { created_at: '2026-09-27T08:00:00.000Z', booked_price: null, services: null },
+      { created_at: '2026-09-28T08:00:00.000Z', booked_price: 65 },
     ]
     expect(montantVerrouille(liste, S)).toBe(65)
   })
 
   it('rend zéro sans seuil — rien n’est verrouillé, rien n’est dû', () => {
-    const liste = [{ created_at: '2026-09-25T08:00:00.000Z', booked_price: 65 }]
+    const liste = [{ created_at: '2026-09-27T08:00:00.000Z', booked_price: 65 }]
     expect(montantVerrouille(liste, null)).toBe(0)
     expect(montantVerrouille([], S)).toBe(0)
   })
@@ -245,9 +246,49 @@ describe('montantVerrouille', () => {
     // Même faille que pour le masquage : octobre ne doit pas être compté avec
     // le seuil de septembre, ni septembre échapper au sien.
     const liste = [
-      { created_at: '2026-09-25T08:00:00.000Z', booked_price: 65 },   // verrouillée
+      { created_at: '2026-09-27T08:00:00.000Z', booked_price: 65 },   // verrouillée
       { created_at: '2026-10-02T08:00:00.000Z', booked_price: 100 },  // mois neuf
     ]
     expect(montantVerrouille(liste, S)).toBe(65)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le plafond ne vaut que pour l'avenir. Un laveur qui avait quarante-neuf
+// clients la veille du déploiement les garde tous : ce sont des gens qu'il a
+// lavés, appelés, facturés. Les lui cacher pour lui vendre une offre, ce n'est
+// pas de la pression commerciale — c'est lui reprendre son propre travail.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('les clients d’avant restent au laveur', () => {
+  const ENTREE = new Date(PLAFOND_RESERVATIONS_APPLIQUE_DES).getTime()
+  const avant = new Date(ENTREE - 60_000).toISOString()
+  const apres = new Date(ENTREE + 60_000).toISOString()
+  const mois = moisParis(avant)!
+
+  it('ne masque jamais une réservation antérieure à l’entrée en vigueur', () => {
+    // Même avec un seuil qui la précède : le plafond n'existait pas encore.
+    const seuils = { [mois]: new Date(ENTREE - 120_000).toISOString() }
+    expect(estVerrouillee({ created_at: avant }, seuils)).toBe(false)
+  })
+
+  it('masque bien ce qui arrive après', () => {
+    const seuils = { [moisParis(apres)!]: apres }
+    expect(estVerrouillee({ created_at: new Date(ENTREE + 120_000).toISOString() }, seuils)).toBe(true)
+  })
+
+  it('ne compte pas l’historique dans le montant masqué', () => {
+    const seuils = { [mois]: new Date(ENTREE - 120_000).toISOString() }
+    expect(montantVerrouille([{ created_at: avant, booked_price: 90 }], seuils)).toBe(0)
+  })
+
+  it('laisse l’historique intact dans une liste masquée', () => {
+    const seuils = { [mois]: new Date(ENTREE - 120_000).toISOString() }
+    const [r] = masquerVerrouillees(
+      [{ created_at: avant, client_name: 'Claire Martin', client_phone: '0611111111' }],
+      seuils,
+    )
+    expect(r.verrouillee).toBe(false)
+    expect(r.client_phone).toBe('0611111111')
   })
 })

@@ -164,6 +164,33 @@ export const PLAN_HISTORIQUE: Plan = 'pro'
  *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé. */
 export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-09-24T00:00:00.000Z'
 
+/** Date à partir de laquelle le plafond de réservations masque quelque chose.
+ *
+ *  Le plafond ne vaut QUE pour l'avenir. Un laveur qui avait quarante-neuf
+ *  clients la veille du déploiement les garde tous : ce sont des gens qu'il a
+ *  lavés, appelés, facturés. Les lui cacher du jour au lendemain pour lui
+ *  vendre une offre, ce n'est pas de la pression commerciale, c'est lui
+ *  reprendre son propre travail — et c'est le meilleur moyen de perdre le
+ *  client au lieu de le faire monter.
+ *
+ *  Mesuré sur `created_at` de la réservation, pas sur la date du rendez-vous :
+ *  c'est le moment où la demande est arrivée qui compte, et lui seul ne bouge
+ *  plus jamais.
+ *
+ *  À CALER SUR LA DATE DE DÉPLOIEMENT de la grille à quatre offres. Plus tôt
+ *  elle est placée, plus d'historique se retrouve masqué ; la reculer à
+ *  '2020-01-01' applique le plafond à tout le passé, la placer dans le futur
+ *  le désactive complètement. */
+export const PLAFOND_RESERVATIONS_APPLIQUE_DES = '2026-09-24T00:00:00.000Z'
+
+/** Le plus tardif entre le début d'une période et l'entrée en vigueur du
+ *  plafond. Sert à ne compter, et à ne masquer, que ce qui vient après. */
+export function debutSoumisAuPlafond(debut: Date): Date {
+  const entree = new Date(PLAFOND_RESERVATIONS_APPLIQUE_DES)
+  if (Number.isNaN(entree.getTime())) return debut
+  return entree.getTime() > debut.getTime() ? entree : debut
+}
+
 /** Comptes soumis à la règle 2026 QUELLE QUE SOIT leur date de création,
  *  désignés par le lien public de leur page de réservation (`slug`).
  *

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { debutDuMoisParis } from '@/lib/plan'
+import { debutDuMoisParis, debutSoumisAuPlafond, PLAFOND_RESERVATIONS_APPLIQUE_DES } from '@/lib/plan'
 
 // Réservations au-delà du quota mensuel : le client réserve, le laveur ne voit
 // rien.
@@ -62,6 +62,17 @@ export function estVerrouillee(
   seuils: SeuilsParMois | null | undefined,
 ): boolean {
   if (!seuils || !r?.created_at) return false
+
+  // Le plafond ne vaut que pour l'avenir. Les clients que le laveur avait
+  // AVANT restent à lui : il les a lavés, appelés, facturés. Les lui cacher du
+  // jour au lendemain pour lui vendre une offre, c'est lui reprendre son
+  // propre travail. Deuxième garde-fou après celui de `seuilsVerrouillage`,
+  // qui ne compte déjà rien d'antérieur : ce qui est masqué doit l'être par
+  // deux chemins, jamais par un seul oubli.
+  const arrivee = new Date(r.created_at).getTime()
+  const entree = new Date(PLAFOND_RESERVATIONS_APPLIQUE_DES).getTime()
+  if (!Number.isNaN(entree) && !Number.isNaN(arrivee) && arrivee < entree) return false
+
   const mois = moisParis(r.created_at)
   if (!mois) return false
   const seuil = seuils[mois]
@@ -171,12 +182,18 @@ export async function seuilsVerrouillage(
   borne.setUTCMonth(borne.getUTCMonth() - (MOIS_COUVERTS - 1))
   borne.setUTCDate(borne.getUTCDate() - 1)
 
+  // Jamais avant l'entrée en vigueur du plafond : les réservations antérieures
+  // ne sont ni masquées, ni même COMPTÉES dans le quota de leur mois. Sinon le
+  // mois du déploiement serait déjà plein avant d'avoir commencé, et le
+  // premier client d'après se retrouverait caché sans raison.
+  const depart = debutSoumisAuPlafond(borne)
+
   const { data, error } = await supabase
     .from('bookings')
     .select('created_at')
     .eq('washer_id', washerId)
     .neq('status', 'cancelled')
-    .gte('created_at', borne.toISOString())
+    .gte('created_at', depart.toISOString())
     .order('created_at', { ascending: true })
     .limit(LIGNES_MAX)
 
@@ -226,7 +243,7 @@ export async function compterReservationsDuMois(
     .select('id', { count: 'exact', head: true })
     .eq('washer_id', washerId)
     .neq('status', 'cancelled')
-    .gte('created_at', debutDuMoisParis(now).toISOString())
+    .gte('created_at', debutSoumisAuPlafond(debutDuMoisParis(now)).toISOString())
 
   if (error || count === null || count === undefined) return null
   return count
