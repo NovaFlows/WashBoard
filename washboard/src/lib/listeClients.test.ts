@@ -77,9 +77,24 @@ describe('listeClients', () => {
 
     const [avec] = listeClients(
       [rdv({ client_email: 'julie@exemple.fr' })], MAINTENANT, [],
-      [{ cle: 'julie@exemple.fr', nePlusContacter: true }],
+      [{ cle: 'julie@exemple.fr', nePlusContacter: true, masque: false }],
     )
     expect(avec.nePlusContacter).toBe(true)
+  })
+
+  it('un client masqué (glisser pour supprimer) n’apparaît plus dans la liste', () => {
+    const bookings = [
+      rdv({ client_email: 'julie@exemple.fr' }),
+      rdv({ client_email: 'marc@garage.fr' }),
+    ]
+    const sansMasque = listeClients(bookings, MAINTENANT)
+    expect(sansMasque).toHaveLength(2)
+
+    const avecMasque = listeClients(
+      bookings, MAINTENANT, [],
+      [{ cle: 'julie@exemple.fr', nePlusContacter: false, masque: true }],
+    )
+    expect(avecMasque.map(c => c.email)).toEqual(['marc@garage.fr'])
   })
 })
 

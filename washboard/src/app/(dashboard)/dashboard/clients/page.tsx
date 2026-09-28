@@ -50,13 +50,14 @@ export default async function ClientsPage() {
   // Sans eux la liste reste celle des réservations : dégradée, pas cassée.
   if (errDocuments) logger.warn('clients.documents.fetch_failed', { washerId: washer.id }, errDocuments)
 
-  // Réglages écrits à la main (table `clients`, SQL du 2026-09-28) : « ne plus contacter » et le
-  // rattachement à une entreprise. UNE lecture pour les deux (même table, même filtre) — inutile
-  // de la faire deux fois. Absente de la base tant que le SQL n'a pas été exécuté : une erreur
-  // ici dégrade la liste (personne ne paraît opposé ni rattaché), elle ne la casse pas.
+  // Réglages écrits à la main (table `clients`, SQL du 2026-09-28) : « ne plus contacter », le
+  // rattachement à une entreprise, et depuis peu « masque_le » (glisser pour supprimer). UNE
+  // lecture pour les trois (même table, même filtre) — inutile de la faire trois fois. Absente
+  // de la base tant que le SQL n'a pas été exécuté : une erreur ici dégrade la liste (personne
+  // ne paraît opposé, rattaché ni masqué), elle ne la casse pas.
   const { data: lignesClients, error: errClients } = await supabase
     .from('clients')
-    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise')
+    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise, masque_le')
     .eq('washer_id', washer.id)
   if (errClients) logger.warn('clients.reglages.fetch_failed', { washerId: washer.id }, errClients)
 
@@ -86,7 +87,7 @@ export default async function ClientsPage() {
     services: (Array.isArray(b.services) ? b.services[0] : b.services) ?? null,
   }))
   const reglages: ClientReglages[] = (lignesClients ?? []).map(r => ({
-    cle: r.cle, nePlusContacter: r.ne_plus_contacter,
+    cle: r.cle, nePlusContacter: r.ne_plus_contacter, masque: !!r.masque_le,
   }))
   const contactsBruts: ContactEntreprise[] = (lignesClients ?? [])
     .filter(r => r.entreprise_id)

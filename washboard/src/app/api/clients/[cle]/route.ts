@@ -26,21 +26,28 @@ function cleValide(cle: string): boolean {
   return /^[^\s]+@[^\s]+\.[^\s]+$/.test(cle) || /^tel:\d{6,}$/.test(cle)
 }
 
+async function washerConnecte() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { erreur: NextResponse.json({ error: 'Non autorisé' }, { status: 401 }) }
+
+  const { data: washer, error } = await supabase.from('washers').select('id').eq('user_id', user.id).single()
+  if (error || !washer) {
+    logger.error('clients.washer_read_failed', {}, error)
+    return { erreur: NextResponse.json({ error: 'Profil introuvable' }, { status: 404 }) }
+  }
+  return { erreur: null, supabase, washerId: washer.id as string }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cle: string }> }) {
   const { cle: cleBrute } = await params
   const cle = decodeURIComponent(cleBrute)
   if (!cleValide(cle)) return NextResponse.json({ error: 'Client introuvable' }, { status: 400 })
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-
-  const { data: washer, error: errWasher } = await supabase
-    .from('washers').select('id').eq('user_id', user.id).single()
-  if (errWasher || !washer) {
-    logger.error('clients.patch.washer_read_failed', {}, errWasher)
-    return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
-  }
+  const ctx = await washerConnecte()
+  if (ctx.erreur) return ctx.erreur
+  const supabase = ctx.supabase!
+  const washer = { id: ctx.washerId! }
 
   const corps = await req.json().catch(() => ({})) as {
     nePlusContacter?: unknown
@@ -93,4 +100,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cl
 
   logger.info('clients.reglage', { washerId: washer.id, nePlusContacter: corps.nePlusContacter })
   return NextResponse.json({ cle, nePlusContacter: corps.nePlusContacter })
+}
+
+/** « Supprimer » un client dans la liste (glisser vers la gauche, 2026-09-28) — en réalité un
+ *  masquage, jamais une vraie suppression. Un client n'est pas une ligne qu'on peut effacer :
+ *  c'est un calcul tiré de ses réservations et de ses documents, et certains portent une
+ *  facture dont la numérotation ne doit jamais avoir de trou, que la loi oblige à garder 10
+ *  ans. `masque_le` donne le résultat visible demandé — il disparaît du fichier — sans toucher
+ *  à aucune réservation, aucun document, aucune facture. Voir `lib/listeClients.ts`, qui
+ *  l'applique, et `ClientReglages.masque` pour le détail. */
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ cle: string }> }) {
+  const { cle: cleBrute } = await params
+  const cle = decodeURIComponent(cleBrute)
+  if (!cleValide(cle)) return NextResponse.json({ error: 'Client introuvable' }, { status: 400 })
+
+  const ctx = await washerConnecte()
+  if (ctx.erreur) return ctx.erreur
+
+  const { error } = await ctx.supabase!
+    .from('clients')
+    .upsert(
+      { washer_id: ctx.washerId!, cle, masque_le: new Date().toISOString(), maj_le: new Date().toISOString() },
+      { onConflict: 'washer_id,cle' },
+    )
+  if (error) return errorResponse('clients.delete.db', error)
+
+  logger.info('clients.masque', { washerId: ctx.washerId })
+  return NextResponse.json({ success: true })
 }

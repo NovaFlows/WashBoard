@@ -1,13 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, X, Trash2 } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import FicheEntrepriseV2 from '@/components/dashboard/FicheEntrepriseV2'
+import { ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
+import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
 import { buildClientProfile, type ClientBooking, type ClientDocument, type ClientReglages } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
 import { clientsARelancer, type LigneARelancer, type ReglagesRelance } from '@/lib/clientsARelancer'
 import { buildEntrepriseProfile, type EntrepriseListItem } from '@/lib/entrepriseProfile'
+import { supprimerClient } from '@/lib/clientsApi'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 
@@ -25,6 +29,14 @@ import { FUSEAU } from '@/lib/dateUtils'
 // morceau d'un vrai CRM, avant les prospects et les fiches entreprise (voir le compte rendu de
 // la discussion). Tout son calcul vit dans `lib/clientsARelancer.ts`, qui réutilise la règle
 // exacte du cron de relance — cet écran ne fait qu'afficher.
+//
+// « Supprimer » un client (glisser la ligne vers la gauche, 2026-09-28, demande d'Alexandre) —
+// en réalité un MASQUAGE, jamais une vraie suppression : voir `ClientReglages.masque` et
+// `/api/clients/[cle]` DELETE. Ses réservations et ses documents ne sont pas touchés — un
+// client porte parfois une facture dont la numérotation ne doit jamais avoir de trou, que la
+// loi oblige à garder 10 ans, donc rien de tout ça ne peut disparaître. Il disparaît seulement
+// de ce fichier-ci. Retiré tout de suite de l'écran (`supprimesLocalement`, optimiste) sans
+// attendre le prochain chargement.
 
 // Rôle "corps" (14/450) et "corps fort" (15/550), largeur 100 — planche
 // Système. Les tailles en px viennent de `specs/03_Clients.txt` (position et
@@ -121,6 +133,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   /** Fiches entreprise (2026-09-28), sites et contacts déjà joints. */
   entreprises?: EntrepriseListItem[]
 }) {
+  const router = useRouter()
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
   const [maintenant] = useState(() => Date.now())
@@ -129,11 +142,32 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [entrepriseOuverteId, setEntrepriseOuverteId] = useState<string | null>(null)
 
-  const clients = useMemo(
-    () => listeClients(bookings, new Date(maintenant), documents, reglages),
-    [bookings, documents, reglages, maintenant],
-  )
+  // « Supprimer » un client (glisser la ligne) — voir l'en-tête du fichier. `supprimesLocalement`
+  // le retire de l'écran tout de suite, sans attendre le prochain chargement des props serveur.
+  const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
+  const [supprimesLocalement, setSupprimesLocalement] = useState<Set<string>>(new Set())
+  const [suppression, setSuppression] = useState<ResumeClient | null>(null)
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false)
+  const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
+
+  const clients = useMemo(() => {
+    const tous = listeClients(bookings, new Date(maintenant), documents, reglages)
+    return supprimesLocalement.size === 0 ? tous : tous.filter(c => !supprimesLocalement.has(c.cle))
+  }, [bookings, documents, reglages, maintenant, supprimesLocalement])
   const pros = useMemo(() => clients.filter(c => c.isProfessional).length, [clients])
+
+  async function confirmerSuppressionClient() {
+    if (!suppression || suppressionEnCours) return
+    setSuppressionEnCours(true)
+    setSuppressionErreur(null)
+    const r = await supprimerClient(suppression.cle)
+    setSuppressionEnCours(false)
+    if (!r.ok) { setSuppressionErreur(r.message); return }
+    setSupprimesLocalement(s => new Set(s).add(suppression.cle))
+    setSuppression(null)
+    setLigneOuverte(null)
+    router.refresh()
+  }
 
   // Qui est déjà rattaché à une entreprise, et à laquelle — pour la Fiche client (menu « … »)
   // et pour exclure ces clients de la liste des contacts à rattacher.
@@ -321,7 +355,16 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
               {affiches.length > 0 && (
                 <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
                   {affiches.map(c => (
-                    <LigneClient key={c.cle} client={c} maintenant={maintenant} onOuvrir={() => setOuvert(c.cle)} />
+                    <LigneClient
+                      key={c.cle}
+                      client={c}
+                      maintenant={maintenant}
+                      onOuvrir={() => setOuvert(c.cle)}
+                      ouverte={ligneOuverte === c.cle}
+                      onOuvrirLigne={() => setLigneOuverte(c.cle)}
+                      onFermerLigne={() => setLigneOuverte(o => (o === c.cle ? null : o))}
+                      onSupprimer={() => { setSuppressionErreur(null); setSuppression(c) }}
+                    />
                   ))}
                 </ul>
               )}
@@ -339,41 +382,84 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
           onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
         />
       )}
+
+      {suppression && (
+        <ConfirmationSuppression
+          titre={`Supprimer ${suppression.isProfessional && suppression.companyName ? suppression.companyName : suppression.name} ?`}
+          texte="Il disparaît de votre fichier. Ses réservations et ses documents restent intacts — rien n’est supprimé de son historique ni de vos chiffres."
+          enCours={suppressionEnCours}
+          erreur={suppressionErreur}
+          onConfirmer={() => void confirmerSuppressionClient()}
+          onClose={() => setSuppression(null)}
+        />
+      )}
     </div>
   )
 }
 
-function LigneClient({ client: c, maintenant, onOuvrir }: { client: ResumeClient; maintenant: number; onOuvrir: () => void }) {
+function LigneClient({ client: c, maintenant, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+  client: ResumeClient
+  maintenant: number
+  onOuvrir: () => void
+  ouverte: boolean
+  onOuvrirLigne: () => void
+  onFermerLigne: () => void
+  onSupprimer: () => void
+}) {
   const titreClient = c.isProfessional && c.companyName ? c.companyName : c.name
   const pastille = pastilleDroite(c, maintenant)
+  const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
+    ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
+  })
 
   return (
-    <li>
+    <li ref={refLigne} className="relative overflow-hidden">
+      {/* Derrière la ligne : cachée tant qu'on n'a pas glissé, retirée de l'ordre de
+          tabulation — un client se supprime aussi depuis sa fiche (menu « … »), pas seulement
+          d'ici. */}
       <button
         type="button"
-        onClick={onOuvrir}
-        aria-label={`Voir la fiche de ${titreClient}`}
-        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+        onClick={onSupprimer}
+        tabIndex={ouverte ? 0 : -1}
+        aria-hidden={!ouverte}
+        aria-label={`Supprimer ${titreClient}`}
+        className={`absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1 text-[12px] text-white ${corpsFort}`}
+        style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
-        <span
-          className={`w-9 h-9 shrink-0 flex items-center justify-center text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)] ${
-            c.isProfessional ? 'rounded-[var(--v2-radius-carte)]' : 'rounded-full'
-          }`}
-        >
-          {initiales(titreClient)}
-        </span>
-
-        <span className="flex-1 min-w-0">
-          <span className={`block text-[15px] ${nom} truncate`}>{titreClient}</span>
-          <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
-            {ligneSecondaire(c, maintenant)}
-          </span>
-        </span>
-
-        <span className={`shrink-0 text-right text-[12.5px] ${corpsFort} tabular-nums ${pastille.couleur}`}>
-          {pastille.texte}
-        </span>
+        <Trash2 size={20} strokeWidth={2} aria-hidden />
+        Supprimer
       </button>
+      <div
+        {...poignee}
+        style={styleContenu}
+        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+      >
+        <button
+          type="button"
+          onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
+          aria-label={`Voir la fiche de ${titreClient}`}
+          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+        >
+          <span
+            className={`w-9 h-9 shrink-0 flex items-center justify-center text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)] ${
+              c.isProfessional ? 'rounded-[var(--v2-radius-carte)]' : 'rounded-full'
+            }`}
+          >
+            {initiales(titreClient)}
+          </span>
+
+          <span className="flex-1 min-w-0">
+            <span className={`block text-[15px] ${nom} truncate`}>{titreClient}</span>
+            <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
+              {ligneSecondaire(c, maintenant)}
+            </span>
+          </span>
+
+          <span className={`shrink-0 text-right text-[12.5px] ${corpsFort} tabular-nums ${pastille.couleur}`}>
+            {pastille.texte}
+          </span>
+        </button>
+      </div>
     </li>
   )
 }

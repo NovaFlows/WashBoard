@@ -12,6 +12,14 @@ export async function marquerNePlusContacter(cle: string, nePlusContacter: boole
   return r.ok ? { ok: true, data: null } : r
 }
 
+/** « Supprime » un client dans la liste — en réalité un masquage, jamais une vraie
+ *  suppression : voir `/api/clients/[cle]` DELETE. Ses réservations, ses documents et ses
+ *  factures restent intacts, il disparaît seulement du fichier. */
+export async function supprimerClient(cle: string): Promise<ResultatApi<null>> {
+  const r = await appeler('supprimer', 'DELETE', `/api/clients/${encodeURIComponent(cle)}`)
+  return r.ok ? { ok: true, data: null } : r
+}
+
 /** Rattache un client existant à une entreprise (ou l'en détache, `entrepriseId: null`) —
  *  fiche entreprise, 2026-09-28. Un contact n'existe que comme un client déjà connu (au moins
  *  une réservation ou un document) : voir `lib/entrepriseProfile.ts`. */

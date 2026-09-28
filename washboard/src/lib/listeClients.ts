@@ -8,6 +8,11 @@
 // Deux sources depuis le 2026-09-27 : les réservations, et les devis et factures
 // écrits à la main — « un client comme un autre » (Alexandre). Les documents
 // sont facultatifs : sans eux, la liste est exactement celle d'avant.
+//
+// Un client « masqué » (glisser pour supprimer, 2026-09-28 — voir `ClientReglages.masque`)
+// n'apparaît PAS dans cette liste : c'est tout ce que le masquage fait. Ses réservations et
+// ses documents restent lisibles partout ailleurs (Chiffres, une fiche ouverte par un autre
+// chemin) — seul ce fichier-ci le cache.
 
 import { buildClientProfile, cleClient, type ClientBooking, type ClientDocument, type ClientReglages } from './clientProfile'
 
@@ -69,8 +74,11 @@ export function listeClients(
     else parDocument.set(k, [d])
   }
 
+  const parReglage = new Map(reglages.map(r => [r.cle, r]))
+
   const clients: ResumeClient[] = []
   for (const email of new Set([...parClient.keys(), ...parDocument.keys()])) {
+    if (parReglage.get(email)?.masque) continue
     const siens = parClient.get(email) ?? []
     const sesDocuments = parDocument.get(email) ?? []
     // Chaque groupe ne contient que ce client : la fiche se calcule sans

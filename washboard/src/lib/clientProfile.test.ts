@@ -121,14 +121,14 @@ describe('buildClientProfile', () => {
 
     const avecReglage = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'alex@example.com', nePlusContacter: true }],
+      [{ cle: 'alex@example.com', nePlusContacter: true, masque: false }],
     )!
     expect(avecReglage.nePlusContacter).toBe(true)
 
     // Un réglage sur UN AUTRE client ne déteint pas.
     const autreClient = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true }],
+      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true, masque: false }],
     )!
     expect(autreClient.nePlusContacter).toBe(false)
   })

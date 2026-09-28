@@ -53,6 +53,13 @@ export type ClientBooking = {
 export type ClientReglages = {
   cle: string
   nePlusContacter: boolean
+  /** « Supprimer » un client dans la liste (glisser, 2026-09-28) : en réalité un masquage, pas
+   *  une vraie suppression — voir `listeClients.ts`, qui l'applique. Un client n'est pas une
+   *  ligne qu'on peut effacer, c'est un calcul tiré de ses réservations et de ses documents ;
+   *  en supprimer une casserait la numérotation des factures (jamais de trou permis) et la
+   *  compta passée. Masquer donne le résultat visible demandé — il disparaît du fichier — sans
+   *  toucher à aucune donnée. */
+  masque: boolean
 }
 
 /** Ce qu'un document apporte à une fiche client. Forme minimale voulue : elle évite de faire

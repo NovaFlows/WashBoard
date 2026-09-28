@@ -141,12 +141,17 @@
 
       alter table public.clients add column if not exists entreprise_id uuid references public.entreprises(id) on delete set null;
       alter table public.clients add column if not exists role_entreprise text;
+      alter table public.clients add column if not exists masque_le timestamptz;
       ```
       Un « contact » d'entreprise EST un client (table `clients`) : `entreprise_id` le rattache,
       `role_entreprise` porte son rôle libre (« Chef d'atelier ») — pas de table `contacts`
       séparée. Conséquence assumée dans `lib/entrepriseProfile.ts` : on ne peut rattacher qu'un
       client déjà connu (au moins une réservation ou un document), jamais quelqu'un qui n'a
       jamais rien pris — ce serait résoudre les « prospects » en douce, pas encore fait.
+      `masque_le` (2026-09-28) sert « supprimer un client » (glisser la ligne dans Clients) :
+      un MASQUAGE, jamais une vraie suppression — voir `ClientReglages.masque` dans
+      `lib/clientProfile.ts` pour pourquoi (numérotation des factures, obligation légale de
+      conservation).
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
@@ -2404,6 +2409,23 @@ rien à faire, mais que le projet reste globalement sain.
         « Entreprises »** ajouté à Clients (masqué tant qu'aucune n'existe) — avant, une
         entreprise ne se retrouvait qu'en rouvrant le contact qui avait servi à la créer, ce
         qu'Alexandre a buté dessus dans la foulée du bug ci-dessus.
+  - [x] 2026-09-28 — **Guide mis à jour** avec la différence « pro » (case cochée par le client,
+        par réservation) vs « entreprise » (rattachement fait à la main par le laveur) —
+        `lib/guide.ts`, entrée `pro-vs-entreprise`.
+  - [x] 2026-09-28 — **Supprimer une entreprise** : sans risque pour les réservations ni les
+        factures — ses sites disparaissent avec elle (cascade), ses contacts redeviennent de
+        simples clients (`entreprise_id` repasse à `null`). Depuis le menu « … » de sa fiche.
+  - [x] 2026-09-28 — **« Supprimer » un client, en glissant sa ligne vers la gauche dans
+        Clients** (demande d'Alexandre — geste natif, comme sur iPhone, même mécanique que les
+        dépenses et l'Assistance : `useLigneGlissante`). En réalité un MASQUAGE
+        (`clients.masque_le`), jamais une vraie suppression : un client n'est pas une ligne
+        qu'on peut effacer, c'est un calcul tiré de ses réservations et de ses documents, et
+        certains portent une facture dont la numérotation ne doit jamais avoir de trou, que la
+        loi oblige à garder 10 ans. Il disparaît du fichier, rien d'autre ne bouge — ni ses
+        réservations, ni ses documents, ni les chiffres passés. Retiré de l'écran tout de suite
+        (optimiste), sans attendre le prochain chargement. Pas construit : « démasquer » un
+        client (annuler la suppression) — aucun écran ne le propose aujourd'hui, seule la
+        colonne existe pour ça plus tard si besoin.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
