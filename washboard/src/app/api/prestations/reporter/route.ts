@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
-
-/** Nom du cookie qui met la question du catalogue en attente. */
-export const COOKIE_REPORT = 'wb_veille_reportee'
+import { COOKIE_REPORT } from '@/lib/veilleReport'
 
 /** « Plus tard » : on cesse de rediriger vers l'écran de choix.
  *
