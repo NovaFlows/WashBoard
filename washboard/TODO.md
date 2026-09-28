@@ -2394,12 +2394,14 @@ rien à faire, mais que le projet reste globalement sain.
           devis sans réponse » ci-dessus, pas encore construit) ;
         - un contact ne peut être qu'un client DÉJÀ connu (au moins une réservation ou un
           document) — créer quelqu'un qui n'a jamais rien pris reviendrait à résoudre les
-          « prospects » en douce, pas encore fait ;
-        - **pas de liste « Entreprises » au premier niveau** : une entreprise ne se trouve
-          aujourd'hui qu'en passant par un de ses contacts déjà connus. Pas gênant tant qu'un
-          laveur a déjà le contact dans son fichier (le cas courant : il a réservé une fois),
-          gênant s'il veut créer une fiche entreprise pour un client tout neuf. À ajouter si ça
-          se révèle un frein réel — pas construit par précaution, faute de retour d'usage.
+          « prospects » en douce, pas encore fait.
+  - [x] 2026-09-28 — **Bug relevé par Alexandre en testant, corrigé le jour même** : créer une
+        entreprise puis s'y rattacher ne menait nulle part (l'écran essayait d'ouvrir la fiche
+        avec l'ancienne liste d'entreprises, d'avant la création — `router.refresh()` manquant
+        dans `FeuilleRattacherV2`, ClientProfileModalV2.tsx). Même occasion : **onglet
+        « Entreprises »** ajouté à Clients (masqué tant qu'aucune n'existe) — avant, une
+        entreprise ne se retrouvait qu'en rouvrant le contact qui avait servi à la créer, ce
+        qu'Alexandre a buté dessus dans la foulée du bug ci-dessus.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +

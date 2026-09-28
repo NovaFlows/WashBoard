@@ -94,7 +94,7 @@ function pastilleDroite(c: ResumeClient, maintenant: number): { texte: string; c
   }
 }
 
-type Filtre = 'tous' | 'pros' | 'relancer'
+type Filtre = 'tous' | 'pros' | 'relancer' | 'entreprises'
 
 /** `ClientBooking` porte déjà tout ce que `RdvMessage` demande (voir son en-tête) — sauf
  *  `client_email` non nullable, alors que le formulaire de réservation ne l'exige pas toujours
@@ -202,6 +202,8 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1`}>
           {filtre === 'relancer' ? (
             <span className="tabular-nums">{aRelancer.length} client{aRelancer.length > 1 ? 's' : ''} pas revenu{aRelancer.length > 1 ? 's' : ''}</span>
+          ) : filtre === 'entreprises' ? (
+            <span className="tabular-nums">{entreprises.length} entreprise{entreprises.length > 1 ? 's' : ''}</span>
           ) : clients.length === 0 ? (
             'Vos clients apparaîtront ici dès leur première réservation.'
           ) : pros > 0 ? (
@@ -214,7 +216,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
 
       {clients.length > 0 && (
         <>
-          {filtre !== 'relancer' && (
+          {filtre !== 'relancer' && filtre !== 'entreprises' && (
             <div className="relative">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--v2-color-gris)] pointer-events-none" aria-hidden />
               <input
@@ -248,6 +250,10 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
               // Le laveur qui n'a pas encore réglé de relance a quand même le droit de voir qui
               // n'est pas revenu : voir le mode « pas de relance programmée » de clientsARelancer.
               ...(reglagesMessages ? [['relancer', 'À relancer'] as const] : []),
+              // Masqué tant qu'aucune entreprise n'existe : un onglet vide n'aiderait personne
+              // (Alexandre, 2026-09-28 — sans lui, une entreprise ne se retrouvait qu'en
+              // rouvrant le contact qui a servi à la créer).
+              ...(entreprises.length > 0 ? [['entreprises', 'Entreprises'] as const] : []),
             ] as const).map(([f, libelle]) => (
               <button
                 key={f}
@@ -277,6 +283,29 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
                 ))}
               </ul>
             )
+          ) : filtre === 'entreprises' ? (
+            <ul aria-label="Entreprises" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+              {entreprises.map(e => (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    onClick={() => setEntrepriseOuverteId(e.id)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--v2-radius-carte)] text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
+                      {initiales(e.nom)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[15px] ${nom} truncate`}>{e.nom}</span>
+                      <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
+                        {e.contacts.length} contact{e.contacts.length > 1 ? 's' : ''}
+                        {e.sites.length > 0 && ` · ${e.sites.length} site${e.sites.length > 1 ? 's' : ''}`}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           ) : (
             <>
               {(recherche.trim() || affiches.length === 0) && (

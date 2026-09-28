@@ -100,12 +100,20 @@ function FeuilleRattacherV2({
   onRattache: (entrepriseId: string) => void
   onClose: () => void
 }) {
+  const router = useRouter()
   const [entrepriseId, setEntrepriseId] = useState<string | 'nouvelle' | ''>('')
   const [nouveauNom, setNouveauNom] = useState('')
   const [role, setRole] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
+  // `entreprisesDisponibles` et la liste des contacts d'une entreprise viennent toutes deux
+  // d'une prop tirée de `clients/page.tsx` (composant serveur) — jamais mises à jour toutes
+  // seules. SANS ce `router.refresh()`, ouvrir la fiche juste après (`onRattache`) tombait sur
+  // l'ancienne liste : une entreprise TOUT JUSTE créée n'y figurait pas encore, et l'écran ne
+  // faisait rien de visible (relevé par Alexandre, 2026-09-28). Le refresh part AVANT
+  // `onRattache` : au moment où l'identifiant est retenu, les données fraîches sont déjà en
+  // chemin.
   async function soumettre() {
     if (enCours) return
     if (entrepriseId === '') { setErreur('Choisissez une entreprise, ou créez-en une.'); return }
@@ -116,11 +124,13 @@ function FeuilleRattacherV2({
       const r = await creerEtRattacher(nouveauNom.trim(), cle, role)
       setEnCours(false)
       if (typeof r === 'string') { setErreur(r); return }
+      router.refresh()
       onRattache(r.id)
     } else {
       const r = await rattacherEntreprise(cle, entrepriseId, role)
       setEnCours(false)
       if (!r.ok) { setErreur(r.message); return }
+      router.refresh()
       onRattache(entrepriseId)
     }
   }
