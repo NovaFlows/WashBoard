@@ -186,6 +186,63 @@ function AppBetaBanner() {
   )
 }
 
+// Annonce des 4 offres 2026, une seule fois par laveur.
+//
+// Même règle de fermeture que AppBetaBanner : une fois fermé, on ne le
+// remontre plus. Contrairement à celui-ci, il n'y a pas de condition de
+// masquage automatique (« déjà activé les notifications ») — l'information
+// concerne tout le monde, y compris un client historique à l'accès complet,
+// qui garde le même accès quoi qu'il arrive mais peut vouloir savoir que
+// l'offre existe désormais pour en parler à un confrère.
+const CLE_FERMEE_OFFRES_2026 = 'wb_annonce_offres_2026_fermee'
+
+function NouvellesOffresBanner() {
+  // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
+  // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    let annule = false
+    ;(async () => {
+      let fermee = false
+      try {
+        fermee = !!localStorage.getItem(CLE_FERMEE_OFFRES_2026)
+      } catch {
+        // Stockage bloqué : on affiche quand même, voir la justification de
+        // AppBetaBanner ci-dessus — un bandeau de trop plutôt qu'une annonce
+        // que personne ne voit.
+      }
+      if (!annule && !fermee) setVisible(true)
+    })()
+    return () => { annule = true }
+  }, [])
+
+  if (!visible) return null
+
+  function fermer() {
+    setVisible(false)
+    try { localStorage.setItem(CLE_FERMEE_OFFRES_2026, '1') } catch { /* rien à faire */ }
+  }
+
+  return (
+    <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-b border-indigo-200 dark:border-indigo-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-wide bg-indigo-600/10 dark:bg-indigo-400/15 px-1.5 py-0.5 rounded">Nouveau</span>
+          WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+        </span>
+        <Link
+          href="/dashboard/abonnement"
+          className="underline font-bold whitespace-nowrap hover:opacity-70"
+        >
+          Voir les offres →
+        </Link>
+      </div>
+      <DismissButton onDismiss={fermer} />
+    </div>
+  )
+}
+
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean }) {
   const [dismissed, setDismissed] = useState(false)
   const [now] = useState(() => Date.now())
@@ -357,6 +414,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
 
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} />
+        <NouvellesOffresBanner />
         <AppBetaBanner />
         <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">

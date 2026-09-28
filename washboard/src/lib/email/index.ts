@@ -4,7 +4,7 @@ import { escapeHtml } from '@/lib/escapeHtml'
 import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
-import { PLAN_PRICES, BOOKING_QUOTA, formatEuros } from '@/lib/plan'
+import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -954,6 +954,85 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : annonce des 4 offres 2026 (diffusion unique à tous les laveurs) ─
+//
+// Le message ne doit rien promettre de faux à personne : un client historique
+// (`grandfathered`) garde son accès complet quoi qu'il arrive, et un compte
+// migré automatiquement a atterri au même tarif ou moins cher (voir
+// 004_offres_2026.sql). Le texte reste donc volontairement rassurant et
+// n'affirme jamais « votre offre a changé » — pour la plupart des lecteurs,
+// rien n'a changé, il y a juste plus de choix qu'avant.
+export async function sendNouvellesOffres({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Nouveau chez WashBoard : 4 offres, dont une gratuite`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651e8;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Quatre offres, une seule idée 🚗</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Payer pour ce qu&apos;on utilise vraiment</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        WashBoard passe de 2 à 4 offres. Rien ne change pour vous aujourd&apos;hui :
+        votre accès actuel reste exactement le même, au même tarif. Ce qui change,
+        c&apos;est le choix disponible pour la suite.
+      </p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.decouverte};margin-right:8px;"></span>
+            <strong>Découverte</strong> — gratuite
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.decouverte} résa/mois</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.starter};margin-right:8px;"></span>
+            <strong>Starter</strong> — ${formatEuros(PLAN_PRICES.starter)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.starter} résa/mois, page perso, CRM</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.pro};margin-right:8px;"></span>
+            <strong>Pro</strong> — ${formatEuros(PLAN_PRICES.pro)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">résa illimitées, compta, avis Google</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.business};margin-right:8px;"></span>
+            <strong>Business</strong> — ${formatEuros(PLAN_PRICES.business)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">3 laveurs inclus, planning collectif</td>
+        </tr>
+      </table>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Voir le détail des offres →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Aucune action requise · Vous restez sur votre offre actuelle si vous ne changez rien</p>
       <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
     </div>
   </div>
