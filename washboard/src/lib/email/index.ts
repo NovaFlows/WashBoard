@@ -4,6 +4,7 @@ import { escapeHtml } from '@/lib/escapeHtml'
 import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
+import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -546,6 +547,68 @@ type SendWasherNotificationParams = {
   bookingId: string
 }
 
+/** Email au laveur pour une réservation au-delà de son quota.
+ *
+ *  Un gabarit à part plutôt qu'une option de plus sur l'email complet : celui-ci
+ *  compose le téléphone, l'adresse, le montant et l'heure à une dizaine
+ *  d'endroits. Y ajouter des « si masqué » un peu partout, c'est garantir qu'un
+ *  jour l'un d'eux sera oublié — et un seul oubli suffit à tout révéler.
+ *
+ *  Le laveur apprend LE NOM et LE JOUR. Assez pour savoir qu'un vrai client
+ *  l'attend, trop peu pour le joindre ou pour se présenter au rendez-vous. */
+export async function sendWasherBookingLocked({ to, washerName, clientName, scheduledAt, appUrl }: {
+  to: string
+  washerName: string
+  clientName: string
+  scheduledAt: string
+  appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  // Le jour, jamais l'heure : l'heure suffirait a honorer le rendez-vous sans
+  // rien payer.
+  const jour = new Date(scheduledAt).toLocaleDateString('fr-FR', {
+    timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long',
+  })
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Nouvelle réservation — ${escapeHtml(clientName)}`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+    <div style="background:#0B1828;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réservation</h1>
+      <p style="margin:0;color:#94a3b8;font-size:13px;">Elle dépasse votre offre actuelle</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(washerName)}</strong>,</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:22px;">
+        <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(clientName)}</p>
+        <p style="margin:0;font-size:14px;color:#64748b;">${jour}</p>
+      </div>
+      <p style="margin:0 0 22px;font-size:14px;color:#475569;line-height:1.6;">
+        Son téléphone, son adresse et l'heure du rendez-vous sont masqués : cette réservation
+        dépasse ce que votre offre affiche ce mois-ci. Changez d'offre pour la débloquer —
+        et toutes les suivantes avec.
+      </p>
+      <div style="text-align:center;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Débloquer cette réservation →
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 export async function sendWasherNotification(params: SendWasherNotificationParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -682,11 +745,62 @@ export async function sendTrialReminder({ to, washerName, trialEndsAt, appUrl }:
 }
 
 // ── Email : expiration du trial (J0) ─────────────────────────────────────
-export async function sendTrialExpired({ to, washerName, appUrl }: {
+export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit = false }: {
   to: string; washerName: string; appUrl?: string
+  /** Règle 2026 : le compte retombe sur Découverte au lieu d'être suspendu.
+   *  Le ton de l'email change du tout au tout — annoncer une coupure qui
+   *  n'aura pas lieu, c'est perdre la confiance du laveur ET la crédibilité de
+   *  tous les emails suivants. */
+  retourGratuit?: boolean
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  if (retourGratuit) {
+    return resend.emails.send({
+      from: 'WashBoard <noreply@washboard.fr>',
+      to,
+      subject: `Votre mois d'essai est terminé — quelle formule vous va ?`,
+      html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Votre mois d&apos;essai est terminé</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Rien ne s&apos;arrête — à vous de choisir la suite</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
+        réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.
+      </p>
+      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#1d4ed8;font-weight:600;">
+          En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
+          gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.
+        </p>
+      </div>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Dès que votre activité dépasse ce rythme, passez à la formule qui vous va :
+        <strong>Starter à ${formatEuros(PLAN_PRICES.starter)}€/mois</strong> (${BOOKING_QUOTA.starter} réservations),
+        ou <strong>Pro à ${formatEuros(PLAN_PRICES.pro)}€/mois</strong> (réservations illimitées, comptabilité, avis Google, relances).
+      </p>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Choisir ma formule →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Sans engagement · Vous pouvez rester sur Découverte aussi longtemps que vous voulez</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+    })
+  }
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
@@ -715,7 +829,7 @@ export async function sendTrialExpired({ to, washerName, appUrl }: {
       </div>
       <div style="text-align:center;margin-bottom:16px;">
         <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Activer mon abonnement — 49€/mois →
+          Activer mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
@@ -757,7 +871,7 @@ export async function sendSubReminder({ to, washerName, endsAt, appUrl }: {
       </p>
       <div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
         <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">
-          Effectuez votre paiement de 49€ par PayPal ou virement — activation sous 24h ouvrées.
+          Effectuez votre paiement par PayPal ou virement — activation sous 24h ouvrées.
         </p>
       </div>
       <div style="text-align:center;">
@@ -807,7 +921,7 @@ export async function sendSubExpired({ to, washerName, appUrl }: {
       </div>
       <div style="text-align:center;margin-bottom:16px;">
         <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Renouveler mon abonnement — 49€/mois →
+          Renouveler mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
@@ -913,6 +1027,85 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : annonce des 4 offres 2026 (diffusion unique à tous les laveurs) ─
+//
+// Le message ne doit rien promettre de faux à personne : un client historique
+// (`grandfathered`) garde son accès complet quoi qu'il arrive, et un compte
+// migré automatiquement a atterri au même tarif ou moins cher (voir
+// 004_offres_2026.sql). Le texte reste donc volontairement rassurant et
+// n'affirme jamais « votre offre a changé » — pour la plupart des lecteurs,
+// rien n'a changé, il y a juste plus de choix qu'avant.
+export async function sendNouvellesOffres({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Nouveau chez WashBoard : 4 offres, dont une gratuite`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651e8;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Quatre offres, une seule idée 🚗</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Payer pour ce qu&apos;on utilise vraiment</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        WashBoard passe de 2 à 4 offres. Rien ne change pour vous aujourd&apos;hui :
+        votre accès actuel reste exactement le même, au même tarif. Ce qui change,
+        c&apos;est le choix disponible pour la suite.
+      </p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.decouverte};margin-right:8px;"></span>
+            <strong>Découverte</strong> — gratuite
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.decouverte} résa/mois</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.starter};margin-right:8px;"></span>
+            <strong>Starter</strong> — ${formatEuros(PLAN_PRICES.starter)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.starter} résa/mois, page perso, CRM</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.pro};margin-right:8px;"></span>
+            <strong>Pro</strong> — ${formatEuros(PLAN_PRICES.pro)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">résa illimitées, compta, avis Google</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.business};margin-right:8px;"></span>
+            <strong>Business</strong> — ${formatEuros(PLAN_PRICES.business)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">3 laveurs inclus, planning collectif</td>
+        </tr>
+      </table>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Voir le détail des offres →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Aucune action requise · Vous restez sur votre offre actuelle si vous ne changez rien</p>
       <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
     </div>
   </div>

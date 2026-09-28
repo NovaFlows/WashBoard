@@ -64,7 +64,6 @@ export type ChiffresProps = {
   events: ChiffresEvent[]
   websiteHost?: string
   hasCompta: boolean
-  comptaPlanLabel: string
   facturesCount: number
   /** Début (ISO) de la fenêtre de visites chargée : avant, pas de donnée. */
   evenementsDepuis?: string | null
@@ -74,7 +73,7 @@ export type ChiffresProps = {
 }
 
 export default function ChiffresV2({
-  bookings, facturesManuelles, events, websiteHost, hasCompta, comptaPlanLabel, facturesCount,
+  bookings, facturesManuelles, events, websiteHost, hasCompta, facturesCount,
   evenementsDepuis, reservationsIncompletes, evenementsIncomplets,
 }: ChiffresProps) {
   const [onglet, setOnglet] = useState<Onglet>('argent')
@@ -118,7 +117,6 @@ export default function ChiffresV2({
       {onglet === 'argent' && (
         <ChiffresArgent
           hasCompta={hasCompta}
-          comptaPlanLabel={comptaPlanLabel}
           facturesCount={facturesCount}
           bookings={bookings}
           facturesManuelles={facturesManuelles}

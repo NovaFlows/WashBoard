@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('combien-gagne-un-laveur-auto-mobile')!
@@ -218,7 +219,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Voyez ce que rapporte vraiment chaque journée">
+        <Cta
+          title="Voyez ce que rapporte vraiment chaque journée"
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard calcule votre chiffre d&apos;affaires par prestation et par jour, groupe vos
           rendez-vous par secteur et relance vos clients récurrents. Vous savez où vous en êtes sans
           attendre la fin du mois.

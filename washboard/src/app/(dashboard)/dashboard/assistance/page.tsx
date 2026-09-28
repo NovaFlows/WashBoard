@@ -17,7 +17,9 @@ export default async function AssistancePage() {
   // `washer.beta_refonte` doit rester lisible ici pour que la barre du bas
   // s'affiche sur cette page aussi. Un `select` qui nomme les colonnes une à
   // une casserait dès qu'on en ajoute une qui n'existe pas encore en base
-  // (jamais le cas de '*', qui tolère une colonne absente).
+  // (jamais le cas de '*', qui tolère une colonne absente) — et couvre déjà
+  // toutes celles que `master` énumère (created_at, slug…) pour le badge de
+  // plan et les bandeaux d'offres.
   const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
 
@@ -27,7 +29,7 @@ export default async function AssistancePage() {
       trialEndsAt={washer.trial_ends_at}
       subscriptionStatus={washer.subscription_status}
       plan={washer.plan}
-      grandfathered={washer.grandfathered}
+      grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}

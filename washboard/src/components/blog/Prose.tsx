@@ -182,18 +182,43 @@ export function Faq({ items }: { items: FaqItem[] }) {
   )
 }
 
-/** Encart de fin d'article. Le texte change selon l'angle abordé. */
-export function Cta({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * Encart de fin d'article. Le texte change selon l'angle abordé.
+ *
+ * `secondary` : lien sobre vers la page métier (ou la page catégorie) du
+ * thème de l'article — à passer via `lienPageMetier` (`@/lib/metiers`), qui
+ * donne l'adresse et le texte ensemble, jamais écrits à la main. Absent :
+ * rien ne s'affiche.
+ */
+export function Cta({
+  title,
+  children,
+  secondary,
+}: {
+  title: string
+  children: React.ReactNode
+  secondary?: { href: string; label: string }
+}) {
   return (
     <div className="mt-12 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
       <h2 className="text-xl font-black tracking-tight mb-2">{title}</h2>
       <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-5">{children}</p>
-      <Link
-        href="/signup"
-        className="inline-block px-5 py-3 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
-      >
-        Lancer mon mois gratuit
-      </Link>
+      <div className="flex flex-wrap items-center gap-5">
+        <Link
+          href="/signup"
+          className="inline-block px-5 py-3 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
+        >
+          Lancer mon mois gratuit
+        </Link>
+        {secondary && (
+          <Link
+            href={secondary.href}
+            className="text-slate-500 dark:text-white/55 hover:text-slate-800 dark:hover:text-white text-sm font-medium transition-colors underline underline-offset-4"
+          >
+            {secondary.label}
+          </Link>
+        )}
+      </div>
       <p className="text-xs text-slate-400 mt-3">Sans engagement · Sans carte bancaire</p>
     </div>
   )

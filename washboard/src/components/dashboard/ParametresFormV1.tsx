@@ -7,7 +7,8 @@ import type { Washer } from '@/types'
 import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { SectionVerrouillee } from '@/components/dashboard/SectionVerrouillee'
 import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
 import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
@@ -16,16 +17,22 @@ import { FacturationCard } from '@/components/dashboard/FacturationCard'
 // Réglages, présentation v1 — le site (navigateur classique, mobile ou
 // ordinateur) affiche ce contenu SANS EXCEPTION, décision d'Alexandre du
 // 2026-09-22 (voir `.claude/agents/refonte.md`, « v1 sur le site, v2
-// seulement dans la PWA installée »). Ce fichier reprend à l'identique le
-// contenu de `ParametresForm.tsx` avant la passe 6 de la refonte : deux
-// onglets (Général / Page client), toute la logique de réglages du laveur.
+// seulement dans la PWA installée »). Ce fichier reprend le contenu de
+// `ParametresForm.tsx` avant la passe 6 de la refonte : deux onglets
+// (Général / Page client), toute la logique de réglages du laveur — et il
+// est tenu à jour avec ce que `master` continue d'y ajouter côté LOGIQUE
+// (fusionné le 2026-09-28 : le nouveau système à 4 offres, `hasFeature`/
+// `requiredPlanLabel`/`SectionVerrouillee`, remplace l'ancien à 2 offres).
 //
-// Seul ajout par rapport à l'ancien fichier : l'id `lien-reservation` posé
-// sur la carte « Votre lien de réservation » (ClientTab, plus bas). Un id
-// HTML n'a aucun effet visuel — la présentation reste pixel pour pixel — il
-// sert uniquement de cible d'ancrage pour ParametresFormV2.tsx (le nouvel
-// écran « Plus »), qui renvoie ici pour éditer le lien et le personnaliser
-// par réseau tant que ces réglages n'ont pas leur propre écran v2.
+// Trois ajouts propres à la refonte, à réappliquer si ce fichier est
+// resynchronisé sur une nouvelle version de master : les id `compte`
+// (carte « Adresse email »), `lien-reservation` (carte « Votre lien de
+// réservation ») et `personnalisation` (carte « Personnalisation de la page
+// client »). Un id HTML n'a aucun effet visuel — il sert uniquement de
+// cible d'ancrage pour ParametresFormV2.tsx (le nouvel écran « Plus ») et
+// pour le Guide (`lib/guide.ts`), qui renvoient ici tant que ces réglages
+// n'ont pas leur propre écran v2. `profil`, `avis` et `relances` portent
+// déjà leur id côté master, aucun ajout à faire sur ceux-là.
 //
 // Cette page reste aussi accessible directement, via la nouvelle route
 // `/dashboard/parametres/tout` (voir ce dossier) : le point d'entrée
@@ -138,7 +145,10 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
-  const canTeam = hasFeature(washer, 'multi_laveurs')
+  const canTeam     = hasFeature(washer, 'multi_laveurs')
+  const canTrajets  = hasFeature(washer, 'frais_deplacement')
+  const canAvis     = hasFeature(washer, 'avis_email')
+  const canFacturer = hasFeature(washer, 'facturation')
 
   function addTier() {
     const mins = parseInt(tierDraft.max_minutes)
@@ -290,6 +300,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             />
           </div>
 
+          <SectionVerrouillee verrouille={!canTrajets} planLabel={requiredPlanLabel('frais_deplacement')}>
           <div>
             <label className={labelClass}>Frais de déplacement par durée</label>
             <div className="space-y-2 mb-3">
@@ -382,6 +393,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               </div>
             </div>
           )}
+          </SectionVerrouillee>
 
           <div>
             <label className={labelClass}>Nombre de laveurs</label>
@@ -407,7 +419,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               <div className="flex items-center gap-3">
                 <input type="number" value={1} disabled className={`${inputClass} w-24 opacity-50 cursor-not-allowed`} />
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                  La gestion d&apos;équipe (RDV simultanés) fait partie du plan Pro.{' '}
+                  La gestion d&apos;équipe (RDV simultanés) fait partie de l&apos;offre {requiredPlanLabel('multi_laveurs')}.{' '}
                   <Link href="/dashboard/abonnement" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Voir les offres</Link>
                 </p>
               </div>
@@ -419,9 +431,12 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       </Card>
 
       {/* Facturation — informations portées sur les factures aux clients */}
-      <FacturationCard washer={washer} />
+      <SectionVerrouillee verrouille={!canFacturer} planLabel={requiredPlanLabel('facturation')}>
+        <FacturationCard washer={washer} />
+      </SectionVerrouillee>
 
       {/* Avis Google — suivi client */}
+      <SectionVerrouillee verrouille={!canAvis} planLabel={requiredPlanLabel('avis_email')}>
       <Card id="avis" title="Avis Google" icon={Star}>
         <form onSubmit={saveReview} noValidate className="space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
@@ -503,16 +518,26 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             <>
               <div>
                 <label className={labelClass}>Expéditeur SMS</label>
+                {/* Le champ acceptait 20 caractères et l'envoi tronquait à 11 :
+                    « AutoNettoyage » partait en « AutoNettoya », un nom coupé que
+                    l'opérateur remplaçait par un autre, sans rien dire. On borne
+                    donc la saisie à ce qui est réellement envoyable. */}
                 <input
                   type="text"
                   value={smsSender}
-                  onChange={e => setSmsSender(e.target.value.slice(0, 20))}
-                  placeholder={washer.name.slice(0, 11)}
+                  onChange={e => setSmsSender(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 11))}
+                  placeholder={washer.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 11)}
                   className={inputClass}
-                  maxLength={20}
+                  maxLength={11}
                 />
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-                  Nom affiché sur le SMS du client. Max 11 caractères (ex. <strong>KookiClean</strong>) ou votre numéro de téléphone.
+                  Nom affiché sur le SMS du client. <strong>11 caractères maximum</strong>,
+                  lettres et chiffres uniquement — ni espace, ni accent, ni tiret
+                  (ex. <strong>KookiClean</strong>). C&apos;est une règle des opérateurs :
+                  un nom qui ne la respecte pas est remplacé à l&apos;arrivée.
+                  {smsSender.length >= 11 && (
+                    <> <span className="text-amber-600 dark:text-amber-400">Limite atteinte.</span></>
+                  )}
                 </p>
               </div>
 
@@ -548,6 +573,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={reviewLoading} />
         </form>
       </Card>
+      </SectionVerrouillee>
 
       {/* Relances clients — Pro+ uniquement */}
       {hasFeature(washer, 'followup') && (
@@ -607,8 +633,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
         </Card>
       )}
 
-      {/* Email. id="compte" : cible du guide pour « changer mon email ou mon mot de passe »
-          (les deux cartes se suivent) — voir `lib/lienV2.ts` pour l'équivalent v2. */}
+      {/* Email */}
       <Card id="compte" title="Adresse email" icon={Mail}>
         <form onSubmit={saveEmail} noValidate className="space-y-4">
           <div>
@@ -862,9 +887,6 @@ function ClientTab({ washer }: { washer: Washer }) {
 
   return (
     <div className="space-y-5">
-      {/* id="lien-reservation" : cible d'ancrage utilisée par ParametresFormV2
-          (écran « Plus » de la refonte 2026, PWA uniquement) pour ses lignes
-          « Mon lien » et « Un lien par réseau ». N'a aucun effet visuel. */}
       <Card id="lien-reservation" title="Votre lien de réservation" icon={Link2}>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
           Personnalisez le lien que vous partagez à vos clients. Une fois modifié,

@@ -52,7 +52,9 @@ export async function PATCH(request: NextRequest) {
   // consommait des SMS facturés à WashBoard sans jamais passer au plan Pro.
   // Signalé par un audit externe le 2026-09-05.
   const { data: profil, error: profilError } = await supabase
-    .from('washers').select('plan, grandfathered, facture_prochain_numero').eq('user_id', user.id).single()
+    .from('washers')
+    .select('plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, facture_prochain_numero')
+    .eq('user_id', user.id).single()
 
   if (profilError || !profil) {
     // Sans certitude sur le plan, on ne débloque rien : laisser passer
@@ -61,7 +63,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
   }
 
-  const refusePro = (fonctionnalite: Feature) =>
+  // Le nom ne dit plus « Pro » : depuis la grille 2026, le palier requis
+  // dépend de la fonctionnalité (Starter, Pro ou Business) et c'est
+  // `requiredPlanLabel` qui le nomme.
+  const refuserOffre = (fonctionnalite: Feature) =>
     NextResponse.json(
       { error: `Cette option est réservée au plan ${requiredPlanLabel(fonctionnalite)}.` },
       { status: 403 },
@@ -69,16 +74,50 @@ export async function PATCH(request: NextRequest) {
 
   // Plusieurs laveurs simultanés : réservé au Pro.
   if (team_size !== undefined && Number(team_size) > 1 && !hasFeature(profil, 'multi_laveurs')) {
-    return refusePro('multi_laveurs')
+    return refuserOffre('multi_laveurs')
   }
   // Relances automatiques : réservées au Pro. Seule l'ACTIVATION est bloquée —
   // un laveur qui rétrograde doit pouvoir les désactiver.
   if (followup_enabled === true && !hasFeature(profil, 'followup')) {
-    return refusePro('followup')
+    return refuserOffre('followup')
   }
   // Demande d'avis par SMS : même règle.
   if (review_channel === 'sms' && !hasFeature(profil, 'avis_sms')) {
-    return refusePro('avis_sms')
+    return refuserOffre('avis_sms')
+  }
+  // Demande d'avis Google, quel que soit le canal.
+  if (review_enabled === true && !hasFeature(profil, 'avis_email')) {
+    return refuserOffre('avis_email')
+  }
+  // Créneaux intelligents (regroupement géographique + remise).
+  if (smart_slot_enabled === true && !hasFeature(profil, 'creneaux_intelligents')) {
+    return refuserOffre('creneaux_intelligents')
+  }
+  // Frais de déplacement : seule la mise en place de paliers est réservée.
+  // Les vider reste possible à tout moment, y compris après une rétrogradation.
+  if (Array.isArray(travel_fee_tiers) && travel_fee_tiers.length > 0
+    && !hasFeature(profil, 'frais_deplacement')) {
+    return refuserOffre('frais_deplacement')
+  }
+  // Identité visuelle de la page de réservation. La condition porte sur une
+  // valeur NON VIDE : retirer son logo ou revenir au thème par défaut doit
+  // rester possible sans payer.
+  const veutPersonnaliser =
+    (logo_url !== undefined && !!String(logo_url ?? '').trim()) ||
+    (brand_color !== undefined && !!brand_color) ||
+    (background_theme !== undefined && !!background_theme)
+  if (veutPersonnaliser && !hasFeature(profil, 'page_personnalisee')) {
+    return refuserOffre('page_personnalisee')
+  }
+  // Mentions légales portées sur les factures : renseigner son SIRET, sa TVA
+  // ou sa forme juridique n'a de sens que si l'on peut émettre des factures.
+  const veutFacturer = [
+    facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva,
+    facture_taux_tva, facture_numero_tva, facture_statut, facture_forme_juridique,
+    facture_capital, facture_immatriculation, facture_prochain_numero,
+  ].some(v => v !== undefined)
+  if (veutFacturer && !hasFeature(profil, 'facturation')) {
+    return refuserOffre('facturation')
   }
 
   const updates: Record<string, unknown> = {}
@@ -157,7 +196,31 @@ export async function PATCH(request: NextRequest) {
   if (review_delay_hours !== undefined) updates.review_delay_hours = Math.min(168, Math.max(0, Math.floor(Number(review_delay_hours)) || 0))
   if (google_review_url !== undefined) updates.google_review_url = google_review_url?.trim() || null
   if (review_channel !== undefined && ['email', 'sms'].includes(review_channel)) updates.review_channel = review_channel
-  if (sms_sender !== undefined) updates.sms_sender = sms_sender?.trim().slice(0, 20) || null
+  // Expéditeur SMS : refusé plutôt que tronqué.
+  //
+  // La règle vient des opérateurs français, pas de nous : 11 caractères,
+  // lettres et chiffres uniquement. Tout le reste est remplacé à l'arrivée par
+  // l'expéditeur du compte d'envoi, sans prévenir personne.
+  //
+  // Le champ acceptait jusqu'ici 20 caractères et le code tronquait à 11 au
+  // moment de l'envoi. Le 2026-09-27, « AutoNettoyage » (13) est ainsi parti en
+  // « AutoNettoya » — un nom coupé, approuvé nulle part, donc remplacé. Le
+  // laveur voyait son nom correctement enregistré dans ses réglages et recevait
+  // ses SMS sous un autre nom, sans aucune explication.
+  if (sms_sender !== undefined) {
+    const expediteur = String(sms_sender ?? '').trim()
+    if (expediteur && !/^[A-Za-z0-9]{1,11}$/.test(expediteur)) {
+      return NextResponse.json(
+        {
+          error: expediteur.length > 11
+            ? `« ${expediteur} » fait ${expediteur.length} caractères : les opérateurs en acceptent 11 au maximum. Essayez une version plus courte.`
+            : 'L\'expéditeur ne peut contenir que des lettres et des chiffres — ni espace, ni tiret, ni accent, ni apostrophe.',
+        },
+        { status: 400 },
+      )
+    }
+    updates.sms_sender = expediteur || null
+  }
   if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
   if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))
   if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
@@ -245,6 +308,17 @@ export async function PATCH(request: NextRequest) {
       }
     }
     updates.zone_config = config
+  }
+
+  // Horodate l'action DU LAVEUR. `updated_at` ne peut pas jouer ce rôle : la
+  // base le réécrit à chaque UPDATE de la ligne, donc aussi quand le cron pose
+  // `trial_reminder_sent_at` ou quand le webhook Stripe change l'abonnement.
+  // Résultat, une fiche « modifiée hier » pouvait ne rien devoir au laveur —
+  // c'est ce qui a rendu la colonne inexploitable pour le suivi client.
+  // Posé seulement s'il y a quelque chose à écrire : un formulaire renvoyé sans
+  // le moindre champ valide n'est pas une modification.
+  if (Object.keys(updates).length > 0) {
+    updates.profile_updated_at = new Date().toISOString()
   }
 
   const { error } = await supabase

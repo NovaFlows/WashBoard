@@ -6,7 +6,7 @@ import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, requiredPlan, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
@@ -35,13 +35,22 @@ type Props = {
   // trois valent « pas de barre du bas », jamais une erreur (voir
   // `betaRefonte` ci-dessous, converti en booléen strict).
   betaRefonte?: boolean | null
+  /** Date de création de la fiche : décide si ce compte suit la règle 2026
+   *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
+  createdAt?: string | null
+  /** Lien public du laveur, pour la liste de bascule anticipée (COMPTES_TEST_RETOUR_GRATUIT). */
+  slug?: string | null
 }
 
-function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boolean }) {
-  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[plan ?? 'essentiel']
+function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
+  // `plan` est ce qui est écrit en base, `effectif` ce qui s'applique
+  // aujourd'hui : après un essai non transformé, les deux diffèrent, et c'est
+  // le second que le laveur doit lire.
+  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[effectif]
   const color = grandfathered
     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-    : plan === 'pro' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
+    : effectif === 'pro' || effectif === 'business'
+      ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
   return (
     <Link
@@ -58,7 +67,19 @@ function PlanBadge({ plan, grandfathered }: { plan?: Plan; grandfathered?: boole
       {/* Sur téléphone, seule la couronne reste : le libellé du plan poussait
           « WashBoard » hors de l'écran, qui s'affichait « Wa… ». Le badge reste
           cliquable et son intitulé passe par aria-label. */}
-      <span className="hidden sm:inline">{label}</span>
+      <span className="hidden sm:inline-flex items-center gap-1.5">
+        {/* Pas de pastille pour un client historique : « Accès complet » n'est
+            pas une offre de la grille, lui en donner une couleur laisserait
+            croire qu'il existe un cinquième palier. */}
+        {!grandfathered && (
+          <span
+            className="inline-block w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: PLAN_COULEURS[effectif] }}
+            aria-hidden
+          />
+        )}
+        {label}
+      </span>
     </Link>
   )
 }
@@ -183,13 +204,89 @@ function AppBetaBanner() {
 // jusqu'à l'expiration.
 const CLE_BANDEAU_ESSAI = 'wb-bandeau-essai'
 
-function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null }) {
+// Annonce des 4 offres 2026, une seule fois par laveur.
+//
+// Même règle de fermeture que AppBetaBanner : une fois fermé, on ne le
+// remontre plus. Contrairement à celui-ci, il n'y a pas de condition de
+// masquage automatique (« déjà activé les notifications ») — l'information
+// concerne tout le monde, y compris un client historique à l'accès complet,
+// qui garde le même accès quoi qu'il arrive mais peut vouloir savoir que
+// l'offre existe désormais pour en parler à un confrère.
+const CLE_FERMEE_OFFRES_2026 = 'wb_annonce_offres_2026_fermee'
+
+function NouvellesOffresBanner() {
+  // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
+  // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    let annule = false
+    ;(async () => {
+      let fermee = false
+      try {
+        fermee = !!localStorage.getItem(CLE_FERMEE_OFFRES_2026)
+      } catch {
+        // Stockage bloqué : on affiche quand même, voir la justification de
+        // AppBetaBanner ci-dessus — un bandeau de trop plutôt qu'une annonce
+        // que personne ne voit.
+      }
+      if (!annule && !fermee) setVisible(true)
+    })()
+    return () => { annule = true }
+  }, [])
+
+  if (!visible) return null
+
+  function fermer() {
+    setVisible(false)
+    try { localStorage.setItem(CLE_FERMEE_OFFRES_2026, '1') } catch { /* rien à faire */ }
+  }
+
+  return (
+    <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-b border-indigo-200 dark:border-indigo-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-wide bg-indigo-600/10 dark:bg-indigo-400/15 px-1.5 py-0.5 rounded">Nouveau</span>
+          WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+        </span>
+        <Link
+          href="/dashboard/abonnement"
+          className="underline font-bold whitespace-nowrap hover:opacity-70"
+        >
+          Voir les offres →
+        </Link>
+      </div>
+      <DismissButton onDismiss={fermer} />
+    </div>
+  )
+}
+
+function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean }) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
 
   /** Rend le bandeau, ou rien s'il a déjà été fermé pour ce repère. */
   const bandeau = (repere: string, contenu: (fermer: () => void) => React.ReactElement) =>
     (ferme === repere ? null : contenu(() => setFerme(repere)))
+
+  // Essai terminé, aucune formule choisie, et le compte suit la règle 2026 :
+  // il tourne sur Découverte. Rien n'est cassé — donc pas de rouge, pas de
+  // « votre compte va être suspendu ». Cette branche passe AVANT les autres :
+  // sans elle, le laveur lirait « Votre période d'essai a expiré » en rouge
+  // alors que sa page de réservation fonctionne toujours.
+  if (choisirFormule) {
+    return bandeau('choisir-formule', fermer => (
+      <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
+          <span>Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.</span>
+          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
+            Voir les offres →
+          </Link>
+        </div>
+        <DismissButton onDismiss={fermer} />
+      </div>
+    ))
+  }
 
   // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
   if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
@@ -276,7 +373,36 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte, createdAt, slug }: Props) {
+  // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
+  // règle recopiée douze fois est une règle qui finit par diverger.
+  const fiche = {
+    plan, grandfathered, slug,
+    created_at: createdAt,
+    subscription_status: subscriptionStatus,
+    trial_ends_at: trialEndsAt,
+  }
+  const offreEffective = planEffectif(fiche)
+
+  // Ce que l'offre actuelle ne couvre pas, signalé dans le menu par le nom de
+  // l'offre qui l'ouvre. Avant, ces entrées étaient identiques aux autres : on
+  // cliquait, on tombait sur un mur, et rien n'avait prévenu. Le badge le dit
+  // d'avance, et l'entrée reste cliquable — c'est en voyant l'aperçu qu'on a
+  // envie de l'offre, pas en butant sur une porte fermée.
+  const badgesOffre = Object.fromEntries(
+    ([
+      ['/dashboard/crm', 'crm'],
+      ['/dashboard/compta', 'compta'],
+      ['/dashboard/factures', 'facturation'],
+    ] as [string, Feature][])
+      .filter(([, f]) => !hasFeature(fiche, f))
+      .map(([href, f]) => {
+        const requis = requiredPlan(f)
+        return [href, { label: PLAN_LABELS[requis], couleur: PLAN_COULEURS[requis] }]
+      }),
+  )
+  const complet = accesComplet(fiche)
+  const choisirFormule = doitChoisirFormule(fiche)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Barre du bas (refonte 2026, passe 4) : uniquement dans la PWA installée
   // (usePwaStandalone — la FORME du châssis change, une nav en plus apparaît,
@@ -380,6 +506,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           unreadSupportCount={unreadSupportCount}
           estEquipeSupport={estEquipeSupport}
           unreadTeamCount={unreadTeamCount}
+          badgesOffre={badgesOffre}
         />
       )}
 
@@ -395,7 +522,8 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           retirés. Ailleurs (site, PWA sans bêta), aucune de ces règles ne
           s'applique et l'en-tête est identique à celui d'avant. */}
       <header className={`bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10${betaRefonte ? ' wb-entete-beta' : ''}`}>
-        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} />
+        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} />
+        <NouvellesOffresBanner />
         <AppBetaBanner />
         <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -443,7 +571,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
             {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
                 sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
                 ce qui laisserait croire à un abonnement qui n'existe pas. */}
-            {washerName && <PlanBadge plan={plan} grandfathered={grandfathered} />}
+            {washerName && <PlanBadge grandfathered={complet} effectif={offreEffective} />}
             <form action="/api/auth/logout" method="POST">
               <button
                 aria-label="Se déconnecter"

@@ -83,9 +83,8 @@ async function lireFrais(debut: string, fin: string): Promise<Expense[] | null> 
   return (json.expenses ?? []) as Expense[]
 }
 
-export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCount, bookings, facturesManuelles, periode, maintenant, reservationsIncompletes }: {
+export default function ChiffresArgent({ hasCompta, facturesCount, bookings, facturesManuelles, periode, maintenant, reservationsIncompletes }: {
   hasCompta: boolean
-  comptaPlanLabel: string
   facturesCount: number
   bookings: ReservationArgent[]
   /** Factures écrites à la main et marquées payées (voir `encaissementsDesFactures`). */
@@ -165,7 +164,7 @@ export default function ChiffresArgent({ hasCompta, comptaPlanLabel, facturesCou
       <UpgradePrompt
         title="Gérez votre comptabilité"
         description="Suivez votre chiffre d'affaires, vos dépenses et votre résultat chaque mois. Disponible à partir du plan Pro."
-        planLabel={comptaPlanLabel}
+        feature="compta"
       />
     )
   }

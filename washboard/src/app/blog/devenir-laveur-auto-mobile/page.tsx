@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devenir-laveur-auto-mobile')!
@@ -213,7 +214,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Être organisé dès le premier client">
+        <Cta
+          title="Être organisé dès le premier client"
+          secondary={lienPageMetier(article.theme)}
+        >
           Une page de réservation à votre nom, un agenda qui se remplit seul, les demandes
           d&apos;avis envoyées automatiquement. WashBoard s&apos;occupe de l&apos;administratif
           pendant que vous lavez.

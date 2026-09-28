@@ -28,7 +28,7 @@ export type Washer = {
   website_url: string | null
   account_status: 'active' | 'deactivated' | 'pending_deletion'
   deletion_scheduled_at: string | null
-  plan: 'essentiel' | 'pro'
+  plan: 'decouverte' | 'starter' | 'pro' | 'business'
   grandfathered: boolean
   review_enabled: boolean
   review_delay_hours: number
@@ -98,6 +98,8 @@ export type Service = {
   vehicle_types: string[]
   vehicle_price_overrides: Record<string, number>
   addons: ServiceAddon[]
+  /** En veille : conservee en base, invisible pour les clients. */
+  en_veille?: boolean
 }
 
 export type Availability = {

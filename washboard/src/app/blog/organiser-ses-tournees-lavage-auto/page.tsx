@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('organiser-ses-tournees-lavage-auto')!
@@ -108,7 +109,10 @@ export default function Page() {
         <P>
           Vous pouvez même encourager ces créneaux avec une petite remise. Dix pour cent sur un
           créneau qui vous économise quarante minutes de route est une excellente affaire pour vous
-          deux.
+          deux. C&apos;est exactement ce que{' '}
+          <A href="/optimisation-tournee-lavage-auto">les créneaux groupés de WashBoard</A>{' '}
+          automatisent : le logiciel compare le trajet réel à vos rendez-vous du jour et met en avant
+          les horaires proches, avec la remise que vous avez réglée.
         </P>
 
         <H2>Prévoir des durées réalistes</H2>
@@ -178,7 +182,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Des tournées groupées, sans y penser">
+        <Cta
+          title="Des tournées groupées, sans y penser"
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard regroupe automatiquement les rendez-vous par quartier, calcule les temps de
           trajet entre deux prestations et ne propose au client que les créneaux réellement
           tenables. Vous roulez moins, vous lavez plus.

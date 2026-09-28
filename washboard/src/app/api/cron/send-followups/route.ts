@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendFollowupEmail } from '@/lib/email'
-import { sendSms } from '@/lib/sms'
-import { graceEnded } from '@/lib/plan'
+import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { graceEnded, hasFeature } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
+import { notifierEquipe } from '@/lib/push'
 import { repartirParClient, decisionPlusRecents } from '@/lib/relances'
 import { cleClient } from '@/lib/clientProfile'
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   let washerQuery = admin
     .from('washers')
-    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
 
@@ -51,8 +52,17 @@ export async function GET(request: NextRequest) {
   // totalement inaperçue.
   let failed = 0
   let clos = 0
+  let premiereCause: string | null = null
 
   for (const washer of washers ?? []) {
+    // Les relances appartiennent à l'offre Pro. Ce contrôle manquait : le job
+    // ne regardait que `followup_enabled`, une case cochée une fois et jamais
+    // relue. Un laveur qui l'avait activée pendant son essai continuait donc à
+    // envoyer des relances — des SMS facturés à WashBoard — depuis une offre
+    // qui ne les comprend pas. Devenu criant avec le retour automatique sur
+    // Découverte à la fin de l'essai.
+    if (!hasFeature(washer, 'followup')) continue
+
     // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
     if (washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) continue
 
@@ -130,7 +140,9 @@ export async function GET(request: NextRequest) {
 
       try {
         if (channel === 'sms' && booking.client_phone) {
-          const sender = (washer.sms_sender ?? washer.name).slice(0, 11)
+          // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
+          // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
+          const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
           await sendSms({ to: booking.client_phone, sender, content: message })
           smsSent++
         } else {
@@ -149,6 +161,9 @@ export async function GET(request: NextRequest) {
           .eq('id', booking.id)
       } catch (e) {
         failed++
+        // La cause telle quelle, pour la notification : « not enough credit »
+        // dit quoi faire, « 3 échecs » envoie fouiller les journaux.
+        premiereCause ??= e instanceof Error ? e.message : String(e)
         logger.error('cron.followups.send_failed', { bookingId: booking.id }, e)
       }
     }
@@ -166,6 +181,23 @@ export async function GET(request: NextRequest) {
       if (errClore) logger.error('cron.send-followups.close_failed', { washerId: washer.id, nombre: paquet.length }, errClore)
       else clos += paquet.length
     }
+  }
+
+  // Ici, un envoi en échec restait déjà candidat pour la prochaine exécution
+  // (`followup_sent_at` n'est posé qu'après un envoi réussi) — mais sans que
+  // personne ne l'apprenne. `tag` fixe : les notifications se remplacent au
+  // lieu de s'empiler tant que la panne dure.
+  if (failed > 0) {
+    await notifierEquipe({
+      title: '⚠️ Relances en échec',
+      body: [
+        `${failed} relance${failed > 1 ? 's' : ''} non envoyée${failed > 1 ? 's' : ''}`,
+        premiereCause ? `Cause : ${premiereCause.slice(0, 160)}` : null,
+        'Nouvelle tentative à la prochaine exécution.',
+      ].filter(Boolean).join('\n'),
+      url: '/dashboard',
+      tag: 'envois-relance-echec',
+    })
   }
 
   return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, clos, test: test.enabled })

@@ -6,6 +6,7 @@ import AccueilV2 from '@/components/dashboard/AccueilV2'
 import type { RdvAccueil } from '@/components/dashboard/AccueilV2'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
+import type { Plan } from '@/lib/plan'
 
 // Point de branchement v1/v2 de l'écran d'accueil — passe 8 de la refonte
 // 2026, même règle que ClientsView.tsx, ParametresForm.tsx ou
@@ -42,6 +43,10 @@ type Props = {
   trafic: { visiteurs: number; conversions: number } | null
   prestationTop: { nom: string; nombre: number } | null
   zone: ZoneConfig
+  /** Quota de réservations du mois et clients masqués par le plafond (fusionné le 2026-09-28) —
+   *  ignorés côté v1, qui rend déjà `JaugeReservations`/`BandeauBloquees` dans `v1`. */
+  jauge: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }
+  bloquees: { nombre: number; offre: Plan; montant: number }
 }
 
 export default function Accueil({ v1, ...v2 }: Props) {

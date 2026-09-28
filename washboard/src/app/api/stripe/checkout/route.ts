@@ -12,6 +12,18 @@ export const POST = withErrorHandling('stripe.checkout', async (req: NextRequest
   if (!user) throw new AppError('non authentifié', { status: 401, publicMessage: 'Non autorisé' })
 
   const { plan } = await req.json() as { plan: Plan }
+
+  // Découverte est gratuite : il n'y a rien à encaisser. Sans ce refus
+  // explicite, l'absence d'identifiant de prix se confondrait avec une
+  // variable d'environnement oubliée, et le laveur lirait « Plan invalide »
+  // pour une offre parfaitement valide.
+  if (plan === 'decouverte') {
+    throw new AppError('offre gratuite', {
+      status: 400,
+      publicMessage: 'L’offre Découverte est gratuite : aucun paiement n’est nécessaire.',
+    })
+  }
+
   const priceId = STRIPE_PRICE_IDS[plan]
   if (!priceId) throw new AppError('plan inconnu', { status: 400, publicMessage: 'Plan invalide' })
 

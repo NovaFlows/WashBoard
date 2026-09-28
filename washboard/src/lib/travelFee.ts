@@ -19,14 +19,14 @@ export function pickTravelFee(tiers: Tier[], durationMin: number): number {
  *  - 'base'     : toujours depuis base_address
  *  - 'previous' : depuis l'adresse du dernier RDV terminé avant scheduled_at, sinon base_address
  *
- *  `bookingsReader` doit avoir un accès élevé (admin) : un visiteur anonyme
+ *  `lecteurPrivilegie` doit avoir un accès élevé (admin) : un visiteur anonyme
  *  n'a aucun droit RLS sur `bookings`, donc un client lié à sa session ne
  *  trouverait jamais de RDV précédent et retomberait toujours, en silence,
  *  sur base_address — même quand le laveur a explicitement choisi le mode
  *  "RDV précédent".
  */
 async function resolveOrigin(
-  bookingsReader: SupabaseClient,
+  lecteurPrivilegie: SupabaseClient,
   washerId: string,
   mode: 'base' | 'previous',
   baseAddress: string | null,
@@ -36,7 +36,7 @@ async function resolveOrigin(
 
   // Chercher le dernier RDV confirmé/en attente du jour qui se termine avant scheduled_at
   const dayStart = scheduledAt.slice(0, 10) + 'T00:00:00.000Z'
-  const { data: prevBookings, error: errPrev } = await bookingsReader
+  const { data: prevBookings, error: errPrev } = await lecteurPrivilegie
     .from('bookings')
     .select('address, scheduled_at, services(duration_minutes)')
     .eq('washer_id', washerId)
@@ -61,16 +61,24 @@ async function resolveOrigin(
  *  Retourne 0 si pas de clé, pas de tiers, ou pas d'adresse origine.
  */
 export async function computeTravelFee(
-  supabase: SupabaseClient,
+  // UN SEUL client, et il doit avoir un accès élevé (admin).
+  //
+  // Il y avait avant deux clients : celui de la session pour lire `washers`,
+  // un client admin pour lire `bookings`. Depuis la fermeture de la lecture
+  // publique de `washers` (audit du 2026-09-05), la clé anonyme ne voit plus
+  // aucune fiche — sans erreur, zéro ligne. `/api/travel-fee` renvoyait donc
+  // 0 € à TOUS les visiteurs : « Pas de frais de déplacement pour cette
+  // adresse », alors que la réservation enregistrée, elle, portait bien les
+  // frais calculés côté serveur. Constaté le 2026-09-26 sur Kookii Clean, dont
+  // un trajet Margency → Évry (1 h 03) valait 40 € invisibles à la réservation.
+  //
+  // Un seul paramètre supprime le piège : il n'y a plus de client à choisir.
+  lecteurPrivilegie: SupabaseClient,
   washerId: string,
   destinationAddress: string,
   scheduledAt: string,
-  // Client à privilèges élevés pour lire `bookings` en mode "RDV précédent"
-  // (RLS bloque un visiteur anonyme). Par défaut = `supabase`, pour ne pas
-  // casser un appelant qui passe déjà un client admin unique.
-  bookingsReader: SupabaseClient = supabase,
 ): Promise<number> {
-  const { data: washer, error: errWasher } = await supabase
+  const { data: washer, error: errWasher } = await lecteurPrivilegie
     .from('washers')
     .select('base_address, travel_fee_tiers, travel_fee_mode')
     .eq('id', washerId)
@@ -87,7 +95,7 @@ export async function computeTravelFee(
 
   if (tiers.length === 0 || !baseAddr) return 0
 
-  const origin = await resolveOrigin(bookingsReader, washerId, mode, baseAddr, scheduledAt)
+  const origin = await resolveOrigin(lecteurPrivilegie, washerId, mode, baseAddr, scheduledAt)
   if (!origin) return 0
 
   try {

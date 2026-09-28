@@ -8,6 +8,8 @@ import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/client
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { ContactEntreprise, EntrepriseListItem } from '@/lib/entrepriseProfile'
+import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
+import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode, montantVerrouille } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -18,7 +20,8 @@ import type { ContactEntreprise, EntrepriseListItem } from '@/lib/entrepriseProf
 // `review_request_sent_at` sert à la timeline mélangée de la fiche (`lib/clientTimeline.ts`).
 // `vehicles_detail` s'ajoute le même jour : le modèle que le client tape lui-même en réservant
 // (`StepService.tsx`), repris dans la fiche plutôt que redemandé au laveur (`clientProfile.ts`,
-// `vehiculesReserves`).
+// `vehiculesReserves`). `created_at` sert AUSSI au verrouillage des réservations hors quota :
+// sans lui, la règle ne peut rien trancher et l'annuaire les afficherait toutes.
 const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, vehicles_detail, services(name, price, duration_minutes)'
 
 export default async function ClientsPage() {
@@ -40,6 +43,26 @@ export default async function ClientsPage() {
   )
   // Sans trace, un fichier vide ne se distinguerait pas d'un laveur sans client.
   if (error) logger.error('clients.bookings.fetch_failed', { washerId: washer.id }, error)
+
+  // Réservations au-delà du quota. Elles ne rejoignent PAS l'annuaire : celui-ci
+  // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
+  // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
+  // au-dessus, avec le nom flouté et le jour.
+  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const montantBloque = montantVerrouille(bookings, seuils)
+  const marquees = masquerVerrouillees(bookings, seuils)
+  const visibles = marquees.filter(b => !b.verrouillee)
+  const bloquees = marquees
+    .filter(b => b.verrouillee)
+    .map(b => ({ id: b.id as string, client_name: b.client_name as string | null, scheduled_at: b.scheduled_at as string }))
+
+  // L'offre proposée dépend du VOLUME du mois, pas du simple fait d'être
+  // bloqué : à sept réservations sur une offre plafonnée à cinq, le Starter
+  // suffit et coûte trente euros de moins que le Pro. Le comptage n'a lieu que
+  // s'il y a quelque chose à débloquer — sinon c'est une requête pour rien sur
+  // chaque affichage de la page.
+  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
 
   // Les devis et factures écrits à la main font naître des clients qui n'ont jamais réservé
   // (Alexandre, 2026-09-27). La RLS limite déjà la lecture à ce laveur ; le filtre explicite
@@ -86,7 +109,7 @@ export default async function ClientsPage() {
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST
   // renvoie un objet : une réservation n'a qu'une prestation. On accepte les
   // deux formes plutôt que de forcer le type.
-  const lignes: ClientBooking[] = bookings.map(b => ({
+  const lignes: ClientBooking[] = visibles.map(b => ({
     ...b,
     services: (Array.isArray(b.services) ? b.services[0] : b.services) ?? null,
   }))
@@ -108,10 +131,13 @@ export default async function ClientsPage() {
   }))
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <ClientsView
         nomLaveur={washer.name}
         bookings={lignes}
+        bloques={bloquees}
+        offreDeblocage={PLAN_LABELS[offreProposee]}
+        montantBloque={montantBloque}
         documents={(documents ?? []) as unknown as ClientDocument[]}
         reglages={reglages}
         reglagesMessages={{

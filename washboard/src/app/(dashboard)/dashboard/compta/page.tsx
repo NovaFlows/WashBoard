@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ComptaDashboard from '@/components/dashboard/ComptaDashboard'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
-import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { ApercuCompta } from '@/components/dashboard/ApercusVerrouilles'
+import { hasFeature } from '@/lib/plan'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
@@ -19,15 +20,16 @@ export default async function ComptaPage() {
   // La comptabilité fait partie du plan Pro (et au-dessus)
   if (!hasFeature(washer, 'compta')) {
     return (
-      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
         <div className="p-4">
           <div className="mb-6">
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Comptabilité</h1>
           </div>
           <UpgradePrompt
             title="Gérez votre comptabilité"
-            description="Suivez votre chiffre d'affaires, vos dépenses et votre résultat chaque mois. Disponible à partir du plan Pro."
-            planLabel={requiredPlanLabel('compta')}
+            description="Suivez votre chiffre d’affaires, vos dépenses et votre résultat chaque mois."
+            feature="compta"
+            apercu={<ApercuCompta />}
           />
         </div>
       </DashboardShell>
@@ -58,7 +60,7 @@ export default async function ComptaPage() {
   const initialRevenue = revenuNet(bookings ?? [])
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <div className="p-4 max-w-2xl mx-auto">
         <div className="mb-5">
           <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Comptabilité</h1>

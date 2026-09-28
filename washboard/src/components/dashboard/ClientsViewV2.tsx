@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { Search, X, Trash2, Lock } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import FicheEntrepriseV2 from '@/components/dashboard/FicheEntrepriseV2'
 import { ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
@@ -15,6 +16,9 @@ import { marquerNePlusContacter, supprimerClient, supprimerEntreprise } from '@/
 import { trouverDoublon } from '@/lib/doublons'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
+import { formatEuros } from '@/lib/plan'
+import { jourSeul } from '@/lib/reservationsVerrouillees'
+import type { ClientBloque } from '@/components/dashboard/ClientsViewV1'
 
 // Fichier clients du laveur, présentation v2 — réservée à la PWA installée en
 // mode standalone (voir ClientsView.tsx, le point de branchement ; décision
@@ -131,8 +135,19 @@ function versRdvMessage(b: ClientBooking): RdvMessage {
   }
 }
 
-export default function ClientsViewV2({ bookings, documents = [], reglages = [], reglagesMessages, entreprises = [], nomLaveur }: {
+export default function ClientsViewV2({
+  bookings, bloques = [], offreDeblocage = 'Pro', montantBloque = 0,
+  documents = [], reglages = [], reglagesMessages, entreprises = [], nomLaveur,
+}: {
   bookings: ClientBooking[]
+  /** Clients masqués par le plafond de l'offre (2026-09-28) — voir `ClientsViewV1.tsx`,
+   *  `ClientBloque` : même règle des deux côtés, une carte floutée plutôt qu'un encart à part
+   *  (« se lisait comme une publicité et se sautait comme une publicité », retour de test). */
+  bloques?: ClientBloque[]
+  /** Nom de l'offre qui les débloque — « Starter », « Pro ». */
+  offreDeblocage?: string
+  /** Total en euros des lavages masqués. */
+  montantBloque?: number
   /** Devis et factures écrits à la main : ils font naître des clients qui n'ont jamais
    *  réservé (Alexandre, 2026-09-27 — « un client comme un autre »). */
   documents?: ClientDocument[]
@@ -266,6 +281,10 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
     [clients, filtre],
   )
   const affiches = useMemo(() => rechercherClients(parFiltre, recherche), [parFiltre, recherche])
+  // Les masqués disparaissent dès qu'une recherche est en cours (on n'a ni leur téléphone ni
+  // leur email, rien sur quoi chercher), et hors de l'onglet « Tous »/« Pros » — même règle
+  // que ClientsViewV1.tsx.
+  const bloquesAffiches = filtre === 'relancer' || filtre === 'entreprises' || recherche.trim() ? [] : bloques
   const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglagesEffectifs) : null
   // Doublon probable (menu « … » de la fiche, 2026-09-28) : calculé ici, pas dans la fiche —
   // c'est cet écran qui connaît TOUT le fichier (`clients`), une fiche ouverte ne voit qu'elle-même.
@@ -319,9 +338,15 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
             <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''}</span>
           )}
         </p>
+        {filtre !== 'relancer' && filtre !== 'entreprises' && bloques.length > 0 && (
+          <p className={`text-[13px] mt-0.5 ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
+            {bloques.length} masqué{bloques.length > 1 ? 's' : ''}
+            {montantBloque > 0 && ` · ${formatEuros(montantBloque)} € de lavages`}
+          </p>
+        )}
       </div>
 
-      {clients.length > 0 && (
+      {(clients.length > 0 || bloques.length > 0) && (
         <>
           {filtre !== 'relancer' && filtre !== 'entreprises' && (
             <div className="relative">
@@ -424,8 +449,11 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
                 </p>
               )}
 
-              {affiches.length > 0 && (
+              {(affiches.length > 0 || bloquesAffiches.length > 0) && (
                 <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+                  {bloquesAffiches.map(b => (
+                    <LigneBloqueeV2 key={b.id} bloque={b} offre={offreDeblocage} />
+                  ))}
                   {affiches.map(c => (
                     <LigneClient
                       key={c.cle}
@@ -558,6 +586,32 @@ function LigneClient({ client: c, maintenant, onOuvrir, ouverte, onOuvrirLigne, 
           </span>
         </button>
       </div>
+    </li>
+  )
+}
+
+/** Une ligne d'annuaire qu'on ne peut pas ouvrir — client venu au-delà du plafond de l'offre.
+ *  Même principe que `ClientsViewV1.tsx`, `LigneBloquee` : le nom et le jour restent lisibles
+ *  (assez pour savoir qu'un vrai client attend), le reste est remplacé par des barres floutées,
+ *  jamais par une valeur inventée. La vraie protection est en amont — téléphone, email, adresse
+ *  et heure ne sont jamais chargés, voir `masquerVerrouillees`. */
+function LigneBloqueeV2({ bloque, offre }: { bloque: ClientBloque; offre: string }) {
+  return (
+    <li className="flex items-start gap-3 px-4 py-3">
+      <span className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-[color:var(--v2-filet)] text-[color:var(--v2-color-gris)] mt-0.5">
+        <Lock size={15} strokeWidth={2} aria-hidden />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className={`block text-[15px] ${nom} truncate`}>{bloque.client_name || 'Client'}</span>
+        <span className="block h-3 w-40 max-w-full rounded bg-[color:var(--v2-filet)] blur-[3px] mt-1.5" aria-hidden />
+        <span className={`block text-[12.5px] mt-1.5 ${corps} text-[color:var(--v2-color-gris)]`}>
+          Réservation le {jourSeul(bloque.scheduled_at) ?? '—'}
+        </span>
+        <Link href="/dashboard/abonnement" className={`inline-block text-[12.5px] mt-1 ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
+          Débloquer avec le plan {offre}
+        </Link>
+      </span>
+      <span className="shrink-0 h-3 w-8 rounded bg-[color:var(--v2-filet)] blur-[3px] mt-1.5" aria-hidden />
     </li>
   )
 }

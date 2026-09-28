@@ -1,14 +1,20 @@
 import { PLAN_CARDS, SITE_URL_FALLBACK } from '@/lib/plan'
+import { FAQ_ITEMS } from '@/lib/faq'
 
 // Données structurées de la page d'accueil (schema.org).
 //
-// Elles décrivent à Google ce qu'est WashBoard : une organisation, et un
-// logiciel avec une gamme de prix. C'est ce qui permet d'afficher un panneau
-// de marque et les tarifs directement dans les résultats de recherche.
+// Elles décrivent à Google ce qu'est WashBoard : une organisation, un
+// logiciel avec une gamme de prix, le site lui-même, et sa FAQ. C'est ce qui
+// permet d'afficher un panneau de marque, les tarifs et les questions
+// dépliables directement dans les résultats de recherche.
 //
 // Les prix sont DÉRIVÉS de PLAN_CARDS, jamais recopiés : annoncer un tarif
 // différent de celui affiché sur la page ferait retirer les résultats
 // enrichis. Changer un prix dans plan.ts suffit à mettre ceci à jour.
+//
+// Les questions/réponses du FAQPage sont DÉRIVÉES de FAQ_ITEMS (@/lib/faq),
+// la même source que la section FAQ affichée sur la page — jamais recopiées
+// à la main, pour la même raison que les prix.
 //
 // Volontairement absent : `aggregateRating`. Nous n'avons pas d'avis clients
 // vérifiables, et en inventer est précisément ce qui fait sanctionner un site.
@@ -42,7 +48,7 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
     url: siteUrl,
     logo: { '@type': 'ImageObject', url: `${siteUrl}/LogoWashBoard.png` },
     description:
-      "Logiciel de gestion pour les pros du nettoyage et de l'entretien à domicile (lavage auto, detailing, ménage, entretien de piscine...) : page de réservation en ligne, agenda, suivi clients et comptabilité.",
+      "Logiciel de gestion pour les laveurs auto mobiles et le detailing : page de réservation en ligne, agenda, suivi clients et comptabilité.",
     // N'apparaît que si des URLs réelles sont renseignées ci-dessus : un
     // tableau vide ne doit pas se retrouver dans le JSON-LD publié.
     ...(SOCIAL_SAME_AS.length > 0 ? { sameAs: SOCIAL_SAME_AS } : {}),
@@ -62,10 +68,13 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
     name: 'WashBoard',
     url: siteUrl,
     applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web',
+    // "PWA" : installable, vérifié via public/manifest.webmanifest
+    // (display: standalone, icônes, raccourcis). Pas iOS/Android — aucune
+    // fiche App Store ni Play Store n'existe, l'affirmer serait faux.
+    operatingSystem: 'Web, PWA',
     inLanguage: 'fr-FR',
     description:
-      "L'outil de gestion des pros du nettoyage et de l'entretien à domicile : réservation en ligne sans compte client, créneaux groupés par quartier, relances et avis automatiques, comptabilité.",
+      "Logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne sans compte client, créneaux groupés au temps de trajet réel entre les rendez-vous, facturation automatique conforme (SIRET, TVA), avis Google demandés après chaque prestation, comptabilité.",
     publisher: { '@id': `${siteUrl}/#organization` },
     offers: {
       '@type': 'AggregateOffer',
@@ -77,5 +86,30 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
     },
   }
 
-  return { '@context': 'https://schema.org', '@graph': [organisation, logiciel] }
+  // Identifie le site lui-même (distinct de l'Organization, qui identifie la
+  // marque) : usage standard recommandé par Google pour ancrer le nom du
+  // site affiché au-dessus du lien dans les résultats de recherche.
+  const site = {
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    url: siteUrl,
+    name: 'WashBoard',
+    inLanguage: 'fr-FR',
+    publisher: { '@id': `${siteUrl}/#organization` },
+  }
+
+  // Généré depuis `FAQ_ITEMS` (@/lib/faq), la même source que la section FAQ
+  // affichée sur la page : impossible que ce balisage annonce une question
+  // ou une réponse différente de ce que lit un visiteur.
+  const faq = {
+    '@type': 'FAQPage',
+    '@id': `${siteUrl}/#faq`,
+    mainEntity: FAQ_ITEMS.map(item => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  }
+
+  return { '@context': 'https://schema.org', '@graph': [organisation, logiciel, site, faq] }
 }

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Chiffres from '@/components/dashboard/Chiffres'
-import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { hasFeature } from '@/lib/plan'
 import { normalizeHost } from '@/lib/funnelStats'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
@@ -93,14 +93,13 @@ export default async function ChiffresPage() {
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <Chiffres
         bookings={bookings ?? []}
         facturesManuelles={(facturesManuelles ?? []) as unknown as FactureManuelle[]}
         events={funnelEvents ?? []}
         websiteHost={websiteHost}
         hasCompta={hasFeature(washer, 'compta')}
-        comptaPlanLabel={requiredPlanLabel('compta')}
         facturesCount={facturesCount ?? 0}
         evenementsDepuis={since.toISOString()}
         reservationsIncompletes={!!bookingsError}
