@@ -20,6 +20,16 @@ export async function supprimerClient(cle: string): Promise<ResultatApi<null>> {
   return r.ok ? { ok: true, data: null } : r
 }
 
+/** Écrit les notes et les véhicules d'un client — texte libre, fiche particulier/pro/entreprise
+ *  (2026-09-28, Alexandre : « comme ça on sait les voitures des gens »). `undefined` laisse le
+ *  champ tel quel côté serveur (voir la route) : on peut n'en changer qu'un des deux. */
+export async function modifierFiche(
+  cle: string, champs: { notes?: string | null; vehicules?: string | null },
+): Promise<ResultatApi<null>> {
+  const r = await appeler('enregistrer', 'PATCH', `/api/clients/${encodeURIComponent(cle)}`, champs)
+  return r.ok ? { ok: true, data: null } : r
+}
+
 /** Rattache un client existant à une entreprise (ou l'en détache, `entrepriseId: null`) —
  *  fiche entreprise, 2026-09-28. Un contact n'existe que comme un client déjà connu (au moins
  *  une réservation ou un document) : voir `lib/entrepriseProfile.ts`. */

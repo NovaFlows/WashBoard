@@ -60,6 +60,14 @@ export type ClientReglages = {
    *  compta passée. Masquer donne le résultat visible demandé — il disparaît du fichier — sans
    *  toucher à aucune donnée. */
   masque: boolean
+  /** Note libre — « portail à code 1234 », « préfère le samedi matin ». */
+  notes: string | null
+  /** Véhicules du client, en texte libre — « Peugeot 208 grise, plaque AB-123-CD » (2026-09-28,
+   *  Alexandre : « comme ça on sait les voitures des gens »). Pas un champ structuré : un
+   *  laveur qui lave 2-3 voitures d'un même foyer n'a pas besoin d'un formulaire par véhicule,
+   *  une ligne tapée une fois suffit — et il sait déjà écrire une plaque plus vite qu'un champ
+   *  ne saurait la valider. */
+  vehicules: string | null
 }
 
 /** Ce qu'un document apporte à une fiche client. Forme minimale voulue : elle évite de faire
@@ -125,6 +133,9 @@ export type ClientProfile = {
   /** Écart moyen, en jours, entre deux visites honorées consécutives — « son rythme ».
    *  `null` avec moins de deux visites : une moyenne sur un seul point ne veut rien dire. */
   rythmeJours: number | null
+  notes: string | null
+  /** Véhicules du client, en texte libre — voir `ClientReglages.vehicules`. */
+  vehicules: string | null
 }
 
 const isHonored = (b: ClientBooking) => b.status === 'confirmed' || b.status === 'done'
@@ -194,6 +205,8 @@ export function buildClientProfile(
   return {
     cle: key,
     nePlusContacter: reglages.find(r => r.cle === key)?.nePlusContacter ?? false,
+    notes: reglages.find(r => r.cle === key)?.notes ?? null,
+    vehicules: reglages.find(r => r.cle === key)?.vehicules ?? null,
     ...identite,
     phone: mine.find(b => b.client_phone)?.client_phone
       ?? siens.find(d => d.contenu.client.telephone)?.contenu.client.telephone

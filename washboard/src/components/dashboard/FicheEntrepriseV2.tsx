@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, MoreHorizontal, Phone, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MoreHorizontal, Phone, Plus } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
+import FeuilleActionsDocumentV2 from '@/components/dashboard/FeuilleActionsDocumentV2'
 import type { EntrepriseProfile, Site } from '@/lib/entrepriseProfile'
 import type { ResumeClient } from '@/lib/listeClients'
 import { rechercherClients } from '@/lib/listeClients'
@@ -13,6 +14,8 @@ import {
   ajouterSite, creerEntreprise, modifierEntreprise, modifierSite, rattacherEntreprise,
   supprimerEntreprise, supprimerSite,
 } from '@/lib/clientsApi'
+import { lireDocuments, envoyerDocument, marquerPayee } from '@/lib/documentsApi'
+import type { Document } from '@/lib/documents'
 import { FUSEAU } from '@/lib/dateUtils'
 
 // Fiche entreprise — proposition de Yanis (canevas du 2026-09-28), construite le même jour.
@@ -298,11 +301,13 @@ type SousFeuille =
   | { quoi: 'supprimer' }
 
 export default function FicheEntrepriseV2({
-  profil, clientsDisponibles, onOuvrirContact, onClose,
+  profil, clientsDisponibles, nomLaveur, onOuvrirContact, onClose,
 }: {
   profil: EntrepriseProfile
   /** Clients pas encore rattachés à CETTE entreprise — voir `FeuilleAjouterContactV2`. */
   clientsDisponibles: ResumeClient[]
+  /** Signature du message WhatsApp d'une facture ouverte depuis l'alerte « impayées ». */
+  nomLaveur: string
   onOuvrirContact: (cle: string) => void
   onClose: () => void
 }) {
@@ -312,6 +317,54 @@ export default function FicheEntrepriseV2({
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
   const { entreprise, sites, contacts, totalRevenue, vehicules, derniersPassages, devisEnAttente, facturesImpayees } = profil
+
+  // Ouvrir une facture depuis l'alerte « impayées » (Alexandre, 2026-09-28 : « quand je clique
+  // sur la notification de la facture […] il faut que ça m'affiche la facture avec télécharger
+  // envoyer etc »). `EntrepriseProfile` ne porte que `ClientDocument` — une forme minimale,
+  // volontairement sans les mentions légales du laveur (voir `lib/clientProfile.ts`) — donc pas
+  // de quoi ouvrir la MÊME feuille que Documents et factures, qui en a besoin. On va chercher le
+  // document complet à la demande, une seule fois, plutôt que d'alourdir tout l'écran Clients
+  // pour un geste occasionnel.
+  const [documentsCharges, setDocumentsCharges] = useState<Document[] | null>(null)
+  const [factureOuverteId, setFactureOuverteId] = useState<string | null>(null)
+  const [chargementFacture, setChargementFacture] = useState(false)
+  const [occupeFacture, setOccupeFacture] = useState(false)
+  const [erreurFacture, setErreurFacture] = useState<string | null>(null)
+  const factureOuverte = factureOuverteId ? documentsCharges?.find(d => d.id === factureOuverteId) ?? null : null
+
+  async function ouvrirFacture(id: string) {
+    setErreurFacture(null)
+    setFactureOuverteId(id)
+    if (documentsCharges) return
+    setChargementFacture(true)
+    const r = await lireDocuments()
+    setChargementFacture(false)
+    if (!r.ok) { setErreurFacture(r.message); setFactureOuverteId(null); return }
+    setDocumentsCharges(r.data)
+  }
+
+  async function marquerFacturePayee(paye: boolean) {
+    if (!factureOuverte || occupeFacture) return
+    setOccupeFacture(true)
+    setErreurFacture(null)
+    const r = await marquerPayee(factureOuverte.id, paye)
+    setOccupeFacture(false)
+    if (!r.ok) { setErreurFacture(r.message); return }
+    // Optimiste, comme Documents et factures : la fiche entreprise (totalRevenue,
+    // facturesImpayees) se recalculera au prochain rendu serveur, `router.refresh()` ci-dessous.
+    setDocumentsCharges(ds => (ds ?? []).map(d => (d.id === factureOuverte.id ? { ...d, paye_le: paye ? new Date().toISOString() : null } : d)))
+    router.refresh()
+  }
+
+  async function envoyerFacture() {
+    if (!factureOuverte || occupeFacture) return
+    setOccupeFacture(true)
+    setErreurFacture(null)
+    const r = await envoyerDocument(factureOuverte.id)
+    setOccupeFacture(false)
+    if (!r.ok) { setErreurFacture(r.message); return }
+    setDocumentsCharges(ds => (ds ?? []).map(d => (d.id === factureOuverte.id ? { ...d, envoye_le: new Date().toISOString() } : d)))
+  }
 
   function apresEcriture() {
     setFeuille(null)
@@ -371,6 +424,8 @@ export default function FicheEntrepriseV2({
         </button>
       </div>
 
+      {erreurFacture && <div className="mt-2"><Constat ton="rouge" role="alert">{erreurFacture}</Constat></div>}
+
       <dl className="grid grid-cols-3 gap-3 mt-3">
         <div className="flex flex-col-reverse">
           <dt className={`m-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>au total</dt>
@@ -381,7 +436,10 @@ export default function FicheEntrepriseV2({
           <dd className={`m-0 text-[24px] leading-none ${corpsFort} tabular-nums`}>{vehicules}</dd>
         </div>
         <div className="flex flex-col-reverse">
-          <dt className={`m-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>paiement</dt>
+          {/* « délai » et pas juste « paiement » : sans ça, confondu avec « a-t-il payé »
+              (Alexandre, 2026-09-28) — ce chiffre est un délai CONVENU, pas un état d'encaissement,
+              qui lui vit dans l'alerte « factures impayées » ci-dessous. */}
+          <dt className={`m-0 text-[12px] leading-tight ${corps} text-[color:var(--v2-color-gris)]`}>délai paiement</dt>
           <dd className={`m-0 text-[24px] leading-none ${corpsFort} tabular-nums`}>
             {entreprise.delaiPaiementJours !== null ? `${entreprise.delaiPaiementJours} j` : '—'}
           </dd>
@@ -393,21 +451,36 @@ export default function FicheEntrepriseV2({
           qui dit qu'il reste quelque chose à percevoir ; « au total » plus haut ne compte QUE
           ce qui est déjà encaissé. */}
       {facturesImpayees.length > 0 && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-color-ambre)]/30 bg-[color:var(--v2-color-surface)] px-3.5 py-3">
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
-          <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
-            {facturesImpayees.length === 1 ? (
-              <>
-                La facture {facturesImpayees[0].document.numero} ({euros.format(facturesImpayees[0].document.contenu.totaux.ttc)}) n’est pas encore
-                encaissée — émise il y a {facturesImpayees[0].jours} j.
-              </>
-            ) : (
-              <>
-                {facturesImpayees.length} factures ne sont pas encore encaissées, pour{' '}
-                {euros.format(facturesImpayees.reduce((s, f) => s + f.document.contenu.totaux.ttc, 0))} au total.
-              </>
-            )}
+        <div className="mt-4 overflow-hidden rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-color-ambre)]/30 bg-[color:var(--v2-color-surface)]">
+          <p className={`flex items-center gap-2 px-3.5 pt-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
+            {facturesImpayees.length === 1
+              ? 'Une facture n’est pas encore encaissée :'
+              : `${facturesImpayees.length} factures ne sont pas encore encaissées, pour ${euros.format(facturesImpayees.reduce((s, f) => s + f.document.contenu.totaux.ttc, 0))} au total :`}
           </p>
+          <ul className="mt-1 divide-y divide-[color:var(--v2-color-ambre)]/20">
+            {facturesImpayees.map(f => (
+              <li key={f.document.id}>
+                {/* Ouvre la feuille de la facture — télécharger, envoyer, appeler, marquer
+                    payée — voir `ouvrirFacture` : c'est de là qu'on encaisse. */}
+                <button
+                  type="button"
+                  onClick={() => void ouvrirFacture(f.document.id)}
+                  className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left hover:bg-[color:var(--v2-color-ambre)]/10"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-[13.5px] ${corpsFort}`}>{f.document.numero}</span>
+                    <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                      Émise il y a {f.jours} j · {euros.format(f.document.contenu.totaux.ttc)}
+                    </span>
+                  </span>
+                  {chargementFacture && factureOuverteId === f.document.id
+                    ? <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>…</span>
+                    : <ChevronRight size={16} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -461,6 +534,7 @@ export default function FicheEntrepriseV2({
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-[14.5px] ${nom}`}>{c.profile?.name ?? c.cle}</span>
                     {c.role && <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{c.role}</span>}
+                    {c.profile?.vehicules && <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{c.profile.vehicules}</span>}
                   </span>
                   {c.profile?.phone && (
                     <a href={`tel:${c.profile.phone}`} onClick={e => e.stopPropagation()} aria-label={`Appeler ${c.profile.name}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] hover:bg-[color:var(--v2-filet)]">
@@ -573,6 +647,20 @@ export default function FicheEntrepriseV2({
         <FeuilleSiteV2
           site={feuille.site} entrepriseId={entreprise.id}
           onEnregistre={apresEcriture} onSupprime={apresEcriture} onClose={() => setFeuille(null)}
+        />
+      )}
+
+      {factureOuverte && (
+        <FeuilleActionsDocumentV2
+          document={factureOuverte}
+          nomLaveur={nomLaveur}
+          occupe={occupeFacture}
+          onEnvoyer={() => void envoyerFacture()}
+          onRepondre={() => {}}
+          onFacturer={() => {}}
+          onPayer={paye => void marquerFacturePayee(paye)}
+          onSupprimer={() => {}}
+          onClose={() => { setFactureOuverteId(null); setErreurFacture(null) }}
         />
       )}
     </div>

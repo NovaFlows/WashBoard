@@ -130,7 +130,7 @@ function versRdvMessage(b: ClientBooking): RdvMessage {
   }
 }
 
-export default function ClientsViewV2({ bookings, documents = [], reglages = [], reglagesMessages, entreprises = [] }: {
+export default function ClientsViewV2({ bookings, documents = [], reglages = [], reglagesMessages, entreprises = [], nomLaveur }: {
   bookings: ClientBooking[]
   /** Devis et factures écrits à la main : ils font naître des clients qui n'ont jamais
    *  réservé (Alexandre, 2026-09-27 — « un client comme un autre »). */
@@ -142,6 +142,8 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   reglagesMessages?: ReglagesRelance
   /** Fiches entreprise (2026-09-28), sites et contacts déjà joints. */
   entreprises?: EntrepriseListItem[]
+  /** Signature du message WhatsApp envoyé depuis une facture ouverte dans la Fiche entreprise. */
+  nomLaveur?: string
 }) {
   const router = useRouter()
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
@@ -159,7 +161,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
     if (reglagesLocaux.size === 0) return reglages
     const parCle = new Map(reglages.map(r => [r.cle, r]))
     for (const [cle, override] of reglagesLocaux) {
-      const existant = parCle.get(cle) ?? { cle, nePlusContacter: false, masque: false }
+      const existant = parCle.get(cle) ?? { cle, nePlusContacter: false, masque: false, notes: null, vehicules: null }
       parCle.set(cle, { ...existant, ...override })
     }
     return [...parCle.values()]
@@ -275,6 +277,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
         <FicheEntrepriseV2
           profil={entrepriseProfil}
           clientsDisponibles={contactsDisponibles}
+          nomLaveur={nomLaveur ?? ''}
           onOuvrirContact={cle => { setEntrepriseOuverteId(null); setOuvert(cle) }}
           onClose={() => setEntrepriseOuverteId(null)}
         />

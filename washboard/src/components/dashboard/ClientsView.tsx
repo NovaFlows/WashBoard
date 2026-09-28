@@ -19,7 +19,7 @@ import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 // Import unique et stable pour tout le reste du dashboard : la page
 // /dashboard/clients continue d'importer ClientsView sans rien savoir du
 // branchement.
-export default function ClientsView({ bookings, documents, reglages, reglagesMessages, entreprises }: {
+export default function ClientsView({ bookings, documents, reglages, reglagesMessages, entreprises, nomLaveur }: {
   bookings: ClientBooking[]
   /** Devis et factures écrits à la main. Ils n'existent que dans la PWA : le site garde sa
    *  liste tirée des seules réservations, donc V1 ne les reçoit pas. */
@@ -31,9 +31,16 @@ export default function ClientsView({ bookings, documents, reglages, reglagesMes
   reglagesMessages?: ReglagesRelance
   /** Fiches entreprise (2026-09-28) : même raison de rester hors de V1 que les documents. */
   entreprises?: EntrepriseListItem[]
+  /** Signature du message WhatsApp envoyé depuis une facture ouverte dans la Fiche entreprise. */
+  nomLaveur?: string
 }) {
   const isPwa = usePwaStandalone()
   return isPwa
-    ? <ClientsViewV2 bookings={bookings} documents={documents} reglages={reglages} reglagesMessages={reglagesMessages} entreprises={entreprises} />
+    ? (
+      <ClientsViewV2
+        bookings={bookings} documents={documents} reglages={reglages} reglagesMessages={reglagesMessages}
+        entreprises={entreprises} nomLaveur={nomLaveur}
+      />
+    )
     : <ClientsViewV1 bookings={bookings} />
 }

@@ -53,6 +53,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cl
     nePlusContacter?: unknown
     entrepriseId?: unknown
     role?: unknown
+    notes?: unknown
+    vehicules?: unknown
   }
 
   // Rattacher (ou détacher, `entrepriseId: null`) : géré séparément du reste, la ligne peut ne
@@ -84,6 +86,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cl
     if (error) return errorResponse('clients.patch.entreprise.db', error)
     logger.info('clients.rattachement', { washerId: washer.id, entrepriseId: corps.entrepriseId })
     return NextResponse.json({ cle, entrepriseId: corps.entrepriseId, role })
+  }
+
+  // Notes et véhicules (2026-09-28, « comme ça on sait les voitures des gens ») : texte libre,
+  // géré à part du reste — la fiche peut n'écrire QUE ça, sans toucher à `ne_plus_contacter`.
+  if ('notes' in corps || 'vehicules' in corps) {
+    if ('notes' in corps && corps.notes !== null && typeof corps.notes !== 'string') {
+      return NextResponse.json({ error: 'Notes invalides' }, { status: 400 })
+    }
+    if ('vehicules' in corps && corps.vehicules !== null && typeof corps.vehicules !== 'string') {
+      return NextResponse.json({ error: 'Véhicules invalides' }, { status: 400 })
+    }
+    const notes = 'notes' in corps ? (corps.notes as string | null)?.trim().slice(0, 2000) || null : undefined
+    const vehicules = 'vehicules' in corps ? (corps.vehicules as string | null)?.trim().slice(0, 2000) || null : undefined
+
+    const { error } = await supabase
+      .from('clients')
+      .upsert(
+        { washer_id: washer.id, cle, ...(notes !== undefined && { notes }), ...(vehicules !== undefined && { vehicules }), maj_le: new Date().toISOString() },
+        { onConflict: 'washer_id,cle' },
+      )
+    if (error) return errorResponse('clients.patch.fiche.db', error)
+    logger.info('clients.fiche', { washerId: washer.id })
+    return NextResponse.json({ cle, notes, vehicules })
   }
 
   if (typeof corps.nePlusContacter !== 'boolean') {

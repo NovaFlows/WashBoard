@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing } from 'lucide-react'
+import { X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing, Car } from 'lucide-react'
 import type { ClientProfile } from '@/lib/clientProfile'
 import { timelineClient } from '@/lib/clientTimeline'
 import { FUSEAU } from '@/lib/dateUtils'
 import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
-import { marquerNePlusContacter, rattacherEntreprise } from '@/lib/clientsApi'
+import { marquerNePlusContacter, rattacherEntreprise, modifierFiche } from '@/lib/clientsApi'
 import { creerEtRattacher } from '@/components/dashboard/FicheEntrepriseV2'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
@@ -173,6 +173,69 @@ function FeuilleRattacherV2({
   )
 }
 
+/** Modifier la fiche — notes et véhicules, texte libre (2026-09-28, Alexandre : « comme ça on
+ *  sait les voitures des gens »). Les deux s'écrivent ensemble : un seul aller-retour, pas deux
+ *  sheets pour deux champs qui vivent sur la même ligne `clients`. */
+function FeuilleModifierFicheV2({
+  cle, notes, vehicules, onEnregistre, onClose,
+}: {
+  cle: string
+  notes: string | null
+  vehicules: string | null
+  onEnregistre: (champs: { notes: string | null; vehicules: string | null }) => void
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [notesSaisies, setNotesSaisies] = useState(notes ?? '')
+  const [vehiculesSaisis, setVehiculesSaisis] = useState(vehicules ?? '')
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function enregistrer() {
+    if (enCours) return
+    setEnCours(true)
+    setErreur(null)
+    const champs = { notes: notesSaisies.trim() || null, vehicules: vehiculesSaisis.trim() || null }
+    const r = await modifierFiche(cle, champs)
+    setEnCours(false)
+    if (!r.ok) { setErreur(r.message); return }
+    router.refresh()
+    onEnregistre(champs)
+  }
+
+  return (
+    <Feuille
+      titre="Modifier la fiche"
+      onClose={onClose}
+      pied={
+        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+      }
+    >
+      <div className="space-y-4">
+        {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
+        <div>
+          <label htmlFor="fiche-vehicules" className={ETIQUETTE}>Véhicules</label>
+          <textarea
+            id="fiche-vehicules" value={vehiculesSaisis} onChange={e => setVehiculesSaisis(e.target.value)} rows={2} maxLength={2000}
+            placeholder="Peugeot 208 grise, plaque AB-123-CD"
+            className={`w-full min-w-0 resize-none rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 py-2.5 text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+          />
+        </div>
+        <div>
+          <label htmlFor="fiche-notes" className={ETIQUETTE}>Notes (facultatif)</label>
+          <textarea
+            id="fiche-notes" value={notesSaisies} onChange={e => setNotesSaisies(e.target.value)} rows={3} maxLength={2000}
+            placeholder="Portail à code 1234, préfère le samedi matin…"
+            className={`w-full min-w-0 resize-none rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 py-2.5 text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+          />
+        </div>
+      </div>
+    </Feuille>
+  )
+}
+
 export default function ClientProfileModalV2({
   profile,
   onClose,
@@ -203,6 +266,9 @@ export default function ClientProfileModalV2({
   const [erreur, setErreur] = useState<string | null>(null)
   const [optionsOuvertes, setOptionsOuvertes] = useState(false)
   const [rattachementOuvert, setRattachementOuvert] = useState(false)
+  const [ficheOuverte, setFicheOuverte] = useState(false)
+  const [notes, setNotes] = useState(profile.notes)
+  const [vehicules, setVehicules] = useState(profile.vehicules)
 
   async function basculerNePlusContacter() {
     if (enCours) return
@@ -418,6 +484,14 @@ export default function ClientProfileModalV2({
                   <button
                     type="button"
                     role="menuitem"
+                    onClick={() => { setOptionsOuvertes(false); setFicheOuverte(true) }}
+                    className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort}`}
+                  >
+                    Modifier la fiche
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     disabled={enCours}
                     onClick={() => { setOptionsOuvertes(false); void basculerNePlusContacter() }}
                     className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
@@ -486,6 +560,16 @@ export default function ClientProfileModalV2({
               </p>
             ))}
           </div>
+
+          {vehicules && (
+            <p className={`mt-3 flex items-start gap-2 text-[13px] ${corps} text-[color:var(--v2-color-encre)]`}>
+              <Car size={14} className="mt-0.5 shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />
+              <span>{vehicules}</span>
+            </p>
+          )}
+          {notes && (
+            <p className={`mt-2 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{notes}</p>
+          )}
 
           {profile.daysSinceLastVisit !== null && profile.daysSinceLastVisit >= 90 && (
             <div className="mt-4 flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-color-ambre)]/30 bg-[color:var(--v2-color-surface)] px-3.5 py-3">
@@ -640,6 +724,15 @@ export default function ClientProfileModalV2({
           entreprisesDisponibles={entreprisesDisponibles}
           onRattache={id => { setRattachementOuvert(false); onOuvrirEntreprise?.(id) }}
           onClose={() => setRattachementOuvert(false)}
+        />
+      )}
+      {ficheOuverte && (
+        <FeuilleModifierFicheV2
+          cle={profile.cle}
+          notes={notes}
+          vehicules={vehicules}
+          onEnregistre={champs => { setNotes(champs.notes); setVehicules(champs.vehicules); setFicheOuverte(false) }}
+          onClose={() => setFicheOuverte(false)}
         />
       )}
     </div>

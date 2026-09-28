@@ -51,13 +51,14 @@ export default async function ClientsPage() {
   if (errDocuments) logger.warn('clients.documents.fetch_failed', { washerId: washer.id }, errDocuments)
 
   // Réglages écrits à la main (table `clients`, SQL du 2026-09-28) : « ne plus contacter », le
-  // rattachement à une entreprise, et depuis peu « masque_le » (glisser pour supprimer). UNE
-  // lecture pour les trois (même table, même filtre) — inutile de la faire trois fois. Absente
-  // de la base tant que le SQL n'a pas été exécuté : une erreur ici dégrade la liste (personne
-  // ne paraît opposé, rattaché ni masqué), elle ne la casse pas.
+  // rattachement à une entreprise, « masque_le » (glisser pour supprimer), et les notes et
+  // véhicules du client. UNE lecture pour tout (même table, même filtre) — inutile de la faire
+  // cinq fois. Absente de la base tant que le SQL n'a pas été exécuté : une erreur ici dégrade
+  // la liste (personne ne paraît opposé, rattaché ni masqué, aucune note ni véhicule), elle ne
+  // la casse pas.
   const { data: lignesClients, error: errClients } = await supabase
     .from('clients')
-    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise, masque_le')
+    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise, masque_le, notes, vehicules')
     .eq('washer_id', washer.id)
   if (errClients) logger.warn('clients.reglages.fetch_failed', { washerId: washer.id }, errClients)
 
@@ -87,7 +88,7 @@ export default async function ClientsPage() {
     services: (Array.isArray(b.services) ? b.services[0] : b.services) ?? null,
   }))
   const reglages: ClientReglages[] = (lignesClients ?? []).map(r => ({
-    cle: r.cle, nePlusContacter: r.ne_plus_contacter, masque: !!r.masque_le,
+    cle: r.cle, nePlusContacter: r.ne_plus_contacter, masque: !!r.masque_le, notes: r.notes, vehicules: r.vehicules,
   }))
   const contactsBruts: ContactEntreprise[] = (lignesClients ?? [])
     .filter(r => r.entreprise_id)
@@ -105,6 +106,7 @@ export default async function ClientsPage() {
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <ClientsView
+        nomLaveur={washer.name}
         bookings={lignes}
         documents={(documents ?? []) as unknown as ClientDocument[]}
         reglages={reglages}

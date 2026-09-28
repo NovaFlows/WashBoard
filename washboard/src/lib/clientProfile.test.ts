@@ -121,16 +121,29 @@ describe('buildClientProfile', () => {
 
     const avecReglage = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'alex@example.com', nePlusContacter: true, masque: false }],
+      [{ cle: 'alex@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null }],
     )!
     expect(avecReglage.nePlusContacter).toBe(true)
 
     // Un réglage sur UN AUTRE client ne déteint pas.
     const autreClient = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true, masque: false }],
+      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null }],
     )!
     expect(autreClient.nePlusContacter).toBe(false)
+  })
+
+  it('notes et véhicules valent null par défaut, et suivent le réglage écrit pour cette clé', () => {
+    const sansReglage = buildClientProfile([mk({})], 'alex@example.com')!
+    expect(sansReglage.notes).toBeNull()
+    expect(sansReglage.vehicules).toBeNull()
+
+    const avecReglage = buildClientProfile(
+      [mk({})], 'alex@example.com', new Date(), [],
+      [{ cle: 'alex@example.com', nePlusContacter: false, masque: false, notes: 'Portail à code 1234', vehicules: 'Peugeot 208 grise' }],
+    )!
+    expect(avecReglage.notes).toBe('Portail à code 1234')
+    expect(avecReglage.vehicules).toBe('Peugeot 208 grise')
   })
 
   it('récupère un téléphone même absent de la réservation la plus récente', () => {

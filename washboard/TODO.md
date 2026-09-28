@@ -2374,10 +2374,6 @@ rien à faire, mais que le projet reste globalement sain.
         en retard de 2 jours » › Faire). Généralisable à toute la liste Documents, pas qu'aux
         pros. Coût de construction bas : la donnée existe déjà dans `documents`
         (`statut`, `repondu_le`, `emis_le`), même genre de calcul pur que `clientsARelancer.ts`.
-  - [ ] **Notes libres sur un client**. La colonne `clients.notes` existe déjà en base (posée par
-        avance le 2026-09-28), il manque l'écran : un champ texte dans la fiche (ou dans le menu
-        « … »), pour noter ce qu'aucune donnée ne capture — « portail à code 1234 », « préfère le
-        samedi matin », « a un chien, prévenir avant de sonner ».
   - [ ] **Prospects** : pas encore construit. Piste retenue en discussion — faire naître un
         prospect automatiquement quand un DEVIS est écrit pour quelqu'un qui n'a jamais réservé
         (`FeuilleDocumentV2.tsx`), plus une capture manuelle (« + Prospect » après un appel).
@@ -2453,6 +2449,29 @@ rien à faire, mais que le projet reste globalement sain.
         paramètres d'adresse (`?nouveau=1&entreprise=...&nom=...&tel=...&email=...&adresse=...`),
         lus par `DocumentsV2.tsx` — même mécanisme que `nouveau=1` lui-même. Ignoré si la feuille
         est rouverte par le « + » propre à cet écran : ce geste-là veut un formulaire vide.
+  - [x] 2026-09-28 — **« délai de paiement » au lieu de « paiement »** sur la tuile-chiffre de la
+        fiche entreprise (Alexandre : « ne met pas paiement mais delai de paiement pour qu'on
+        comprenne du coup ») — le chiffre n'a pas changé, seul le mot au-dessus était ambigu.
+  - [x] 2026-09-28 — **Alerte « factures impayées » cliquable** sur la fiche entreprise : tape
+        dessus, ça ouvre la MÊME feuille d'actions que Documents et factures (télécharger,
+        envoyer, marquer payée), plus un nouveau bouton **Appeler** (visible même sur une facture
+        pro, pas réservé aux devis). `FeuilleActions` de `DocumentsV2.tsx` extraite en composant
+        partagé `FeuilleActionsDocumentV2.tsx` pour ça — `ClientDocument` (forme minimale de la
+        fiche) n'a pas de quoi construire le message WhatsApp, donc la fiche entreprise charge le
+        `Document` complet à la demande (`lireDocuments()`, mis en cache) plutôt que de forcer
+        `ClientDocument` à porter des champs qu'il n'a jamais eus.
+  - [x] 2026-09-28 — **Véhicules et notes sur la fiche client** (Alexandre : « j'aimerais qu'on
+        mette dans la fiche client de particulier / pro / entreprise les modeles de voitures
+        comme ca on sait les voitures des gens »). Deux champs texte libre sur `clients`
+        (`vehicules` neuf, `notes` déjà posé le 2026-09-28 mais jamais câblé) : SQL —
+        ```sql
+        alter table public.clients add column if not exists vehicules text;
+        ```
+        Modifiables depuis le menu « … » de la fiche (particulier/pro), « Modifier la fiche » ;
+        affichés dans le corps de la fiche quand non vides. Côté entreprise, le véhicule de
+        chaque contact apparaît sous son nom dans la liste Contacts — pas de note d'entreprise
+        (une entreprise n'a pas de fiche propre, seulement ses contacts, voir plus haut).
+        Optimiste comme le reste de l'écran (`router.refresh()` avant de refermer la feuille).
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
