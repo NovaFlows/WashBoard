@@ -61,7 +61,7 @@ export default async function ClientsPage() {
   // la casse pas.
   const { data: lignesClients, error: errClients } = await supabase
     .from('clients')
-    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise, masque_le, notes, vehicules')
+    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise, masque_le, notes, vehicules, nom, telephone')
     .eq('washer_id', washer.id)
   if (errClients) logger.warn('clients.reglages.fetch_failed', { washerId: washer.id }, errClients)
 
@@ -91,7 +91,8 @@ export default async function ClientsPage() {
     services: (Array.isArray(b.services) ? b.services[0] : b.services) ?? null,
   }))
   const reglages: ClientReglages[] = (lignesClients ?? []).map(r => ({
-    cle: r.cle, nePlusContacter: r.ne_plus_contacter, masque: !!r.masque_le, notes: r.notes, vehicules: r.vehicules,
+    cle: r.cle, nePlusContacter: r.ne_plus_contacter, masque: !!r.masque_le,
+    notes: r.notes, vehicules: r.vehicules, nom: r.nom, telephone: r.telephone,
   }))
   const contactsBruts: ContactEntreprise[] = (lignesClients ?? [])
     .filter(r => r.entreprise_id)

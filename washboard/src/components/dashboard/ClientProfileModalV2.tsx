@@ -2,16 +2,24 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing, Car } from 'lucide-react'
+import {
+  X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing, Car, Pencil, ListChecks, Users, BellOff,
+  Download, Eraser, Check,
+} from 'lucide-react'
 import type { ClientProfile } from '@/lib/clientProfile'
 import { timelineClient } from '@/lib/clientTimeline'
 import { FUSEAU } from '@/lib/dateUtils'
 import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
-import { marquerNePlusContacter, rattacherEntreprise, modifierFiche } from '@/lib/clientsApi'
+import {
+  marquerNePlusContacter, rattacherEntreprise, modifierFiche, listerTaches, creerTache,
+  marquerTacheFaite, type ClientTache, fusionnerClients, enregistrerExport, anonymiserClient,
+} from '@/lib/clientsApi'
 import { creerEtRattacher } from '@/components/dashboard/FicheEntrepriseV2'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION } from '@/components/dashboard/FeuilleV2'
-import { Constat } from '@/components/dashboard/PrestationsUiV2'
+import { Constat, ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
+import type { Doublon } from '@/lib/doublons'
+import { texteExportClient, nomFichierExportClient } from '@/lib/exportClient'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
 // une carte centrée (ordinateur), réservée à la PWA installée en mode
@@ -34,10 +42,13 @@ import { Constat } from '@/components/dashboard/PrestationsUiV2'
 //    d'autres données chargées), les contacts et sites multiples pour un pro (table `sites`,
 //    pas construite).
 //
-// Le menu d'options (« ... ») ne porte qu'UNE action pour l'instant, « ne plus contacter »
-// (2026-09-28) : les autres (tâche, fusion de doublons, export RGPD) demandent des tables qui
-// n'existent pas encore (voir TODO.md, « Roadmap produit »). Construit en sheet dès maintenant,
-// pas en simple lien, pour ne pas avoir à tout redécouper le jour où ces actions arrivent.
+// Le menu d'options (« ... », canevas de Yanis « Fiche > Options ») est passé le 2026-09-28 d'une
+// simple liste de mots à une vraie feuille (icône + titre + sous-titre par action), avec six
+// actions : modifier la fiche (nom, téléphone, notes, véhicules — étendu ce jour-là, portait
+// avant seulement notes/véhicules), ajouter une tâche, fusionner un doublon (repéré par
+// `lib/doublons.ts`, absente si rien ne ressemble), ne plus contacter, exporter ses données et
+// anonymiser la fiche (droit d'accès et droit à l'effacement, RGPD — libellés et mécanique
+// revus par l'agent `legal` avant construction, voir le compte rendu de la conversation).
 
 // Rôles de police — mêmes constantes que ClientsViewV2.tsx (passe 2), plus
 // `hero` pour les trois chiffres de la fiche (planche Système : "chiffre
@@ -173,19 +184,26 @@ function FeuilleRattacherV2({
   )
 }
 
-/** Modifier la fiche — notes et véhicules, texte libre (2026-09-28, Alexandre : « comme ça on
- *  sait les voitures des gens »). Les deux s'écrivent ensemble : un seul aller-retour, pas deux
- *  sheets pour deux champs qui vivent sur la même ligne `clients`. */
+/** Modifier la fiche — nom, téléphone, véhicules et notes, texte libre (2026-09-28, Alexandre :
+ *  « comme ça on sait les voitures des gens »). Les quatre s'écrivent ensemble : un seul
+ *  aller-retour, pas quatre sheets pour des champs qui vivent sur la même ligne `clients`. Nom
+ *  et téléphone sont des CORRECTIONS (leur graphie habituelle vient d'une réservation ou d'un
+ *  document, voir `ClientReglages.nom`/`.telephone`) — laissés vides, le calcul habituel
+ *  continue de s'appliquer. */
 function FeuilleModifierFicheV2({
-  cle, notes, vehicules, onEnregistre, onClose,
+  cle, nom: nomActuel, telephone: telephoneActuel, notes, vehicules, onEnregistre, onClose,
 }: {
   cle: string
+  nom: string | null
+  telephone: string | null
   notes: string | null
   vehicules: string | null
-  onEnregistre: (champs: { notes: string | null; vehicules: string | null }) => void
+  onEnregistre: (champs: { nom: string | null; telephone: string | null; notes: string | null; vehicules: string | null }) => void
   onClose: () => void
 }) {
   const router = useRouter()
+  const [nomSaisi, setNomSaisi] = useState(nomActuel ?? '')
+  const [telephoneSaisi, setTelephoneSaisi] = useState(telephoneActuel ?? '')
   const [notesSaisies, setNotesSaisies] = useState(notes ?? '')
   const [vehiculesSaisis, setVehiculesSaisis] = useState(vehicules ?? '')
   const [enCours, setEnCours] = useState(false)
@@ -195,7 +213,12 @@ function FeuilleModifierFicheV2({
     if (enCours) return
     setEnCours(true)
     setErreur(null)
-    const champs = { notes: notesSaisies.trim() || null, vehicules: vehiculesSaisis.trim() || null }
+    const champs = {
+      nom: nomSaisi.trim() || null,
+      telephone: telephoneSaisi.trim() || null,
+      notes: notesSaisies.trim() || null,
+      vehicules: vehiculesSaisis.trim() || null,
+    }
     const r = await modifierFiche(cle, champs)
     setEnCours(false)
     if (!r.ok) { setErreur(r.message); return }
@@ -215,6 +238,14 @@ function FeuilleModifierFicheV2({
     >
       <div className="space-y-4">
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
+        <div>
+          <label htmlFor="fiche-nom" className={ETIQUETTE}>Nom (facultatif — corrige l’orthographe)</label>
+          <input id="fiche-nom" className={CHAMP} value={nomSaisi} onChange={e => setNomSaisi(e.target.value)} maxLength={200} />
+        </div>
+        <div>
+          <label htmlFor="fiche-telephone" className={ETIQUETTE}>Téléphone (facultatif)</label>
+          <input id="fiche-telephone" type="tel" inputMode="tel" className={CHAMP} value={telephoneSaisi} onChange={e => setTelephoneSaisi(e.target.value)} maxLength={30} />
+        </div>
         <div>
           <label htmlFor="fiche-vehicules" className={ETIQUETTE}>Véhicules</label>
           <textarea
@@ -236,18 +267,162 @@ function FeuilleModifierFicheV2({
   )
 }
 
+/** Un pense-bête court sur cette fiche — « Rappeler », « Proposer l'intérieur » (menu « … »,
+ *  2026-09-28). Pas d'échéance ni de priorité : voir `lib/clientsApi.ts`, `ClientTache`. */
+function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjoute: (t: ClientTache) => void; onClose: () => void }) {
+  const [texte, setTexte] = useState('')
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function ajouter() {
+    if (enCours || !texte.trim()) return
+    setEnCours(true)
+    setErreur(null)
+    const r = await creerTache(cle, texte.trim())
+    setEnCours(false)
+    if (!r.ok) { setErreur(r.message); return }
+    onAjoute(r.data)
+  }
+
+  return (
+    <Feuille
+      titre="Ajouter une tâche"
+      onClose={onClose}
+      pied={
+        <button type="button" onClick={() => void ajouter()} disabled={enCours || !texte.trim()} className={`${BOUTON} w-full text-white disabled:opacity-50`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+          {enCours ? 'Ajout…' : 'Ajouter'}
+        </button>
+      }
+    >
+      <div className="space-y-4">
+        {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
+        <div>
+          <label htmlFor="tache-texte" className={ETIQUETTE}>Tâche</label>
+          <input
+            id="tache-texte" className={CHAMP} value={texte} onChange={e => setTexte(e.target.value)}
+            placeholder="Rappeler, proposer l’intérieur…" maxLength={300} autoFocus
+          />
+        </div>
+      </div>
+    </Feuille>
+  )
+}
+
+/** Droit à l'effacement (article 17 du RGPD, exception de conservation comptable 17.3.b) —
+ *  texte de confirmation et mécanique revus par l'agent `legal` le 2026-09-28. Irréversible :
+ *  la case à cocher force à lire avant de pouvoir valider, le bouton reste désactivé sinon. */
+function FeuilleAnonymiserV2({ titreClient, onConfirme, onClose }: { titreClient: string; onConfirme: () => Promise<string | null>; onClose: () => void }) {
+  const [coche, setCoche] = useState(false)
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function confirmer() {
+    if (enCours || !coche) return
+    setEnCours(true)
+    setErreur(null)
+    const message = await onConfirme()
+    setEnCours(false)
+    if (message) setErreur(message)
+  }
+
+  return (
+    <Feuille
+      titre={`Anonymiser la fiche de ${titreClient} ?`}
+      onClose={onClose}
+      pied={
+        <div>
+          {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+          <div className="flex gap-2.5">
+            <button type="button" onClick={onClose} className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`} style={PRESSION}>
+              Annuler
+            </button>
+            <button
+              type="button" onClick={() => void confirmer()} disabled={enCours || !coche}
+              className={`${BOUTON} flex-1 text-white disabled:opacity-50`} style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
+            >
+              {enCours ? 'Anonymisation…' : 'Anonymiser définitivement'}
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <p className={`text-[15px] leading-snug ${corpsFort} text-[color:var(--v2-color-rouge)]`}>Cette action est irréversible.</p>
+        <p className={`text-[14px] leading-snug ${corps}`}>
+          Ce qui disparaît : nom, email, téléphone et adresse — remplacés par des valeurs anonymes
+          sur toutes les réservations et documents de ce client.
+        </p>
+        <p className={`text-[14px] leading-snug ${corps}`}>
+          Ce qui reste (obligation comptable, 10 ans) : montants, dates, numéros de facture.
+        </p>
+        <p className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+          Vous ne pourrez plus retrouver ni recontacter ce client après cette action. Si des
+          notes libres ou le champ véhicule mentionnent son nom, modifiez-les vous-même avant de
+          continuer — l’anonymisation automatique ne les efface pas.
+        </p>
+        <label className="flex items-start gap-2.5 pt-2">
+          <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className={`text-[13.5px] leading-snug ${corpsFort}`}>Je comprends que cette action est irréversible</span>
+        </label>
+      </div>
+    </Feuille>
+  )
+}
+
+/** Une ligne du menu « … » — icône, titre, sous-titre explicatif (« Fiche > Options » du
+ *  canevas de Yanis, 2026-09-28). Le sous-titre est ce qui manquait le plus à l'ancien menu
+ *  (une simple liste de mots) : dire CE QUE fait une action, pas seulement son nom, surtout
+ *  pour les deux actions RGPD qu'un laveur ne rencontre jamais ailleurs. */
+function LigneOption({
+  icone: Icone, titre: titreLigne, sousTitre, couleur, onClick, disabled,
+}: {
+  icone: typeof Pencil
+  titre: string
+  sousTitre?: string
+  couleur?: string
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-start gap-3 py-3 text-left disabled:opacity-50"
+    >
+      <span
+        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-filet)]"
+        style={couleur ? { color: couleur } : undefined}
+      >
+        <Icone size={16} strokeWidth={2} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block text-[15px] ${corpsFort}`} style={couleur ? { color: couleur } : undefined}>{titreLigne}</span>
+        {sousTitre && <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</span>}
+      </span>
+    </button>
+  )
+}
+
 export default function ClientProfileModalV2({
   profile,
   onClose,
   entrepriseDuContact,
   entreprisesDisponibles = [],
   onOuvrirEntreprise,
+  doublon,
+  nomLaveur = '',
 }: {
   profile: ClientProfile
   onClose: () => void
   entrepriseDuContact?: { id: string; nom: string; role: string | null } | null
   entreprisesDisponibles?: { id: string; nom: string }[]
   onOuvrirEntreprise?: (id: string) => void
+  /** Doublon probable pour cette fiche (`lib/doublons.ts`), calculé par l'écran Clients qui
+   *  connaît tout le fichier — cette fiche-ci n'a que SES propres réservations et documents. */
+  doublon?: Doublon | null
+  /** Signature du fichier exporté (article 15 du RGPD) — « Données conservées par {nomLaveur} ». */
+  nomLaveur?: string
 }) {
   const router = useRouter()
   const [maintenant] = useState(() => Date.now())
@@ -269,6 +444,65 @@ export default function ClientProfileModalV2({
   const [ficheOuverte, setFicheOuverte] = useState(false)
   const [notes, setNotes] = useState(profile.notes)
   const [vehicules, setVehicules] = useState(profile.vehicules)
+
+  // Tâches (menu « … », 2026-09-28) : chargées à l'ouverture de la fiche, pas dans
+  // `clients/page.tsx` — la plupart des fiches n'en ont aucune (voir `clientsApi.ts`).
+  const [taches, setTaches] = useState<ClientTache[] | null>(null)
+  const [tacheOuverte, setTacheOuverte] = useState(false)
+  const [tacheEnCours, setTacheEnCours] = useState<string | null>(null)
+  useEffect(() => {
+    let vivant = true
+    void listerTaches(profile.cle).then(r => { if (vivant && r.ok) setTaches(r.data) })
+    return () => { vivant = false }
+  }, [profile.cle])
+
+  async function cocherTache(id: string) {
+    if (tacheEnCours) return
+    setTacheEnCours(id)
+    const avant = taches
+    setTaches(t => t?.filter(x => x.id !== id) ?? null)
+    const r = await marquerTacheFaite(id, true)
+    setTacheEnCours(null)
+    if (!r.ok) { setTaches(avant); setErreur(r.message) }
+  }
+
+  // Fusionner un doublon (menu « … », 2026-09-28) : cette fiche absorbe l'autre — voir
+  // `lib/doublons.ts` pour comment il est repéré, `/api/clients/fusionner` pour la fusion.
+  const [fusionOuverte, setFusionOuverte] = useState(false)
+  const [fusionEnCours, setFusionEnCours] = useState(false)
+  const [fusionErreur, setFusionErreur] = useState<string | null>(null)
+  async function confirmerFusion() {
+    if (!doublon || fusionEnCours) return
+    setFusionEnCours(true)
+    setFusionErreur(null)
+    const r = await fusionnerClients(doublon.cle, profile.email, profile.phone)
+    setFusionEnCours(false)
+    if (!r.ok) { setFusionErreur(r.message); return }
+    setFusionOuverte(false)
+    router.refresh()
+  }
+
+  // Anonymiser la fiche (droit à l'effacement, menu « … », 2026-09-28) : irréversible, ferme la
+  // fiche après coup — il n'y a plus rien à regarder ici, ses coordonnées ont disparu.
+  const [anonymiserOuvert, setAnonymiserOuvert] = useState(false)
+  async function confirmerAnonymisation(): Promise<string | null> {
+    const r = await anonymiserClient(profile.cle)
+    if (!r.ok) return r.message
+    onClose()
+    router.refresh()
+    return null
+  }
+
+  function exporter() {
+    const contenu = texteExportClient(profile, nomLaveur)
+    const url = URL.createObjectURL(new Blob([contenu], { type: 'text/plain;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nomFichierExportClient(profile)
+    a.click()
+    URL.revokeObjectURL(url)
+    void enregistrerExport(profile.cle)
+  }
 
   async function basculerNePlusContacter() {
     if (enCours) return
@@ -437,79 +671,16 @@ export default function ClientProfileModalV2({
               </p>
             )}
           </div>
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setOptionsOuvertes(o => !o)}
-              aria-label="Options de la fiche"
-              aria-haspopup="menu"
-              aria-expanded={optionsOuvertes}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
-            >
-              <MoreHorizontal size={20} strokeWidth={2} />
-            </button>
-            {optionsOuvertes && (
-              <>
-                {/* Un tap n'importe où ailleurs referme le menu, sans fermer la fiche. */}
-                <button aria-hidden tabIndex={-1} onClick={() => setOptionsOuvertes(false)} className="fixed inset-0 z-10 cursor-default" />
-                <div
-                  role="menu"
-                  aria-label="Options"
-                  className="absolute right-0 top-[52px] z-20 w-64 overflow-hidden rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] shadow-lg"
-                >
-                  {entrepriseDuContact ? (
-                    <>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setOptionsOuvertes(false); onOuvrirEntreprise?.(entrepriseDuContact.id) }}
-                        className={`w-full truncate px-4 py-3 text-left text-[14px] leading-snug ${corpsFort}`}
-                      >
-                        Voir « {entrepriseDuContact.nom} »
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={enCours}
-                        onClick={() => { setOptionsOuvertes(false); void detacherEntreprise() }}
-                        className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
-                        style={{ color: 'var(--v2-color-rouge)' }}
-                      >
-                        Se détacher de cette entreprise
-                      </button>
-                    </>
-                  ) : entreprisesDisponibles !== undefined && onOuvrirEntreprise && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => { setOptionsOuvertes(false); setRattachementOuvert(true) }}
-                      className={`w-full px-4 py-3 text-left text-[14px] leading-snug ${corpsFort}`}
-                    >
-                      Rattacher à une entreprise
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => { setOptionsOuvertes(false); setFicheOuverte(true) }}
-                    className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort}`}
-                  >
-                    Modifier la fiche
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={enCours}
-                    onClick={() => { setOptionsOuvertes(false); void basculerNePlusContacter() }}
-                    className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
-                    style={{ color: nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}
-                  >
-                    {nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter ce client'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setOptionsOuvertes(true)}
+            aria-label="Options de la fiche"
+            aria-haspopup="dialog"
+            aria-expanded={optionsOuvertes}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
+          >
+            <MoreHorizontal size={20} strokeWidth={2} />
+          </button>
           <button
             ref={closeRef}
             onClick={onClose}
@@ -613,6 +784,30 @@ export default function ClientProfileModalV2({
               >
                 Message
               </a>
+            </div>
+          )}
+
+          {/* Tâches ouvertes (« Ajouter une tâche », menu « … ») : un pense-bête court, coché
+              une fois fait — il disparaît alors de la liste (voir `lib/clientsApi.ts`). */}
+          {taches !== null && taches.length > 0 && (
+            <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-4">
+              <h3 className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Tâches</h3>
+              <ul className="mt-1.5">
+                {taches.map(t => (
+                  <li key={t.id} className="flex items-center gap-2.5 py-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void cocherTache(t.id)}
+                      disabled={tacheEnCours === t.id}
+                      aria-label={`Marquer « ${t.texte} » comme faite`}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] text-transparent transition-colors hover:border-[color:var(--v2-color-accent)] hover:text-[color:var(--v2-color-accent)] disabled:opacity-50"
+                    >
+                      <Check size={13} strokeWidth={2.5} />
+                    </button>
+                    <span className={`min-w-0 flex-1 truncate text-[14px] ${corps}`}>{t.texte}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -725,6 +920,82 @@ export default function ClientProfileModalV2({
         </div>
       </div>
 
+      {optionsOuvertes && (
+        <Feuille
+          titre={titreClient}
+          onClose={() => setOptionsOuvertes(false)}
+          pied={
+            <button
+              type="button" onClick={() => setOptionsOuvertes(false)}
+              className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
+              style={PRESSION}
+            >
+              Annuler
+            </button>
+          }
+        >
+          <div className="divide-y divide-[color:var(--v2-filet)]">
+            <LigneOption
+              icone={Pencil}
+              titre="Modifier la fiche"
+              sousTitre="Nom, téléphone, véhicules, notes"
+              onClick={() => { setOptionsOuvertes(false); setFicheOuverte(true) }}
+            />
+            <LigneOption
+              icone={ListChecks}
+              titre="Ajouter une tâche"
+              sousTitre="« Rappeler », « Proposer l’intérieur »"
+              onClick={() => { setOptionsOuvertes(false); setTacheOuverte(true) }}
+            />
+            {doublon && (
+              <LigneOption
+                icone={Users}
+                titre="Fusionner un doublon"
+                sousTitre={doublon.motif}
+                onClick={() => { setOptionsOuvertes(false); setFusionOuverte(true) }}
+              />
+            )}
+            {entrepriseDuContact ? (
+              <LigneOption
+                icone={Users}
+                titre="Se détacher de cette entreprise"
+                sousTitre={`Rattaché à « ${entrepriseDuContact.nom} »`}
+                couleur="var(--v2-color-rouge)"
+                disabled={enCours}
+                onClick={() => { setOptionsOuvertes(false); void detacherEntreprise() }}
+              />
+            ) : entreprisesDisponibles !== undefined && onOuvrirEntreprise && (
+              <LigneOption
+                icone={Users}
+                titre="Rattacher à une entreprise"
+                onClick={() => { setOptionsOuvertes(false); setRattachementOuvert(true) }}
+              />
+            )}
+            <LigneOption
+              icone={BellOff}
+              titre={nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter'}
+              sousTitre="Stoppe relances et messages groupés"
+              couleur={nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)'}
+              disabled={enCours}
+              onClick={() => { setOptionsOuvertes(false); void basculerNePlusContacter() }}
+            />
+            <LigneOption
+              icone={Download}
+              titre="Exporter ses données"
+              sousTitre="Droit d’accès — tout ce qu’on sait sur ce client, à lui remettre s’il le demande"
+              onClick={() => { setOptionsOuvertes(false); exporter() }}
+            />
+            <LigneOption
+              icone={Eraser}
+              titre="Anonymiser la fiche"
+              sousTitre="Droit à l’effacement — nom, email, téléphone et adresse supprimés ; montants et factures gardés 10 ans. Irréversible."
+              couleur="var(--v2-color-rouge)"
+              onClick={() => { setOptionsOuvertes(false); setAnonymiserOuvert(true) }}
+            />
+          </div>
+        </Feuille>
+      )}
+
       {rattachementOuvert && (
         <FeuilleRattacherV2
           cle={profile.cle}
@@ -736,10 +1007,43 @@ export default function ClientProfileModalV2({
       {ficheOuverte && (
         <FeuilleModifierFicheV2
           cle={profile.cle}
+          nom={null}
+          telephone={null}
           notes={notes}
           vehicules={vehicules}
-          onEnregistre={champs => { setNotes(champs.notes); setVehicules(champs.vehicules); setFicheOuverte(false) }}
+          onEnregistre={champs => {
+            setNotes(champs.notes)
+            setVehicules(champs.vehicules)
+            setFicheOuverte(false)
+          }}
           onClose={() => setFicheOuverte(false)}
+        />
+      )}
+      {tacheOuverte && (
+        <FeuilleAjouterTacheV2
+          cle={profile.cle}
+          onAjoute={t => { setTaches(ts => [t, ...(ts ?? [])]); setTacheOuverte(false) }}
+          onClose={() => setTacheOuverte(false)}
+        />
+      )}
+      {fusionOuverte && doublon && (
+        <ConfirmationSuppression
+          titre={`Fusionner avec ${doublon.identifiant} ?`}
+          texte="Ses réservations et ses documents rejoignent cette fiche, qui les absorbe. L’autre fiche disparaît."
+          remarque="Irréversible : deux fiches redevenues une seule ne se re-séparent pas."
+          libelleAction="Fusionner"
+          libelleEnCours="Fusion…"
+          enCours={fusionEnCours}
+          erreur={fusionErreur}
+          onConfirmer={() => void confirmerFusion()}
+          onClose={() => setFusionOuverte(false)}
+        />
+      )}
+      {anonymiserOuvert && (
+        <FeuilleAnonymiserV2
+          titreClient={titreClient}
+          onConfirme={confirmerAnonymisation}
+          onClose={() => setAnonymiserOuvert(false)}
         />
       )}
     </div>

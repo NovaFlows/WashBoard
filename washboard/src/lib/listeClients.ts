@@ -117,10 +117,12 @@ export function listeClients(
   return clients.sort((a, b) => new Date(b.activite).getTime() - new Date(a.activite).getTime())
 }
 
-const sansAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export const sansAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-/** Chiffres d'un numéro, sous la forme 0XXXXXXXXX quand il est écrit en +33. */
-function chiffresTelephone(s: string): string {
+/** Chiffres d'un numéro, sous la forme 0XXXXXXXXX quand il est écrit en +33. Exporté : sert
+ *  aussi à repérer un doublon par téléphone (`lib/doublons.ts`), même besoin de comparer deux
+ *  écritures différentes du même numéro. */
+export function chiffresTelephone(s: string): string {
   const d = s.replace(/\D/g, '')
   return d.startsWith('33') && d.length > 9 ? '0' + d.slice(2) : d
 }

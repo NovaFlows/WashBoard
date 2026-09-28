@@ -2,6 +2,7 @@
 
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import type { ClientProfile } from '@/lib/clientProfile'
+import type { Doublon } from '@/lib/doublons'
 import ClientProfileModalV1 from '@/components/dashboard/ClientProfileModalV1'
 import ClientProfileModalV2 from '@/components/dashboard/ClientProfileModalV2'
 
@@ -28,13 +29,17 @@ export default function ClientProfileModal({
   entrepriseDuContact,
   entreprisesDisponibles,
   onOuvrirEntreprise,
+  doublon,
+  nomLaveur,
 }: {
   profile: ClientProfile
   onClose: () => void
-  /** Fiche entreprise (2026-09-28) : V1 n'y a pas accès, ces trois props sont ignorées côté site. */
+  /** Fiche entreprise (2026-09-28) : V1 n'y a pas accès, ces props sont ignorées côté site. */
   entrepriseDuContact?: { id: string; nom: string; role: string | null } | null
   entreprisesDisponibles?: { id: string; nom: string }[]
   onOuvrirEntreprise?: (id: string) => void
+  doublon?: Doublon | null
+  nomLaveur?: string
 }) {
   const isPwa = usePwaStandalone()
   return isPwa
@@ -42,7 +47,7 @@ export default function ClientProfileModal({
       <ClientProfileModalV2
         profile={profile} onClose={onClose}
         entrepriseDuContact={entrepriseDuContact} entreprisesDisponibles={entreprisesDisponibles}
-        onOuvrirEntreprise={onOuvrirEntreprise}
+        onOuvrirEntreprise={onOuvrirEntreprise} doublon={doublon} nomLaveur={nomLaveur}
       />
     )
     : <ClientProfileModalV1 profile={profile} onClose={onClose} />

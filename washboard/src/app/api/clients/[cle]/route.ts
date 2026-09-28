@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
+import { isValidPhone } from '@/lib/phone'
 
 // Réglages écrits à la main sur un client — table `clients`, SQL donné dans la conversation du
 // 2026-09-28 (proposition de Yanis : « ne plus contacter », discutée avec Alexandre).
@@ -55,6 +56,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cl
     role?: unknown
     notes?: unknown
     vehicules?: unknown
+    nom?: unknown
+    telephone?: unknown
   }
 
   // Rattacher (ou détacher, `entrepriseId: null`) : géré séparément du reste, la ligne peut ne
@@ -88,27 +91,48 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cl
     return NextResponse.json({ cle, entrepriseId: corps.entrepriseId, role })
   }
 
-  // Notes et véhicules (2026-09-28, « comme ça on sait les voitures des gens ») : texte libre,
-  // géré à part du reste — la fiche peut n'écrire QUE ça, sans toucher à `ne_plus_contacter`.
-  if ('notes' in corps || 'vehicules' in corps) {
+  // Notes, véhicules, nom et téléphone (2026-09-28, menu « Modifier la fiche ») : texte libre,
+  // géré à part du reste — la fiche peut n'en écrire QU'UN SEUL, sans toucher à
+  // `ne_plus_contacter`.
+  if ('notes' in corps || 'vehicules' in corps || 'nom' in corps || 'telephone' in corps) {
     if ('notes' in corps && corps.notes !== null && typeof corps.notes !== 'string') {
       return NextResponse.json({ error: 'Notes invalides' }, { status: 400 })
     }
     if ('vehicules' in corps && corps.vehicules !== null && typeof corps.vehicules !== 'string') {
       return NextResponse.json({ error: 'Véhicules invalides' }, { status: 400 })
     }
+    if ('nom' in corps && corps.nom !== null && typeof corps.nom !== 'string') {
+      return NextResponse.json({ error: 'Nom invalide' }, { status: 400 })
+    }
+    if ('telephone' in corps) {
+      if (corps.telephone !== null && typeof corps.telephone !== 'string') {
+        return NextResponse.json({ error: 'Téléphone invalide' }, { status: 400 })
+      }
+      if (typeof corps.telephone === 'string' && corps.telephone.trim() && !isValidPhone(corps.telephone)) {
+        return NextResponse.json({ error: 'Le numéro de téléphone n’est pas valide.' }, { status: 400 })
+      }
+    }
     const notes = 'notes' in corps ? (corps.notes as string | null)?.trim().slice(0, 2000) || null : undefined
     const vehicules = 'vehicules' in corps ? (corps.vehicules as string | null)?.trim().slice(0, 2000) || null : undefined
+    const nom = 'nom' in corps ? (corps.nom as string | null)?.trim().slice(0, 200) || null : undefined
+    const telephone = 'telephone' in corps ? (corps.telephone as string | null)?.trim().slice(0, 30) || null : undefined
 
     const { error } = await supabase
       .from('clients')
       .upsert(
-        { washer_id: washer.id, cle, ...(notes !== undefined && { notes }), ...(vehicules !== undefined && { vehicules }), maj_le: new Date().toISOString() },
+        {
+          washer_id: washer.id, cle,
+          ...(notes !== undefined && { notes }),
+          ...(vehicules !== undefined && { vehicules }),
+          ...(nom !== undefined && { nom }),
+          ...(telephone !== undefined && { telephone }),
+          maj_le: new Date().toISOString(),
+        },
         { onConflict: 'washer_id,cle' },
       )
     if (error) return errorResponse('clients.patch.fiche.db', error)
     logger.info('clients.fiche', { washerId: washer.id })
-    return NextResponse.json({ cle, notes, vehicules })
+    return NextResponse.json({ cle, notes, vehicules, nom, telephone })
   }
 
   if (typeof corps.nePlusContacter !== 'boolean') {

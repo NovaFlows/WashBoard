@@ -65,6 +65,13 @@ export type ClientReglages = {
    *  compta passée. Masquer donne le résultat visible demandé — il disparaît du fichier — sans
    *  toucher à aucune donnée. */
   masque: boolean
+  /** Corrige le nom retenu (le plus récent d'une réservation ou d'un document, par défaut) —
+   *  un client tape parfois son nom de travers, ou le laveur veut la graphie officielle
+   *  (2026-09-28, menu « Modifier la fiche »). `null` : rien à corriger, le calcul habituel
+   *  s'applique. */
+  nom: string | null
+  /** Même principe pour le téléphone retenu. */
+  telephone: string | null
   /** Note libre — « portail à code 1234 », « préfère le samedi matin ». */
   notes: string | null
   /** Véhicules du client, en texte libre — « Peugeot 208 grise, plaque AB-123-CD » (2026-09-28,
@@ -234,16 +241,23 @@ export function buildClientProfile(
       .flatMap(s => s.modeles.map(m => m.trim()).filter(Boolean)),
   )]
 
+  const reglage = reglages.find(r => r.cle === key)
+
   return {
     cle: key,
-    nePlusContacter: reglages.find(r => r.cle === key)?.nePlusContacter ?? false,
-    notes: reglages.find(r => r.cle === key)?.notes ?? null,
-    vehicules: reglages.find(r => r.cle === key)?.vehicules ?? null,
+    nePlusContacter: reglage?.nePlusContacter ?? false,
+    notes: reglage?.notes ?? null,
+    vehicules: reglage?.vehicules ?? null,
     vehiculesReserves,
     ...identite,
-    phone: mine.find(b => b.client_phone)?.client_phone
+    // Une correction manuelle (menu « Modifier la fiche ») prime sur le calcul habituel — voir
+    // `ClientReglages.nom`/`.telephone`.
+    name: reglage?.nom || identite.name,
+    phone: reglage?.telephone || (
+      mine.find(b => b.client_phone)?.client_phone
       ?? siens.find(d => d.contenu.client.telephone)?.contenu.client.telephone
-      ?? '',
+      ?? ''
+    ),
     addresses: [...new Set([
       ...mine.map(b => b.address),
       ...siens.map(d => d.contenu.client.adresseFacturation),

@@ -172,6 +172,13 @@ export const GUIDE: GuideSection[] = [
         keywords: ['pro', 'professionnel', 'entreprise', 'siret', 'contact', 'site', 'difference', 'rattacher'],
       },
       {
+        id: 'menu-fiche-client',
+        question: 'À quoi sert le menu « … » d’une fiche client ?',
+        answer:
+          "Ouvrez la fiche d'un client dans [Clients](/dashboard/clients) et tapez sur « … » en haut à droite. Six actions : « Modifier la fiche » corrige le nom, le téléphone, ajoute des notes ou les véhicules du client (ce qu'il a tapé en réservant s'affiche déjà tout seul — ce champ sert surtout pour un client né d'un devis, ou pour un détail comme la plaque). « Ajouter une tâche » pose un pense-bête court sur la fiche — « Rappeler », « Proposer l'intérieur » — coché une fois fait. « Fusionner un doublon » n'apparaît que si une autre fiche ressemble à celle-ci (même téléphone ou même nom) : elle absorbe l'autre, irréversible. « Ne plus contacter » exclut le client des relances et des demandes d'avis automatiques. « Exporter ses données » télécharge tout ce que vous savez sur lui, à lui remettre s'il le demande (droit d'accès RGPD). « Anonymiser la fiche » efface nom, email, téléphone et adresse partout — les montants et numéros de facture restent, la loi impose de les garder dix ans — action irréversible, à réserver à une vraie demande du client (droit à l'effacement RGPD).",
+        keywords: ['menu', 'options', 'modifier', 'tache', 'rappel', 'doublon', 'fusionner', 'rgpd', 'export', 'exporter', 'anonymiser', 'effacement', 'supprimer donnees', 'vehicule'],
+      },
+      {
         id: 'avis',
         question: 'Comment demander des avis Google automatiquement ?',
         answer:

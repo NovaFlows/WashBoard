@@ -121,14 +121,14 @@ describe('buildClientProfile', () => {
 
     const avecReglage = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'alex@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null }],
+      [{ cle: 'alex@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null, nom: null, telephone: null }],
     )!
     expect(avecReglage.nePlusContacter).toBe(true)
 
     // Un réglage sur UN AUTRE client ne déteint pas.
     const autreClient = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null }],
+      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null, nom: null, telephone: null }],
     )!
     expect(autreClient.nePlusContacter).toBe(false)
   })
@@ -140,10 +140,25 @@ describe('buildClientProfile', () => {
 
     const avecReglage = buildClientProfile(
       [mk({})], 'alex@example.com', new Date(), [],
-      [{ cle: 'alex@example.com', nePlusContacter: false, masque: false, notes: 'Portail à code 1234', vehicules: 'Peugeot 208 grise' }],
+      [{ cle: 'alex@example.com', nePlusContacter: false, masque: false, notes: 'Portail à code 1234', vehicules: 'Peugeot 208 grise', nom: null, telephone: null }],
     )!
     expect(avecReglage.notes).toBe('Portail à code 1234')
     expect(avecReglage.vehicules).toBe('Peugeot 208 grise')
+  })
+
+  it('nom et téléphone corrigés à la main (menu « Modifier la fiche ») priment sur le calcul habituel', () => {
+    const p = buildClientProfile(
+      [mk({ client_name: 'alexx', client_phone: '0611112222' })], 'alex@example.com', new Date(), [],
+      [{ cle: 'alex@example.com', nePlusContacter: false, masque: false, notes: null, vehicules: null, nom: 'Alexandre Dupont', telephone: '0699998888' }],
+    )!
+    expect(p.name).toBe('Alexandre Dupont')
+    expect(p.phone).toBe('0699998888')
+  })
+
+  it('sans correction, nom et téléphone restent ceux calculés habituellement', () => {
+    const p = buildClientProfile([mk({ client_name: 'Alex', client_phone: '0611112222' })], 'alex@example.com')!
+    expect(p.name).toBe('Alex')
+    expect(p.phone).toBe('0611112222')
   })
 
   it('vehiculesReserves reprend les modèles tapés par le client en réservant, du plus récent, sans doublon', () => {

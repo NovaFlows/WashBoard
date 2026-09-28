@@ -152,6 +152,18 @@
       un MASQUAGE, jamais une vraie suppression — voir `ClientReglages.masque` dans
       `lib/clientProfile.ts` pour pourquoi (numérotation des factures, obligation légale de
       conservation).
+- [ ] **Supabase (SQL Editor) — colonne `clients.vehicules`** (2026-09-28, « les modèles de
+      voitures des gens »), sans laquelle le champ Véhicules de la fiche répond une erreur :
+      ```sql
+      alter table public.clients add column if not exists vehicules text;
+      ```
+- [ ] **Supabase (SQL Editor) — menu « Options » refait : colonnes `clients.nom`/`.telephone`,
+      tables `client_taches` et `client_rgpd_journal`, fonctions `fusionner_clients` et
+      `anonymiser_client`** (2026-09-28) — sans ce SQL, « Modifier la fiche » (nom/téléphone),
+      « Ajouter une tâche », « Fusionner un doublon » et « Anonymiser la fiche » répondent tous
+      une erreur (« Exporter ses données » fonctionne sans, il ne journalise juste rien). SQL
+      complet donné plus bas, section « Roadmap produit » › **Menu « Options » de la fiche
+      refait**, À EXÉCUTER APRÈS le bloc `entreprises`/`sites` ci-dessus (même table `clients`).
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
@@ -2489,11 +2501,166 @@ rien à faire, mais que le projet reste globalement sain.
         dans `FactureContenu.client.vehicule` (`lib/facture.ts`, `lib/documents.ts`).
         `vehiculesReserves` mêle les deux sources par date (réservation ou document, la plus
         récente d'abord) plutôt que de les empiler sans ordre.
-  - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
-        documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
-  - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
-        droit à l'effacement, montants conservés pour la compta légale) — à faire vérifier le
-        libellé exact par l'agent `legal` avant de le construire.
+  - [x] 2026-09-28 — **Menu « Options » de la fiche refait** (canevas de Yanis, « Fiche >
+        Options ») : passé d'une petite liste de mots à une vraie feuille (icône + titre +
+        sous-titre par action), avec six actions. `lib/guide.ts`, entrée `menu-fiche-client`.
+    - **Modifier la fiche étendue** : portait seulement notes/véhicules, porte maintenant aussi
+      nom et téléphone (`ClientReglages.nom`/`.telephone`, `clientProfile.ts`) — une CORRECTION
+      qui prime sur le calcul habituel (le plus récent d'une réservation ou d'un document),
+      jamais une réécriture de l'historique.
+    - **Ajouter une tâche** : pense-bête court, table `client_taches` (SQL ci-dessous),
+      `/api/clients/[cle]/taches` (GET/POST), `/api/taches/[id]` (PATCH/DELETE). Chargée à
+      l'ouverture de la fiche, pas dans `clients/page.tsx` — la plupart des fiches n'en ont
+      aucune. Cochée = disparaît (pas d'historique des tâches faites, pas demandé).
+    - **Fusionner un doublon** : repéré par `lib/doublons.ts` (même téléphone, sinon même nom
+      sans accent ni casse — jamais l'email, c'est justement ce qui diffère entre deux fiches
+      de la même personne). N'apparaît dans le menu QUE si un doublon est trouvé. La fusion
+      elle-même (`/api/clients/fusionner`, fonction SQL `fusionner_clients` ci-dessous)
+      réassigne réservations et documents de la fiche source vers la fiche cible (email/
+      téléphone réécrits), combine leurs réglages (notes, véhicules, ne plus contacter — la
+      cible garde les siens en priorité), puis supprime la ligne de réglages de la source.
+      Irréversible.
+    - **Exporter ses données (RGPD, article 15)** : libellé et mécanique revus par l'agent
+      `legal` avant construction (voir le compte rendu de la conversation du 2026-09-28). Un
+      fichier texte lisible directement, PAS un JSON brut (`lib/exportClient.ts`,
+      `texteExportClient`), généré entièrement dans le navigateur depuis la fiche déjà
+      chargée — aucune requête pour construire le fichier. `/api/clients/[cle]/rgpd` ne fait
+      que journaliser l'action (table `client_rgpd_journal`, SQL ci-dessous), pour la
+      responsabilité du laveur en cas de contrôle (article 5.2) — jamais le contenu exporté.
+    - **Anonymiser la fiche (RGPD, article 17, exception comptable 17.3.b)** : remplace nom,
+      email, téléphone et adresse par des valeurs anonymes sur TOUTES les réservations et TOUS
+      les documents de ce client — jamais montants, dates ni numéros de facture (fonction SQL
+      `anonymiser_client` ci-dessous, même mécanique que `fusionner_clients`). Confirmation
+      avec case à cocher obligatoire (texte exact fourni par l'agent `legal`), bouton
+      désactivé tant qu'elle n'est pas cochée. Irréversible, ferme la fiche après coup.
+      **Limite connue, signalée par `legal`** : les champs libres (notes, véhicules) qui
+      mentionneraient le nom du client en toutes lettres ne sont PAS balayés automatiquement —
+      la confirmation le dit, mais rien ne le vérifie. Hors périmètre également : toute autre
+      table qui porterait les coordonnées de ce client (funnel d'abandon de réservation, par
+      exemple) — seules réservations et documents sont couverts.
+
+      SQL à exécuter dans Supabase (idempotent, un seul passage) :
+      ```sql
+      alter table public.clients add column if not exists nom text;
+      alter table public.clients add column if not exists telephone text;
+
+      create table if not exists public.client_taches (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        cle text not null,
+        texte text not null,
+        faite_le timestamptz,
+        created_at timestamptz not null default now()
+      );
+      create index if not exists client_taches_washer_cle_idx on public.client_taches(washer_id, cle);
+      alter table public.client_taches enable row level security;
+      drop policy if exists "client_taches_all" on public.client_taches;
+      create policy "client_taches_all" on public.client_taches for all
+        using (washer_id in (select id from public.washers where user_id = auth.uid()))
+        with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      grant select, insert, update, delete on public.client_taches to authenticated;
+      grant all on public.client_taches to service_role;
+
+      create table if not exists public.client_rgpd_journal (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        cle text not null,
+        action text not null,
+        utilisateur_id uuid,
+        created_at timestamptz not null default now()
+      );
+      alter table public.client_rgpd_journal enable row level security;
+      drop policy if exists "client_rgpd_journal_all" on public.client_rgpd_journal;
+      create policy "client_rgpd_journal_all" on public.client_rgpd_journal for all
+        using (washer_id in (select id from public.washers where user_id = auth.uid()))
+        with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      grant select, insert on public.client_rgpd_journal to authenticated;
+      grant all on public.client_rgpd_journal to service_role;
+
+      -- Fusionner un doublon : la fiche SOURCE disparaît, ses réservations et documents
+      -- prennent l'email/téléphone de la fiche CIBLE. Sous un verrou (deux fusions du même
+      -- laveur en même temps ne doivent pas se marcher dessus).
+      create or replace function public.fusionner_clients(
+        p_washer_id uuid, p_cle_source text, p_email_cible text, p_telephone_cible text
+      ) returns void
+      language plpgsql security definer set search_path = public as $$
+      begin
+        perform pg_advisory_xact_lock(hashtext(p_washer_id::text || ':clients'));
+
+        update public.bookings
+        set client_email = nullif(p_email_cible, ''),
+            client_phone = coalesce(nullif(p_telephone_cible, ''), client_phone)
+        where washer_id = p_washer_id
+          and (
+            lower(trim(client_email)) = p_cle_source
+            or (
+              (client_email is null or trim(client_email) = '')
+              and ('tel:' || regexp_replace(client_phone, '\D', '', 'g')) = p_cle_source
+            )
+          );
+
+        update public.documents
+        set contenu = jsonb_set(
+              jsonb_set(contenu, '{client,email}', to_jsonb(nullif(p_email_cible, ''))),
+              '{client,telephone}', to_jsonb(nullif(p_telephone_cible, ''))
+            )
+        where washer_id = p_washer_id
+          and (
+            lower(trim(contenu->'client'->>'email')) = p_cle_source
+            or (
+              (contenu->'client'->>'email' is null or trim(contenu->'client'->>'email') = '')
+              and ('tel:' || regexp_replace(contenu->'client'->>'telephone', '\D', '', 'g')) = p_cle_source
+            )
+          );
+
+        delete from public.clients where washer_id = p_washer_id and cle = p_cle_source;
+      end;
+      $$;
+      grant execute on function public.fusionner_clients(uuid, text, text, text) to authenticated;
+
+      -- Anonymiser (droit à l'effacement, article 17) : remplace nom/email/téléphone/adresse
+      -- partout, jamais montants ni numéros de facture. Même verrou que la fusion.
+      create or replace function public.anonymiser_client(p_washer_id uuid, p_cle text) returns void
+      language plpgsql security definer set search_path = public as $$
+      begin
+        perform pg_advisory_xact_lock(hashtext(p_washer_id::text || ':clients'));
+
+        update public.bookings
+        set client_name = 'Client anonymisé', client_email = null, client_phone = null, address = 'Adresse supprimée'
+        where washer_id = p_washer_id
+          and (
+            lower(trim(client_email)) = p_cle
+            or (
+              (client_email is null or trim(client_email) = '')
+              and ('tel:' || regexp_replace(client_phone, '\D', '', 'g')) = p_cle
+            )
+          );
+
+        update public.documents
+        set contenu = jsonb_set(
+              jsonb_set(
+                jsonb_set(
+                  jsonb_set(contenu, '{client,nom}', to_jsonb('Client anonymisé'::text)),
+                  '{client,email}', 'null'::jsonb
+                ),
+                '{client,telephone}', 'null'::jsonb
+              ),
+              '{client,adresseFacturation}', to_jsonb('Adresse supprimée'::text)
+            )
+        where washer_id = p_washer_id
+          and (
+            lower(trim(contenu->'client'->>'email')) = p_cle
+            or (
+              (contenu->'client'->>'email' is null or trim(contenu->'client'->>'email') = '')
+              and ('tel:' || regexp_replace(contenu->'client'->>'telephone', '\D', '', 'g')) = p_cle
+            )
+          );
+
+        delete from public.clients where washer_id = p_washer_id and cle = p_cle;
+      end;
+      $$;
+      grant execute on function public.anonymiser_client(uuid, text) to authenticated;
+      ```
 
 - [x] 2026-09-17 — **Livré par Ryan** (`56836f2`). Tables `support_questions` /
       `support_messages` **créées à la main dans Supabase** ce jour-là, SQL donné dans la

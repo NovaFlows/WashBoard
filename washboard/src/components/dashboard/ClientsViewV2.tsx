@@ -12,6 +12,7 @@ import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeC
 import { clientsARelancer, type LigneARelancer, type ReglagesRelance } from '@/lib/clientsARelancer'
 import { buildEntrepriseProfile, type EntrepriseListItem } from '@/lib/entrepriseProfile'
 import { marquerNePlusContacter, supprimerClient, supprimerEntreprise } from '@/lib/clientsApi'
+import { trouverDoublon } from '@/lib/doublons'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 
@@ -161,7 +162,7 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
     if (reglagesLocaux.size === 0) return reglages
     const parCle = new Map(reglages.map(r => [r.cle, r]))
     for (const [cle, override] of reglagesLocaux) {
-      const existant = parCle.get(cle) ?? { cle, nePlusContacter: false, masque: false, notes: null, vehicules: null }
+      const existant = parCle.get(cle) ?? { cle, nePlusContacter: false, masque: false, notes: null, vehicules: null, nom: null, telephone: null }
       parCle.set(cle, { ...existant, ...override })
     }
     return [...parCle.values()]
@@ -266,6 +267,9 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   )
   const affiches = useMemo(() => rechercherClients(parFiltre, recherche), [parFiltre, recherche])
   const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglagesEffectifs) : null
+  // Doublon probable (menu « … » de la fiche, 2026-09-28) : calculé ici, pas dans la fiche —
+  // c'est cet écran qui connaît TOUT le fichier (`clients`), une fiche ouverte ne voit qu'elle-même.
+  const doublon = fiche ? trouverDoublon(fiche, clients) : null
 
   // La Fiche entreprise REMPLACE l'écran Clients (comme une destination à part), pas une
   // feuille par-dessus : c'est un fichier en soi (contacts, sites), pas le détail d'une ligne.
@@ -288,6 +292,8 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
             entrepriseDuContact={entrepriseParCle.get(fiche.cle) ?? null}
             entreprisesDisponibles={entreprisesOptions}
             onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
+            doublon={doublon}
+            nomLaveur={nomLaveur}
           />
         )}
       </>
@@ -446,6 +452,8 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
           entrepriseDuContact={entrepriseParCle.get(fiche.cle) ?? null}
           entreprisesDisponibles={entreprisesOptions}
           onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
+          doublon={doublon}
+          nomLaveur={nomLaveur}
         />
       )}
 
