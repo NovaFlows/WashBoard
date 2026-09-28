@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SITE_URL } from '@/lib/blog'
-import { PLAN_CARDS, SMS_QUOTA, freeMonthsLabel } from '@/lib/plan'
+import { PLAN_CARDS, freeMonthsLabel } from '@/lib/plan'
 import type { FaqItem } from '@/components/blog/Prose'
+import { ComparatifBesoins } from '@/components/ComparatifBesoins'
+import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 
 // Page comparatif — angle "outils génériques", pas "vs un concurrent nommé".
 //
@@ -125,106 +127,9 @@ function Footer() {
   )
 }
 
-// Comparaison dédiée, pas le composant `Table` partagé de Prose.tsx : ce
-// dernier force chaque cellule sur une seule ligne (`whitespace-nowrap`) et
-// défile horizontalement — pensé pour des cellules courtes (prix, dates), pas
-// pour des phrases complètes. Avec ce contenu, la colonne "WashBoard" — celle
-// qui doit justement convaincre — se retrouvait hors champ, à faire défiler
-// pour la voir. Ici le texte s'enroule normalement, et la colonne WashBoard
-// est visuellement distincte (fond teinté) plutôt que perdue au même niveau
-// que les deux autres. En grille sur écran large, en cartes empilées sur
-// téléphone (trois colonnes de prose ne tiennent pas sur un petit écran).
-function ComparatifBesoins({ head, rows }: { head: string[]; rows: string[][] }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-      {/* En-tête, visible seulement à partir de sm : sur téléphone chaque
-          carte répète son propre libellé de colonne. */}
-      <div className="hidden sm:grid sm:grid-cols-[1.3fr_1fr_1fr_1fr] bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        {head.map((h, i) => (
-          <p key={h} className={`px-4 py-3 text-xs font-black uppercase tracking-wide ${i === head.length - 1 ? 'text-[#1651E8] dark:text-[#6A9FFF]' : 'text-slate-500 dark:text-slate-400'}`}>
-            {h}
-          </p>
-        ))}
-      </div>
-      <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-        {rows.map((row, i) => (
-          <div key={i} className="sm:grid sm:grid-cols-[1.3fr_1fr_1fr_1fr] p-4 sm:p-0">
-            <p className="font-bold text-slate-900 dark:text-white sm:px-4 sm:py-3 sm:font-semibold mb-2 sm:mb-0">
-              {row[0]}
-            </p>
-            {row.slice(1).map((cell, j) => (
-              <div
-                key={j}
-                className={`text-sm leading-relaxed sm:px-4 sm:py-3 ${j === row.length - 2 ? 'text-slate-900 dark:text-white font-medium bg-[#1651E8]/[0.04] dark:bg-[#1651E8]/10' : 'text-slate-500 dark:text-slate-400'}`}
-              >
-                <span className="sm:hidden font-bold text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 block mb-1">
-                  {head[j + 1]}
-                </span>
-                {cell}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // Dérivés de PLAN_CARDS, jamais recopiés.
 const essentiel = PLAN_CARDS.find(c => c.key === 'essentiel')!
 const pro = PLAN_CARDS.find(c => c.key === 'pro')!
-
-const besoinsHead = [
-  'Besoin',
-  'À la main (WhatsApp, Excel, carnet papier)',
-  'Outil généraliste (Calendly, Google Agenda seul)',
-  'WashBoard',
-]
-
-const besoinsRows: string[][] = [
-  [
-    'Réservation en ligne, sans échange de messages',
-    'Non — chaque créneau se négocie par message',
-    'Oui, pour un outil de prise de rendez-vous comme Calendly',
-    'Oui',
-  ],
-  [
-    'Prix qui suit le type de véhicule (citadine, SUV, utilitaire…)',
-    'Recalculé à la main à chaque fois',
-    'Non — un rendez-vous a une durée et un prix uniques',
-    'Oui, prix et durée par prestation et par véhicule',
-  ],
-  [
-    'Frais de déplacement calculés automatiquement',
-    'Non',
-    'Non — pas prévu pour un métier qui se déplace',
-    'Oui, par palier de trajet réel (Google Maps)',
-  ],
-  [
-    'Créneaux qui limitent les trajets entre deux adresses',
-    'Non',
-    'Non — créneaux fixes, sans lien avec la géographie',
-    'Oui, groupés au temps de trajet réel',
-  ],
-  [
-    'Facturation conforme (SIRET, TVA, numérotation continue)',
-    'Non — à refaire à part',
-    'Non',
-    'Oui, générée et envoyée automatiquement',
-  ],
-  [
-    'Avis Google demandés après chaque prestation',
-    'Non — à faire penser à soi-même',
-    'Non',
-    `Oui, par email (et SMS en formule Pro, ${SMS_QUOTA.pro}/mois)`,
-  ],
-  [
-    'Plusieurs véhicules dans une même réservation',
-    'Possible, mais recalculé à la main',
-    'Non — un rendez-vous, un seul motif',
-    'Oui, prix et durée propres à chaque véhicule',
-  ],
-]
 
 const faqItems: FaqItem[] = [
   {

@@ -109,7 +109,10 @@ export default function Page() {
         <P>
           Vous pouvez même encourager ces créneaux avec une petite remise. Dix pour cent sur un
           créneau qui vous économise quarante minutes de route est une excellente affaire pour vous
-          deux.
+          deux. C&apos;est exactement ce que{' '}
+          <A href="/optimisation-tournee-lavage-auto">les créneaux groupés de WashBoard</A>{' '}
+          automatisent : le logiciel compare le trajet réel à vos rendez-vous du jour et met en avant
+          les horaires proches, avec la remise que vous avez réglée.
         </P>
 
         <H2>Prévoir des durées réalistes</H2>

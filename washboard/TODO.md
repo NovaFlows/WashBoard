@@ -484,6 +484,45 @@ Pas fait, à trancher :
   multi-métier) : gardés tels quels pour l'historique, ne pas les reprendre
   comme feuille de route actuelle.
 
+**2026-09-28 — brief GEO d'Alexandre, comparatif dupliqué sur la landing, nouvelle page pilier.**
+- **Comparatif dupliqué sur la landing** (demande Alexandre : la page
+  `/meilleur-logiciel-lavage-auto` est jugée trop convaincante pour rester
+  accessible seulement via un lien). Section « Le choix » (3 approches) +
+  tableau complet ajoutés juste après l'énumération des fonctionnalités sur
+  la landing, contenu et composant mutualisés (`lib/comparatifAuto.ts`,
+  `components/ComparatifBesoins.tsx`) avec la page dédiée — la page dédiée
+  existe toujours, ce n'est pas un déplacement.
+- **Carte compagne du ROI refaite** : l'ancienne carte "7 points comparés →
+  voir le comparatif" n'avait plus de sens (le comparatif est maintenant sur
+  la même page, plus haut). Remplacée par 3 cartes en rangée sous le calcul
+  "+40" : réassurance (mois offert/sans CB/accompagnement, avec lien vers
+  `/signup`), conséquence du +40 côté charge administrative (factures/avis
+  envoyés seuls), fait produit vérifiable (0 ressaisie). Décidé avec Ryan
+  après comparaison visuelle de plusieurs options en local.
+- **JSON-LD `SoftwareApplication`** (brief Alexandre — GEO) : `operatingSystem`
+  passé de `"Web"` à `"Web, PWA"` (vérifié : `public/manifest.webmanifest`
+  existe, installable) ; **pas iOS/Android**, aucune app native n'existe,
+  l'affirmer aurait été faux. Description enrichie (calcul de tournée,
+  facturation automatique, avis Google) — **sans mentionner de devis**,
+  fonctionnalité absente de `master` (à ajouter le jour où elle y arrive
+  officiellement, si c'est un vrai produit — à vérifier avec Ryan/Alexandre,
+  la refonte PWA n'est pas encore fusionnée).
+- **Nouvelle page pilier `/optimisation-tournee-lavage-auto`** (brief
+  Alexandre demandait 3 pages : celle-ci validée, `/logiciel-lavage-auto-domicile`
+  écartée — redondante avec `/logiciel-lavage-auto` existant, cannibalisation —,
+  `/reservation-en-ligne-detailing` **en attente** — contredit la fusion
+  auto+detailing du recentrage du 27/09, à trancher avec Alexandre). Angle
+  « optimisation de tournée » (problème), distinct de l'angle produit de
+  `/logiciel-lavage-auto` : créneaux groupés, contrainte de trajet toujours
+  active, frais de déplacement automatiques. Maillée dans les deux sens avec
+  `/logiciel-lavage-auto` et l'article `organiser-ses-tournees-lavage-auto`,
+  ajoutée au sitemap (24 adresses), image de partage dédiée.
+- **H1/title (point 2 du brief Alexandre) : pas d'action, déjà géré par
+  Alexandre ailleurs** (rotation du H1 passée de 3 à 4 slogans) — confirmé
+  par Ryan, ne pas y toucher de ce côté.
+- Vérifié avant tout ça : typecheck, eslint, 1042/1042 tests, build, contrôle
+  en local (title, JSON-LD, sitemap, liens croisés).
+
 **Ce que le document dit et qui est faux** : il attribue l'avance de
 CarnetWash à son H1. Leur H1 est « Plus de clients. Moins de paperasse. », une
 accroche bénéfice exactement comme « Fais plus. Gère moins. ». **Le H1 de

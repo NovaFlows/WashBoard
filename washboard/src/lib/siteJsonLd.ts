@@ -68,10 +68,13 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
     name: 'WashBoard',
     url: siteUrl,
     applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web',
+    // "PWA" : installable, vérifié via public/manifest.webmanifest
+    // (display: standalone, icônes, raccourcis). Pas iOS/Android — aucune
+    // fiche App Store ni Play Store n'existe, l'affirmer serait faux.
+    operatingSystem: 'Web, PWA',
     inLanguage: 'fr-FR',
     description:
-      "Logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne sans compte client, créneaux groupés par quartier, relances et avis automatiques, comptabilité.",
+      "Logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne sans compte client, créneaux groupés au temps de trajet réel entre les rendez-vous, facturation automatique conforme (SIRET, TVA), avis Google demandés après chaque prestation, comptabilité.",
     publisher: { '@id': `${siteUrl}/#organization` },
     offers: {
       '@type': 'AggregateOffer',

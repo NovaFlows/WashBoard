@@ -37,11 +37,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     })),
-    // Page comparatif ("meilleur-logiciel-lavage-auto") : notre contenu,
-    // aucune donnée de laveur, pas de date honnête disponible — même raison
-    // que les pages métier ci-dessus.
+    // Page comparatif ("meilleur-logiciel-lavage-auto") et page pilier
+    // "optimisation de tournée" : notre contenu, aucune donnée de laveur, pas
+    // de date honnête disponible — même raison que les pages métier
+    // ci-dessus. Standalone, pas dans METIER_PAGES (un thème n'a qu'une page).
     {
       url: `${SITE_URL}/meilleur-logiciel-lavage-auto`,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${SITE_URL}/optimisation-tournee-lavage-auto`,
       changeFrequency: 'monthly',
       priority: 0.8,
     },

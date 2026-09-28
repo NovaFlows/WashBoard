@@ -14,6 +14,8 @@ import { SOCIAL_LINKS } from '@/components/ui/socialLinks'
 import { FAQ_ITEMS } from '@/lib/faq'
 import { metierPageForTheme } from '@/lib/metiers'
 import type { Theme } from '@/lib/blog'
+import { ComparatifBesoins } from '@/components/ComparatifBesoins'
+import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 
 // Slogans courts et uniformes — pas de saut de layout
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
@@ -148,7 +150,7 @@ const ETAPES_CRENEAUX = [
 // commerciaux (voir lib/plan.ts pour ceux-là).
 const PARCOURS_TOUT_EN_UN = [
   'Mardi 14h : Sophie B. réserve un lavage complet sur ta page — 45€, elle choisit elle-même son créneau.',
-  'Le rendez-vous tombe directement dans ton agenda du mardi, sans que tu aies rien à recopier.',
+  'Le rendez-vous tombe directement dans ton agenda du mardi, une notification t’arrive aussitôt, sans que tu aies rien à recopier.',
   'Tu interviens chez elle à l’heure prévue : l’adresse et la prestation viennent de sa réservation, rien à ressaisir.',
   'Sa fiche client s’actualise toute seule : c’est sa 3ᵉ visite, 135€ dépensés chez toi au total.',
   'Tu marques le rendez-vous « Terminé » : la facture des 45€ part directement, une demande d’avis Google suit.',
@@ -889,6 +891,72 @@ export default function LandingPage() {
         </FadeGroup>
       </section>
 
+      {/* ── Le choix + le comparatif ── repris en doublon volontaire de
+          /meilleur-logiciel-lavage-auto (données et composant partagés via
+          lib/comparatifAuto.ts et components/ComparatifBesoins.tsx) : cette
+          page s'est révélée trop convaincante pour rester accessible
+          seulement via un lien, elle mérite sa place ici, juste après
+          l'inventaire des fonctionnalités. Angle « outils génériques », pas
+          de concurrent nommé — voir le header de la page dédiée pour le
+          détail juridique. */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-14">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le choix</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Trois façons de gérer, aucune n&apos;est absurde
+          </h2>
+        </FadeUp>
+        <FadeGroup className="grid sm:grid-cols-3 gap-8 sm:gap-10 mb-16">
+          {[
+            {
+              n: '01',
+              titre: 'À la main',
+              texte: 'WhatsApp pour les réservations, Excel pour les prix et le suivi, un carnet ou une note pour l’agenda. Zéro coût, zéro mise en place. Tient tant que le volume reste faible et que personne d’autre n’a besoin de lire ces informations.',
+            },
+            {
+              n: '02',
+              titre: 'Un outil généraliste',
+              texte: 'Calendly ou un agenda Google partagé gèrent très bien la prise de rendez-vous en ligne sans échange de messages. Ils ne savent en revanche rien du métier : ni du véhicule, ni du trajet, ni de la facture qui doit suivre.',
+            },
+            {
+              n: '03',
+              titre: 'Un logiciel dédié',
+              texte: 'Pensé pour une activité qui se déplace : prix par véhicule, frais de déplacement, créneaux qui limitent la route, facture conforme. Le compromis : un abonnement, et une mise en place initiale.',
+            },
+          ].map((etape) => (
+            <FadeItem key={etape.n}>
+              <span className="text-3xl font-black text-[#1651E8]/25 leading-none">{etape.n}</span>
+              <p className="mt-3 font-bold text-slate-900 dark:text-white">{etape.titre}</p>
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{etape.texte}</p>
+            </FadeItem>
+          ))}
+        </FadeGroup>
+
+        <FadeUp className="mb-8">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Poste par poste</p>
+          <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-4">
+            Ce qui change vraiment selon l&apos;outil
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            Pas de note globale ni de verdict à l&apos;emporte-pièce : chaque besoin, comparé pour ce qu&apos;il
+            est. Un outil comme Calendly fait très bien la prise de rendez-vous simple — l&apos;écart se joue
+            ailleurs.
+          </p>
+        </FadeUp>
+        <FadeUp>
+          <ComparatifBesoins head={besoinsHead} rows={besoinsRows} />
+          <Link
+            href="/meilleur-logiciel-lavage-auto"
+            className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline underline-offset-4"
+          >
+            Voir le comparatif complet, avec la foire aux questions
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+        </FadeUp>
+      </section>
+
       {/* ── Le produit en vrai ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-12">
@@ -1069,8 +1137,8 @@ export default function LandingPage() {
 
       {/* ── ROI ── */}
       <section className="border-t border-slate-100 dark:border-slate-800/50 py-24 sm:py-32">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 grid lg:grid-cols-[1fr_300px] gap-12 lg:gap-10 items-start">
-          <FadeUp>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <FadeUp className="mb-14">
             <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
               {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
                   assez de clients pour en publier une, et l'afficher comme un
@@ -1106,37 +1174,44 @@ export default function LandingPage() {
             </div>
           </FadeUp>
 
-          {/* Carte compagne : la zone ne laissait que le calcul, seul dans un
-              conteneur large — beaucoup de vide à droite sur grand écran.
-              Le moment où quelqu'un se demande "est-ce que ça vaut le coup"
-              est justement celui où le comparatif (P2, meilleur-logiciel-
-              lavage-auto) a le plus de sens : ni un nouveau chiffre, ni un
-              développement du calcul déjà présent, juste un renvoi. */}
-          <FadeUp>
-            {/* Même traitement que la carte de gauche (bordure d'accent +
-                chiffre en avant) plutôt qu'un simple bloc de texte : les deux
-                cartes se répondent au lieu que l'une paraisse secondaire.
-                "7" est réel, pas inventé pour l'occasion — c'est le nombre de
-                lignes du tableau de meilleur-logiciel-lavage-auto. */}
-            <Link href="/meilleur-logiciel-lavage-auto" className="group block">
-              <div className="border-l-4 border-[#1651E8] dark:border-[#6A9FFF] pl-6">
-                <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.22em] mb-5">Tu hésites encore ?</p>
-                <p className="text-5xl sm:text-6xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-3">
-                  7
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">points comparés, poste par poste</p>
-                <p className="font-bold text-slate-900 dark:text-white group-hover:text-[#1651E8] dark:group-hover:text-[#6A9FFF] transition-colors mb-2">
-                  Ce qui change vraiment entre gérer à la main et un logiciel pensé pour le lavage auto
-                </p>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF]">
-                  Voir le comparatif
-                  <svg aria-hidden className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </Link>
-          </FadeUp>
+          {/* Trois angles pour répondre à « est-ce que ça vaut le coup »,
+              rangés sous le calcul plutôt que dans une seule carte compagne
+              qui laissait trop de vide : réassurance (mois offert, sans CB),
+              conséquence du +40 côté charge de travail, et un fait produit
+              vérifiable (0 ressaisie). Même traitement que « 3 features
+              secondaires » plus haut (boîte à colonnes divisées). */}
+          <FadeGroup className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <FadeItem className="bg-white dark:bg-slate-900/50 p-6 sm:p-7">
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wide mb-3">Tu hésites encore ?</p>
+              <p className="font-bold text-slate-900 dark:text-white mb-3">Rien à perdre à essayer</p>
+              <ul className="space-y-1.5 mb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                <li>Un mois offert</li>
+                <li>Sans carte bancaire, sans engagement</li>
+                <li>Accompagnement inclus, par WhatsApp</li>
+              </ul>
+              <Link href="/signup" className="text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline underline-offset-4">
+                Lancer mon mois gratuit →
+              </Link>
+            </FadeItem>
+
+            <FadeItem className="bg-white dark:bg-slate-900/50 p-6 sm:p-7">
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wide mb-3">Autre effet du +40</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-2">+40</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">factures envoyées sans y penser</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Facture et demande d&apos;avis Google partent seules à chaque rendez-vous terminé.
+              </p>
+            </FadeItem>
+
+            <FadeItem className="bg-white dark:bg-slate-900/50 p-6 sm:p-7">
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wide mb-3">Ce qui ne change jamais</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-2">0</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">information à ressaisir à la main</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Adresse, prestation, prix : tout vient de la réservation du client, jusqu&apos;à la facture.
+              </p>
+            </FadeItem>
+          </FadeGroup>
         </div>
       </section>
 

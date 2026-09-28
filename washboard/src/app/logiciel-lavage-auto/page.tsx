@@ -92,7 +92,18 @@ const fonctionnalites: MetierFeature[] = [
   },
   {
     titre: 'Des créneaux qui limitent la route',
-    desc: 'Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes rendez-vous déjà prévus ce jour-là et met en avant les horaires proches de l’un d’eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un quart d’heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que le trajet rendrait injoignable.',
+    desc: (
+      <>
+        Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes
+        rendez-vous déjà prévus ce jour-là et met en avant les horaires proches de l&apos;un
+        d&apos;eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un
+        quart d&apos;heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que
+        le trajet rendrait injoignable — voir notre page sur{' '}
+        <Link href="/optimisation-tournee-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+          l&apos;optimisation de tournée
+        </Link>.
+      </>
+    ),
   },
   {
     titre: 'Un agenda qui suit ton équipe',
