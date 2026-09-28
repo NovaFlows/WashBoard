@@ -1,3 +1,4 @@
+import { PLAN_LABELS, offreCatalogueIllimite } from '@/lib/plan'
 /** Règles d'une prestation valide, partagées par le formulaire du tableau de
  *  bord, les routes `/api/services` et la page de réservation publique.
  *
@@ -60,8 +61,11 @@ export function prestationsAffichees<T extends { vehicle_types?: unknown; en_vei
 
 /** Refus serveur : réactiver au-delà de ce que l'offre autorise. */
 export function erreurTropDActives(plafond: number): string {
+  // Le nom de l'offre, pas « l'offre supérieure » : un laveur à qui on dit de
+  // monter sans lui dire où ni pour combien ne monte pas, il referme.
+  const offre = PLAN_LABELS[offreCatalogueIllimite()]
   return `Votre offre affiche ${plafond} prestation${plafond > 1 ? 's' : ''} au maximum. `
-    + `Mettez-en une autre en veille, ou passez à l’offre supérieure.`
+    + `Mettez-en une autre en veille, ou passez à l’offre ${offre} pour un catalogue illimité.`
 }
 
 export type ChampPrestation = 'nom' | 'prix' | 'duree' | 'type' | 'duree_max'

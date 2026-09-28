@@ -411,6 +411,12 @@ export default function PrestationsManager({ services: initialServices, categori
   const [form, setForm] = useState<FormData>(EMPTY)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Message de plafond atteint, rendu comme une PROPOSITION et non comme une
+   *  erreur. Réactiver une prestation quand le catalogue est plein n'est pas
+   *  une faute du laveur : c'est le moment exact où l'offre supérieure lui
+   *  sert à quelque chose. Une bannière rouge le ferait renoncer ; une
+   *  proposition lui donne une porte. */
+  const [plafondCatalogue, setPlafondCatalogue] = useState<string | null>(null)
 
   const actives = services.filter(sv => !estEnVeille(sv))
   const aRanger = aMettreEnVeille(actives.length, plafond)
@@ -426,6 +432,7 @@ export default function PrestationsManager({ services: initialServices, categori
   async function basculerVeille(svc: Service) {
     const cible = !estEnVeille(svc)
     setError(null)
+    setPlafondCatalogue(null)
     setLoading(true)
     const res = await fetch(`/api/services/${svc.id}`, {
       method: 'PATCH',
@@ -436,7 +443,10 @@ export default function PrestationsManager({ services: initialServices, categori
       setServices(prev => prev.map(x => (x.id === svc.id ? { ...x, en_veille: cible } : x)))
     } else {
       const corps = await res.json().catch(() => ({}))
-      setError(corps.error ?? 'Impossible de modifier cette prestation')
+      // 403 avec un quota : le catalogue est plein. Ce n'est pas une erreur à
+      // signaler en rouge, c'est une offre à proposer.
+      if (res.status === 403 && corps.quota) setPlafondCatalogue(corps.error)
+      else setError(corps.error ?? 'Impossible de modifier cette prestation')
     }
     setLoading(false)
   }
@@ -695,8 +705,33 @@ export default function PrestationsManager({ services: initialServices, categori
           </div>
         )}
 
+        {plafondCatalogue && (
+          <div className="rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 px-4 py-4 text-center">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Catalogue complet</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-sm mx-auto">{plafondCatalogue}</p>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <Link
+                href="/dashboard/abonnement"
+                className="px-4 py-2 rounded-xl bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold transition-colors active:scale-[0.97]"
+              >
+                Voir les offres
+              </Link>
+              <button
+                onClick={() => setPlafondCatalogue(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Plus tard
+              </button>
+            </div>
+          </div>
+        )}
+
         {!showAdd && editId === null && categories.length > 0 && (
-          catalogueComplet ? (
+          // `!plafondCatalogue` : quand la réactivation vient d'être refusée,
+          // son encadré dit déjà tout — et en mieux, puisqu'il rappelle qu'on
+          // peut mettre une autre prestation en veille. Les deux ensemble
+          // faisaient deux fois le même mur, l'un sur l'autre.
+          catalogueComplet && !plafondCatalogue ? (
             <div className="w-full py-4 px-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Catalogue complet — {plafond} prestations sur votre offre

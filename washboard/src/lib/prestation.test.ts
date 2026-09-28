@@ -1,3 +1,4 @@
+import { PLAN_LABELS, offreCatalogueIllimite } from './plan'
 import { describe, it, expect } from 'vitest'
 import { estReservable, champsManquants, messageManques, dureeValide, DUREE_MAX_MINUTES , estEnVeille, estVisibleParLesClients, aMettreEnVeille, prestationsAffichees, erreurTropDActives} from './prestation'
 
@@ -202,6 +203,13 @@ describe('erreurTropDActives — le refus lu par le laveur', () => {
 
   it('dit quoi faire, pas seulement que c’est refusé', () => {
     expect(erreurTropDActives(3)).toMatch(/veille/)
-    expect(erreurTropDActives(3)).toMatch(/offre supérieure/)
+  })
+
+  it('NOMME l’offre qui lève le plafond', () => {
+    // « Passez à l'offre supérieure » ne dit ni laquelle ni combien : le
+    // laveur referme. Le nom de l'offre est calculé, pas écrit en dur — le
+    // jour où le catalogue illimité change de palier, le message suit.
+    expect(erreurTropDActives(3)).toContain(PLAN_LABELS[offreCatalogueIllimite()])
+    expect(erreurTropDActives(3)).toMatch(/illimité/)
   })
 })

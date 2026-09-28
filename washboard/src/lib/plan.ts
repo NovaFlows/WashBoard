@@ -115,6 +115,16 @@ export const BOOKING_QUOTA: Record<Plan, number | null> = {
   business:   null,
 }
 
+/** La première offre dont le catalogue n'a plus de plafond.
+ *
+ *  Calculée plutôt qu'écrite en dur : déplacer le catalogue illimité d'un
+ *  palier à l'autre ne doit pas laisser les écrans proposer la mauvaise offre.
+ *  Le laveur qui bute sur son plafond doit lire le nom de celle qui le lève,
+ *  pas « l'offre supérieure » — qui ne lui dit ni laquelle ni combien. */
+export function offreCatalogueIllimite(): Plan {
+  return PLANS.find(p => SERVICE_QUOTA[p] === null) ?? 'starter'
+}
+
 /** Prestations au catalogue. Ce n'est pas un plafond mensuel : c'est le
  *  nombre de lignes que le laveur peut avoir en même temps. */
 export const SERVICE_QUOTA: Record<Plan, number | null> = {

@@ -51,7 +51,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         )
       }
       if (quotaDepasse(plafond, count ?? 0)) {
-        return NextResponse.json({ error: erreurTropDActives(plafond) }, { status: 403 })
+        // `quota` accompagne le message : l'écran le reconnaît sans avoir à
+        // lire le texte, et propose l'offre au lieu d'afficher une erreur
+        // rouge de plus. Même forme que la création d'une prestation.
+        return NextResponse.json(
+          { error: erreurTropDActives(plafond), quota: { plafond, utilisees: count ?? 0 } },
+          { status: 403 },
+        )
       }
     }
   }
