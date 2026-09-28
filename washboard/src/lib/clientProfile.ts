@@ -40,10 +40,12 @@ export type ClientBooking = {
   company_name: string | null
   services: { name: string; price: number; duration_minutes: number } | null
   /** Facultatifs : absents des listes qui n'en ont pas l'usage (le fichier clients « simple »,
-   *  les tests). Nécessaires pour reproduire la décision de relance (`lib/messagesAutomatiques.ts`) — voir
-   *  `clientsARelancer.ts`, seul endroit qui les lit. */
+   *  les tests). Nécessaires pour reproduire la décision de relance (`lib/messagesAutomatiques.ts`,
+   *  voir `clientsARelancer.ts`) et pour la timeline de la fiche (`clientTimeline.ts`), qui
+   *  mélange prestations, avis et relances dans un seul historique. */
   created_at?: string
   followup_sent_at?: string | null
+  review_request_sent_at?: string | null
 }
 
 /** Un réglage écrit à la main sur un client — table `clients`, SQL donné le 2026-09-28.
@@ -109,6 +111,9 @@ export type ClientProfile = {
   daysSinceLastVisit: number | null
   /** A demandé à ne plus être contacté : les crons de relance et d'avis doivent l'exclure. */
   nePlusContacter: boolean
+  /** Écart moyen, en jours, entre deux visites honorées consécutives — « son rythme ».
+   *  `null` avec moins de deux visites : une moyenne sur un seul point ne veut rien dire. */
+  rythmeJours: number | null
 }
 
 const isHonored = (b: ClientBooking) => b.status === 'confirmed' || b.status === 'done'
@@ -144,6 +149,15 @@ export function buildClientProfile(
   // n'est pas une visite, et le faire compter fausserait toute relance.
   const honoredDates = honored.map(b => b.scheduled_at).sort()
   const lastVisit = honoredDates.length ? honoredDates[honoredDates.length - 1] : null
+  // « Son rythme » : l'écart moyen entre deux visites, pas leur nombre — un client vu deux fois
+  // à un mois d'écart n'a pas le même rythme qu'un autre vu deux fois à un an d'écart, même
+  // total. Une seule visite ne donne aucun écart à mesurer.
+  const rythmeJours = honoredDates.length >= 2
+    ? Math.round(
+        (new Date(honoredDates[honoredDates.length - 1]).getTime() - new Date(honoredDates[0]).getTime())
+        / (honoredDates.length - 1) / 86_400_000,
+      )
+    : null
 
   // Identité : la source la plus récente, réservation ou document. Un client connu par un
   // seul devis n'a pas de réservation d'où tirer son nom.
@@ -185,5 +199,6 @@ export function buildClientProfile(
     daysSinceLastVisit: lastVisit
       ? Math.floor((now.getTime() - new Date(lastVisit).getTime()) / 86_400_000)
       : null,
+    rythmeJours,
   }
 }

@@ -99,6 +99,21 @@ describe('buildClientProfile', () => {
     expect(p.addresses).toEqual(['Nouvelle', 'Ancienne'])
   })
 
+  it('rythmeJours : l’écart moyen entre visites, pas leur nombre', () => {
+    // Trois visites honorées, régulièrement espacées de 30 jours : 1er mai, 31 mai, 30 juin.
+    const p = buildClientProfile([
+      mk({ id: 'a', scheduled_at: '2026-05-01T09:00:00Z' }),
+      mk({ id: 'b', scheduled_at: '2026-05-31T09:00:00Z' }),
+      mk({ id: 'c', scheduled_at: '2026-06-30T09:00:00Z' }),
+    ], 'alex@example.com')!
+    expect(p.rythmeJours).toBe(30)
+  })
+
+  it('rythmeJours reste null avec moins de deux visites honorées', () => {
+    expect(buildClientProfile([mk({})], 'alex@example.com')!.rythmeJours).toBeNull()
+    expect(buildClientProfile([mk({ status: 'cancelled' })], 'alex@example.com')!.rythmeJours).toBeNull()
+  })
+
   it('nePlusContacter vaut faux par défaut, et suit le réglage écrit pour cette clé', () => {
     const sansReglage = buildClientProfile([mk({})], 'alex@example.com')!
     expect(sansReglage.nePlusContacter).toBe(false)

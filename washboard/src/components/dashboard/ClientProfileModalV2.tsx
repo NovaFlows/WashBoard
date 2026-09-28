@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Phone, Mail, MapPin } from 'lucide-react'
-import type { ClientBooking, ClientProfile } from '@/lib/clientProfile'
+import { X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing } from 'lucide-react'
+import type { ClientProfile } from '@/lib/clientProfile'
+import { timelineClient } from '@/lib/clientTimeline'
 import { FUSEAU } from '@/lib/dateUtils'
 import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
@@ -18,19 +19,21 @@ import { marquerNePlusContacter } from '@/lib/clientsApi'
 // change, buildClientProfile et ClientProfile n'ont pas bougé, et elle n'est
 // pas dupliquée avec ClientProfileModalV1.tsx.
 //
-// La maquette (specs/08_Fiche-feuille.txt, page_08.png) montre des données
-// que le profil ne calcule pas : le rythme du client, un menu d'options
-// ("..."), un bouton "Rendez-vous", des contacts et sites multiples pour un
-// pro, des devis et factures. Rien de tout ça n'est inventé ici — voir le
-// compte rendu de la passe pour la liste précise et ce qu'il faudrait
-// construire.
+// La maquette (specs/08_Fiche-feuille.txt, page_08.png) montre des données que le profil ne
+// calculait pas au départ. État au 2026-09-28 (canevas de Yanis, discuté avec Alexandre) :
+//  - « son rythme » (`ClientProfile.rythmeJours`) et le menu d'options (« ... ») EXISTENT
+//    désormais, voir plus bas ;
+//  - la timeline mélange prestations, avis et relances (`lib/clientTimeline.ts`), plutôt que
+//    la seule liste de rendez-vous d'avant ;
+//  - RESTE À CONSTRUIRE : le bouton « Rendez-vous » (suppose de brancher cet écran sur le
+//    formulaire de rendez-vous manuel de l'Agenda, `RendezVousManuelV2.tsx` — un autre écran,
+//    d'autres données chargées), les contacts et sites multiples pour un pro (table `sites`,
+//    pas construite).
 //
-// « Ne plus contacter » (2026-09-28, proposition de Yanis discutée avec Alexandre) : premier
-// morceau du menu d'options qui manquait ci-dessus. Une simple ligne pour l'instant, pas encore
-// un menu — les autres actions (tâche, fusion, export RGPD) demandent des tables qui n'existent
-// pas encore (voir le compte rendu de la discussion). Écrit directement ici plutôt que remonté
-// par une prop : la feuille est le seul endroit qui connaît la clé du client (`profile.cle`) et
-// se rouvre elle-même après écriture, elle n'a besoin de prévenir personne d'autre.
+// Le menu d'options (« ... ») ne porte qu'UNE action pour l'instant, « ne plus contacter »
+// (2026-09-28) : les autres (tâche, fusion de doublons, export RGPD) demandent des tables qui
+// n'existent pas encore (voir TODO.md, « Roadmap produit »). Construit en sheet dès maintenant,
+// pas en simple lien, pour ne pas avoir à tout redécouper le jour où ces actions arrivent.
 
 // Rôles de police — mêmes constantes que ClientsViewV2.tsx (passe 2), plus
 // `hero` pour les trois chiffres de la fiche (planche Système : "chiffre
@@ -73,6 +76,15 @@ function dateCourte(iso: string, maintenant: number): string {
 const depuis = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: FUSEAU })
 
+/** « 2 mois », « 12 j » — au-delà de 45 jours, le mois est plus lisible qu'un compte de jours ;
+ *  en dessous, un mois arrondi (« 1 mois » pour 20 jours d'écart) donnerait une fausse
+ *  précision. Même seuil que les arrondis déjà en place ailleurs dans l'écran Chiffres. */
+function formatRythme(jours: number): string {
+  if (jours < 45) return `${jours} j`
+  const mois = Math.round(jours / 30)
+  return `${mois} mois`
+}
+
 export default function ClientProfileModalV2({
   profile,
   onClose,
@@ -94,6 +106,7 @@ export default function ClientProfileModalV2({
   const [nePlusContacter, setNePlusContacter] = useState(profile.nePlusContacter)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [optionsOuvertes, setOptionsOuvertes] = useState(false)
 
   async function basculerNePlusContacter() {
     if (enCours) return
@@ -145,7 +158,11 @@ export default function ClientProfileModalV2({
   // ne doit pas laisser échapper la tabulation vers la liste derrière.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'Escape') {
+        if (optionsOuvertes) setOptionsOuvertes(false)
+        else onClose()
+        return
+      }
       if (e.key !== 'Tab' || !feuilleRef.current) return
       const items = feuilleRef.current.querySelectorAll<HTMLElement>(SELECTEUR_FOCUSABLE)
       if (items.length === 0) return
@@ -161,7 +178,7 @@ export default function ClientProfileModalV2({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, optionsOuvertes])
 
   const titreClient = profile.isProfessional && profile.companyName ? profile.companyName : profile.name
 
@@ -174,11 +191,20 @@ export default function ClientProfileModalV2({
   const depuisTexte = profile.firstVisit ? `Client depuis ${depuis(profile.firstVisit)}` : null
   const sousTitre = [depuisTexte, profile.addresses[0] ?? null].filter(Boolean).join(' · ')
 
+  // Troisième chiffre : « son rythme » (l'écart moyen entre deux visites) plutôt que le panier
+  // moyen — c'est ce que montre le canevas de Yanis, et une information que rien d'autre sur
+  // cet écran ne donne (le panier moyen, lui, se retrouve en divisant les deux premiers
+  // chiffres). Sans historique suffisant (moins de deux visites), on retombe sur le panier
+  // moyen : « son rythme » sur un seul point ne voudrait rien dire, un tiret ferait un écran
+  // à moitié vide pour un client tout neuf.
   const statistiques = [
     { label: 'lavages', valeur: String(profile.honoredCount) },
     { label: 'au total', valeur: `${profile.totalRevenue} €` },
-    { label: 'panier moyen', valeur: `${profile.averageBasket} €` },
+    profile.rythmeJours !== null
+      ? { label: 'son rythme', valeur: formatRythme(profile.rythmeJours) }
+      : { label: 'panier moyen', valeur: `${profile.averageBasket} €` },
   ]
+  const timeline = timelineClient(profile.bookings)
 
   return (
     <div
@@ -223,6 +249,45 @@ export default function ClientProfileModalV2({
                 Contact · {profile.name}
               </p>
             )}
+            {nePlusContacter && (
+              <p className={`mt-1 text-[12px] ${corpsFort} text-[color:var(--v2-color-rouge)]`}>
+                Ne reçoit plus de messages automatiques
+              </p>
+            )}
+          </div>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setOptionsOuvertes(o => !o)}
+              aria-label="Options de la fiche"
+              aria-haspopup="menu"
+              aria-expanded={optionsOuvertes}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
+            >
+              <MoreHorizontal size={20} strokeWidth={2} />
+            </button>
+            {optionsOuvertes && (
+              <>
+                {/* Un tap n'importe où ailleurs referme le menu, sans fermer la fiche. */}
+                <button aria-hidden tabIndex={-1} onClick={() => setOptionsOuvertes(false)} className="fixed inset-0 z-10 cursor-default" />
+                <div
+                  role="menu"
+                  aria-label="Options"
+                  className="absolute right-0 top-[52px] z-20 w-64 overflow-hidden rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] shadow-lg"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={enCours}
+                    onClick={() => { setOptionsOuvertes(false); void basculerNePlusContacter() }}
+                    className={`w-full px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
+                    style={{ color: nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}
+                  >
+                    {nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter ce client'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
           <button
             ref={closeRef}
@@ -234,6 +299,9 @@ export default function ClientProfileModalV2({
           </button>
         </div>
         </div>
+        {erreur && (
+          <p className={`px-5 pb-2 text-[12.5px] ${corps} text-[color:var(--v2-color-rouge)]`} role="alert">{erreur}</p>
+        )}
 
         <div
           className="flex-1 overflow-y-auto overscroll-contain px-5 pt-5"
@@ -317,24 +385,6 @@ export default function ClientProfileModalV2({
             </div>
           )}
 
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={() => void basculerNePlusContacter()}
-              disabled={enCours}
-              className={`text-[12.5px] ${corpsFort} underline disabled:opacity-50`}
-              style={{ color: nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}
-            >
-              {nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter ce client'}
-            </button>
-            {nePlusContacter && (
-              <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Il ne recevra plus ni relance, ni demande d’avis. Vous pouvez toujours l’appeler ou lui écrire vous-même.
-              </p>
-            )}
-            {erreur && <p className={`mt-1 text-[12px] ${corps} text-[color:var(--v2-color-rouge)]`} role="alert">{erreur}</p>}
-          </div>
-
           {/* Devis et factures écrits à la main. Ils ne sont pas des rendez-vous et n'ont donc
               rien à faire dans l'historique ci-dessous : les y mêler ferait passer un devis
               pour une prestation faite (Alexandre, 2026-09-27). */}
@@ -375,18 +425,20 @@ export default function ClientProfileModalV2({
               </p>
             )}
             <ol>
-              {profile.bookings.map((b: ClientBooking, i) => {
-                const s = STATUT[statutAffiche(b)]
-                const dernier = i === profile.bookings.length - 1
-                const prix = b.booked_price ?? b.services?.price ?? 0
+              {timeline.map((e, i) => {
+                const dernier = i === timeline.length - 1
+                // Chaque type d'événement porte sa couleur de point et son contenu — voir
+                // `lib/clientTimeline.ts` pour ce qui distingue une VRAIE relance/prestation
+                // (reproduites exactement) d'une demande d'avis (déduite, comme partout
+                // ailleurs où WashBoard l'affiche).
+                const cle = e.type === 'prestation' ? e.booking.id : `${e.type}-${e.date}`
+                const couleur = e.type === 'prestation'
+                  ? STATUT[statutAffiche(e.booking)].couleur
+                  : e.type === 'avis' ? 'var(--v2-color-ambre)' : 'var(--v2-color-accent)'
                 return (
-                  <li key={b.id} className="flex gap-3 py-3">
+                  <li key={cle} className="flex gap-3 py-3">
                     <span className="relative flex w-2.5 shrink-0 justify-center">
-                      <span
-                        className="absolute top-1.5 h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: s.couleur }}
-                        aria-hidden
-                      />
+                      <span className="absolute top-1.5 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: couleur }} aria-hidden />
                       {!dernier && (
                         <span
                           className="absolute top-3 w-px bg-[color:var(--v2-filet)]"
@@ -396,13 +448,32 @@ export default function ClientProfileModalV2({
                       )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className={`truncate text-[14.5px] ${nom}`}>{b.services?.name ?? 'Prestation'}</span>
-                        <span className={`shrink-0 text-[14px] ${corpsFort} tabular-nums`}>{prix} €</span>
-                      </span>
-                      <span className={`mt-0.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                        {dateCourte(b.scheduled_at, maintenant)} · {s.label}
-                      </span>
+                      {e.type === 'prestation' ? (
+                        <>
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className={`truncate text-[14.5px] ${nom}`}>{e.booking.services?.name ?? 'Prestation'}</span>
+                            <span className={`shrink-0 text-[14px] ${corpsFort} tabular-nums`}>
+                              {e.booking.booked_price ?? e.booking.services?.price ?? 0} €
+                            </span>
+                          </span>
+                          <span className={`mt-0.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                            {dateCourte(e.booking.scheduled_at, maintenant)} · {STATUT[statutAffiche(e.booking)].label}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex items-center gap-1.5">
+                            {e.type === 'avis' ? <Star size={13} strokeWidth={2} aria-hidden /> : <BellRing size={13} strokeWidth={2} aria-hidden />}
+                            <span className={`truncate text-[14.5px] ${nom}`}>
+                              {e.type === 'avis' ? 'Demande d’avis envoyée' : 'Relance envoyée'}
+                            </span>
+                          </span>
+                          <span className={`mt-0.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                            {dateCourte(e.date, maintenant)}
+                            {e.type === 'relance' && e.aReserveDepuis && ' · a réservé depuis'}
+                          </span>
+                        </>
+                      )}
                     </span>
                   </li>
                 )
