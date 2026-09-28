@@ -273,9 +273,21 @@ export default async function BookingPage({ params }: Props) {
       </header>
 
       <main id="main-content" className="max-w-lg mx-auto px-4 py-8">
+        {/* ── Le titre de la page : qui la signe ────────────────────────────
+            Sur une offre payante, le laveur. Sur l'offre gratuite, WashBoard —
+            son nom n'apparaît nulle part, l'en-tête et le titre portent le
+            nôtre. C'est ce que la grille tarifaire vend : la page personnalisée
+            commence au Starter.
+
+            Le nom reste annoncé aux lecteurs d'écran, sans être affiché : un
+            client aveugle doit pouvoir savoir chez qui il réserve. Ce que
+            l'offre gratuite ne donne pas, c'est la VITRINE — pas l'identité. */}
         {!themed && (
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{washer.name}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {personnalisee ? washer.name : 'WashBoard'}
+            </h1>
+            {!personnalisee && <p className="sr-only">Page de réservation de {washer.name}</p>}
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Réservez votre lavage à domicile en quelques clics</p>
           </div>
         )}
