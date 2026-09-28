@@ -55,6 +55,8 @@ export type EntrepriseProfile = {
   entreprise: Entreprise
   sites: Site[]
   contacts: ContactProfile[]
+  /** Somme des factures ENCAISSÉES des contacts — jamais une facture juste émise (voir
+   *  `ClientProfile.totalRevenue`, même règle que l'« Encaissé » de Chiffres). */
   totalRevenue: number
   /** « Véhicules » du canevas : le nombre de prestations honorées, tous contacts confondus —
    *  même mot que `ClientProfile.honoredCount`, au pluriel de l'entreprise. */
@@ -65,6 +67,10 @@ export type EntrepriseProfile = {
    *  « retard » (aucun seuil réglé nulle part, voir TODO.md « Relancer les devis sans réponse »),
    *  seulement le fait et depuis combien de temps. */
   devisEnAttente: { document: ClientDocument; jours: number }[]
+  /** Factures émises à un contact de l'entreprise, pas encore encaissées — même logique que
+   *  `devisEnAttente`, sur l'autre automatisme : « depuis combien de temps », jamais « en
+   *  retard » (aucun délai de relance de facture réglé nulle part). */
+  facturesImpayees: { document: ClientDocument; jours: number }[]
 }
 
 export function buildEntrepriseProfile(
@@ -89,14 +95,20 @@ export function buildEntrepriseProfile(
     .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
 
   const clesContacts = new Set(contactsBruts.map(c => c.cle))
-  const devisEnAttente = documents
-    .filter(d => d.genre === 'devis' && d.statut === 'envoye'
-      && clesContacts.has(cleClient(d.contenu.client.email, d.contenu.client.telephone)))
-    .map(d => ({
-      document: d,
-      jours: Math.floor((now.getTime() - new Date(d.emis_le ?? d.created_at).getTime()) / 86_400_000),
-    }))
+  const enAttenteDepuis = (d: ClientDocument) =>
+    Math.floor((now.getTime() - new Date(d.emis_le ?? d.created_at).getTime()) / 86_400_000)
+  const documentsDesContacts = documents.filter(d =>
+    clesContacts.has(cleClient(d.contenu.client.email, d.contenu.client.telephone)))
+
+  const devisEnAttente = documentsDesContacts
+    .filter(d => d.genre === 'devis' && d.statut === 'envoye')
+    .map(d => ({ document: d, jours: enAttenteDepuis(d) }))
     .sort((a, b) => b.jours - a.jours)
 
-  return { entreprise, sites, contacts, totalRevenue, vehicules, derniersPassages, devisEnAttente }
+  const facturesImpayees = documentsDesContacts
+    .filter(d => d.genre === 'facture' && !d.paye_le)
+    .map(d => ({ document: d, jours: enAttenteDepuis(d) }))
+    .sort((a, b) => b.jours - a.jours)
+
+  return { entreprise, sites, contacts, totalRevenue, vehicules, derniersPassages, devisEnAttente, facturesImpayees }
 }

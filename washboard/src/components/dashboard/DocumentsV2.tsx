@@ -9,7 +9,7 @@ import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/Pr
 import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
 import {
   devisExpire, libelleGenre, libelleStatut, messageWhatsapp, nomFichierDocument, partagerPdf,
-  tonStatut, totalDocument, type Document, type GenreDocument,
+  tonStatut, totalDocument, type Document, type GenreDocument, type SaisieDocument,
 } from '@/lib/documents'
 import { whatsappDigits } from '@/lib/phone'
 import {
@@ -260,9 +260,26 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
   // retire donc le paramètre, pour que le tap suivant soit bien une navigation.
   const router = useRouter()
   const chemin = usePathname()
-  const ouvertParUrl = useSearchParams().get('nouveau') !== null
+  const paramsUrl = useSearchParams()
+  const ouvertParUrl = paramsUrl.get('nouveau') !== null
   const [nouveau, setNouveau] = useState<GenreDocument | null>(null)
   const feuilleNouveau = nouveau ?? (ouvertParUrl ? 'devis' : null)
+
+  // Pré-remplissage depuis la Fiche entreprise (Alexandre, 2026-09-28 : « il faut que ce soit
+  // pré rempli avec les informations de l'entreprise dans le devis »), transporté par l'adresse
+  // au même titre que `nouveau=1` (voir FicheEntrepriseV2.tsx, `hrefNouveauDevis`). Ignoré si la
+  // feuille a été rouverte par le « + » de cet écran (`nouveau` local, pas `ouvertParUrl`) : ce
+  // geste-là veut un formulaire vide, pas les paramètres d'une navigation précédente.
+  const prefill: Partial<SaisieDocument> | undefined = nouveau === null && ouvertParUrl && paramsUrl.get('entreprise')
+    ? {
+        clientNom: paramsUrl.get('nom') ?? '',
+        clientTelephone: paramsUrl.get('tel') ?? '',
+        clientEmail: paramsUrl.get('email') ?? '',
+        clientAdresse: paramsUrl.get('adresse') ?? '',
+        professionnel: true,
+        entreprise: paramsUrl.get('entreprise') ?? '',
+      }
+    : undefined
 
   function fermerNouveau() {
     setNouveau(null)
@@ -463,6 +480,7 @@ export default function DocumentsV2({ prestations, nomLaveur }: {
           aujourdhui={aujourdhui}
           prestations={prestations}
           genreInitial={feuilleNouveau}
+          prefill={prefill}
           onEnregistrer={async saisie => {
             const r = await creerDocument(saisie)
             if (!r.ok) return r.message

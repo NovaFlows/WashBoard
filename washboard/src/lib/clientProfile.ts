@@ -75,6 +75,10 @@ export type ClientDocument = {
     client: { nom: string; email: string; telephone?: string | null; professionnel: boolean; entreprise: string | null; adresseFacturation: string }
     totaux: { ttc: number }
   }
+  /** `null` tant que la facture n'est pas encaissée (`lib/documents.ts`, `estPayee`) — c'est ce
+   *  qui décide si elle compte dans les chiffres du client, voir plus bas. Absent sur un devis :
+   *  un devis n'est jamais « payé », la question ne se pose pas. */
+  paye_le?: string | null
 }
 
 /** Email en minuscules, ou à défaut le téléphone préfixé `tel:`. Une chaîne vide quand on n'a
@@ -144,9 +148,12 @@ export function buildClientProfile(
 
   if (mine.length === 0 && siens.length === 0) return null
 
-  // Une facture écrite à la main est un travail fait et payé ; un devis n'est qu'une
-  // proposition. Seules les factures comptent donc dans les chiffres du client.
-  const facturesFaites = siens.filter(d => d.genre === 'facture')
+  // Une facture ÉMISE n'est pas de l'argent reçu — elle ne compte dans les chiffres du client
+  // qu'une fois ENCAISSÉE (`paye_le` posé, voir `lib/documents.ts`, même règle que l'« Encaissé »
+  // de Chiffres, `lib/chiffresArgent.ts`). Avant ce jour-là (2026-09-28), une facture comptait
+  // dès sa création, payée ou non — un client dont la facture attendait encore son virement
+  // paraissait déjà avoir payé. Un devis, lui, n'est jamais payé : il ne compte jamais.
+  const facturesFaites = siens.filter(d => d.genre === 'facture' && !!d.paye_le)
   const latest = mine[0]
   const honored = mine.filter(isHonored)
   const totalRevenue = honored.reduce((sum, b) => sum + priceOf(b), 0)

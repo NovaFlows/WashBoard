@@ -311,7 +311,7 @@ export default function FicheEntrepriseV2({
   const [feuille, setFeuille] = useState<SousFeuille | null>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
-  const { entreprise, sites, contacts, totalRevenue, vehicules, derniersPassages, devisEnAttente } = profil
+  const { entreprise, sites, contacts, totalRevenue, vehicules, derniersPassages, devisEnAttente, facturesImpayees } = profil
 
   function apresEcriture() {
     setFeuille(null)
@@ -329,9 +329,27 @@ export default function FicheEntrepriseV2({
     onClose()
   }
 
-  // Premier contact joignable : c'est lui que le bouton Appeler compose, faute d'un contact
-  // « principal » désigné (rien dans le canevas de Yanis ne distingue un contact des autres).
+  // Premier contact joignable : c'est lui que le bouton Appeler compose, et lui qui pré-remplit
+  // un nouveau devis — faute d'un contact « principal » désigné (rien dans le canevas de Yanis
+  // ne distingue un contact des autres).
+  const contactPrincipal = contacts.find(c => c.profile?.phone)?.profile ?? contacts[0]?.profile ?? null
   const premierTelephone = contacts.find(c => c.profile?.phone)?.profile?.phone ?? null
+
+  // « + Devis » pré-rempli avec l'entreprise et son contact principal (Alexandre, 2026-09-28 :
+  // « il faut que ce soit pré rempli avec les informations de l'entreprise dans le devis ») —
+  // transporté par l'adresse, lue par `DocumentsV2.tsx` au même titre que `nouveau=1`. Rien à
+  // pré-remplir sans contact joignable : le lien reste simple, sans paramètres inutiles.
+  const hrefNouveauDevis = (() => {
+    const params = new URLSearchParams({ nouveau: '1' })
+    if (contactPrincipal) {
+      params.set('entreprise', entreprise.nom)
+      if (contactPrincipal.name) params.set('nom', contactPrincipal.name)
+      if (contactPrincipal.phone) params.set('tel', contactPrincipal.phone)
+      if (contactPrincipal.email) params.set('email', contactPrincipal.email)
+      if (contactPrincipal.addresses[0]) params.set('adresse', contactPrincipal.addresses[0])
+    }
+    return `/dashboard/chiffres/documents?${params.toString()}`
+  })()
 
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
@@ -370,6 +388,29 @@ export default function FicheEntrepriseV2({
         </div>
       </dl>
 
+      {/* Une facture émise n'est pas de l'argent reçu tant qu'elle n'est pas encaissée (même
+          règle que l'« Encaissé » de Chiffres) — cette alerte est le seul endroit de la fiche
+          qui dit qu'il reste quelque chose à percevoir ; « au total » plus haut ne compte QUE
+          ce qui est déjà encaissé. */}
+      {facturesImpayees.length > 0 && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-color-ambre)]/30 bg-[color:var(--v2-color-surface)] px-3.5 py-3">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
+          <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
+            {facturesImpayees.length === 1 ? (
+              <>
+                La facture {facturesImpayees[0].document.numero} ({euros.format(facturesImpayees[0].document.contenu.totaux.ttc)}) n’est pas encore
+                encaissée — émise il y a {facturesImpayees[0].jours} j.
+              </>
+            ) : (
+              <>
+                {facturesImpayees.length} factures ne sont pas encore encaissées, pour{' '}
+                {euros.format(facturesImpayees.reduce((s, f) => s + f.document.contenu.totaux.ttc, 0))} au total.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {devisEnAttente.length > 0 && (
         <div className="mt-4 flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-color-ambre)]/30 bg-[color:var(--v2-color-surface)] px-3.5 py-3">
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
@@ -391,7 +432,7 @@ export default function FicheEntrepriseV2({
           </a>
         )}
         <a
-          href="/dashboard/chiffres/documents?nouveau=1"
+          href={hrefNouveauDevis}
           className={`${BOUTON} flex-1 gap-2 text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >

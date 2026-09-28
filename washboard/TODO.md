@@ -2437,6 +2437,22 @@ rien à faire, mais que le projet reste globalement sain.
         ClientsViewV2.tsx) porte maintenant les deux gestes (masquer, ne plus contacter), et
         s'applique partout où `reglages` comptait avant — la fiche ouverte juste après reflète
         déjà le changement, sans attendre `router.refresh()`.
+  - [x] 2026-09-28 — **Bug relevé par Alexandre en testant : une facture comptait AVANT d'être
+        payée.** `ClientDocument` (`lib/clientProfile.ts`) ne connaissait pas `paye_le` — une
+        facture écrite à la main comptait dans le total d'un client dès sa création, payée ou
+        non, contrairement à l'« Encaissé » de Chiffres qui n'a compté que le payé dès le
+        départ. Un client dont la facture attendait encore son virement paraissait déjà avoir
+        payé. Corrigé partout où `ClientDocument` circule : la fiche client (« au total »), la
+        fiche entreprise (même calcul, sommé) et le fichier Clients. Au passage : la fiche
+        client affiche maintenant « Encaissée »/« À encaisser » sur chaque facture, et la fiche
+        entreprise gagne une alerte **factures impayées** (montant + depuis combien de temps),
+        symétrique à celle des devis en attente.
+  - [x] 2026-09-28 — **« + Devis » pré-rempli depuis la Fiche entreprise** (Alexandre : « il faut
+        que ce soit pré rempli avec les informations de l'entreprise dans le devis »). Le lien
+        transporte le nom de l'entreprise et les coordonnées du premier contact joignable en
+        paramètres d'adresse (`?nouveau=1&entreprise=...&nom=...&tel=...&email=...&adresse=...`),
+        lus par `DocumentsV2.tsx` — même mécanisme que `nouveau=1` lui-même. Ignoré si la feuille
+        est rouverte par le « + » propre à cet écran : ce geste-là veut un formulaire vide.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +

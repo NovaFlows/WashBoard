@@ -543,6 +543,17 @@ export default function ClientProfileModalV2({
                       <span className={`ml-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                         {dateCourte(d.emis_le ?? d.created_at, maintenant)}
                       </span>
+                      {/* Une facture émise n'est pas de l'argent reçu tant qu'elle n'est pas
+                          encaissée — même règle que l'« Encaissé » de Chiffres. Rien pour un
+                          devis : il n'est jamais « payé », la question ne se pose pas ici. */}
+                      {d.genre === 'facture' && (
+                        <span
+                          className={`ml-2 text-[12.5px] ${corpsFort}`}
+                          style={{ color: d.paye_le ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
+                        >
+                          {d.paye_le ? 'Encaissée' : 'À encaisser'}
+                        </span>
+                      )}
                     </span>
                     <a
                       href={`/api/documents/${d.id}/pdf`}

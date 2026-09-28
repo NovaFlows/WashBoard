@@ -43,7 +43,7 @@ export default async function ClientsPage() {
   // est là pour que la requête reste juste si la policy change un jour.
   const { data: documents, error: errDocuments } = await supabase
     .from('documents')
-    .select('id, genre, numero, statut, emis_le, created_at, contenu')
+    .select('id, genre, numero, statut, emis_le, created_at, contenu, paye_le')
     .eq('washer_id', washer.id)
     .order('created_at', { ascending: false })
     .limit(500)

@@ -17,7 +17,10 @@ const rdv = (o: Partial<ClientBooking>): ClientBooking => {
 }
 
 let m = 0
-const doc = (o: Partial<ClientDocument['contenu']['client']> & { genre?: 'devis' | 'facture'; statut?: string; emis_le?: string | null }): ClientDocument => {
+const doc = (
+  o: Partial<ClientDocument['contenu']['client']>
+    & { genre?: 'devis' | 'facture'; statut?: string; emis_le?: string | null; paye_le?: string | null; ttc?: number },
+): ClientDocument => {
   m++
   return {
     id: `d${m}`, genre: o.genre ?? 'devis', numero: `D-0000${m}`, statut: o.statut ?? 'envoye',
@@ -27,8 +30,9 @@ const doc = (o: Partial<ClientDocument['contenu']['client']> & { genre?: 'devis'
         nom: o.nom ?? 'Karim Benali', email: o.email ?? 'karim@garage.fr', telephone: o.telephone ?? null,
         professionnel: true, entreprise: 'Garage Renault', adresseFacturation: '12 av. de la Somme',
       },
-      totaux: { ttc: 5760 },
+      totaux: { ttc: o.ttc ?? 5760 },
     },
+    paye_le: o.paye_le,
   }
 }
 
@@ -85,6 +89,32 @@ describe('buildEntrepriseProfile', () => {
     const documents = [doc({ email: 'karim@garage.fr', statut: 'transforme' })]
     const p = buildEntrepriseProfile(ENTREPRISE, [], contacts, [], documents)
     expect(p.devisEnAttente).toHaveLength(0)
+  })
+
+  it('une facture écrite à la main ne compte dans le total QUE si elle est encaissée', () => {
+    const contacts: ContactEntreprise[] = [{ cle: 'karim@garage.fr', entrepriseId: 'e1', role: null }]
+    const impayee = buildEntrepriseProfile(ENTREPRISE, [], contacts, [], [
+      doc({ email: 'karim@garage.fr', genre: 'facture', ttc: 120, paye_le: null }),
+    ])
+    expect(impayee.totalRevenue).toBe(0)
+
+    const payee = buildEntrepriseProfile(ENTREPRISE, [], contacts, [], [
+      doc({ email: 'karim@garage.fr', genre: 'facture', ttc: 120, paye_le: '2026-09-25T09:00:00Z' }),
+    ])
+    expect(payee.totalRevenue).toBe(120)
+  })
+
+  it('factures impayées : seulement celles d’un contact de CETTE entreprise, jamais un devis', () => {
+    const contacts: ContactEntreprise[] = [{ cle: 'karim@garage.fr', entrepriseId: 'e1', role: null }]
+    const documents = [
+      doc({ email: 'karim@garage.fr', genre: 'facture', paye_le: null, emis_le: '2026-09-18T09:00:00Z' }),
+      doc({ email: 'karim@garage.fr', genre: 'facture', paye_le: '2026-09-21T09:00:00Z' }), // déjà encaissée
+      doc({ email: 'karim@garage.fr', genre: 'devis', statut: 'envoye' }), // un devis, jamais « impayé »
+      doc({ email: 'quelqu-un-dautre@x.fr', genre: 'facture', paye_le: null }), // pas un contact d'ici
+    ]
+    const p = buildEntrepriseProfile(ENTREPRISE, [], contacts, [], documents, new Date('2026-09-22T09:00:00Z'))
+    expect(p.facturesImpayees).toHaveLength(1)
+    expect(p.facturesImpayees[0].jours).toBe(4)
   })
 
   it('les sites passent tels quels : ce module ne les calcule pas, il les porte', () => {

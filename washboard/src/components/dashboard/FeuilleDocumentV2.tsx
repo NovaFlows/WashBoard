@@ -107,18 +107,22 @@ function LigneSaisieV2({
 }
 
 export default function FeuilleDocumentV2({
-  aujourdhui, prestations, genreInitial, onEnregistrer, onClose,
+  aujourdhui, prestations, genreInitial, prefill, onEnregistrer, onClose,
 }: {
   /** Jour de Paris, `AAAA-MM-JJ`. */
   aujourdhui: string
   /** Les prestations du laveur, pour remplir une ligne d'un tap au lieu de la taper. */
   prestations: Prestation[]
   genreInitial: GenreDocument
+  /** Champs client posés d'avance — depuis la Fiche entreprise (2026-09-28), qui connaît déjà
+   *  le nom, les coordonnées et l'entreprise du contact. Complète `saisieNeuve`, ne le remplace
+   *  pas : les lignes, la remise, la validité restent celles d'un document tout neuf. */
+  prefill?: Partial<SaisieDocument>
   /** `null` quand c'est émis, sinon la phrase à afficher — la feuille reste ouverte. */
   onEnregistrer: (saisie: SaisieDocument) => Promise<string | null>
   onClose: () => void
 }) {
-  const [saisie, setSaisie] = useState<SaisieDocument>(() => saisieNeuve(genreInitial, aujourdhui))
+  const [saisie, setSaisie] = useState<SaisieDocument>(() => ({ ...saisieNeuve(genreInitial, aujourdhui), ...prefill }))
   const [remise, setRemise] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)

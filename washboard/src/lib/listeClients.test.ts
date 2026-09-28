@@ -152,6 +152,7 @@ describe('clients nés d’un devis ou d’une facture écrits à la main', () =
       },
       totaux: { ttc: p.ttc ?? 90 },
     },
+    paye_le: p.paye_le,
   })
 
   it('fait apparaître quelqu’un qui n’a jamais réservé', () => {
@@ -172,10 +173,20 @@ describe('clients nés d’un devis ou d’une facture écrits à la main', () =
     expect(c.honoredCount).toBe(0)
   })
 
-  it('une facture écrite à la main, si : c’est un travail fait et payé', () => {
-    const c = listeClients([], MAINTENANT, [doc({ genre: 'facture', numero: 'F-00015', ttc: 120 })])[0]
+  it('une facture écrite à la main, si : c’est un travail fait ET payé', () => {
+    const c = listeClients([], MAINTENANT, [
+      doc({ genre: 'facture', numero: 'F-00015', ttc: 120, paye_le: '2026-09-25T10:00:00.000Z' }),
+    ])[0]
     expect(c.totalRevenue).toBe(120)
     expect(c.honoredCount).toBe(1)
+  })
+
+  it('une facture émise mais pas encore encaissée ne compte pas — sinon un client non payé paraît déjà avoir payé', () => {
+    const c = listeClients([], MAINTENANT, [doc({ genre: 'facture', numero: 'F-00016', ttc: 250, paye_le: null })])[0]
+    expect(c.totalRevenue).toBe(0)
+    expect(c.honoredCount).toBe(0)
+    // Elle reste comptée comme document : elle existe, elle n'engage juste pas encore d'argent.
+    expect(c.documentsCount).toBe(1)
   })
 
   it('rejoint le client existant quand l’email est le même, sans le dédoubler', () => {
