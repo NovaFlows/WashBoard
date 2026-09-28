@@ -400,25 +400,33 @@ export function formatEuros(amount: number): string {
  *  si l'agenda passe à 45 minutes, c'est le bouton qui doit changer. */
 export const RDV_BUSINESS_MINUTES = 30
 
-/** Numéro de support, au format international, sans le zéro initial. */
-const WHATSAPP_SUPPORT = '33684140438'
+/** Adresse à qui écrire quand l'agenda n'est pas encore branché. */
+const EMAIL_CONTACT = 'novaflows.pro@gmail.com'
 
 /** Où mène « Nous contacter » sur l'offre Business.
  *
- *  `NEXT_PUBLIC_RDV_BUSINESS_URL` attend un lien d'agenda (Cal.com, Calendly…)
- *  configuré sur un créneau de trente minutes. Tant qu'il n'est pas posé, le
- *  bouton ouvre WhatsApp avec le message déjà écrit : c'est le canal de support
- *  qui existe déjà, il est immédiat, et surtout il n'est jamais mort. Un bouton
- *  qui ne fait rien sur la seule offre qu'on vend par téléphone coûterait plus
- *  cher que tout le reste de cette grille.
+ *  `NEXT_PUBLIC_RDV_BUSINESS_URL` attend un lien d'agenda réglé sur un créneau
+ *  de trente minutes AVEC visioconférence — une page de rendez-vous Google
+ *  Calendar ajoute un lien Meet automatiquement, Cal.com et Calendly savent le
+ *  faire aussi. Le prospect choisit son horaire, reçoit l'invitation avec le
+ *  lien de visio, et personne n'a de message à échanger pour convenir d'une
+ *  heure.
  *
- *  Le message est volontairement à la première personne du client : il n'a
- *  qu'à appuyer sur envoyer. */
+ *  Sans cette variable, le bouton ouvre un email pré-rempli. Ce n'est pas
+ *  l'expérience voulue — c'est un filet, pour qu'un bouton sur la seule offre
+ *  qu'on vend de vive voix ne soit jamais mort. Le jour où la variable est
+ *  posée, plus personne ne voit ce repli. */
 export function lienRendezVousBusiness(): string {
   const agenda = process.env.NEXT_PUBLIC_RDV_BUSINESS_URL
   if (agenda) return agenda
-  const message = `Bonjour, je souhaite un rendez-vous de ${RDV_BUSINESS_MINUTES} minutes pour l’offre Business de WashBoard.`
-  return `https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent(message)}`
+  const sujet = `Rendez-vous ${RDV_BUSINESS_MINUTES} min — offre Business`
+  const corps = `Bonjour,
+
+Je souhaite un rendez-vous de ${RDV_BUSINESS_MINUTES} minutes en visio au sujet de l’offre Business de WashBoard.
+
+Mes disponibilités :
+`
+  return `mailto:${EMAIL_CONTACT}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`
 }
 
 /** Ce qu'affiche le bouton d'une offre sans tarif. */

@@ -831,12 +831,22 @@ describe('offre sur devis', () => {
   })
 
   it('donne toujours un lien, même sans agenda configuré', () => {
-    // Un bouton mort sur la seule offre qu'on vend par téléphone coûterait plus
-    // cher que toute la grille. Sans agenda, on retombe sur WhatsApp.
+    // Un bouton mort sur la seule offre qu'on vend de vive voix coûterait plus
+    // cher que toute la grille. Sans agenda, on retombe sur un email — jamais
+    // sur rien.
     vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', '')
     const repli = lienRendezVousBusiness()
-    expect(repli).toMatch(/^https:\/\/wa\.me\//)
+    expect(repli).toMatch(/^mailto:/)
     expect(decodeURIComponent(repli)).toContain(`${RDV_BUSINESS_MINUTES} minutes`)
+    expect(decodeURIComponent(repli)).toContain('visio')
+    vi.unstubAllEnvs()
+  })
+
+  it('n’envoie jamais vers WhatsApp pour un rendez-vous', () => {
+    // Un rendez-vous se prend dans un agenda, avec un lien de visio : une
+    // conversation WhatsApp demande d'abord de convenir d'une heure à la main.
+    vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', '')
+    expect(lienRendezVousBusiness()).not.toContain('wa.me')
     vi.unstubAllEnvs()
   })
 
