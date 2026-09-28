@@ -374,12 +374,46 @@ export function formatEuros(amount: number): string {
 //
 // Règle de rédaction : on n'annonce ici que ce que le produit sait faire
 // aujourd'hui. Une ligne de plus sur une carte, c'est une promesse de vente.
+/** Durée du rendez-vous proposé sur l'offre Business, en minutes.
+ *  Écrite ici parce qu'elle s'affiche sur le bouton et doit dire la vérité :
+ *  si l'agenda passe à 45 minutes, c'est le bouton qui doit changer. */
+export const RDV_BUSINESS_MINUTES = 30
+
+/** Numéro de support, au format international, sans le zéro initial. */
+const WHATSAPP_SUPPORT = '33684140438'
+
+/** Où mène « Nous contacter » sur l'offre Business.
+ *
+ *  `NEXT_PUBLIC_RDV_BUSINESS_URL` attend un lien d'agenda (Cal.com, Calendly…)
+ *  configuré sur un créneau de trente minutes. Tant qu'il n'est pas posé, le
+ *  bouton ouvre WhatsApp avec le message déjà écrit : c'est le canal de support
+ *  qui existe déjà, il est immédiat, et surtout il n'est jamais mort. Un bouton
+ *  qui ne fait rien sur la seule offre qu'on vend par téléphone coûterait plus
+ *  cher que tout le reste de cette grille.
+ *
+ *  Le message est volontairement à la première personne du client : il n'a
+ *  qu'à appuyer sur envoyer. */
+export function lienRendezVousBusiness(): string {
+  const agenda = process.env.NEXT_PUBLIC_RDV_BUSINESS_URL
+  if (agenda) return agenda
+  const message = `Bonjour, je souhaite un rendez-vous de ${RDV_BUSINESS_MINUTES} minutes pour l’offre Business de WashBoard.`
+  return `https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent(message)}`
+}
+
+/** Ce qu'affiche le bouton d'une offre sans tarif. */
+export const LIBELLE_CONTACT = 'Nous contacter'
+export const LIBELLE_RDV_BUSINESS = `Prendre rendez-vous — ${RDV_BUSINESS_MINUTES} min`
+
 export type PlanCard = {
   key: Plan
   name: string
   price: number
-  /** Tarif de départ (Business : le prix dépend du nombre de laveurs). */
+  /** Tarif de départ (le prix dépend du nombre de laveurs). */
   from?: boolean
+  /** Offre sans tarif affiché : on montre « Nous contacter » et on propose un
+   *  rendez-vous. Le prix existe toujours dans `PLAN_PRICES` — il sert au
+   *  calcul et à Stripe — mais il n'est plus annoncé publiquement. */
+  surDevis?: boolean
   tagline: string
   features: string[]
   /** Offre mise en avant sur la grille. */
@@ -426,12 +460,16 @@ export const PLAN_CARDS: PlanCard[] = [
     ],
   },
   {
-    key: 'business', name: 'Business', price: 129, from: true,
+    key: 'business', name: 'Business', price: 129, surDevis: true,
     tagline: 'Pour une équipe sur la route.',
     features: [
       'Tout le Pro',
       '3 laveurs inclus',
-      `+${PRIX_LAVEUR_SUPPLEMENTAIRE} €/mois par laveur supplémentaire`,
+      // Le montant par laveur n'est plus annoncé : une carte qui dit
+      // « Nous contacter » et imprime un tarif deux lignes plus bas se
+      // contredit toute seule. PRIX_LAVEUR_SUPPLEMENTAIRE reste la référence
+      // interne, pour le devis et la facturation.
+      'Tarif selon la taille de votre équipe',
       'Planning collectif (rendez-vous simultanés)',
     ],
   },

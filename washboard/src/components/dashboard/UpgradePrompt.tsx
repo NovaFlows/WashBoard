@@ -1,5 +1,8 @@
 import Link from 'next/link'
-import { PLAN_CARDS, PLAN_LABELS, PLAN_PRICES, requiredPlan, type Feature } from '@/lib/plan'
+import {
+  PLAN_CARDS, PLAN_LABELS, PLAN_PRICES, requiredPlan,
+  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, type Feature,
+} from '@/lib/plan'
 
 // Écran affiché à la place d'une fonctionnalité que l'offre ne comprend pas.
 //
@@ -48,8 +51,15 @@ export function UpgradePrompt({ title, description, feature, apercu }: {
           Offre {label}
         </span>
         <span className="text-sm font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
-          {carteOffre?.from && <span className="font-medium text-slate-400">dès </span>}
-          {prix}€<span className="text-xs font-medium text-slate-400">/mois</span>
+          {/* Une offre sans tarif public n'en affiche pas ici non plus. Un prix
+              qui n'apparaît qu'à cet endroit serait celui sur lequel le laveur
+              se ferait une idée — et celui qu'il nous reprocherait au devis. */}
+          {carteOffre?.surDevis ? LIBELLE_CONTACT : (
+            <>
+              {carteOffre?.from && <span className="font-medium text-slate-400">dès </span>}
+              {prix}€<span className="text-xs font-medium text-slate-400">/mois</span>
+            </>
+          )}
         </span>
       </div>
 
@@ -69,12 +79,23 @@ export function UpgradePrompt({ title, description, feature, apercu }: {
         </ul>
       )}
 
-      <Link
-        href="/dashboard/abonnement"
-        className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
-      >
-        Passer à l’offre {label} — {prix}€/mois
-      </Link>
+      {carteOffre?.surDevis ? (
+        <a
+          href={lienRendezVousBusiness()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+        >
+          {LIBELLE_RDV_BUSINESS}
+        </a>
+      ) : (
+        <Link
+          href="/dashboard/abonnement"
+          className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+        >
+          Passer à l’offre {label} — {prix}€/mois
+        </Link>
+      )}
       <Link
         href="/dashboard/abonnement"
         className="mt-2.5 block text-center text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"

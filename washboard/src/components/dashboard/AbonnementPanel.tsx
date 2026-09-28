@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import {
   PLAN_CARDS, PLAN_PRICES, PLAN_HISTORIQUE, monthsOwed, freeMonthsLabel, formatEuros,
+  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS,
   yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -275,7 +276,7 @@ export default function AbonnementPanel({
                   ) : null}
                 </div>
                 <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-0.5">
-                  {card.price === 0 ? 'Gratuit' : (
+                  {card.surDevis ? LIBELLE_CONTACT : card.price === 0 ? 'Gratuit' : (
                     <>
                       {card.from && <span className="text-xs font-medium text-slate-400">dès </span>}
                       {billing === 'yearly' ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
@@ -287,7 +288,7 @@ export default function AbonnementPanel({
                     mensuelle, cette ligne verte vendait l'engagement annuel au
                     milieu des tarifs mensuels : le vert du produit signale une
                     économie, il n'a rien à faire là où il n'y en a pas. */}
-                {billing === 'yearly' && card.price > 0 && (
+                {billing === 'yearly' && card.price > 0 && !card.surDevis && (
                   <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
                     Soit {formatEuros(yearlyPrice(card.price))}€/an — {freeMonthsLabel()}
                   </p>
@@ -311,6 +312,20 @@ export default function AbonnementPanel({
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
                     Inclus dans votre plan
                   </span>
+                ) : card.surDevis ? (
+                  // Business ne passe pas par Stripe depuis cet écran : le prix
+                  // dépend de la taille de l'équipe, donc il se chiffre après
+                  // l'entretien. Placé AVANT les branches de paiement, sinon un
+                  // compte en retard de règlement se verrait proposer de payer
+                  // un montant qu'on n'a pas encore établi.
+                  <a
+                    href={lienRendezVousBusiness()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center py-2 rounded-xl text-xs font-bold bg-[#1651E8] hover:bg-[#0F4ACC] text-white transition-colors"
+                  >
+                    {LIBELLE_RDV_BUSINESS}
+                  </a>
                 ) : card.price === 0 ? (
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
                     {isCurrent ? 'Votre offre actuelle' : 'Sans paiement'}

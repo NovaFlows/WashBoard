@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
+  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
   type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -902,7 +903,7 @@ export default function LandingPage() {
             const featured = !!card.highlight
             // Une offre gratuite n'a ni tarif annuel, ni mois offert : tout ce
             // qui parle d'engagement doit se taire sur cette carte.
-            const yearly = billing === 'yearly' && card.price > 0
+            const yearly = billing === 'yearly' && card.price > 0 && !card.surDevis
             return (
               <FadeItem
                 key={card.key}
@@ -922,8 +923,13 @@ export default function LandingPage() {
                   </span>
                 )}
                 <p className={`text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{card.name}</p>
+                {/* Business n'affiche pas de tarif : son prix dépend de la
+                    taille de l'équipe, et une équipe se chiffre après l'avoir
+                    écoutée. Un « dès 129 € » attirait les mauvaises questions
+                    (« pourquoi si cher ? ») avant qu'on ait pu poser les
+                    bonnes (« vous êtes combien sur la route ? »). */}
                 <p className={`text-4xl font-black mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                  {card.price === 0 ? 'Gratuit' : (
+                  {card.surDevis ? LIBELLE_CONTACT : card.price === 0 ? 'Gratuit' : (
                     <>
                       {card.from && <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>dès </span>}
                       {yearly ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
@@ -932,7 +938,9 @@ export default function LandingPage() {
                   )}
                 </p>
                 <p className={`text-xs mt-1.5 font-semibold ${featured ? 'text-emerald-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {card.price === 0
+                  {card.surDevis
+                    ? `Un échange de ${RDV_BUSINESS_MINUTES} minutes, puis un devis`
+                    : card.price === 0
                     ? 'Sans carte bancaire, sans limite de durée'
                     : yearly
                       ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
@@ -949,9 +957,23 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
-                  {card.price === 0 ? 'Je commence gratuitement' : 'Je démarre'}
-                </Link>
+                {card.surDevis ? (
+                  // Lien externe et non `next/link` : il sort du site, vers un
+                  // agenda ou vers WhatsApp. `noopener` par principe sur toute
+                  // ouverture d'onglet.
+                  <a
+                    href={lienRendezVousBusiness()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    {LIBELLE_RDV_BUSINESS}
+                  </a>
+                ) : (
+                  <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
+                    {card.price === 0 ? 'Je commence gratuitement' : 'Je démarre'}
+                  </Link>
+                )}
               </FadeItem>
             )
           })}

@@ -47,8 +47,18 @@ export default function CGV() {
               annoncer un prix que le produit ne pratique plus. */}
           {PLAN_CARDS.map(c => (
             <li key={c.key}>
-              <strong>{c.name} :</strong> {formatEuros(c.price)} € HT / mois,
-              ou {formatEuros(yearlyPrice(c.price))} € HT / an ({freeMonthsLabel()})
+              <strong>{c.name} :</strong>{' '}
+              {/* Une offre sans tarif public ne peut pas en afficher un ici :
+                  des CGV qui annoncent un prix que le produit ne pratique plus
+                  engagent l'éditeur sur ce prix. */}
+              {c.surDevis ? (
+                <>tarif sur devis, établi après entretien et fonction du nombre de laveurs.</>
+              ) : (
+                <>
+                  {formatEuros(c.price)} € HT / mois,
+                  ou {formatEuros(yearlyPrice(c.price))} € HT / an ({freeMonthsLabel()})
+                </>
+              )}
             </li>
           ))}
         </ul>

@@ -8,6 +8,7 @@ import {
   RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, COMPTES_TEST_RETOUR_GRATUIT,
   suitRetourGratuit, essaiTermineSansFormule,
   planEffectif, doitChoisirFormule, offreQuiCouvre,
+  lienRendezVousBusiness, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
   type Plan, type Feature,
 } from './plan'
 
@@ -289,9 +290,12 @@ describe('PLAN_CARDS — ce qui est montré au laveur', () => {
     expect(PLAN_CARDS.filter(c => c.highlight)).toHaveLength(1)
   })
 
-  it('ne présente « à partir de » que là où le prix dépend de l’usage', () => {
-    // Seul le Business a un prix variable (laveurs supplémentaires).
-    expect(PLAN_CARDS.filter(c => c.from).map(c => c.key)).toEqual(['business'])
+  it('ne présente plus de tarif de départ, faute de tarif affiché', () => {
+    // Le Business était la seule offre à prix variable, donc la seule à porter
+    // un « dès ». Elle n'affiche plus de tarif du tout : plus aucune carte n'a
+    // de prix de départ à annoncer. Le jour où une offre en retrouve un, ce
+    // test tombe et rappelle qu'il faut alors le rendre visible.
+    expect(PLAN_CARDS.filter(c => c.from).map(c => c.key)).toEqual([])
   })
 })
 
@@ -795,5 +799,50 @@ describe('offreQuiCouvre', () => {
         if (plafond !== null) expect(plafond).toBeGreaterThanOrEqual(volume)
       }
     }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L'offre Business n'affiche pas de tarif : son prix dépend de la taille de
+// l'équipe, donc il se chiffre après un entretien. Mais le prix continue
+// d'exister pour Stripe et pour les calculs — c'est l'AFFICHAGE qui change,
+// pas la facturation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('offre sur devis', () => {
+  it('marque Business, et elle seule', () => {
+    const surDevis = PLAN_CARDS.filter(c => c.surDevis).map(c => c.key)
+    expect(surDevis).toEqual(['business'])
+  })
+
+  it('garde un prix interne, pour Stripe et les calculs', () => {
+    // Ne pas afficher un tarif n'est pas ne plus en avoir : l'abonnement se
+    // facture, et `PLAN_PRICES` reste la référence.
+    expect(PLAN_PRICES.business).toBeGreaterThan(0)
+  })
+
+  it('ne cumule pas « dès » et « sur devis »', () => {
+    // « dès 129 € » et « Nous contacter » au même endroit se contrediraient.
+    for (const c of PLAN_CARDS) expect(c.surDevis && c.from).toBeFalsy()
+  })
+
+  it('annonce la durée réelle du rendez-vous', () => {
+    expect(LIBELLE_RDV_BUSINESS).toContain(String(RDV_BUSINESS_MINUTES))
+  })
+
+  it('donne toujours un lien, même sans agenda configuré', () => {
+    // Un bouton mort sur la seule offre qu'on vend par téléphone coûterait plus
+    // cher que toute la grille. Sans agenda, on retombe sur WhatsApp.
+    vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', '')
+    const repli = lienRendezVousBusiness()
+    expect(repli).toMatch(/^https:\/\/wa\.me\//)
+    expect(decodeURIComponent(repli)).toContain(`${RDV_BUSINESS_MINUTES} minutes`)
+    vi.unstubAllEnvs()
+  })
+
+  it('préfère l’agenda quand il est configuré', () => {
+    vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', 'https://cal.com/washboard/business')
+    expect(lienRendezVousBusiness()).toBe('https://cal.com/washboard/business')
+    vi.unstubAllEnvs()
   })
 })
