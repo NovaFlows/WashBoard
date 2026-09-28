@@ -6,6 +6,7 @@ import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
 import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
+import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
@@ -29,6 +30,24 @@ export default async function CrmPage() {
   // AVANT les lectures : inutile de parcourir une année d'événements pour
   // afficher un écran d'invitation à changer d'offre.
   if (!hasFeature(washer, 'crm')) {
+    // Depuis QUAND les chiffres existent déjà. La collecte tourne pour tout le
+    // monde, sans regarder l'offre (voir api/analytics/funnel) : ce qui est
+    // fermé, c'est l'affichage, jamais l'enregistrement. Le laveur doit le
+    // savoir, sinon il croit qu'attendre lui coûte son historique.
+    //
+    // La date est la PLUS RÉCENTE entre son inscription et la fenêtre d'un an
+    // que le CRM sait lire : promettre « depuis votre inscription » à quelqu'un
+    // inscrit il y a trois ans serait un mensonge le jour où il paie.
+    const debutFenetre = new Date()
+    debutFenetre.setDate(debutFenetre.getDate() - FUNNEL_HISTORY_DAYS)
+    const inscription = washer.created_at ? new Date(washer.created_at) : null
+    const depuis = inscription && !Number.isNaN(inscription.getTime()) && inscription > debutFenetre
+      ? inscription
+      : debutFenetre
+    const depuisLabel = depuis.toLocaleDateString('fr-FR', {
+      timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric',
+    })
+
     return (
       <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
         <div className="p-4">
@@ -40,6 +59,7 @@ export default async function CrmPage() {
             description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning."
             feature="crm"
             apercu={<ApercuCrm />}
+            rassurance={`Vos visites et vos réservations sont déjà enregistrées depuis le ${depuisLabel}. Vous ne perdez rien à attendre : tout s’affichera d’un coup le jour où vous changez d’offre.`}
           />
         </div>
       </DashboardShell>

@@ -25,11 +25,17 @@ import {
 // passe est toujours inventé (voir ApercusVerrouilles) — un flou CSS se retire
 // en deux clics dans les outils du navigateur, il ne protège rien. Les vrais
 // chiffres ne sont pas seulement floutés, ils ne sont pas chargés du tout.
-export function UpgradePrompt({ title, description, feature, apercu }: {
+export function UpgradePrompt({ title, description, feature, apercu, rassurance }: {
   title: string
   description: string
   feature: Feature
   apercu?: React.ReactNode
+  /** Une ligne pour dire ce qui se passe PENDANT l'attente. Sans elle, le
+   *  laveur croit qu'il ne commencera à compter qu'une fois abonné — donc
+   *  qu'attendre lui coûte des données. C'est faux : elles s'accumulent déjà,
+   *  seul l'affichage est fermé. Le lui dire retire la peur de rater le coche,
+   *  et ce qui reste est le désir de voir. */
+  rassurance?: string
 }) {
   const plan = requiredPlan(feature)
   const carteOffre = PLAN_CARDS.find(c => c.key === plan)
@@ -66,6 +72,12 @@ export function UpgradePrompt({ title, description, feature, apercu }: {
 
       <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1.5">{title}</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{description}</p>
+
+      {rassurance && (
+        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400 leading-relaxed">
+          {rassurance}
+        </p>
+      )}
 
       {avantages.length > 0 && (
         <ul className="mt-5 space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-5">
