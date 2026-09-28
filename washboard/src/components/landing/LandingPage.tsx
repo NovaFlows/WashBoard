@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
   lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
+  PLAN_COULEURS,
   type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -922,7 +923,16 @@ export default function LandingPage() {
                     Le plus populaire
                   </span>
                 )}
-                <p className={`text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{card.name}</p>
+                <p className={`flex items-center gap-2 text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                  {/* La pastille accompagne le nom, elle ne le remplace pas :
+                      seule, elle ne dirait rien à un laveur daltonien. */}
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: PLAN_COULEURS[card.key] }}
+                    aria-hidden
+                  />
+                  {card.name}
+                </p>
                 {/* Business n'affiche pas de tarif : son prix dépend de la
                     taille de l'équipe, et une équipe se chiffre après l'avoir
                     écoutée. Un « dès 129 € » attirait les mauvaises questions

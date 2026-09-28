@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, requiredPlan, type Plan, type Feature } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, requiredPlan, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
@@ -57,7 +57,19 @@ function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effec
       {/* Sur téléphone, seule la couronne reste : le libellé du plan poussait
           « WashBoard » hors de l'écran, qui s'affichait « Wa… ». Le badge reste
           cliquable et son intitulé passe par aria-label. */}
-      <span className="hidden sm:inline">{label}</span>
+      <span className="hidden sm:inline-flex items-center gap-1.5">
+        {/* Pas de pastille pour un client historique : « Accès complet » n'est
+            pas une offre de la grille, lui en donner une couleur laisserait
+            croire qu'il existe un cinquième palier. */}
+        {!grandfathered && (
+          <span
+            className="inline-block w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: PLAN_COULEURS[effectif] }}
+            aria-hidden
+          />
+        )}
+        {label}
+      </span>
     </Link>
   )
 }
@@ -307,7 +319,10 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       ['/dashboard/factures', 'facturation'],
     ] as [string, Feature][])
       .filter(([, f]) => !hasFeature(fiche, f))
-      .map(([href, f]) => [href, PLAN_LABELS[requiredPlan(f)]]),
+      .map(([href, f]) => {
+        const requis = requiredPlan(f)
+        return [href, { label: PLAN_LABELS[requis], couleur: PLAN_COULEURS[requis] }]
+      }),
   )
   const complet = accesComplet(fiche)
   const choisirFormule = doitChoisirFormule(fiche)

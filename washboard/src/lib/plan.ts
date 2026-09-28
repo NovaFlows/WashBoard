@@ -73,6 +73,27 @@ export const PLAN_LABELS: Record<Plan, string> = {
   business:   'Business',
 }
 
+/** Une couleur par offre, pour la reconnaître d'un coup d'œil.
+ *
+ *  Le laveur croise son offre à cinq endroits — le badge de l'en-tête, le
+ *  menu, la grille tarifaire, la jauge, les cartes verrouillées. Quatre noms
+ *  qui se ressemblent (« Starter », « Pro ») se relisent à chaque fois ; une
+ *  couleur se reconnaît sans lire.
+ *
+ *  L'ordre suit la montée en gamme, et c'est volontaire : gris pour le gratuit,
+ *  puis les deux couleurs de la marque, puis le violet réservé au haut de
+ *  gamme. On ne saute pas d'une famille de teintes à l'autre au milieu.
+ *
+ *  Une pastille est un REPÈRE, jamais la seule information : chaque endroit qui
+ *  en pose garde le nom de l'offre à côté. Un laveur daltonien ne doit rien
+ *  perdre. */
+export const PLAN_COULEURS: Record<Plan, string> = {
+  decouverte: '#94A3B8',  // ardoise : c'est gratuit, ça ne se met pas en avant
+  starter:    '#00C4D4',  // cyan WashBoard
+  pro:        '#1651E8',  // bleu WashBoard, celui des boutons
+  business:   '#7C3AED',  // violet : la seule teinte qui ne sert à rien d'autre
+}
+
 export const PLAN_PRICES: Record<Plan, number> = {
   decouverte: 0,
   starter:    19,

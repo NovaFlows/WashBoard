@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PLAN_LABELS, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_COULEURS, type Plan } from '@/lib/plan'
 
 const BLEU = '#1651E8'
 const ORANGE = '#D97706'
@@ -50,7 +50,12 @@ export function JaugeReservations({ utilisees, quota, offre }: {
           <span className="text-slate-400 dark:text-slate-500"> / {quota}</span>
           <span className="font-semibold text-slate-500 dark:text-slate-400"> réservations ce mois-ci</span>
         </p>
-        <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+        <span className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ backgroundColor: PLAN_COULEURS[offre] }}
+            aria-hidden
+          />
           {PLAN_LABELS[offre]}
         </span>
       </div>

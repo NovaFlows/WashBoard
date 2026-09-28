@@ -21,11 +21,11 @@ type Props = {
    *  deux sens de lecture différents (voir le commentaire sur l'entrée
    *  « Support » plus bas). */
   unreadTeamCount?: number | null
-  /** Entrées de menu que l'offre actuelle ne couvre pas, href → nom de l'offre
-   *  qui les ouvre (« Starter », « Pro »). Elles restent CLIQUABLES : la page
+  /** Entrées de menu que l'offre actuelle ne couvre pas, href → l'offre qui
+   *  les ouvre : son nom et sa couleur. Elles restent CLIQUABLES : la page
    *  montre alors un aperçu et ce qu'il faut pour l'avoir. Un menu grisé ne
    *  donne envie de rien — on ne désire pas ce qu'on ne peut pas regarder. */
-  badgesOffre?: Record<string, string>
+  badgesOffre?: Record<string, { label: string; couleur: string }>
 }
 
 const NAV = [
@@ -161,10 +161,16 @@ export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport,
               )}
               {badgesOffre?.[item.href] && (
                 <span
-                  className="ml-auto shrink-0 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-[0.08em] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                  title={`Inclus à partir de l’offre ${badgesOffre[item.href]}`}
+                  className="ml-auto shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-[0.08em] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                  title={`Inclus à partir de l’offre ${badgesOffre[item.href].label}`}
                 >
-                  {badgesOffre[item.href]}
+                  {/* La pastille double le nom, elle ne le remplace pas. */}
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: badgesOffre[item.href].couleur }}
+                    aria-hidden
+                  />
+                  {badgesOffre[item.href].label}
                 </span>
               )}
             </Link>

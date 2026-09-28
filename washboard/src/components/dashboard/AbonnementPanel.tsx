@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   PLAN_CARDS, PLAN_PRICES, PLAN_HISTORIQUE, monthsOwed, freeMonthsLabel, formatEuros,
-  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS,
+  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, PLAN_COULEURS,
   yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -270,7 +270,14 @@ export default function AbonnementPanel({
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-bold text-slate-900 dark:text-slate-100">{card.name}</p>
+                  <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: PLAN_COULEURS[card.key] }}
+                      aria-hidden
+                    />
+                    {card.name}
+                  </p>
                   {isCurrent ? (
                     <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-600 text-white">Actuel</span>
                   ) : null}

@@ -3,7 +3,7 @@ import {
   hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
   formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
   quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
-  PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
+  PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, PLAN_COULEURS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
   TEAM_SIZE_INCLUS, PLAN_ESSAI, PLAN_HISTORIQUE,
   RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, COMPTES_TEST_RETOUR_GRATUIT,
   suitRetourGratuit, essaiTermineSansFormule,
@@ -844,5 +844,24 @@ describe('offre sur devis', () => {
     vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', 'https://cal.com/washboard/business')
     expect(lienRendezVousBusiness()).toBe('https://cal.com/washboard/business')
     vi.unstubAllEnvs()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Une couleur par offre : le laveur croise la sienne à cinq endroits, quatre
+// noms qui se ressemblent se relisent à chaque fois, une couleur se reconnaît.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PLAN_COULEURS', () => {
+  it('donne une couleur à chaque offre, sans en oublier', () => {
+    for (const c of PLAN_CARDS) {
+      expect(PLAN_COULEURS[c.key], `offre ${c.key}`).toMatch(/^#[0-9A-F]{6}$/i)
+    }
+  })
+
+  it('n’attribue jamais deux fois la même', () => {
+    // Deux offres de la même couleur, c'est un repère qui ne repère rien.
+    const couleurs = Object.values(PLAN_COULEURS)
+    expect(new Set(couleurs).size).toBe(couleurs.length)
   })
 })
