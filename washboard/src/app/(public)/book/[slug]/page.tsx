@@ -11,6 +11,7 @@ import { prestationsAffichees } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
+import { compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -191,6 +192,14 @@ export default async function BookingPage({ params }: Props) {
   // plutôt que dans les réglages seuls : un compte qui aurait personnalisé sa
   // page AVANT de rétrograder garde ses valeurs en base, et elles doivent
   // cesser de s'afficher sans qu'on ait à les effacer.
+  // Plafond du mois atteint ? Sert à deux choses sur cette page : retirer le
+  // bouton WhatsApp (voir plus bas), et rien d'autre — la réservation, elle,
+  // reste acceptée. Un comptage en échec rend `null` : dans le doute on laisse
+  // le bouton, comme partout ailleurs le doute profite au laveur.
+  const plafondMensuel = quotaReservations(washer)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDuMois(admin, washer.id)
+  const plafondAtteint = plafondMensuel !== null && utiliseesCeMois !== null && utiliseesCeMois >= plafondMensuel
+
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -273,21 +282,14 @@ export default async function BookingPage({ params }: Props) {
       </header>
 
       <main id="main-content" className="max-w-lg mx-auto px-4 py-8">
-        {/* ── Le titre de la page : qui la signe ────────────────────────────
-            Sur une offre payante, le laveur. Sur l'offre gratuite, WashBoard —
-            son nom n'apparaît nulle part, l'en-tête et le titre portent le
-            nôtre. C'est ce que la grille tarifaire vend : la page personnalisée
-            commence au Starter.
-
-            Le nom reste annoncé aux lecteurs d'écran, sans être affiché : un
-            client aveugle doit pouvoir savoir chez qui il réserve. Ce que
-            l'offre gratuite ne donne pas, c'est la VITRINE — pas l'identité. */}
+        {/* ── Le titre de la page : chez qui on réserve ─────────────────────
+            Le nom du laveur, toujours — c'est lui que le client vient voir.
+            Ce que l'offre gratuite ne lui donne pas, c'est L'EN-TÊTE : là-haut,
+            c'est notre logo et notre nom. La vitrine est à nous, le rendez-vous
+            est à lui. */}
         {!themed && (
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {personnalisee ? washer.name : 'WashBoard'}
-            </h1>
-            {!personnalisee && <p className="sr-only">Page de réservation de {washer.name}</p>}
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{washer.name}</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Réservez votre lavage à domicile en quelques clics</p>
           </div>
         )}
@@ -313,6 +315,9 @@ export default async function BookingPage({ params }: Props) {
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,
+            // Réserver en tant qu'entreprise demande le suivi qui va avec —
+            // fiche société, facture, relance. L'offre gratuite ne l'a pas.
+            clients_pro: hasFeature(washer, 'crm'),
           }}
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à
@@ -331,16 +336,21 @@ export default async function BookingPage({ params }: Props) {
           </div>
         )}
 
-        {/* ── Contact direct : seulement sur une offre sans plafond ────────
-            Sur une offre plafonnée, le laveur ne voit ni le téléphone ni
-            l'adresse des réservations au-delà de son quota. Lui laisser un
-            bouton WhatsApp sur sa page annulait tout : le client écrivait, le
-            laveur répondait, et il récupérait par ce biais ce qu'on venait de
-            masquer. Le bouton revient dès que l'offre n'a plus de plafond.
+        {/* ── Contact direct : jusqu'au plafond du mois, pas au-delà ───────
+            Le bouton reste là tant que le laveur n'a pas atteint son quota :
+            c'est son outil de travail, et le lui retirer parce qu'il est sur
+            une petite offre serait une punition, pas un modèle économique.
+            Il disparaît AU MOMENT où le plafond est atteint, et pour la seule
+            raison qui compte : au-delà, le laveur ne voit plus le téléphone ni
+            l'adresse de ses nouveaux clients. Lui laisser un bouton WhatsApp
+            annulerait tout — le client écrit, le laveur répond, et il récupère
+            par ce biais ce qu'on vient de masquer. Le mois suivant remet le
+            compteur à zéro, et le bouton revient tout seul.
+
             À ne pas confondre avec l'écran « page suspendue » plus haut, qui
             garde son bouton d'appel : là, contacter le prestataire est la
             seule chose qui reste à faire. */}
-        {washer.phone && quotaReservations(washer) === null && (
+        {washer.phone && !plafondAtteint && (
           <div className="mt-6 flex justify-center">
             <a
               href={`https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`}

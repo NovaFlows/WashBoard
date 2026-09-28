@@ -61,6 +61,11 @@ export type WasherPublic = {
   /** Informations de facturation complètes : un booléen, jamais le SIRET ni
    *  l'adresse eux-mêmes, qui n'ont rien à faire dans la page publique. */
   facturation_prete?: boolean
+  /** Le laveur peut recevoir des clients PROFESSIONNELS : fiche société,
+   *  facture, suivi. L'offre gratuite ne l'a pas, l'onglet ne s'affiche donc
+   *  pas — plutôt que de le montrer barré, ce qui ferait porter au CLIENT le
+   *  refus d'une limite qui n'est pas la sienne. */
+  clients_pro?: boolean
   // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
 }
 
@@ -214,6 +219,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             services={services}
             categories={categories}
             factureApresPrestation={washer.facturation_prete === true}
+            clientsProAutorises={washer.clients_pro !== false}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
               // Changer de prestation invalide les options de la précédente :
