@@ -17,10 +17,21 @@ import { logger } from '@/lib/logger'
 // `?confirmer=1` déclenche l'envoi réel ; sans lui, la route ne fait qu'un
 // aperçu — liste des destinataires, aucun envoi — pour se relire avant
 // d'écrire à de vrais clients.
+//
+// `?test=<email>` envoie UNIQUEMENT ce mail-là (le vrai template, pas une
+// copie) et s'arrête là — ni la liste des laveurs, ni la notification
+// d'équipe, ni le compteur ne sont touchés. Sert à voir le rendu réel avant
+// de déclencher la diffusion à tout le monde.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
+  const test = request.nextUrl.searchParams.get('test')
+  if (test) {
+    await sendNouvellesOffres({ to: test, washerName: 'NovaFlows' })
+    return NextResponse.json({ test: true, envoyeA: test })
   }
 
   const admin = createSupabaseClient(
