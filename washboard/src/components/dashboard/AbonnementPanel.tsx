@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   PLAN_CARDS, PLAN_PRICES, PLAN_HISTORIQUE, monthsOwed, freeMonthsLabel, formatEuros,
-  lienRendezVousBusiness, lienChangementOffre, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS,
+  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS,
   yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -335,13 +335,23 @@ export default function AbonnementPanel({
                   >
                     {LIBELLE_RDV_BUSINESS}
                   </a>
-                ) : card.price === 0 && subscriptionStatus !== 'active' ? (
-                  // Pas encore abonné : l'offre gratuite ne se choisit pas, on
-                  // y retombe tout seul à la fin de l'essai. Rien à cliquer.
+                ) : card.price === 0 ? (
+                  // L'offre gratuite ne s'achète pas : on y retombe tout seul à
+                  // la fin de l'essai, ou on nous écrit pour redescendre.
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
                     Sans paiement
                   </span>
-                ) : subscriptionStatus !== 'active' ? (
+                ) : (
+                  // PayPal sur TOUTE offre payante qui n'est pas la sienne, que
+                  // l'abonnement soit actif ou non. Le panneau ne montrait rien
+                  // à un abonné déjà actif : il cliquait sur Starter ou Pro et
+                  // il ne se passait rien.
+                  //
+                  // ⚠️ Un abonné qui paie ici règle la nouvelle offre pendant que
+                  // l'ancienne court encore : l'activation étant manuelle (voir
+                  // la note sous la grille), c'est à ce moment-là qu'on arrête
+                  // l'ancienne et qu'on ajuste. Choix assumé — demander d'écrire
+                  // avant de payer faisait perdre la vente.
                   <div className="space-y-2">
                     {billing === 'monthly' && dueMonths > 1 && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold text-center">
@@ -365,27 +375,17 @@ export default function AbonnementPanel({
                       PayPal — {formatEuros(amountFor(card.price))}€
                     </a>
                   </div>
-                ) : (
-                  // Déjà abonné, et ce n'est pas son offre : on ouvre la
-                  // conversation plutôt qu'un paiement. Changer d'offre en
-                  // cours d'abonnement demande d'arrêter l'ancienne et de
-                  // calculer un prorata — le faire payer d'abord, c'est le
-                  // prélever deux fois et le rembourser à la main.
-                  <a
-                    href={lienChangementOffre(card.name)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block text-center py-2 rounded-xl text-xs font-bold bg-[#1651E8] hover:bg-[#0F4ACC] text-white transition-colors"
-                  >
-                    {card.price === 0 ? 'Revenir à Découverte' : `Passer à ${card.name}`}
-                  </a>
                 )}
               </div>
             )
           })}
         </div>
 
-        {subscriptionStatus !== 'active' && (
+        {/* Affichée dès qu'un bouton de paiement existe, et plus seulement
+            aux comptes non abonnés : un abonné qui change d'offre paie lui
+            aussi ici, et c'est à ce moment qu'il doit lire que l'activation
+            passe par nous. */}
+        {!grandfathered && (
           <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-5">
             Après réception de votre paiement, votre abonnement sera activé manuellement sous 24h ouvrées.
           </p>

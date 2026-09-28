@@ -400,22 +400,6 @@ export function lienRendezVousBusiness(): string {
   return `https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent(message)}`
 }
 
-/** Où mène « Passer à … » quand le laveur est DÉJÀ abonné.
- *
- *  Un changement d'offre en cours d'abonnement ne peut pas être un simple
- *  paiement : il faut arrêter l'ancienne, calculer le prorata, activer la
- *  nouvelle. Le faire payer avant cela, c'est le prélever deux fois et le
- *  rembourser à la main. On ouvre donc la conversation, ce que la FAQ de cette
- *  même page promet déjà — elle le disait en bas de page, personne ne
- *  descendait jusque-là.
- *
- *  Message déjà écrit, à la première personne : il n'a qu'à appuyer sur
- *  envoyer. */
-export function lienChangementOffre(nomOffre: string): string {
-  const message = `Bonjour, je souhaite passer à l’offre ${nomOffre} de WashBoard.`
-  return `https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent(message)}`
-}
-
 /** Ce qu'affiche le bouton d'une offre sans tarif. */
 export const LIBELLE_CONTACT = 'Nous contacter'
 export const LIBELLE_RDV_BUSINESS = `Prendre rendez-vous — ${RDV_BUSINESS_MINUTES} min`
