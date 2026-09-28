@@ -196,8 +196,21 @@ export const PLAN_HISTORIQUE: Plan = 'pro'
  *    - la désactiver entièrement        → la placer dans le futur.
  *
  *  Pour l'ESSAYER sans attendre 30 jours : créer un compte (il sera forcément
- *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé. */
-export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-09-24T00:00:00.000Z'
+ *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé.
+ *
+ *  Reculée du 24/09 au 20/08 le 2026-09-29, à la demande explicite
+ *  d'Alexandre : « mes clients en essai gratuit, fin de période d'essai + pas
+ *  de paiement = plan gratuit, automatique ». Vérifié avant de reculer la
+ *  date : sur les 9 comptes alors en essai, 7 étaient antérieurs au 24/09 et
+ *  seraient tombés sur l'ancien mécanisme (suspension après 30 jours de
+ *  grâce) au lieu de la bascule automatique vers Découverte. Le plus ancien
+ *  de ces sept, BellAuto89, a été créé le 20/08 — la date couvre exactement
+ *  ce groupe, sans remonter plus loin que nécessaire. Aucun compte payant
+ *  n'est concerné par ce recul : le seul compte historique de la période
+ *  (ADMIN RYAN, grandfathered) reste hors de cette règle dans tous les cas
+ *  (voir `essaiTermineSansFormule`). Kookii Clean (17/06) n'est pas couvert
+ *  et garde l'ancien comportement — décision distincte, pas encore tranchée. */
+export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-08-20T00:00:00.000Z'
 
 /** Date à partir de laquelle le plafond de réservations masque quelque chose.
  *
