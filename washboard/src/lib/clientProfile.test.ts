@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildClientProfile, type ClientBooking } from './clientProfile'
+import { buildClientProfile, type ClientBooking, type ClientDocument } from './clientProfile'
 
 const base: ClientBooking = {
   id: '1',
@@ -157,6 +157,24 @@ describe('buildClientProfile', () => {
   it('vehiculesReserves est vide sans réservation ou sans modèle renseigné', () => {
     expect(buildClientProfile([mk({ vehicles_detail: null })], 'alex@example.com')!.vehiculesReserves).toEqual([])
     expect(buildClientProfile([mk({ vehicles_detail: [{ models: ['  '] }] })], 'alex@example.com')!.vehiculesReserves).toEqual([])
+  })
+
+  it('vehiculesReserves reprend aussi le véhicule tapé sur un devis ou une facture écrits à la main, mêlé aux réservations par date', () => {
+    const document: ClientDocument = {
+      id: 'd1', genre: 'devis', numero: 'D-00001', statut: 'emis',
+      emis_le: '2026-07-01T09:00:00Z', created_at: '2026-07-01T09:00:00Z',
+      contenu: {
+        client: { nom: 'Alex', email: 'alex@example.com', professionnel: false, entreprise: null, adresseFacturation: '', vehicule: 'Renault Kangoo' },
+        totaux: { ttc: 90 },
+      },
+    }
+    const p = buildClientProfile(
+      [mk({ scheduled_at: '2026-08-01T09:00:00Z', vehicles_detail: [{ models: ['Peugeot 208'] }] })],
+      'alex@example.com', new Date(), [document],
+    )!
+    // Le devis (1er juillet) est plus ancien que la réservation (1er août) : la voiture la plus
+    // récente reste en tête, peu importe la source.
+    expect(p.vehiculesReserves).toEqual(['Peugeot 208', 'Renault Kangoo'])
   })
 
   it('récupère un téléphone même absent de la réservation la plus récente', () => {

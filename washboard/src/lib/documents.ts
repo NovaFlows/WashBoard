@@ -64,6 +64,10 @@ export type SaisieDocument = {
   clientTelephone: string
   /** Adresse de facturation du client. À défaut, le lieu de la prestation. */
   clientAdresse: string
+  /** Modèle du véhicule, texte libre — la réservation publique le demande déjà
+   *  (`StepService.tsx`) ; un document écrit à la main doit pouvoir le demander pareil, sans
+   *  quoi la fiche client n'en sait rien pour ce travail-là (2026-09-28, Alexandre). */
+  clientVehicule: string
   professionnel: boolean
   entreprise: string
   /** SIRET du client professionnel (le SIREN en est extrait pour la facture). */
@@ -206,6 +210,7 @@ export function normaliserSaisie(brut: unknown): SaisieDocument {
     clientEmail: texte(o.clientEmail),
     clientTelephone: texte(o.clientTelephone),
     clientAdresse: texte(o.clientAdresse),
+    clientVehicule: texte(o.clientVehicule),
     professionnel: o.professionnel === true,
     entreprise: texte(o.entreprise),
     siret: texte(o.siret),
@@ -387,6 +392,7 @@ export function construireDocument(saisie: SaisieDocument, v: VendeurFacturable)
       entreprise: pro ? saisie.entreprise.trim() || null : null,
       siren: /^\d{9}$/.test(sirenClient) ? sirenClient : null,
       adresseFacturation: saisie.clientAdresse.trim() || saisie.lieu.trim(),
+      vehicule: saisie.clientVehicule.trim() || null,
     },
     prestation: {
       date: saisie.date,
@@ -411,6 +417,7 @@ export function saisieDepuisContenu(contenu: FactureContenu, genre: GenreDocumen
     clientEmail: contenu.client.email ?? '',
     clientTelephone: contenu.client.telephone ?? '',
     clientAdresse: contenu.client.adresseFacturation,
+    clientVehicule: contenu.client.vehicule ?? '',
     professionnel: contenu.client.professionnel,
     entreprise: contenu.client.entreprise ?? '',
     siret: contenu.client.siren ?? '',
@@ -431,7 +438,7 @@ export function saisieDepuisContenu(contenu: FactureContenu, genre: GenreDocumen
 export function saisieNeuve(genre: GenreDocument, aujourdhui: string): SaisieDocument {
   return {
     genre,
-    clientNom: '', clientEmail: '', clientTelephone: '', clientAdresse: '',
+    clientNom: '', clientEmail: '', clientTelephone: '', clientAdresse: '', clientVehicule: '',
     professionnel: false, entreprise: '', siret: '',
     date: genre === 'facture' ? aujourdhui : null,
     lieu: '',

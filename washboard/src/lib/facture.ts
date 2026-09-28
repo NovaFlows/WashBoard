@@ -173,6 +173,11 @@ export type FactureContenu = {
     entreprise: string | null
     siren: string | null
     adresseFacturation: string
+    /** Modèle du véhicule, texte libre — absent des factures de réservation (la page publique
+     *  le demande déjà, voir `bookings.vehicles_detail`). Porté par les documents écrits à la
+     *  main : même besoin, même endroit où le taper (2026-09-28, Alexandre : « demandé le
+     *  véhicule dans les devis du coup quand on les fait à la main »). */
+    vehicule?: string | null
   }
   /** `date` est nulle quand la prestation n'est pas encore planifiée — le cas normal d'un
    *  devis. Une facture de réservation en porte toujours une. */

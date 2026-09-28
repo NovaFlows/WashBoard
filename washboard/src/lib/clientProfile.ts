@@ -85,7 +85,14 @@ export type ClientDocument = {
   emis_le: string | null
   created_at: string
   contenu: {
-    client: { nom: string; email: string; telephone?: string | null; professionnel: boolean; entreprise: string | null; adresseFacturation: string }
+    client: {
+      nom: string; email: string; telephone?: string | null; professionnel: boolean
+      entreprise: string | null; adresseFacturation: string
+      /** Modèle tapé à la main sur un devis/facture écrit sans réservation — voir
+       *  `FactureContenu.client.vehicule` (`lib/facture.ts`). Reprend dans `vehiculesReserves`
+       *  ci-dessous, au même titre qu'un modèle donné en réservant. */
+      vehicule?: string | null
+    }
     totaux: { ttc: number }
   }
   /** `null` tant que la facture n'est pas encaissée (`lib/documents.ts`, `estPayee`) — c'est ce
@@ -214,11 +221,17 @@ export function buildClientProfile(
       }
   const prestations = honored.length + facturesFaites.length
 
-  // `mine` est déjà trié du plus récent au plus ancien : le premier modèle rencontré est donc
-  // le plus récent. Un `Set` dédoublonne en gardant cet ordre (une même voiture revient souvent
-  // d'une réservation à l'autre, pas la peine de la répéter).
+  // Deux sources donnent un modèle : la réservation en ligne (`vehicles_detail`) et un devis ou
+  // une facture écrits à la main (`contenu.client.vehicule`) — même besoin, deux endroits
+  // possibles pour le taper. Datées puis triées ensemble (la plus récente d'abord), pour que le
+  // dédoublonnage (`Set`, qui garde l'ordre d'insertion) ne favorise pas une source sur l'autre.
   const vehiculesReserves = [...new Set(
-    mine.flatMap(b => (b.vehicles_detail ?? []).flatMap(v => (v.models ?? []).map(m => m.trim()).filter(Boolean))),
+    [
+      ...mine.map(b => ({ date: b.scheduled_at, modeles: (b.vehicles_detail ?? []).flatMap(v => v.models ?? []) })),
+      ...siens.map(d => ({ date: dateDocument(d), modeles: d.contenu.client.vehicule ? [d.contenu.client.vehicule] : [] })),
+    ]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .flatMap(s => s.modeles.map(m => m.trim()).filter(Boolean)),
   )]
 
   return {

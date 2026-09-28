@@ -205,6 +205,12 @@ describe('construireDocument', () => {
     const c = construireDocument(saisie({ clientAdresse: '' }), vendeur)
     expect(c.client.adresseFacturation).toBe('3 allée des Roses, 95000 Cergy')
   })
+
+  it('le véhicule est facultatif, gardé tel quel, ou null si vide', () => {
+    expect(construireDocument(saisie({ clientVehicule: 'Peugeot 208 grise' }), vendeur).client.vehicule)
+      .toBe('Peugeot 208 grise')
+    expect(construireDocument(saisie({ clientVehicule: '' }), vendeur).client.vehicule).toBeNull()
+  })
 })
 
 describe('saisieDepuisContenu — transformer un devis accepté en facture', () => {

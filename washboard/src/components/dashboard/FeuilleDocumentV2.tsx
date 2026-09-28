@@ -242,6 +242,17 @@ export default function FeuilleDocumentV2({
               placeholder="Adresse du client"
             />
           </div>
+          {/* Même besoin que la réservation publique (StepService.tsx, qui le demande déjà au
+              client) : un devis ou une facture écrits à la main n'ont personne d'autre à qui
+              le demander (Alexandre, 2026-09-28). */}
+          <input
+            type="text"
+            value={saisie.clientVehicule}
+            onChange={e => modifier({ clientVehicule: e.target.value })}
+            placeholder="Véhicule (facultatif) — Peugeot 208 grise"
+            aria-label="Véhicule du client"
+            className={`${CHAMP} mt-2`}
+          />
           <button
             type="button"
             aria-pressed={saisie.professionnel}

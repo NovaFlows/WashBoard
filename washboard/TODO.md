@@ -2481,6 +2481,14 @@ rien à faire, mais que le projet reste globalement sain.
         récent, sans doublon ; la fiche les affiche EN PREMIER, le champ manuel restant un
         complément (plaque, couleur) ou un secours pour un client sans réservation (né d'un
         devis). `COLONNES` de `clients/page.tsx` élargi à `vehicles_detail` pour ça.
+        **Même jour, même logique étendue aux devis/factures écrits à la main** (Alexandre :
+        « demandé le véhicule dans les devis du coup quand on les fait à la main ») : un devis
+        n'a pas de réservation derrière, donc pas de `vehicles_detail` à reprendre — la feuille
+        `FeuilleDocumentV2.tsx` demande maintenant le véhicule au même endroit que le reste du
+        client (sous l'adresse), champ facultatif `clientVehicule` sur `SaisieDocument`, gardé
+        dans `FactureContenu.client.vehicule` (`lib/facture.ts`, `lib/documents.ts`).
+        `vehiculesReserves` mêle les deux sources par date (réservation ou document, la plus
+        récente d'abord) plutôt que de les empiler sans ordre.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
