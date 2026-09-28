@@ -46,6 +46,11 @@ export type ClientBooking = {
   created_at?: string
   followup_sent_at?: string | null
   review_request_sent_at?: string | null
+  /** Modèle(s) tapés par le CLIENT LUI-MÊME à la réservation (`StepService.tsx`, un texte libre
+   *  par véhicule) — pas une donnée à ressaisir : `vehiculesReserves`, plus bas, la reprend
+   *  telle quelle. Forme minimale : seul `models` sert ici, le reste de `VehicleItem`
+   *  (`@/types`) ne concerne que le formulaire de réservation. */
+  vehicles_detail?: { models?: string[] | null }[] | null
 }
 
 /** Un réglage écrit à la main sur un client — table `clients`, SQL donné le 2026-09-28.
@@ -134,8 +139,15 @@ export type ClientProfile = {
    *  `null` avec moins de deux visites : une moyenne sur un seul point ne veut rien dire. */
   rythmeJours: number | null
   notes: string | null
-  /** Véhicules du client, en texte libre — voir `ClientReglages.vehicules`. */
+  /** Véhicules du client, en texte libre — voir `ClientReglages.vehicules`. Écrit à la main, sert
+   *  pour un client sans réservation (né d'un devis) ou pour ajouter un détail que la réservation
+   *  ne demande pas (plaque, couleur). */
   vehicules: string | null
+  /** Modèles donnés par le client lui-même en réservant (`ClientBooking.vehicles_detail`), du
+   *  plus récent au plus ancien, sans doublon — la source à privilégier : `vehicules` ci-dessus
+   *  est le complément manuel, pas un doublon à ressaisir. Vide pour un client qui n'a jamais
+   *  réservé en ligne (né d'un devis) ou qui a réservé sans préciser de modèle. */
+  vehiculesReserves: string[]
 }
 
 const isHonored = (b: ClientBooking) => b.status === 'confirmed' || b.status === 'done'
@@ -202,11 +214,19 @@ export function buildClientProfile(
       }
   const prestations = honored.length + facturesFaites.length
 
+  // `mine` est déjà trié du plus récent au plus ancien : le premier modèle rencontré est donc
+  // le plus récent. Un `Set` dédoublonne en gardant cet ordre (une même voiture revient souvent
+  // d'une réservation à l'autre, pas la peine de la répéter).
+  const vehiculesReserves = [...new Set(
+    mine.flatMap(b => (b.vehicles_detail ?? []).flatMap(v => (v.models ?? []).map(m => m.trim()).filter(Boolean))),
+  )]
+
   return {
     cle: key,
     nePlusContacter: reglages.find(r => r.cle === key)?.nePlusContacter ?? false,
     notes: reglages.find(r => r.cle === key)?.notes ?? null,
     vehicules: reglages.find(r => r.cle === key)?.vehicules ?? null,
+    vehiculesReserves,
     ...identite,
     phone: mine.find(b => b.client_phone)?.client_phone
       ?? siens.find(d => d.contenu.client.telephone)?.contenu.client.telephone

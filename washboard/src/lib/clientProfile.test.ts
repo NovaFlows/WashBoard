@@ -146,6 +146,19 @@ describe('buildClientProfile', () => {
     expect(avecReglage.vehicules).toBe('Peugeot 208 grise')
   })
 
+  it('vehiculesReserves reprend les modèles tapés par le client en réservant, du plus récent, sans doublon', () => {
+    const p = buildClientProfile([
+      mk({ id: 'recent', scheduled_at: '2026-08-01T09:00:00Z', vehicles_detail: [{ models: ['Peugeot 208'] }] }),
+      mk({ id: 'vieux', scheduled_at: '2026-01-01T09:00:00Z', vehicles_detail: [{ models: ['Renault Clio', 'Peugeot 208'] }] }),
+    ], 'alex@example.com')!
+    expect(p.vehiculesReserves).toEqual(['Peugeot 208', 'Renault Clio'])
+  })
+
+  it('vehiculesReserves est vide sans réservation ou sans modèle renseigné', () => {
+    expect(buildClientProfile([mk({ vehicles_detail: null })], 'alex@example.com')!.vehiculesReserves).toEqual([])
+    expect(buildClientProfile([mk({ vehicles_detail: [{ models: ['  '] }] })], 'alex@example.com')!.vehiculesReserves).toEqual([])
+  })
+
   it('récupère un téléphone même absent de la réservation la plus récente', () => {
     const p = buildClientProfile([
       mk({ id: 'recent', client_phone: '', scheduled_at: '2026-08-01T09:00:00Z' }),

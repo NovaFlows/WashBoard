@@ -16,7 +16,10 @@ import type { ContactEntreprise, EntrepriseListItem } from '@/lib/entrepriseProf
 // `created_at` et `followup_sent_at` s'ajoutent depuis le 2026-09-28 : c'est ce qu'il faut pour
 // reproduire la décision du cron de relance (`lib/clientsARelancer.ts`, onglet « À relancer »).
 // `review_request_sent_at` sert à la timeline mélangée de la fiche (`lib/clientTimeline.ts`).
-const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, services(name, price, duration_minutes)'
+// `vehicles_detail` s'ajoute le même jour : le modèle que le client tape lui-même en réservant
+// (`StepService.tsx`), repris dans la fiche plutôt que redemandé au laveur (`clientProfile.ts`,
+// `vehiculesReserves`).
+const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, vehicles_detail, services(name, price, duration_minutes)'
 
 export default async function ClientsPage() {
   const supabase = await createClient()

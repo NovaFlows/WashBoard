@@ -366,6 +366,13 @@ export default function ClientProfileModalV2({
   const depuisTexte = profile.firstVisit ? `Client depuis ${depuis(profile.firstVisit)}` : null
   const sousTitre = [depuisTexte, profile.addresses[0] ?? null].filter(Boolean).join(' · ')
 
+  // Les modèles donnés par le client lui-même en réservant priment (source directe) ; le champ
+  // manuel n'ajoute qu'un complément (plaque, couleur…) ou comble l'absence de réservation.
+  const vehiculesTexte = [
+    profile.vehiculesReserves.length > 0 ? profile.vehiculesReserves.join(', ') : null,
+    vehicules,
+  ].filter(Boolean).join(' · ')
+
   // Troisième chiffre : « son rythme » (l'écart moyen entre deux visites) plutôt que le panier
   // moyen — c'est ce que montre le canevas de Yanis, et une information que rien d'autre sur
   // cet écran ne donne (le panier moyen, lui, se retrouve en divisant les deux premiers
@@ -561,10 +568,10 @@ export default function ClientProfileModalV2({
             ))}
           </div>
 
-          {vehicules && (
+          {vehiculesTexte && (
             <p className={`mt-3 flex items-start gap-2 text-[13px] ${corps} text-[color:var(--v2-color-encre)]`}>
               <Car size={14} className="mt-0.5 shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />
-              <span>{vehicules}</span>
+              <span>{vehiculesTexte}</span>
             </p>
           )}
           {notes && (

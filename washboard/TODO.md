@@ -2472,6 +2472,15 @@ rien à faire, mais que le projet reste globalement sain.
         chaque contact apparaît sous son nom dans la liste Contacts — pas de note d'entreprise
         (une entreprise n'a pas de fiche propre, seulement ses contacts, voir plus haut).
         Optimiste comme le reste de l'écran (`router.refresh()` avant de refermer la feuille).
+        **Corrigé le même jour, relevé par Alexandre** (« si justement on a dans le lien de
+        réservation demandé le modèle au client ») : la réservation publique demande DÉJÀ le
+        modèle au client (`StepService.tsx`, un champ texte libre par véhicule, stocké dans
+        `bookings.vehicles_detail`) — le champ manuel ci-dessus, seul, obligeait à retaper une
+        donnée déjà donnée par le client. `ClientProfile.vehiculesReserves` (nouveau,
+        `clientProfile.ts`) reprend ces modèles depuis l'historique de réservations, du plus
+        récent, sans doublon ; la fiche les affiche EN PREMIER, le champ manuel restant un
+        complément (plaque, couleur) ou un secours pour un client sans réservation (né d'un
+        devis). `COLONNES` de `clients/page.tsx` élargi à `vehicles_detail` pour ça.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +

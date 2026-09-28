@@ -525,7 +525,14 @@ export default function FicheEntrepriseV2({
           <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>Aucun contact rattaché.</p>
         ) : (
           <ul className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] px-4">
-            {contacts.map(c => (
+            {contacts.map(c => {
+              // Les modèles donnés en réservant priment ; le champ manuel n'ajoute qu'un
+              // complément — même règle que la fiche client, ClientProfileModalV2.tsx.
+              const vehiculesTexte = [
+                c.profile?.vehiculesReserves.length ? c.profile.vehiculesReserves.join(', ') : null,
+                c.profile?.vehicules,
+              ].filter(Boolean).join(' · ')
+              return (
               <li key={c.cle}>
                 <button type="button" onClick={() => onOuvrirContact(c.cle)} className="flex w-full items-center gap-3 py-2.5 text-left">
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] ${corpsFort} bg-[color:var(--v2-filet)]`}>
@@ -534,7 +541,7 @@ export default function FicheEntrepriseV2({
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-[14.5px] ${nom}`}>{c.profile?.name ?? c.cle}</span>
                     {c.role && <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{c.role}</span>}
-                    {c.profile?.vehicules && <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{c.profile.vehicules}</span>}
+                    {vehiculesTexte && <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{vehiculesTexte}</span>}
                   </span>
                   {c.profile?.phone && (
                     <a href={`tel:${c.profile.phone}`} onClick={e => e.stopPropagation()} aria-label={`Appeler ${c.profile.name}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] hover:bg-[color:var(--v2-filet)]">
@@ -543,7 +550,8 @@ export default function FicheEntrepriseV2({
                   )}
                 </button>
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </section>
