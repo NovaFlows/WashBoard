@@ -115,8 +115,12 @@ function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilise
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color:var(--v2-filet)]" aria-hidden>
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pourcent}%`, backgroundColor: couleur }} />
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{message}</p>
+      {/* En colonne sur téléphone : côte à côte, « Plafond atteint — les suivantes
+          sont masquées jusqu'au 16 octobre » se pliait sur quatre lignes étroites
+          contre le lien. La largeur de l'écran est le vrai arbitre, pas la place
+          que prend le lien. */}
+      <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{message}</p>
         {(derniere || depasse) && (
           <Link href="/dashboard/abonnement" className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em] hover:underline" style={{ color: couleur }}>
             Changer d’offre →

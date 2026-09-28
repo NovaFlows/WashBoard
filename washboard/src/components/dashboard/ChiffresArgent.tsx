@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/GraphiqueBarres'
 import { libelleCategorie } from '@/lib/depenses'
 import { deplacer, formaterJour, libelleComparaison, plageDe, type PeriodeChiffres, type PeriodType } from '@/lib/chiffresPeriode'
@@ -161,10 +161,11 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
 
   if (!hasCompta) {
     return (
-      <UpgradePrompt
-        title="Gérez votre comptabilité"
-        description="Suivez votre chiffre d'affaires, vos dépenses et votre résultat chaque mois. Disponible à partir du plan Pro."
+      <OffreVerrouilleeV2
+        titre="Gérez votre comptabilité"
+        description="Votre chiffre d’affaires, vos dépenses et votre résultat, mois par mois."
         feature="compta"
+        rassurance="Vos encaissements sont déjà comptés en coulisse : rien n’est perdu en attendant, seul l’affichage est fermé."
       />
     )
   }

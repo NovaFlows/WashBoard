@@ -122,6 +122,82 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
   )
 }
 
+// ── Bandeaux d'information : une forme par version ─────────────────────────
+//
+// Les bandeaux (fin d'essai, paiement en retard, annonce des offres, bêta de
+// l'application) restent affichés dans la PWA : c'est de l'information
+// commerciale, on ne la retire pas à celui qui est justement en train de
+// choisir son offre. Mais ils arrivaient tels quels du site — bleu pleine
+// largeur, texte centré, liens soulignés — posés au-dessus du papier de la
+// refonte. Alexandre l'a dit le 2026-09-29 en voyant l'écran : « ça n'a rien à
+// voir ». D'où cette forme v2 : une carte de la même famille que les autres,
+// alignée à gauche, filet de la couleur du ton plutôt qu'un aplat.
+//
+// Le site, lui, ne bouge pas d'un pixel : c'est la branche `!isPwa` ci-dessous,
+// reprise à l'identique de ce que chaque bandeau rendait avant.
+type TonBandeau = 'accent' | 'vert' | 'ambre' | 'rouge' | 'nouveau'
+
+const V2_POLICE = '[font-family:var(--font-archivo)]'
+const V2_FORT = `${V2_POLICE} [font-weight:var(--v2-type-corps-fort-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
+
+/** Couleur v2 d'un ton. « nouveau » n'existe pas dans les jetons : c'est
+ *  l'accent, réservé ici aux annonces produit. */
+const couleurTon = (ton: TonBandeau) =>
+  ton === 'nouveau' ? 'var(--v2-color-accent)' : `var(--v2-color-${ton})`
+
+function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
+  etiquette?: string
+  ton: TonBandeau
+  children: React.ReactNode
+  lien?: string
+  libelleLien?: string
+  onDismiss?: () => void
+}) {
+  const couleur = couleurTon(ton)
+  return (
+    <div className="px-3 pt-3 sm:px-4">
+      <div
+        className="flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border bg-[color:var(--v2-color-surface)] px-3.5 py-3"
+        style={{ borderColor: `color-mix(in srgb, ${couleur} 35%, transparent)` }}
+      >
+        <span className="min-w-0 flex-1">
+          {etiquette && (
+            <span
+              className="mb-1 block text-[10.5px] font-black uppercase tracking-[0.18em]"
+              style={{ color: couleur }}
+            >
+              {etiquette}
+            </span>
+          )}
+          <span className={`block text-[13.5px] leading-snug ${V2_FORT} text-[color:var(--v2-color-encre)]`}>
+            {children}
+          </span>
+          {lien && libelleLien && (
+            <Link
+              href={lien}
+              className={`mt-1 inline-block text-[12.5px] ${V2_FORT}`}
+              style={{ color: couleur }}
+            >
+              {libelleLien} →
+            </Link>
+          )}
+        </span>
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            aria-label="Fermer"
+            className="-mr-1 -mt-1 shrink-0 p-1 text-[color:var(--v2-color-gris)] transition-opacity hover:opacity-70"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Annonce de l'application mobile, en bêta.
 //
 // Deux règles pour qu'un bandeau d'annonce ne devienne pas un meuble qu'on ne
@@ -143,6 +219,7 @@ function AppBetaBanner() {
   // On part de « masqué » : ce qui décide de l'affichage n'existe que dans le
   // navigateur, et un rendu serveur différent provoquerait un clignotement.
   const [visible, setVisible] = useState(false)
+  const isPwa = usePwaStandalone()
 
   useEffect(() => {
     let annule = false
@@ -175,6 +252,20 @@ function AppBetaBanner() {
   function fermer() {
     setVisible(false)
     try { localStorage.setItem(CLE_FERME, '1') } catch { /* rien à faire */ }
+  }
+
+  if (isPwa) {
+    return (
+      <BandeauV2
+        etiquette="Bêta"
+        ton="accent"
+        lien="/dashboard/guide#guide-application"
+        libelleLien="En savoir plus"
+        onDismiss={fermer}
+      >
+        Recevez vos réservations en notification sur votre téléphone.
+      </BandeauV2>
+    )
   }
 
   return (
@@ -218,6 +309,7 @@ function NouvellesOffresBanner() {
   // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
   // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
   const [visible, setVisible] = useState(false)
+  const isPwa = usePwaStandalone()
 
   useEffect(() => {
     let annule = false
@@ -242,6 +334,20 @@ function NouvellesOffresBanner() {
     try { localStorage.setItem(CLE_FERMEE_OFFRES_2026, '1') } catch { /* rien à faire */ }
   }
 
+  if (isPwa) {
+    return (
+      <BandeauV2
+        etiquette="Nouveau"
+        ton="nouveau"
+        lien="/dashboard/abonnement"
+        libelleLien="Voir les offres"
+        onDismiss={fermer}
+      >
+        WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+      </BandeauV2>
+    )
+  }
+
   return (
     <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-b border-indigo-200 dark:border-indigo-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
       <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
@@ -264,10 +370,49 @@ function NouvellesOffresBanner() {
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean }) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
+  const isPwa = usePwaStandalone()
 
   /** Rend le bandeau, ou rien s'il a déjà été fermé pour ce repère. */
   const bandeau = (repere: string, contenu: (fermer: () => void) => React.ReactElement) =>
     (ferme === repere ? null : contenu(() => setFerme(repere)))
+
+  // Habillage v1 par ton — repris à l'identique de ce que chaque état rendait
+  // avant, pour que le site ne bouge pas d'un pixel.
+  const HABIT_V1: Record<TonBandeau | 'urgent' | 'expire', string> = {
+    accent: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800',
+    nouveau: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800',
+    vert: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800',
+    ambre: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800',
+    rouge: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-b border-red-200 dark:border-red-800',
+    urgent: 'bg-orange-500 text-white',
+    expire: 'bg-red-600 text-white',
+  }
+
+  /** Un état du bandeau, dans la forme de la version en cours. `fermer` absent :
+   *  l'état ne se ferme pas (essai expiré — on ne masque pas une porte close). */
+  const etat = (
+    ton: TonBandeau, habitV1: keyof typeof HABIT_V1,
+    texte: React.ReactNode, libelleLien: string, fermer?: () => void,
+  ) => {
+    if (isPwa) {
+      return (
+        <BandeauV2 ton={ton} lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
+          {texte}
+        </BandeauV2>
+      )
+    }
+    return (
+      <div className={`text-sm font-semibold py-2.5 px-3 flex items-center gap-2 ${HABIT_V1[habitV1]}`}>
+        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
+          <span>{texte}</span>
+          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
+            {libelleLien} →
+          </Link>
+        </div>
+        {fermer && <DismissButton onDismiss={fermer} />}
+      </div>
+    )
+  }
 
   // Essai terminé, aucune formule choisie, et le compte suit la règle 2026 :
   // il tourne sur Découverte. Rien n'est cassé — donc pas de rouge, pas de
@@ -275,44 +420,29 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   // sans elle, le laveur lirait « Votre période d'essai a expiré » en rouge
   // alors que sa page de réservation fonctionne toujours.
   if (choisirFormule) {
-    return bandeau('choisir-formule', fermer => (
-      <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
-        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
-          <span>Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.</span>
-          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
-            Voir les offres →
-          </Link>
-        </div>
-        <DismissButton onDismiss={fermer} />
-      </div>
+    return bandeau('choisir-formule', fermer => etat(
+      'accent', 'accent',
+      'Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.',
+      'Voir les offres', fermer,
     ))
   }
 
   // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
   if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
-    return bandeau(`resilie-${cancelsAt}`, fermer => (
-      <div className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-b border-red-200 dark:border-red-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
-        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
-          <span>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</span>
-          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
-            Réactiver →
-          </Link>
-        </div>
-        <DismissButton onDismiss={fermer} />
-      </div>
+    return bandeau(`resilie-${cancelsAt}`, fermer => etat(
+      'rouge', 'rouge',
+      <>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</>,
+      'Réactiver', fermer,
     ))
   }
 
   if (!subscriptionStatus || subscriptionStatus === 'active') return null
 
   if (subscriptionStatus === 'expired') {
-    return (
-      <div className="bg-red-600 text-white text-sm font-semibold py-2.5 px-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
-        <span>Votre période d&apos;essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.</span>
-        <Link href="/dashboard/abonnement" className="underline font-bold hover:text-red-100 whitespace-nowrap">
-          Voir les offres →
-        </Link>
-      </div>
+    return etat(
+      'rouge', 'expire',
+      'Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.',
+      'Voir les offres',
     )
   }
 
@@ -322,51 +452,21 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 
     // Carte enregistrée, facturation différée
     if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
-      return bandeau(`carte-${daysLeft}`, fermer => (
-        <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
-          <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
-            <span>
-              ✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}
-            </span>
-            <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
-              Gérer →
-            </Link>
-          </div>
-          <DismissButton onDismiss={fermer} />
-        </div>
+      return bandeau(`carte-${daysLeft}`, fermer => etat(
+        'vert', 'vert',
+        <>✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</>,
+        'Gérer', fermer,
       ))
     }
 
     if (daysLeft <= 0) {
-      return (
-        <div className="bg-red-600 text-white text-sm font-semibold py-2.5 px-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
-          <span>Votre période d&apos;essai a expiré.</span>
-          <Link href="/dashboard/abonnement" className="underline font-bold hover:text-red-100 whitespace-nowrap">
-            Activer mon abonnement →
-          </Link>
-        </div>
-      )
+      return etat('rouge', 'expire', 'Votre période d’essai a expiré.', 'Activer mon abonnement')
     }
 
-    return bandeau(`essai-${daysLeft}`, fermer => (
-      <div className={`text-sm font-semibold py-2.5 px-3 flex items-center gap-2 ${
-        isUrgent
-          ? 'bg-orange-500 text-white'
-          : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800'
-      }`}>
-        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
-          <span>
-            Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
-          </span>
-          <Link
-            href="/dashboard/abonnement"
-            className={`underline font-bold whitespace-nowrap ${isUrgent ? 'hover:text-orange-100' : 'hover:opacity-70'}`}
-          >
-            Voir l&apos;abonnement →
-          </Link>
-        </div>
-        <DismissButton onDismiss={fermer} />
-      </div>
+    return bandeau(`essai-${daysLeft}`, fermer => etat(
+      isUrgent ? 'ambre' : 'accent', isUrgent ? 'urgent' : 'accent',
+      <>Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</>,
+      'Voir l’abonnement', fermer,
     ))
   }
 
