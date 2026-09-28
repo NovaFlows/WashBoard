@@ -400,33 +400,28 @@ export function formatEuros(amount: number): string {
  *  si l'agenda passe à 45 minutes, c'est le bouton qui doit changer. */
 export const RDV_BUSINESS_MINUTES = 30
 
-/** Adresse à qui écrire quand l'agenda n'est pas encore branché. */
-const EMAIL_CONTACT = 'novaflows.pro@gmail.com'
+/** La page de prise de rendez-vous de WashBoard, faite maison.
+ *  Calendrier, créneaux libres, trente minutes : « Planifier un appel ». */
+const PAGE_RENDEZ_VOUS = '/booking'
 
 /** Où mène « Nous contacter » sur l'offre Business.
  *
- *  `NEXT_PUBLIC_RDV_BUSINESS_URL` attend un lien d'agenda réglé sur un créneau
- *  de trente minutes AVEC visioconférence — une page de rendez-vous Google
- *  Calendar ajoute un lien Meet automatiquement, Cal.com et Calendly savent le
- *  faire aussi. Le prospect choisit son horaire, reçoit l'invitation avec le
- *  lien de visio, et personne n'a de message à échanger pour convenir d'une
- *  heure.
+ *  Vers notre propre page de rendez-vous : le prospect choisit sa date et son
+ *  créneau, l'appel se pose dans l'agenda. Pas de message à échanger pour
+ *  convenir d'une heure — c'est exactement le travail qu'un agenda supprime,
+ *  et c'est pour ça qu'on ne renvoie ni vers WhatsApp ni vers un email.
  *
- *  Sans cette variable, le bouton ouvre un email pré-rempli. Ce n'est pas
- *  l'expérience voulue — c'est un filet, pour qu'un bouton sur la seule offre
- *  qu'on vend de vive voix ne soit jamais mort. Le jour où la variable est
- *  posée, plus personne ne voit ce repli. */
+ *  `NEXT_PUBLIC_RDV_BUSINESS_URL` permet de basculer vers un agenda externe
+ *  (Cal.com, Calendly, plage de rendez-vous Google) sans toucher au code, par
+ *  exemple le jour où on veut le lien Meet automatique. Sans elle, c'est notre
+ *  page qui sert. */
 export function lienRendezVousBusiness(): string {
-  const agenda = process.env.NEXT_PUBLIC_RDV_BUSINESS_URL
-  if (agenda) return agenda
-  const sujet = `Rendez-vous ${RDV_BUSINESS_MINUTES} min — offre Business`
-  const corps = `Bonjour,
+  return process.env.NEXT_PUBLIC_RDV_BUSINESS_URL || PAGE_RENDEZ_VOUS
+}
 
-Je souhaite un rendez-vous de ${RDV_BUSINESS_MINUTES} minutes en visio au sujet de l’offre Business de WashBoard.
-
-Mes disponibilités :
-`
-  return `mailto:${EMAIL_CONTACT}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`
+/** Vrai si ce lien sort du site : seul ce cas justifie d'ouvrir un onglet. */
+export function rendezVousExterne(lien: string): boolean {
+  return !lien.startsWith('/')
 }
 
 /** Ce qu'affiche le bouton d'une offre sans tarif. */

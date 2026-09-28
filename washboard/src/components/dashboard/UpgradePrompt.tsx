@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import {
   PLAN_CARDS, PLAN_LABELS, PLAN_PRICES, requiredPlan,
-  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, type Feature,
+  lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, type Feature,
 } from '@/lib/plan'
 
 // Écran affiché à la place d'une fonctionnalité que l'offre ne comprend pas.
@@ -35,6 +35,7 @@ export function UpgradePrompt({ title, description, feature, apercu }: {
   const carteOffre = PLAN_CARDS.find(c => c.key === plan)
   const prix = PLAN_PRICES[plan]
   const label = PLAN_LABELS[plan]
+  const rdvBusiness = lienRendezVousBusiness()
 
   // Trois arguments suffisent : au-delà, on ne lit plus une proposition, on
   // parcourt une grille tarifaire — et il y en a déjà une, à un clic.
@@ -81,9 +82,8 @@ export function UpgradePrompt({ title, description, feature, apercu }: {
 
       {carteOffre?.surDevis ? (
         <a
-          href={lienRendezVousBusiness()}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={rdvBusiness}
+          {...(rendezVousExterne(rdvBusiness) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
         >
           {LIBELLE_RDV_BUSINESS}

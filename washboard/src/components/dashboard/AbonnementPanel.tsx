@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   PLAN_CARDS, PLAN_PRICES, PLAN_HISTORIQUE, monthsOwed, freeMonthsLabel, formatEuros,
-  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, PLAN_COULEURS,
+  lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, PLAN_COULEURS,
   yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -118,6 +118,8 @@ export default function AbonnementPanel({
   const [now] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [billing, setBilling] = useState<BillingCycle>('yearly')
+  const rdvBusiness = lienRendezVousBusiness()
+  const rdvExterne = rendezVousExterne(rdvBusiness)
 
   const daysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
@@ -335,9 +337,8 @@ export default function AbonnementPanel({
                   // compte en retard de règlement se verrait proposer de payer
                   // un montant qu'on n'a pas encore établi.
                   <a
-                    href={lienRendezVousBusiness()}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={rdvBusiness}
+                    {...(rdvExterne ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     className="block text-center py-2 rounded-xl text-xs font-bold bg-[#1651E8] hover:bg-[#0F4ACC] text-white transition-colors"
                   >
                     {LIBELLE_RDV_BUSINESS}

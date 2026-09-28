@@ -8,7 +8,7 @@ import {
   RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, COMPTES_TEST_RETOUR_GRATUIT,
   suitRetourGratuit, essaiTermineSansFormule,
   planEffectif, doitChoisirFormule, offreQuiCouvre,
-  lienRendezVousBusiness, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
+  lienRendezVousBusiness, rendezVousExterne, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
   type Plan, type Feature,
 } from './plan'
 
@@ -830,24 +830,27 @@ describe('offre sur devis', () => {
     expect(LIBELLE_RDV_BUSINESS).toContain(String(RDV_BUSINESS_MINUTES))
   })
 
-  it('donne toujours un lien, même sans agenda configuré', () => {
-    // Un bouton mort sur la seule offre qu'on vend de vive voix coûterait plus
-    // cher que toute la grille. Sans agenda, on retombe sur un email — jamais
-    // sur rien.
+  it('mène à notre propre page de rendez-vous', () => {
+    // Calendrier, créneaux libres, trente minutes : la page existe déjà.
     vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', '')
-    const repli = lienRendezVousBusiness()
-    expect(repli).toMatch(/^mailto:/)
-    expect(decodeURIComponent(repli)).toContain(`${RDV_BUSINESS_MINUTES} minutes`)
-    expect(decodeURIComponent(repli)).toContain('visio')
+    expect(lienRendezVousBusiness()).toBe('/booking')
     vi.unstubAllEnvs()
   })
 
-  it('n’envoie jamais vers WhatsApp pour un rendez-vous', () => {
-    // Un rendez-vous se prend dans un agenda, avec un lien de visio : une
-    // conversation WhatsApp demande d'abord de convenir d'une heure à la main.
+  it('n’envoie ni vers WhatsApp ni vers un email', () => {
+    // Un rendez-vous se prend dans un agenda. Écrire un message pour convenir
+    // d'une heure, c'est précisément le travail qu'un agenda supprime.
     vi.stubEnv('NEXT_PUBLIC_RDV_BUSINESS_URL', '')
-    expect(lienRendezVousBusiness()).not.toContain('wa.me')
+    const lien = lienRendezVousBusiness()
+    expect(lien).not.toContain('wa.me')
+    expect(lien).not.toMatch(/^mailto:/)
     vi.unstubAllEnvs()
+  })
+
+  it('distingue un lien interne d’un lien externe', () => {
+    // Seul un lien qui sort du site justifie d'ouvrir un onglet.
+    expect(rendezVousExterne('/booking')).toBe(false)
+    expect(rendezVousExterne('https://cal.com/washboard')).toBe(true)
   })
 
   it('préfère l’agenda quand il est configuré', () => {

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
-  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
+  lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
   PLAN_COULEURS,
   type BillingCycle,
 } from '@/lib/plan'
@@ -165,6 +165,8 @@ function ThemeToggle() {
 export default function LandingPage() {
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [billing, setBilling] = useState<BillingCycle>('yearly')
+  const rdvBusiness = lienRendezVousBusiness()
+  const rdvExterne = rendezVousExterne(rdvBusiness)
 
   // La nav reprend le bleu ciel du hero ; passé le hero il n'y a plus de
   // dégradé derrière elle, elle doit donc devenir opaque. Un observateur évite
@@ -899,6 +901,7 @@ export default function LandingPage() {
           <BillingToggle value={billing} onChange={setBilling} />
         </FadeUp>
 
+        {/* Calculés une fois : l'adresse du rendez-vous, et s'il sort du site. */}
         <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {PLAN_CARDS.map((card) => {
             const featured = !!card.highlight
@@ -972,9 +975,8 @@ export default function LandingPage() {
                   // agenda ou vers WhatsApp. `noopener` par principe sur toute
                   // ouverture d'onglet.
                   <a
-                    href={lienRendezVousBusiness()}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={rdvBusiness}
+                    {...(rdvExterne ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
                   >
                     {LIBELLE_RDV_BUSINESS}
