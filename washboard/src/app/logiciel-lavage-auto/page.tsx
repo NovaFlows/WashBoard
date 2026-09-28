@@ -126,8 +126,11 @@ const fonctionnalites: MetierFeature[] = [
 ]
 
 // Dérivés de PLAN_CARDS, jamais recopiés : un prix qui change dans plan.ts
-// se répercute ici sans qu'il faille penser à cette page.
-const essentiel = PLAN_CARDS.find(c => c.key === 'essentiel')!
+// se répercute ici sans qu'il faille penser à cette page. Grille 2026 à 4
+// offres : Starter, pas Essentiel (disparu) — le multi-laveurs a quitté Pro
+// pour Business, corrigé dans la phrase ci-dessous lors de la fusion du
+// 2026-09-28.
+const starter = PLAN_CARDS.find(c => c.key === 'starter')!
 const pro = PLAN_CARDS.find(c => c.key === 'pro')!
 
 const faqItems: FaqItem[] = [
@@ -154,7 +157,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien coûte WashBoard pour un laveur auto mobile ?',
     answer:
-      `${essentiel.price}€/mois en formule ${essentiel.name} (réservation, agenda, créneaux optimisés, frais de déplacement, CRM, facturation, avis Google par email) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute la comptabilité, les avis par SMS, les relances de suivi et le multi-laveurs. Un mois est offert à l’inscription, sans carte bancaire.`,
+      `${starter.price}€/mois en formule ${starter.name} (réservation, agenda, page personnalisée, CRM) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute les créneaux et frais de déplacement intelligents, la comptabilité, la facturation, les avis Google (email et SMS) et les relances de suivi. Un mois est offert à l’inscription, sans carte bancaire.`,
   },
   {
     question: 'Est-ce adapté si je travaille seul ?',
