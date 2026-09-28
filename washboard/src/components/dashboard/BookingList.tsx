@@ -8,6 +8,7 @@ import { openGmail, openWhatsapp } from '@/lib/contact'
 import { formatPrice, effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { formatHeure } from '@/lib/dateUtils'
 import ConfirmerCloture from './ConfirmerCloture'
+import { CarteVerrouillee } from './CarteVerrouillee'
 
 type ServiceAddon = { id: string; label: string; price: number; category: string; duration_minutes?: number }
 type Service = { name: string; price: number; duration_minutes: number }
@@ -34,10 +35,17 @@ type Booking = {
   // voiture, d'un canapé ou d'un deux-roues — ce qui change tout ce qu'il doit
   // prévoir avant de partir.
   services: (Service & { service_categories?: { name: string } | null }) | null
+  /** Réservation au-delà du quota : la carte est rendue floutée, à sa place
+   *  dans la liste. Posé par `masquerVerrouillees`, jamais par un écran. */
+  verrouillee?: boolean
 }
 
 type Props = {
   bookings: Booking[]
+  /** Nom de l'offre qui débloque les réservations masquées (« Starter »,
+   *  « Pro »). Calculée par la page sur le volume du mois, pas écrite en dur :
+   *  à sept réservations, c'est le Starter qu'il faut proposer, pas le Pro. */
+  offreDeblocage?: string
   washerId: string
   /** Infos de facturation complètes : « Terminé » émet bien une facture. */
   facturationPrete: boolean
@@ -68,7 +76,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   closed_late: { label: 'Délai dépassé', dot: 'bg-orange-400',  badge: 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800' },
 }
 
-export default function BookingList({ bookings, facturationPrete, historiqueTronque, children }: Props) {
+export default function BookingList({ bookings, facturationPrete, historiqueTronque, children, offreDeblocage }: Props) {
   const router = useRouter()
   const [list, setList]       = useState(bookings)
   const [loading, setLoading] = useState<string | null>(null)
@@ -184,7 +192,9 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
           </div>
           <div className="space-y-2.5">
             {upcoming.map(b => (
-              <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
+              b.verrouillee
+                ? <CarteVerrouillee key={b.id} clientName={b.client_name} scheduledAt={b.scheduled_at} offre={offreDeblocage ?? 'Pro'} />
+                : <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
             ))}
           </div>
         </section>

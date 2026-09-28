@@ -12,6 +12,9 @@ import {
 } from '@/lib/listeFactures'
 import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
+import { hasFeature } from '@/lib/plan'
+import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { ApercuFactures } from '@/components/dashboard/ApercusVerrouilles'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,6 +119,25 @@ export default async function FacturesPage({
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'factures')
 
+  // La facturation conforme fait partie de l'offre Pro (et au-dessus).
+  if (!hasFeature(washer, 'facturation')) {
+    return (
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+        <div className="p-4">
+          <div className="mb-6">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Factures</h1>
+          </div>
+          <UpgradePrompt
+            title="Éditez des factures conformes"
+            description="Mentions légales, SIRET, TVA, numérotation continue : des factures que votre comptable accepte."
+            feature="facturation"
+            apercu={<ApercuFactures />}
+          />
+        </div>
+      </DashboardShell>
+    )
+  }
+
   // Lectures paginées : au-delà de 1 000 lignes, une lecture simple serait
   // coupée sans prévenir (voir `toutesLesLignes`).
   const [emises, importees] = await Promise.all([
@@ -177,7 +199,7 @@ export default async function FacturesPage({
   const manques = infosFacturationManquantes(washer)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <div className="mb-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Factures</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

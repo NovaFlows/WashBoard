@@ -71,14 +71,17 @@ async function patch(body: Record<string, unknown>) {
   return { res, body: await res.json() }
 }
 
-const ESSENTIEL = { data: { plan: 'essentiel', grandfathered: false, id: 'w1' }, error: null }
-const PRO       = { data: { plan: 'pro', grandfathered: false, id: 'w1' }, error: null }
+const DECOUVERTE = { data: { plan: 'decouverte', grandfathered: false, id: 'w1' }, error: null }
+const STARTER    = { data: { plan: 'starter',    grandfathered: false, id: 'w1' }, error: null }
+const PRO        = { data: { plan: 'pro',        grandfathered: false, id: 'w1' }, error: null }
+const BUSINESS   = { data: { plan: 'business',   grandfathered: false, id: 'w1' }, error: null }
+const HISTORIQUE = { data: { plan: 'decouverte', grandfathered: true,  id: 'w1' }, error: null }
 
 beforeEach(() => {
   updates.length = 0
   plan = {
     utilisateur: { id: 'user-1' },
-    washer: ESSENTIEL,
+    washer: DECOUVERTE,
     slugPris: { data: null, error: null },
     updateError: null,
   }
@@ -107,43 +110,173 @@ describe('PATCH /api/washer — authentification', () => {
   })
 })
 
-describe('PATCH /api/washer — options réservées au Pro (H6)', () => {
-  it('refuse le multi-laveurs à un compte Essentiel', async () => {
-    const { res, body } = await patch({ team_size: 4 })
-    expect(res.status).toBe(403)
-    expect(body.error).toMatch(/Pro/)
-    expect(updates).toHaveLength(0)
+describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
+  // Le contrôle porte sur le plan LU EN BASE, jamais sur ce que le navigateur
+  // envoie : c'est la faille relevée par l'audit du 2026-09-05.
+
+  describe('offre Découverte — rien au-delà de l’agenda', () => {
+    it('refuse le multi-laveurs', async () => {
+      const { res, body } = await patch({ team_size: 4 })
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/Business/)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('refuse la personnalisation de la page (logo)', async () => {
+      const { res, body } = await patch({ logo_url: 'https://exemple.fr/logo.png' })
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/Starter/)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('refuse la couleur de marque et le thème de fond', async () => {
+      expect((await patch({ brand_color: '#ff0000' })).res.status).toBe(403)
+      expect((await patch({ background_theme: 'nuit' })).res.status).toBe(403)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('refuse les créneaux intelligents', async () => {
+      const { res, body } = await patch({ smart_slot_enabled: true })
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/Pro/)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('ACCEPTE les paliers de frais de déplacement', async () => {
+      // Ouverts dès le gratuit : un laveur mobile qui roule quinze kilomètres
+      // sans pouvoir les facturer travaille à perte. Lui vendre le droit de ne
+      // pas perdre d'argent serait une drôle de façon de commencer.
+      const { res } = await patch({ travel_fee_tiers: [{ max_minutes: 30, fee: 10 }] })
+      expect(res.status).toBe(200)
+      expect(updates).toHaveLength(1)
+    })
+
+    it('refuse les avis Google, quel que soit le canal', async () => {
+      expect((await patch({ review_enabled: true })).res.status).toBe(403)
+      expect((await patch({ review_channel: 'sms' })).res.status).toBe(403)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('refuse les relances automatiques', async () => {
+      const { res } = await patch({ followup_enabled: true })
+      expect(res.status).toBe(403)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('refuse les mentions légales de facturation', async () => {
+      const { res, body } = await patch({ facture_siret: '73282932000074' })
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/Pro/)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('laisse modifier ce qui n’appartient à aucune offre', async () => {
+      // Nom, téléphone et message d'accueil restent ouverts à tout le monde :
+      // sans eux, l'offre gratuite ne serait pas utilisable du tout.
+      const { res } = await patch({ name: 'Kooki Clean', welcome_message: 'Bonjour !' })
+      expect(res.status).toBe(200)
+      expect(updates[0].name).toBe('Kooki Clean')
+    })
+
+    it('laisse RETIRER un réglage payant hérité d’une ancienne offre', async () => {
+      // Un laveur qui rétrograde doit pouvoir éteindre ce qu'il n'a plus, et
+      // effacer son logo. Bloquer le retrait le laisserait coincé.
+      expect((await patch({ followup_enabled: false })).res.status).toBe(200)
+      expect((await patch({ logo_url: '' })).res.status).toBe(200)
+      expect((await patch({ brand_color: null })).res.status).toBe(200)
+      expect((await patch({ travel_fee_tiers: [] })).res.status).toBe(200)
+      expect((await patch({ team_size: 1 })).res.status).toBe(200)
+    })
   })
 
-  it('refuse les relances automatiques à un compte Essentiel', async () => {
-    const { res } = await patch({ followup_enabled: true })
-    expect(res.status).toBe(403)
-    expect(updates).toHaveLength(0)
+  describe('offre Starter — la page et le CRM, rien de plus', () => {
+    beforeEach(() => { plan.washer = STARTER })
+
+    it('autorise la personnalisation de la page', async () => {
+      expect((await patch({ logo_url: 'https://exemple.fr/logo.png' })).res.status).toBe(200)
+      expect((await patch({ brand_color: '#ff0000' })).res.status).toBe(200)
+      expect((await patch({ background_theme: 'nuit' })).res.status).toBe(200)
+    })
+
+    it('refuse encore tout ce qui appartient au Pro', async () => {
+      // Les frais de déplacement n'y sont plus : ils sont ouverts dès le
+      // gratuit, donc le Starter les a forcément aussi.
+      expect((await patch({ smart_slot_enabled: true })).res.status).toBe(403)
+      expect((await patch({ review_enabled: true })).res.status).toBe(403)
+      expect((await patch({ followup_enabled: true })).res.status).toBe(403)
+      expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(403)
+      expect(updates).toHaveLength(0)
+    })
+
+    it('refuse le multi-laveurs, réservé au Business', async () => {
+      const { res, body } = await patch({ team_size: 3 })
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/Business/)
+    })
   })
 
-  it('refuse la demande d avis par SMS à un compte Essentiel', async () => {
-    const { res } = await patch({ review_channel: 'sms' })
-    expect(res.status).toBe(403)
-    expect(updates).toHaveLength(0)
+  describe('offre Pro — tout sauf l’équipe', () => {
+    beforeEach(() => { plan.washer = PRO })
+
+    it('autorise les avis, les relances, les créneaux et les trajets', async () => {
+      expect((await patch({ review_enabled: true })).res.status).toBe(200)
+      expect((await patch({ review_channel: 'sms' })).res.status).toBe(200)
+      expect((await patch({ followup_enabled: true })).res.status).toBe(200)
+      expect((await patch({ smart_slot_enabled: true })).res.status).toBe(200)
+      expect((await patch({ travel_fee_tiers: [{ max_minutes: 30, fee: 10 }] })).res.status).toBe(200)
+    })
+
+    it('autorise les mentions légales de facturation', async () => {
+      expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(200)
+    })
+
+    it('refuse toujours le multi-laveurs', async () => {
+      const { res, body } = await patch({ team_size: 2 })
+      expect(res.status).toBe(403)
+      expect(body.error).toMatch(/Business/)
+      expect(updates).toHaveLength(0)
+    })
   })
 
-  it('laisse un compte Essentiel DÉSACTIVER une option Pro', async () => {
-    // Un laveur qui rétrograde doit pouvoir éteindre ce qu'il n'a plus.
-    const { res } = await patch({ followup_enabled: false })
-    expect(res.status).toBe(200)
-    expect(updates[0].followup_enabled).toBe(false)
+  describe('offre Business — l’équipe en plus', () => {
+    beforeEach(() => { plan.washer = BUSINESS })
+
+    it('autorise plusieurs laveurs', async () => {
+      const { res } = await patch({ team_size: 4 })
+      expect(res.status).toBe(200)
+      expect(updates[0].team_size).toBe(4)
+    })
+
+    it('autorise tout le reste', async () => {
+      expect((await patch({ smart_slot_enabled: true })).res.status).toBe(200)
+      expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(200)
+      expect((await patch({ logo_url: 'https://exemple.fr/logo.png' })).res.status).toBe(200)
+    })
   })
 
-  it('laisse un compte Essentiel rester à un seul laveur', async () => {
-    const { res } = await patch({ team_size: 1 })
-    expect(res.status).toBe(200)
+  describe('client historique — tout ouvert, quel que soit le plan en base', () => {
+    beforeEach(() => { plan.washer = HISTORIQUE })
+
+    it('n’oppose aucun refus, même avec un plan « decouverte » en base', async () => {
+      expect((await patch({ team_size: 4 })).res.status).toBe(200)
+      expect((await patch({ followup_enabled: true })).res.status).toBe(200)
+      expect((await patch({ review_channel: 'sms' })).res.status).toBe(200)
+      expect((await patch({ smart_slot_enabled: true })).res.status).toBe(200)
+      expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(200)
+      expect((await patch({ logo_url: 'https://exemple.fr/logo.png' })).res.status).toBe(200)
+    })
   })
 
-  it('autorise ces options pour un compte Pro', async () => {
-    plan.washer = PRO
-    expect((await patch({ team_size: 4 })).res.status).toBe(200)
-    expect((await patch({ followup_enabled: true })).res.status).toBe(200)
-    expect((await patch({ review_channel: 'sms' })).res.status).toBe(200)
+  describe('ancien plan « essentiel » encore en base', () => {
+    beforeEach(() => {
+      plan.washer = { data: { plan: 'essentiel', grandfathered: false, id: 'w1' }, error: null }
+    })
+
+    it('est traité comme le nouveau Pro — aucun acquis perdu au déploiement', async () => {
+      expect((await patch({ review_channel: 'sms' })).res.status).toBe(200)
+      expect((await patch({ followup_enabled: true })).res.status).toBe(200)
+      expect((await patch({ smart_slot_enabled: true })).res.status).toBe(200)
+    })
   })
 })
 
@@ -231,8 +364,8 @@ describe('PATCH /api/washer — téléphone', () => {
 })
 
 describe('PATCH /api/washer — bornage des valeurs numériques', () => {
-  it('borne la taille d équipe d un compte Pro', async () => {
-    plan.washer = PRO
+  it('borne la taille d équipe d un compte Business', async () => {
+    plan.washer = BUSINESS
     await patch({ team_size: 9999 })
     expect(updates[0].team_size).toBe(50)
   })
@@ -243,6 +376,7 @@ describe('PATCH /api/washer — bornage des valeurs numériques', () => {
   })
 
   it('écarte les paliers de frais de déplacement incohérents', async () => {
+    plan.washer = PRO
     await patch({ travel_fee_tiers: [
       { max_minutes: 15, fee: 5 },
       { max_minutes: 0,  fee: 5 },   // durée nulle

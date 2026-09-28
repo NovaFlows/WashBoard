@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendReviewRequest } from '@/lib/email'
 import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
-import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded } from '@/lib/plan'
-import type { Plan } from '@/lib/plan'
+import { hasFeature, SMS_QUOTA, GRANDFATHERED_SMS_QUOTA, graceEnded, washerPlan } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
 import { notifierEquipe } from '@/lib/push'
@@ -79,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     const { data: washer, error: errWasher } = await admin
       .from('washers')
-      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
+      .select('name, review_enabled, google_review_url, review_channel, plan, grandfathered, slug, created_at, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
       .eq('id', b.washer_id)
       .single()
 
@@ -116,7 +115,7 @@ export async function GET(request: NextRequest) {
     } else if (channel === 'sms' && b.client_phone && hasFeature(washer, 'avis_sms')) {
       const quota = washer.grandfathered
         ? GRANDFATHERED_SMS_QUOTA
-        : SMS_QUOTA[washer.plan as Plan] ?? 0
+        : SMS_QUOTA[washerPlan(washer)]
       if (quota > 0) {
         const monthStart = new Date()
         monthStart.setDate(1)

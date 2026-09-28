@@ -14,6 +14,9 @@ type Props = {
    *  sera émise après la prestation. Sinon, le client pro ne recevra qu'un
    *  récapitulatif — on ne lui promet pas une facture qui ne viendra pas. */
   factureApresPrestation?: boolean
+  /** Le laveur accepte les clients professionnels. Faux sur l'offre gratuite :
+   *  la bascule Particulier / Professionnel disparaît alors entièrement. */
+  clientsProAutorises?: boolean
   onNext: (data: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number; is_professional: boolean; vehicles_detail?: VehicleItem[] }) => void
   accent?: string
 }
@@ -32,7 +35,7 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, factureApresPrestation = false, onNext, accent = '#2563eb' }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb' }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   // Panier : un compteur par type (permet de mélanger les types)
@@ -174,7 +177,13 @@ export default function StepService({ services, categories, selected, factureApr
 
   return (
     <div>
-      {/* Toggle Particulier / Professionnel (facturation) */}
+      {/* Toggle Particulier / Professionnel (facturation).
+          Absent quand le laveur n'a pas l'offre qui va avec : on ne montre pas
+          au CLIENT une case barrée pour une limite qui n'est pas la sienne. Il
+          réserve alors en particulier, sans savoir qu'un autre choix existait —
+          et c'est très bien : la page doit vendre le lavage, pas l'abonnement
+          du laveur. */}
+      {clientsProAutorises && (
       <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-4">
         <button
           onClick={() => { setIsPro(false) }}
@@ -197,6 +206,7 @@ export default function StepService({ services, categories, selected, factureApr
           <Building2 size={15} strokeWidth={2} /> Professionnel
         </button>
       </div>
+      )}
 
       {isPro && (
         <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-400">

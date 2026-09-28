@@ -21,9 +21,9 @@ export function StatsWidget({
   pending: number
   confirmed: number
   terminesCeMois: number
-  /** `null` : compte sans accès à la comptabilité (plan Essentiel). La case
-   *  est alors omise plutôt que de réclamer une mise à niveau dans un espace
-   *  aussi compact. */
+  /** `null` : compte sans accès au suivi du chiffre d'affaires (offre
+   *  Découverte). La case est alors omise plutôt que de réclamer une mise à
+   *  niveau dans un espace aussi compact. */
   caCeMois: number | null
 }) {
   const compteurs = [

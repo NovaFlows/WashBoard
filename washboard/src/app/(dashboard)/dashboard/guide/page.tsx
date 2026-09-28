@@ -20,7 +20,7 @@ export default async function GuidePage() {
       trialEndsAt={washer.trial_ends_at}
       subscriptionStatus={washer.subscription_status}
       plan={washer.plan}
-      grandfathered={washer.grandfathered}
+      grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
     >

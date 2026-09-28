@@ -1,9 +1,12 @@
 'use client'
 
+import Link from 'next/link'
+import { PlafondCatalogueModal } from '@/components/dashboard/PlafondCatalogueModal'
+
 import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
 import CategoriesManager from './CategoriesManager'
-import { champsManquants, estReservable, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
+import { champsManquants, estReservable, estEnVeille, aMettreEnVeille, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
 import { joursDureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
 
@@ -401,7 +404,7 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
   )
 }
 
-export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[] }) {
+export default function PrestationsManager({ services: initialServices, categories: initialCategories, availabilities, plafond = null }: { services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]; plafond?: number | null }) {
   const [categories, setCategories] = useState(initialCategories)
   const [services, setServices] = useState(initialServices)
   const [showAdd, setShowAdd] = useState(false)
@@ -409,6 +412,99 @@ export default function PrestationsManager({ services: initialServices, categori
   const [form, setForm] = useState<FormData>(EMPTY)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Refus de plafond, rendu comme une PROPOSITION et non comme une erreur.
+   *  Réactiver une prestation quand le catalogue est plein n'est pas une faute
+   *  du laveur : c'est le moment exact où l'offre supérieure lui sert à
+   *  quelque chose. Une bannière rouge le ferait renoncer ; une proposition
+   *  lui donne une porte — trois, en fait, dont une gratuite.
+   *
+   *  On retient la prestation VISÉE, pas seulement le message : sans elle,
+   *  impossible de proposer un échange, on ne saurait pas quoi réactiver une
+   *  fois la place libérée. */
+  const [refusPlafond, setRefusPlafond] = useState<{ message: string; cible: Service } | null>(null)
+
+  const actives = services.filter(sv => !estEnVeille(sv))
+  const aRanger = aMettreEnVeille(actives.length, plafond)
+  // Catalogue plein : on n'ouvre plus le formulaire. Le serveur refusait déjà
+  // (403), mais après avoir laissé tout remplir — nom, prix, durée, types de
+  // véhicules — pour finir sur un message d'erreur. Dire non avant de faire
+  // travailler quelqu'un pour rien, c'est la moindre des politesses.
+  const catalogueComplet = plafond !== null && actives.length >= plafond
+
+  /** Met en veille ou reactive. L'etat local suit tout de suite : sans ca, le
+   *  laveur clique et ne voit rien bouger jusqu'au rechargement — il reclique,
+   *  et il a mis en veille deux prestations au lieu d'une. */
+  async function basculerVeille(svc: Service) {
+    const cible = !estEnVeille(svc)
+    setError(null)
+    setRefusPlafond(null)
+    setLoading(true)
+    const res = await fetch(`/api/services/${svc.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ en_veille: cible }),
+    })
+    if (res.ok) {
+      setServices(prev => prev.map(x => (x.id === svc.id ? { ...x, en_veille: cible } : x)))
+    } else {
+      const corps = await res.json().catch(() => ({}))
+      // 403 avec un quota : le catalogue est plein. Ce n'est pas une erreur à
+      // signaler en rouge, c'est une offre à proposer.
+      if (res.status === 403 && corps.quota) setRefusPlafond({ message: corps.error, cible: svc })
+      else setError(corps.error ?? 'Impossible de modifier cette prestation')
+    }
+    setLoading(false)
+  }
+
+  /** Endort une prestation en ligne, puis remet la cible en service.
+   *
+   *  Dans CET ordre, et jamais l'inverse : réactiver d'abord échouerait, le
+   *  plafond étant justement atteint. C'est aussi pour ça que le serveur reste
+   *  la seule autorité — l'écran ne décide rien, il enchaîne deux demandes et
+   *  lit les réponses.
+   *
+   *  Si la seconde échoue, on remet la première en ligne. Sans ce retour en
+   *  arrière, le laveur perdrait une prestation sans en récupérer aucune :
+   *  il aurait cliqué « Échanger » et se retrouverait avec moins qu'avant. */
+  async function echangerVeille(idAEndormir: string): Promise<boolean> {
+    const cible = refusPlafond?.cible
+    if (!cible) return false
+    setError(null)
+
+    const endormir = await fetch(`/api/services/${idAEndormir}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ en_veille: true }),
+    })
+    if (!endormir.ok) {
+      const corps = await endormir.json().catch(() => ({}))
+      setError(corps.error ?? 'Impossible de mettre cette prestation en veille')
+      return false
+    }
+
+    const reveiller = await fetch(`/api/services/${cible.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ en_veille: false }),
+    })
+    if (!reveiller.ok) {
+      await fetch(`/api/services/${idAEndormir}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ en_veille: false }),
+      }).catch(() => {})
+      const corps = await reveiller.json().catch(() => ({}))
+      setError(corps.error ?? 'Impossible de réactiver cette prestation')
+      return false
+    }
+
+    setServices(prev => prev.map(x =>
+      x.id === idAEndormir ? { ...x, en_veille: true }
+      : x.id === cible.id  ? { ...x, en_veille: false }
+      : x,
+    ))
+    return true
+  }
 
   function categoryName(id: string | null): string | null {
     if (!id) return null
@@ -528,7 +624,36 @@ export default function PrestationsManager({ services: initialServices, categori
         <div>
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Prestations</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Les lavages proposés à vos clients, rattachés à une catégorie.</p>
+          {plafond !== null && (
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1.5">
+              {actives.length} / {plafond} affichée{plafond > 1 ? 's' : ''} sur votre page de réservation
+            </p>
+          )}
         </div>
+
+        {/* Trop de prestations pour l'offre : on ne choisit PAS à sa place.
+            Effacer casserait les rendez-vous qui la référencent, et choisir
+            d'autorité lui retirerait sa prestation la plus rentable sans le
+            prévenir. On lui montre le compte et on le laisse trancher. */}
+        {aRanger > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-2xl p-4">
+            <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+              Choisissez les {plafond} prestations à garder en ligne
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-1.5 leading-relaxed">
+              Votre offre en affiche {plafond} au maximum, vous en avez {actives.length}.
+              En attendant votre choix, votre page montre les {plafond} premières — les autres
+              sont déjà invisibles pour vos clients. Rien n’est effacé.
+            </p>
+            <button
+              type="button"
+              onClick={() => { window.location.href = '/prestations-a-choisir' }}
+              className="mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Choisir maintenant
+            </button>
+          </div>
+        )}
 
         {services.length === 0 && !showAdd && categories.length > 0 && (
           <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
@@ -556,7 +681,12 @@ export default function PrestationsManager({ services: initialServices, categori
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{svc.name}</p>
+                    <p className={`font-semibold text-sm ${estEnVeille(svc) ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-slate-100'}`}>{svc.name}</p>
+                    {estEnVeille(svc) && (
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        En veille
+                      </span>
+                    )}
                     {categoryName(svc.category_id) && (
                       <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
                         {categoryName(svc.category_id)}
@@ -574,6 +704,17 @@ export default function PrestationsManager({ services: initialServices, categori
                   )}
                 </div>
                 <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => basculerVeille(svc)}
+                    disabled={loading}
+                    className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors disabled:opacity-40 ${
+                      estEnVeille(svc)
+                        ? 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                        : 'text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {estEnVeille(svc) ? 'Réactiver' : 'Mettre en veille'}
+                  </button>
                   <button
                     onClick={() => startEdit(svc)}
                     className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -620,14 +761,45 @@ export default function PrestationsManager({ services: initialServices, categori
         )}
 
         {!showAdd && editId === null && categories.length > 0 && (
-          <button
-            onClick={startAdd}
-            className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-sm font-medium transition-colors"
-          >
-            + Ajouter une prestation
-          </button>
+          catalogueComplet ? (
+            <div className="w-full py-4 px-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                Catalogue complet — {plafond} prestations sur votre offre
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Passez à l’offre Starter pour un catalogue illimité, ou modifiez
+                une prestation existante.
+              </p>
+              <Link
+                href="/dashboard/abonnement"
+                className="inline-block mt-3 px-4 py-2 rounded-xl bg-[#1651E8] text-white text-sm font-semibold transition-transform active:scale-[0.97]"
+              >
+                Voir les offres
+              </Link>
+            </div>
+          ) : (
+            <button
+              onClick={startAdd}
+              className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-sm font-medium transition-colors"
+            >
+              + Ajouter une prestation
+            </button>
+          )
         )}
       </div>
+
+      {/* En fenêtre, plus en encadré : l'encadré vivait au milieu de la liste,
+          sous le pouce, et après un clic sur « Réactiver » il apparaissait hors
+          écran — on croyait que rien ne s'était passé. */}
+      {refusPlafond && (
+        <PlafondCatalogueModal
+          message={refusPlafond.message}
+          cible={{ id: refusPlafond.cible.id, name: refusPlafond.cible.name }}
+          actives={actives.map(sv => ({ id: sv.id, name: sv.name }))}
+          onEchanger={echangerVeille}
+          onFermer={() => setRefusPlafond(null)}
+        />
+      )}
     </div>
   )
 }
