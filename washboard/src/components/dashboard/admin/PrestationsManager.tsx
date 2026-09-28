@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { PlafondCatalogueModal } from '@/components/dashboard/PlafondCatalogueModal'
 
 import { useState } from 'react'
 import type { Availability, Service, ServiceAddon, ServiceCategory } from '@/types'
@@ -705,33 +706,8 @@ export default function PrestationsManager({ services: initialServices, categori
           </div>
         )}
 
-        {plafondCatalogue && (
-          <div className="rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 px-4 py-4 text-center">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Catalogue complet</p>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-sm mx-auto">{plafondCatalogue}</p>
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <Link
-                href="/dashboard/abonnement"
-                className="px-4 py-2 rounded-xl bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold transition-colors active:scale-[0.97]"
-              >
-                Voir les offres
-              </Link>
-              <button
-                onClick={() => setPlafondCatalogue(null)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                Plus tard
-              </button>
-            </div>
-          </div>
-        )}
-
         {!showAdd && editId === null && categories.length > 0 && (
-          // `!plafondCatalogue` : quand la réactivation vient d'être refusée,
-          // son encadré dit déjà tout — et en mieux, puisqu'il rappelle qu'on
-          // peut mettre une autre prestation en veille. Les deux ensemble
-          // faisaient deux fois le même mur, l'un sur l'autre.
-          catalogueComplet && !plafondCatalogue ? (
+          catalogueComplet ? (
             <div className="w-full py-4 px-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Catalogue complet — {plafond} prestations sur votre offre
@@ -757,6 +733,13 @@ export default function PrestationsManager({ services: initialServices, categori
           )
         )}
       </div>
+
+      {/* En fenêtre, plus en encadré : l'encadré vivait au milieu de la liste,
+          sous le pouce, et après un clic sur « Réactiver » il apparaissait hors
+          écran — on croyait que rien ne s'était passé. */}
+      {plafondCatalogue && (
+        <PlafondCatalogueModal message={plafondCatalogue} onFermer={() => setPlafondCatalogue(null)} />
+      )}
     </div>
   )
 }
