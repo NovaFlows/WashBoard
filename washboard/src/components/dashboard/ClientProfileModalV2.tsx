@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing } from 'lucide-react'
 import type { ClientProfile } from '@/lib/clientProfile'
 import { timelineClient } from '@/lib/clientTimeline'
 import { FUSEAU } from '@/lib/dateUtils'
 import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
-import { marquerNePlusContacter } from '@/lib/clientsApi'
+import { marquerNePlusContacter, rattacherEntreprise } from '@/lib/clientsApi'
+import { creerEtRattacher } from '@/components/dashboard/FicheEntrepriseV2'
+import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION } from '@/components/dashboard/FeuilleV2'
+import { Constat } from '@/components/dashboard/PrestationsUiV2'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
 // une carte centrée (ordinateur), réservée à la PWA installée en mode
@@ -85,13 +89,94 @@ function formatRythme(jours: number): string {
   return `${mois} mois`
 }
 
+/** Rattacher un contact à une entreprise — depuis la Fiche client, quand il n'est pas encore
+ *  rattaché (fiche entreprise, 2026-09-28). Choisir une entreprise existante, ou en créer une en
+ *  tapant simplement son nom : les deux mènent au même geste, « rattacher ». */
+function FeuilleRattacherV2({
+  cle, entreprisesDisponibles, onRattache, onClose,
+}: {
+  cle: string
+  entreprisesDisponibles: { id: string; nom: string }[]
+  onRattache: (entrepriseId: string) => void
+  onClose: () => void
+}) {
+  const [entrepriseId, setEntrepriseId] = useState<string | 'nouvelle' | ''>('')
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [role, setRole] = useState('')
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function soumettre() {
+    if (enCours) return
+    if (entrepriseId === '') { setErreur('Choisissez une entreprise, ou créez-en une.'); return }
+    if (entrepriseId === 'nouvelle' && !nouveauNom.trim()) { setErreur('Indiquez le nom de l’entreprise.'); return }
+    setEnCours(true)
+    setErreur(null)
+    if (entrepriseId === 'nouvelle') {
+      const r = await creerEtRattacher(nouveauNom.trim(), cle, role)
+      setEnCours(false)
+      if (typeof r === 'string') { setErreur(r); return }
+      onRattache(r.id)
+    } else {
+      const r = await rattacherEntreprise(cle, entrepriseId, role)
+      setEnCours(false)
+      if (!r.ok) { setErreur(r.message); return }
+      onRattache(entrepriseId)
+    }
+  }
+
+  return (
+    <Feuille
+      titre="Rattacher à une entreprise"
+      onClose={onClose}
+      pied={
+        <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+          {enCours ? 'Rattachement…' : 'Rattacher'}
+        </button>
+      }
+    >
+      <div className="space-y-4">
+        {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
+        <div>
+          <label htmlFor="rattacher-entreprise" className={ETIQUETTE}>Entreprise</label>
+          <select
+            id="rattacher-entreprise" value={entrepriseId} onChange={e => setEntrepriseId(e.target.value as typeof entrepriseId)}
+            className={CHAMP}
+          >
+            <option value="" disabled>Choisir…</option>
+            {entreprisesDisponibles.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
+            <option value="nouvelle">+ Nouvelle entreprise…</option>
+          </select>
+        </div>
+        {entrepriseId === 'nouvelle' && (
+          <div>
+            <label htmlFor="rattacher-nom" className={ETIQUETTE}>Nom de l’entreprise</label>
+            <input id="rattacher-nom" className={CHAMP} value={nouveauNom} onChange={e => setNouveauNom(e.target.value)} maxLength={200} autoFocus />
+          </div>
+        )}
+        <div>
+          <label htmlFor="rattacher-role" className={ETIQUETTE}>Son rôle (facultatif)</label>
+          <input id="rattacher-role" className={CHAMP} value={role} onChange={e => setRole(e.target.value)} placeholder="Chef d’atelier, comptabilité…" maxLength={200} />
+        </div>
+      </div>
+    </Feuille>
+  )
+}
+
 export default function ClientProfileModalV2({
   profile,
   onClose,
+  entrepriseDuContact,
+  entreprisesDisponibles = [],
+  onOuvrirEntreprise,
 }: {
   profile: ClientProfile
   onClose: () => void
+  entrepriseDuContact?: { id: string; nom: string; role: string | null } | null
+  entreprisesDisponibles?: { id: string; nom: string }[]
+  onOuvrirEntreprise?: (id: string) => void
 }) {
+  const router = useRouter()
   const [maintenant] = useState(() => Date.now())
   const [visible, setVisible] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -107,6 +192,7 @@ export default function ClientProfileModalV2({
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [optionsOuvertes, setOptionsOuvertes] = useState(false)
+  const [rattachementOuvert, setRattachementOuvert] = useState(false)
 
   async function basculerNePlusContacter() {
     if (enCours) return
@@ -117,6 +203,19 @@ export default function ClientProfileModalV2({
     const r = await marquerNePlusContacter(profile.cle, cible)
     setEnCours(false)
     if (!r.ok) { setNePlusContacter(!cible); setErreur(r.message) }
+  }
+
+  /** `router.refresh()` : `entrepriseDuContact` vient d'une prop tirée de `clients/page.tsx`
+   *  (composant serveur), pas d'un état local — sans le refresh, le menu continuerait à
+   *  proposer « Se détacher » d'une entreprise déjà quittée. */
+  async function detacherEntreprise() {
+    if (enCours) return
+    setEnCours(true)
+    setErreur(null)
+    const r = await rattacherEntreprise(profile.cle, null, '')
+    setEnCours(false)
+    if (!r.ok) { setErreur(r.message); return }
+    router.refresh()
   }
 
   // Entrée animée : un cran après le montage pour que le navigateur parte
@@ -275,12 +374,43 @@ export default function ClientProfileModalV2({
                   aria-label="Options"
                   className="absolute right-0 top-[52px] z-20 w-64 overflow-hidden rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] shadow-lg"
                 >
+                  {entrepriseDuContact ? (
+                    <>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => { setOptionsOuvertes(false); onOuvrirEntreprise?.(entrepriseDuContact.id) }}
+                        className={`w-full truncate px-4 py-3 text-left text-[14px] leading-snug ${corpsFort}`}
+                      >
+                        Voir « {entrepriseDuContact.nom} »
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={enCours}
+                        onClick={() => { setOptionsOuvertes(false); void detacherEntreprise() }}
+                        className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
+                        style={{ color: 'var(--v2-color-rouge)' }}
+                      >
+                        Se détacher de cette entreprise
+                      </button>
+                    </>
+                  ) : entreprisesDisponibles !== undefined && onOuvrirEntreprise && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setOptionsOuvertes(false); setRattachementOuvert(true) }}
+                      className={`w-full px-4 py-3 text-left text-[14px] leading-snug ${corpsFort}`}
+                    >
+                      Rattacher à une entreprise
+                    </button>
+                  )}
                   <button
                     type="button"
                     role="menuitem"
                     disabled={enCours}
                     onClick={() => { setOptionsOuvertes(false); void basculerNePlusContacter() }}
-                    className={`w-full px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
+                    className={`w-full border-t border-[color:var(--v2-filet)] px-4 py-3 text-left text-[14px] leading-snug ${corpsFort} disabled:opacity-50`}
                     style={{ color: nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}
                   >
                     {nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter ce client'}
@@ -482,6 +612,15 @@ export default function ClientProfileModalV2({
           </div>
         </div>
       </div>
+
+      {rattachementOuvert && (
+        <FeuilleRattacherV2
+          cle={profile.cle}
+          entreprisesDisponibles={entreprisesDisponibles}
+          onRattache={id => { setRattachementOuvert(false); onOuvrirEntreprise?.(id) }}
+          onClose={() => setRattachementOuvert(false)}
+        />
+      )}
     </div>
   )
 }

@@ -3,9 +3,11 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
+import FicheEntrepriseV2 from '@/components/dashboard/FicheEntrepriseV2'
 import { buildClientProfile, type ClientBooking, type ClientDocument, type ClientReglages } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
 import { clientsARelancer, type LigneARelancer, type ReglagesRelance } from '@/lib/clientsARelancer'
+import { buildEntrepriseProfile, type EntrepriseListItem } from '@/lib/entrepriseProfile'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 
@@ -106,7 +108,7 @@ function versRdvMessage(b: ClientBooking): RdvMessage {
   }
 }
 
-export default function ClientsViewV2({ bookings, documents = [], reglages = [], reglagesMessages }: {
+export default function ClientsViewV2({ bookings, documents = [], reglages = [], reglagesMessages, entreprises = [] }: {
   bookings: ClientBooking[]
   /** Devis et factures écrits à la main : ils font naître des clients qui n'ont jamais
    *  réservé (Alexandre, 2026-09-27 — « un client comme un autre »). */
@@ -116,6 +118,8 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   /** Réglages de relance du laveur : sans eux, pas d'onglet « À relancer » (bookings passés
    *  sans cette prop dans les autres écrans qui réutilisent ClientsViewV2 — aucun aujourd'hui). */
   reglagesMessages?: ReglagesRelance
+  /** Fiches entreprise (2026-09-28), sites et contacts déjà joints. */
+  entreprises?: EntrepriseListItem[]
 }) {
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
@@ -123,12 +127,33 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   const [recherche, setRecherche] = useState('')
   const [filtre, setFiltre] = useState<Filtre>('tous')
   const [ouvert, setOuvert] = useState<string | null>(null)
+  const [entrepriseOuverteId, setEntrepriseOuverteId] = useState<string | null>(null)
 
   const clients = useMemo(
     () => listeClients(bookings, new Date(maintenant), documents, reglages),
     [bookings, documents, reglages, maintenant],
   )
   const pros = useMemo(() => clients.filter(c => c.isProfessional).length, [clients])
+
+  // Qui est déjà rattaché à une entreprise, et à laquelle — pour la Fiche client (menu « … »)
+  // et pour exclure ces clients de la liste des contacts à rattacher.
+  const entrepriseParCle = useMemo(() => {
+    const m = new Map<string, { id: string; nom: string; role: string | null }>()
+    for (const e of entreprises) for (const c of e.contacts) m.set(c.cle, { id: e.id, nom: e.nom, role: c.role })
+    return m
+  }, [entreprises])
+  const entreprisesOptions = useMemo(() => entreprises.map(e => ({ id: e.id, nom: e.nom })), [entreprises])
+  const entrepriseOuverte = entrepriseOuverteId ? entreprises.find(e => e.id === entrepriseOuverteId) ?? null : null
+  const entrepriseProfil = entrepriseOuverte
+    ? buildEntrepriseProfile(entrepriseOuverte, entrepriseOuverte.sites, entrepriseOuverte.contacts, bookings, documents, new Date(maintenant), reglages)
+    : null
+  // Candidats au rattachement : tout le monde sauf les contacts DÉJÀ dans l'entreprise ouverte
+  // (un client lié à une AUTRE entreprise reste proposé — le réassigner est permis, juste pas
+  // vérifié comme un cas normal, voir `lib/entrepriseProfile.ts`).
+  const contactsDisponibles = useMemo(
+    () => clients.filter(c => entrepriseParCle.get(c.cle)?.id !== entrepriseOuverteId),
+    [clients, entrepriseParCle, entrepriseOuverteId],
+  )
   const aRelancer: LigneARelancer[] = useMemo(
     () => reglagesMessages
       ? clientsARelancer(bookings.map(versRdvMessage), reglagesMessages, reglages, maintenant)
@@ -141,6 +166,32 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
   )
   const affiches = useMemo(() => rechercherClients(parFiltre, recherche), [parFiltre, recherche])
   const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglages) : null
+
+  // La Fiche entreprise REMPLACE l'écran Clients (comme une destination à part), pas une
+  // feuille par-dessus : c'est un fichier en soi (contacts, sites), pas le détail d'une ligne.
+  // La Fiche d'UN CONTACT, elle, reste une feuille qui monte par-dessus — cohérent avec le reste
+  // de l'écran, et elle sait y revenir (`onOuvrirEntreprise`).
+  if (entrepriseProfil) {
+    return (
+      <>
+        <FicheEntrepriseV2
+          profil={entrepriseProfil}
+          clientsDisponibles={contactsDisponibles}
+          onOuvrirContact={cle => { setEntrepriseOuverteId(null); setOuvert(cle) }}
+          onClose={() => setEntrepriseOuverteId(null)}
+        />
+        {fiche && (
+          <ClientProfileModal
+            profile={fiche}
+            onClose={() => setOuvert(null)}
+            entrepriseDuContact={entrepriseParCle.get(fiche.cle) ?? null}
+            entreprisesDisponibles={entreprisesOptions}
+            onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
+          />
+        )}
+      </>
+    )
+  }
 
   return (
     <div
@@ -250,7 +301,15 @@ export default function ClientsViewV2({ bookings, documents = [], reglages = [],
         </>
       )}
 
-      {fiche && <ClientProfileModal profile={fiche} onClose={() => setOuvert(null)} />}
+      {fiche && (
+        <ClientProfileModal
+          profile={fiche}
+          onClose={() => setOuvert(null)}
+          entrepriseDuContact={entrepriseParCle.get(fiche.cle) ?? null}
+          entreprisesDisponibles={entreprisesOptions}
+          onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
+        />
+      )}
     </div>
   )
 }

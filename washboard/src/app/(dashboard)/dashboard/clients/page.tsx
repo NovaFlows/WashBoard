@@ -7,6 +7,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
+import type { ContactEntreprise, EntrepriseListItem } from '@/lib/entrepriseProfile'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -49,16 +50,33 @@ export default async function ClientsPage() {
   // Sans eux la liste reste celle des réservations : dégradée, pas cassée.
   if (errDocuments) logger.warn('clients.documents.fetch_failed', { washerId: washer.id }, errDocuments)
 
-  // Réglages écrits à la main (table `clients`, SQL du 2026-09-28) : pour l'instant, seulement
-  // « ne plus contacter ». Absente de la base tant que le SQL n'a pas été exécuté — une erreur
-  // ici dégrade la liste (personne ne paraît avoir demandé qu'on le laisse tranquille), elle ne
-  // la casse pas.
-  const { data: reglagesClients, error: errReglages } = await supabase
+  // Réglages écrits à la main (table `clients`, SQL du 2026-09-28) : « ne plus contacter » et le
+  // rattachement à une entreprise. UNE lecture pour les deux (même table, même filtre) — inutile
+  // de la faire deux fois. Absente de la base tant que le SQL n'a pas été exécuté : une erreur
+  // ici dégrade la liste (personne ne paraît opposé ni rattaché), elle ne la casse pas.
+  const { data: lignesClients, error: errClients } = await supabase
     .from('clients')
-    .select('cle, ne_plus_contacter')
+    .select('cle, ne_plus_contacter, entreprise_id, role_entreprise')
     .eq('washer_id', washer.id)
-    .eq('ne_plus_contacter', true)
-  if (errReglages) logger.warn('clients.reglages.fetch_failed', { washerId: washer.id }, errReglages)
+  if (errClients) logger.warn('clients.reglages.fetch_failed', { washerId: washer.id }, errClients)
+
+  // Entreprises (fiche entreprise, 2026-09-28) : leurs sites, et leurs contacts tirés de
+  // `lignesClients` ci-dessus (un contact EST un client `entreprise_id` renseigné — voir
+  // `lib/entrepriseProfile.ts`). Aucune agrégation ici : le chiffre d'affaires et les derniers
+  // passages se calculent dans le navigateur, à partir des mêmes réservations et documents que
+  // le reste de l'écran (`buildEntrepriseProfile`).
+  const { data: entreprisesBrutes, error: errEntreprises } = await supabase
+    .from('entreprises')
+    .select('id, nom, delai_paiement_jours')
+    .eq('washer_id', washer.id)
+    .order('nom')
+  if (errEntreprises) logger.warn('clients.entreprises.fetch_failed', { washerId: washer.id }, errEntreprises)
+
+  const idsEntreprises = (entreprisesBrutes ?? []).map(e => e.id)
+  const { data: sitesBruts, error: errSites } = idsEntreprises.length === 0
+    ? { data: [] as { id: string; entreprise_id: string; adresse: string; note: string | null }[], error: null }
+    : await supabase.from('sites').select('id, entreprise_id, adresse, note').in('entreprise_id', idsEntreprises)
+  if (errSites) logger.warn('clients.sites.fetch_failed', { washerId: washer.id }, errSites)
 
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST
   // renvoie un objet : une réservation n'a qu'une prestation. On accepte les
@@ -67,8 +85,20 @@ export default async function ClientsPage() {
     ...b,
     services: (Array.isArray(b.services) ? b.services[0] : b.services) ?? null,
   }))
-  const reglages: ClientReglages[] = (reglagesClients ?? []).map(r => ({
+  const reglages: ClientReglages[] = (lignesClients ?? []).map(r => ({
     cle: r.cle, nePlusContacter: r.ne_plus_contacter,
+  }))
+  const contactsBruts: ContactEntreprise[] = (lignesClients ?? [])
+    .filter(r => r.entreprise_id)
+    .map(r => ({ cle: r.cle, entrepriseId: r.entreprise_id as string, role: r.role_entreprise }))
+  const entreprises: EntrepriseListItem[] = (entreprisesBrutes ?? []).map(e => ({
+    id: e.id,
+    nom: e.nom,
+    delaiPaiementJours: e.delai_paiement_jours,
+    sites: (sitesBruts ?? [])
+      .filter(s => s.entreprise_id === e.id)
+      .map(s => ({ id: s.id, entrepriseId: s.entreprise_id, adresse: s.adresse, note: s.note })),
+    contacts: contactsBruts.filter(c => c.entrepriseId === e.id),
   }))
 
   return (
@@ -82,6 +112,7 @@ export default async function ClientsPage() {
           followup_delay_days: washer.followup_delay_days ?? 90,
           followup_message: washer.followup_message ?? null,
         } satisfies ReglagesRelance}
+        entreprises={entreprises}
       />
     </DashboardShell>
   )

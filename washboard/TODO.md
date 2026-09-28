@@ -82,6 +82,69 @@
       CRM (fiche entreprise, tâches) en aura besoin, mieux vaut une seule migration que deux.
       `service_role` reçoit tout : les deux crons (`send-followups`, `send-reviews`) lisent
       cette table avec le client admin pour exclure les clients opposés.
+- [ ] **Supabase (SQL Editor) — tables `entreprises` et `sites` (fiche entreprise)**, À EXÉCUTER
+      APRÈS le bloc `clients` ci-dessus (la dernière ligne y ajoute deux colonnes). Sans ce SQL,
+      la Fiche entreprise ne peut rien créer ni rattacher. Construite le 2026-09-28 :
+      ```sql
+      create table public.entreprises (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        nom text not null,
+        delai_paiement_jours integer,
+        cree_le timestamptz not null default now(),
+        maj_le timestamptz not null default now()
+      );
+
+      alter table public.entreprises enable row level security;
+
+      create policy "entreprises_select" on public.entreprises
+        for select using (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "entreprises_insert" on public.entreprises
+        for insert with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "entreprises_update" on public.entreprises
+        for update using (washer_id in (select id from public.washers where user_id = auth.uid()));
+
+      grant select, insert, update on public.entreprises to authenticated;
+      grant all on public.entreprises to service_role;
+
+      create table public.sites (
+        id uuid primary key default gen_random_uuid(),
+        entreprise_id uuid not null references public.entreprises(id) on delete cascade,
+        adresse text not null,
+        note text,
+        cree_le timestamptz not null default now()
+      );
+
+      alter table public.sites enable row level security;
+
+      create policy "sites_select" on public.sites
+        for select using (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+      create policy "sites_insert" on public.sites
+        for insert with check (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+      create policy "sites_update" on public.sites
+        for update using (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+      create policy "sites_delete" on public.sites
+        for delete using (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+
+      grant select, insert, update, delete on public.sites to authenticated;
+      grant all on public.sites to service_role;
+
+      alter table public.clients add column if not exists entreprise_id uuid references public.entreprises(id) on delete set null;
+      alter table public.clients add column if not exists role_entreprise text;
+      ```
+      Un « contact » d'entreprise EST un client (table `clients`) : `entreprise_id` le rattache,
+      `role_entreprise` porte son rôle libre (« Chef d'atelier ») — pas de table `contacts`
+      séparée. Conséquence assumée dans `lib/entrepriseProfile.ts` : on ne peut rattacher qu'un
+      client déjà connu (au moins une réservation ou un document), jamais quelqu'un qui n'a
+      jamais rien pris — ce serait résoudre les « prospects » en douce, pas encore fait.
 - [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
       retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
       `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
@@ -2275,6 +2338,19 @@ rien à faire, mais que le projet reste globalement sain.
         relance reproduite exactement, avis déduit — pas de note ni d'étoile inventée, WashBoard
         n'a aucune API qui lirait un vrai avis Google), et menu « … » dans l'en-tête (une seule
         entrée pour l'instant, « ne plus contacter »).
+  - [ ] **Récupérer le vrai contenu d'un avis Google, quand ce sera possible.** Aujourd'hui
+        WashBoard n'est relié à AUCUNE API Google qui lirait un avis réel : `review_request_sent_at`
+        prouve seulement qu'une DEMANDE est partie, jamais ce que le client a écrit ni sa note.
+        C'est pour ça que la timeline de la fiche (`lib/clientTimeline.ts`) affiche « Demande
+        d'avis envoyée » et rien de plus, alors que le canevas de Yanis montre « Avis Google 5
+        étoiles · "Voiture nickel, ponctuel" ». Pour combler l'écart il faudrait la **Google
+        Business Profile API** (lecture des avis de la fiche d'établissement du laveur) : chaque
+        laveur devrait connecter SON compte Google Business (comme pour l'Agenda), et il faudrait
+        relier un avis reçu à LA bonne demande envoyée — pas garanti (Google ne renvoie ni
+        l'identité de l'auteur ni de référence vers la demande), donc un rapprochement par date +
+        éventuellement le nom laissé sur l'avis, avec un vrai risque de faux positifs sur un
+        laveur qui reçoit plusieurs avis le même jour. Pas commencé, pas scoping précis : à
+        reprendre depuis zéro le jour où ça devient prioritaire.
   - [ ] **Bouton « + Rendez-vous » de la fiche client** : chantier à part, pas un ajout rapide.
         Suppose de brancher l'écran Clients sur le formulaire de rendez-vous manuel de l'Agenda
         (`RendezVousManuelV2.tsx`, `useRendezVousManuel.ts`), qui charge ses propres données
@@ -2300,22 +2376,30 @@ rien à faire, mais que le projet reste globalement sain.
         (`FeuilleDocumentV2.tsx`), plus une capture manuelle (« + Prospect » après un appel).
         Nécessite un vrai statut (prospect → client) et une date de conversion, que la table
         `clients` ne porte pas encore.
-  - [ ] **Fiche entreprise** (plusieurs sites, plusieurs contacts, délai de paiement) : jugé
-        représentatif par Alexandre (fréquent chez ses laveurs, pas un cas isolé de Yanis) — donc
-        à construire, pas à simplifier. Demande des tables `entreprises`/`sites`/`contacts` liées
-        à `clients`, pas seulement des colonnes en plus. Détail du canevas de Yanis (capture du
-        2026-09-28, écran « Clients > Fiche entreprise ») : en-tête avec le nom et « Client
-        depuis {mois} · N sites » ; trois chiffres héros — CA de l'année, nombre de véhicules,
-        délai de paiement en jours (un champ que `clients`/`entreprises` n'a pas encore) ; une
-        alerte quand un devis envoyé à cette entreprise dépasse son délai de réponse habituel
-        (« en retard de 2 jours » › bouton Faire — rejoint la relance de devis ci-dessus, mais
-        au niveau entreprise) ; boutons Appeler / + Devis ; une section **Contacts** (nom, rôle
-        libre — « Chef d'atelier », « Comptabilité » —, et ce que CE contact reçoit : réserve
-        les lavages, reçoit les factures) ; une section **Sites** (adresse + note libre par
-        site — « Parking arrière, point d'eau à droite », « Badge à demander à l'accueil, sans
-        eau uniquement » — donc un site n'est pas qu'une adresse, il porte des instructions
-        d'accès) ; une section **Derniers passages** (comme l'historique d'un particulier, mais
-        sans distinguer par quel site ou quel contact — à trancher si utile).
+  - [x] 2026-09-28 — **Fiche entreprise construite** (jugée représentative par Alexandre —
+        fréquent chez ses laveurs, pas un cas isolé de Yanis). Tables `entreprises`/`sites`
+        (SQL ci-dessus) ; un « contact » d'entreprise EST un client (`clients.entreprise_id` +
+        `role_entreprise`), pas une table à part. Agrégation (chiffre d'affaires, véhicules,
+        derniers passages, devis en attente) calculée dans le navigateur à partir des mêmes
+        réservations/documents que le reste de l'écran (`lib/entrepriseProfile.ts`), jamais
+        d'une requête séparée — même principe que `buildClientProfile`. Nouvel écran
+        `FicheEntrepriseV2.tsx`, atteint depuis le menu « … » d'un contact déjà lié, ou en
+        rattachant un client existant à une entreprise (nouvelle ou existante) depuis ce même
+        menu. Écarts assumés avec le canevas de Yanis, documentés en tête du fichier :
+        - le chiffre d'affaires est TOUT L'HISTORIQUE (« au total »), pas « cette année » —
+          aucun autre chiffre de la fiche client ne se borne à l'année en cours, introduire
+          cette seule exception aurait été incohérent ;
+        - l'alerte de devis dit seulement DEPUIS COMBIEN DE TEMPS il attend une réponse, jamais
+          « en retard » — aucun seuil de retard n'est réglé nulle part (rejoint « Relancer les
+          devis sans réponse » ci-dessus, pas encore construit) ;
+        - un contact ne peut être qu'un client DÉJÀ connu (au moins une réservation ou un
+          document) — créer quelqu'un qui n'a jamais rien pris reviendrait à résoudre les
+          « prospects » en douce, pas encore fait ;
+        - **pas de liste « Entreprises » au premier niveau** : une entreprise ne se trouve
+          aujourd'hui qu'en passant par un de ses contacts déjà connus. Pas gênant tant qu'un
+          laveur a déjà le contact dans son fichier (le cas courant : il a réservé une fois),
+          gênant s'il veut créer une fiche entreprise pour un client tout neuf. À ajouter si ça
+          se révèle un frein réel — pas construit par précaution, faute de retour d'usage.
   - [ ] **Fusionner un doublon** : le plus délicat techniquement — réattribuer réservations,
         documents et (plus tard) tâches d'une fiche à l'autre sans rien perdre.
   - [ ] **Exporter / anonymiser un client (RGPD)** : bonne intuition de Yanis (droit d'accès +
