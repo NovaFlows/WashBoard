@@ -254,7 +254,14 @@ export function debutSoumisAuPlafond(debut: Date): Date {
  *  est dans le code, pas dans une variable d'environnement : c'est une règle
  *  qui décide qui est rétrogradé, elle doit se relire dans l'historique Git. */
 export const COMPTES_TEST_RETOUR_GRATUIT: string[] = [
-  // Exemple : 'mon-compte-de-test'
+  // ysclean (créé le 20/06, offre Pro active, PAS client historique) : seul
+  // compte réel, payant et non `grandfathered`, créé avant le 20/08 — donc le
+  // seul que le recul de date ci-dessus ne couvrait pas. Ajouté le 2026-09-29
+  // à la demande explicite d'Alexandre : « même règle que les nouveaux » pour
+  // la question posée sur ce cas précis — si son paiement s'arrête un jour,
+  // il a droit aux mêmes 30 jours de grâce puis à la bascule vers Découverte,
+  // jamais à la coupure de sa page de réservation.
+  'ysclean-066d',
 ]
 
 /** Ce qu'il faut savoir d'un compte pour trancher la fin d'essai. Tous les
