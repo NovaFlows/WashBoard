@@ -592,6 +592,84 @@ export function debutDuMoisParis(now: Date = new Date()): Date {
   return minuitParisUTC(`${annee}-${mois}-01`)
 }
 
+/** Jour du mois d'une date, à l'heure de Paris. */
+function jourParis(quand: Date): number {
+  return Number(quand.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }).slice(8, 10))
+}
+
+/** Nombre de jours du mois (annee, mois) — `mois` de 1 à 12. */
+function joursDansLeMois(annee: number, mois: number): number {
+  return new Date(Date.UTC(annee, mois, 0)).getUTCDate()
+}
+
+/** Début de la période de quota en cours, à minuit heure de Paris.
+ *
+ *  Le compteur ne repart PLUS le 1er du mois : il repart à la date anniversaire
+ *  de l'inscription. Un laveur inscrit le 22 a son mois du 22 au 21. Le 1er du
+ *  mois était un choix d'implémentation qui se voyait : quelqu'un qui
+ *  s'inscrivait le 28 consommait son quota entier en trois jours, puis
+ *  attendait. Il payait un mois et en recevait trois jours.
+ *
+ *  Le jour d'ancrage est plafonné à la longueur du mois : inscrit un 31, il est
+ *  servi le 28 en février et le 30 en avril. Le décaler au 1er du mois suivant
+ *  reviendrait à lui offrir jusqu'à trois jours de quota en plus chaque année ;
+ *  le reculer d'un jour le pénaliserait autant. Le dernier jour du mois est la
+ *  seule lecture qui ne fabrique ni cadeau ni punition.
+ *
+ *  Sans date d'inscription lisible, on retombe sur le 1er du mois : une règle
+ *  imparfaite vaut mieux qu'un plantage sur la page de réservation. */
+export function debutPeriodeQuota(
+  creeLe: string | Date | null | undefined,
+  now: Date = new Date(),
+): Date {
+  if (!creeLe) return debutDuMoisParis(now)
+  const creation = creeLe instanceof Date ? creeLe : new Date(creeLe)
+  if (Number.isNaN(creation.getTime())) return debutDuMoisParis(now)
+
+  const ancre = jourParis(creation)
+  const [a, m, j] = now
+    .toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+    .split('-')
+    .map(Number)
+
+  // Le mois en cours d'abord ; si son ancrage n'est pas encore passé, celui du
+  // mois précédent.
+  let annee = a
+  let mois = m
+  if (j < Math.min(ancre, joursDansLeMois(a, m))) {
+    mois -= 1
+    if (mois === 0) { mois = 12; annee -= 1 }
+  }
+  const jour = Math.min(ancre, joursDansLeMois(annee, mois))
+  return minuitParisUTC(`${annee}-${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}`)
+}
+
+/** Début de la période SUIVANTE : la date à laquelle le compteur repart.
+ *  C'est ce que les écrans annoncent au laveur — « jusqu'au 22 octobre » vaut
+ *  mieux que « le mois prochain », qui ne dit pas quand. */
+export function finPeriodeQuota(
+  creeLe: string | Date | null | undefined,
+  now: Date = new Date(),
+): Date {
+  const debut = debutPeriodeQuota(creeLe, now)
+  // Un jour après le début suffit à tomber dans la période suivante, quelle que
+  // soit sa longueur : on relance le même calcul depuis là.
+  const dansLaSuivante = new Date(debut.getTime())
+  dansLaSuivante.setUTCMonth(dansLaSuivante.getUTCMonth() + 1)
+  dansLaSuivante.setUTCDate(dansLaSuivante.getUTCDate() + 1)
+  return debutPeriodeQuota(creeLe, dansLaSuivante)
+}
+
+/** La date de remise à zéro, écrite pour être lue : « 22 octobre ». */
+export function libelleRemiseAZero(
+  creeLe: string | Date | null | undefined,
+  now: Date = new Date(),
+): string {
+  return finPeriodeQuota(creeLe, now).toLocaleDateString('fr-FR', {
+    timeZone: 'Europe/Paris', day: 'numeric', month: 'long',
+  })
+}
+
 // Vrai si la période de grâce de 30 jours après l'échéance (subscription_ends_at,
 // ou trial_ends_at si jamais encore abonné) est dépassée. Un abonnement actif
 // n'est jamais concerné — à vérifier séparément par l'appelant.

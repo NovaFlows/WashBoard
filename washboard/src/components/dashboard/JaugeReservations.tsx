@@ -19,11 +19,14 @@ const ROUGE = '#DC2626'
  *
  *  Ne s'affiche pas sur une offre sans plafond : il n'y a alors rien à
  *  compter, et une jauge pleine à 3 % serait un rappel gratuit qu'on paie. */
-export function JaugeReservations({ utilisees, quota, offre }: {
+export function JaugeReservations({ utilisees, quota, offre, remiseAZero }: {
   utilisees: number
   /** `null` sur une offre sans plafond : le composant ne rend alors rien. */
   quota: number | null
   offre: Plan
+  /** Date de remise à zéro du compteur, déjà écrite (« 22 octobre »). Elle
+   *  tombe à la date anniversaire de l'inscription, pas le 1er du mois. */
+  remiseAZero?: string
 }) {
   if (quota === null || quota <= 0) return null
 
@@ -37,10 +40,10 @@ export function JaugeReservations({ utilisees, quota, offre }: {
   const pourcent = Math.min(100, Math.round((utilisees / quota) * 100))
 
   const message = depasse
-    ? 'Plafond atteint — les suivantes sont masquées'
+    ? `Plafond atteint — les suivantes sont masquées${remiseAZero ? ` jusqu’au ${remiseAZero}` : ''}`
     : derniere
       ? 'Plus qu’une réservation avant le plafond'
-      : `Encore ${restantes} réservations ce mois-ci`
+      : `Encore ${restantes} réservations avant le ${remiseAZero ?? 'prochain palier'}`
 
   return (
     <div className="mb-4 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -48,7 +51,7 @@ export function JaugeReservations({ utilisees, quota, offre }: {
         <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
           <span style={{ color: couleur }}>{utilisees}</span>
           <span className="text-slate-400 dark:text-slate-500"> / {quota}</span>
-          <span className="font-semibold text-slate-500 dark:text-slate-400"> réservations ce mois-ci</span>
+          <span className="font-semibold text-slate-500 dark:text-slate-400"> réservations ce mois</span>
         </p>
         <span className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
           <span

@@ -7,7 +7,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking } from '@/lib/clientProfile'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
-import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDuMois, montantVerrouille } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode, montantVerrouille } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -40,7 +40,7 @@ export default async function ClientsPage() {
   // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
   // au-dessus, avec le nom flouté et le jour.
-  const seuils = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const montantBloque = montantVerrouille(bookings, seuils)
   const marquees = masquerVerrouillees(bookings, seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
@@ -53,7 +53,7 @@ export default async function ClientsPage() {
   // suffit et coûte trente euros de moins que le Pro. Le comptage n'a lieu que
   // s'il y a quelque chose à débloquer — sinon c'est une requête pour rien sur
   // chaque affichage de la page.
-  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDuMois(supabase, washer.id)
+  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDeLaPeriode(supabase, washer)
   const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
 
 

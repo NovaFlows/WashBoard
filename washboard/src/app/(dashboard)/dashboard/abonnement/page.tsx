@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AbonnementPanel from '@/components/dashboard/AbonnementPanel'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutDuMoisParis } from '@/lib/plan'
+import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutPeriodeQuota, debutSoumisAuPlafond, libelleRemiseAZero } from '@/lib/plan'
 import { logger } from '@/lib/logger'
 
 export default async function AbonnementPage() {
@@ -25,7 +25,11 @@ export default async function AbonnementPage() {
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', washer.id)
       .neq('status', 'cancelled')
-      .gte('created_at', debutDuMoisParis().toISOString()),
+      // MÊME borne que partout ailleurs : le début de la période, mais jamais
+      // avant l'entrée en vigueur du plafond. Sans `debutSoumisAuPlafond`,
+      // cette page annonçait 18 / 5 pendant que la jauge de l'accueil disait
+      // 8 / 5 — deux chiffres pour la même chose sur deux écrans voisins.
+      .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(washer.created_at)).toISOString()),
     plafondPrestations === null ? null : supabase
       .from('services')
       .select('id', { count: 'exact', head: true })
@@ -62,6 +66,7 @@ export default async function AbonnementPage() {
         reservationsCeMois={resaCeMois?.error ? null : resaCeMois?.count ?? null}
         plafondPrestations={plafondPrestations}
         prestationsAuCatalogue={prestations?.error ? null : prestations?.count ?? null}
+        remiseAZero={libelleRemiseAZero(washer.created_at)}
       />
     </DashboardShell>
   )

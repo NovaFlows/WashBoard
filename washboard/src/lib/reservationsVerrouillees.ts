@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { debutDuMoisParis, debutSoumisAuPlafond, PLAFOND_RESERVATIONS_APPLIQUE_DES } from '@/lib/plan'
+import {
+  debutPeriodeQuota, finPeriodeQuota, debutSoumisAuPlafond, PLAFOND_RESERVATIONS_APPLIQUE_DES,
+} from '@/lib/plan'
 
 // Réservations au-delà du quota mensuel : le client réserve, le laveur ne voit
 // rien.
@@ -22,36 +24,45 @@ import { debutDuMoisParis, debutSoumisAuPlafond, PLAFOND_RESERVATIONS_APPLIQUE_D
 /** Réservation minimale pour décider du verrouillage. */
 type Datee = { created_at?: string | null }
 
-/** Un seuil par mois, indexé « AAAA-MM » à l'heure de Paris.
+/** Une période de quota, et l'instant après lequel tout y est verrouillé.
+ *
+ *  Une période, pas un mois calendaire : le compteur repart à la date
+ *  anniversaire de l'inscription (voir `debutPeriodeQuota`). Un laveur inscrit
+ *  le 22 a son mois du 22 au 21.
+ *
+ *  Les bornes sont portées ici plutôt que recalculées à chaque appel : une
+ *  réservation appartient à la période qui la contient, et `estVerrouillee`
+ *  n'a donc besoin de rien d'autre que cette liste — ni de la date
+ *  d'inscription, ni du jour d'ancrage. Ce qui évite de faire descendre la
+ *  fiche du laveur jusque dans les composants d'affichage.
  *
  *  Un seuil unique ne suffisait pas, et c'était une vraie fuite : il ne portait
- *  que sur le mois en cours, donc au 1ᵉʳ du mois suivant les réservations
- *  masquées de septembre étaient comparées au seuil d'octobre — antérieures,
- *  donc plus verrouillées. Téléphone, adresse et prix réapparaissaient en
- *  clair. Il suffisait d'attendre. Pire : une réservation prise fin septembre
- *  pour un rendez-vous début octobre livrait ses coordonnées AVANT le
- *  rendez-vous, qu'il suffisait alors d'honorer sans jamais payer.
- *
- *  Chaque réservation est désormais jugée sur le quota DE SON MOIS. Rien n'est
- *  écrit en base pour autant : le verrou reste un calcul, donc changer d'offre
- *  ouvre toujours tout d'un coup, sans migration ni rattrapage. */
-export type SeuilsParMois = Record<string, string>
-
-/** Le mois d'un instant, à l'heure de Paris, au format « AAAA-MM ».
- *
- *  À l'heure de Paris et pas en UTC : une réservation prise le 1ᵉʳ octobre à
- *  0 h 30 vaut « 2026-10 » en France et « 2026-09 » en UTC. Se tromper de mois
- *  la ferait juger sur le quota du mois précédent — déjà épuisé — et la
- *  masquerait à tort. */
-export function moisParis(quand: string | null | undefined): string | null {
-  if (!quand) return null
-  const d = new Date(quand)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }).slice(0, 7)
+ *  que sur la période en cours, donc au changement de période tout ce qui était
+ *  masqué redevenait lisible. Téléphone, adresse et prix réapparaissaient en
+ *  clair. Il suffisait d'attendre. */
+export type Periode = {
+  /** Début inclus, instant ISO. */
+  debut: string
+  /** Fin exclue : c'est le début de la période suivante. */
+  fin: string
+  /** Création de la DERNIÈRE réservation comprise dans le quota. */
+  seuil: string
 }
 
-/** Vrai si cette réservation est arrivée après l'épuisement du quota de SON
- *  mois.
+export type SeuilsVerrouillage = readonly Periode[]
+
+/** La période qui contient cet instant, s'il y en a une. */
+function periodeDe(quand: string, periodes: SeuilsVerrouillage): Periode | null {
+  const t = new Date(quand).getTime()
+  if (Number.isNaN(t)) return null
+  for (const p of periodes) {
+    if (t >= new Date(p.debut).getTime() && t < new Date(p.fin).getTime()) return p
+  }
+  return null
+}
+
+/** Vrai si cette réservation est arrivée après l'épuisement du quota de SA
+ *  période.
  *
  *  La comparaison porte sur des instants, pas sur des chaînes : Postgres rend
  *  ses dates avec un nombre variable de décimales et un décalage explicite
@@ -59,28 +70,24 @@ export function moisParis(quand: string | null | undefined): string | null {
  *  comparent donc pas caractère par caractère. */
 export function estVerrouillee(
   r: Datee | null | undefined,
-  seuils: SeuilsParMois | null | undefined,
+  periodes: SeuilsVerrouillage | null | undefined,
 ): boolean {
-  if (!seuils || !r?.created_at) return false
+  if (!periodes || periodes.length === 0 || !r?.created_at) return false
 
   // Le plafond ne vaut que pour l'avenir. Les clients que le laveur avait
-  // AVANT restent à lui : il les a lavés, appelés, facturés. Les lui cacher du
-  // jour au lendemain pour lui vendre une offre, c'est lui reprendre son
-  // propre travail. Deuxième garde-fou après celui de `seuilsVerrouillage`,
-  // qui ne compte déjà rien d'antérieur : ce qui est masqué doit l'être par
-  // deux chemins, jamais par un seul oubli.
+  // AVANT restent à lui : il les a lavés, appelés, facturés. Deuxième garde-fou
+  // après celui de `seuilsVerrouillage`, qui ne compte déjà rien d'antérieur :
+  // ce qui est masqué doit l'être par deux chemins, jamais par un seul oubli.
   const arrivee = new Date(r.created_at).getTime()
   const entree = new Date(PLAFOND_RESERVATIONS_APPLIQUE_DES).getTime()
-  if (!Number.isNaN(entree) && !Number.isNaN(arrivee) && arrivee < entree) return false
+  if (Number.isNaN(arrivee)) return false
+  if (!Number.isNaN(entree) && arrivee < entree) return false
 
-  const mois = moisParis(r.created_at)
-  if (!mois) return false
-  const seuil = seuils[mois]
-  if (!seuil) return false
-  const t = new Date(r.created_at).getTime()
-  const s = new Date(seuil).getTime()
-  if (Number.isNaN(t) || Number.isNaN(s)) return false
-  return t > s
+  const p = periodeDe(r.created_at, periodes)
+  if (!p) return false
+  const s = new Date(p.seuil).getTime()
+  if (Number.isNaN(s)) return false
+  return arrivee > s
 }
 
 /** Ce qu'une réservation verrouillée laisse voir, et ce qu'elle retient.
@@ -129,69 +136,86 @@ export function jourSeul(quand: string | null | undefined): string | null {
  *  verrouillée ne doit pas laisser voir. */
 export function masquerVerrouillees<T extends Datee>(
   reservations: T[],
-  seuils: SeuilsParMois | null | undefined,
+  periodes: SeuilsVerrouillage | null | undefined,
 ): (T & { verrouillee: boolean })[] {
   return reservations.map(r =>
-    estVerrouillee(r, seuils)
+    estVerrouillee(r, periodes)
       ? { ...r, ...MASQUE, verrouillee: true }
       : { ...r, verrouillee: false },
   )
 }
 
-/** Nombre de mois remontés pour calculer les seuils.
+/** Nombre de périodes remontées pour calculer les seuils.
  *
  *  Une fenêtre, parce qu'une requête doit rester bornée. Au-delà, le masquage
  *  se lève : une réservation d'il y a plus d'un an n'a plus de valeur
  *  commerciale — le rendez-vous est passé depuis longtemps — et la garder
  *  verrouillée coûterait une requête plus lourde sur tous les écrans. C'est un
  *  arbitrage assumé, pas un oubli. */
-const MOIS_COUVERTS = 12
+const PERIODES_COUVERTES = 12
 
 /** Nombre de lignes lues au maximum. PostgREST plafonne de toute façon ses
- *  réponses ; l'écrire ici rend la limite visible. Un mois dont les lignes
+ *  réponses ; l'écrire ici rend la limite visible. Une période dont les lignes
  *  seraient tronquées n'obtient pas de seuil, donc ne masque rien : le doute
  *  profite au laveur, jamais l'inverse. */
 const LIGNES_MAX = 5000
 
-/** Un seuil de verrouillage par mois, sur la fenêtre couverte.
+/** Ce qu'il faut savoir du laveur pour découper ses périodes. */
+export type LaveurPeriode = { id: string; created_at?: string | null }
+
+/** Les bornes des périodes couvertes, de la plus ancienne à la plus récente. */
+export function bornesPeriodes(
+  creeLe: string | null | undefined,
+  now: Date = new Date(),
+  combien: number = PERIODES_COUVERTES,
+): { debut: string; fin: string }[] {
+  const bornes: { debut: string; fin: string }[] = []
+  let curseur = now
+  for (let i = 0; i < combien; i++) {
+    const debut = debutPeriodeQuota(creeLe, curseur)
+    const fin = finPeriodeQuota(creeLe, curseur)
+    bornes.unshift({ debut: debut.toISOString(), fin: fin.toISOString() })
+    // Une milliseconde avant ce début tombe dans la période précédente.
+    curseur = new Date(debut.getTime() - 1)
+  }
+  return bornes
+}
+
+/** Un seuil de verrouillage par période, sur la fenêtre couverte.
  *
- *  Le seuil d'un mois est la date de création de la DERNIÈRE réservation
- *  comprise dans le quota de ce mois-là. Un mois qui n'a pas atteint son
- *  plafond n'a pas de seuil, et rien n'y est masqué.
+ *  Le seuil d'une période est la date de création de la DERNIÈRE réservation
+ *  comprise dans le quota de cette période-là. Une période qui n'a pas atteint
+ *  son plafond n'a pas de seuil, et rien n'y est masqué.
  *
  *  Une seule requête pour toute la fenêtre, et le classement se fait en
- *  mémoire : douze requêtes — une par mois — auraient coûté douze allers-retours
- *  sur chaque écran du tableau de bord.
+ *  mémoire : douze requêtes — une par période — auraient coûté douze
+ *  allers-retours sur chaque écran du tableau de bord.
  *
- *  Table vide quand l'offre n'a pas de plafond : il n'y a alors rien à masquer,
+ *  Liste vide quand l'offre n'a pas de plafond : il n'y a alors rien à masquer,
  *  et aucune requête n'est faite. */
 export async function seuilsVerrouillage(
   // Le client Supabase n'est pas typé dans ce projet (voir washerCourant).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>,
-  washerId: string,
+  laveur: LaveurPeriode,
   quota: number | null,
   now: Date = new Date(),
-): Promise<SeuilsParMois> {
-  if (quota === null || quota <= 0) return {}
+): Promise<SeuilsVerrouillage> {
+  if (quota === null || quota <= 0) return []
 
-  // Début du mois courant, reculé de onze mois : douze mois complets, celui-ci
-  // compris. Un jour de marge en plus absorbe le décalage d'heure d'été, qui
-  // sinon pourrait manquer la première heure du mois le plus ancien.
-  const borne = debutDuMoisParis(now)
-  borne.setUTCMonth(borne.getUTCMonth() - (MOIS_COUVERTS - 1))
-  borne.setUTCDate(borne.getUTCDate() - 1)
+  const bornes = bornesPeriodes(laveur.created_at, now)
+  if (bornes.length === 0) return []
 
   // Jamais avant l'entrée en vigueur du plafond : les réservations antérieures
-  // ne sont ni masquées, ni même COMPTÉES dans le quota de leur mois. Sinon le
-  // mois du déploiement serait déjà plein avant d'avoir commencé, et le
+  // ne sont ni masquées, ni même COMPTÉES dans le quota de leur période. Sinon
+  // la période du déploiement serait déjà pleine avant d'avoir commencé, et le
   // premier client d'après se retrouverait caché sans raison.
-  const depart = debutSoumisAuPlafond(borne)
+  const depart = debutSoumisAuPlafond(new Date(bornes[0].debut))
 
   const { data, error } = await supabase
     .from('bookings')
     .select('created_at')
-    .eq('washer_id', washerId)
+    .eq('washer_id', laveur.id)
     .neq('status', 'cancelled')
     .gte('created_at', depart.toISOString())
     .order('created_at', { ascending: true })
@@ -200,50 +224,64 @@ export async function seuilsVerrouillage(
   // Sans certitude, on ne masque rien : cacher les coordonnées d'un client à un
   // laveur qui y a droit lui ferait rater un vrai rendez-vous. Le sens du
   // doute va toujours vers le laveur.
-  if (error || !data) return {}
+  if (error || !data) return []
 
-  return seuilsDepuisDates(data.map((l: { created_at: string }) => l.created_at), quota)
+  return seuilsDepuisDates(data.map((l: { created_at: string }) => l.created_at), quota, bornes)
 }
 
 /** Le classement lui-même, séparé de la base pour être vérifiable.
  *
- *  `dates` arrive triée par ordre croissant. Pour chaque mois, la N-ième
- *  réservation (N = quota) donne le seuil ; tout ce qui la suit dans le même
- *  mois est verrouillé. */
-export function seuilsDepuisDates(dates: readonly string[], quota: number): SeuilsParMois {
-  if (quota <= 0) return {}
+ *  `dates` arrive triée par ordre croissant. Dans chaque période, la N-ième
+ *  réservation (N = quota) donne le seuil ; tout ce qui la suit dans la même
+ *  période est verrouillé. */
+export function seuilsDepuisDates(
+  dates: readonly string[],
+  quota: number,
+  bornes: readonly { debut: string; fin: string }[],
+): SeuilsVerrouillage {
+  if (quota <= 0 || bornes.length === 0) return []
 
-  const compte: Record<string, number> = {}
-  const seuils: SeuilsParMois = {}
+  const compte = new Map<string, number>()
+  const seuils = new Map<string, string>()
   for (const d of dates) {
-    const mois = moisParis(d)
-    if (!mois) continue
-    compte[mois] = (compte[mois] ?? 0) + 1
-    if (compte[mois] === quota) seuils[mois] = d
+    const t = new Date(d).getTime()
+    if (Number.isNaN(t)) continue
+    const b = bornes.find(x => t >= new Date(x.debut).getTime() && t < new Date(x.fin).getTime())
+    if (!b) continue
+    const n = (compte.get(b.debut) ?? 0) + 1
+    compte.set(b.debut, n)
+    if (n === quota) seuils.set(b.debut, d)
   }
-  return seuils
+
+  const trouves: Periode[] = []
+  for (const b of bornes) {
+    const seuil = seuils.get(b.debut)
+    if (seuil) trouves.push({ debut: b.debut, fin: b.fin, seuil })
+  }
+  return trouves
 }
 
-/** Combien de réservations ce mois-ci, plafond compris.
+/** Combien de réservations dans la période en cours, plafond compris.
  *
- *  Sert à choisir l'offre à proposer : c'est ce volume-là qu'elle doit couvrir.
- *  Le compte porte sur les mêmes lignes que `seuilsVerrouillage` — même mois,
- *  mêmes annulations écartées — sinon les deux se contrediraient.
+ *  Sert à la jauge, au choix de l'offre à proposer et au retrait du bouton
+ *  WhatsApp. Le compte porte sur les mêmes lignes que `seuilsVerrouillage` —
+ *  même période, mêmes annulations écartées — sinon les deux se
+ *  contrediraient.
  *
  *  `null` en cas d'erreur, et jamais zéro : un zéro inventé ferait proposer la
  *  plus petite offre à quelqu'un qui en déborde. */
-export async function compterReservationsDuMois(
+export async function compterReservationsDeLaPeriode(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>,
-  washerId: string,
+  laveur: LaveurPeriode,
   now: Date = new Date(),
 ): Promise<number | null> {
   const { count, error } = await supabase
     .from('bookings')
     .select('id', { count: 'exact', head: true })
-    .eq('washer_id', washerId)
+    .eq('washer_id', laveur.id)
     .neq('status', 'cancelled')
-    .gte('created_at', debutSoumisAuPlafond(debutDuMoisParis(now)).toISOString())
+    .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(laveur.created_at, now)).toISOString())
 
   if (error || count === null || count === undefined) return null
   return count
@@ -271,11 +309,11 @@ type Chiffree = Datee & {
 
 export function montantVerrouille(
   reservations: readonly Chiffree[],
-  seuils: SeuilsParMois | null | undefined,
+  periodes: SeuilsVerrouillage | null | undefined,
 ): number {
   let total = 0
   for (const r of reservations) {
-    if (!estVerrouillee(r, seuils)) continue
+    if (!estVerrouillee(r, periodes)) continue
     const service = Array.isArray(r.services) ? r.services[0] : r.services
     const prix = r.booked_price ?? service?.price ?? 0
     if (typeof prix === 'number' && Number.isFinite(prix)) total += prix

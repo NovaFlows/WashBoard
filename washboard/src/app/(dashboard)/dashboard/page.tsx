@@ -9,10 +9,10 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
-import { hasFeature, quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
+import { hasFeature, quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS, libelleRemiseAZero } from '@/lib/plan'
 import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
 import { JaugeReservations } from '@/components/dashboard/JaugeReservations'
-import { seuilsVerrouillage, masquerVerrouillees, montantVerrouille, compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees, montantVerrouille, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
@@ -232,7 +232,7 @@ export default async function DashboardPage() {
   // (en attente, confirmés, chiffre d'affaires) restent entiers : le laveur a
   // le droit de savoir COMBIEN de demandes il a reçues, c'est même l'argument
   // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilsVerrou)
   // Le compte porte sur les rendez-vous À VENIR : un client bloqué dont la date
   // est passée n'est plus une occasion à saisir, seulement un regret. Compter
@@ -246,7 +246,7 @@ export default async function DashboardPage() {
   // Le comptage n'a lieu que sur une offre plafonnée : ailleurs il n'y a rien
   // à compter, et ce serait une requête pour rien à chaque affichage.
   const plafondMensuel = quotaReservations(washer)
-  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDuMois(supabase, washer.id)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(supabase, washer)
   // L'offre nommée sur les cartes floutées : la moins chère qui couvre le
   // volume du mois. Écrire « Pro » en dur ferait payer trente euros de plus à
   // un laveur que le Starter suffisait à débloquer.
@@ -343,6 +343,7 @@ export default async function DashboardPage() {
         utilisees={utiliseesCeMois ?? 0}
         quota={utiliseesCeMois === null ? null : plafondMensuel}
         offre={planEffectif(washer)}
+        remiseAZero={libelleRemiseAZero(washer.created_at)}
       />
       <BandeauBloquees nombre={nbBloquees} offre={planEffectif(washer)} montant={montantBloque} />
       <DemarrageCard progress={progress} />

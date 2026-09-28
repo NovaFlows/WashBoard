@@ -11,7 +11,7 @@ import { prestationsAffichees } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
-import { compterReservationsDuMois } from '@/lib/reservationsVerrouillees'
+import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -197,7 +197,7 @@ export default async function BookingPage({ params }: Props) {
   // reste acceptée. Un comptage en échec rend `null` : dans le doute on laisse
   // le bouton, comme partout ailleurs le doute profite au laveur.
   const plafondMensuel = quotaReservations(washer)
-  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDuMois(admin, washer.id)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(admin, washer)
   const plafondAtteint = plafondMensuel !== null && utiliseesCeMois !== null && utiliseesCeMois >= plafondMensuel
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')

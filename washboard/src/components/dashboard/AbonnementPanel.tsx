@@ -19,6 +19,9 @@ type Props = {
   reservationsCeMois: number | null
   plafondPrestations: number | null
   prestationsAuCatalogue: number | null
+  /** Date à laquelle le compteur repart, déjà écrite (« 22 octobre »).
+   *  Calculée sur la date d'inscription du laveur, pas sur le calendrier. */
+  remiseAZero: string
   /** Essai terminé sans formule choisie : le compte tourne sur Découverte et
    *  on attend une décision. */
   doitChoisir: boolean
@@ -113,7 +116,7 @@ function StatusBadge({ status, plan, grandfathered }: { status: string; plan: Pl
 export default function AbonnementPanel({
   subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered,
   plafondReservations, reservationsCeMois, plafondPrestations, prestationsAuCatalogue,
-  doitChoisir,
+  remiseAZero, doitChoisir,
 }: Props) {
   const [now] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
@@ -221,10 +224,10 @@ export default function AbonnementPanel({
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Votre consommation</h2>
           {plafondReservations !== null && reservationsCeMois !== null && (
             <Jauge
-              titre="Réservations ce mois-ci"
+              titre="Réservations ce mois"
               utilise={reservationsCeMois}
               plafond={plafondReservations}
-              unite="vos clients ne peuvent plus réserver en ligne jusqu’au 1er du mois prochain."
+              unite={`vos clients ne peuvent plus réserver en ligne jusqu’au ${remiseAZero}.`}
             />
           )}
           {plafondPrestations !== null && prestationsAuCatalogue !== null && (
@@ -235,8 +238,13 @@ export default function AbonnementPanel({
               unite="vous ne pouvez plus en ajouter."
             />
           )}
+          {/* La date exacte, pas « le mois prochain » : le compteur repart à
+              la date anniversaire de l'inscription, pas le 1er. Annoncer le 1er
+              à quelqu'un inscrit le 22 lui promettait neuf jours qui
+              n'arrivaient pas. */}
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            Les réservations se remettent à zéro le 1er de chaque mois. Les rendez-vous annulés ne comptent pas.
+            Les réservations se remettent à zéro le {remiseAZero}, puis tous les mois à cette date.
+            Les rendez-vous annulés ne comptent pas.
           </p>
         </div>
       )}

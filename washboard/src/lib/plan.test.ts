@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { minuitParisUTC } from './dateUtils'
 import {
   hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
   formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
   quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
+  debutPeriodeQuota, finPeriodeQuota, libelleRemiseAZero,
   PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, PLAN_COULEURS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
   TEAM_SIZE_INCLUS, PLAN_ESSAI, PLAN_HISTORIQUE,
   RETOUR_GRATUIT_POUR_COMPTES_CREES_DES, COMPTES_TEST_RETOUR_GRATUIT,
@@ -876,5 +878,84 @@ describe('PLAN_COULEURS', () => {
     // Deux offres de la même couleur, c'est un repère qui ne repère rien.
     const couleurs = Object.values(PLAN_COULEURS)
     expect(new Set(couleurs).size).toBe(couleurs.length)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le quota ne repart plus le 1er du mois mais à la date anniversaire de
+// l'inscription. Le 1er était un choix d'implémentation qui se voyait :
+// quelqu'un inscrit le 28 consommait son quota en trois jours, puis attendait.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('debutPeriodeQuota', () => {
+  const INSCRIT_LE_22 = '2026-03-22T14:30:00.000Z'
+
+  it('démarre la période au jour d’inscription du mois en cours', () => {
+    expect(debutPeriodeQuota(INSCRIT_LE_22, new Date('2026-09-25T10:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-09-22').toISOString())
+  })
+
+  it('reste sur la période précédente tant que l’anniversaire n’est pas passé', () => {
+    // Le 21 septembre appartient encore au mois ouvert le 22 août.
+    expect(debutPeriodeQuota(INSCRIT_LE_22, new Date('2026-09-21T10:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-08-22').toISOString())
+  })
+
+  it('bascule le jour même, dès minuit heure de Paris', () => {
+    // 21 septembre 22h30 UTC = 22 septembre 0h30 à Paris : période neuve.
+    expect(debutPeriodeQuota(INSCRIT_LE_22, new Date('2026-09-21T22:30:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-09-22').toISOString())
+  })
+
+  it('passe l’année en arrière sans se tromper', () => {
+    expect(debutPeriodeQuota('2026-03-22T00:00:00Z', new Date('2027-01-10T10:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-12-22').toISOString())
+  })
+
+  it('ramène au dernier jour du mois quand le 31 n’existe pas', () => {
+    // Inscrit un 31 : servi le 28 en février, le 30 en avril. Le décaler au 1er
+    // du mois suivant offrirait des jours de quota ; le reculer en volerait.
+    const inscrit31 = '2026-01-31T09:00:00Z'
+    expect(debutPeriodeQuota(inscrit31, new Date('2026-02-28T12:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-02-28').toISOString())
+    expect(debutPeriodeQuota(inscrit31, new Date('2026-04-30T12:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-04-30').toISOString())
+  })
+
+  it('retombe sur le 1er du mois sans date d’inscription lisible', () => {
+    // Une règle imparfaite vaut mieux qu'un plantage sur la page publique.
+    const now = new Date('2026-09-25T10:00:00Z')
+    for (const absente of [null, undefined, '', 'pas une date']) {
+      expect(debutPeriodeQuota(absente, now).toISOString()).toBe(debutDuMoisParis(now).toISOString())
+    }
+  })
+})
+
+describe('finPeriodeQuota', () => {
+  it('donne la date exacte de remise à zéro', () => {
+    expect(finPeriodeQuota('2026-03-22T00:00:00Z', new Date('2026-09-25T10:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-10-22').toISOString())
+  })
+
+  it('suit le mois court quand l’ancrage est un 31', () => {
+    expect(finPeriodeQuota('2026-01-31T00:00:00Z', new Date('2026-01-31T12:00:00Z')).toISOString())
+      .toBe(minuitParisUTC('2026-02-28').toISOString())
+  })
+
+  it('s’écrit pour être lue', () => {
+    expect(libelleRemiseAZero('2026-03-22T00:00:00Z', new Date('2026-09-25T10:00:00Z')))
+      .toBe('22 octobre')
+  })
+
+  it('tombe toujours APRÈS le début de la période en cours', () => {
+    // La propriété qui compte : une période ne peut pas être vide ni négative.
+    const now = new Date('2026-09-25T10:00:00Z')
+    for (let jour = 1; jour <= 31; jour++) {
+      const creation = `2026-01-${String(jour).padStart(2, '0')}T08:00:00Z`
+      const debut = debutPeriodeQuota(creation, now)
+      expect(finPeriodeQuota(creation, now).getTime(), `inscrit le ${jour}`)
+        .toBeGreaterThan(debut.getTime())
+      expect(debut.getTime()).toBeLessThanOrEqual(now.getTime())
+    }
   })
 })

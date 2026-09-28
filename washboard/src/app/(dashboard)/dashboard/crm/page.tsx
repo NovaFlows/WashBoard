@@ -64,7 +64,7 @@ export default async function CrmPage() {
   // sinon le laveur récupérait ici, en deux clics, exactement ce que l'accueil
   // et le calendrier viennent de lui cacher. Elles restent comptées sur la
   // page Clients, nom flouté et jour seul.
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 
   const since = new Date()

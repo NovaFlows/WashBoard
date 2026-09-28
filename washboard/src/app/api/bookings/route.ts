@@ -10,7 +10,7 @@ import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import type { ZoneConfig } from '@/types'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { graceEnded, quotaReservations, quotaDepasse, debutDuMoisParis, planEffectif, suitRetourGratuit, PLAN_LABELS } from '@/lib/plan'
+import { graceEnded, quotaReservations, quotaDepasse, debutPeriodeQuota, debutSoumisAuPlafond, planEffectif, suitRetourGratuit, PLAN_LABELS } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
@@ -227,7 +227,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', bookingData.washer_id)
       .neq('status', 'cancelled')
-      .gte('created_at', debutDuMoisParis().toISOString())
+      // Jamais avant l'entrée en vigueur du plafond : sinon l'historique d'un
+      // laveur remplirait sa toute première période avant qu'elle commence.
+      .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(washer?.created_at)).toISOString())
 
     // Un comptage illisible ne bloque plus rien — il n'y a plus rien à
     // bloquer. Au pire, la réservation s'affiche en clair chez un laveur qui

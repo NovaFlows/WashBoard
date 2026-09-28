@@ -59,7 +59,7 @@ export default async function CalendrierPage() {
   // Le masquage se fait ICI, au sortir de la base : un composant qui
   // oublierait la règle afficherait le vrai nom du client. À cet endroit,
   // l'oubli est impossible — la donnée n'existe déjà plus.
-  const seuils = await seuilsVerrouillage(supabase, washer.id, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const marquees = masquerVerrouillees(bookings ?? [], seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
   // Les journées concernées, pour le bandeau au-dessus de l'agenda. Le jour
