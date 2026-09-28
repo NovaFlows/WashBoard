@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   PLAN_CARDS, PLAN_PRICES, PLAN_HISTORIQUE, monthsOwed, freeMonthsLabel, formatEuros,
-  lienRendezVousBusiness, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS,
+  lienRendezVousBusiness, lienChangementOffre, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS,
   yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -308,9 +308,18 @@ export default function AbonnementPanel({
                 {/* Un client historique a déjà tout : aucune carte ne lui propose
                     de payer quoi que ce soit. L'offre gratuite non plus, pour
                     une raison inverse — il n'y a rien à encaisser. */}
+                {/* Chaque carte mène quelque part. Avant, un laveur déjà
+                    abonné voyait Starter et Pro SANS AUCUN BOUTON : il cliquait
+                    dessus, rien ne se passait, et il en concluait — à raison —
+                    que l'écran était cassé. Le panneau supposait qu'un abonné
+                    n'a plus rien à acheter ; il a justement à changer. */}
                 {grandfathered ? (
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
                     Inclus dans votre plan
+                  </span>
+                ) : isCurrent ? (
+                  <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
+                    Votre offre actuelle
                   </span>
                 ) : card.surDevis ? (
                   // Business ne passe pas par Stripe depuis cet écran : le prix
@@ -326,9 +335,11 @@ export default function AbonnementPanel({
                   >
                     {LIBELLE_RDV_BUSINESS}
                   </a>
-                ) : card.price === 0 ? (
+                ) : card.price === 0 && subscriptionStatus !== 'active' ? (
+                  // Pas encore abonné : l'offre gratuite ne se choisit pas, on
+                  // y retombe tout seul à la fin de l'essai. Rien à cliquer.
                   <span className="block text-center py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
-                    {isCurrent ? 'Votre offre actuelle' : 'Sans paiement'}
+                    Sans paiement
                   </span>
                 ) : subscriptionStatus !== 'active' ? (
                   <div className="space-y-2">
@@ -354,7 +365,21 @@ export default function AbonnementPanel({
                       PayPal — {formatEuros(amountFor(card.price))}€
                     </a>
                   </div>
-                ) : null}
+                ) : (
+                  // Déjà abonné, et ce n'est pas son offre : on ouvre la
+                  // conversation plutôt qu'un paiement. Changer d'offre en
+                  // cours d'abonnement demande d'arrêter l'ancienne et de
+                  // calculer un prorata — le faire payer d'abord, c'est le
+                  // prélever deux fois et le rembourser à la main.
+                  <a
+                    href={lienChangementOffre(card.name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center py-2 rounded-xl text-xs font-bold bg-[#1651E8] hover:bg-[#0F4ACC] text-white transition-colors"
+                  >
+                    {card.price === 0 ? 'Revenir à Découverte' : `Passer à ${card.name}`}
+                  </a>
+                )}
               </div>
             )
           })}
