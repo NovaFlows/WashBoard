@@ -59,6 +59,9 @@ function initiales(texte: string): string {
 export type MessagesAutomatiquesProps = {
   reglages: ReglagesMessages
   smsAutorise: boolean
+  /** Le plan autorise l'ACTIVATION de la demande d'avis (Pro) — la route refuse sinon. */
+  avisAutorise: boolean
+  libellePlanAvis: string
   /** Le plan autorise l'ACTIVATION des relances (Pro) — la route refuse sinon. */
   relanceAutorisee: boolean
   libellePlanRelance: string
@@ -212,7 +215,7 @@ function ListeMessages({
 }
 
 export default function MessagesAutomatiquesV2({
-  reglages: reglagesServeur, smsAutorise, relanceAutorisee, libellePlanRelance, nomLaveur, slug, rdvs, lectureIncomplete,
+  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, slug, rdvs, lectureIncomplete,
 }: MessagesAutomatiquesProps) {
   const router = useRouter()
   // Réglages locaux : mis à jour dès qu'une écriture réussit, sans attendre le
@@ -303,15 +306,27 @@ export default function MessagesAutomatiquesV2({
       </div>
 
       <Carte>
-        <LigneAutomatisme
-          libelle="Demande d’avis Google"
-          resume={`${libelleDelaiAvis(reglages.review_delay_hours)} · ${libelleCanal(reglages.review_channel)}`}
-          avertissement={avertissementAvis}
-          actif={avisMarche}
-          enCours={enCours === 'avis'}
-          onBasculer={() => basculer('avis')}
-          onOuvrir={() => setFeuille({ quoi: 'avis', activer: false })}
-        />
+        {avisAutorise || reglages.review_enabled ? (
+          <LigneAutomatisme
+            libelle="Demande d’avis Google"
+            resume={`${libelleDelaiAvis(reglages.review_delay_hours)} · ${libelleCanal(reglages.review_channel)}`}
+            avertissement={avertissementAvis}
+            actif={avisMarche}
+            enCours={enCours === 'avis'}
+            onBasculer={() => basculer('avis')}
+            onOuvrir={() => setFeuille({ quoi: 'avis', activer: false })}
+          />
+        ) : (
+          <LigneAutomatisme
+            libelle="Demande d’avis Google"
+            resume={`Réservé au plan ${libellePlanAvis}`}
+            actif={false}
+            enCours={false}
+            verrouille
+            onBasculer={() => {}}
+            href="/dashboard/abonnement"
+          />
+        )}
         {relanceAutorisee || reglages.followup_enabled ? (
           <LigneAutomatisme
             libelle="Relance"

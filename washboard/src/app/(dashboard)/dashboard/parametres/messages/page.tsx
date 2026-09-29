@@ -62,6 +62,8 @@ export default async function MessagesAutomatiquesPage() {
           followup_message: washer.followup_message ?? null,
         }}
         smsAutorise={hasFeature(washer, 'avis_sms')}
+        avisAutorise={hasFeature(washer, 'avis_email')}
+        libellePlanAvis={requiredPlanLabel('avis_email')}
         relanceAutorisee={hasFeature(washer, 'followup')}
         libellePlanRelance={requiredPlanLabel('followup')}
         nomLaveur={washer.name}
