@@ -127,7 +127,7 @@ export default function RendezVousManuelV2({
   )
 
   return (
-    <Feuille titre="Nouveau rendez-vous" onClose={onClose} fermerSurFond={false} pied={pied}>
+    <Feuille titre="Nouveau rendez-vous" onClose={onClose} pied={pied}>
       <div className="space-y-6">
         <section className="space-y-3">
           <Titre>Quand</Titre>

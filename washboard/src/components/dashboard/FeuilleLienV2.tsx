@@ -41,7 +41,6 @@ export default function FeuilleLienV2({ slug, prefixe, onContinuer, onClose }: P
     <Feuille
       titre="Changer mon lien"
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={false} libelle="Continuer" onClose={onClose} formulaire="lien-reservation" />}
     >
       <form id="lien-reservation" onSubmit={valider} noValidate>

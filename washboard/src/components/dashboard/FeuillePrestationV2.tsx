@@ -183,7 +183,6 @@ export default function FeuillePrestationV2({
     <Feuille
       titre={service ? 'Modifier la prestation' : 'Nouvelle prestation'}
       onClose={onClose}
-      fermerSurFond={false}
       pied={pied}
     >
       <div>

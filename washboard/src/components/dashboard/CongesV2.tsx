@@ -156,7 +156,6 @@ export function FeuilleAjoutConge({
       titre="Bloquer une période"
       sousTitre="Plus aucune réservation ne sera possible sur ces jours."
       onClose={onClose}
-      fermerSurFond={false}
       pied={
         <div>
           {erreurDates && <div className="mb-3"><Constat ton="rouge" role="alert">{erreurDates}</Constat></div>}

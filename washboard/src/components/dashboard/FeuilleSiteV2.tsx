@@ -63,7 +63,6 @@ export default function FeuilleSiteV2({ site, onEnregistrer, onClose }: Props) {
       titre="Mon site web"
       sousTitre="Facultatif."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="apparence-site" />}
     >
       <form id="apparence-site" onSubmit={valider} noValidate>

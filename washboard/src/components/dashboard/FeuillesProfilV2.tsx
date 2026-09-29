@@ -54,7 +54,6 @@ export function FeuilleTexteV2({
       titre={titre}
       sousTitre={sousTitre}
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-texte" />}
     >
       <form id="profil-texte" onSubmit={soumettre} noValidate>
@@ -103,7 +102,6 @@ export function FeuilleAdresseDepartV2({
       titre="Adresse de départ"
       sousTitre="D’où vous partez le matin."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-adresse" />}
     >
       <form id="profil-adresse" onSubmit={soumettre} noValidate>
@@ -156,7 +154,6 @@ export function FeuilleEquipeV2({
       titre="Nombre de laveurs"
       sousTitre="Vous compris."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-equipe" />}
     >
       <form id="profil-equipe" onSubmit={soumettre} noValidate>

@@ -104,7 +104,6 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
       titre="Nouvelle plage"
       sousTitre="Vos clients réservent pendant ces heures."
       onClose={onClose}
-      fermerSurFond={false}
       pied={pied}
     >
       <div className="space-y-5 pb-2">

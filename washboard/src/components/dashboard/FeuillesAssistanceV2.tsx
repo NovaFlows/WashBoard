@@ -34,7 +34,6 @@ export function FeuilleNouvelleQuestionV2({
       titre="Nouvelle question"
       sousTitre="Une personne de l’équipe vous répond en moins de 24 h."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={false} libelle="Envoyer" onClose={onClose} formulaire="assistance-nouvelle" />}
     >
       <form id="assistance-nouvelle" onSubmit={valider} noValidate>

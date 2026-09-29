@@ -135,7 +135,6 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
       verrou="facturation"
       sousTitre="Ce qui figure sur les factures envoyées à vos clients."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-facturation" />}
     >
       <form id="profil-facturation" onSubmit={soumettre} noValidate>

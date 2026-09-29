@@ -24,9 +24,9 @@ import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTa
 // Le focus initial va au bouton Fermer, jamais à un champ : sur mobile,
 // focaliser un champ ouvre le clavier avant même que la feuille soit lisible.
 //
-// `fermerSurFond` : un formulaire long ne se ferme PAS d'un tap à côté (les
-// mains mouillées ratent souvent la cible, et tout ce qui a été saisi serait
-// perdu). Fermeture explicite : la croix, « Annuler », ou Échap.
+//
+// Un tap sur le fond ferme la feuille, comme un glissement de la poignée vers le bas —
+// pour TOUTES les feuilles (demandé par Alexandre, 2026-09-29), formulaires compris.
 
 export const police = '[font-family:var(--font-archivo)]'
 export const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -64,7 +64,6 @@ export function Feuille({
   onClose,
   children,
   pied,
-  fermerSurFond = true,
   verrou,
 }: {
   titre: string
@@ -73,7 +72,6 @@ export function Feuille({
   children: ReactNode
   /** Zone d'actions fixée en bas de la feuille (le corps défile au-dessus). */
   pied?: ReactNode
-  fermerSurFond?: boolean
   /** Fonctionnalité d'offre dont dépend cette feuille. Si l'offre en cours ne
    *  la couvre pas, le contenu reste VISIBLE mais flou et inerte (on voit ce
    *  qu'on obtient, sans pouvoir le remplir pour rien), une pastille dit quelle
@@ -128,7 +126,7 @@ export function Feuille({
       <button
         aria-hidden
         tabIndex={-1}
-        onClick={fermerSurFond ? onClose : undefined}
+        onClick={onClose}
         className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${visible ? 'opacity-100' : 'opacity-0'}`}
         style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', cursor: 'default' }}
       />
@@ -177,7 +175,7 @@ export function Feuille({
         >
           {ferme && verrou ? (
             <div className="relative">
-              <div inert className="select-none [&_input]:blur-[4px] [&_textarea]:blur-[4px] [&_select]:blur-[4px] [&_button]:blur-[4px] [&_img]:blur-[4px] [&_svg]:opacity-40">
+              <div inert className="select-none [&_input]:blur-[4px] [&_textarea]:blur-[4px] [&_select]:blur-[4px] [&_button]:blur-[4px] [&_img]:blur-[4px] [&_p]:blur-[3px] [&_svg]:opacity-40">
                 {children}
               </div>
               <div className="absolute inset-0 flex items-start justify-center pt-10">

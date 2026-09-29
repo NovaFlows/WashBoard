@@ -92,7 +92,6 @@ export function FeuilleAjoutDepenseV2({
     <Feuille
       titre="Ajouter un frais"
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Ajouter" onClose={onClose} formulaire="depense-ajout" />}
     >
       <form id="depense-ajout" onSubmit={soumettre} noValidate>
@@ -166,7 +165,6 @@ export function FeuilleAjoutRecurrentV2({
       titre="Frais qui revient chaque mois"
       sousTitre="Assurance, abonnement, loyer… ajouté tout seul, chaque mois."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Ajouter" onClose={onClose} formulaire="depense-recurrent" />}
     >
       <form id="depense-recurrent" onSubmit={soumettre} noValidate>

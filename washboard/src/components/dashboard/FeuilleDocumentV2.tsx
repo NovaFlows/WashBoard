@@ -181,7 +181,6 @@ export default function FeuilleDocumentV2({
         ? 'Un prix engageant, valable un temps donné. Il ne compte pas tant que le client n’a pas dit oui.'
         : 'Une facture pour un travail fait hors de votre page de réservation.'}
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle={devis ? 'Créer le devis' : 'Créer la facture'} onClose={onClose} formulaire="document-nouveau" />}
     >
       <form id="document-nouveau" onSubmit={soumettre} noValidate>

@@ -206,7 +206,6 @@ export function ReglageAvisV2({
       titre="Demande d’avis Google"
       sousTitre="Un message après chaque prestation terminée"
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle={activer ? 'Enregistrer et activer' : 'Enregistrer'} onClose={onClose} formulaire="reglage-avis" />}
     >
       <form id="reglage-avis" onSubmit={valider} noValidate>
@@ -367,7 +366,6 @@ export function ReglageRelanceV2({
       titre="Relance"
       sousTitre="Faire revenir un client qui ne revient plus"
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle={activer ? 'Enregistrer et activer' : 'Enregistrer'} onClose={onClose} formulaire="reglage-relance" />}
     >
       <form id="reglage-relance" onSubmit={valider} noValidate>

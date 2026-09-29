@@ -217,7 +217,6 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
       titre="Où vous intervenez"
       sousTitre="Un client hors zone ne peut pas réserver."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="feuille-zone" />}
     >
       <form id="feuille-zone" onSubmit={valider} noValidate>

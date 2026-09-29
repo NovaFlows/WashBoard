@@ -51,7 +51,6 @@ export default function FeuilleMessageV2({ message, onEnregistrer, onClose }: Pr
       titre="Message d’accueil"
       sousTitre="Affiché sous votre nom, en haut de votre page."
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="apparence-message" />}
     >
       <form id="apparence-message" onSubmit={valider} noValidate>

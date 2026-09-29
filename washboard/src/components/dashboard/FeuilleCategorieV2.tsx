@@ -102,7 +102,6 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
     <Feuille
       titre={categorie ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
       onClose={onClose}
-      fermerSurFond={false}
       pied={pied}
     >
       <div>

@@ -56,7 +56,6 @@ export function FeuilleEmailV2({ email, onClose }: { email: string; onClose: () 
       titre="Adresse e-mail"
       sousTitre="Votre identifiant de connexion."
       onClose={onClose}
-      fermerSurFond={false}
       pied={envoye
         ? undefined
         : <Pied enCours={enCours} libelle="Changer l’adresse" onClose={onClose} formulaire="profil-email" />}
@@ -133,7 +132,6 @@ export function FeuilleMotDePasseV2({ email, onClose }: { email: string; onClose
     <Feuille
       titre="Mot de passe"
       onClose={onClose}
-      fermerSurFond={false}
       pied={<Pied enCours={enCours} libelle="Changer le mot de passe" onClose={onClose} formulaire="profil-mdp" />}
     >
       <form id="profil-mdp" onSubmit={soumettre} noValidate>
