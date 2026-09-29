@@ -7,8 +7,8 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { quotaReservations } from '@/lib/plan'
-import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
+import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
+import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 
 export default async function CalendrierPage() {
   const supabase = await createClient()
@@ -74,10 +74,17 @@ export default async function CalendrierPage() {
   // trois sur l'accueil — deux chiffres pour la même chose sur deux écrans
   // voisins, et c'est le produit entier qu'on cesse de croire. Un rendez-vous
   // passé mais jamais clôturé reste d'ailleurs un client à récupérer.
-  const joursMasques = marquees
+  const masquees = marquees
     .filter(b => b.verrouillee && b.scheduled_at && !['done', 'cancelled'].includes(b.status as string))
     // Midi UTC du jour de Paris : le jour seul quitte le serveur, jamais l'heure.
-    .map(b => `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })}T12:00:00Z`)
+    .map(b => ({
+      id: b.id as string,
+      client_name: (b.client_name as string | null) ?? null,
+      scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })}T12:00:00Z`,
+    }))
+  const joursMasques = masquees.map(m => m.scheduled_at)
+  const volumeDuMois = masquees.length === 0 ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  const offreDeblocage = PLAN_LABELS[offreQuiCouvre(planEffectif(washer), volumeDuMois)]
 
   // Congés, prestations et catégories : en échec, le calendrier affiche une
   // journée libre et des listes vides — donc un laveur qui pourrait accepter un
@@ -109,6 +116,8 @@ export default async function CalendrierPage() {
           // Un booléen, jamais le jeton : tout ce qui passe ici est sérialisé dans la page.
           googleAgendaConnecte={!!washer.google_refresh_token}
           joursMasques={joursMasques}
+          masquees={masquees}
+          offreDeblocage={offreDeblocage}
         />
       </Suspense>
     </DashboardShell>

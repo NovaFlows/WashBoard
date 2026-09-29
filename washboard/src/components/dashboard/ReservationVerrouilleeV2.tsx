@@ -89,6 +89,43 @@ export function LigneClientVerrouilleeV2({ reservation: r, offre }: { reservatio
   )
 }
 
+/** Carte d'un client masqué dans la journée de l'agenda. Même silhouette que `RendezVousCarte`,
+ *  mais l'heure, la prestation, le prix et le lieu ne sont que des barres floues : l'heure n'a
+ *  jamais quitté le serveur, la carte se range donc en fin de journée. */
+export function CarteJourVerrouilleeV2({ reservation: r, offre }: { reservation: ReservationMasquee; offre: string }) {
+  const [fiche, setFiche] = useState(false)
+  return (
+    <div className="flex items-start gap-3 pt-2">
+      <div className="flex w-10 shrink-0 flex-col items-end gap-1 pt-3">
+        <Lock size={14} strokeWidth={2.2} aria-hidden className="text-[color:var(--v2-color-gris)]" />
+        <BarreLigne className="h-2.5 w-7" />
+      </div>
+      <span aria-hidden className="my-1.5 w-[3px] self-stretch rounded-full bg-[color:var(--v2-filet-fort)]" />
+      <button
+        type="button"
+        onClick={() => setFiche(true)}
+        aria-haspopup="dialog"
+        aria-label={`${r.client_name || 'Client'} : rendez-vous masqué par votre offre`}
+        className="flex min-w-0 flex-1 flex-col gap-1 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-3.5 py-3 text-left"
+      >
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={`truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
+            <Lock size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
+          </span>
+          <BarreLigne className="h-3.5 w-10 shrink-0" />
+        </span>
+        <BarreLigne className="mt-1 h-3 w-32 max-w-full" />
+        <span className="flex items-center justify-between gap-2 pt-1.5">
+          <BarreLigne className="h-3 w-20" />
+          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Heure masquée</span>
+        </span>
+      </button>
+      {fiche && <FicheVerrouilleeV2 reservation={r} offre={offre} onClose={() => setFiche(false)} />}
+    </div>
+  )
+}
+
 function LigneFloue({ icone, largeur }: { icone: React.ReactNode; largeur: string }) {
   return (
     <div className="flex items-center gap-3 border-b border-[color:var(--v2-filet)] py-3.5 last:border-b-0">

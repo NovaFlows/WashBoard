@@ -20,7 +20,7 @@ import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/P
 import FeuilleGoogleAgendaV2, { issueDepuisParametre } from '@/components/dashboard/FeuilleGoogleAgendaV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
-import { JoursMasquesV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
+import { JoursMasquesV2, CarteJourVerrouilleeV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
@@ -223,7 +223,7 @@ function finRendezVous(b: Booking): Date {
 
 type Trajet = { minutes: number; km: number } | null
 
-export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte, joursMasques = [] }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
   const [today] = useState(() => new Date())
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
@@ -351,6 +351,10 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     [byDate, dayDate],
   )
   const jour = jourBrut
+  const masqueesDuJour = useMemo(
+    () => masquees.filter(m => dayKey(new Date(m.scheduled_at)) === dayKey(dayDate)),
+    [masquees, dayDate],
+  )
   // Un rendez-vous annulé n'occupe plus de temps : il reste visible dans la
   // liste (jamais escamoté), mais n'entre dans aucun calcul de trajet, de
   // créneau libre ou de total.
@@ -506,7 +510,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         />
       )}
 
-      {jour.length === 0 ? (
+      {jour.length === 0 && masqueesDuJour.length === 0 ? (
         <p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] text-center py-10`}>
           Aucun rendez-vous ce jour.
         </p>
@@ -569,6 +573,9 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               </div>
             )
           })}
+          {masqueesDuJour.map(m => (
+            <CarteJourVerrouilleeV2 key={m.id} reservation={m} offre={offreDeblocage} />
+          ))}
         </div>
       )}
 
