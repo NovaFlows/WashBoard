@@ -25,6 +25,12 @@ function Barre({ className }: { className: string }) {
   return <span aria-hidden className={`block rounded bg-[color:var(--v2-filet-fort)] blur-[3px] ${className}`} />
 }
 
+/** Barre floue des lignes de liste : plus soutenue que celles de la fiche, sinon le flou
+ *  disparaît sur le fond blanc du mode clair. */
+function BarreLigne({ className }: { className: string }) {
+  return <span aria-hidden className={`block rounded bg-[color:var(--v2-color-gris)]/45 blur-[4px] ${className}`} />
+}
+
 /** Ligne d'une liste de rendez-vous (« À confirmer » de l'accueil). Même forme que `LigneRdv`. */
 export function LigneRdvVerrouilleeV2({ reservation: r, offre }: { reservation: ReservationMasquee; offre: string }) {
   const [fiche, setFiche] = useState(false)
@@ -41,19 +47,13 @@ export function LigneRdvVerrouilleeV2({ reservation: r, offre }: { reservation: 
           {jourAbrege(r.scheduled_at)}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-          <span className={`truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
-          <span className="mt-1.5 block h-3 w-28 rounded bg-[color:var(--v2-filet-fort)] blur-[3px]" aria-hidden />
-          <span className={`mt-1 text-[12.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            Débloquer avec le plan {offre}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={`truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
+            <Lock size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
           </span>
+          <BarreLigne className="mt-1 h-3 w-24" />
         </span>
-        <span className="flex shrink-0 flex-col items-end gap-1.5 pt-1">
-          <Barre className="h-3 w-9" />
-          <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[color:var(--v2-color-gris)]">
-            <Lock size={13} strokeWidth={2.2} aria-hidden />
-            <Barre className="h-3 w-12" />
-          </span>
-        </span>
+        <BarreLigne className="mt-1 h-3 w-10 shrink-0" />
       </button>
       {fiche && <FicheVerrouilleeV2 reservation={r} offre={offre} onClose={() => setFiche(false)} />}
     </>
@@ -77,18 +77,12 @@ export function LigneClientVerrouilleeV2({ reservation: r, offre }: { reservatio
         </span>
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
-          <span className="mt-1.5 block h-3 w-40 max-w-full rounded bg-[color:var(--v2-filet-fort)] blur-[3px]" aria-hidden />
-          <span className={`mt-1.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          <BarreLigne className="mt-1.5 h-3 w-32 max-w-full" />
+          <span className={`mt-1.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
             Réservation le {jourSeul(r.scheduled_at) ?? '—'}
           </span>
-          <span className={`mt-1 inline-block text-[12.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            Débloquer avec le plan {offre}
-          </span>
         </span>
-        <span className="mt-1.5 flex shrink-0 items-center gap-1.5 text-[color:var(--v2-color-gris)]">
-          <Barre className="h-3 w-8" />
-          <Lock size={13} strokeWidth={2.2} aria-hidden />
-        </span>
+        <BarreLigne className="mt-1.5 h-3 w-10 shrink-0" />
       </button>
       {fiche && <FicheVerrouilleeV2 reservation={r} offre={offre} onClose={() => setFiche(false)} />}
     </li>
