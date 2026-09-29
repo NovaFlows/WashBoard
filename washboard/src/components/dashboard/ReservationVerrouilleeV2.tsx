@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Lock, Mail, MapPin, Phone } from 'lucide-react'
+import { ChevronRight, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { jourSeul } from '@/lib/reservationsVerrouillees'
 
@@ -168,30 +168,30 @@ export function JoursMasquesV2({ dates }: { dates: string[] }) {
   return (
     <Link
       href="/dashboard/clients"
-      className="block rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3 transition-colors hover:border-[color:var(--v2-color-accent)]"
+      className="block rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5 transition-colors hover:border-[color:var(--v2-color-accent)]"
     >
       <span className="flex items-center gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-filet)] text-[color:var(--v2-color-gris)]">
           <Lock size={15} strokeWidth={2.2} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`block text-[14px] ${corpsFort}`}>
+          <span className={`block text-[14.5px] leading-tight ${corpsFort}`}>
             {total} client{total > 1 ? 's' : ''} absent{total > 1 ? 's' : ''} de cet agenda
           </span>
-          <span className={`block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Leur heure est masquée par votre offre
+          <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+            Heure masquée par votre offre
           </span>
         </span>
-        <span className={`shrink-0 text-[12.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>Les voir</span>
+        <ChevronRight size={18} strokeWidth={2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
       </span>
-      <span className="mt-2.5 flex flex-wrap gap-1.5">
+      <span className="mt-3 flex flex-wrap gap-1.5 pl-12">
         {montres.map(([jour, n]) => (
-          <span key={jour} className={`rounded-full bg-[color:var(--v2-filet)] px-2.5 py-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          <span key={jour} className={`rounded-full bg-[color:var(--v2-filet)] px-2.5 py-1 text-[12px] leading-none ${corps} text-[color:var(--v2-color-gris)]`}>
             {jour}{n > 1 ? ` · ${n}` : ''}
           </span>
         ))}
         {reste > 0 && (
-          <span className={`px-1 py-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>+ {reste} autre{reste > 1 ? 's' : ''}</span>
+          <span className={`px-1 py-1 text-[12px] leading-none ${corps} text-[color:var(--v2-color-gris)]`}>+ {reste} autre{reste > 1 ? 's' : ''}</span>
         )}
       </span>
     </Link>

@@ -16,7 +16,8 @@ import FeuilleCreneauxV2 from '@/components/dashboard/FeuilleCreneauxV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
 import { ConfirmationSuppression, Constat, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
 import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients } from '@/lib/prestation'
-import { PLAN_LABELS, offreCatalogueIllimite, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, offreCatalogueIllimite, requiredPlanLabel, type Plan } from '@/lib/plan'
+import { useOffre } from '@/components/dashboard/OffreContext'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
   type FormulairePrestation, type ModeleCategorie,
@@ -263,6 +264,7 @@ export default function PrestationsV2({
   zone: zoneServeur, adresseDeBase, creneaux: creneauxServeur, plafond, offre,
 }: Props) {
   const router = useRouter()
+  const { peut } = useOffre()
   const p = usePrestationsV2(servicesServeur, categoriesServeur)
   const { services, categories } = p
   // Zone et créneaux : l'état local suit la base dès qu'une écriture réussit, sans
@@ -470,7 +472,7 @@ export default function PrestationsV2({
           />
           <LigneDeuxNiveaux
             label="Créneaux intelligents"
-            valeur={resumeCreneaux(creneaux)}
+            valeur={peut('creneaux_intelligents') ? resumeCreneaux(creneaux) : `Inclus dans l’offre ${requiredPlanLabel('creneaux_intelligents')}`}
             onClick={() => setFeuille({ quoi: 'creneaux' })}
           />
         </ul>

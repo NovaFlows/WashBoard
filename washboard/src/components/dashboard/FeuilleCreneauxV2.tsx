@@ -78,7 +78,7 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
   return (
     <Feuille
       titre="Créneaux intelligents"
-      verrou={reglages.actif ? undefined : 'creneaux_intelligents'}
+      verrou="creneaux_intelligents"
       sousTitre="Une remise sur les créneaux proches d’un rendez-vous déjà pris, pour regrouper vos trajets."
       onClose={onClose}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="feuille-creneaux" />}
