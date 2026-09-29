@@ -45,6 +45,39 @@ export function usePrestationsV2(servicesInitiaux: Service[], categoriesInitiale
     return null
   }
 
+  /** Met une prestation en veille, ou la remet en ligne (plafond de catalogue
+   *  des offres 2026 — voir `lib/prestation.ts`, `estEnVeille`).
+   *
+   *  Mettre en veille est toujours permis : c'est la sortie de secours d'un
+   *  laveur qui a plus de prestations que son offre n'en affiche. Seule la
+   *  REMISE EN LIGNE peut être refusée (403), et ce refus n'est pas une erreur
+   *  à peindre en rouge : c'est une offre à proposer, d'où le `plafond` rendu
+   *  à l'appelant plutôt qu'une simple phrase. */
+  async function basculerVeille(id: string, enVeille: boolean): Promise<
+    { ok: true } | { ok: false; message: string; plafond?: number }
+  > {
+    let res: Response
+    try {
+      res = await fetch(`/api/services/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ en_veille: enVeille }),
+      })
+    } catch {
+      return { ok: false, message: 'Enregistrement impossible. Vérifiez votre connexion et réessayez.' }
+    }
+    const corps = await res.json().catch(() => ({})) as { error?: string; quota?: { plafond: number } }
+    if (!res.ok) {
+      return {
+        ok: false,
+        message: corps.error ?? 'Impossible de modifier cette prestation',
+        plafond: res.status === 403 ? corps.quota?.plafond : undefined,
+      }
+    }
+    setServices(s => s.map(svc => (svc.id === id ? { ...svc, en_veille: enVeille } : svc)))
+    return { ok: true }
+  }
+
   async function creerCategorie(nom: string, types: CategoryType[]): Promise<ResultatApi<ServiceCategory>> {
     const r = await apiCreerCategorie(nom.trim(), types, categories.length)
     if (r.ok) setCategories(c => [...c, r.data])
@@ -71,7 +104,7 @@ export function usePrestationsV2(servicesInitiaux: Service[], categoriesInitiale
 
   return {
     services, categories,
-    creerPrestation, modifierPrestation, supprimerPrestation,
+    creerPrestation, modifierPrestation, supprimerPrestation, basculerVeille,
     creerCategorie, modifierCategorie, supprimerCategorie,
   }
 }

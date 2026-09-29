@@ -5,6 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Prestations from '@/components/dashboard/Prestations'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
+import { planEffectif, quotaPrestations } from '@/lib/plan'
 import type { Availability, Service, ServiceCategory } from '@/types'
 
 // Refonte 2026 — « Prestations et prix » : les lavages proposés aux clients, leurs
@@ -29,7 +30,7 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 const COLONNES =
   'id, name, zone_config, base_address, ' +
   'smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, ' +
-  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
+  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, subscription_ends_at, created_at'
 
 export default async function PrestationsPage() {
   const supabase = await createClient()
@@ -68,6 +69,8 @@ export default async function PrestationsPage() {
           categories={(categories ?? []) as ServiceCategory[]}
           availabilities={(availabilities ?? []) as Availability[]}
           lectureIncomplete={!!errServices || !!errCategories}
+          plafond={quotaPrestations(washer)}
+          offre={planEffectif(washer)}
           zone={washer.zone_config ?? null}
           adresseDeBase={washer.base_address ?? null}
           creneaux={{

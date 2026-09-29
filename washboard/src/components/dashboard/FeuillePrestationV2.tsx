@@ -41,6 +41,16 @@ type Props = {
   onEnregistrer: (form: FormulairePrestation) => Promise<string | null>
   /** Ouvre la confirmation de suppression (absent à la création). */
   onSupprimer?: () => void
+  /** Mise en veille (plafond de catalogue des offres 2026) — absent à la
+   *  création et sur une offre sans plafond. Endormir est toujours permis ;
+   *  rallumer peut être refusé si le catalogue est déjà plein, et `refus` porte
+   *  alors la phrase à lire. */
+  veille?: {
+    enVeille: boolean
+    enCours: boolean
+    refus: string | null
+    onBasculer: () => void
+  }
   onClose: () => void
 }
 
@@ -58,7 +68,7 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
 }
 
 export default function FeuillePrestationV2({
-  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, onClose,
+  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, onClose,
 }: Props) {
   const [form, setForm] = useState(formulaireInitial)
   const [enCours, setEnCours] = useState(false)
@@ -454,6 +464,33 @@ export default function FeuillePrestationV2({
           />
           <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/250</p>
         </Repliable>
+
+        {service && veille && (
+          <div className="border-t border-[color:var(--v2-filet)] pt-3">
+            <Titre>Sur votre page de réservation</Titre>
+            <p className={`mt-1 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              {veille.enVeille
+                ? 'En veille : vos clients ne la voient pas et ne peuvent pas la réserver. Rien n’est effacé — ses rendez-vous et ses factures restent.'
+                : 'En ligne : vos clients la voient et peuvent la réserver.'}
+            </p>
+            {veille.refus && (
+              <p className={`mt-2 text-[13px] leading-snug ${corpsFort}`} style={{ color: 'var(--v2-color-ambre)' }}>
+                {veille.refus}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={veille.onBasculer}
+              disabled={veille.enCours}
+              className={`mt-2 flex min-h-11 items-center text-[15px] ${corpsFort} disabled:opacity-50`}
+              style={{ color: 'var(--v2-color-accent)' }}
+            >
+              {veille.enCours
+                ? 'Enregistrement…'
+                : veille.enVeille ? 'Remettre en ligne' : 'Mettre en veille'}
+            </button>
+          </div>
+        )}
 
         {service && onSupprimer && (
           <div className="border-t border-[color:var(--v2-filet)] pt-2">

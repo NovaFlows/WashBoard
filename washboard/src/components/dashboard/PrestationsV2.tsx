@@ -15,7 +15,8 @@ import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
 import FeuilleCreneauxV2 from '@/components/dashboard/FeuilleCreneauxV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
 import { ConfirmationSuppression, Constat, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
-import { estReservable } from '@/lib/prestation'
+import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients } from '@/lib/prestation'
+import { PLAN_LABELS, offreCatalogueIllimite, type Plan } from '@/lib/plan'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
   type FormulairePrestation, type ModeleCategorie,
@@ -82,6 +83,64 @@ type Props = {
    *  fusionnée avec `zone_config.center_address` (deux adresses distinctes). */
   adresseDeBase: string | null
   creneaux: ReglagesCreneaux
+  /** Nombre de prestations que l'offre affiche sur la page de réservation —
+   *  `null` : aucune limite (Pro, Business, clients historiques). Au-delà, les
+   *  suivantes sont MASQUÉES aux clients sans être effacées, voir
+   *  `lib/prestation.ts` (`prestationsAffichees`) et la fenêtre de choix
+   *  (`ChoixVeilleModal`). L'écran le disait nulle part : un laveur plafonné
+   *  voyait quatre prestations ici et trois sur sa page. */
+  plafond: number | null
+  /** Offre en cours, pour la nommer plutôt que dire « votre offre ». */
+  offre: Plan
+}
+
+/** Où en est le catalogue face au plafond de l'offre : le compte de ce que la
+ *  page de réservation affiche, et, selon le cas, soit la demande de choisir
+ *  (trop de prestations : rien n'est effacé, on ne choisit pas à sa place), soit
+ *  la porte vers l'offre qui lève le plafond (catalogue plein). Jamais en rouge :
+ *  ce n'est pas une faute, c'est le moment où l'offre supérieure sert. */
+function BandeauPlafondV2({ enLigne, plafond, offre, aRanger, complet }: {
+  enLigne: number; plafond: number; offre: Plan; aRanger: number; complet: boolean
+}) {
+  const suivante = offreCatalogueIllimite()
+  return (
+    <div className="mt-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className={`text-[14px] ${corpsFort}`}>
+          {enLigne} / {plafond} en ligne
+        </p>
+        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Offre {PLAN_LABELS[offre]}</p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color:var(--v2-filet)]" aria-hidden>
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(100, Math.round((enLigne / plafond) * 100))}%`,
+            background: aRanger > 0 ? 'var(--v2-color-ambre)' : 'var(--v2-color-accent)',
+          }}
+        />
+      </div>
+      {aRanger > 0 ? (
+        <p className={`mt-3 text-[13.5px] leading-snug ${corps}`}>
+          Votre offre en affiche {plafond} au maximum, vous en avez {enLigne}. Ouvrez une prestation pour la mettre en
+          veille : vos clients ne la voient plus, rien n’est effacé.
+        </p>
+      ) : complet ? (
+        <p className={`mt-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+          Catalogue complet. Mettez une prestation en veille ou modifiez-en une, ou passez à l’offre {PLAN_LABELS[suivante]} pour un catalogue illimité.
+        </p>
+      ) : null}
+      {(aRanger > 0 || complet) && (
+        <Link
+          href="/dashboard/abonnement"
+          className={`${BOUTON} mt-3 w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
+          style={PRESSION}
+        >
+          Voir les offres
+        </Link>
+      )}
+    </div>
+  )
 }
 
 /** Titre de section en phrase, gris. `nombre` est facultatif : les sections
@@ -131,6 +190,7 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
 }) {
   const prix = prixListe(service)
   const reservable = estReservable(service)
+  const enVeille = estEnVeille(service)
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
     ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
   })
@@ -173,6 +233,19 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
                 </span>
               </span>
             )}
+            {/* Même forme que l'avertissement ci-dessus, en ambre : ce n'est pas
+                une erreur de configuration, c'est le plafond de l'offre qui
+                garde cette prestation hors ligne. Sans cette ligne, l'écran
+                montrait quatre prestations quand la page n'en affichait que
+                trois, sans dire lesquelles. */}
+            {reservable && enVeille && (
+              <span className="flex items-start gap-2">
+                <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
+                <span className={`text-[12.5px] leading-snug ${corpsFort} text-[color:var(--v2-color-encre)]`}>
+                  En veille : vos clients ne la voient pas
+                </span>
+              </span>
+            )}
           </span>
           <span className={`shrink-0 text-right text-[15.5px] ${corpsFort} tabular-nums`}>
             {prix.des && <span className={`mr-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès</span>}
@@ -187,7 +260,7 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, creneaux: creneauxServeur,
+  zone: zoneServeur, adresseDeBase, creneaux: creneauxServeur, plafond, offre,
 }: Props) {
   const router = useRouter()
   const p = usePrestationsV2(servicesServeur, categoriesServeur)
@@ -208,6 +281,26 @@ export default function PrestationsV2({
   const [suppression, setSuppression] = useState<Suppression>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
+  // Mise en veille (plafond de catalogue) : l'état de l'aller-retour en cours et
+  // le refus éventuel, lus par la feuille d'édition de la prestation ouverte.
+  const [veilleEnCours, setVeilleEnCours] = useState<string | null>(null)
+  const [veilleRefus, setVeilleRefus] = useState<string | null>(null)
+
+  // Ce que les clients voient VRAIMENT : ni en veille, ni sans type de véhicule.
+  // C'est ce compte-là que le plafond borne, pas le nombre de lignes de l'écran.
+  const enLigne = p.services.filter(estVisibleParLesClients)
+  const catalogueComplet = plafond !== null && enLigne.length >= plafond
+
+  async function basculerVeille(service: Service) {
+    if (veilleEnCours) return
+    setVeilleEnCours(service.id)
+    setVeilleRefus(null)
+    const r = await p.basculerVeille(service.id, !estEnVeille(service))
+    setVeilleEnCours(null)
+    if (!r.ok) { setVeilleRefus(r.message); return }
+    // La page de réservation change : les compteurs du serveur doivent suivre.
+    router.refresh()
+  }
   // Une seule ligne de prestation glissée (bouton « Supprimer » visible) à la fois.
   const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
 
@@ -328,7 +421,7 @@ export default function PrestationsV2({
           </p>
         )}
       </div>
-      {!lectureIncomplete && peutAjouterPrestation && (
+      {!lectureIncomplete && peutAjouterPrestation && !catalogueComplet && (
         <button
           type="button"
           onClick={ouvrirNouvellePrestation}
@@ -415,6 +508,16 @@ export default function PrestationsV2({
         </>
       ) : (
         <>
+          {plafond !== null && (
+            <BandeauPlafondV2
+              enLigne={enLigne.length}
+              plafond={plafond}
+              offre={offre}
+              aRanger={aMettreEnVeille(enLigne.length, plafond)}
+              complet={catalogueComplet}
+            />
+          )}
+
           {!peutAjouterPrestation && (
             <p className={`mt-1 px-0.5 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
               Créez d’abord une catégorie : elle liste ce que vos clients peuvent choisir (Voiture avec Citadine, Berline, SUV…).
@@ -485,6 +588,12 @@ export default function PrestationsV2({
           availabilities={availabilities}
           onEnregistrer={enregistrerPrestation}
           onSupprimer={feuille.service ? () => demanderSuppression({ quoi: 'prestation', service: feuille.service! }) : undefined}
+          veille={feuille.service && plafond !== null ? {
+            enVeille: estEnVeille(feuille.service),
+            enCours: veilleEnCours === feuille.service.id,
+            refus: veilleRefus,
+            onBasculer: () => void basculerVeille(feuille.service!),
+          } : undefined}
           // Sous une confirmation, Échap et la poignée ne ferment que la confirmation.
           onClose={suppression ? () => {} : fermerFeuille}
         />

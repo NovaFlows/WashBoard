@@ -6,6 +6,7 @@ import { isPwaStandalone } from '@/lib/pwaStandalone'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
 import type { ReglagesCreneaux } from '@/lib/creneauxForm'
+import type { Plan } from '@/lib/plan'
 
 // Point d'entrée de « Prestations et prix » — destination NEUVE de la refonte
 // 2026 (troisième cas de refonte.md, même schéma que Chiffres.tsx et
@@ -28,6 +29,8 @@ type Props = {
   zone: ZoneConfig
   adresseDeBase: string | null
   creneaux: ReglagesCreneaux
+  plafond: number | null
+  offre: Plan
 }
 
 /** Depuis le 2026-09-25, l'écran porte aussi la zone d'intervention et les
