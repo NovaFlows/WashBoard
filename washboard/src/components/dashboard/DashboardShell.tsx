@@ -158,7 +158,7 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
 }) {
   const couleur = couleurTon(ton)
   return (
-    <div className="px-3 pt-3 sm:px-4">
+    <div className="wb-bandeau-v2 px-3 pt-3 sm:px-4">
       <div
         className="flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border bg-[color:var(--v2-color-surface)] px-3.5 py-3"
         style={{ borderColor: `color-mix(in srgb, ${couleur} 35%, transparent)` }}

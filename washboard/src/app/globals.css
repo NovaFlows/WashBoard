@@ -273,6 +273,15 @@ html.wb-pwa .wb-entete-beta .wb-entete-barre {
   display: none;
 }
 
+/* Bandeaux v1 (rouge, bleu, vert…) : au premier rendu, avant que React ne sache qu'on est dans
+   la PWA, le serveur envoie leur forme v1. iOS 26 teinte la barre d'état d'après ce qui est en
+   haut de la page À CE MOMENT-LÀ et ne la met plus à jour avant la navigation suivante : un
+   bandeau v1 rouge donnait une barre d'état rouge jusqu'au changement d'onglet. On ne laisse
+   donc paraître, en tête de l'en-tête bêta, que la forme v2 (`wb-bandeau-v2`). */
+html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
+  display: none;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants
    ──────────────────────────────────────────────────────────────────────────
