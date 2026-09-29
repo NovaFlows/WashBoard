@@ -247,6 +247,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', bookingData.washer_id)
       .neq('status', 'cancelled')
+      // Les rendez-vous que le laveur a saisis lui-même ne comptent pas : ce ne sont pas des
+      // clients venus par WashBoard.
+      .eq('saisie_par_laveur', false)
       // Jamais avant l'entrée en vigueur du plafond : sinon l'historique d'un
       // laveur remplirait sa toute première période avant qu'elle commence.
       .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(washer?.created_at)).toISOString())
@@ -258,7 +261,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     if (errMois) {
       logger.error('bookings.quotaMensuel.read_failed',
         { washerId: bookingData.washer_id }, errMois)
-    } else if (quotaDepasse(plafondMensuel, moisCount ?? 0)) {
+    } else if (!isOwner && quotaDepasse(plafondMensuel, moisCount ?? 0)) {
       auDelaDuQuota = true
       logger.info('bookings.au_dela_du_quota', {
         washerId: bookingData.washer_id,
@@ -497,6 +500,14 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     }
     return errorResponse('bookings.insert.db', error, { washerId: bookingData.washer_id })
+  }
+
+  // Un rendez-vous saisi par le laveur dans son agenda est SON client : marqué, il n'est jamais
+  // masqué ni compté dans le quota. Posé après l'enregistrement plutôt que dans la fonction
+  // atomique, qui ne connaît pas cette colonne.
+  if (isOwner) {
+    const { error: errMarque } = await supabase.from('bookings').update({ saisie_par_laveur: true }).eq('id', id)
+    if (errMarque) logger.error('bookings.saisie_par_laveur.mark_failed', { bookingId: id }, errMarque)
   }
 
   // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)

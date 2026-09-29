@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // route DÉCIDE, pas ce que la base répond.
 
 const rpcAppels: { nom: string; args: Record<string, unknown> }[] = []
+const majAppels: { table: string; valeurs: Record<string, unknown> }[] = []
 
 type Reponse = { data?: unknown; error?: unknown; count?: number }
 
@@ -36,6 +37,7 @@ function nouveauBuilder(table: string) {
   const self = () => b
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
+    update: (valeurs: Record<string, unknown>) => { majAppels.push({ table, valeurs }); return b },
     eq: self, gte: self, lte: self, in: self, order: self, limit: self,
     neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
@@ -119,6 +121,7 @@ function requete(body: Record<string, unknown>) {
 
 beforeEach(() => {
   rpcAppels.length = 0
+  majAppels.length = 0
   notifierLaveur.mockClear()
   sendWasherNotification.mockClear()
   sendWasherBookingLocked.mockClear()
@@ -261,11 +264,30 @@ describe('POST /api/bookings — le laveur qui saisit son propre rendez-vous', (
     expect(res.status).toBe(201)
   })
 
+  it('marque le rendez-vous comme saisi par le laveur, donc jamais masqué ni compté', async () => {
+    await poster()
+    expect(majAppels).toEqual([{ table: 'bookings', valeurs: { saisie_par_laveur: true } }])
+  })
+
+  it('ne le traite pas comme une réservation au-delà du quota, même en offre Découverte pleine', async () => {
+    avecWasher({ plan: 'decouverte' })
+    plan.countMois = 5
+    await poster()
+    expect(sendWasherBookingLocked).not.toHaveBeenCalled()
+  })
+
   it('ne lève RIEN pour la session d un autre laveur', async () => {
     plan.session = { id: 'quelqu-un-dautre' }
     const { res, body } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
     expect(res.status).toBe(409)
     expect(body.error).toMatch(/horaires/)
+  })
+})
+
+describe('POST /api/bookings — un visiteur ne marque rien', () => {
+  it('ne pose pas la marque « saisi par le laveur » sur une réservation publique', async () => {
+    await poster()
+    expect(majAppels).toHaveLength(0)
   })
 })
 
