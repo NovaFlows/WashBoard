@@ -3,6 +3,7 @@
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import CalendrierDashboardV1, { type CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
 import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
+import { JoursClientsMasques } from '@/components/dashboard/JoursClientsMasques'
 
 // Point de branchement v1/v2 de l'écran Agenda (calendrier) — passe 7 de la
 // refonte 2026, même schéma que ClientsView.tsx / ClientProfileModal.tsx /
@@ -19,5 +20,13 @@ import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
 // sans rien savoir du branchement.
 export default function CalendrierDashboard(props: CalendrierProps) {
   const isPwa = usePwaStandalone()
-  return isPwa ? <CalendrierDashboardV2 {...props} /> : <CalendrierDashboardV1 {...props} />
+  if (isPwa) return <CalendrierDashboardV2 {...props} />
+  // Sur le site, le bandeau des clients masqués garde sa place au-dessus de la grille ; dans la
+  // PWA il est rendu DANS l'agenda v2 (sinon le conteneur v2, qui remonte de 24 px, le rogne).
+  return (
+    <>
+      <JoursClientsMasques dates={props.joursMasques ?? []} />
+      <CalendrierDashboardV1 {...props} />
+    </>
+  )
 }

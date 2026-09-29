@@ -15,7 +15,8 @@ import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
 import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
-import { PLAN_LABELS, PLAN_COULEURS, formatEuros, type Plan } from '@/lib/plan'
+import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
+import { PLAN_LABELS, PLAN_COULEURS, type Plan } from '@/lib/plan'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -128,36 +129,6 @@ function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilise
         )}
       </div>
     </div>
-  )
-}
-
-/** Réservations au-delà du quota, masquées ce mois-ci — équivalent v2 de
- *  `ReservationsBloquees.tsx` (site). Vers les clients, pas vers l'abonnement : le bandeau
- *  annonce des gens, il doit mener aux gens. */
-function BandeauBloqueesV2({ nombre, offre, montant }: { nombre: number; offre: Plan; montant: number }) {
-  if (nombre <= 0) return null
-  return (
-    <Link
-      href="/dashboard/clients"
-      className="mb-4 flex items-center gap-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3 transition-colors hover:border-[color:var(--v2-color-accent)]"
-    >
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-[13px] ${corpsFort}`}
-        style={{ backgroundColor: 'var(--v2-color-accent)' }}
-      >
-        {nombre}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={`block text-[14px] ${corpsFort}`}>
-          {montant > 0 ? `${formatEuros(montant)} € de lavages en attente` : `${nombre > 1 ? 'nouveaux clients' : 'nouveau client'} en attente`}
-        </span>
-        <span className={`block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          {montant > 0 && `${nombre} client${nombre > 1 ? 's' : ''} · `}
-          Votre offre {PLAN_LABELS[offre]} ne les affiche pas
-        </span>
-      </span>
-      <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--v2-color-accent)' }}>Voir →</span>
-    </Link>
   )
 }
 
@@ -289,8 +260,11 @@ type Props = {
    *  `JaugeReservations.tsx`, la version site) — `quota: null` sur une offre sans plafond, rien
    *  ne s'affiche alors. */
   jauge: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }
-  /** Réservations masquées par le plafond ce mois-ci (voir `ReservationsBloquees.tsx`). */
-  bloquees: { nombre: number; offre: Plan; montant: number }
+  /** Demandes en attente masquées par le plafond : elles se rangent dans « À confirmer », en
+   *  carte floutée avec un cadenas (l'id, le nom et le jour seulement — voir `dashboard/page.tsx`). */
+  verrouillees: ReservationMasquee[]
+  /** L'offre la moins chère qui les débloque, nommée sur chaque carte. */
+  offreDeblocage: string
 }
 
 export default function AccueilV2({
@@ -307,7 +281,8 @@ export default function AccueilV2({
   prestationTop,
   zone,
   jauge,
-  bloquees,
+  verrouillees,
+  offreDeblocage,
 }: Props) {
   const [personnaliser, setPersonnaliser] = useState(false)
 
@@ -344,7 +319,6 @@ export default function AccueilV2({
       className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <JaugeReservationsV2 {...jauge} />
-      <BandeauBloqueesV2 {...bloquees} />
       {demarrage}
 
       <div className="flex items-start gap-2">
@@ -396,17 +370,20 @@ export default function AccueilV2({
         </section>
       )}
 
-      {aConfirmer.length > 0 && (
+      {aConfirmer.length + verrouillees.length > 0 && (
         <section className="mt-6">
           <div className="flex items-baseline justify-between gap-2 px-0.5 pb-2">
             <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>À confirmer</span>
             <span className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)] tabular-nums`}>
-              {aConfirmer.length} demande{aConfirmer.length > 1 ? 's' : ''}
+              {aConfirmer.length + verrouillees.length} demande{aConfirmer.length + verrouillees.length > 1 ? 's' : ''}
             </span>
           </div>
           <CarteListe>
             {aConfirmer.map(b => (
               <LigneRdv key={b.id} rdv={b} avecDate />
+            ))}
+            {verrouillees.map(r => (
+              <LigneRdvVerrouilleeV2 key={r.id} reservation={r} offre={offreDeblocage} />
             ))}
           </CarteListe>
         </section>

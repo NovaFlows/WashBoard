@@ -20,6 +20,7 @@ import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/P
 import FeuilleGoogleAgendaV2, { issueDepuisParametre } from '@/components/dashboard/FeuilleGoogleAgendaV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
+import { JoursMasquesV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
@@ -222,7 +223,7 @@ function finRendezVous(b: Booking): Date {
 
 type Trajet = { minutes: number; km: number } | null
 
-export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte, joursMasques = [] }: CalendrierProps) {
   const [today] = useState(() => new Date())
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
@@ -433,6 +434,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           </button>
         </div>
       </div>
+
+      <JoursMasquesV2 dates={joursMasques} />
 
       <div data-bandeau-semaine className="flex items-center gap-1.5">
         <button

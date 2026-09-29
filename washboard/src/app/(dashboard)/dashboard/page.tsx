@@ -289,10 +289,19 @@ export default async function DashboardPage() {
   // « À confirmer » : les demandes en attente APRÈS aujourd'hui — celles du
   // jour sont déjà dans la journée, juste au-dessus, et les répéter en ferait
   // du bruit.
-  const aConfirmer = (aVenir ?? []).filter(
-    b => b.status === 'pending'
+  const aConfirmer = aVenirOuvertes.filter(    b => b.status === 'pending'
       && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui,
   )
+  // Les demandes en attente qui dépassent le quota : elles s'affichent dans « À confirmer »
+  // en carte floutée avec un cadenas. On ne transmet que l'id, le nom et LE JOUR (midi UTC du
+  // jour de Paris) : l'heure n'a aucune raison de quitter le serveur.
+  const verrouillees = aVenirVisible
+    .filter(b => b.verrouillee && b.status === 'pending')
+    .map(b => ({
+      id: b.id,
+      client_name: b.client_name,
+      scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z`,
+    }))
   // « Journée commencée » : au moins un rendez-vous clôturé aujourd'hui, pour
   // distinguer « journée terminée » de « rien de prévu » quand il ne reste
   // rien à faire. Un booléen, pas un compte : `historique` est tronqué aux
@@ -458,7 +467,8 @@ export default async function DashboardPage() {
           offre: planEffectif(washer),
           remiseAZero: libelleRemiseAZero(washer.created_at),
         }}
-        bloquees={{ nombre: nbBloquees, offre: planEffectif(washer), montant: montantBloque }}
+        verrouillees={verrouillees}
+        offreDeblocage={offreDeblocage}
       />
     </DashboardShell>
   )
