@@ -6,6 +6,7 @@ import type { Device } from '@/lib/funnelTracking'
 import ChiffresArgent from '@/components/dashboard/ChiffresArgent'
 import ChiffresAcquisition from '@/components/dashboard/ChiffresAcquisition'
 import ChiffresClients from '@/components/dashboard/ChiffresClients'
+import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import SelecteurPeriodeV2 from '@/components/dashboard/SelecteurPeriodeV2'
 import { aujourdhuiParis, type PeriodeChiffres } from '@/lib/chiffresPeriode'
 import type { FactureManuelle } from '@/lib/chiffresArgent'
@@ -63,6 +64,11 @@ export type ChiffresProps = {
   facturesManuelles?: FactureManuelle[]
   events: ChiffresEvent[]
   websiteHost?: string
+  /** Acquisition et Clients (Starter et au-dessus). */
+  hasCrm: boolean
+  /** Le chiffre d'affaires (Starter et au-dessus). */
+  hasCa: boolean
+  /** La comptabilité : dépenses, résultat, factures (Pro et au-dessus). */
   hasCompta: boolean
   facturesCount: number
   /** Début (ISO) de la fenêtre de visites chargée : avant, pas de donnée. */
@@ -73,7 +79,7 @@ export type ChiffresProps = {
 }
 
 export default function ChiffresV2({
-  bookings, facturesManuelles, events, websiteHost, hasCompta, facturesCount,
+  bookings, facturesManuelles, events, websiteHost, hasCrm, hasCa, hasCompta, facturesCount,
   evenementsDepuis, reservationsIncompletes, evenementsIncomplets,
 }: ChiffresProps) {
   const [onglet, setOnglet] = useState<Onglet>('argent')
@@ -116,6 +122,7 @@ export default function ChiffresV2({
 
       {onglet === 'argent' && (
         <ChiffresArgent
+          hasCa={hasCa}
           hasCompta={hasCompta}
           facturesCount={facturesCount}
           bookings={bookings}
@@ -125,7 +132,21 @@ export default function ChiffresV2({
           reservationsIncompletes={reservationsIncompletes}
         />
       )}
-      {onglet === 'acquisition' && (
+      {onglet === 'acquisition' && !hasCrm && (
+        <OffreVerrouilleeV2
+          titre="Sachez d’où viennent vos clients"
+          description="Visites de votre page, réservations, sources : tout ce qui mène à un rendez-vous."
+          feature="crm"
+        />
+      )}
+      {onglet === 'clients' && !hasCrm && (
+        <OffreVerrouilleeV2
+          titre="Connaissez vos clients"
+          description="Vos meilleurs clients, ceux à relancer, la part de pros et de particuliers."
+          feature="crm"
+        />
+      )}
+      {onglet === 'acquisition' && hasCrm && (
         <ChiffresAcquisition
           events={events}
           websiteHost={websiteHost}
@@ -135,7 +156,7 @@ export default function ChiffresV2({
           evenementsIncomplets={evenementsIncomplets}
         />
       )}
-      {onglet === 'clients' && (
+      {onglet === 'clients' && hasCrm && (
         <ChiffresClients
           bookings={bookings}
           periode={periode}

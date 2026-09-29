@@ -99,6 +99,8 @@ export default async function ChiffresPage() {
         facturesManuelles={(facturesManuelles ?? []) as unknown as FactureManuelle[]}
         events={funnelEvents ?? []}
         websiteHost={websiteHost}
+        hasCrm={hasFeature(washer, 'crm')}
+        hasCa={hasFeature(washer, 'ca_simple')}
         hasCompta={hasFeature(washer, 'compta')}
         facturesCount={facturesCount ?? 0}
         evenementsDepuis={since.toISOString()}

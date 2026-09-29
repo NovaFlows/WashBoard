@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { Lock } from 'lucide-react'
+import { requiredPlanLabel } from '@/lib/plan'
 import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/GraphiqueBarres'
 import { libelleCategorie } from '@/lib/depenses'
@@ -57,6 +59,25 @@ type Expense = { id: string; date: string; category: string; label: string; amou
 const nombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const euros = (v: number) => `${nombre.format(Math.round(v))} €`
 
+// Starter : le chiffre d'affaires seul (ce qui est encaissé). La comptabilité — dépenses,
+// résultat, factures — est de l'offre Pro : on la voit, floue, avec la porte vers les offres.
+function libelleHeroCa(type: PeriodType): string {
+  switch (type) {
+    case 'jour': return "Chiffre d'affaires du jour"
+    case 'semaine': return "Chiffre d'affaires de la semaine"
+    case 'annee': return "Chiffre d'affaires de l'année"
+    default: return "Chiffre d'affaires du mois"
+  }
+}
+
+function titreGraphiqueCa(type: PeriodType): string {
+  switch (type) {
+    case 'jour': return "Encaissé par heure"
+    case 'annee': return "Encaissé par mois"
+    default: return "Encaissé par jour"
+  }
+}
+
 function libelleHero(type: PeriodType): string {
   switch (type) {
     case 'jour': return 'Résultat du jour'
@@ -83,7 +104,51 @@ async function lireFrais(debut: string, fin: string): Promise<Expense[] | null> 
   return (json.expenses ?? []) as Expense[]
 }
 
-export default function ChiffresArgent({ hasCompta, facturesCount, bookings, facturesManuelles, periode, maintenant, reservationsIncompletes }: {
+/** La comptabilité vue depuis Starter : la silhouette des dépenses et des factures, floue et
+ *  inerte, sous une pastille qui dit quelle offre l'ouvre. */
+function ComptaVerrouillee() {
+  const offre = requiredPlanLabel('compta')
+  const barre = 'rounded-full bg-[color:var(--v2-filet-fort)]'
+  return (
+    <div className="relative">
+      <div aria-hidden className="select-none blur-[5px]">
+        <div className="pb-2 px-0.5">
+          <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Dépenses</span>
+        </div>
+        <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="flex items-center gap-2.5 py-3">
+              <span className="flex-1 flex flex-col gap-1.5">
+                <span className={`${barre} h-3 w-32`} />
+                <span className={`${barre} h-2.5 w-20 opacity-60`} />
+              </span>
+              <span className={`${barre} h-3 w-12`} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-col gap-2 px-1">
+          <span className={`${barre} h-3 w-40`} />
+          <span className={`${barre} h-3 w-48`} />
+        </div>
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+        <Link
+          href="/dashboard/abonnement"
+          className={`inline-flex items-center gap-2 rounded-full border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-[13.5px] shadow-lg ${corpsFort}`}
+        >
+          <Lock size={14} strokeWidth={2.4} aria-hidden />
+          Inclus dans l’offre {offre}
+        </Link>
+        <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
+          Dépenses, résultat et factures — la comptabilité complète.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default function ChiffresArgent({ hasCa, hasCompta, facturesCount, bookings, facturesManuelles, periode, maintenant, reservationsIncompletes }: {
+  hasCa: boolean
   hasCompta: boolean
   facturesCount: number
   bookings: ReservationArgent[]
@@ -138,46 +203,52 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
     [bookings, facturesManuelles],
   )
 
-  const serie = useMemo(
-    () => (reponse && reponse.cle === cle && !reponse.erreur ? serieArgent(periode, encaissements, reponse.frais, maintenant) : null),
-    [reponse, cle, periode, encaissements, maintenant],
-  )
+  const serie = useMemo(() => {
+    if (!hasCompta) return serieArgent(periode, encaissements, [], maintenant)
+    return reponse && reponse.cle === cle && !reponse.erreur ? serieArgent(periode, encaissements, reponse.frais, maintenant) : null
+  }, [hasCompta, reponse, cle, periode, encaissements, maintenant])
 
-  const totauxPrecedents = useMemo(
-    () => (reponse?.fraisPrecedents ? totauxArgent(precedente, encaissements, reponse.fraisPrecedents) : null),
-    [reponse, precedente, encaissements],
-  )
+  const totauxPrecedents = useMemo(() => {
+    if (!hasCompta) return totauxArgent(precedente, encaissements, [])
+    return reponse?.fraisPrecedents ? totauxArgent(precedente, encaissements, reponse.fraisPrecedents) : null
+  }, [hasCompta, reponse, precedente, encaissements])
+
+  // Sans comptabilité, tout se lit en « encaissé » : ni résultat ni dépensé n'existent pour ce laveur.
+  const enResultat = hasCompta
 
   const points: PointBarre[] = useMemo(() => (serie?.points ?? []).map(pt => ({
     cle: pt.cle,
     label: pt.label,
     afficherLabel: pt.afficherLabel,
     libelleLong: pt.libelleLong,
-    valeur: serie!.fraisParCreneau ? pt.resultat : pt.encaisse,
-    detail: serie!.fraisParCreneau ? `Encaissé ${euros(pt.encaisse)} · Dépensé ${euros(pt.depense)}` : undefined,
+    valeur: enResultat && serie!.fraisParCreneau ? pt.resultat : pt.encaisse,
+    detail: enResultat && serie!.fraisParCreneau ? `Encaissé ${euros(pt.encaisse)} · Dépensé ${euros(pt.depense)}` : undefined,
     futur: pt.futur,
     courant: pt.courant,
-  })), [serie])
+  })), [serie, enResultat])
 
-  if (!hasCompta) {
+  if (!hasCa) {
     return (
       <OffreVerrouilleeV2
-        titre="Gérez votre comptabilité"
-        description="Votre chiffre d’affaires, vos dépenses et votre résultat, mois par mois."
-        feature="compta"
+        titre="Suivez votre chiffre d’affaires"
+        description="Ce que vous encaissez, jour après jour et mois après mois."
+        feature="ca_simple"
         rassurance="Vos encaissements sont déjà comptés en coulisse : rien n’est perdu en attendant, seul l’affichage est fermé."
       />
     )
   }
 
-  const erreur = reponse?.cle === cle && reponse.erreur
-  const resultat = serie?.resultat ?? 0
-  const ecart = serie && totauxPrecedents ? ecartRelatif(resultat, totauxPrecedents.resultat) : null
+  const erreur = hasCompta && reponse?.cle === cle && reponse.erreur
+  const resultat = (enResultat ? serie?.resultat : serie?.encaisse) ?? 0
+  const ecart = serie && totauxPrecedents
+    ? ecartRelatif(resultat, enResultat ? totauxPrecedents.resultat : totauxPrecedents.encaisse)
+    : null
   const recentes = [...(reponse?.cle === cle ? reponse.frais : [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
 
   const meilleur = points.filter(p => !p.futur).reduce<PointBarre | null>((m, p) => (!m || p.valeur > m.valeur ? p : m), null)
+  const parResultat = enResultat && !!serie?.fraisParCreneau
   const resume = serie && !serie.vide
-    ? `${titreGraphique(periode.type)}, ${plage.label}. ${serie.fraisParCreneau ? 'Résultat' : 'Encaissé'} total ${euros(serie.fraisParCreneau ? serie.resultat : serie.encaisse)}.`
+    ? `${enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type)}, ${plage.label}. ${parResultat ? 'Résultat' : 'Encaissé'} total ${euros(parResultat ? serie.resultat : serie.encaisse)}.`
       + (meilleur ? ` Meilleur créneau : ${meilleur.libelleLong}, ${euros(meilleur.valeur)}.` : '')
       + ' Flèches gauche et droite pour parcourir les barres.'
     : ''
@@ -197,7 +268,7 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
       ) : (
         <>
           <div className="flex flex-col gap-[3px]">
-            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{libelleHero(periode.type)}</span>
+            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{enResultat ? libelleHero(periode.type) : libelleHeroCa(periode.type)}</span>
             <span className={`text-[44px] sm:text-[52px] leading-none ${hero}`}>
               {serie ? euros(resultat) : '—'}
             </span>
@@ -209,17 +280,21 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
           </div>
 
           <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
-            <div className="flex justify-between px-4 py-3.5">
-              <span className="flex flex-col gap-0.5">
-                <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Encaissé</span>
-                <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.encaisse) : '—'}</span>
-              </span>
-              <span className="flex flex-col gap-0.5 items-end">
-                <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Dépensé</span>
-                <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.depense) : '—'}</span>
-              </span>
-            </div>
-            <div className="h-px bg-[color:var(--v2-filet)]" />
+            {enResultat && (
+              <>
+                <div className="flex justify-between px-4 py-3.5">
+                  <span className="flex flex-col gap-0.5">
+                    <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Encaissé</span>
+                    <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.encaisse) : '—'}</span>
+                  </span>
+                  <span className="flex flex-col gap-0.5 items-end">
+                    <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Dépensé</span>
+                    <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.depense) : '—'}</span>
+                  </span>
+                </div>
+                <div className="h-px bg-[color:var(--v2-filet)]" />
+              </>
+            )}
             <div className="px-4 py-3.5">
               {!serie ? (
                 <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-12`}>Chargement…</p>
@@ -228,7 +303,7 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
                   {serie.vide && finitAvant(periode, premierJour)
                     ? `Pas de données avant le ${formaterJour(premierJour!)}, date de votre premier rendez-vous.`
                     : serie.vide
-                      ? 'Aucun rendez-vous terminé ni frais sur cette période.'
+                      ? (enResultat ? 'Aucun rendez-vous terminé ni frais sur cette période.' : 'Aucun rendez-vous terminé sur cette période.')
                       : 'Aucun encaissement à tracer sur cette période.'}
                 </p>
               ) : (
@@ -237,13 +312,15 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
                   points={points}
                   formaterValeur={euros}
                   resume={resume}
-                  titreParDefaut={`${titreGraphique(periode.type)} · touchez une barre pour lire sa valeur`}
+                  titreParDefaut={`${enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type)} · touchez une barre pour lire sa valeur`}
                 />
               )}
             </div>
           </div>
 
-          <div>
+          {!hasCompta && <ComptaVerrouillee />}
+
+          {hasCompta && <div>
             <div className="flex items-baseline justify-between px-0.5 pb-2">
               <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Dépenses</span>
               {/* Écran v2 (2026-09-26) : « + Ajouter un frais » tombait sur l'ancienne page de
@@ -273,12 +350,12 @@ export default function ChiffresArgent({ hasCompta, facturesCount, bookings, fac
                 </ul>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Deux portes différentes, et c'est voulu : les factures de rendez-vous naissent
               toutes seules et se consultent ; les devis et factures écrits à la main se
               créent (Alexandre, 2026-09-27). */}
-          {([
+          {hasCompta && ([
             { href: '/dashboard/factures', texte: `Factures · ${nombre.format(facturesCount)} émise${facturesCount > 1 ? 's' : ''}` },
             { href: '/dashboard/chiffres/documents', texte: 'Devis et factures à la main' },
           ] as const).map(l => (

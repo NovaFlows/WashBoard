@@ -456,7 +456,7 @@ export default async function DashboardPage() {
         journeeCommencee={journeeCommencee}
         dateDuJour={aujourdhui}
         widgets={widgetsAffiches}
-        stats={statsMois ? { terminesCeMois, caCeMois: hasFeature(washer, 'compta') ? caCeMois : null } : null}
+        stats={statsMois ? { terminesCeMois, caCeMois: hasFeature(washer, 'ca_simple') ? caCeMois : null } : null}
         clients={visibles.has('clients') ? resumeClientsWidget : null}
         trafic={visibles.has('traffic') ? { visiteurs: visiteursSemaine, conversions: conversionsSemaine } : null}
         prestationTop={visibles.has('services') ? (prestationsComptees[0] ?? null) : null}
