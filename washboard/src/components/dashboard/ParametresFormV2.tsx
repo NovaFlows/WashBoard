@@ -216,8 +216,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
           </span>
           <a
             href={`/book/${washer.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
             className={`text-[13px] ${corpsFort} shrink-0`}
             style={{ color: 'var(--v2-color-accent)' }}
           >

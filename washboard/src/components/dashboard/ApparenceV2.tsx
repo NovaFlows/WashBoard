@@ -136,8 +136,6 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
         )}
         <a
           href={`/book/${slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
           className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >

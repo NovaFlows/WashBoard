@@ -1,4 +1,5 @@
-import { cache, Suspense } from 'react'
+import { cache, Suspense } from 'react'
+import RetourApercu from '@/components/booking/RetourApercu'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -204,6 +205,7 @@ export default async function BookingPage({ params }: Props) {
   return (
     <>
     {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
+    <RetourApercu />
     <div
       className={`min-h-screen ${themed ? '' : 'bg-slate-50 dark:bg-slate-950'}`}
       style={bgStyle ?? undefined}

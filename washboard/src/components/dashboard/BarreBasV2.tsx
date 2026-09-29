@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
@@ -214,6 +214,52 @@ function ContourChargement({ actif }: { actif: boolean }) {
   )
 }
 
+/** iOS (PWA installée) perd parfois le bas de l'écran : après un appel ou un enregistrement
+ *  d'écran (la barre d'état s'agrandit), un clavier fermé, ou un retour d'arrière-plan, le
+ *  bloc « fixé » reste là où était l'ancien bas — la barre flotte à mi-écran. Le navigateur
+ *  ne recalcule pas ; on le force : on réécrit la position de la barre et on relit la mise en
+ *  page à chaque événement qui change la taille de l'écran. */
+function useRecalerBarre(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    let raf = 0
+    let t: ReturnType<typeof setTimeout> | undefined
+    const recaler = () => {
+      const nav = ref.current
+      if (!nav) return
+      const bas = nav.style.bottom
+      nav.style.bottom = 'calc(15px + env(safe-area-inset-bottom, 0px))'
+      void nav.offsetHeight
+      nav.style.bottom = bas
+      if (window.visualViewport && window.visualViewport.offsetTop !== 0) window.scrollTo(window.scrollX, window.scrollY)
+    }
+    const planifier = () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(t)
+      raf = requestAnimationFrame(recaler)
+      // Second passage : iOS anime encore le clavier ou la barre d'état.
+      t = setTimeout(recaler, 350)
+    }
+    const surVisibilite = () => { if (document.visibilityState === 'visible') planifier() }
+    const vv = window.visualViewport
+    window.addEventListener('resize', planifier)
+    window.addEventListener('orientationchange', planifier)
+    window.addEventListener('pageshow', planifier)
+    window.addEventListener('focusout', planifier)
+    document.addEventListener('visibilitychange', surVisibilite)
+    vv?.addEventListener('resize', planifier)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(t)
+      window.removeEventListener('resize', planifier)
+      window.removeEventListener('orientationchange', planifier)
+      window.removeEventListener('pageshow', planifier)
+      window.removeEventListener('focusout', planifier)
+      document.removeEventListener('visibilitychange', surVisibilite)
+      vv?.removeEventListener('resize', planifier)
+    }
+  }, [ref])
+}
+
 export function BarreBasV2() {
   const pathname = usePathname()
   const router = useRouter()
@@ -268,8 +314,12 @@ export function BarreBasV2() {
   // pas de destination, et les quatre onglets occupent les colonnes 0, 1, 3 et 4.
   const colonneActive = actifCourant?.colonne ?? -1
 
+  const navRef = useRef<HTMLElement>(null)
+  useRecalerBarre(navRef)
+
   return (
     <nav
+      ref={navRef}
       aria-label="Navigation"
       // Position fixe, pas absolue : DashboardShell n'est pas un cadre de
       // taille fixe comme dans la maquette (390×844), c'est le châssis réel

@@ -391,8 +391,8 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     expire: 'bg-red-600 text-white',
   }
 
-  /** Un état du bandeau, dans la forme de la version en cours. `fermer` absent :
-   *  l'état ne se ferme pas (essai expiré — on ne masque pas une porte close). */
+  /** Un état du bandeau, dans la forme de la version en cours. Tout bandeau se ferme
+   *  (demandé par Alexandre, 2026-09-30) : la porte vers les offres reste dans le menu. */
   const etat = (
     ton: TonBandeau, habitV1: keyof typeof HABIT_V1,
     texte: React.ReactNode, libelleLien: string, fermer?: () => void,
@@ -442,11 +442,11 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   if (!subscriptionStatus || subscriptionStatus === 'active') return null
 
   if (subscriptionStatus === 'expired') {
-    return etat(
+    return bandeau('expire', fermer => etat(
       'rouge', 'expire',
       'Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.',
-      'Voir les offres',
-    )
+      'Voir les offres', fermer,
+    ))
   }
 
   if (subscriptionStatus === 'trial' && trialEndsAt) {
@@ -463,7 +463,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     }
 
     if (daysLeft <= 0) {
-      return etat('rouge', 'expire', 'Votre période d’essai a expiré.', 'Activer mon abonnement')
+      return bandeau('essai-expire', fermer => etat('rouge', 'expire', 'Votre période d’essai a expiré.', 'Activer mon abonnement', fermer))
     }
 
     return bandeau(`essai-${daysLeft}`, fermer => etat(
@@ -523,6 +523,18 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // secours tant que les passes 5 et 6 ne sont pas faites.
   const isPwa = usePwaStandalone()
   const showBarreBas = isPwa && !!betaRefonte
+  // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
+  // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
+  // refonte cessent de s'appliquer. On la remet dès qu'elle manque.
+  useEffect(() => {
+    if (!isPwa) return
+    const html = document.documentElement
+    const remettre = () => { if (!html.classList.contains('wb-pwa')) html.classList.add('wb-pwa') }
+    remettre()
+    const obs = new MutationObserver(remettre)
+    obs.observe(html, { attributes: true, attributeFilter: ['class'] })
+    return () => obs.disconnect()
+  }, [isPwa])
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
   // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
@@ -630,11 +642,17 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           annonce) restent : information commerciale, ils ne sont jamais
           retirés. Ailleurs (site, PWA sans bêta), aucune de ces règles ne
           s'applique et l'en-tête est identique à celui d'avant. */}
-      <header className={`bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10${betaRefonte ? ' wb-entete-beta' : ''}`}>
+      <header
+        className={`bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10${betaRefonte ? ' wb-entete-beta' : ''}`}
+        // Dans la PWA en bêta, l'en-tête n'est plus qu'un porte-bandeaux : décidé ici, en JSX,
+        // et pas seulement par la classe `wb-pwa` de <html> (que React peut effacer en
+        // réécrivant `className`) — sinon la rangée v1 réapparaissait au fil de la navigation.
+        style={showBarreBas ? { position: 'static', background: 'transparent', borderBottomWidth: 0 } : undefined}
+      >
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} />
         <NouvellesOffresBanner />
         <AppBetaBanner />
-        <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+        {!showBarreBas && <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -696,7 +714,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
             </form>
             <ThemeToggle header />
           </div>
-        </div>
+        </div>}
       </header>
 
       <main
