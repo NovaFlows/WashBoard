@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
 import { SupportBadgesContext } from './SupportBadgesContext'
+import { OffreContext } from './OffreContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, requiredPlan, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
@@ -40,6 +41,8 @@ type Props = {
   createdAt?: string | null
   /** Lien public du laveur, pour la liste de bascule anticipée (COMPTES_TEST_RETOUR_GRATUIT). */
   slug?: string | null
+  /** Fin de la période payée (colonne écrite par le webhook Stripe) : décide du délai de grâce avant le retour sur Découverte. */
+  subscriptionEndsAt?: string | null
 }
 
 function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
@@ -473,7 +476,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte, createdAt, slug }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte, createdAt, slug, subscriptionEndsAt }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -481,6 +484,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     created_at: createdAt,
     subscription_status: subscriptionStatus,
     trial_ends_at: trialEndsAt,
+    subscription_ends_at: subscriptionEndsAt,
   }
   const offreEffective = planEffectif(fiche)
 
@@ -502,6 +506,11 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       }),
   )
   const complet = accesComplet(fiche)
+  const offreCourante = useMemo(
+    () => ({ offre: offreEffective, peut: (f: Feature) => hasFeature(fiche, f) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [offreEffective, plan, grandfathered, slug, createdAt, subscriptionStatus, trialEndsAt, subscriptionEndsAt],
+  )
   const choisirFormule = doitChoisirFormule(fiche)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Barre du bas (refonte 2026, passe 4) : uniquement dans la PWA installée
@@ -703,7 +712,9 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 8px + env(safe-area-inset-bottom, 0px))' } : undefined}
       >
         <SupportBadgesContext.Provider value={supportBadges}>
-          {children}
+          <OffreContext.Provider value={offreCourante}>
+            {children}
+          </OffreContext.Provider>
         </SupportBadgesContext.Provider>
       </main>
 

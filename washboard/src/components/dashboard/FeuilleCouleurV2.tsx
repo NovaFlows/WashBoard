@@ -39,6 +39,7 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
   return (
     <Feuille
       titre="Couleur de ma marque"
+      verrou="page_personnalisee"
       sousTitre="Elle colore les boutons et les choix sur votre page."
       onClose={onClose}
     >

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, Plus } from 'lucide-react'
+import { useOffre } from '@/components/dashboard/OffreContext'
+import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
 import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
@@ -103,7 +105,42 @@ function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
   )
 }
 
-export default function DocumentsV2({ prestations, nomLaveur }: {
+type PropsDocuments = {
+  prestations: { id: string; name: string; price: number }[]
+  /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
+  nomLaveur: string
+}
+
+/** La facturation conforme fait partie de l'offre Pro (comme `/dashboard/factures`
+ *  sur le site). Sous cette offre, l'écran entier est remplacé par la carte
+ *  d'offre : ne pas proposer d'écrire un document qu'on ne pourra pas émettre. */
+export default function DocumentsV2(props: PropsDocuments) {
+  const { peut } = useOffre()
+  if (peut('facturation')) return <DocumentsOuvertsV2 {...props} />
+  return (
+    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
+      <div className="flex items-center gap-1 pb-2">
+        <Link
+          href="/dashboard/chiffres"
+          aria-label="Retour à Chiffres"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+        >
+          <ChevronLeft size={22} strokeWidth={2} />
+        </Link>
+        <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
+      </div>
+      <div className="mt-2">
+        <OffreVerrouilleeV2
+          titre="Éditez des devis et des factures conformes"
+          description="Mentions légales, SIRET, TVA, numérotation continue : des documents que votre comptable accepte."
+          feature="facturation"
+        />
+      </div>
+    </div>
+  )
+}
+
+function DocumentsOuvertsV2({ prestations, nomLaveur }: {
   prestations: { id: string; name: string; price: number }[]
   /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
   nomLaveur: string

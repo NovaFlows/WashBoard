@@ -83,6 +83,7 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
   return (
     <Feuille
       titre="Fond de la page"
+      verrou="page_personnalisee"
       sousTitre="Un fond retire le bouton clair/sombre chez vos clients."
       onClose={onClose}
     >

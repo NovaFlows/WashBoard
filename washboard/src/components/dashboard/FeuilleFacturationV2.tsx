@@ -132,6 +132,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
   return (
     <Feuille
       titre="Mon statut et mes factures"
+      verrou="facturation"
       sousTitre="Ce qui figure sur les factures envoyées à vos clients."
       onClose={onClose}
       fermerSurFond={false}

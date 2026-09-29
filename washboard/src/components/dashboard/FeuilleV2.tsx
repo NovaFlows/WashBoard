@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { X } from 'lucide-react'
+import Link from 'next/link'
+import { Lock, X } from 'lucide-react'
+import { requiredPlanLabel, type Feature } from '@/lib/plan'
+import { useOffre } from '@/components/dashboard/OffreContext'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 
 // Feuille du bas générique de l'agenda v2 — réservée à la PWA installée en
@@ -62,6 +65,7 @@ export function Feuille({
   children,
   pied,
   fermerSurFond = true,
+  verrou,
 }: {
   titre: string
   sousTitre?: string
@@ -70,7 +74,16 @@ export function Feuille({
   /** Zone d'actions fixée en bas de la feuille (le corps défile au-dessus). */
   pied?: ReactNode
   fermerSurFond?: boolean
+  /** Fonctionnalité d'offre dont dépend cette feuille. Si l'offre en cours ne
+   *  la couvre pas, le contenu reste VISIBLE mais flou et inerte (on voit ce
+   *  qu'on obtient, sans pouvoir le remplir pour rien), une pastille dit quelle
+   *  offre l'ouvre, et le pied est remplacé par la porte vers les offres. Le
+   *  serveur refuse de toute façon (403) : ceci évite seulement de faire
+   *  travailler quelqu'un avant de lui dire non. */
+  verrou?: Feature
 }) {
+  const { peut } = useOffre()
+  const ferme = !!verrou && !peut(verrou)
   const [visible, setVisible] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
@@ -160,17 +173,40 @@ export function Feuille({
           // `overflow-x-hidden` : sans lui, un seul champ trop large (un `select` au contenu
           // long sur iPhone) rendrait toute la feuille déplaçable latéralement.
           className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pt-4 [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full"
-          style={{ paddingBottom: pied ? 16 : 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          style={{ paddingBottom: pied || ferme ? 16 : 'calc(env(safe-area-inset-bottom) + 20px)' }}
         >
-          {children}
+          {ferme && verrou ? (
+            <div className="relative">
+              <div inert className="select-none [&_input]:blur-[4px] [&_textarea]:blur-[4px] [&_select]:blur-[4px] [&_button]:blur-[4px] [&_img]:blur-[4px] [&_svg]:opacity-40">
+                {children}
+              </div>
+              <div className="absolute inset-0 flex items-start justify-center pt-10">
+                <Link
+                  href="/dashboard/abonnement"
+                  className={`inline-flex items-center gap-2 rounded-full border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-[13.5px] shadow-lg ${corpsFort}`}
+                >
+                  <Lock size={14} strokeWidth={2.4} aria-hidden />
+                  Inclus dans l’offre {requiredPlanLabel(verrou)}
+                </Link>
+              </div>
+            </div>
+          ) : children}
         </div>
 
-        {pied && (
+        {(pied || ferme) && (
           <div
             className="border-t border-[color:var(--v2-filet)] px-5 pt-3"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
           >
-            {pied}
+            {ferme ? (
+              <Link
+                href="/dashboard/abonnement"
+                className={`${BOUTON} w-full text-white`}
+                style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
+              >
+                Voir les offres
+              </Link>
+            ) : pied}
           </div>
         )}
       </div>

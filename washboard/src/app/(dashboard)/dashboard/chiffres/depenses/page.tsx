@@ -16,7 +16,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // vérification de session — d'où la liste de colonnes minimale (jamais `*` : la fiche laveur
 // porte des jetons Google et des identifiants Stripe).
 const COLONNES =
-  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
+  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, created_at, slug, subscription_ends_at'
 
 export default async function DepensesPage() {
   const supabase = await createClient()
@@ -26,7 +26,7 @@ export default async function DepensesPage() {
   const washer = await washerDuUtilisateur(supabase, user.id, 'depenses', COLONNES)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <Depenses />
     </DashboardShell>
   )

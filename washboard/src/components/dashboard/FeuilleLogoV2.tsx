@@ -26,6 +26,7 @@ export default function FeuilleLogoV2({ nom, logoUrl, etat, onChoisir, onRetirer
   return (
     <Feuille
       titre="Logo"
+      verrou={logoUrl ? undefined : 'page_personnalisee'}
       sousTitre="Il s’affiche en haut de votre page de réservation."
       onClose={onClose}
       pied={
