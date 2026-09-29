@@ -21,6 +21,16 @@ export type ReservationMasquee = { id: string; client_name: string | null; sched
 const jourAbrege = (iso: string): string =>
   new Date(iso).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', weekday: 'short', day: 'numeric' }).replace('.', '')
 
+/** Le nom d'un client masqué : présent mais flou, illisible à l'œil comme au lecteur d'écran. */
+function NomFlou({ nom, className = '' }: { nom: string | null; className?: string }) {
+  return (
+    <span className={className}>
+      <span className="sr-only">Client masqué</span>
+      <span aria-hidden className="select-none blur-[5px]">{nom || 'Client'}</span>
+    </span>
+  )
+}
+
 function Barre({ className }: { className: string }) {
   return <span aria-hidden className={`block rounded bg-[color:var(--v2-filet-fort)] blur-[3px] ${className}`} />
 }
@@ -40,7 +50,7 @@ export function LigneRdvVerrouilleeV2({ reservation: r, offre }: { reservation: 
         type="button"
         onClick={() => setFiche(true)}
         aria-haspopup="dialog"
-        aria-label={`${r.client_name || 'Client'} : réservation masquée par votre offre`}
+        aria-label="Client masqué par votre offre"
         className="flex min-h-[46px] w-full items-start gap-3.5 py-[11px] text-left"
       >
         <span className={`w-[58px] shrink-0 pt-0.5 text-[15px] ${corpsFort} capitalize text-[color:var(--v2-color-gris)] tabular-nums`}>
@@ -48,7 +58,7 @@ export function LigneRdvVerrouilleeV2({ reservation: r, offre }: { reservation: 
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className={`truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
+            <NomFlou nom={r.client_name} className={`truncate text-[15px] ${corpsFort}`} />
             <Lock size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
           </span>
           <BarreLigne className="mt-1 h-3 w-24" />
@@ -69,14 +79,14 @@ export function LigneClientVerrouilleeV2({ reservation: r, offre }: { reservatio
         type="button"
         onClick={() => setFiche(true)}
         aria-haspopup="dialog"
-        aria-label={`Voir la fiche de ${r.client_name || 'ce client'} (masquée par votre offre)`}
+        aria-label="Voir la fiche d’un client masqué par votre offre"
         className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)]"
       >
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-filet)] text-[color:var(--v2-color-gris)]">
           <Lock size={15} strokeWidth={2} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`block truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
+          <NomFlou nom={r.client_name} className={`block truncate text-[15px] ${corpsFort}`} />
           <BarreLigne className="mt-1.5 h-3 w-32 max-w-full" />
           <span className={`mt-1.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
             Réservation le {jourSeul(r.scheduled_at) ?? '—'}
@@ -105,12 +115,12 @@ export function CarteJourVerrouilleeV2({ reservation: r, offre }: { reservation:
         type="button"
         onClick={() => setFiche(true)}
         aria-haspopup="dialog"
-        aria-label={`${r.client_name || 'Client'} : rendez-vous masqué par votre offre`}
+        aria-label="Rendez-vous masqué par votre offre"
         className="flex min-w-0 flex-1 flex-col gap-1 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-3.5 py-3 text-left"
       >
         <span className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className={`truncate text-[15px] ${corpsFort}`}>{r.client_name || 'Client'}</span>
+            <NomFlou nom={r.client_name} className={`truncate text-[15px] ${corpsFort}`} />
             <Lock size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
           </span>
           <BarreLigne className="h-3.5 w-10 shrink-0" />
@@ -139,7 +149,7 @@ function LigneFloue({ icone, largeur }: { icone: React.ReactNode; largeur: strin
 function FicheVerrouilleeV2({ reservation: r, offre, onClose }: { reservation: ReservationMasquee; offre: string; onClose: () => void }) {
   return (
     <Feuille
-      titre={r.client_name || 'Client'}
+      titre={<NomFlou nom={r.client_name} />}
       sousTitre={`Réservation le ${jourSeul(r.scheduled_at) ?? '—'}`}
       onClose={onClose}
       pied={

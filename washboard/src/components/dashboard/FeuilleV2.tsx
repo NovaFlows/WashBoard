@@ -66,7 +66,7 @@ export function Feuille({
   pied,
   verrou,
 }: {
-  titre: string
+  titre: ReactNode
   sousTitre?: string
   onClose: () => void
   children: ReactNode
