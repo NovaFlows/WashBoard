@@ -313,6 +313,12 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
    que les jetons du thème clair — voir le compte rendu de la passe pour le
    détail des écarts constatés avec la fiche de décisions de l'agent. */
 
+/* ⚠️ 2026-09-30 — tout ce qui suit (jetons `--v2-*`, écran de lancement, barre du bas)
+   n'existe que sur les branches de la refonte. La prévisualisation d'`integration-pwa` a
+   servi une feuille compilée SANS cette partie, héritée du cache de build de master : la
+   PWA s'affichait sans couleurs ni arrondis, les utilitaires Tailwind seuls survivant.
+   Si ça se reproduit : redéployer en décochant « Use existing Build Cache ». */
+
 :root {
   /* Couleurs — planche Système, panneau "Couleurs" (thème clair, confirmé) */
   --v2-color-fond: #F6F5F3;
