@@ -478,3 +478,15 @@ export function synthese(bilans: readonly BilanCampagne[], budgets: readonly num
     coutParReservation: reservations > 0 ? budget / reservations : null,
   }
 }
+
+/** Une campagne prête à afficher : son bilan, ses vidéos classées, et ce qui
+ *  est arrivé sans qu'on sache par laquelle.
+ *
+ *  Déclaré ici et pas dans l'écran : la page qui lit la base et le composant
+ *  qui l'affiche doivent parler du même objet, sinon l'un ajoute un champ que
+ *  l'autre ignore en silence. */
+export type CampagneAffichee = Campagne & {
+  bilan: BilanCampagne
+  creations: BilanCreation[]
+  reste: { visites: number; reservations: number; chiffreAffaires: number }
+}

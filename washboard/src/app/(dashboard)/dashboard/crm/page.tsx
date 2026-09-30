@@ -1,9 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmView from '@/components/dashboard/CrmView'
+import CampagnesView from '@/components/dashboard/CampagnesView'
+import CrmOnglets, { type OngletCrm } from '@/components/dashboard/CrmOnglets'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
-import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
+import {
+  SITE_URL_FALLBACK, hasFeature, requiredPlan, quotaReservations,
+  PLAN_LABELS, PLAN_COULEURS,
+} from '@/lib/plan'
 import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
 import { FUSEAU } from '@/lib/dateUtils'
@@ -11,7 +17,11 @@ import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
-import { ApercuCrm } from '@/components/dashboard/ApercusVerrouilles'
+import { ApercuCrm, ApercuCampagnes } from '@/components/dashboard/ApercusVerrouilles'
+import {
+  bilansParCampagne, bilansParCreation, resteHorsCreations,
+  type Campagne, type CampagneAffichee, type Creation, type Format, type Plateforme,
+} from '@/lib/campagne'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -19,12 +29,140 @@ import { ApercuCrm } from '@/components/dashboard/ApercusVerrouilles'
 // transiter un volume déraisonnable vers le navigateur.
 const FUNNEL_HISTORY_DAYS = 365
 
-export default async function CrmPage() {
+/** Ce que l'onglet Publicités a besoin de lire.
+ *
+ *  Isolé dans sa propre fonction, et appelé seulement quand l'onglet est
+ *  ouvert : sans cette séparation, afficher les statistiques de visite ferait
+ *  aussi charger toutes les campagnes, et l'inverse — deux fois le travail pour
+ *  un écran qui n'en montre qu'un. */
+async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
+  const { data: campagnes, error: errCampagnes } = await supabase
+    .from('campagnes')
+    .select('id, nom, plateforme, budget, cle, debut, fin')
+    .eq('washer_id', washerId)
+    .order('debut', { ascending: false })
+
+  // Sans trace, une liste vide ne se distinguerait pas d'un laveur sans
+  // campagne — et il croirait avoir perdu son travail.
+  if (errCampagnes) logger.error('campagnes.list.read_failed', { washerId }, errCampagnes)
+
+  const liste: Campagne[] = (campagnes ?? []).map(c => ({
+    id: c.id as string,
+    nom: c.nom as string,
+    plateforme: c.plateforme as Plateforme,
+    // `numeric` revient en chaîne depuis PostgREST : sans cette conversion, le
+    // budget serait concaténé au lieu d'être divisé, et tous les retours
+    // seraient faux.
+    budget: Number(c.budget),
+    cle: c.cle as string,
+    debut: c.debut as string,
+    fin: (c.fin as string | null) ?? null,
+  }))
+
+  if (liste.length === 0) return { campagnes: [] as CampagneAffichee[] }
+
+  // Les créations, s'il y en a. Table absente = migration 008 non exécutée :
+  // les campagnes s'affichent quand même, sans le détail par vidéo. Le code
+  // peut ainsi partir avant la migration ou après, dans n'importe quel ordre.
+  const { data: brutesCreations, error: errCreations } = await supabase
+    .from('campagne_creations')
+    .select('id, campagne_id, nom, format, cle, budget')
+    .eq('washer_id', washerId)
+    .order('created_at')
+
+  if (errCreations) logger.warn('campagnes.creations.read_failed', { washerId }, errCreations)
+
+  const creations: Creation[] = (brutesCreations ?? []).map(c => ({
+    id: c.id as string,
+    campagne_id: c.campagne_id as string,
+    nom: c.nom as string,
+    format: c.format as Format,
+    cle: c.cle as string,
+    budget: c.budget === null ? null : Number(c.budget),
+  }))
+
+  // On ne lit que ce qui porte une campagne, et jamais avant la plus ancienne
+  // d'entre elles : inutile de parcourir un an de trafic organique pour
+  // attribuer trois publicités.
+  const depuis = liste.reduce((min, c) => (c.debut < min ? c.debut : min), liste[0].debut)
+
+  // `utm_content` peut ne pas exister (migration 008) : on retente sans elle
+  // plutôt que de perdre les bilans de campagne, qui eux fonctionnent déjà.
+  const visites = await toutesLesLignes((d, f) => supabase
+    .from('booking_funnel_events')
+    .select('session_id, utm_campaign, utm_content, created_at')
+    .eq('washer_id', washerId)
+    .not('utm_campaign', 'is', null)
+    .gte('created_at', `${depuis}T00:00:00Z`)
+    .order('created_at').order('id').range(d, f))
+
+  const visitesSures = visites.error
+    ? await toutesLesLignes((d, f) => supabase
+        .from('booking_funnel_events')
+        .select('session_id, utm_campaign, created_at')
+        .eq('washer_id', washerId)
+        .not('utm_campaign', 'is', null)
+        .gte('created_at', `${depuis}T00:00:00Z`)
+        .order('created_at').order('id').range(d, f))
+    : visites
+
+  const reservations = await toutesLesLignes((d, f) => supabase
+    .from('bookings')
+    .select('utm_campaign, utm_content, created_at, status, booked_price')
+    .eq('washer_id', washerId)
+    .not('utm_campaign', 'is', null)
+    .gte('created_at', `${depuis}T00:00:00Z`)
+    .order('created_at').order('id').range(d, f))
+
+  const reservationsSures = reservations.error
+    ? await toutesLesLignes((d, f) => supabase
+        .from('bookings')
+        .select('utm_campaign, created_at, status, booked_price')
+        .eq('washer_id', washerId)
+        .not('utm_campaign', 'is', null)
+        .gte('created_at', `${depuis}T00:00:00Z`)
+        .order('created_at').order('id').range(d, f))
+    : reservations
+
+  if (visitesSures.error) logger.error('campagnes.visites.read_failed', { washerId }, visitesSures.error)
+  if (reservationsSures.error) logger.error('campagnes.reservations.read_failed', { washerId }, reservationsSures.error)
+
+  const lesVisites = visitesSures.data ?? []
+  const lesReservations = reservationsSures.data ?? []
+  const bilans = bilansParCampagne(liste, lesVisites, lesReservations)
+
+  function assembler(c: Campagne): CampagneAffichee {
+    // Un bilan à zéro plutôt qu'aucun : l'écran ne doit pas avoir à gérer le
+    // cas d'une campagne qui n'a pas encore reçu une seule visite.
+    const bilan = bilans.get(c.id) ?? {
+      visites: 0, reservations: 0, tauxConversion: null,
+      coutParReservation: null, chiffreAffaires: 0,
+      retour: c.budget > 0 ? 0 : null,
+    }
+    const parCreation = bilansParCreation(c, creations, lesVisites, lesReservations)
+    return { ...c, bilan, creations: parCreation, reste: resteHorsCreations(bilan, parCreation) }
+  }
+
+  return { campagnes: liste.map(assembler) }
+}
+
+export default async function CrmPage({ searchParams }: {
+  searchParams: Promise<{ onglet?: string }>
+}) {
+  const { onglet } = await searchParams
+  const ongletActif: OngletCrm = onglet === 'campagnes' ? 'campagnes' : 'apercu'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'crm')
+
+  const coque = (contenu: React.ReactNode) => (
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      {contenu}
+    </DashboardShell>
+  )
 
   // Le CRM fait partie de l'offre Starter (et au-dessus). Le verrou est posé
   // AVANT les lectures : inutile de parcourir une année d'événements pour
@@ -48,24 +186,63 @@ export default async function CrmPage() {
       timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric',
     })
 
-    return (
-      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
-        <div className="p-4">
-          <div className="mb-6">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">CRM</h1>
-          </div>
-          <UpgradePrompt
-            title="Sachez d’où viennent vos clients"
-            description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning."
-            feature="crm"
-            apercu={<ApercuCrm />}
-            rassurance={`Vos visites et vos réservations sont déjà enregistrées depuis le ${depuisLabel}. Vous ne perdez rien à attendre : tout s’affichera d’un coup le jour où vous changez d’offre.`}
-          />
+    return coque(
+      <div className="p-4">
+        <div className="mb-6">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">CRM</h1>
         </div>
-      </DashboardShell>
+        <UpgradePrompt
+          title="Sachez d’où viennent vos clients"
+          description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning."
+          feature="crm"
+          apercu={<ApercuCrm />}
+          rassurance={`Vos visites et vos réservations sont déjà enregistrées depuis le ${depuisLabel}. Vous ne perdez rien à attendre : tout s’affichera d’un coup le jour où vous changez d’offre.`}
+        />
+      </div>,
     )
   }
 
+  // Le badge de l'onglet Publicités : le nom de l'offre qui l'ouvre, dit
+  // d'avance. Sans lui, on clique et on tombe sur un mur sans avoir été
+  // prévenu.
+  const requisPubs = requiredPlan('campagnes')
+  const badgePubs = hasFeature(washer, 'campagnes')
+    ? undefined
+    : { label: PLAN_LABELS[requisPubs], couleur: PLAN_COULEURS[requisPubs] }
+
+  const onglets = <CrmOnglets actif={ongletActif} badge={badgePubs} />
+
+  // ── Onglet Publicités ─────────────────────────────────────────────────────
+  if (ongletActif === 'campagnes') {
+    if (!hasFeature(washer, 'campagnes')) {
+      return coque(
+        <div>
+          {onglets}
+          <UpgradePrompt
+            title="Savoir laquelle de vos vidéos vous rapporte"
+            description="Déclarez votre budget, collez un lien par vidéo : WashBoard compte les visites, les réservations, et ce qu’elles ont rapporté — vidéo par vidéo."
+            feature="campagnes"
+            apercu={<ApercuCampagnes />}
+            rassurance="Vos visites et vos réservations sont déjà enregistrées. Une campagne créée aujourd’hui commence à compter dès son premier clic."
+          />
+        </div>,
+      )
+    }
+
+    const { campagnes } = await chargerCampagnes(supabase, washer.id)
+    return coque(
+      <div>
+        {onglets}
+        <CampagnesView
+          campagnes={campagnes}
+          baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`}
+          accent={washer.brand_color ?? undefined}
+        />
+      </div>,
+    )
+  }
+
+  // ── Onglet Vue d'ensemble ─────────────────────────────────────────────────
   // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
   // erreur. Voir `toutesLesLignes`.
   const { data: bookings, error: bookingsError } = await toutesLesLignes(
@@ -111,8 +288,10 @@ export default async function CrmPage() {
 
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
-  return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+  return coque(
+    <div>
+      {onglets}
+
       {/* Les statistiques se calculent désormais dans le navigateur, à partir
           des événements bruts : changer de période ne recharge pas la page, et
           les visites comme les réservations portent sur la même sélection. */}
@@ -135,6 +314,6 @@ export default async function CrmPage() {
           <TrafficSourceLinks baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`} accent={washer.brand_color ?? undefined} />
         </div>
       </div>
-    </DashboardShell>
+    </div>,
   )
 }

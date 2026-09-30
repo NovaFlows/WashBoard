@@ -315,7 +315,6 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const badgesOffre = Object.fromEntries(
     ([
       ['/dashboard/crm', 'crm'],
-      ['/dashboard/campagnes', 'campagnes'],
       ['/dashboard/compta', 'compta'],
       ['/dashboard/factures', 'facturation'],
     ] as [string, Feature][])
