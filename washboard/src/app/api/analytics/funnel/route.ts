@@ -38,6 +38,9 @@ const FunnelEventSchema = z.object({
   session_id:    z.string().uuid(),
   step:          z.enum(['prestation', 'options', 'creneau', 'coordonnees', 'confirmation']),
   referrer_host: z.string().max(255).optional(),
+  // Clé de campagne publicitaire (voir campagne.ts). Bornée ici aussi :
+  // la valeur vient d'une URL publique, donc de n'importe qui.
+  utm_campaign:  z.string().max(64).optional(),
   device:        z.enum(['mobile', 'tablet', 'desktop']).optional(),
 })
 
@@ -65,7 +68,22 @@ export async function POST(req: Request) {
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('booking_funnel_events').insert(parsed.data)
+  const { utm_campaign, ...sansCampagne } = parsed.data
+  let { error } = await admin.from('booking_funnel_events').insert(parsed.data)
+
+  // Colonne `utm_campaign` absente : la migration 006 n'a pas encore tourné.
+  // On réessaie sans elle, plutôt que de perdre TOUT le suivi de trafic en
+  // attendant. Le code peut ainsi partir avant la migration, ou après, dans
+  // n'importe quel ordre — c'est la seule façon de ne pas avoir à
+  // synchroniser un déploiement Vercel avec une exécution SQL à la main.
+  //
+  // On réessaie sur n'importe quelle erreur plutôt que sur le code 42703 :
+  // une insertion ne renvoie pas toujours de code exploitable, et un second
+  // essai qui échoue ne coûte qu'une ligne de journal.
+  if (error && utm_campaign) {
+    const seconde = await admin.from('booking_funnel_events').insert(sansCampagne)
+    error = seconde.error
+  }
 
   // On log sans jamais faire échouer la requête côté client : un raté de
   // tracking ne doit pas se voir sur la page de réservation.

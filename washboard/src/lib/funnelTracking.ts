@@ -8,6 +8,12 @@ export type FunnelStep = 'prestation' | 'options' | 'creneau' | 'coordonnees' | 
 export type Device = 'mobile' | 'tablet' | 'desktop'
 
 const SESSION_STORAGE_KEY = 'wb_funnel_sid'
+const CAMPAGNE_STORAGE_KEY = 'wb_utm_campaign'
+
+/** Longueur au-delà de laquelle on ignore : une clé de campagne fait quarante
+ *  caractères (voir campagne.ts). Plus long, c'est qu'on nous envoie autre
+ *  chose — et cette valeur part en base. */
+const CAMPAGNE_MAX = 64
 
 /** Classe une largeur d'écran en catégorie d'appareil (pure, testable). */
 export function detectDevice(width: number): Device {
@@ -41,6 +47,47 @@ export function resolveReferrerHost(referrer: string, currentHost: string, searc
   const utmSource = new URLSearchParams(search).get('utm_source')?.toLowerCase() as TrafficSourceKey | null
   if (utmSource && utmSource in TRAFFIC_SOURCE_HOSTS) return TRAFFIC_SOURCE_HOSTS[utmSource]
   return extractReferrerHost(referrer, currentHost)
+}
+
+/** La campagne portée par le lien (`?utm_campaign=...`), retenue le temps de
+ *  la visite.
+ *
+ *  Retenue dans `sessionStorage`, comme l'identifiant de session, et pour la
+ *  même raison : limitée à l'onglet, effacée à sa fermeture, aucun suivi d'une
+ *  visite à l'autre. C'est ce qui dispense la page de réservation d'un bandeau
+ *  de consentement — et un bandeau devant un formulaire de réservation coûte
+ *  au laveur bien plus de clients qu'une statistique ne lui en rapporte.
+ *
+ *  Conséquence assumée : quelqu'un qui clique la publicité lundi, ferme, et
+ *  revient réserver jeudi en direct n'est pas rattaché à la campagne. Elle est
+ *  donc sous-estimée, jamais sur-estimée — le sens de l'erreur qui ne fait
+ *  jamais prendre une mauvaise décision au laveur.
+ *
+ *  Nettoyée de ce qui n'a rien à faire dans une clé : la valeur arrive d'une
+ *  URL publique, et finit en base. */
+export function nettoyerCleCampagne(brut: string | null | undefined): string | undefined {
+  if (!brut) return undefined
+  const propre = brut.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, CAMPAGNE_MAX)
+  return propre || undefined
+}
+
+/** Lit la campagne de l'URL, la retient, et la rend. Sans paramètre dans
+ *  l'URL, rend celle déjà retenue pour cette visite — le laveur perdrait son
+ *  attribution dès la deuxième étape du formulaire sans cette mémoire. */
+export function resolveCampagne(search: string): string | undefined {
+  const depuisUrl = nettoyerCleCampagne(new URLSearchParams(search).get('utm_campaign'))
+  if (typeof window === 'undefined') return depuisUrl
+  try {
+    if (depuisUrl) {
+      window.sessionStorage.setItem(CAMPAGNE_STORAGE_KEY, depuisUrl)
+      return depuisUrl
+    }
+    return window.sessionStorage.getItem(CAMPAGNE_STORAGE_KEY) ?? undefined
+  } catch {
+    // Stockage refusé (navigation privée stricte, navigateurs intégrés) : on
+    // se contente de l'URL. Pas de mesure plutôt qu'un parcours cassé.
+    return depuisUrl
+  }
 }
 
 /** Session anonyme limitée à l'onglet du navigateur : pas de cookie
@@ -79,6 +126,7 @@ export function trackFunnelStep(washerId: string, step: FunnelStep): void {
     session_id:    sessionId,
     step,
     referrer_host: resolveReferrerHost(document.referrer, window.location.host, window.location.search),
+    utm_campaign:  resolveCampagne(window.location.search),
     device:        detectDevice(window.innerWidth),
   })
   try {

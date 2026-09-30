@@ -138,3 +138,38 @@ export function ApercuFactures() {
     </div>
   )
 }
+
+/** Aperçu de l'écran des campagnes, pour l'invitation à passer au Pro.
+ *
+ *  Décoratif, comme les autres : les chiffres sont inventés, aucun n'est lu en
+ *  base. Ce qui reste NET, c'est ce que le laveur comprendra qu'on lui dira —
+ *  « Retour », « Coût par client » ; ce qui est flouté, c'est la réponse. */
+export function ApercuCampagnes() {
+  return (
+    <div className="space-y-4" aria-hidden>
+      <div className={CARTE}>
+        <Etiquette />
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">Pub Rentrée</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Meta · budget 80 €</p>
+        <div className="flex gap-4">
+          <Chiffre label="Visites" valeur="312" />
+          <Chiffre label="Réservations" valeur="14" />
+          <Chiffre label="Retour" valeur="× 11,4" couleur="text-emerald-600 dark:text-emerald-400" />
+        </div>
+      </div>
+      <div className={CARTE}>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Ce qu’elle vous a rapporté</p>
+        <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+          <div className="flex justify-between">
+            <span>Coût par client</span>
+            <Flou className="font-semibold">5,71 €</Flou>
+          </div>
+          <div className="flex justify-between">
+            <span>Chiffre d’affaires</span>
+            <Flou className="font-semibold">910 €</Flou>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

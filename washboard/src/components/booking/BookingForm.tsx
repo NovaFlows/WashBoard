@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Washer, Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import { dureeTotale } from '@/lib/pricing'
-import { trackFunnelStep, type FunnelStep } from '@/lib/funnelTracking'
+import { trackFunnelStep, type FunnelStep, resolveCampagne } from '@/lib/funnelTracking'
 import StepService from './StepService'
 import StepOptions from './StepOptions'
 import StepSlot from './StepSlot'
@@ -127,6 +127,11 @@ export default function BookingForm({ washer, services, categories, availabiliti
       washer_id:      washer.id,
       is_smart_slot:  form.is_smart_slot ?? false,
       smart_discount: form.smart_discount ?? 0,
+      // L'origine est figée ICI, au moment de la réservation, et jamais
+      // recalculée ensuite. C'est ce qui permet de dire plus tard combien
+      // d'argent une campagne a rapporté — les événements de visite, eux, ne
+      // portent aucun prix et sont purgés à treize mois.
+      utm_campaign:   resolveCampagne(typeof window === 'undefined' ? '' : window.location.search),
     }
     try {
       const res = await fetch('/api/bookings', {

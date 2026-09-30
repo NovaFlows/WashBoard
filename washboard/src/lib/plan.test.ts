@@ -34,25 +34,25 @@ const ACCES: Record<Plan, Record<Feature, boolean>> = {
     // Les frais de déplacement sont ouverts DÈS LE GRATUIT : un laveur mobile
     // qui roule quinze kilomètres sans pouvoir les facturer travaille à perte.
     creneaux_intelligents: false, frais_deplacement: true, followup: false,
-    multi_laveurs: false,
+    campagnes: false, multi_laveurs: false,
   },
   starter: {
     page_personnalisee: true, crm: true, ca_simple: true,
     avis_email: false, avis_sms: false, compta: false, facturation: false,
     creneaux_intelligents: false, frais_deplacement: true, followup: false,
-    multi_laveurs: false,
+    campagnes: false, multi_laveurs: false,
   },
   pro: {
     page_personnalisee: true, crm: true, ca_simple: true,
     avis_email: true, avis_sms: true, compta: true, facturation: true,
     creneaux_intelligents: true, frais_deplacement: true, followup: true,
-    multi_laveurs: false,
+    campagnes: true, multi_laveurs: false,
   },
   business: {
     page_personnalisee: true, crm: true, ca_simple: true,
     avis_email: true, avis_sms: true, compta: true, facturation: true,
     creneaux_intelligents: true, frais_deplacement: true, followup: true,
-    multi_laveurs: true,
+    campagnes: true, multi_laveurs: true,
   },
 }
 
@@ -140,6 +140,7 @@ describe('requiredPlanLabel — l’offre à prendre pour débloquer', () => {
     expect(requiredPlanLabel('avis_sms')).toBe('Pro')
     expect(requiredPlanLabel('followup')).toBe('Pro')
     expect(requiredPlanLabel('creneaux_intelligents')).toBe('Pro')
+    expect(requiredPlanLabel('campagnes')).toBe('Pro')
     expect(requiredPlanLabel('frais_deplacement')).toBe('Découverte')
     expect(requiredPlanLabel('multi_laveurs')).toBe('Business')
   })

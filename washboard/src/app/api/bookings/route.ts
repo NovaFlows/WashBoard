@@ -24,6 +24,10 @@ const WASHER_DAILY_CAP = 60  // réservations max par laveur et par jour
 const BookingSchema = z.object({
   hp:              z.string().optional(),   // honeypot : doit rester vide
   washer_id:       z.string().uuid(),
+  // Campagne publicitaire d'origine (voir campagne.ts). Facultative, bornée,
+  // et nettoyée côté client — mais la valeur vient d'une URL publique, donc
+  // de n'importe qui : on la reborne ici, là où elle entre vraiment.
+  utm_campaign:    z.string().max(64).regex(/^[a-z0-9-]*$/).optional(),
   service_id:      z.string().uuid(),
   vehicle_type:    z.string().min(1),
   vehicle_count:   z.number().int().min(1).max(99).optional().default(1),
@@ -114,6 +118,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // enregistré est recalculé plus bas depuis le catalogue.
     booked_price: _prixClientIgnore, is_professional, company_name, siret, billing_address,
     vehicles_detail, selected_addons, travel_fee,
+    // Écrite APRÈS la création, pas dans la RPC : la définition de
+    // `create_booking_atomic` ne vit qu'en base, pas dans ce dépôt. Lui passer
+    // une clé qu'elle ne connaît pas, c'est parier sur une implémentation
+    // qu'on ne peut pas lire — et si le pari est perdu, c'est la réservation
+    // entière qui échoue, pas seulement l'attribution.
+    utm_campaign,
     ...bookingData
   } = cleanData
   const id = randomUUID()
@@ -477,6 +487,21 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     }
     return errorResponse('bookings.insert.db', error, { washerId: bookingData.washer_id })
+  }
+
+  // ── Attribution publicitaire ────────────────────────────────────────────
+  // Posée à part, et après coup. Un échec ici ne doit RIEN casser : le client
+  // a réservé, c'est ce qui compte. On perd une ligne de statistique, pas un
+  // rendez-vous — et c'est le bon sens de l'erreur.
+  if (utm_campaign) {
+    const { error: errAttribution } = await admin
+      .from('bookings')
+      .update({ utm_campaign })
+      .eq('id', id)
+    if (errAttribution) {
+      logger.warn('bookings.attribution.write_failed',
+        { bookingId: id, washerId: bookingData.washer_id }, errAttribution)
+    }
   }
 
   // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)
