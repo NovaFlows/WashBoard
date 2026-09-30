@@ -8,7 +8,9 @@ import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/client
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { ContactEntreprise, EntrepriseListItem } from '@/lib/entrepriseProfile'
-import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
+import { quotaReservations, planEffectif, offreQuiCouvre, hasFeature, requiredPlanLabel, PLAN_LABELS } from '@/lib/plan'
+import { minVehiclePrice } from '@/lib/pricing'
+import { DELAI_AVIS_DEFAUT_HEURES, DELAI_RELANCE_DEFAUT_JOURS } from '@/lib/messagesAutomatiques'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode, montantVerrouille } from '@/lib/reservationsVerrouillees'
 
 // Fichier clients : tiré des réservations, un client par email (voir
@@ -106,6 +108,14 @@ export default async function ClientsPage() {
     : await supabase.from('sites').select('id, entreprise_id, adresse, note').in('entreprise_id', idsEntreprises)
   if (errSites) logger.warn('clients.sites.fetch_failed', { washerId: washer.id }, errSites)
 
+  // Section « Automatismes » (2026-09-30) : les prix ne servent qu'à l'exemple chiffré de la
+  // feuille des créneaux intelligents. Sans eux la feuille reste utilisable, sans exemple.
+  const { data: services, error: errServices } = await supabase
+    .from('services')
+    .select('*')
+    .eq('washer_id', washer.id)
+  if (errServices) logger.warn('clients.services.fetch_failed', { washerId: washer.id }, errServices)
+
   // Le typage déduit une LISTE pour la jointure `services`, mais PostgREST
   // renvoie un objet : une réservation n'a qu'une prestation. On accepte les
   // deux formes plutôt que de forcer le type.
@@ -146,6 +156,29 @@ export default async function ClientsPage() {
           followup_message: washer.followup_message ?? null,
         } satisfies ReglagesRelance}
         entreprises={entreprises}
+        automatismes={{
+          messages: {
+            review_enabled: !!washer.review_enabled,
+            review_delay_hours: washer.review_delay_hours ?? DELAI_AVIS_DEFAUT_HEURES,
+            google_review_url: washer.google_review_url ?? null,
+            review_channel: washer.review_channel === 'sms' ? 'sms' : 'email',
+            followup_enabled: !!washer.followup_enabled,
+            followup_delay_days: washer.followup_delay_days ?? DELAI_RELANCE_DEFAUT_JOURS,
+            followup_message: washer.followup_message ?? null,
+          },
+          smsAutorise: hasFeature(washer, 'avis_sms'),
+          avisAutorise: hasFeature(washer, 'avis_email'),
+          relanceAutorisee: hasFeature(washer, 'followup'),
+          libellePlanAvis: requiredPlanLabel('avis_email'),
+          libellePlanRelance: requiredPlanLabel('followup'),
+          creneaux: {
+            actif: !!washer.smart_slot_enabled,
+            proximite: washer.smart_slot_radius_minutes ?? 15,
+            type: washer.smart_slot_discount_type === 'percent' ? 'percent' : 'fixed',
+            valeur: Number(washer.smart_slot_discount_value ?? 0),
+          },
+          prestationsPrix: (services ?? []).map(s => ({ nom: s.name as string, prix: minVehiclePrice(s) })),
+        }}
       />
     </DashboardShell>
   )

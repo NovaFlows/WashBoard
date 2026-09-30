@@ -15,21 +15,20 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 //
 // L'adresse est sous `/dashboard/parametres/` pour que « Plus » reste allumé dans
 // la barre du bas (BarreBasV2 : `startsWith('/dashboard/parametres')`) — c'est un
-// écran de « Plus », comme `parametres/messages`.
+// écran de « Plus », comme `parametres/horaires`.
 //
 // Lecture seule ici : les écritures passent par `/api/services`,
 // `/api/categories` et `/api/washer` depuis le navigateur. Mêmes requêtes que
 // `/dashboard/admin` (`admin/page.tsx`).
 //
-// Depuis le 2026-09-25, l'écran porte aussi la zone d'intervention et les
-// créneaux intelligents (sections `#zone` et `#creneaux`) : d'où les colonnes
-// `zone_config`, `smart_slot_*` et `base_address`. Les colonnes sont ÉNUMÉRÉES
+// Depuis le 2026-09-25, l'écran porte aussi la zone d'intervention (section `#zone`) :
+// d'où les colonnes `zone_config` et `base_address`. Les créneaux intelligents l'ont quitté
+// le 2026-09-30 pour « Clients ». Les colonnes sont ÉNUMÉRÉES
 // (jamais `*`) : tout ce qui franchit la frontière serveur → navigateur est
 // sérialisé dans la page, et la fiche laveur porte des jetons Google et des
 // identifiants Stripe.
 const COLONNES =
   'id, name, zone_config, base_address, ' +
-  'smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, ' +
   'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, subscription_ends_at, created_at'
 
 export default async function PrestationsPage() {
@@ -73,12 +72,6 @@ export default async function PrestationsPage() {
           offre={planEffectif(washer)}
           zone={washer.zone_config ?? null}
           adresseDeBase={washer.base_address ?? null}
-          creneaux={{
-            actif: !!washer.smart_slot_enabled,
-            proximite: washer.smart_slot_radius_minutes ?? 15,
-            type: washer.smart_slot_discount_type === 'percent' ? 'percent' : 'fixed',
-            valeur: Number(washer.smart_slot_discount_value ?? 0),
-          }}
         />
       </Suspense>
     </DashboardShell>

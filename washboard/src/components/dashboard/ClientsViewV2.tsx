@@ -17,6 +17,7 @@ import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 import { formatEuros } from '@/lib/plan'
 import { LigneClientVerrouilleeV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
+import AutomatismesClientsV2, { type AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
 import type { ClientBloque } from '@/components/dashboard/ClientsViewV1'
 
 // Fichier clients du laveur, présentation v2 — réservée à la PWA installée en
@@ -126,16 +127,30 @@ type Filtre = 'tous' | 'pros' | 'relancer' | 'entreprises'
  *  (Alexandre, 2026-09-30) : un fichier de plusieurs dizaines de contacts ne se déroule plus d'un bloc. */
 const PAS_AFFICHAGE = 5
 
-function BoutonChargerPlus({ restants, onClick }: { restants: number; onClick: () => void }) {
+const CLASSE_BOUTON_PAGINATION = `flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-colors active:bg-[color:var(--v2-color-fond)] motion-reduce:transition-none`
+
+/** « Charger plus » tant qu'il reste des lignes ; « Charger moins » dès qu'on a déplié au-delà du
+ *  premier lot (Alexandre, 2026-09-30) — un tap par lot de 5, dans les deux sens. */
+function PaginationListe({ total, limite, onPlus, onMoins }: {
+  total: number; limite: number; onPlus: () => void; onMoins: () => void
+}) {
+  const restants = total - limite
+  const peutReplier = limite > PAS_AFFICHAGE && total > PAS_AFFICHAGE
+  if (restants <= 0 && !peutReplier) return null
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-colors active:bg-[color:var(--v2-color-fond)] motion-reduce:transition-none`}
-    >
-      Charger plus
-      <span className="ml-1.5 text-[color:var(--v2-color-gris)]">({restants} restant{restants > 1 ? 's' : ''})</span>
-    </button>
+    <div className="flex gap-2">
+      {peutReplier && (
+        <button type="button" onClick={onMoins} className={CLASSE_BOUTON_PAGINATION}>
+          Charger moins
+        </button>
+      )}
+      {restants > 0 && (
+        <button type="button" onClick={onPlus} className={CLASSE_BOUTON_PAGINATION}>
+          Charger plus
+          <span className="ml-1.5 text-[color:var(--v2-color-gris)]">({restants})</span>
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -153,7 +168,7 @@ function versRdvMessage(b: ClientBooking): RdvMessage {
 
 export default function ClientsViewV2({
   bookings, bloques = [], offreDeblocage = 'Pro', montantBloque = 0,
-  documents = [], reglages = [], reglagesMessages, entreprises = [], nomLaveur,
+  documents = [], reglages = [], reglagesMessages, entreprises = [], nomLaveur, automatismes,
 }: {
   bookings: ClientBooking[]
   /** Clients masqués par le plafond de l'offre (2026-09-28) — voir `ClientsViewV1.tsx`,
@@ -176,6 +191,8 @@ export default function ClientsViewV2({
   entreprises?: EntrepriseListItem[]
   /** Signature du message WhatsApp envoyé depuis une facture ouverte dans la Fiche entreprise. */
   nomLaveur?: string
+  /** Section « Automatismes » (avis Google, relance, créneaux intelligents), 2026-09-30. */
+  automatismes?: AutomatismesClients
 }) {
   const router = useRouter()
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
@@ -308,7 +325,13 @@ export default function ClientsViewV2({
   const chargerPlus = () => setVisibles(v => ({ ...v, [filtre]: v[filtre] + PAS_AFFICHAGE }))
   const bloquesVus = bloquesAffiches.slice(0, limite)
   const affichesVus = affiches.slice(0, Math.max(0, limite - bloquesVus.length))
-  const restantsClients = bloquesAffiches.length + affiches.length - limite
+  const totalClients = bloquesAffiches.length + affiches.length
+  // Replier ramène au lot précédent de ce qui est RÉELLEMENT affiché (pas de la limite, qui peut
+  // dépasser le total après un dernier « Charger plus » partiel).
+  const chargerMoins = (total: number) => setVisibles(v => {
+    const affiche = Math.min(v[filtre], total)
+    return { ...v, [filtre]: Math.max(PAS_AFFICHAGE, (Math.ceil(affiche / PAS_AFFICHAGE) - 1) * PAS_AFFICHAGE) }
+  })
   const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglagesEffectifs) : null
   // Doublon probable (menu « … » de la fiche, 2026-09-28) : calculé ici, pas dans la fiche —
   // c'est cet écran qui connaît TOUT le fichier (`clients`), une fiche ouverte ne voit qu'elle-même.
@@ -447,7 +470,7 @@ export default function ClientsViewV2({
                   />
                 ))}
               </ul>
-              {aRelancer.length > limite && <BoutonChargerPlus restants={aRelancer.length - limite} onClick={chargerPlus} />}
+              <PaginationListe total={aRelancer.length} limite={limite} onPlus={chargerPlus} onMoins={() => chargerMoins(aRelancer.length)} />
               </>
             )
           ) : filtre === 'entreprises' ? (
@@ -465,9 +488,12 @@ export default function ClientsViewV2({
                 />
               ))}
             </ul>
-            {entreprisesAffichees.length > limite && (
-              <BoutonChargerPlus restants={entreprisesAffichees.length - limite} onClick={chargerPlus} />
-            )}
+            <PaginationListe
+              total={entreprisesAffichees.length}
+              limite={limite}
+              onPlus={chargerPlus}
+              onMoins={() => chargerMoins(entreprisesAffichees.length)}
+            />
             </>
           ) : (
             <>
@@ -500,11 +526,13 @@ export default function ClientsViewV2({
                   ))}
                 </ul>
               )}
-              {restantsClients > 0 && <BoutonChargerPlus restants={restantsClients} onClick={chargerPlus} />}
+              <PaginationListe total={totalClients} limite={limite} onPlus={chargerPlus} onMoins={() => chargerMoins(totalClients)} />
             </>
           )}
         </>
       )}
+
+      {automatismes && <AutomatismesClientsV2 automatismes={automatismes} />}
 
       {fiche && (
         <ClientProfileModal

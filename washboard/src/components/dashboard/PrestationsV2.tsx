@@ -12,22 +12,16 @@ import { CarteListe, Chevron, Ligne } from '@/components/dashboard/ParametresFor
 import FeuillePrestationV2 from '@/components/dashboard/FeuillePrestationV2'
 import FeuilleCategorieV2 from '@/components/dashboard/FeuilleCategorieV2'
 import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
-import FeuilleCreneauxV2 from '@/components/dashboard/FeuilleCreneauxV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
 import { ConfirmationSuppression, Constat, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
 import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients } from '@/lib/prestation'
-import { PLAN_LABELS, offreCatalogueIllimite, requiredPlanLabel, type Plan } from '@/lib/plan'
-import { useOffre } from '@/components/dashboard/OffreContext'
+import { PLAN_LABELS, offreCatalogueIllimite, type Plan } from '@/lib/plan'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
   type FormulairePrestation, type ModeleCategorie,
 } from '@/lib/prestationForm'
-import { formatDureeFr, minVehiclePrice } from '@/lib/pricing'
+import { formatDureeFr } from '@/lib/pricing'
 import { resumeZone } from '@/lib/zoneForm'
-import {
-  prestationExemple, prixLePlusBas, resumeCreneaux,
-  type ChampsCreneaux, type ReglagesCreneaux,
-} from '@/lib/creneauxForm'
 import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
 
 // « Prestations et prix » — refonte 2026, destination NEUVE de « Plus » (la
@@ -62,7 +56,6 @@ type FeuilleOuverte =
   | { quoi: 'prestation'; service: Service | null; formulaire: FormulairePrestation }
   | { quoi: 'categorie'; categorie: ServiceCategory | null }
   | { quoi: 'zone' }
-  | { quoi: 'creneaux' }
   | null
 
 type Suppression =
@@ -83,7 +76,6 @@ type Props = {
   /** `washers.base_address` : proposée d'un tap dans la feuille Zone, jamais
    *  fusionnée avec `zone_config.center_address` (deux adresses distinctes). */
   adresseDeBase: string | null
-  creneaux: ReglagesCreneaux
   /** Nombre de prestations que l'offre affiche sur la page de réservation —
    *  `null` : aucune limite (Pro, Business, clients historiques). Au-delà, les
    *  suivantes sont MASQUÉES aux clients sans être effacées, voir
@@ -261,23 +253,20 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, creneaux: creneauxServeur, plafond, offre,
+  zone: zoneServeur, adresseDeBase, plafond, offre,
 }: Props) {
   const router = useRouter()
-  const { peut } = useOffre()
   const p = usePrestationsV2(servicesServeur, categoriesServeur)
   const { services, categories } = p
   // Zone et créneaux : l'état local suit la base dès qu'une écriture réussit, sans
   // attendre le rechargement — la phrase de la ligne change tout de suite.
   const [zone, setZone] = useState(zoneServeur)
-  const [creneaux, setCreneaux] = useState(creneauxServeur)
   // Arrivée par un lien de l'accueil de l'app (`#zone`, `#creneaux`) : on ouvre
   // directement la feuille visée. Cet écran ne se monte qu'après le garde-fou de
   // `Prestations.tsx`, donc toujours dans le navigateur.
   const [feuille, setFeuille] = useState<FeuilleOuverte>(() => {
     const ancre = window.location.hash
     if (ancre === '#zone') return { quoi: 'zone' }
-    if (ancre === '#creneaux') return { quoi: 'creneaux' }
     return null
   })
   const [suppression, setSuppression] = useState<Suppression>(null)
@@ -381,22 +370,6 @@ export default function PrestationsV2({
     return null
   }
 
-  async function enregistrerCreneaux(champs: ChampsCreneaux): Promise<string | null> {
-    const r = await enregistrerZoneCreneaux(champs)
-    if (!r.ok) return r.message
-    setCreneaux(prev => ({
-      actif: champs.smart_slot_enabled,
-      // Éteindre n'envoie que l'interrupteur : le reste garde sa valeur.
-      proximite: champs.smart_slot_radius_minutes ?? prev.proximite,
-      type: champs.smart_slot_discount_type ?? prev.type,
-      valeur: champs.smart_slot_discount_value ?? prev.valeur,
-    }))
-    setFeuille(null)
-    router.refresh()
-    return null
-  }
-
-  const prestationsPrix = services.map(s => ({ nom: s.name, prix: minVehiclePrice(s) }))
   const ligneZone = resumeZone(zone)
 
   const peutAjouterPrestation = categories.length > 0
@@ -469,11 +442,6 @@ export default function PrestationsV2({
             valeur={ligneZone.texte}
             ton={ligneZone.ton}
             onClick={() => setFeuille({ quoi: 'zone' })}
-          />
-          <LigneDeuxNiveaux
-            label="Créneaux intelligents"
-            valeur={peut('creneaux_intelligents') ? resumeCreneaux(creneaux) : `Inclus dans l’offre ${requiredPlanLabel('creneaux_intelligents')}`}
-            onClick={() => setFeuille({ quoi: 'creneaux' })}
           />
         </ul>
       </CarteListe>
@@ -621,15 +589,6 @@ export default function PrestationsV2({
           zone={zone}
           adresseDeBase={adresseDeBase}
           onEnregistrer={enregistrerZone}
-          onClose={fermerFeuille}
-        />
-      )}
-      {feuille?.quoi === 'creneaux' && (
-        <FeuilleCreneauxV2
-          reglages={creneaux}
-          prestation={prestationExemple(prestationsPrix)}
-          prixLePlusBas={prixLePlusBas(prestationsPrix)}
-          onEnregistrer={enregistrerCreneaux}
           onClose={fermerFeuille}
         />
       )}

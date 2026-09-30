@@ -15,9 +15,10 @@ import {
 // Réservé à la PWA installée (voir MessagesAutomatiques.tsx, le garde-fou : le
 // site est renvoyé vers `/dashboard/parametres/tout#avis`).
 //
-// L'adresse est sous `/dashboard/parametres/` pour que « Plus » reste allumé
-// dans la barre du bas (BarreBasV2 : `startsWith('/dashboard/parametres')`) —
-// c'est un écran de « Plus », maquette « Plus > Messages automatiques ».
+// L'adresse est sous `/dashboard/clients/` pour que « Clients » reste allumé dans la
+// barre du bas (BarreBasV2 : `startsWith('/dashboard/clients')`) : depuis le 2026-09-30 cet
+// écran se range avec les clients (lignes « Avis Google » et « Relance client » de la section
+// « Automatismes »), il n'est plus dans « Plus ».
 //
 // Lecture seule ici : les écritures passent par `PATCH /api/washer` depuis le
 // navigateur. Aucun cron n'est déclenché, aucun message n'est envoyé.

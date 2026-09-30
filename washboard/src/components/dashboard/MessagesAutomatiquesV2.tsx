@@ -308,8 +308,8 @@ export default function MessagesAutomatiquesV2({
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
-          href="/dashboard/parametres"
-          aria-label="Retour à Plus"
+          href="/dashboard/clients"
+          aria-label="Retour à Clients"
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />

@@ -6,6 +6,7 @@ import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { EntrepriseListItem } from '@/lib/entrepriseProfile'
 import ClientsViewV1, { type ClientBloque } from '@/components/dashboard/ClientsViewV1'
 import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
+import type { AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
 
 // Point de branchement v1/v2 de l'écran Clients — décision d'Alexandre,
 // 2026-09-22 : la refonte 2026 (jetons v2, filtre Pros, avatars carrés pour
@@ -23,7 +24,7 @@ import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 // branchement.
 export default function ClientsView({
   bookings, bloques = [], offreDeblocage = 'Pro', montantBloque = 0,
-  documents, reglages, reglagesMessages, entreprises, nomLaveur,
+  documents, reglages, reglagesMessages, entreprises, nomLaveur, automatismes,
 }: {
   bookings: ClientBooking[]
   /** Clients masqués par le plafond de l'offre (2026-09-28) — voir `ClientsViewV1.tsx`,
@@ -45,6 +46,8 @@ export default function ClientsView({
   entreprises?: EntrepriseListItem[]
   /** Signature du message WhatsApp envoyé depuis une facture ouverte dans la Fiche entreprise. */
   nomLaveur?: string
+  /** Avis Google, relance, créneaux intelligents : PWA seulement (2026-09-30). */
+  automatismes?: AutomatismesClients
 }) {
   const isPwa = usePwaStandalone()
   return isPwa
@@ -52,7 +55,7 @@ export default function ClientsView({
       <ClientsViewV2
         bookings={bookings} bloques={bloques} offreDeblocage={offreDeblocage} montantBloque={montantBloque}
         documents={documents} reglages={reglages} reglagesMessages={reglagesMessages}
-        entreprises={entreprises} nomLaveur={nomLaveur}
+        entreprises={entreprises} nomLaveur={nomLaveur} automatismes={automatismes}
       />
     )
     : <ClientsViewV1 bookings={bookings} bloques={bloques} offreDeblocage={offreDeblocage} montantBloque={montantBloque} />

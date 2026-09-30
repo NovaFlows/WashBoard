@@ -19,7 +19,7 @@ export function destinationPwa(ancre: string): string {
   switch (ancre.replace(/^#/, '')) {
     case 'facturation': return `${PROFIL}#facturation`
     case 'avis':
-    case 'relances': return '/dashboard/parametres/messages'
+    case 'relances': return '/dashboard/clients/messages'
     case 'lien-reservation': return '/dashboard/parametres/liens'
     case 'personnalisation': return '/dashboard/parametres/apparence'
     case 'notifications': return '/dashboard/parametres/reglages#notifications'

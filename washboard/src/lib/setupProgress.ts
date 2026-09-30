@@ -140,7 +140,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.reviewsEnabled,
       blocking: false, essential: false,
       href: '/dashboard/parametres#avis',
-      hrefV2: '/dashboard/parametres/messages',
+      hrefV2: '/dashboard/clients/messages',
     },
     {
       key: 'followup',
@@ -148,7 +148,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.followupEnabled,
       blocking: false, essential: false,
       href: '/dashboard/parametres#relances',
-      hrefV2: '/dashboard/parametres/messages',
+      hrefV2: '/dashboard/clients/messages',
     },
     {
       key: 'calendar',
@@ -164,7 +164,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.smartSlotEnabled,
       blocking: false, essential: false,
       href: '/dashboard/admin#creneaux',
-      hrefV2: '/dashboard/parametres/prestations#creneaux',
+      hrefV2: '/dashboard/clients#creneaux',
     },
     {
       key: 'welcome',

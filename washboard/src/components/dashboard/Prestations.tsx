@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
-import type { ReglagesCreneaux } from '@/lib/creneauxForm'
 import type { Plan } from '@/lib/plan'
 
 // Point d'entrée de « Prestations et prix » — destination NEUVE de la refonte
@@ -28,7 +27,6 @@ type Props = {
   lectureIncomplete: boolean
   zone: ZoneConfig
   adresseDeBase: string | null
-  creneaux: ReglagesCreneaux
   plafond: number | null
   offre: Plan
 }

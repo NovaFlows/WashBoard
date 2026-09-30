@@ -8,8 +8,7 @@ import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 import Link from 'next/link'
 import type { Washer } from '@/types'
-import { hasFeature, PLAN_LABELS } from '@/lib/plan'
-import { nombreActifs } from '@/lib/messagesAutomatiques'
+import { PLAN_LABELS } from '@/lib/plan'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { infosFacturationManquantes } from '@/lib/facture'
@@ -27,8 +26,8 @@ import { infosFacturationManquantes } from '@/lib/facture'
 // vers `/dashboard/parametres/tout` — la nouvelle route qui rend l'ancien
 // formulaire complet tel quel (ParametresFormV1, réutilisé sans modification),
 // pour les réglages qui n'ont pas encore leur propre écran v2 (Équipe ; les
-// Messages automatiques ont le leur depuis le 2026-09-24 :
-// `/dashboard/parametres/messages`). Aucune requête ni aucun calcul n'est dupliqué ici :
+// Messages automatiques ont le leur depuis le 2026-09-24, dans Clients depuis le 2026-09-30 :
+// `/dashboard/clients/messages`). Aucune requête ni aucun calcul n'est dupliqué ici :
 // cet écran est un sommaire, pas une nouvelle source de vérité.
 //
 // Dernière ligne du menu (« Tous les réglages »), absente de la maquette :
@@ -178,22 +177,6 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
   const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
   const notifications = resumeNotifications(etatNotifications)
 
-  // Ce qui part VRAIMENT : un avis « activé » sans lien Google, ou une relance
-  // sans message, ne part pas (le cron les traite sans rien envoyer) — compter
-  // « 2 actifs » ici alors que l'écran Messages automatiques en montre 1 serait
-  // se contredire.
-  const automatismesActifs = nombreActifs(
-    {
-      review_enabled: !!washer.review_enabled,
-      review_delay_hours: washer.review_delay_hours,
-      google_review_url: washer.google_review_url,
-      review_channel: washer.review_channel === 'sms' ? 'sms' : 'email',
-      followup_enabled: !!washer.followup_enabled,
-      followup_delay_days: washer.followup_delay_days,
-      followup_message: washer.followup_message,
-    },
-    { smsAutorise: hasFeature(washer, 'avis_sms') },
-  )
   const planLabel = washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]
 
   return (
@@ -240,11 +223,8 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
       <div>
         <TitreSection>De temps en temps</TitreSection>
         <CarteListe>
-          <Ligne
-            label="Messages automatiques"
-            valeur={`${automatismesActifs} actif${automatismesActifs > 1 ? 's' : ''}`}
-            href="/dashboard/parametres/messages"
-          />
+          {/* « Messages automatiques » et « Créneaux intelligents » ont quitté « Plus » le
+              2026-09-30 (Alexandre) : ils vivent dans « Clients », section « Automatismes ». */}
           {/* « Modèles de messages » de la maquette (7) n'a pas d'équivalent
               dans le code : un seul message d'avis (codé en dur, voir
               refonte.md) et un seul message de relance personnalisable,
@@ -273,13 +253,12 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
       <div>
         <TitreSection>Une fois</TitreSection>
         <CarteListe>
-          {/* « Zone, créneaux » : depuis le 2026-09-25, l'écran « Prestations et prix »
-              porte aussi la zone d'intervention et les créneaux intelligents. Les
-              deux lignes qui menaient à l'ancien écran (« Zone et déplacement »,
-              « Créneaux intelligents ») ont donc disparu d'ici. */}
+          {/* « Zone » : l'écran « Prestations et prix » porte aussi la zone d'intervention
+              (depuis le 2026-09-25). Les créneaux intelligents, eux, sont dans « Clients »
+              depuis le 2026-09-30. */}
           <Ligne
             label="Prestations et prix"
-            sousLabel="Zone, créneaux"
+            sousLabel="Zone d’intervention"
             valeur={typeof servicesCount === 'number' ? String(servicesCount) : undefined}
             href="/dashboard/parametres/prestations"
           />
