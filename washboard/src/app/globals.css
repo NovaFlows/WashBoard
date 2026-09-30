@@ -145,8 +145,14 @@ body.wb-hide-fab [data-wb-whatsapp-fab] {
    barre existe, par la barre elle-même. Le mécanisme `wb-hide-fab` ci-dessus
    ne suffit pas : chaque panneau qui l'utilise le RETIRE à sa fermeture, y
    compris quand c'est la barre qui l'avait posé — la bulle réapparaissait donc
-   après la première fiche fermée. */
-body:has(.wb-barre-bas-verre) [data-wb-whatsapp-fab] {
+   après la première fiche fermée.
+
+   ⚠️ Aucun `:has()` dans ce fichier : Turbopack, qui construit les déploiements, abandonne
+   silencieusement TOUT le CSS qui suit le premier `:has()` rencontré. Le 2026-10-01, la
+   refonte est partie en production sans ses couleurs ni ses arrondis pour cette raison —
+   les utilitaires Tailwind survivaient, les jetons `--v2-*` non. D'où la classe
+   `wb-barre-bas`, posée sur <html> par DashboardShell. */
+html.wb-barre-bas [data-wb-whatsapp-fab] {
   display: none;
 }
 
@@ -546,8 +552,8 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
 /* PWA en bêta : le papier de la refonte couvre tout l'écran, y compris derrière les
    encoches, le rebond et ce qui dépasse du contenu (voir DashboardShell). La barre du
    bas est le repère : elle n'existe que dans ce mode. */
-html:has(.wb-barre-bas-verre),
-body:has(.wb-barre-bas-verre) {
+html.wb-barre-bas,
+html.wb-barre-bas body {
   background-color: var(--v2-color-fond);
 }
 

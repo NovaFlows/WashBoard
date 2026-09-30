@@ -531,15 +531,21 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
   // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
   // refonte cessent de s'appliquer. On la remet dès qu'elle manque.
+  //
+  // `wb-barre-bas` dit aux règles CSS que la barre du bas est à l'écran. Ce repère était
+  // auparavant lu directement dans le DOM (`body:has(.wb-barre-bas-verre)`) : Turbopack, qui
+  // construit les déploiements, abandonne TOUT le fichier CSS à partir du premier `:has()`
+  // rencontré — la refonte partait donc en production sans ses couleurs. Voir globals.css.
   useEffect(() => {
-    if (!isPwa) return
     const html = document.documentElement
+    html.classList.toggle('wb-barre-bas', showBarreBas)
+    if (!isPwa) return
     const remettre = () => { if (!html.classList.contains('wb-pwa')) html.classList.add('wb-pwa') }
     remettre()
     const obs = new MutationObserver(remettre)
     obs.observe(html, { attributes: true, attributeFilter: ['class'] })
     return () => obs.disconnect()
-  }, [isPwa])
+  }, [isPwa, showBarreBas])
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
   // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
