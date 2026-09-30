@@ -8,6 +8,31 @@ const MAINTENANT = new Date('2026-09-05T10:00:00Z').getTime()
 const dans = (ms: number) => new Date(MAINTENANT + ms).toISOString()
 
 describe('verdictDate', () => {
+  describe('réservation le jour même désactivée', () => {
+    const PARIS_MIDI = new Date('2026-09-05T10:00:00Z').getTime() // 12h à Paris
+    const apres = (ms: number) => new Date(PARIS_MIDI + ms).toISOString()
+
+    it('refuse un créneau encore à venir aujourd’hui', () => {
+      expect(verdictDate(apres(3 * 3600_000), PARIS_MIDI, BOOKING_HORIZON_DAYS, false)).toBe('jour_meme')
+    })
+    it('accepte le lendemain', () => {
+      expect(verdictDate(apres(JOUR), PARIS_MIDI, BOOKING_HORIZON_DAYS, false)).toBe('ok')
+    })
+    it('lit le jour à l’heure de Paris, pas en UTC', () => {
+      // 23h UTC le 5 = 01h le 6 à Paris : 7h ce matin-là est encore « aujourd'hui » pour le laveur.
+      const nuit = new Date('2026-09-05T23:00:00Z').getTime()
+      expect(verdictDate('2026-09-06T05:00:00Z', nuit, BOOKING_HORIZON_DAYS, false)).toBe('jour_meme')
+      expect(verdictDate('2026-09-07T05:00:00Z', nuit, BOOKING_HORIZON_DAYS, false)).toBe('ok')
+    })
+    it('laisse passer le jour même quand la case est cochée (défaut)', () => {
+      expect(verdictDate(apres(3 * 3600_000), PARIS_MIDI)).toBe('ok')
+      expect(verdictDate(apres(3 * 3600_000), PARIS_MIDI, BOOKING_HORIZON_DAYS, true)).toBe('ok')
+    })
+    it('un créneau passé reste « passe », pas « jour_meme »', () => {
+      expect(verdictDate(apres(-3600_000), PARIS_MIDI, BOOKING_HORIZON_DAYS, false)).toBe('passe')
+    })
+  })
+
   it('accepte un créneau à venir dans la fenêtre proposée', () => {
     expect(verdictDate(dans(2 * JOUR), MAINTENANT)).toBe('ok')
     expect(verdictDate(dans(BOOKING_HORIZON_DAYS * JOUR), MAINTENANT)).toBe('ok')

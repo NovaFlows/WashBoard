@@ -173,7 +173,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, same_day_booking, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -320,7 +320,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Le laveur qui saisit lui-même un rendez-vous depuis son tableau de bord
   // reste libre de forcer : c'est son métier, pas une anomalie.
   if (!isOwner) {
-    const quand = verdictDate(bookingData.scheduled_at)
+    const quand = verdictDate(bookingData.scheduled_at, Date.now(), undefined, washer?.same_day_booking !== false)
     if (quand !== 'ok') {
       logger.warn('bookings.rejected.date', {
         washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, verdict: quand,
@@ -329,7 +329,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         {
           error: quand === 'passe'
             ? 'Ce créneau est déjà passé. Merci de choisir une autre date.'
-            : 'Cette date n\'est pas ouverte à la réservation.',
+            : quand === 'jour_meme'
+              ? 'Les réservations le jour même ne sont pas ouvertes. Merci de choisir une date à partir de demain.'
+              : 'Cette date n\'est pas ouverte à la réservation.',
         },
         { status: 400 },
       )

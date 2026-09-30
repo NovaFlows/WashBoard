@@ -23,6 +23,7 @@ type Props = {
   availabilities: Availability[]
   unavailabilities: Unavailability[]
   teamSize: number
+  jourMemeAutorise: boolean
   lectureIncomplete: boolean
 }
 

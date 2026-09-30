@@ -22,7 +22,9 @@ import { SLOT_STEP } from './slots'
  *  la réservation refuserait ensuite. */
 export const BOOKING_HORIZON_DAYS = 60
 
-export type VerdictDate = 'ok' | 'invalide' | 'passe' | 'trop_loin'
+export type VerdictDate = 'ok' | 'invalide' | 'passe' | 'trop_loin' | 'jour_meme'
+
+const jourParis = (ms: number) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
 
 /** Le rendez-vous tombe-t-il dans la fenêtre réservable ?
  *
@@ -35,10 +37,14 @@ export function verdictDate(
   scheduledAt: string,
   nowMs: number = Date.now(),
   horizonDays: number = BOOKING_HORIZON_DAYS,
+  jourMemeAutorise: boolean = true,
 ): VerdictDate {
   const t = new Date(scheduledAt).getTime()
   if (!Number.isFinite(t)) return 'invalide'
   if (t <= nowMs) return 'passe'
+  // Case « les clients peuvent réserver le jour même » décochée : seuls les jours suivants sont
+  // ouverts. Le jour se lit à l'heure de Paris, celle des horaires du laveur.
+  if (!jourMemeAutorise && jourParis(t) <= jourParis(nowMs)) return 'jour_meme'
   if (t > nowMs + (horizonDays + 1) * 24 * 60 * 60_000) return 'trop_loin'
   return 'ok'
 }

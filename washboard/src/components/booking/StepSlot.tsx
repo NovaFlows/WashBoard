@@ -24,6 +24,8 @@ type Props = {
   existingBookings: ExistingBooking[]
   unavailabilities: UnavailabilityItem[]
   teamSize: number
+  /** Case « réserver le jour même » des Horaires : décochée, la réservation ne s'ouvre que demain. */
+  jourMemeAutorise?: boolean
   serviceDuration: number
   servicePrice: number
   washerId: string
@@ -68,7 +70,7 @@ function grilleDuMois(mois: Date): (Date | null)[] {
 const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
-  availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
+  availabilities, existingBookings, unavailabilities, teamSize, jourMemeAutorise = true, serviceDuration, servicePrice, washerId,
   hasTravelFee = false, travelFeeMode = 'base', onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
@@ -88,9 +90,13 @@ export default function StepSlot({
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
   const [morningVisible,     setMorningVisible]     = useState(6)
   const [afternoonVisible,   setAfternoonVisible]   = useState(6)
-  // Fenêtre réservable : d'aujourd'hui (les créneaux déjà commencés sont écartés plus bas) à
-  // l'horizon que le serveur accepte.
-  const [premierJour] = useState(() => aMinuit(new Date()))
+  // Fenêtre réservable : d'aujourd'hui (les créneaux déjà commencés sont écartés plus bas), ou de
+  // demain si le laveur a décoché « réserver le jour même », à l'horizon que le serveur accepte.
+  const [premierJour] = useState(() => {
+    const d = aMinuit(new Date())
+    if (!jourMemeAutorise) d.setDate(d.getDate() + 1)
+    return d
+  })
   const [dernierJour] = useState(() => {
     const d = aMinuit(new Date())
     d.setDate(d.getDate() + BOOKING_HORIZON_DAYS)

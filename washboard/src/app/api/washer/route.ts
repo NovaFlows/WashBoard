@@ -16,7 +16,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const {
-    name, phone, slug, logo_url, welcome_message, brand_color, team_size,
+    name, phone, slug, logo_url, welcome_message, brand_color, team_size, same_day_booking,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
@@ -176,6 +176,7 @@ export async function PATCH(request: NextRequest) {
   if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
   if (brand_color !== undefined) updates.brand_color = brand_color || null
   if (team_size !== undefined) updates.team_size = Math.min(50, Math.max(1, Math.floor(Number(team_size)) || 1))
+  if (same_day_booking !== undefined) updates.same_day_booking = Boolean(same_day_booking)
   if (smart_slot_enabled !== undefined) updates.smart_slot_enabled = Boolean(smart_slot_enabled)
   if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
   if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type

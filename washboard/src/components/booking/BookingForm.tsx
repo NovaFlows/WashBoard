@@ -61,6 +61,8 @@ export type WasherPublic = {
   name: string
   base_address: string | null
   team_size: number | null
+  /** Les clients peuvent-ils réserver le jour même ? Absent = oui. */
+  same_day_booking?: boolean
   travel_fee_mode: 'base' | 'previous'
   travel_fee_tiers: { max_minutes: number; fee: number }[] | null
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
@@ -334,6 +336,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             existingBookings={dispos.bookings}
             unavailabilities={dispos.unavailabilities}
             teamSize={washer.team_size ?? 1}
+            jourMemeAutorise={washer.same_day_booking !== false}
             // Règle unique, qui sait lire les deux formes : options rattachées
             // à chaque véhicule, ou liste commune des anciennes réservations.
             serviceDuration={dureeTotale(

@@ -12,8 +12,9 @@ import FeuillePlageV2 from '@/components/dashboard/FeuillePlageV2'
 import FeuilleJourV2 from '@/components/dashboard/FeuilleJourV2'
 import HorairesEtatVideV2, { type ModeleHoraires } from '@/components/dashboard/HorairesEtatVideV2'
 import { CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
-import { ConfirmationSuppression, Constat, nom } from '@/components/dashboard/PrestationsUiV2'
+import { ConfirmationSuppression, Constat, Interrupteur, nom } from '@/components/dashboard/PrestationsUiV2'
 import { toDateStr } from '@/lib/dateUtils'
+import { enregistrerProfil } from '@/lib/profilApi'
 import {
   FERME, JOURS_AFFICHES, NOMS_JOURS, congesAVenir, libelleJour, libellePlage, phraseEchecAjout, resumeHoraires,
 } from '@/lib/horaires'
@@ -47,13 +48,15 @@ type Props = {
   availabilities: Availability[]
   unavailabilities: Unavailability[]
   teamSize: number
+  /** Case « les clients peuvent réserver le jour même » (cochée par défaut). */
+  jourMemeAutorise: boolean
   /** La lecture des horaires ou des congés a échoué : on n'affiche PAS un écran
    *  vide (le laveur le prendrait pour son état réel et referait sa semaine, ou
    *  croirait ses congés levés). */
   lectureIncomplete: boolean
 }
 
-export default function HorairesV2({ availabilities, unavailabilities, teamSize, lectureIncomplete }: Props) {
+export default function HorairesV2({ availabilities, unavailabilities, teamSize, jourMemeAutorise, lectureIncomplete }: Props) {
   const h = useHorairesV2(availabilities)
   const { plages } = h
   const {
@@ -68,6 +71,21 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
   // Échec partiel d'un raccourci de l'état vide : la liste n'est plus vide (des
   // jours ont été créés), le message ne peut donc plus vivre dans l'état vide.
   const [banniere, setBanniere] = useState<string | null>(null)
+
+  const [jourMeme, setJourMeme] = useState(jourMemeAutorise)
+  const [jourMemeEnCours, setJourMemeEnCours] = useState(false)
+  const [jourMemeErreur, setJourMemeErreur] = useState<string | null>(null)
+
+  // L'affichage suit la base, pas le doigt : on n'inverse l'interrupteur qu'une fois l'écriture faite.
+  async function basculerJourMeme() {
+    if (jourMemeEnCours) return
+    setJourMemeEnCours(true)
+    setJourMemeErreur(null)
+    const r = await enregistrerProfil({ same_day_booking: !jourMeme })
+    setJourMemeEnCours(false)
+    if (r.ok) setJourMeme(!jourMeme)
+    else setJourMemeErreur(r.message)
+  }
 
   const vide = plages.length === 0
   const [aujourdhui] = useState(() => toDateStr(new Date()))
@@ -198,6 +216,28 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
               </ul>
             </CarteListe>
           )}
+
+          <section aria-label="Réservation le jour même" className="mt-[26px]">
+            <CarteListe>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1 py-3">
+                  <p className={`text-[15.5px] ${nom}`}>Réservation le jour même</p>
+                  <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {jourMeme
+                      ? 'Vos clients peuvent réserver pour aujourd’hui, tant qu’il reste un créneau à venir.'
+                      : 'Vos clients réservent à partir de demain.'}
+                  </p>
+                </div>
+                <Interrupteur
+                  actif={jourMeme}
+                  enCours={jourMemeEnCours}
+                  libelle="Les clients peuvent réserver le jour même"
+                  onClick={basculerJourMeme}
+                />
+              </div>
+            </CarteListe>
+            {jourMemeErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{jourMemeErreur}</Constat></div>}
+          </section>
 
           {/* Les congés restent gérables même sans aucune plage : un laveur qui
               n'a pas encore réglé sa semaine peut déjà bloquer une période. */}

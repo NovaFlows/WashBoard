@@ -17,6 +17,7 @@ export type Washer = {
   zone_config: ZoneConfig
   google_refresh_token: string | null
   team_size: number
+  same_day_booking?: boolean
   smart_slot_enabled: boolean
   smart_slot_radius_minutes: number
   smart_slot_discount_type: 'fixed' | 'percent'
