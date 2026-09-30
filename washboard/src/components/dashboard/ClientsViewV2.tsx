@@ -122,6 +122,23 @@ function pastilleDroite(c: ResumeClient, maintenant: number): { texte: string; c
 
 type Filtre = 'tous' | 'pros' | 'relancer' | 'entreprises'
 
+/** Clients montrés d'abord sous chaque filtre, puis ajoutés à chaque « Charger plus »
+ *  (Alexandre, 2026-09-30) : un fichier de plusieurs dizaines de contacts ne se déroule plus d'un bloc. */
+const PAS_AFFICHAGE = 5
+
+function BoutonChargerPlus({ restants, onClick }: { restants: number; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-colors active:bg-[color:var(--v2-color-fond)] motion-reduce:transition-none`}
+    >
+      Charger plus
+      <span className="ml-1.5 text-[color:var(--v2-color-gris)]">({restants} restant{restants > 1 ? 's' : ''})</span>
+    </button>
+  )
+}
+
 /** `ClientBooking` porte déjà tout ce que `RdvMessage` demande (voir son en-tête) — sauf
  *  `client_email` non nullable, alors que le formulaire de réservation ne l'exige pas toujours
  *  d'après son type. Une chaîne vide s'exclut d'elle-même du regroupement par client. */
@@ -166,6 +183,9 @@ export default function ClientsViewV2({
   const [maintenant] = useState(() => Date.now())
   const [recherche, setRecherche] = useState('')
   const [filtre, setFiltre] = useState<Filtre>('tous')
+  const [visibles, setVisibles] = useState<Record<Filtre, number>>({
+    tous: PAS_AFFICHAGE, pros: PAS_AFFICHAGE, relancer: PAS_AFFICHAGE, entreprises: PAS_AFFICHAGE,
+  })
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [entrepriseOuverteId, setEntrepriseOuverteId] = useState<string | null>(null)
 
@@ -284,6 +304,11 @@ export default function ClientsViewV2({
   // leur email, rien sur quoi chercher), et hors de l'onglet « Tous »/« Pros » — même règle
   // que ClientsViewV1.tsx.
   const bloquesAffiches = filtre === 'relancer' || filtre === 'entreprises' || recherche.trim() ? [] : bloques
+  const limite = visibles[filtre]
+  const chargerPlus = () => setVisibles(v => ({ ...v, [filtre]: v[filtre] + PAS_AFFICHAGE }))
+  const bloquesVus = bloquesAffiches.slice(0, limite)
+  const affichesVus = affiches.slice(0, Math.max(0, limite - bloquesVus.length))
+  const restantsClients = bloquesAffiches.length + affiches.length - limite
   const fiche = ouvert ? buildClientProfile(bookings, ouvert, new Date(maintenant), documents, reglagesEffectifs) : null
   // Doublon probable (menu « … » de la fiche, 2026-09-28) : calculé ici, pas dans la fiche —
   // c'est cet écran qui connaît TOUT le fichier (`clients`), une fiche ouverte ne voit qu'elle-même.
@@ -408,8 +433,9 @@ export default function ClientsViewV2({
                 Tous vos clients sont revenus, ou n’ont pas encore de quoi être relancés.
               </p>
             ) : (
+              <>
               <ul aria-label="Clients à relancer" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-                {aRelancer.map(l => (
+                {aRelancer.slice(0, limite).map(l => (
                   <LigneARelancerVue
                     key={l.cle}
                     ligne={l}
@@ -421,10 +447,13 @@ export default function ClientsViewV2({
                   />
                 ))}
               </ul>
+              {aRelancer.length > limite && <BoutonChargerPlus restants={aRelancer.length - limite} onClick={chargerPlus} />}
+              </>
             )
           ) : filtre === 'entreprises' ? (
+            <>
             <ul aria-label="Entreprises" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-              {entreprisesAffichees.map(e => (
+              {entreprisesAffichees.slice(0, limite).map(e => (
                 <LigneEntreprise
                   key={e.id}
                   entreprise={e}
@@ -436,6 +465,10 @@ export default function ClientsViewV2({
                 />
               ))}
             </ul>
+            {entreprisesAffichees.length > limite && (
+              <BoutonChargerPlus restants={entreprisesAffichees.length - limite} onClick={chargerPlus} />
+            )}
+            </>
           ) : (
             <>
               {(recherche.trim() || affiches.length === 0) && (
@@ -450,10 +483,10 @@ export default function ClientsViewV2({
 
               {(affiches.length > 0 || bloquesAffiches.length > 0) && (
                 <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-                  {bloquesAffiches.map(b => (
+                  {bloquesVus.map(b => (
                     <LigneClientVerrouilleeV2 key={b.id} reservation={b} offre={offreDeblocage} />
                   ))}
-                  {affiches.map(c => (
+                  {affichesVus.map(c => (
                     <LigneClient
                       key={c.cle}
                       client={c}
@@ -467,6 +500,7 @@ export default function ClientsViewV2({
                   ))}
                 </ul>
               )}
+              {restantsClients > 0 && <BoutonChargerPlus restants={restantsClients} onClick={chargerPlus} />}
             </>
           )}
         </>
