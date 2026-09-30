@@ -34,7 +34,7 @@ export default async function AssistancePage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
-      <Assistance beta={!!washer.beta_refonte} />
+      <Assistance />
     </DashboardShell>
   )
 }

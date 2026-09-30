@@ -32,11 +32,9 @@ type Props = {
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
   cancelsAt?: string | null
-  // Refonte 2026, passe 4 : `washer.beta_refonte`, tel quel — `undefined`
-  // tant que la colonne n'existe pas en base (SQL pas encore passé),
-  // `null`/`false`/absent pour un laveur qui n'a pas rejoint le bêta. Les
-  // trois valent « pas de barre du bas », jamais une erreur (voir
-  // `betaRefonte` ci-dessous, converti en booléen strict).
+  // Ancien interrupteur du bêta (`washer.beta_refonte`). Depuis le 2026-10-01 la refonte
+  // vaut pour TOUTE application installée : la valeur n'est plus lue. La prop reste
+  // déclarée le temps que les pages cessent de la passer.
   betaRefonte?: boolean | null
   /** Date de création de la fiche : décide si ce compte suit la règle 2026
    *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
@@ -484,7 +482,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, betaRefonte, createdAt, slug, subscriptionEndsAt }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -523,14 +521,13 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Barre du bas (refonte 2026, passe 4) : uniquement dans la PWA installée
   // (usePwaStandalone — la FORME du châssis change, une nav en plus apparaît,
-  // donc le hook plutôt que la classe CSS `wb-pwa`, voir globals.css) ET
-  // seulement pour un laveur qui a rejoint le bêta. `!!betaRefonte` absorbe
-  // `undefined` (colonne absente), `null` et `false` de la même façon : rien
-  // ne s'affiche, jamais d'erreur. Le menu latéral (Sidebar, juste en dessous)
-  // n'est JAMAIS conditionné par ces deux variables : il reste le filet de
-  // secours tant que les passes 5 et 6 ne sont pas faites.
+  // donc le hook plutôt que la classe CSS `wb-pwa`, voir globals.css). Depuis le
+  // 2026-10-01, plus de filtre `beta_refonte` : toute application installée reçoit
+  // la refonte. Le menu latéral (Sidebar, juste en dessous) n'est JAMAIS conditionné
+  // par cette variable : il reste le filet de secours tant que les passes 5 et 6 ne
+  // sont pas faites.
   const isPwa = usePwaStandalone()
-  const showBarreBas = isPwa && !!betaRefonte
+  const showBarreBas = isPwa
   // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
   // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
   // refonte cessent de s'appliquer. On la remet dès qu'elle manque.
@@ -599,16 +596,15 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Le cookie est RETIRÉ hors de l'application installée : sur Android, le navigateur et
   // l'application partagent leurs cookies, et le site doit garder ses couleurs à lui.
   useEffect(() => {
-    const base = 'wb_pwa_beta=; path=/; max-age=0; samesite=lax'
-    if (!isPwa || !showBarreBas) {
-      document.cookie = base
+    if (!isPwa) {
+      document.cookie = 'wb_pwa_beta=; path=/; max-age=0; samesite=lax'
       return
     }
     document.cookie = `wb_pwa_beta=1; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
     // Rien à changer dans la page en cours : Next réécrit ses propres balises `theme-color`
     // (essayé, ça ne tient pas), et de toute façon iOS ne relit la couleur qu'au lancement.
     // Changer de thème en séance se voit donc au lancement suivant, lui aussi.
-  }, [showBarreBas, isPwa])
+  }, [isPwa])
 
   return (
     // PWA en bêta : tout le fond de l'écran est le papier de la refonte (`--v2-color-fond`),
@@ -643,17 +639,15 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       {isPwa && <ConfirmationEnvoiV2 />}
       {showBarreBas && <RetourGesteV2 />}
 
-      {/* En-tête. Dans la PWA en bêta, la classe `wb-entete-beta` (posée dès
-          que le serveur sait que le laveur est dans le bêta) le réduit, par
-          CSS et sans flash, à ses seuls bandeaux : la rangée ☰ / titre /
-          badge de plan / déconnexion / thème (`wb-entete-barre`) est masquée,
-          et le bloc perd son statut collant, son fond et son filet — voir
-          globals.css. Les bandeaux (fin d'essai, paiement, résiliation,
-          annonce) restent : information commerciale, ils ne sont jamais
-          retirés. Ailleurs (site, PWA sans bêta), aucune de ces règles ne
+      {/* En-tête. La classe `wb-entete-beta` le réduit, par CSS et sans flash, à ses
+          seuls bandeaux : la rangée ☰ / titre / badge de plan / déconnexion / thème
+          (`wb-entete-barre`) est masquée, et le bloc perd son statut collant, son fond
+          et son filet — voir globals.css. Les bandeaux (fin d'essai, paiement,
+          résiliation, annonce) restent : information commerciale, ils ne sont jamais
+          retirés. Ces règles sont portées par `html.wb-pwa` : sur le site, aucune ne
           s'applique et l'en-tête est identique à celui d'avant. */}
       <header
-        className={`bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10${betaRefonte ? ' wb-entete-beta' : ''}`}
+        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 wb-entete-beta"
         // Dans la PWA en bêta, l'en-tête n'est plus qu'un porte-bandeaux : décidé ici, en JSX,
         // et pas seulement par la classe `wb-pwa` de <html> (que React peut effacer en
         // réécrivant `className`) — sinon la rangée v1 réapparaissait au fil de la navigation.
