@@ -610,3 +610,8 @@ html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after {
 @media (prefers-reduced-motion: reduce) {
   .wb-envoi-fond, .wb-envoi-carte, .wb-envoi-pastille { animation: none; }
 }
+
+/* La PWA installée n'a pas de barre de défilement visible : le contenu défile toujours au doigt,
+   mais aucune glissière ne se pose sur le côté (Alexandre, 2026-09-30). Le site garde la sienne. */
+html.wb-pwa, html.wb-pwa * { scrollbar-width: none; }
+html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible } from '@/lib/slots'
+import { generateSlots, creneauPasse, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 
@@ -88,12 +88,9 @@ export default function StepSlot({
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
   const [morningVisible,     setMorningVisible]     = useState(6)
   const [afternoonVisible,   setAfternoonVisible]   = useState(6)
-  // Fenêtre réservable : de demain à l'horizon que le serveur accepte.
-  const [premierJour] = useState(() => {
-    const d = aMinuit(new Date())
-    d.setDate(d.getDate() + 1)
-    return d
-  })
+  // Fenêtre réservable : d'aujourd'hui (les créneaux déjà commencés sont écartés plus bas) à
+  // l'horizon que le serveur accepte.
+  const [premierJour] = useState(() => aMinuit(new Date()))
   const [dernierJour] = useState(() => {
     const d = aMinuit(new Date())
     d.setDate(d.getDate() + BOOKING_HORIZON_DAYS)
@@ -201,7 +198,15 @@ export default function StepSlot({
    *  et pas entièrement en congé. */
   function estReservable(d: Date): boolean {
     if (d < premierJour || d > dernierJour) return false
-    return availableDaysOfWeek.includes(d.getDay()) && !isDateUnavailable(d)
+    if (!availableDaysOfWeek.includes(d.getDay()) || isDateUnavailable(d)) return false
+    // Aujourd'hui : encore faut-il qu'il reste un horaire à venir avant la fermeture.
+    if (memeJour(d, new Date())) {
+      const maintenant = new Date()
+      return availabilities
+        .filter(a => a.day_of_week === d.getDay())
+        .some(a => generateSlots(a.start_time, a.end_time, serviceDuration).some(s => !creneauPasse(s, d, maintenant)))
+    }
+    return true
   }
 
   /** Jour réservable suivant (1) ou précédent (-1), en sautant les jours
@@ -248,6 +253,7 @@ export default function StepSlot({
   const slotsForDay = selectedDate
     ? dayAvailabilities
         .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
+        .filter(slot => !creneauPasse(slot, selectedDate, new Date()))
         .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []

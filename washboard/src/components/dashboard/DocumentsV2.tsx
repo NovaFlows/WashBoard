@@ -106,6 +106,30 @@ function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
   )
 }
 
+/** La flèche revient d'où l'on vient : le « + » de la barre du bas est accessible de partout,
+ *  et renvoyer à Chiffres après un devis écrit depuis l'Accueil ou les Clients faisait perdre
+ *  le fil (Alexandre, 2026-09-30). Sans historique (écran ouvert en direct), Chiffres reste le
+ *  parent. Le « + » tapé ici même remplace l'adresse au lieu de l'empiler (BarreBasV2), sinon
+ *  un retour ne ferait que revenir à cet écran. */
+function FlecheRetourDocuments() {
+  const router = useRouter()
+  return (
+    <Link
+      href="/dashboard/chiffres"
+      aria-label="Retour à Chiffres"
+      onClick={e => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+          e.preventDefault()
+          router.back()
+        }
+      }}
+      className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+    >
+      <ChevronLeft size={22} strokeWidth={2} />
+    </Link>
+  )
+}
+
 type PropsDocuments = {
   prestations: { id: string; name: string; price: number }[]
   /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
@@ -121,13 +145,7 @@ export default function DocumentsV2(props: PropsDocuments) {
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
       <div className="flex items-center gap-1 pb-2">
-        <Link
-          href="/dashboard/chiffres"
-          aria-label="Retour à Chiffres"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
-        </Link>
+        <FlecheRetourDocuments />
         <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
       </div>
       <div className="mt-2">
@@ -275,13 +293,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
       <div className="flex items-center gap-1 pb-2">
-        <Link
-          href="/dashboard/chiffres"
-          aria-label="Retour à Chiffres"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
-        </Link>
+        <FlecheRetourDocuments />
         <div className="min-w-0 flex-1">
           <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>

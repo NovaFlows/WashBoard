@@ -382,8 +382,12 @@ export function BarreBasV2() {
         aria-label="Nouveau devis ou facture"
         // Déjà sur l'écran : la feuille s'ouvre sur place, il n'y a pas de page à attendre.
         // Allumer le contour de chargement ferait tourner un trait pour rien.
-        onClick={() => {
-          if (!pathname?.startsWith('/dashboard/chiffres/documents')) {
+        onClick={e => {
+          if (pathname?.startsWith('/dashboard/chiffres/documents')) {
+            // Remplacer, pas empiler : la flèche retour de l'écran doit mener là d'où l'on vient.
+            e.preventDefault()
+            router.replace(CENTRE_HREF, { scroll: false })
+          } else {
             setAttente({ href: CENTRE_HREF, depuis: pathname ?? '' })
           }
         }}

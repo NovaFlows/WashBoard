@@ -9,6 +9,15 @@ export type FeasibilityConstraint = { start: string; end: string; travelToNew: n
 
 /** Génère les créneaux d'une plage [start,end], par pas de `step`, en gardant
  *  ceux dont la durée tient avant la fin. Format "HH:MM". */
+/** Le créneau `slot` (« HH:MM ») du jour `date` a-t-il déjà commencé à l'instant `maintenant` ?
+ *  Sert à proposer le jour même : à 10 h, on réserve à partir de 10 h, pas avant. */
+export function creneauPasse(slot: string, date: Date, maintenant: Date): boolean {
+  const [h, m] = slot.split(':').map(Number)
+  const debut = new Date(date)
+  debut.setHours(h, m, 0, 0)
+  return debut.getTime() <= maintenant.getTime()
+}
+
 export function generateSlots(start: string, end: string, durationMinutes: number, step: number = SLOT_STEP): string[] {
   const slots: string[] = []
   const [sh, sm] = start.split(':').map(Number)

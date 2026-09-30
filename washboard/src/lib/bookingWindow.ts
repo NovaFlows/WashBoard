@@ -1,7 +1,7 @@
 // Validation serveur du moment choisi pour une réservation.
 //
-// Le formulaire public ne propose que des créneaux légitimes : jours J+1 à
-// J+14, horaires d'ouverture du laveur, pas de chevauchement. Mais la route
+// Le formulaire public ne propose que des créneaux légitimes : jours J à
+// J+60, horaires d'ouverture du laveur, pas de chevauchement. Mais la route
 // `POST /api/bookings` acceptait n'importe quel `scheduled_at` bien formé —
 // une requête directe créait un rendez-vous à 3h du matin un dimanche de
 // fermeture, ou daté de l'an dernier, ou dans trois ans. Le laveur le
@@ -13,7 +13,7 @@
 
 import { SLOT_STEP } from './slots'
 
-/** Nombre de jours proposés par le formulaire, à partir de demain.
+/** Nombre de jours proposés par le formulaire, à partir d'aujourd'hui (seuls les horaires encore à venir le jour même).
  *
  *  Passé de 14 à 60 le 20/09/2026, en même temps que le calendrier mensuel de
  *  la page de réservation : une grille qui montre le mois entier n'a de sens
@@ -27,7 +27,7 @@ export type VerdictDate = 'ok' | 'invalide' | 'passe' | 'trop_loin'
 /** Le rendez-vous tombe-t-il dans la fenêtre réservable ?
  *
  *  Bornes volontairement exprimées en instants, pas en jours calendaires : un
- *  client qui ouvre la page à 23h59 voit les jours J+1..J+14, et son envoi peut
+ *  client qui ouvre la page à 23h59 voit les jours J..J+60, et son envoi peut
  *  arriver après minuit. Un décompte en jours locaux rejetterait alors sa
  *  réservation sans qu'il ait rien fait de mal. On tolère donc un jour de plus
  *  sur la borne haute, et on ne refuse en bas que ce qui est réellement passé. */

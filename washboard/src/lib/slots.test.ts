@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  generateSlots, countOverlaps, countConflicts, isSlotInWindows,
+  generateSlots, creneauPasse, countOverlaps, countConflicts, isSlotInWindows,
   isSlotFeasible, effectiveTeamSize, dureeIncompatible, joursDureeIncompatible,
 } from './slots'
 
@@ -237,5 +237,20 @@ describe('isSlotFeasible — temps de trajet entre RDV', () => {
       { start: iso(11, 30), end: iso(12, 0), travelToNew: 0, travelFromNew: 600 },  // après, OK
     ]
     expect(isSlotFeasible('10:00', date, 60, around)).toBe(true)
+  })
+})
+
+describe('creneauPasse — réserver le jour même', () => {
+  const dix = new Date(2026, 0, 15, 10, 0, 0, 0)
+  it('écarte les créneaux déjà commencés, pile maintenant compris', () => {
+    expect(creneauPasse('09:30', date, dix)).toBe(true)
+    expect(creneauPasse('10:00', date, dix)).toBe(true)
+  })
+  it('garde ceux qui suivent', () => {
+    expect(creneauPasse('10:30', date, dix)).toBe(false)
+    expect(creneauPasse('14:00', date, dix)).toBe(false)
+  })
+  it('ne touche pas aux jours suivants', () => {
+    expect(creneauPasse('08:00', new Date(2026, 0, 16), dix)).toBe(false)
   })
 })

@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
       .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes)')
       .eq('washer_id', washerId)
       .neq('status', 'cancelled')
-      .gte('scheduled_at', new Date().toISOString())
+      // Douze heures de recul : un lavage commencé ce matin occupe encore le laveur, et le
+      // formulaire propose maintenant le jour même.
+      .gte('scheduled_at', new Date(Date.now() - 12 * 60 * 60_000).toISOString())
       .order('scheduled_at')
       .order('id')
       .range(debut, fin)),
