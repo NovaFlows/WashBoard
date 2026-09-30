@@ -12,7 +12,7 @@ import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
-import { pixelIdValide } from '@/lib/consentement'
+import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 
 type Props = {
@@ -224,7 +224,11 @@ export default async function BookingPage({ params }: Props) {
   // Lu et validé ici plutôt que passé tel quel : la valeur vient de la base,
   // où une contrainte la garde déjà, mais elle traverse ensuite jusqu'à un
   // `<script>` — c'est le genre de chemin où l'on vérifie deux fois.
-  const pixelId = pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null
+  // La simulation locale l'emporte, et elle n'existe qu'en développement
+  // (voir pixelIdDev) : elle permet de voir le bandeau sans avoir à écrire en
+  // base, et ne peut pas fuir en production.
+  const pixelId = pixelIdDev()
+    ?? (pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null)
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null

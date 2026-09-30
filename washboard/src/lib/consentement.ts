@@ -123,6 +123,22 @@ export function nettoyerPixelId(brut: string | null | undefined): string | null 
   return chiffres || null
 }
 
+/** Pixel simulé en local, pour voir le bandeau sans toucher à la base.
+ *
+ *  `NEXT_PUBLIC_DEV_PIXEL_ID=123456789012345` fait comme si le laveur avait
+ *  déclaré ce Pixel : le bandeau apparaît, le consentement se comporte
+ *  exactement comme en vrai, et rien n'est écrit nulle part.
+ *
+ *  INERTE EN PRODUCTION, et c'est la seule chose qui compte ici : sans cette
+ *  garde, une variable oubliée dans l'environnement Vercel ferait apparaître
+ *  un bandeau — et charger un script tiers — sur la page de tous les laveurs.
+ *  Même motif que `NEXT_PUBLIC_DEV_OFFRE` (voir plan.ts). */
+export function pixelIdDev(): string | null {
+  if (process.env.NODE_ENV === 'production') return null
+  const v = process.env.NEXT_PUBLIC_DEV_PIXEL_ID
+  return pixelIdValide(v) ? String(v).trim() : null
+}
+
 // ── Accès au stockage ───────────────────────────────────────────────────────
 //
 // `localStorage` et non un cookie : le choix du visiteur n'a aucune raison de
