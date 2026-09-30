@@ -596,3 +596,17 @@ html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after {
   html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::before,
   html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after { animation-duration: 1ms; }
 }
+
+/* ── « Bien envoyé » (ConfirmationEnvoiV2) ─────────────────────────────────
+   La carte monte en 220 ms, la pastille verte « pose » son coche juste après.
+   `--v2-ease-out`, jamais d'ease-in. Sous `prefers-reduced-motion` : rien ne bouge,
+   la fenêtre apparaît et disparaît seulement. */
+@keyframes wb-envoi-fond { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wb-envoi-carte { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes wb-envoi-pastille { 0% { transform: scale(.6); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.wb-envoi-fond { animation: wb-envoi-fond 160ms var(--v2-ease-out) both; }
+.wb-envoi-carte { animation: wb-envoi-carte 220ms var(--v2-ease-out) both; }
+.wb-envoi-pastille { animation: wb-envoi-pastille 360ms var(--v2-ease-out) 120ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .wb-envoi-fond, .wb-envoi-carte, .wb-envoi-pastille { animation: none; }
+}

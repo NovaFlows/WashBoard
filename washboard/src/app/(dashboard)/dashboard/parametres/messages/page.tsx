@@ -67,6 +67,8 @@ export default async function MessagesAutomatiquesPage() {
         relanceAutorisee={hasFeature(washer, 'followup')}
         libellePlanRelance={requiredPlanLabel('followup')}
         nomLaveur={washer.name}
+        expediteurSms={washer.sms_sender ?? ''}
+        telephone={washer.phone ?? ''}
         slug={washer.slug}
         rdvs={rdvs}
         lectureIncomplete={!!error || tronque}

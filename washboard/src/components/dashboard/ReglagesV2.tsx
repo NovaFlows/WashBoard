@@ -20,9 +20,8 @@ import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 // clients du laveur. Ses prestations, ses horaires, sa page — c'est « Plus ». L'apparence de
 // l'app, ses notifications, l'aide — c'est ici.
 //
-// « Tous les réglages » y est aussi, parce qu'il faut bien un chemin vers ce qui n'a pas
-// encore d'écran refait (email, mot de passe, accès support, zone de danger) ; il occupait
-// jusqu'ici le bas de « Plus », où il traînait sans raison.
+// L'ancien écran « Tous les réglages » n'est plus proposé ici : email, mot de passe, frais de
+// déplacement, pause et suppression du compte vivent dans « Mon profil » (2026-09-30).
 
 export default function ReglagesV2() {
   const { theme, setTheme } = useTheme()
@@ -94,20 +93,6 @@ export default function ReglagesV2() {
             signal={<NonLus count={unreadSupportCount} />}
           />
         </CarteListe>
-      </div>
-
-      <div>
-        <TitreSection>Plus loin</TitreSection>
-        <CarteListe>
-          <Ligne
-            label="Tous les réglages"
-            sousLabel="Email, mot de passe"
-            href="/dashboard/parametres/tout"
-          />
-        </CarteListe>
-        <p className={`mt-2 px-0.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          L’ancien écran complet, pour les réglages qui n’ont pas encore leur page ici.
-        </p>
       </div>
 
       {feuilleNotifications && <FeuilleNotificationsV2 onClose={() => setFeuilleNotifications(false)} />}

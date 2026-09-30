@@ -13,6 +13,9 @@ export type ChampsProfil = Partial<{
   phone: string
   base_address: string
   team_size: number
+  travel_fee_tiers: { max_minutes: number; fee: number }[]
+  travel_fee_mode: 'base' | 'previous'
+  sms_sender: string
   facture_statut: 'ei' | 'societe'
   facture_nom_legal: string
   facture_siret: string
@@ -30,5 +33,20 @@ export type ChampsProfil = Partial<{
  *  nommé reste tel quel en base. */
 export async function enregistrerProfil(champs: ChampsProfil): Promise<ResultatApi<null>> {
   const r = await appeler('enregistrer', 'PATCH', '/api/washer', champs)
+  return r.ok ? { ok: true, data: null } : r
+}
+
+/** Actions sur le compte (`POST /api/account`) : suspendre, réactiver / annuler la suppression,
+ *  programmer la suppression (30 jours, le nom exact de l'entreprise est exigé). */
+export async function actionCompte(
+  action: 'deactivate' | 'reactivate' | 'delete', confirmName?: string,
+): Promise<ResultatApi<null>> {
+  const r = await appeler('enregistrer', 'POST', '/api/account', { action, confirm_name: confirmName })
+  return r.ok ? { ok: true, data: null } : r
+}
+
+/** SMS test envoyé sur le téléphone du laveur (`POST /api/test-sms`, plan Pro). */
+export async function envoyerSmsTest(): Promise<ResultatApi<null>> {
+  const r = await appeler('envoyer', 'POST', '/api/test-sms')
   return r.ok ? { ok: true, data: null } : r
 }

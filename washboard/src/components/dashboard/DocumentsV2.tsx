@@ -19,6 +19,7 @@ import {
   supprimerDevis,
 } from '@/lib/documentsApi'
 import { aujourdhuiParis } from '@/lib/chiffresPeriode'
+import { confirmerEnvoi } from '@/lib/confirmationEnvoi'
 
 // « Devis et factures » — refonte 2026, destination NEUVE (Alexandre, 2026-09-27 : « on va
 // créer une section nouveau devis facture qui existe pas pour en générer un ou une »).
@@ -399,7 +400,11 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
           document={ouvert}
           nomLaveur={nomLaveur}
           occupe={occupe}
-          onEnvoyer={() => void agir(() => envoyerDocument(ouvert.id), 'Envoyé au client.')}
+          onEnvoyer={() => void agir(async () => {
+            const r = await envoyerDocument(ouvert.id)
+            if (r.ok) confirmerEnvoi({ titre: 'Email envoyé', detail: `${libelleGenre(ouvert.genre)} ${ouvert.numero ?? ''} pour ${ouvert.contenu.client.nom}`.replace(/\s+/g, ' ').trim() })
+            return r
+          }, 'Envoyé au client.')}
           onRepondre={statut => void agir(
             () => repondreDevis(ouvert.id, statut),
             statut === 'accepte' ? 'Devis accepté. Vous pouvez le transformer en facture.' : 'Devis marqué refusé.',

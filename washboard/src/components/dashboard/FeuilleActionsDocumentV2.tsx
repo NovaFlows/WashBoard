@@ -2,6 +2,7 @@
 
 import { Phone } from 'lucide-react'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import { confirmerEnvoi, annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { libelleGenre, messageWhatsapp, nomFichierDocument, partagerPdf, type Document } from '@/lib/documents'
 import { whatsappDigits } from '@/lib/phone'
 
@@ -73,7 +74,13 @@ export default function FeuilleActionsDocumentV2({
                 messageWhatsapp(d, null, nomLaveur),
                 `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim(),
               )
-              if (partage) return
+              if (partage === 'annule') return
+              const cible = `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim()
+              if (partage === 'envoye') {
+                confirmerEnvoi({ titre: 'PDF envoyé', detail: `${cible} pour ${client}` })
+                return
+              }
+              annoncerApresRetour({ titre: 'Message envoyé', detail: `${cible} pour ${client}` })
               // Repli (ordinateur, navigateur trop ancien) : `wa.me` ne transporte qu'un
               // message, le lien y est donc indispensable — sinon le client n'a rien.
               window.open(

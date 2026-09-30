@@ -27,6 +27,7 @@ const CORRESPONDANCES: Record<string, string> = {
   // Réglages : l'ancien formulaire géant s'est rangé en écrans. Les ancres qui visent une
   // feuille (`#facturation`, `#notifications`) la font ouvrir à l'arrivée — l'écran d'après
   // les lit dans `window.location.hash`.
+  '/dashboard/parametres/tout': '/dashboard/parametres/profil',
   '/dashboard/parametres#profil': '/dashboard/parametres/profil',
   '/dashboard/parametres#compte': '/dashboard/parametres/profil',
   '/dashboard/parametres#facturation': '/dashboard/parametres/profil#facturation',

@@ -19,7 +19,7 @@ import type { Washer } from '@/types'
 // (jamais `*`) : tout ce qui franchit la frontière serveur → navigateur est sérialisé dans la
 // page, et la fiche laveur porte des jetons Google et des identifiants Stripe.
 const COLONNES =
-  'id, name, phone, base_address, team_size, ' +
+  'id, name, phone, base_address, team_size, travel_fee_tiers, travel_fee_mode, account_status, deletion_scheduled_at, ' +
   'facture_statut, facture_nom_legal, facture_siret, facture_adresse, facture_forme_juridique, ' +
   'facture_capital, facture_immatriculation, facture_regime_tva, facture_taux_tva, facture_numero_tva, ' +
   'facture_prochain_numero, ' +

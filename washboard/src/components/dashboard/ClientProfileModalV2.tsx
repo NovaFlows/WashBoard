@@ -19,6 +19,7 @@ import { creerEtRattacher } from '@/components/dashboard/FicheEntrepriseV2'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
 import type { Doublon } from '@/lib/doublons'
+import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { texteExportClient, nomFichierExportClient } from '@/lib/exportClient'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
@@ -779,6 +780,7 @@ export default function ClientProfileModalV2({
               </a>
               <a
                 href={`sms:${profile.phone}`}
+                onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `À ${profile.name}` })}
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >

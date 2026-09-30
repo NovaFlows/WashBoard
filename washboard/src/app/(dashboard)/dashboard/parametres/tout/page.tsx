@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresFormV1 from '@/components/dashboard/ParametresFormV1'
+import ToutLesReglages from '@/components/dashboard/ToutLesReglages'
 
 // « Tous les réglages » — refonte 2026, passe 6. Rend l'ancien formulaire de
 // réglages (ParametresFormV1, deux onglets) tel quel, à une nouvelle adresse,
@@ -22,6 +23,9 @@ import ParametresFormV1 from '@/components/dashboard/ParametresFormV1'
 //
 // Aucune logique nouvelle : mêmes lectures, même composant que
 // `/dashboard/parametres` en v1.
+//
+// Depuis le 2026-09-30 cette page est réservée au SITE : chaque bloc a son écran v2 dans la PWA
+// installée, et `ToutLesReglages` y renvoie selon l'ancre (les liens ci-dessus n'y mènent plus).
 export default async function TousLesReglagesPage() {
   const supabase = await createClient()
 
@@ -32,6 +36,7 @@ export default async function TousLesReglagesPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+      <ToutLesReglages>
       <div className="mb-6">
         <Link
           href="/dashboard/parametres"
@@ -46,6 +51,7 @@ export default async function TousLesReglagesPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gérez vos informations et votre page client</p>
       </div>
       <ParametresFormV1 washer={washer} email={user.email ?? ''} />
+      </ToutLesReglages>
     </DashboardShell>
   )
 }

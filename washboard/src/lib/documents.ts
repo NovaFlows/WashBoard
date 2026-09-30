@@ -312,27 +312,31 @@ export function messageWhatsapp(
   return lignes.join('\n')
 }
 
+/** Issue d'un partage natif : `envoye` = la feuille de partage s'est terminée sur un choix,
+ *  `annule` = le laveur l'a fermée, `indisponible` = l'appareil ne sait pas partager un fichier. */
+export type IssuePartage = 'envoye' | 'annule' | 'indisponible'
+
 /** Le PDF lui-même, prêt à être partagé par l'appareil (WhatsApp, Messages, Mail…).
  *
  *  `wa.me` ne sait pas joindre de fichier : un lien seul obligeait le client à aller
  *  chercher son devis (Alexandre, 2026-09-27). Le partage natif, lui, envoie le VRAI PDF —
- *  c'est ce que fait l'iPhone quand on partage depuis une app. Rend `false` quand l'appareil
- *  ne sait pas partager un fichier : l'appelant retombe alors sur le lien `wa.me`. */
+ *  c'est ce que fait l'iPhone quand on partage depuis une app. Rend `indisponible` quand
+ *  l'appareil ne sait pas partager un fichier : l'appelant retombe alors sur le lien `wa.me`. */
 export async function partagerPdf(
   lienPdf: string, nomFichier: string, texte: string, titre: string,
-): Promise<boolean> {
-  if (typeof navigator === 'undefined' || !navigator.share || !navigator.canShare) return false
+): Promise<IssuePartage> {
+  if (typeof navigator === 'undefined' || !navigator.share || !navigator.canShare) return 'indisponible'
   try {
     const reponse = await fetch(lienPdf)
-    if (!reponse.ok) return false
+    if (!reponse.ok) return 'indisponible'
     const fichier = new File([await reponse.blob()], nomFichier, { type: 'application/pdf' })
-    if (!navigator.canShare({ files: [fichier] })) return false
+    if (!navigator.canShare({ files: [fichier] })) return 'indisponible'
     await navigator.share({ files: [fichier], text: texte, title: titre })
-    return true
+    return 'envoye'
   } catch (e) {
     // Un partage annulé par l'utilisateur lève aussi : ce n'est pas un échec à rattraper
     // en ouvrant WhatsApp derrière son dos.
-    return (e as Error)?.name === 'AbortError'
+    return (e as Error)?.name === 'AbortError' ? 'annule' : 'indisponible'
   }
 }
 

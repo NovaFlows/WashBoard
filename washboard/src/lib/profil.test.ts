@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ajouterPalier, joursAvantPurge, nettoyerExpediteur, nomConfirme, resumeFraisDeplacement,
   resumeAdresseDepart, resumeEquipe, resumeFacturation, resumeNomEntreprise, resumeTelephone,
   validerEmail, validerFacturation, validerMotDePasse, validerNomEntreprise, validerTelephone,
 } from './profil'
@@ -73,5 +74,55 @@ describe('vérifications de saisie', () => {
     expect(validerFacturation({ ...base, prochainNumero: '7,5' })).toContain('entier')
     // Avancer la numérotation reste possible (reprise d'un ancien logiciel).
     expect(validerFacturation({ ...base, prochainNumero: '120' })).toBeNull()
+  })
+})
+
+describe('frais de déplacement', () => {
+  it('résume les paliers', () => {
+    expect(resumeFraisDeplacement([]).texte).toBe('Aucun : le déplacement est offert')
+    expect(resumeFraisDeplacement(null).texte).toBe('Aucun : le déplacement est offert')
+    expect(resumeFraisDeplacement([{ max_minutes: 10, fee: 5 }]).texte).toBe('1 palier, jusqu’à 5 €')
+    expect(resumeFraisDeplacement([{ max_minutes: 10, fee: 5 }, { max_minutes: 20, fee: 12.5 }]).texte)
+      .toBe('2 paliers, jusqu’à 12,50 €')
+  })
+
+  it('ajoute un palier trié, et remplace une durée déjà saisie', () => {
+    const a = ajouterPalier([{ max_minutes: 30, fee: 10 }], '15', '4')
+    expect(a.erreur).toBeNull()
+    expect(a.tiers).toEqual([{ max_minutes: 15, fee: 4 }, { max_minutes: 30, fee: 10 }])
+    const b = ajouterPalier(a.tiers, '30', '11,5')
+    expect(b.tiers).toEqual([{ max_minutes: 15, fee: 4 }, { max_minutes: 30, fee: 11.5 }])
+  })
+
+  it('refuse une durée ou des frais invalides sans rien ajouter', () => {
+    const base = [{ max_minutes: 10, fee: 5 }]
+    for (const [m, f] of [['', '5'], ['0', '5'], ['abc', '5'], ['10', ''], ['10', '-1']]) {
+      const r = ajouterPalier(base, m, f)
+      expect(r.erreur).not.toBeNull()
+      expect(r.tiers).toBe(base)
+    }
+    expect(ajouterPalier(base, '20', '0').erreur).toBeNull()
+  })
+})
+
+describe('expéditeur SMS et compte', () => {
+  it('nettoie le nom d’expéditeur', () => {
+    expect(nettoyerExpediteur('Kooki Clean !')).toBe('KookiClean')
+    expect(nettoyerExpediteur('Éclat-Auto 2026 Longnom')).toBe('clatAuto202')
+    expect(nettoyerExpediteur('')).toBe('')
+  })
+
+  it('compte les jours avant la purge', () => {
+    const t0 = Date.parse('2026-09-30T10:00:00Z')
+    expect(joursAvantPurge(null, t0)).toBe(30)
+    expect(joursAvantPurge('2026-09-30T09:00:00Z', t0)).toBe(30)
+    expect(joursAvantPurge('2026-09-20T10:00:00Z', t0)).toBe(20)
+    expect(joursAvantPurge('2026-06-01T10:00:00Z', t0)).toBe(0)
+  })
+
+  it('confirme le nom de l’entreprise sans tenir compte de la casse ni des espaces', () => {
+    expect(nomConfirme('  kooki clean ', 'Kooki Clean')).toBe(true)
+    expect(nomConfirme('Kooki', 'Kooki Clean')).toBe(false)
+    expect(nomConfirme('', '')).toBe(false)
   })
 })

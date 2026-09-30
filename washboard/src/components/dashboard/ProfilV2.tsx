@@ -9,11 +9,17 @@ import { LigneDeuxNiveaux as Ligne } from '@/components/dashboard/PrestationsUiV
 import { Section } from '@/components/dashboard/PrestationsV2'
 import { corps, titre } from '@/components/dashboard/FeuilleV2'
 import { FeuilleAdresseDepartV2, FeuilleEquipeV2, FeuilleTexteV2 } from '@/components/dashboard/FeuillesProfilV2'
+import {
+  CarteEtatCompte, FeuilleDeplacementV2, FeuillePauseV2, FeuilleSuppressionV2,
+} from '@/components/dashboard/FeuillesReglagesV2'
+import { useOffre } from '@/components/dashboard/OffreContext'
+import { requiredPlanLabel } from '@/lib/plan'
 import FeuilleFacturationV2 from '@/components/dashboard/FeuilleFacturationV2'
 import { FeuilleEmailV2, FeuilleMotDePasseV2 } from '@/components/dashboard/FeuillesConnexionV2'
-import { enregistrerProfil, type ChampsProfil } from '@/lib/profilApi'
+import { actionCompte, enregistrerProfil, type ChampsProfil } from '@/lib/profilApi'
 import {
-  resumeAdresseDepart, resumeEmail, resumeEquipe, resumeFacturation, resumeNomEntreprise, resumeTelephone,
+  resumeAdresseDepart, resumeEmail, resumeEquipe, resumeFacturation, resumeFraisDeplacement, resumeNomEntreprise,
+  resumeTelephone,
   validerNomEntreprise, validerTelephone,
 } from '@/lib/profil'
 import type { Washer } from '@/types'
@@ -31,14 +37,19 @@ import type { Washer } from '@/types'
 // Le nombre de laveurs vient de l'ancienne ligne « Équipe » : il n'a pas d'autre écran v2, et
 // le perdre reviendrait à ne plus pouvoir régler les rendez-vous simultanés depuis la PWA.
 //
-// Les frais de déplacement, eux, restent sur l'ancien écran (« Tous les réglages ») : ils
-// doivent rejoindre la zone d'intervention, pas ce profil — voir TODO.md.
+// Depuis le 2026-09-30, cet écran porte AUSSI ce qui n'existait que sur l'ancien « Tous les
+// réglages » : les frais de déplacement (à côté de l'adresse de départ dont ils dépendent) et,
+// en bas, la mise en pause / suppression du compte. Cet ancien écran n'est plus atteignable
+// depuis la PWA : `/parametres/tout` y renvoie ici (voir `ToutLesReglages.tsx`).
 
 type Feuille =
-  | 'nom' | 'telephone' | 'adresse' | 'equipe' | 'facturation' | 'email' | 'motDePasse' | null
+  | 'nom' | 'telephone' | 'adresse' | 'deplacement' | 'equipe' | 'facturation' | 'email' | 'motDePasse'
+  | 'pause' | 'suppression' | null
 
 export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer; email: string; peutEquipe: boolean }) {
   const router = useRouter()
+  const { peut } = useOffre()
+  const [maintenant] = useState(() => Date.now())
   // Copie locale : la ligne change tout de suite après un enregistrement réussi, sans attendre
   // le rechargement de la page (`router.refresh()`, lancé en plus pour le reste de l'écran).
   const [fiche, setFiche] = useState(washer)
@@ -64,9 +75,32 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
   const nom = resumeNomEntreprise(fiche.name)
   const telephone = resumeTelephone(fiche.phone)
   const adresse = resumeAdresseDepart(fiche.base_address)
+  const paliers = fiche.travel_fee_tiers ?? []
+  const deplacement = paliers.length === 0 && !peut('frais_deplacement')
+    ? { texte: `Inclus dans l’offre ${requiredPlanLabel('frais_deplacement')}` }
+    : resumeFraisDeplacement(paliers)
+  const etatCompte = fiche.account_status === 'deactivated' || fiche.account_status === 'pending_deletion'
+    ? fiche.account_status : null
   const equipe = resumeEquipe(fiche.team_size, peutEquipe)
   const facturation = resumeFacturation(fiche)
   const courriel = resumeEmail(email)
+
+  async function reactiver(): Promise<string | null> {
+    const r = await actionCompte('reactivate')
+    if (!r.ok) return r.message
+    setFiche(f => ({ ...f, account_status: 'active', deletion_scheduled_at: null }) as Washer)
+    router.refresh()
+    return null
+  }
+
+  function compteChange(etat: 'deactivated' | 'pending_deletion') {
+    setFiche(f => ({
+      ...f,
+      account_status: etat,
+      deletion_scheduled_at: etat === 'pending_deletion' ? new Date().toISOString() : null,
+    }) as Washer)
+    router.refresh()
+  }
 
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
@@ -86,12 +120,22 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
         </div>
       </div>
 
+      {etatCompte && (
+        <CarteEtatCompte
+          etat={etatCompte}
+          programmeeLe={fiche.deletion_scheduled_at ?? null}
+          maintenant={maintenant}
+          onReactiver={reactiver}
+        />
+      )}
+
       <Section titre="Mon entreprise">
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
             <Ligne label="Nom de l’entreprise" valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
             <Ligne label="Téléphone" valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
             <Ligne label="Adresse de départ" valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
+            <Ligne label="Frais de déplacement" valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
             <Ligne
               label="Nombre de laveurs"
               valeur={equipe.texte}
@@ -126,6 +170,25 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
         </CarteListe>
       </Section>
 
+      {!etatCompte && (
+        <Section titre="Mon compte">
+          <CarteListe>
+            <ul className="divide-y divide-[color:var(--v2-filet)]">
+              <Ligne
+                label="Mettre mon compte en pause"
+                valeur="Masque votre page de réservation. Réversible."
+                onClick={() => setFeuille('pause')}
+              />
+              <Ligne
+                label="Supprimer mon compte"
+                valeur="Efface vos données après 30 jours."
+                onClick={() => setFeuille('suppression')}
+              />
+            </ul>
+          </CarteListe>
+        </Section>
+      )}
+
       {feuille === 'nom' && (
         <FeuilleTexteV2
           titre="Nom de l’entreprise"
@@ -157,6 +220,18 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
           onEnregistrer={v => enregistrer({ base_address: v })}
           onClose={fermer}
         />
+      )}
+      {feuille === 'deplacement' && (
+        <FeuilleDeplacementV2
+          paliers={paliers}
+          mode={fiche.travel_fee_mode ?? 'base'}
+          onEnregistrer={champs => enregistrer(champs)}
+          onClose={fermer}
+        />
+      )}
+      {feuille === 'pause' && <FeuillePauseV2 onFait={() => compteChange('deactivated')} onClose={fermer} />}
+      {feuille === 'suppression' && (
+        <FeuilleSuppressionV2 nom={fiche.name ?? ''} onFait={() => compteChange('pending_deletion')} onClose={fermer} />
       )}
       {feuille === 'equipe' && (
         <FeuilleEquipeV2

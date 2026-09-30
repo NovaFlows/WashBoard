@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import type { ClientBooking } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
 import { whatsappDigits } from '@/lib/phone'
+import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { formatHeure } from '@/lib/calendarLayout'
 import { Feuille, CHAMP, corps, corpsFort, puce, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { DISTANCES_KM, adressesClients, clientsProches, libelleKm, positionsClients, type Position } from '@/lib/proposerCreneau'
@@ -288,6 +289,7 @@ export default function ProposerCreneauV2({
                       target="_blank"
                       rel="noopener"
                       aria-label={`Proposer ce créneau à ${c.name} sur WhatsApp`}
+                      onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `Créneau proposé à ${c.name}` })}
                       className={boutonEnvoi}
                       style={stylePression}
                     >
@@ -296,6 +298,7 @@ export default function ProposerCreneauV2({
                     <a
                       href={smsHref(c.phone, message)}
                       aria-label={`Proposer ce créneau à ${c.name} par SMS`}
+                      onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `Créneau proposé à ${c.name}` })}
                       className={boutonEnvoi}
                       style={stylePression}
                     >

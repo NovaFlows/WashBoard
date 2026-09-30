@@ -96,3 +96,54 @@ export function validerFacturation(champs: { siret: string; regime: 'franchise' 
   }
   return null
 }
+
+// ── Frais de déplacement, expéditeur SMS, compte ───────────────────────────
+// Les trois réglages qui n'existaient que sur l'ancien écran (`ParametresFormV1`) : mêmes
+// règles, mêmes bornes que lui et que la route (`PATCH /api/washer`, `POST /api/account`).
+
+export type PalierDeplacement = { max_minutes: number; fee: number }
+export type ModeDeplacement = 'base' | 'previous'
+
+export const MODES_DEPLACEMENT: { valeur: ModeDeplacement; libelle: string; detail: string }[] = [
+  { valeur: 'base', libelle: 'Mon siège (adresse de départ)', detail: 'Toujours calculé depuis votre adresse fixe.' },
+  { valeur: 'previous', libelle: 'Le RDV précédent de la journée', detail: 'Calculé depuis le dernier client : plus précis pour les tournées.' },
+]
+
+const euro = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',')} €`
+
+export function resumeFraisDeplacement(tiers: PalierDeplacement[] | null | undefined): Resume {
+  const n = tiers?.length ?? 0
+  if (n === 0) return { texte: 'Aucun : le déplacement est offert' }
+  const plus = tiers!.reduce((m, t) => Math.max(m, t.fee), 0)
+  return { texte: `${n} palier${n > 1 ? 's' : ''}, jusqu’à ${euro(plus)}` }
+}
+
+/** Ajoute un palier (durée max. en minutes → frais), trié et sans doublon de durée : un palier
+ *  saisi deux fois avec la même durée remplace l'ancien. `erreur` non nul = rien n'est ajouté. */
+export function ajouterPalier(
+  tiers: PalierDeplacement[], minutes: string, frais: string,
+): { tiers: PalierDeplacement[]; erreur: string | null } {
+  const m = Number(minutes.replace(',', '.'))
+  const f = Number(frais.replace(',', '.'))
+  if (!minutes.trim() || !Number.isFinite(m) || m <= 0) return { tiers, erreur: 'Indiquez une durée de trajet en minutes (1 ou plus).' }
+  if (!frais.trim() || !Number.isFinite(f) || f < 0) return { tiers, erreur: 'Indiquez des frais en euros (0 ou plus).' }
+  const minutesEntieres = Math.round(m)
+  const suite = [...tiers.filter(t => t.max_minutes !== minutesEntieres), { max_minutes: minutesEntieres, fee: Math.round(f * 100) / 100 }]
+  return { tiers: suite.sort((a, b) => a.max_minutes - b.max_minutes), erreur: null }
+}
+
+/** Nettoie un nom d'expéditeur SMS : lettres et chiffres sans accent, 11 caractères au plus. */
+export function nettoyerExpediteur(saisie: string): string {
+  return saisie.replace(/[^A-Za-z0-9]/g, '').slice(0, 11)
+}
+
+/** Jours restants avant la purge d'un compte dont la suppression est programmée (30 j). */
+export function joursAvantPurge(programmeeLe: string | null | undefined, maintenant: number): number {
+  if (!programmeeLe) return 30
+  const ecoule = Math.floor((maintenant - new Date(programmeeLe).getTime()) / 86_400_000)
+  return Math.max(0, 30 - ecoule)
+}
+
+export function nomConfirme(saisie: string, nom: string | null | undefined): boolean {
+  return saisie.trim().toLowerCase() === (nom ?? '').trim().toLowerCase() && !!saisie.trim()
+}

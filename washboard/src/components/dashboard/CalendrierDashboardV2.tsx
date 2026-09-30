@@ -22,6 +22,7 @@ import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge 
 import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
 import { JoursMasquesV2, CarteJourVerrouilleeV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
+import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -1101,7 +1102,7 @@ function DetailRendezVous({
                 <p className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-ambre)' }}>
                   {factureMsg.texte}{' '}
                   {factureMsg.completer && (
-                    <a href="/dashboard/parametres/tout#facturation" className={`${corpsFort} underline`}>
+                    <a href="/dashboard/parametres/profil#facturation" className={`${corpsFort} underline`}>
                       Compléter mes informations
                     </a>
                   )}
@@ -1129,6 +1130,7 @@ function DetailRendezVous({
               </a>
               <a
                 href={`sms:${b.client_phone}`}
+                onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `À ${b.client_name}` })}
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
