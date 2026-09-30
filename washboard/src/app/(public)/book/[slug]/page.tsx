@@ -316,6 +316,7 @@ export default async function BookingPage({ params }: Props) {
             team_size: washer.team_size ?? null,
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
+            reservation_jour_meme: washer.reservation_jour_meme ?? false,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,
             // Réserver en tant qu'entreprise demande le suivi qui va avec —
