@@ -23,12 +23,13 @@ function lire() {
   return JSON.stringify({
     appli: isPwaStandalone(),
     classe: document.documentElement.classList.contains('wb-pwa'),
+    hote: location.host,
   })
 }
 
 export function DiagnosticPwa() {
   const brut = useSyncExternalStore(rien, lire, () => '')
-  const etat = brut ? (JSON.parse(brut) as { appli: boolean; classe: boolean }) : null
+  const etat = brut ? (JSON.parse(brut) as { appli: boolean; classe: boolean; hote: string }) : null
   const oui = (v: boolean) => (v ? 'oui' : 'non')
   // Accès équipe : ce que le serveur répond pour CE compte (voir `api/support/est-equipe`).
   const [equipe, setEquipe] = useState<{ membre: boolean; compte: string | null; listeConfiguree: boolean } | null>(null)
@@ -43,6 +44,7 @@ export function DiagnosticPwa() {
   return (
     <p className="pb-2 text-center text-[11px] text-[color:var(--v2-color-gris)] tabular-nums opacity-70">
       v. {process.env.NEXT_PUBLIC_BUILD_SHA}
+      {etat && <><br />{etat.hote}</>}
       {etat && <> · mode appli : {oui(etat.appli)} · classe wb-pwa : {oui(etat.classe)}</>}
       {equipe && <><br />compte : {equipe.compte ?? '?'} · équipe : {oui(equipe.membre)} · liste du déploiement : {equipe.listeConfiguree ? 'définie' : 'ABSENTE'}</>}
     </p>
