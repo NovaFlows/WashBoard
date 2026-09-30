@@ -61,7 +61,7 @@ function fil(overrides: Record<string, unknown>) {
 }
 
 beforeEach(() => {
-  vi.stubEnv('SUPPORT_ADMIN_EMAILS', 'equipe@washboard.fr')
+  vi.stubEnv('SUPPORT_ADMIN_USER_IDS', 'u-equipe')
   adminOuvert = false
   plan = {
     utilisateur: { id: 'u-equipe', email: 'equipe@washboard.fr' },

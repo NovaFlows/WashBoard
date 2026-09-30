@@ -1035,6 +1035,54 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
   })
 }
 
+// ── Email : confirmation de l'adresse à l'inscription ─────────────────────
+// Le nom de l'entreprise est saisi par l'inscrit lui-même : il est échappé,
+// sinon n'importe qui pourrait glisser un lien de sa composition dans un email
+// parti de noreply@washboard.fr vers l'adresse qu'il a tapée.
+export async function sendEmailConfirmation({ to, washerName, confirmUrl }: {
+  to: string; washerName: string | null; confirmUrl: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const salutation = washerName ? `Bonjour <strong>${escapeHtml(washerName)}</strong>,` : 'Bonjour,'
+  const lien = escapeHtml(confirmUrl)
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: 'Confirme ton adresse email — WashBoard',
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Confirme ton adresse email</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Dernière étape avant d&apos;accéder à ton tableau de bord</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">${salutation}</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+        Ton compte WashBoard est créé. Pour l&apos;activer, confirme que cette adresse est bien la tienne.
+      </p>
+      <div style="text-align:center;">
+        <a href="${lien}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Confirmer mon email
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;line-height:1.6;word-break:break-all;">
+        Le bouton ne fonctionne pas ? Copie ce lien dans ton navigateur :<br>${lien}
+      </p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
+        Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 // ── Email : annonce des 4 offres 2026 (diffusion unique à tous les laveurs) ─
 //
 // Le message ne doit rien promettre de faux à personne : un client historique

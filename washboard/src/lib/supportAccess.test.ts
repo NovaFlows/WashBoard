@@ -57,26 +57,29 @@ describe('supportAccessMinutesLeft', () => {
 })
 
 describe('isSupportMember', () => {
-  it('reconnaît une adresse de la liste, sans se soucier de la casse', () => {
-    expect(isSupportMember('Contact@WashBoard.fr', 'contact@washboard.fr')).toBe(true)
-    expect(isSupportMember(' contact@washboard.fr ', 'contact@washboard.fr')).toBe(true)
+  const ID = '72164139-29f0-4594-b133-410ad5bde6dc'
+
+  it('reconnaît un identifiant de la liste, sans se soucier de la casse ni des espaces', () => {
+    expect(isSupportMember(ID, ID)).toBe(true)
+    expect(isSupportMember(` ${ID.toUpperCase()} `, ID)).toBe(true)
   })
 
-  it('accepte plusieurs adresses séparées par des virgules', () => {
-    const liste = 'a@washboard.fr, b@washboard.fr'
-    expect(isSupportMember('b@washboard.fr', liste)).toBe(true)
-    expect(isSupportMember('c@washboard.fr', liste)).toBe(false)
+  it('accepte plusieurs identifiants séparés par des virgules', () => {
+    const liste = `u-1, ${ID}`
+    expect(isSupportMember(ID, liste)).toBe(true)
+    expect(isSupportMember('u-2', liste)).toBe(false)
   })
 
   it('ne reconnaît personne si la variable n’est pas définie', () => {
     // Un déploiement mal configuré doit fermer l'accès, pas l'ouvrir à tous.
-    expect(isSupportMember('contact@washboard.fr', undefined)).toBe(false)
-    expect(isSupportMember('contact@washboard.fr', '')).toBe(false)
+    expect(isSupportMember(ID, undefined)).toBe(false)
+    expect(isSupportMember(ID, '')).toBe(false)
+    expect(isSupportMember(ID, ' , ')).toBe(false)
   })
 
-  it('refuse une adresse absente ou vide', () => {
-    expect(isSupportMember(null, 'contact@washboard.fr')).toBe(false)
-    expect(isSupportMember('', 'contact@washboard.fr')).toBe(false)
-    expect(isSupportMember('   ', 'contact@washboard.fr')).toBe(false)
+  it('refuse un identifiant absent ou vide', () => {
+    expect(isSupportMember(null, ID)).toBe(false)
+    expect(isSupportMember(undefined, ID)).toBe(false)
+    expect(isSupportMember('   ', ID)).toBe(false)
   })
 })

@@ -23,7 +23,15 @@ export default function LoginPage() {
     if (!password) { setError('Mot de passe requis'); return }
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError('Email ou mot de passe incorrect'); setLoading(false); return }
+    if (error) {
+      // Supabase ne répond `email_not_confirmed` qu'une fois le mot de passe
+      // validé : pas besoin de le revérifier avant d'afficher /verifier-email.
+      if (error.code === 'email_not_confirmed') {
+        router.push(`/verifier-email?email=${encodeURIComponent(email.trim())}`)
+        return
+      }
+      setError('Email ou mot de passe incorrect'); setLoading(false); return
+    }
     router.push('/dashboard')
     router.refresh()
   }

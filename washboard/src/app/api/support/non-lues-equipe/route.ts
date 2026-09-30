@@ -21,7 +21,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  if (!isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)) {
+  if (!isSupportMember(user.id, process.env.SUPPORT_ADMIN_USER_IDS)) {
     logger.warn('support.non-lues-equipe.get.denied', { userId: user.id })
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
