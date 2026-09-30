@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
 import ConfirmationEnvoiV2 from './ConfirmationEnvoiV2'
+import RetourGesteV2 from './RetourGesteV2'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -640,6 +641,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
 
       {showBarreBas && <BarreBasV2 />}
       {isPwa && <ConfirmationEnvoiV2 />}
+      {showBarreBas && <RetourGesteV2 />}
 
       {/* En-tête. Dans la PWA en bêta, la classe `wb-entete-beta` (posée dès
           que le serveur sait que le laveur est dans le bêta) le réduit, par

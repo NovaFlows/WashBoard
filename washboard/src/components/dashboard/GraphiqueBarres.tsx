@@ -129,6 +129,7 @@ export default function GraphiqueBarres({ points, formaterValeur, resume, titreP
       </div>
 
       <div
+        data-no-swipe-back
         ref={zone}
         role="group"
         aria-label={resume}
