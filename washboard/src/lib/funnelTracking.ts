@@ -9,6 +9,7 @@ export type Device = 'mobile' | 'tablet' | 'desktop'
 
 const SESSION_STORAGE_KEY = 'wb_funnel_sid'
 const CAMPAGNE_STORAGE_KEY = 'wb_utm_campaign'
+const CREATION_STORAGE_KEY = 'wb_utm_content'
 
 /** Longueur au-delà de laquelle on ignore : une clé de campagne fait quarante
  *  caractères (voir campagne.ts). Plus long, c'est qu'on nous envoie autre
@@ -71,23 +72,41 @@ export function nettoyerCleCampagne(brut: string | null | undefined): string | u
   return propre || undefined
 }
 
-/** Lit la campagne de l'URL, la retient, et la rend. Sans paramètre dans
- *  l'URL, rend celle déjà retenue pour cette visite — le laveur perdrait son
- *  attribution dès la deuxième étape du formulaire sans cette mémoire. */
-export function resolveCampagne(search: string): string | undefined {
-  const depuisUrl = nettoyerCleCampagne(new URLSearchParams(search).get('utm_campaign'))
+/** Lit un paramètre d'attribution de l'URL, le retient pour la visite, et le
+ *  rend. Sans paramètre dans l'URL, rend celui déjà retenu — le laveur perdrait
+ *  son attribution dès la deuxième étape du formulaire sans cette mémoire. */
+function resolveAttribution(search: string, parametre: string, cleStockage: string): string | undefined {
+  const depuisUrl = nettoyerCleCampagne(new URLSearchParams(search).get(parametre))
   if (typeof window === 'undefined') return depuisUrl
   try {
     if (depuisUrl) {
-      window.sessionStorage.setItem(CAMPAGNE_STORAGE_KEY, depuisUrl)
+      window.sessionStorage.setItem(cleStockage, depuisUrl)
       return depuisUrl
     }
-    return window.sessionStorage.getItem(CAMPAGNE_STORAGE_KEY) ?? undefined
+    return window.sessionStorage.getItem(cleStockage) ?? undefined
   } catch {
     // Stockage refusé (navigation privée stricte, navigateurs intégrés) : on
     // se contente de l'URL. Pas de mesure plutôt qu'un parcours cassé.
     return depuisUrl
   }
+}
+
+export function resolveCampagne(search: string): string | undefined {
+  return resolveAttribution(search, 'utm_campaign', CAMPAGNE_STORAGE_KEY)
+}
+
+/** La création — la vidéo précise — portée par `?utm_content=...`.
+ *
+ *  Même mécanique que la campagne, et c'est volontaire : un second chemin de
+ *  lecture finirait par diverger du premier, et une attribution qui se perd ne
+ *  se voit pas. Elle ne remplace jamais la campagne, elle l'affine : une visite
+ *  porte les deux, sinon la vidéo compterait sans son budget.
+ *
+ *  Toujours limitée à l'onglet, toujours sans cookie : la page de réservation
+ *  reste dispensée de bandeau de consentement, et un bandeau devant un
+ *  formulaire coûte plus de clients qu'une statistique n'en rapporte. */
+export function resolveCreation(search: string): string | undefined {
+  return resolveAttribution(search, 'utm_content', CREATION_STORAGE_KEY)
 }
 
 /** Session anonyme limitée à l'onglet du navigateur : pas de cookie
@@ -127,6 +146,7 @@ export function trackFunnelStep(washerId: string, step: FunnelStep): void {
     step,
     referrer_host: resolveReferrerHost(document.referrer, window.location.host, window.location.search),
     utm_campaign:  resolveCampagne(window.location.search),
+    utm_content:   resolveCreation(window.location.search),
     device:        detectDevice(window.innerWidth),
   })
   try {

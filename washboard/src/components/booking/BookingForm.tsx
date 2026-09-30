@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Washer, Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import { dureeTotale } from '@/lib/pricing'
-import { trackFunnelStep, type FunnelStep, resolveCampagne } from '@/lib/funnelTracking'
+import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepService from './StepService'
 import StepOptions from './StepOptions'
@@ -150,6 +150,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
       // d'argent une campagne a rapporté — les événements de visite, eux, ne
       // portent aucun prix et sont purgés à treize mois.
       utm_campaign:   resolveCampagne(typeof window === 'undefined' ? '' : window.location.search),
+      utm_content:    resolveCreation(typeof window === 'undefined' ? '' : window.location.search),
     }
     try {
       const res = await fetch('/api/bookings', {

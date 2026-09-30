@@ -28,6 +28,9 @@ const BookingSchema = z.object({
   // et nettoyée côté client — mais la valeur vient d'une URL publique, donc
   // de n'importe qui : on la reborne ici, là où elle entre vraiment.
   utm_campaign:    z.string().max(64).regex(/^[a-z0-9-]*$/).optional(),
+  // La création (la vidéo) qui a produit le clic. Même borne que la
+  // campagne : ces deux valeurs arrivent d'une URL publique.
+  utm_content:     z.string().max(64).regex(/^[a-z0-9-]*$/).optional(),
   service_id:      z.string().uuid(),
   vehicle_type:    z.string().min(1),
   vehicle_count:   z.number().int().min(1).max(99).optional().default(1),
@@ -123,7 +126,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // une clé qu'elle ne connaît pas, c'est parier sur une implémentation
     // qu'on ne peut pas lire — et si le pari est perdu, c'est la réservation
     // entière qui échoue, pas seulement l'attribution.
-    utm_campaign,
+    utm_campaign, utm_content,
     ...bookingData
   } = cleanData
   const id = randomUUID()
@@ -494,10 +497,20 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // a réservé, c'est ce qui compte. On perd une ligne de statistique, pas un
   // rendez-vous — et c'est le bon sens de l'erreur.
   if (utm_campaign) {
-    const { error: errAttribution } = await admin
+    let { error: errAttribution } = await admin
       .from('bookings')
-      .update({ utm_campaign })
+      .update({ utm_campaign, ...(utm_content ? { utm_content } : {}) })
       .eq('id', id)
+
+    // Colonne `utm_content` absente (migration 008 non exécutée) : on réécrit
+    // la campagne seule. Sans ce repli, un déploiement en avance sur la
+    // migration perdrait l'attribution ENTIÈRE de la réservation — donc son
+    // chiffre d'affaires dans le bilan — pour une colonne de précision.
+    if (errAttribution && utm_content) {
+      const seconde = await admin.from('bookings').update({ utm_campaign }).eq('id', id)
+      errAttribution = seconde.error
+    }
+
     if (errAttribution) {
       logger.warn('bookings.attribution.write_failed',
         { bookingId: id, washerId: bookingData.washer_id }, errAttribution)
