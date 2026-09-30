@@ -12,6 +12,8 @@ import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
+import { pixelIdValide } from '@/lib/consentement'
+import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -79,11 +81,26 @@ export default async function BookingPage({ params }: Props) {
   // Idem : lecture serveur, et colonnes énumérées plutôt que `select('*')`.
   // Charger l'objet entier revenait à faire transiter des secrets par une page
   // publique, en comptant sur le fait qu'on ne les transmettrait pas plus loin.
-  const { data: washer } = await admin
+  //
+  // `meta_pixel_id` est demandé à part, et son absence est rattrapée : tant
+  // que la migration 007 n'a pas tourné, la colonne n'existe pas et la requête
+  // entière échouerait — c'est-à-dire que TOUTES les pages de réservation
+  // tomberaient, pas seulement le bandeau de consentement. Le code peut ainsi
+  // partir avant la migration, ou après, dans n'importe quel ordre.
+  const COLONNES = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview'
+  let { data: washer } = await admin
     .from('washers')
-    .select('id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview')
+    .select(`${COLONNES}, meta_pixel_id`)
     .eq('slug', slug)
     .single()
+
+  if (!washer) {
+    // Le type déduit de la seconde requête n'a pas la colonne : c'est
+    // exactement ce qu'on cherche à représenter — un laveur lu sans Pixel,
+    // donc sans bandeau. `pixelIdValide` traitera l'absence comme un refus.
+    const secours = await admin.from('washers').select(COLONNES).eq('slug', slug).single()
+    washer = secours.data ? { ...secours.data, meta_pixel_id: null } : null
+  }
 
   if (!washer) notFound()
   if (washer.account_status && washer.account_status !== 'active') notFound()
@@ -199,6 +216,15 @@ export default async function BookingPage({ params }: Props) {
   const plafondMensuel = quotaReservations(washer)
   const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(admin, washer)
   const plafondAtteint = plafondMensuel !== null && utiliseesCeMois !== null && utiliseesCeMois >= plafondMensuel
+
+  // Le Pixel du laveur, s'il en a déclaré un. `null` sinon — et dans ce cas
+  // aucun bandeau ne s'affiche, aucun script tiers n'est injecté, aucun cookie
+  // n'est déposé. Une page sans Pixel reste exactement ce qu'elle était.
+  //
+  // Lu et validé ici plutôt que passé tel quel : la valeur vient de la base,
+  // où une contrainte la garde déjà, mais elle traverse ensuite jusqu'à un
+  // `<script>` — c'est le genre de chemin où l'on vérifie deux fois.
+  const pixelId = pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
@@ -380,7 +406,18 @@ export default async function BookingPage({ params }: Props) {
             </a>
           </p>
         )}
+        {/* « Gérer mes cookies » : n'apparaît que si le laveur a un Pixel,
+            donc que s'il y a quelque chose à gérer. */}
+        {pixelId && (
+          <p className="mt-6 text-center">
+            <LienGererCookies pixelId={pixelId} />
+          </p>
+        )}
       </main>
+
+      {/* Le bandeau, et le chargement du Pixel qu'il commande. Sans Pixel
+          déclaré, ce composant ne rend rien et n'injecte rien. */}
+      <ConsentementCookies pixelId={pixelId} slug={washer.slug} />
     </div>
     </>
   )

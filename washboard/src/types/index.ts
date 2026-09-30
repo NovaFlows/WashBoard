@@ -26,6 +26,9 @@ export type Washer = {
   travel_fee_mode: 'base' | 'previous'
   background_theme: string | null
   website_url: string | null
+  /** Pixel Meta du laveur. `null` = aucun, donc aucun bandeau de consentement
+   *  et aucun script tiers sur sa page de réservation. */
+  meta_pixel_id?: string | null
   account_status: 'active' | 'deactivated' | 'pending_deletion'
   deletion_scheduled_at: string | null
   plan: 'decouverte' | 'starter' | 'pro' | 'business'

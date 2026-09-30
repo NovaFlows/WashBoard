@@ -610,5 +610,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
 
   logger.info('bookings.created', { bookingId: id, washerId: bookingData.washer_id, bookedPrice: booked_price })
-  return Response.json({ data: { id } }, { status: 201 })
+  // Le montant RETENU par le serveur, renvoyé au client. Il en a besoin pour
+  // signaler la conversion au Pixel Meta du laveur : le prix envoyé par le
+  // formulaire est délibérément ignoré à l'enregistrement (voir plus haut), et
+  // remonter à Meta un montant que WashBoard n'a pas retenu fausserait
+  // l'optimisation de toutes les campagnes du laveur.
+  return Response.json({ data: { id, booked_price } }, { status: 201 })
 })
