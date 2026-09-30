@@ -370,7 +370,7 @@ function NouvellesOffresBanner() {
   )
 }
 
-function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean }) {
+function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null }) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
   const isPwa = usePwaStandalone()
@@ -440,6 +440,12 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   }
 
   if (!subscriptionStatus || subscriptionStatus === 'active') return null
+
+  // Client historique dont la période payée court encore (`subscription_ends_at` dans le futur) :
+  // son statut peut dire « expired » (reliquat de l'ancien essai), mais il a tout ouvert et rien
+  // n'est échu — lui afficher « votre essai a expiré » serait faux (constaté sur AutoNett,
+  // 2026-09-30 : grandfathered, échéance au 14 octobre).
+  if (grandfathered && subscriptionEndsAt && new Date(subscriptionEndsAt).getTime() > now) return null
 
   if (subscriptionStatus === 'expired') {
     return bandeau('expire', fermer => etat(
@@ -649,7 +655,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         // réécrivant `className`) — sinon la rangée v1 réapparaissait au fil de la navigation.
         style={showBarreBas ? { position: 'static', background: 'transparent', borderBottomWidth: 0 } : undefined}
       >
-        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} />
+        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt} />
         <NouvellesOffresBanner />
         <AppBetaBanner />
         {!showBarreBas && <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
