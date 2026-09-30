@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { addonsDuration } from '@/lib/pricing'
 import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
+import { derniereLocalisation } from '@/lib/slots'
+import { dateStrParis } from '@/lib/dateUtils'
 
 type DmResponse = {
   status: string
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value')
+    .select('smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, base_address')
     .eq('id', washerId)
     .single()
 
@@ -62,8 +64,30 @@ export async function GET(request: NextRequest) {
     .range(debut, fin))
   if (errBookings) logger.error('slots.smart.bookings.read_failed', {}, errBookings)
 
-  // Pas de RDV ce jour → aucune contrainte de trajet
-  if (!bookings?.length) return NextResponse.json({ ...empty, ...config })
+  const bookingsAujourdhui = bookings ?? []
+
+  const dureeBooking = (b: { services: unknown; selected_addons: unknown; vehicle_count: number | null }) => {
+    const svc    = b.services as unknown as { duration_minutes: number } | null
+    const addons = (b.selected_addons as { duration_minutes?: number }[] | null) ?? []
+    return ((svc?.duration_minutes ?? 60) + addonsDuration(addons)) * Math.max(1, (b.vehicle_count ?? 1))
+  }
+
+  // Réservation le jour même : le PREMIER créneau proposé ne vaut que si le
+  // laveur peut matériellement l'atteindre depuis là où il se trouve — son
+  // dernier rendez-vous déjà terminé aujourd'hui, ou son adresse de départ
+  // s'il n'a encore rien fait. Calculé uniquement quand la date demandée est
+  // aujourd'hui : un jour futur n'a jamais ce problème, et le vérifier pour
+  // rien coûterait un appel Google de plus par visite.
+  const origineJourMeme = (washer?.reservation_jour_meme && date === dateStrParis())
+    ? derniereLocalisation(
+        bookingsAujourdhui.map(b => ({ scheduled_at: b.scheduled_at, durationMin: dureeBooking(b), address: b.address })),
+        Date.now(),
+        washer.base_address ?? null,
+      )
+    : null
+
+  // Rien à calculer : ni RDV ce jour, ni position de départ à vérifier.
+  if (!bookingsAujourdhui.length && !origineJourMeme) return NextResponse.json({ ...empty, ...config })
 
   const apiKey = getMapsApiKey()
   if (!apiKey) {
@@ -71,7 +95,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...empty, ...config })
   }
 
-  const bookingAddrs = bookings.map(b => encodeURIComponent(b.address)).join('|')
+  // Adresses « origine » : les RDV du jour, puis — s'il y en a une — la
+  // position de départ pour le jour même, toujours en DERNIER : son index
+  // dans le lot (bookingsAujourdhui.length) sert à la retrouver après coup.
+  const adressesOrigine = [
+    ...bookingsAujourdhui.map(b => b.address),
+    ...(origineJourMeme ? [origineJourMeme.address] : []),
+  ]
+  const bookingAddrs = adressesOrigine.map(encodeURIComponent).join('|')
   const newAddr      = encodeURIComponent(address)
   const base         = `https://maps.googleapis.com/maps/api/distancematrix/json?mode=driving&key=${apiKey}`
 
@@ -102,10 +133,8 @@ export async function GET(request: NextRequest) {
 
   // Contraintes de trajet — toujours calculées (indépendant des smart slots)
   // La durée effective tient compte du vehicle_count (90 min × 2 véhicules = 180 min occupés)
-  const bookingConstraints = bookings.map((b, i) => {
-    const svc          = b.services as unknown as { duration_minutes: number } | null
-    const bAddons      = (b.selected_addons as { duration_minutes?: number }[] | null) ?? []
-    const durationMin  = ((svc?.duration_minutes ?? 60) + addonsDuration(bAddons)) * Math.max(1, (b.vehicle_count ?? 1))
+  const bookingConstraints = bookingsAujourdhui.map((b, i) => {
+    const durationMin = dureeBooking(b)
     const bStart       = new Date(b.scheduled_at).getTime()
     const bEnd         = bStart + durationMin * 60_000
     const toNew        = dmToNew.rows[i]?.elements[0]
@@ -118,19 +147,39 @@ export async function GET(request: NextRequest) {
     }
   })
 
+  // Contrainte synthétique de la position de départ pour le jour même : un
+  // « rendez-vous » qui aurait commencé avant l'aube et durerait jusqu'à
+  // maintenant. `start` volontairement très ancien (epoch) plutôt que de ne
+  // poser qu'un `end` : ça rend la branche « RDV après » de `isSlotFeasible`
+  // structurellement inatteignable pour cette contrainte, donc un horaire
+  // déjà passé aujourd'hui reste rejeté — jamais validé par erreur au motif
+  // qu'un trajet depuis le futur « rentrerait ».
+  if (origineJourMeme) {
+    const idx   = bookingsAujourdhui.length // dernier élément du lot, voir adressesOrigine
+    const toNew = dmToNew.rows[idx]?.elements[0]
+    if (toNew?.status === 'OK') {
+      bookingConstraints.push({
+        start: new Date(0).toISOString(),
+        end:   new Date().toISOString(),
+        travelToNew:   toNew.duration.value,
+        travelFromNew: 0,
+      })
+    } else {
+      logger.error('slots.smart.jour_meme.trajet_introuvable', { washerId, adresse: origineJourMeme.address })
+    }
+  }
+
   // Créneaux intelligents — uniquement si le laveur a activé la fonctionnalité
   const WINDOW_MIN = 90
   const smartWindows: { start: string; end: string }[] = []
 
   if (washer?.smart_slot_enabled) {
     const radiusSeconds = (washer.smart_slot_radius_minutes ?? 15) * 60
-    for (let i = 0; i < bookings.length; i++) {
+    for (let i = 0; i < bookingsAujourdhui.length; i++) {
       const toNew = dmToNew.rows[i]?.elements[0]
       if (toNew?.status !== 'OK' || toNew.duration.value > radiusSeconds) continue
-      const svc         = bookings[i].services as unknown as { duration_minutes: number } | null
-      const iAddons     = (bookings[i].selected_addons as { duration_minutes?: number }[] | null) ?? []
-      const durationMin = ((svc?.duration_minutes ?? 60) + addonsDuration(iAddons)) * Math.max(1, (bookings[i].vehicle_count ?? 1))
-      const bStart      = new Date(bookings[i].scheduled_at).getTime()
+      const durationMin = dureeBooking(bookingsAujourdhui[i])
+      const bStart      = new Date(bookingsAujourdhui[i].scheduled_at).getTime()
       const bEnd        = bStart + durationMin * 60_000
       smartWindows.push({
         start: new Date(bStart - WINDOW_MIN * 60_000).toISOString(),

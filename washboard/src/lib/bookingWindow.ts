@@ -1,7 +1,7 @@
 // Validation serveur du moment choisi pour une réservation.
 //
-// Le formulaire public ne propose que des créneaux légitimes : jours J à
-// J+60, horaires d'ouverture du laveur, pas de chevauchement. Mais la route
+// Le formulaire public ne propose que des créneaux légitimes : jours J+1 à
+// J+14, horaires d'ouverture du laveur, pas de chevauchement. Mais la route
 // `POST /api/bookings` acceptait n'importe quel `scheduled_at` bien formé —
 // une requête directe créait un rendez-vous à 3h du matin un dimanche de
 // fermeture, ou daté de l'an dernier, ou dans trois ans. Le laveur le
@@ -12,8 +12,9 @@
 // rendez-vous depuis son tableau de bord : lui a le droit de forcer.
 
 import { SLOT_STEP } from './slots'
+import { dateStrParis } from './dateUtils'
 
-/** Nombre de jours proposés par le formulaire, à partir d'aujourd'hui (seuls les horaires encore à venir le jour même).
+/** Nombre de jours proposés par le formulaire, à partir de demain.
  *
  *  Passé de 14 à 60 le 20/09/2026, en même temps que le calendrier mensuel de
  *  la page de réservation : une grille qui montre le mois entier n'a de sens
@@ -22,14 +23,12 @@ import { SLOT_STEP } from './slots'
  *  la réservation refuserait ensuite. */
 export const BOOKING_HORIZON_DAYS = 60
 
-export type VerdictDate = 'ok' | 'invalide' | 'passe' | 'trop_loin' | 'jour_meme'
-
-const jourParis = (ms: number) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+export type VerdictDate = 'ok' | 'invalide' | 'passe' | 'trop_loin'
 
 /** Le rendez-vous tombe-t-il dans la fenêtre réservable ?
  *
  *  Bornes volontairement exprimées en instants, pas en jours calendaires : un
- *  client qui ouvre la page à 23h59 voit les jours J..J+60, et son envoi peut
+ *  client qui ouvre la page à 23h59 voit les jours J+1..J+14, et son envoi peut
  *  arriver après minuit. Un décompte en jours locaux rejetterait alors sa
  *  réservation sans qu'il ait rien fait de mal. On tolère donc un jour de plus
  *  sur la borne haute, et on ne refuse en bas que ce qui est réellement passé. */
@@ -37,14 +36,10 @@ export function verdictDate(
   scheduledAt: string,
   nowMs: number = Date.now(),
   horizonDays: number = BOOKING_HORIZON_DAYS,
-  jourMemeAutorise: boolean = true,
 ): VerdictDate {
   const t = new Date(scheduledAt).getTime()
   if (!Number.isFinite(t)) return 'invalide'
   if (t <= nowMs) return 'passe'
-  // Case « les clients peuvent réserver le jour même » décochée : seuls les jours suivants sont
-  // ouverts. Le jour se lit à l'heure de Paris, celle des horaires du laveur.
-  if (!jourMemeAutorise && jourParis(t) <= jourParis(nowMs)) return 'jour_meme'
   if (t > nowMs + (horizonDays + 1) * 24 * 60 * 60_000) return 'trop_loin'
   return 'ok'
 }
@@ -77,6 +72,19 @@ export function heureParis(scheduledAt: string): { jour: number; minutes: number
 
   if (jour < 0 || !Number.isFinite(h) || !Number.isFinite(m)) return null
   return { jour, minutes: h * 60 + m }
+}
+
+/** Ce rendez-vous tombe-t-il aujourd'hui, à l'heure de Paris ?
+ *
+ *  Sert à la réservation le jour même : elle est réservée aux laveurs qui
+ *  l'ont explicitement activée (`reservation_jour_meme`), un réglage qui
+ *  n'existait pas jusqu'ici. Un appel direct à cette route pourrait sinon
+ *  glisser un rendez-vous pour aujourd'hui chez n'importe quel laveur, alors
+ *  que le formulaire ne le proposerait jamais. */
+export function estAujourdhuiParis(scheduledAt: string, nowMs: number = Date.now()): boolean {
+  const t = new Date(scheduledAt)
+  if (!Number.isFinite(t.getTime())) return false
+  return dateStrParis(t) === dateStrParis(new Date(nowMs))
 }
 
 export type PlageOuverture = { day_of_week: number; start_time: string; end_time: string }

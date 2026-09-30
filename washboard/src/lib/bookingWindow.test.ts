@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   verdictDate, heureParis, creneauDansOuverture, BOOKING_HORIZON_DAYS, horaireAligne,
+  estAujourdhuiParis,
 } from './bookingWindow'
 
 const JOUR = 24 * 60 * 60_000
@@ -8,31 +9,6 @@ const MAINTENANT = new Date('2026-09-05T10:00:00Z').getTime()
 const dans = (ms: number) => new Date(MAINTENANT + ms).toISOString()
 
 describe('verdictDate', () => {
-  describe('réservation le jour même désactivée', () => {
-    const PARIS_MIDI = new Date('2026-09-05T10:00:00Z').getTime() // 12h à Paris
-    const apres = (ms: number) => new Date(PARIS_MIDI + ms).toISOString()
-
-    it('refuse un créneau encore à venir aujourd’hui', () => {
-      expect(verdictDate(apres(3 * 3600_000), PARIS_MIDI, BOOKING_HORIZON_DAYS, false)).toBe('jour_meme')
-    })
-    it('accepte le lendemain', () => {
-      expect(verdictDate(apres(JOUR), PARIS_MIDI, BOOKING_HORIZON_DAYS, false)).toBe('ok')
-    })
-    it('lit le jour à l’heure de Paris, pas en UTC', () => {
-      // 23h UTC le 5 = 01h le 6 à Paris : 7h ce matin-là est encore « aujourd'hui » pour le laveur.
-      const nuit = new Date('2026-09-05T23:00:00Z').getTime()
-      expect(verdictDate('2026-09-06T05:00:00Z', nuit, BOOKING_HORIZON_DAYS, false)).toBe('jour_meme')
-      expect(verdictDate('2026-09-07T05:00:00Z', nuit, BOOKING_HORIZON_DAYS, false)).toBe('ok')
-    })
-    it('laisse passer le jour même quand la case est cochée (défaut)', () => {
-      expect(verdictDate(apres(3 * 3600_000), PARIS_MIDI)).toBe('ok')
-      expect(verdictDate(apres(3 * 3600_000), PARIS_MIDI, BOOKING_HORIZON_DAYS, true)).toBe('ok')
-    })
-    it('un créneau passé reste « passe », pas « jour_meme »', () => {
-      expect(verdictDate(apres(-3600_000), PARIS_MIDI, BOOKING_HORIZON_DAYS, false)).toBe('passe')
-    })
-  })
-
   it('accepte un créneau à venir dans la fenêtre proposée', () => {
     expect(verdictDate(dans(2 * JOUR), MAINTENANT)).toBe('ok')
     expect(verdictDate(dans(BOOKING_HORIZON_DAYS * JOUR), MAINTENANT)).toBe('ok')
@@ -171,5 +147,23 @@ describe('horaireAligne — verrou de saisie côté serveur', () => {
   it('respecte un pas personnalisé', () => {
     expect(horaireAligne('08:15', 15)).toBe(true)
     expect(horaireAligne('08:10', 15)).toBe(false)
+  })
+})
+
+describe('estAujourdhuiParis — verrou serveur de la réservation le jour même', () => {
+  it('vrai pour un rendez-vous plus tard dans la même journée', () => {
+    expect(estAujourdhuiParis(dans(2 * 60 * 60_000), MAINTENANT)).toBe(true)
+  })
+  it('vrai pour un rendez-vous plus tôt le même jour (déjà passé, mais même date)', () => {
+    expect(estAujourdhuiParis(dans(-2 * 60 * 60_000), MAINTENANT)).toBe(true)
+  })
+  it('faux pour demain', () => {
+    expect(estAujourdhuiParis(dans(JOUR), MAINTENANT)).toBe(false)
+  })
+  it('faux pour hier', () => {
+    expect(estAujourdhuiParis(dans(-JOUR), MAINTENANT)).toBe(false)
+  })
+  it('faux pour une date illisible', () => {
+    expect(estAujourdhuiParis('pas une date', MAINTENANT)).toBe(false)
   })
 })

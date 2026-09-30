@@ -19,9 +19,30 @@ type Props = {
   availabilities: Availability[]
   unavailabilities: Unavailability[]
   teamSize: number
+  reservationJourMeme: boolean
+  baseAddress: string | null
 }
 
-export default function DisponibilitesManager({ availabilities: initial, unavailabilities: initialUnavail, teamSize }: Props) {
+export default function DisponibilitesManager({ availabilities: initial, unavailabilities: initialUnavail, teamSize, reservationJourMeme: initialJourMeme, baseAddress }: Props) {
+  // ── Réservation le jour même ─────────────────────────────────────────────
+  const [jourMeme,       setJourMeme]       = useState(initialJourMeme)
+  const [jourMemeSaving, setJourMemeSaving] = useState(false)
+  const [jourMemeMsg,    setJourMemeMsg]    = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function saveJourMeme(valeur: boolean) {
+    setJourMeme(valeur)
+    setJourMemeSaving(true)
+    setJourMemeMsg(null)
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reservation_jour_meme: valeur }),
+    })
+    if (res.ok) setJourMemeMsg({ ok: true, text: 'Enregistré' })
+    else { setJourMeme(!valeur); setJourMemeMsg({ ok: false, text: 'Erreur lors de la sauvegarde' }) }
+    setJourMemeSaving(false)
+  }
+
   // ── Créneaux hebdomadaires ───────────────────────────────────────────────
   const [slots,      setSlots]      = useState(initial)
   const [dayOfWeek,  setDayOfWeek]  = useState<number>(1)
@@ -87,6 +108,45 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
 
   return (
     <div className="space-y-5">
+      {/* ── Réservation le jour même ───────────────────────────── */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Réservation le jour même</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Vos clients peuvent réserver pour aujourd&apos;hui. Le premier créneau proposé tient compte
+              du temps de route depuis votre position actuelle — votre dernier rendez-vous du jour, ou
+              votre adresse de départ si vous n&apos;avez encore rien de prévu.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => saveJourMeme(!jourMeme)}
+            disabled={jourMemeSaving}
+            aria-label="Autoriser la réservation le jour même"
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${jourMeme ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${jourMeme ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {jourMeme && !baseAddress && (
+          <p className="mt-3 text-xs text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+            <svg className="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            Sans adresse de départ (réglages → Identité), le trajet ne peut être vérifié que si vous avez
+            déjà un rendez-vous dans la journée.
+          </p>
+        )}
+
+        {jourMemeMsg && (
+          <p className={`mt-2 text-xs font-medium ${jourMemeMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            {jourMemeMsg.ok ? '✓ ' : '✕ '}{jourMemeMsg.text}
+          </p>
+        )}
+      </div>
+
       {/* ── Créneaux hebdomadaires ─────────────────────────────── */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Ajouter un créneau</h2>

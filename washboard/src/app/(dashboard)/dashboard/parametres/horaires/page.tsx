@@ -48,7 +48,8 @@ export default async function HorairesPage() {
         availabilities={(availabilities ?? []) as Availability[]}
         unavailabilities={(unavailabilities ?? []) as Unavailability[]}
         teamSize={washer.team_size ?? 1}
-        jourMemeAutorise={washer.same_day_booking !== false}
+        jourMemeAutorise={!!washer.reservation_jour_meme}
+        adresseDepart={!!washer.base_address?.trim()}
         lectureIncomplete={!!errDispos || !!errConges}
       />
     </DashboardShell>

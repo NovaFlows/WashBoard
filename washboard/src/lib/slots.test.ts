@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
-  generateSlots, creneauPasse, countOverlaps, countConflicts, isSlotInWindows,
+  generateSlots, countOverlaps, countConflicts, isSlotInWindows,
   isSlotFeasible, effectiveTeamSize, dureeIncompatible, joursDureeIncompatible,
+  slotEstPasse, derniereLocalisation,
 } from './slots'
 
 // Repère local fixe → ISO construits localement pour être TZ-safe
@@ -240,17 +241,40 @@ describe('isSlotFeasible — temps de trajet entre RDV', () => {
   })
 })
 
-describe('creneauPasse — réserver le jour même', () => {
-  const dix = new Date(2026, 0, 15, 10, 0, 0, 0)
-  it('écarte les créneaux déjà commencés, pile maintenant compris', () => {
-    expect(creneauPasse('09:30', date, dix)).toBe(true)
-    expect(creneauPasse('10:00', date, dix)).toBe(true)
+// ─────────────────────────────────────────────────────────────────────────
+describe('slotEstPasse — réservation le jour même', () => {
+  it('un créneau avant maintenant est passé', () => {
+    expect(slotEstPasse('10:00', date, ms(10, 30))).toBe(true)
   })
-  it('garde ceux qui suivent', () => {
-    expect(creneauPasse('10:30', date, dix)).toBe(false)
-    expect(creneauPasse('14:00', date, dix)).toBe(false)
+  it('un créneau après maintenant n’est pas passé', () => {
+    expect(slotEstPasse('10:00', date, ms(9, 30))).toBe(false)
   })
-  it('ne touche pas aux jours suivants', () => {
-    expect(creneauPasse('08:00', new Date(2026, 0, 16), dix)).toBe(false)
+  it('pile à l’instant présent → passé (<=)', () => {
+    expect(slotEstPasse('10:00', date, ms(10, 0))).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('derniereLocalisation — position du laveur pour le jour même', () => {
+  it('sans rendez-vous ni adresse de départ, position inconnue', () => {
+    expect(derniereLocalisation([], ms(14, 0), null)).toBeNull()
+  })
+  it('sans rendez-vous terminé, retombe sur l’adresse de départ', () => {
+    expect(derniereLocalisation([], ms(14, 0), '1 rue de Paris')).toEqual({ address: '1 rue de Paris' })
+  })
+  it('un rendez-vous du matin déjà terminé prime sur l’adresse de départ', () => {
+    const bookings = [{ scheduled_at: iso(9, 0), durationMin: 60, address: 'Chez le premier client' }] // 9h-10h
+    expect(derniereLocalisation(bookings, ms(14, 0), '1 rue de Paris')).toEqual({ address: 'Chez le premier client' })
+  })
+  it('un rendez-vous pas encore terminé est ignoré (déjà une contrainte réelle ailleurs)', () => {
+    const bookings = [{ scheduled_at: iso(13, 30), durationMin: 60, address: 'Chez le client en cours' }] // 13h30-14h30
+    expect(derniereLocalisation(bookings, ms(14, 0), '1 rue de Paris')).toEqual({ address: '1 rue de Paris' })
+  })
+  it('plusieurs rendez-vous terminés : garde le plus récent', () => {
+    const bookings = [
+      { scheduled_at: iso(8, 0),  durationMin: 60, address: 'Premier client' },  // 8h-9h
+      { scheduled_at: iso(10, 0), durationMin: 60, address: 'Deuxième client' }, // 10h-11h
+    ]
+    expect(derniereLocalisation(bookings, ms(12, 0), '1 rue de Paris')).toEqual({ address: 'Deuxième client' })
   })
 })

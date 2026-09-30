@@ -9,15 +9,6 @@ export type FeasibilityConstraint = { start: string; end: string; travelToNew: n
 
 /** Génère les créneaux d'une plage [start,end], par pas de `step`, en gardant
  *  ceux dont la durée tient avant la fin. Format "HH:MM". */
-/** Le créneau `slot` (« HH:MM ») du jour `date` a-t-il déjà commencé à l'instant `maintenant` ?
- *  Sert à proposer le jour même : à 10 h, on réserve à partir de 10 h, pas avant. */
-export function creneauPasse(slot: string, date: Date, maintenant: Date): boolean {
-  const [h, m] = slot.split(':').map(Number)
-  const debut = new Date(date)
-  debut.setHours(h, m, 0, 0)
-  return debut.getTime() <= maintenant.getTime()
-}
-
 export function generateSlots(start: string, end: string, durationMinutes: number, step: number = SLOT_STEP): string[] {
   const slots: string[] = []
   const [sh, sm] = start.split(':').map(Number)
@@ -123,6 +114,43 @@ export function countConflicts(newStartMs: number, newEndMs: number, bookings: B
     const bEnd = b.startMs + b.durationMin * 60_000
     return b.startMs < newEndMs && bEnd > newStartMs
   }).length
+}
+
+/** Vrai si l'heure de ce créneau, sur cette date, est déjà passée.
+ *
+ *  Sert à la réservation le jour même : sans ce filtre, un client qui ouvre
+ *  la page à 14h verrait encore des horaires du matin, pour un rendez-vous
+ *  qu'il ne peut plus prendre. */
+export function slotEstPasse(slotTime: string, date: Date, nowMs: number = Date.now()): boolean {
+  return slotRange(slotTime, date, 0).start <= nowMs
+}
+
+export type BookingAvecAdresse = SlotBooking & { address: string }
+
+/** Où se trouve le laveur MAINTENANT, pour estimer si le premier créneau du
+ *  jour même est physiquement atteignable : à l'adresse de son dernier
+ *  rendez-vous déjà terminé aujourd'hui, ou à son adresse de départ s'il n'a
+ *  encore rien fait. `null` si aucune des deux n'est connue — dans ce cas,
+ *  l'appelant ne peut pas vérifier le trajet et ne doit rien bloquer à
+ *  l'aveugle (mieux vaut aucune contrainte qu'une contrainte inventée).
+ *
+ *  Ne regarde que les rendez-vous déjà TERMINÉS (fin <= maintenant) : un
+ *  rendez-vous en cours ou à venir aujourd'hui est déjà une contrainte réelle
+ *  dans `bookingConstraints`, avec la bonne adresse — le dupliquer ici avec
+ *  l'adresse de départ serait faux. */
+export function derniereLocalisation(
+  bookingsAujourdhui: BookingAvecAdresse[],
+  nowMs: number,
+  baseAddress: string | null,
+): { address: string } | null {
+  const termines = bookingsAujourdhui
+    .map(b => ({ address: b.address, fin: new Date(b.scheduled_at).getTime() + b.durationMin * 60_000 }))
+    .filter(b => b.fin <= nowMs)
+    .sort((a, b) => b.fin - a.fin)
+
+  if (termines.length > 0) return { address: termines[0].address }
+  if (baseAddress) return { address: baseAddress }
+  return null
 }
 
 /** Vrai si le créneau est physiquement faisable vu les temps de trajet entre RDV. */

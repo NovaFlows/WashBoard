@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, creneauPasse, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 
@@ -24,13 +24,16 @@ type Props = {
   existingBookings: ExistingBooking[]
   unavailabilities: UnavailabilityItem[]
   teamSize: number
-  /** Case « réserver le jour même » des Horaires : décochée, la réservation ne s'ouvre que demain. */
-  jourMemeAutorise?: boolean
   serviceDuration: number
   servicePrice: number
   washerId: string
   hasTravelFee?: boolean
   travelFeeMode?: 'base' | 'previous'
+  /** Le laveur accepte-t-il les réservations pour aujourd'hui ? Faux par
+   *  défaut : sans ce réglage explicite, le comportement d'avant (à partir
+   *  de demain) ne doit pas changer sous les pieds d'un laveur qui n'a rien
+   *  demandé. */
+  reservationJourMeme?: boolean
   onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   onBack: () => void
   accent?: string
@@ -70,8 +73,8 @@ function grilleDuMois(mois: Date): (Date | null)[] {
 const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
-  availabilities, existingBookings, unavailabilities, teamSize, jourMemeAutorise = true, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', onNext, onBack, accent = '#2563eb',
+  availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
@@ -90,11 +93,11 @@ export default function StepSlot({
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
   const [morningVisible,     setMorningVisible]     = useState(6)
   const [afternoonVisible,   setAfternoonVisible]   = useState(6)
-  // Fenêtre réservable : d'aujourd'hui (les créneaux déjà commencés sont écartés plus bas), ou de
-  // demain si le laveur a décoché « réserver le jour même », à l'horizon que le serveur accepte.
+  // Fenêtre réservable : d'aujourd'hui (si le laveur l'a activé) ou de
+  // demain, à l'horizon que le serveur accepte.
   const [premierJour] = useState(() => {
     const d = aMinuit(new Date())
-    if (!jourMemeAutorise) d.setDate(d.getDate() + 1)
+    if (!reservationJourMeme) d.setDate(d.getDate() + 1)
     return d
   })
   const [dernierJour] = useState(() => {
@@ -204,15 +207,7 @@ export default function StepSlot({
    *  et pas entièrement en congé. */
   function estReservable(d: Date): boolean {
     if (d < premierJour || d > dernierJour) return false
-    if (!availableDaysOfWeek.includes(d.getDay()) || isDateUnavailable(d)) return false
-    // Aujourd'hui : encore faut-il qu'il reste un horaire à venir avant la fermeture.
-    if (memeJour(d, new Date())) {
-      const maintenant = new Date()
-      return availabilities
-        .filter(a => a.day_of_week === d.getDay())
-        .some(a => generateSlots(a.start_time, a.end_time, serviceDuration).some(s => !creneauPasse(s, d, maintenant)))
-    }
-    return true
+    return availableDaysOfWeek.includes(d.getDay()) && !isDateUnavailable(d)
   }
 
   /** Jour réservable suivant (1) ou précédent (-1), en sautant les jours
@@ -259,7 +254,9 @@ export default function StepSlot({
   const slotsForDay = selectedDate
     ? dayAvailabilities
         .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
-        .filter(slot => !creneauPasse(slot, selectedDate, new Date()))
+        // Sans effet un jour futur (jamais « passé ») ; retire les horaires du
+        // matin quand le jour même est réservable et qu'il est déjà l'après-midi.
+        .filter(slot => !slotEstPasse(slot, selectedDate))
         .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []

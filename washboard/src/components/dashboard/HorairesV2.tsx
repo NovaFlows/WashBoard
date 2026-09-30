@@ -48,15 +48,17 @@ type Props = {
   availabilities: Availability[]
   unavailabilities: Unavailability[]
   teamSize: number
-  /** Case « les clients peuvent réserver le jour même » (cochée par défaut). */
+  /** Réglage `reservation_jour_meme` (éteint par défaut, comme sur le site). */
   jourMemeAutorise: boolean
+  /** Adresse de départ renseignée : sans elle, le trajet du jour même n'est vérifié que s'il y a déjà un rendez-vous. */
+  adresseDepart: boolean
   /** La lecture des horaires ou des congés a échoué : on n'affiche PAS un écran
    *  vide (le laveur le prendrait pour son état réel et referait sa semaine, ou
    *  croirait ses congés levés). */
   lectureIncomplete: boolean
 }
 
-export default function HorairesV2({ availabilities, unavailabilities, teamSize, jourMemeAutorise, lectureIncomplete }: Props) {
+export default function HorairesV2({ availabilities, unavailabilities, teamSize, jourMemeAutorise, adresseDepart, lectureIncomplete }: Props) {
   const h = useHorairesV2(availabilities)
   const { plages } = h
   const {
@@ -81,7 +83,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
     if (jourMemeEnCours) return
     setJourMemeEnCours(true)
     setJourMemeErreur(null)
-    const r = await enregistrerProfil({ same_day_booking: !jourMeme })
+    const r = await enregistrerProfil({ reservation_jour_meme: !jourMeme })
     setJourMemeEnCours(false)
     if (r.ok) setJourMeme(!jourMeme)
     else setJourMemeErreur(r.message)
@@ -224,7 +226,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
                   <p className={`text-[15.5px] ${nom}`}>Réservation le jour même</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {jourMeme
-                      ? 'Vos clients peuvent réserver pour aujourd’hui, tant qu’il reste un créneau à venir.'
+                      ? 'Vos clients peuvent réserver pour aujourd’hui. Le premier créneau tient compte du temps de route depuis votre position.'
                       : 'Vos clients réservent à partir de demain.'}
                   </p>
                 </div>
@@ -236,6 +238,13 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
                 />
               </div>
             </CarteListe>
+            {jourMeme && !adresseDepart && (
+              <div className="mt-2">
+                <Constat ton="ambre" role="status">
+                  Sans adresse de départ, le trajet n’est vérifié que si vous avez déjà un rendez-vous dans la journée.
+                </Constat>
+              </div>
+            )}
             {jourMemeErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{jourMemeErreur}</Constat></div>}
           </section>
 

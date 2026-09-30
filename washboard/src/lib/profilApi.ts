@@ -13,7 +13,7 @@ export type ChampsProfil = Partial<{
   phone: string
   base_address: string
   team_size: number
-  same_day_booking: boolean
+  reservation_jour_meme: boolean
   travel_fee_tiers: { max_minutes: number; fee: number }[]
   travel_fee_mode: 'base' | 'previous'
   sms_sender: string

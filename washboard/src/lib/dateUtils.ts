@@ -27,6 +27,15 @@ export function getMondayOf(d: Date): Date {
  *  navigateur d'un laveur en France, cela ne change rien. */
 export const FUSEAU = 'Europe/Paris'
 
+/** "YYYY-MM-DD" à l'heure de Paris — le jour civil que voit un laveur ou un
+ *  client en France, quel que soit le fuseau du serveur qui l'exécute (UTC
+ *  sur Vercel). Reprend exactement le calcul déjà utilisé pour dater une
+ *  réservation ; sert à savoir si UNE date tombe « aujourd'hui » (réservation
+ *  le jour même), pas seulement à formater une heure. */
+export function dateStrParis(d: Date = new Date()): string {
+  return d.toLocaleDateString('en-CA', { timeZone: FUSEAU })
+}
+
 /** Heure au format court français (09:05, 14:30), à l'heure de Paris.
  *
  *  Était recopiée dans trois fichiers (calendrier, liste de RDV, liens de

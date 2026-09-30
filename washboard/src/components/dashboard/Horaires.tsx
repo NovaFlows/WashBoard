@@ -24,6 +24,7 @@ type Props = {
   unavailabilities: Unavailability[]
   teamSize: number
   jourMemeAutorise: boolean
+  adresseDepart: boolean
   lectureIncomplete: boolean
 }
 

@@ -6,7 +6,7 @@ import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { effectiveTeamSize } from '@/lib/slots'
-import { verdictDate, creneauDansOuverture } from '@/lib/bookingWindow'
+import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import type { ZoneConfig } from '@/types'
@@ -173,7 +173,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, same_day_booking, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview, reservation_jour_meme').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -320,7 +320,22 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Le laveur qui saisit lui-même un rendez-vous depuis son tableau de bord
   // reste libre de forcer : c'est son métier, pas une anomalie.
   if (!isOwner) {
-    const quand = verdictDate(bookingData.scheduled_at, Date.now(), undefined, washer?.same_day_booking !== false)
+    // La réservation le jour même n'existe, pour le formulaire public, que si
+    // le laveur l'a explicitement activée (`reservation_jour_meme`) — sans ce
+    // verrou, un appel direct à cette route glisserait un rendez-vous pour
+    // aujourd'hui chez n'importe quel laveur, y compris ceux qui ne veulent
+    // être prévenus qu'à l'avance.
+    if (estAujourdhuiParis(bookingData.scheduled_at) && !washer?.reservation_jour_meme) {
+      logger.warn('bookings.rejected.jour_meme_non_autorise', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at,
+      })
+      return Response.json(
+        { error: 'La réservation le jour même n\'est pas activée pour ce prestataire. Merci de choisir un autre jour.' },
+        { status: 400 },
+      )
+    }
+
+    const quand = verdictDate(bookingData.scheduled_at)
     if (quand !== 'ok') {
       logger.warn('bookings.rejected.date', {
         washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, verdict: quand,
@@ -329,9 +344,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         {
           error: quand === 'passe'
             ? 'Ce créneau est déjà passé. Merci de choisir une autre date.'
-            : quand === 'jour_meme'
-              ? 'Les réservations le jour même ne sont pas ouvertes. Merci de choisir une date à partir de demain.'
-              : 'Cette date n\'est pas ouverte à la réservation.',
+            : 'Cette date n\'est pas ouverte à la réservation.',
         },
         { status: 400 },
       )
