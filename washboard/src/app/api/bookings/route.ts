@@ -1,16 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendBookingRequest, sendWasherNotification } from '@/lib/email'
+import { sendBookingRequest, sendWasherNotification, sendWasherBookingLocked } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { effectiveTeamSize } from '@/lib/slots'
-import { verdictDate, creneauDansOuverture } from '@/lib/bookingWindow'
+import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import type { ZoneConfig } from '@/types'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { graceEnded } from '@/lib/plan'
+import { graceEnded, quotaReservations, quotaDepasse, debutPeriodeQuota, debutSoumisAuPlafond, planEffectif, suitRetourGratuit, PLAN_LABELS } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
@@ -153,7 +153,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview, reservation_jour_meme').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -190,11 +190,65 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
 
   // ── Blocage si abonnement expiré depuis plus de 30 jours (sauf laveur lui-même) ──
+  //
+  // Ce blocage ne s'applique PLUS aux comptes qui suivent la règle 2026 : chez
+  // eux, un essai terminé sans formule ne coupe rien, il fait retomber le
+  // compte sur Découverte — le plafond mensuel juste en dessous s'en charge.
+  // Couper ET plafonner reviendrait à appliquer deux fois la même sanction.
   const isOwner = !!authUser && washer?.user_id === authUser.id
   if (!isOwner && washer && washer.subscription_status !== 'active'
+    && !suitRetourGratuit(washer)
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
     return Response.json({ error: 'Les réservations ne sont plus disponibles pour ce prestataire.' }, { status: 403 })
   }
+
+  // ── Quota mensuel : au-delà, on accepte quand même ──────────────────────
+  //
+  // La réservation N'EST PLUS REFUSÉE. Refuser faisait payer au client la
+  // limite d'un logiciel qu'il n'a pas choisi : il repartait, et le laveur
+  // perdait un lavage sans même savoir qu'on l'avait sollicité.
+  //
+  // Ce qui est plafonné, c'est ce que le laveur en VOIT. Au-delà du quota il
+  // sait qu'une demande est arrivée, sans le nom, sans le téléphone, sans
+  // l'adresse — voir `lib/reservationsVerrouillees`. La pression pèse sur
+  // celui qui peut y remédier, pas sur son client.
+  //
+  // Rien n'est écrit pour marquer ces réservations : le verrouillage se déduit
+  // du quota en cours, donc un changement d'offre ouvre tout d'un coup.
+  //
+  // Le compte porte sur le mois civil parisien de CRÉATION, pas sur la date du
+  // rendez-vous : c'est l'usage du logiciel qui est plafonné, pas le
+  // remplissage de l'agenda. Les rendez-vous annulés ne comptent pas.
+  const plafondMensuel = quotaReservations(washer)
+  let auDelaDuQuota = false
+  if (plafondMensuel !== null) {
+    const { count: moisCount, error: errMois } = await admin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('washer_id', bookingData.washer_id)
+      .neq('status', 'cancelled')
+      // Jamais avant l'entrée en vigueur du plafond : sinon l'historique d'un
+      // laveur remplirait sa toute première période avant qu'elle commence.
+      .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(washer?.created_at)).toISOString())
+
+    // Un comptage illisible ne bloque plus rien — il n'y a plus rien à
+    // bloquer. Au pire, la réservation s'affiche en clair chez un laveur qui
+    // aurait dû la voir masquée : on préfère cette erreur-là à l'inverse, qui
+    // lui cacherait un vrai rendez-vous.
+    if (errMois) {
+      logger.error('bookings.quotaMensuel.read_failed',
+        { washerId: bookingData.washer_id }, errMois)
+    } else if (quotaDepasse(plafondMensuel, moisCount ?? 0)) {
+      auDelaDuQuota = true
+      logger.info('bookings.au_dela_du_quota', {
+        washerId: bookingData.washer_id,
+        plan: washer?.plan ?? null,
+        plafond: plafondMensuel,
+        utilisees: moisCount ?? 0,
+      })
+    }
+  }
+
   // Durée réellement bloquée par ce rendez-vous. Calculée ici parce qu'elle
   // sert deux fois : au contrôle des horaires, puis à l'enregistrement de la
   // fin du créneau en base (colonne `ends_at`, cf. réservation atomique).
@@ -243,6 +297,21 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Le laveur qui saisit lui-même un rendez-vous depuis son tableau de bord
   // reste libre de forcer : c'est son métier, pas une anomalie.
   if (!isOwner) {
+    // La réservation le jour même n'existe, pour le formulaire public, que si
+    // le laveur l'a explicitement activée (`reservation_jour_meme`) — sans ce
+    // verrou, un appel direct à cette route glisserait un rendez-vous pour
+    // aujourd'hui chez n'importe quel laveur, y compris ceux qui ne veulent
+    // être prévenus qu'à l'avance.
+    if (estAujourdhuiParis(bookingData.scheduled_at) && !washer?.reservation_jour_meme) {
+      logger.warn('bookings.rejected.jour_meme_non_autorise', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at,
+      })
+      return Response.json(
+        { error: 'La réservation le jour même n\'est pas activée pour ce prestataire. Merci de choisir un autre jour.' },
+        { status: 400 },
+      )
+    }
+
     const quand = verdictDate(bookingData.scheduled_at)
     if (quand !== 'ok') {
       logger.warn('bookings.rejected.date', {
@@ -447,7 +516,19 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     ]
 
-    if (washerEmail) {
+    // Au-dela du quota, le laveur est PREVENU sans rien apprendre : lui envoyer
+    // le nom et le telephone par email viderait le masquage de son sens, il
+    // suffirait d'ouvrir sa boite mail.
+    if (washerEmail && auDelaDuQuota) {
+      emailJobs.push(
+        sendWasherBookingLocked({
+          to: washerEmail,
+          washerName: washer.name,
+          clientName: bookingData.client_name,
+          scheduledAt: bookingData.scheduled_at,
+        }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
+      )
+    } else if (washerEmail) {
       emailJobs.push(
         sendWasherNotification({
           to: washerEmail,
@@ -476,7 +557,20 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // iPhone sans l'application installée. L'email reste le canal fiable.
     const quand = new Date(bookingData.scheduled_at)
     emailJobs.push(
-      notifierLaveur(bookingData.washer_id, {
+      notifierLaveur(bookingData.washer_id, auDelaDuQuota ? {
+        // Meme regle que l'email : on annonce, on ne raconte pas.
+        // Le nom et le jour, rien de plus. Le telephone, l'adresse et l'heure
+        // restent masques : c'est ce qu'on vend.
+        title: '🔒 Nouvelle réservation',
+        body: [
+          `👤 ${bookingData.client_name}`,
+          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })}`,
+          'Changez d’offre pour voir l’heure et les coordonnées.',
+        ].join('\n'),
+        url: '/dashboard/abonnement',
+        tag: `booking-${id}`,
+        bookingId: id,
+      } : {
         // Les emoji servent de repères : le laveur retrouve la ligne qu'il
         // cherche (qui ? quoi ? quand ?) sans lire la notification en entier,
         // souvent d'un coup d'œil entre deux voitures. Un seul par ligne,

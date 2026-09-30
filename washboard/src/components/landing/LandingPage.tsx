@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
+  lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
+  PLAN_COULEURS,
   type BillingCycle,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -113,7 +115,9 @@ function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boo
 }
 
 // Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
-// PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans l'Essentiel ce qui est Pro.
+// PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans une offre ce qui appartient
+// à l'offre du dessus. La grille 2026 en compte quatre — Découverte, Starter,
+// Pro, Business — et c'est `plan.ts` qui en est la seule source.
 // Ordre demandé par Ryan le 2026-09-27 : la facturation remonte près du haut
 // de la grille (déjà mise en avant dans l'encart phare juste au-dessus, elle
 // mérite aussi sa place ici) ; les créneaux intelligents, eux, redescendent
@@ -237,6 +241,8 @@ function ThemeToggle() {
 export default function LandingPage() {
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [billing, setBilling] = useState<BillingCycle>('yearly')
+  const rdvBusiness = lienRendezVousBusiness()
+  const rdvExterne = rendezVousExterne(rdvBusiness)
 
   // La nav reprend le bleu ciel du hero ; passé le hero il n'y a plus de
   // dégradé derrière elle, elle doit donc devenir opaque. Un observateur évite
@@ -1268,7 +1274,7 @@ export default function LandingPage() {
         <FadeUp className="mb-8">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Les formules</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-            {billing === 'yearly' ? `${formatEuros(yearlyMonthlyEquivalent(49))}€/mois en annuel.` : '49€/mois. Sans engagement.'}
+            Commence gratuitement. Tu paies quand ça remplit.
           </h2>
         </FadeUp>
 
@@ -1276,30 +1282,63 @@ export default function LandingPage() {
           <BillingToggle value={billing} onChange={setBilling} />
         </FadeUp>
 
-        <FadeGroup className="grid sm:grid-cols-2 gap-6 items-stretch max-w-3xl">
+        {/* Calculés une fois : l'adresse du rendez-vous, et s'il sort du site. */}
+        <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {PLAN_CARDS.map((card) => {
-            const featured = card.key === 'essentiel'
-            const yearly = billing === 'yearly'
+            const featured = !!card.highlight
+            // Une offre gratuite n'a ni tarif annuel, ni mois offert : tout ce
+            // qui parle d'engagement doit se taire sur cette carte.
+            const yearly = billing === 'yearly' && card.price > 0 && !card.surDevis
             return (
               <FadeItem
                 key={card.key}
                 className={`relative flex flex-col rounded-2xl p-6 sm:p-8 ${featured ? 'border border-white/[0.08]' : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'}`}
                 style={featured ? { background: 'linear-gradient(135deg, #0B1828 0%, #0D2248 100%)' } : undefined}
               >
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  {featured ? (
-                    <span className="bg-[#1651E8] text-white text-xs font-bold px-4 py-1.5 rounded-full">Le plus populaire</span>
-                  ) : null}
-                </div>
-                <p className={`text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{card.name}</p>
+                {/* Dans la carte, en haut à droite — plus à cheval sur son bord.
+                    À cheval, la moitié du badge flottait dans un écart de 24 px
+                    et frôlait la carte du dessus : sur téléphone, où les cartes
+                    s'empilent, il donnait l'impression d'une étiquette décollée
+                    entre deux offres. Ici il ne déborde de rien, et les prix des
+                    quatre cartes restent alignés — un badge inséré dans le flux
+                    aurait poussé la carte Pro vers le bas toute seule. */}
+                {featured && (
+                  <span className="absolute top-4 right-4 bg-[#1651E8] text-white text-[11px] font-bold px-3 py-1 rounded-full">
+                    Le plus populaire
+                  </span>
+                )}
+                <p className={`flex items-center gap-2 text-base font-bold mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                  {/* La pastille accompagne le nom, elle ne le remplace pas :
+                      seule, elle ne dirait rien à un laveur daltonien. */}
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: PLAN_COULEURS[card.key] }}
+                    aria-hidden
+                  />
+                  {card.name}
+                </p>
+                {/* Business n'affiche pas de tarif : son prix dépend de la
+                    taille de l'équipe, et une équipe se chiffre après l'avoir
+                    écoutée. Un « dès 129 € » attirait les mauvaises questions
+                    (« pourquoi si cher ? ») avant qu'on ait pu poser les
+                    bonnes (« vous êtes combien sur la route ? »). */}
                 <p className={`text-4xl font-black mt-2 ${featured ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                  {yearly ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
-                  <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>/mois</span>
+                  {card.surDevis ? LIBELLE_CONTACT : card.price === 0 ? 'Gratuit' : (
+                    <>
+                      {card.from && <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>dès </span>}
+                      {yearly ? formatEuros(yearlyMonthlyEquivalent(card.price)) : card.price}€
+                      <span className={`text-base font-medium ${featured ? 'text-white/45' : 'text-slate-400'}`}>/mois</span>
+                    </>
+                  )}
                 </p>
                 <p className={`text-xs mt-1.5 font-semibold ${featured ? 'text-emerald-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {yearly
-                    ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
-                    : `Passez à l’année : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
+                  {card.surDevis
+                    ? `Un échange de ${RDV_BUSINESS_MINUTES} minutes, puis un devis`
+                    : card.price === 0
+                    ? 'Sans carte bancaire, sans limite de durée'
+                    : yearly
+                      ? `Soit ${formatEuros(yearlyPrice(card.price))}€/an — ${freeMonthsLabel()}`
+                      : `Passez à l’année : ${formatEuros(yearlyMonthlyEquivalent(card.price))}€/mois`}
                 </p>
                 <p className={`text-sm mt-1 mb-6 ${featured ? 'text-white/60' : 'text-slate-500 dark:text-slate-400'}`}>{card.tagline}</p>
                 <div className="space-y-3 text-left mb-8 flex-1">
@@ -1312,15 +1351,28 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
-                  Je démarre
-                </Link>
+                {card.surDevis ? (
+                  // Lien externe et non `next/link` : il sort du site, vers un
+                  // agenda ou vers WhatsApp. `noopener` par principe sur toute
+                  // ouverture d'onglet.
+                  <a
+                    href={rdvBusiness}
+                    {...(rdvExterne ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    {LIBELLE_RDV_BUSINESS}
+                  </a>
+                ) : (
+                  <Link href="/signup" className="block w-full text-center py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors">
+                    {card.price === 0 ? 'Je commence gratuitement' : 'Je démarre'}
+                  </Link>
+                )}
               </FadeItem>
             )
           })}
         </FadeGroup>
         <FadeUp className="mt-8">
-          <p className="text-xs text-slate-400">1 mois offert · Sans carte bancaire · Support WhatsApp — 06 84 14 04 38</p>
+          <p className="text-xs text-slate-400">Offre gratuite sans carte bancaire · 1 mois d’essai sur les offres payantes · Support WhatsApp — 06 84 14 04 38</p>
         </FadeUp>
       </section>
 
@@ -1330,6 +1382,9 @@ export default function LandingPage() {
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-12">Questions</p>
         </FadeUp>
         <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {/* Contenu dans lib/faq.ts, mis à jour pour la grille 2026 lors de
+              cette fusion (2026-09-28) : source unique, aussi lue par le
+              balisage JSON-LD FAQPage — voir le commentaire de ce fichier. */}
           {FAQ_ITEMS.map((item) => (
             <FadeUp key={item.q} className="py-6 sm:py-7">
               <p className="font-bold text-slate-900 dark:text-white mb-2">{item.q}</p>

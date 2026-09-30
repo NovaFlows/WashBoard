@@ -7,9 +7,10 @@ import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
-import { graceEnded } from '@/lib/plan'
-import { estReservable } from '@/lib/prestation'
+import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
+import { prestationsAffichees } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
+import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -28,7 +29,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *
@@ -99,7 +100,9 @@ export default async function BookingPage({ params }: Props) {
   const admin = createAdminClient()
 
   // Déjà lue par `generateMetadata` dans la même requête : `cache()` rend ici
-  // le même objet, sans second aller-retour.
+  // le même objet, sans second aller-retour. Colonnes vérifiées contre les
+  // besoins de tarifs-4-offres lors de la fusion du 2026-09-28 (created_at
+  // manquait pour suitRetourGratuit — ajouté à COLONNES_LAVEUR).
   const { data: washer } = await lireLaveur(slug)
 
   if (!washer) notFound()
@@ -107,7 +110,13 @@ export default async function BookingPage({ params }: Props) {
 
   // Abonnement expiré depuis plus de 30 jours : page de réservation suspendue
   // grandfathered n'exempte pas du paiement — s'ils ne paient pas, on bloque aussi
+  // Les comptes qui suivent la règle 2026 ne sont JAMAIS suspendus : leur essai
+  // terminé les fait retomber sur Découverte, pas dehors. Sans cette exception,
+  // la page affichait « momentanément suspendue » alors que la route de
+  // réservation, elle, acceptait la demande — deux vérités contradictoires sur
+  // le même compte, et un client perdu pour rien.
   const isBlocked = washer.subscription_status !== 'active'
+    && !suitRetourGratuit(washer)
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)
 
   if (isBlocked) {
@@ -170,12 +179,31 @@ export default async function BookingPage({ params }: Props) {
       .eq('washer_id', washer.id),
   ])
 
-  const bgStyle = getBgStyle(washer.background_theme)
+  // ── Identité visuelle : réservée aux offres payantes ────────────────────
+  //
+  // Sur l'offre Découverte, la page reste aux couleurs de WashBoard et porte
+  // notre nom. C'est ce qu'annonce la grille tarifaire, et le contrôle est ici
+  // plutôt que dans les réglages seuls : un compte qui aurait personnalisé sa
+  // page AVANT de rétrograder garde ses valeurs en base, et elles doivent
+  // cesser de s'afficher sans qu'on ait à les effacer.
+  // Plafond du mois atteint ? Sert à deux choses sur cette page : retirer le
+  // bouton WhatsApp (voir plus bas), et rien d'autre — la réservation, elle,
+  // reste acceptée. Un comptage en échec rend `null` : dans le doute on laisse
+  // le bouton, comme partout ailleurs le doute profite au laveur.
+  const plafondMensuel = quotaReservations(washer)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(admin, washer)
+  const plafondAtteint = plafondMensuel !== null && utiliseesCeMois !== null && utiliseesCeMois >= plafondMensuel
+
+  const personnalisee = hasFeature(washer, 'page_personnalisee')
+  const logoUrl       = personnalisee ? washer.logo_url : null
+  const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
+
+  const bgStyle = personnalisee ? getBgStyle(washer.background_theme) : null
   const themed  = !!bgStyle
 
   return (
     <>
-    {washer.logo_url && <link rel="icon" href={washer.logo_url} type="image/png" />}
+    {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
     <div
       className={`min-h-screen ${themed ? '' : 'bg-slate-50 dark:bg-slate-950'}`}
       style={bgStyle ?? undefined}
@@ -186,36 +214,70 @@ export default async function BookingPage({ params }: Props) {
           : 'border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
       }>
         <div className="w-full px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {washer.logo_url ? (
-              <img
-                src={washer.logo_url}
-                alt={washer.name}
-                className="w-12 h-12 rounded-xl object-cover"
-              />
-            ) : (
-              <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold select-none ${
-                themed
-                  ? 'bg-white/10 border-white/20 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
-              }`}>
-                {washer.name.charAt(0).toUpperCase()}
+          {/* ── Qui signe cette page ────────────────────────────────────────
+              Sur une offre payante, le laveur : son logo, son nom. Sur
+              l'offre gratuite, WashBoard : notre logo et notre nom, exactement
+              ce que la grille tarifaire annonce (« page aux couleurs
+              WashBoard »).
+
+              L'initiale du laveur dans un carré gris ne signait rien : ni lui,
+              puisqu'il n'a pas choisi cette identité, ni nous. Son nom, lui,
+              n'a pas disparu — il reste juste en dessous, en titre de page,
+              là où le client le lit de toute façon avant de réserver. */}
+          {personnalisee ? (
+            <div className="flex items-center gap-3">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={washer.name}
+                  className="w-12 h-12 rounded-xl object-cover"
+                />
+              ) : (
+                <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold select-none ${
+                  themed
+                    ? 'bg-white/10 border-white/20 text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {washer.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className={`text-2xl font-extrabold leading-none tracking-tight ${themed ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
+                  {washer.name}
+                </p>
+                <p className={`text-xs mt-1 leading-none ${themed ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {washer.welcome_message || 'Réservation en ligne'}
+                </p>
               </div>
-            )}
-            <div>
-              <p className={`text-2xl font-extrabold leading-none tracking-tight ${themed ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
-                {washer.name}
-              </p>
-              <p className={`text-xs mt-1 leading-none ${themed ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
-                {washer.welcome_message || 'Réservation en ligne'}
-              </p>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/LogoWashBoard.png"
+                alt=""
+                aria-hidden
+                className="w-10 h-10 object-contain"
+              />
+              <div>
+                <p className="text-2xl font-extrabold leading-none tracking-tight text-slate-900 dark:text-slate-100">
+                  WashBoard
+                </p>
+                <p className="text-xs mt-1 leading-none text-slate-400 dark:text-slate-500">
+                  {washer.welcome_message || 'Réservation en ligne'}
+                </p>
+              </div>
+            </div>
+          )}
           {!themed && <ThemeToggle large />}
         </div>
       </header>
 
       <main id="main-content" className="max-w-lg mx-auto px-4 py-8">
+        {/* ── Le titre de la page : chez qui on réserve ─────────────────────
+            Le nom du laveur, toujours — c'est lui que le client vient voir.
+            Ce que l'offre gratuite ne lui donne pas, c'est L'EN-TÊTE : là-haut,
+            c'est notre logo et notre nom. La vitrine est à nous, le rendez-vous
+            est à lui. */}
         {!themed && (
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{washer.name}</h1>
@@ -244,14 +306,22 @@ export default async function BookingPage({ params }: Props) {
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,
+            // Réserver en tant qu'entreprise demande le suivi qui va avec —
+            // fiche société, facture, relance. L'offre gratuite ne l'a pas.
+            clients_pro: hasFeature(washer, 'crm'),
           }}
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à
           // choisir. Le tableau de bord la signale au laveur en rouge.
-          services={(services ?? []).filter(estReservable)}
+          services={prestationsAffichees(services ?? [], quotaPrestations(washer))}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
-          accent={washer.brand_color ?? '#2563eb'}
+          // Plus de existingBookings/unavailabilities ici : BookingForm les
+          // charge lui-même via /api/booking-availability (voir plus haut).
+          // `accent` respecte la règle "personnalisation réservée aux offres
+          // payantes" — c'est washer.brand_color brut sur les offres payantes,
+          // le bleu WashBoard sinon (calculé plus haut).
+          accent={accent}
         />
 
         {washer.website_url && (
@@ -266,7 +336,21 @@ export default async function BookingPage({ params }: Props) {
           </Suspense>
         )}
 
-        {washer.phone && (
+        {/* ── Contact direct : jusqu'au plafond du mois, pas au-delà ───────
+            Le bouton reste là tant que le laveur n'a pas atteint son quota :
+            c'est son outil de travail, et le lui retirer parce qu'il est sur
+            une petite offre serait une punition, pas un modèle économique.
+            Il disparaît AU MOMENT où le plafond est atteint, et pour la seule
+            raison qui compte : au-delà, le laveur ne voit plus le téléphone ni
+            l'adresse de ses nouveaux clients. Lui laisser un bouton WhatsApp
+            annulerait tout — le client écrit, le laveur répond, et il récupère
+            par ce biais ce qu'on vient de masquer. Le mois suivant remet le
+            compteur à zéro, et le bouton revient tout seul.
+
+            À ne pas confondre avec l'écran « page suspendue » plus haut, qui
+            garde son bouton d'appel : là, contacter le prestataire est la
+            seule chose qui reste à faire. */}
+        {washer.phone && !plafondAtteint && (
           <div className="mt-6 flex justify-center">
             <a
               href={`https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`}
@@ -280,6 +364,21 @@ export default async function BookingPage({ params }: Props) {
               Nous contacter sur WhatsApp
             </a>
           </div>
+        )}
+        {!personnalisee && (
+          // La marque de l'offre gratuite. Discrète mais cliquable : c'est le
+          // seul canal d'acquisition que le produit s'offre à lui-même.
+          <p className="mt-10 text-center text-xs text-slate-400 dark:text-slate-500">
+            Réservation propulsée par{' '}
+            <a
+              href="https://www.washboard.fr"
+              target="_blank"
+              rel="noopener"
+              className="font-semibold text-slate-500 dark:text-slate-400 underline underline-offset-2"
+            >
+              WashBoard
+            </a>
+          </p>
         )}
       </main>
     </div>

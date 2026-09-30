@@ -6,6 +6,7 @@ import type { Washer, Service, ServiceCategory, Availability, Unavailability } f
 import IdentiteForm from './IdentiteForm'
 import PrestationsManager from './PrestationsManager'
 import DisponibilitesManager from './DisponibilitesManager'
+import { quotaPrestations } from '@/lib/plan'
 
 type Tab = 'identite' | 'prestations' | 'disponibilites'
 
@@ -37,6 +38,9 @@ const ONGLET_PAR_ANCRE: Record<string, Tab> = {
 }
 
 export default function AdminTabs({ washer, services, categories, availabilities, unavailabilities }: Props) {
+  // Plafond de catalogue de l'offre, `null` quand il n'y en a pas. Calcule
+  // ici plutot que passe depuis la page : la fiche laveur est deja la.
+  const plafondPrestations = quotaPrestations(washer)
   const [tab, setTab] = useState<Tab>('identite')
 
   // L'onglet ne peut pas etre choisi au rendu serveur : le fragment d'URL n'y
@@ -84,8 +88,8 @@ export default function AdminTabs({ washer, services, categories, availabilities
       {tab === 'identite'       && <IdentiteForm washer={washer} />}
       {/* Ancres de defilement : les onglets Prestations et Disponibilites
           n'ont pas de section interne a cibler, on ancre leur contenu entier. */}
-      {tab === 'prestations'    && <div id="prestations" className="scroll-mt-24"><PrestationsManager services={services} categories={categories} availabilities={availabilities} /></div>}
-      {tab === 'disponibilites' && <div id="disponibilites" className="scroll-mt-24"><DisponibilitesManager availabilities={availabilities} unavailabilities={unavailabilities} teamSize={washer.team_size ?? 1} /></div>}
+      {tab === 'prestations'    && <div id="prestations" className="scroll-mt-24"><PrestationsManager services={services} categories={categories} availabilities={availabilities} plafond={plafondPrestations} /></div>}
+      {tab === 'disponibilites' && <div id="disponibilites" className="scroll-mt-24"><DisponibilitesManager availabilities={availabilities} unavailabilities={unavailabilities} teamSize={washer.team_size ?? 1} reservationJourMeme={washer.reservation_jour_meme === true} baseAddress={washer.base_address} /></div>}
     </div>
   )
 }

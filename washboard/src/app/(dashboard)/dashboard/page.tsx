@@ -9,7 +9,10 @@ import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS, libelleRemiseAZero } from '@/lib/plan'
+import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
+import { JaugeReservations } from '@/components/dashboard/JaugeReservations'
+import { seuilsVerrouillage, masquerVerrouillees, montantVerrouille, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
@@ -219,19 +222,62 @@ export default async function DashboardPage() {
     welcomeMessage: washer.welcome_message ?? null,
   })
 
+  // ── Réservations au-delà du quota : visibles, mais muettes ──────────────
+  //
+  // Le masquage se fait ICI, au sortir de la base : un composant qui oublierait
+  // la règle afficherait le vrai nom du client. À cet endroit, l'oubli est
+  // impossible — la donnée n'existe déjà plus.
+  //
+  // Seules les listes de rendez-vous passent par le masque. Les comptages
+  // (en attente, confirmés, chiffre d'affaires) restent entiers : le laveur a
+  // le droit de savoir COMBIEN de demandes il a reçues, c'est même l'argument
+  // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilsVerrou)
+  // Le compte porte sur les rendez-vous À VENIR : un client bloqué dont la date
+  // est passée n'est plus une occasion à saisir, seulement un regret. Compter
+  // les regrets ne fait pas vendre, ça décourage.
+  const nbBloquees = aVenirVisible.filter(b => b.verrouillee).length
+  // Le montant se calcule sur la liste BRUTE : `masquerVerrouillees` efface
+  // justement le prix. On somme d'abord, on masque ensuite.
+  const montantBloque = montantVerrouille(aVenir ?? [], seuilsVerrou)
+
+  // La jauge s'affiche en permanence, pas seulement une fois le mur atteint.
+  // Le comptage n'a lieu que sur une offre plafonnée : ailleurs il n'y a rien
+  // à compter, et ce serait une requête pour rien à chaque affichage.
+  const plafondMensuel = quotaReservations(washer)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  // L'offre nommée sur les cartes floutées : la moins chère qui couvre le
+  // volume du mois. Écrire « Pro » en dur ferait payer trente euros de plus à
+  // un laveur que le Starter suffisait à débloquer.
+  const offreDeblocage = PLAN_LABELS[offreQuiCouvre(planEffectif(washer), utiliseesCeMois)]
+
   const passes = historique.data ?? []
-  const all = [...(aVenir ?? []), ...passes]
+
+  // Les réservations verrouillées RESTENT dans la liste « À venir », à leur
+  // place, rendues en carte floutée avec un cadenas (voir CarteVerrouillee).
+  // Elles en avaient d'abord été retirées, et un encadré à part les annonçait
+  // au-dessus : au test, cet encadré se lisait comme une publicité et se
+  // sautait comme une publicité. À sa place dans la liste, la carte se lit
+  // pour ce qu'elle est — un rendez-vous qui manque.
+  //
+  // Aucune fuite pour autant : le flou n'est qu'une décoration, c'est
+  // `masquerVerrouillees` qui a déjà retiré l'heure, le prix, le téléphone et
+  // l'adresse bien avant d'arriver ici.
+  const aVenirOuvertes = aVenirVisible.filter(b => !b.verrouillee)
+  const passesOuverts = masquerVerrouillees(passes, seuilsVerrou).filter(b => !b.verrouillee)
+  const all = [...aVenirVisible, ...passesOuverts]
 
   // Aujourd'hui, à l'heure de Paris — calculé sur `aVenir` (déjà en main, déjà
   // trié par heure croissante), sans requête de plus. Ne montre que ce qui
   // reste à faire : un rendez-vous déjà clôturé n'a plus rien à demander.
   const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
-  const rdvAujourdhui = (aVenir ?? []).filter(
+  const rdvAujourdhui = aVenirOuvertes.filter(
     b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
   // Après aujourd'hui, pour ne pas doublonner le widget ci-dessus : les trois
   // prochains, dans l'ordre où `aVenir` est déjà trié.
-  const rdvProchains = (aVenir ?? [])
+  const rdvProchains = aVenirOuvertes
     .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
     .slice(0, 3)
 
@@ -271,7 +317,10 @@ export default async function DashboardPage() {
         pending={pending}
         confirmed={confirmed}
         terminesCeMois={terminesCeMois}
-        caCeMois={hasFeature(washer, 'compta') ? caCeMois : null}
+        // « Suivi simple du chiffre d'affaires » : c'est ce que l'offre
+        // Starter promet, et ça tient dans cette seule case. La comptabilité
+        // détaillée (dépenses, résultat, export) reste au Pro.
+        caCeMois={hasFeature(washer, 'ca_simple') ? caCeMois : null}
       />
     ),
     clients: (
@@ -289,7 +338,14 @@ export default async function DashboardPage() {
   const widgetsAffiches = [...visibles]
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <JaugeReservations
+        utilisees={utiliseesCeMois ?? 0}
+        quota={utiliseesCeMois === null ? null : plafondMensuel}
+        offre={planEffectif(washer)}
+        remiseAZero={libelleRemiseAZero(washer.created_at)}
+      />
+      <BandeauBloquees nombre={nbBloquees} offre={planEffectif(washer)} montant={montantBloque} />
       <DemarrageCard progress={progress} />
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -312,6 +368,7 @@ export default async function DashboardPage() {
         washerId={washer.id}
         facturationPrete={infosFacturationManquantes(washer).length === 0}
         historiqueTronque={passes.length === HISTORIQUE_AFFICHE}
+        offreDeblocage={offreDeblocage}
       >
         {/* Passés en enfants de BookingList : lui seul peut placer « à venir »,
             widgets et historique dans une même grille, réagencée par zone

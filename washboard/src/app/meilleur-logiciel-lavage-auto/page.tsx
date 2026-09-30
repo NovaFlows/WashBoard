@@ -127,8 +127,10 @@ function Footer() {
   )
 }
 
-// Dérivés de PLAN_CARDS, jamais recopiés.
-const essentiel = PLAN_CARDS.find(c => c.key === 'essentiel')!
+// Dérivés de PLAN_CARDS, jamais recopiés. Grille 2026 à 4 offres : Starter,
+// pas Essentiel (disparu) — le multi-laveurs a quitté Pro pour Business,
+// corrigé dans la phrase ci-dessous lors de la fusion du 2026-09-28.
+const starter = PLAN_CARDS.find(c => c.key === 'starter')!
 const pro = PLAN_CARDS.find(c => c.key === 'pro')!
 
 const faqItems: FaqItem[] = [
@@ -155,7 +157,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien coûte un logiciel dédié comme WashBoard ?',
     answer:
-      `${essentiel.price}€/mois en formule ${essentiel.name} (réservation, agenda, créneaux optimisés, frais de déplacement, CRM, facturation, avis Google par email) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute la comptabilité, les avis par SMS et le multi-laveurs. Un mois est offert à l’inscription, sans carte bancaire.`,
+      `${starter.price}€/mois en formule ${starter.name} (réservation, agenda, page personnalisée, CRM) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute les créneaux et frais de déplacement intelligents, la comptabilité, la facturation et les avis Google (email et SMS). Un mois est offert à l’inscription, sans carte bancaire.`,
   },
 ]
 

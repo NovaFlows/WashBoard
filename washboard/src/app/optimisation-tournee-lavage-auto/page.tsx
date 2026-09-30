@@ -112,7 +112,10 @@ function Footer() {
   )
 }
 
-const essentiel = PLAN_CARDS.find(c => c.key === 'essentiel')!
+// Grille 2026 à 4 offres : créneaux intelligents et frais de déplacement
+// (le sujet de cette page) sont des fonctions Pro, pas Starter — corrigé
+// lors de la fusion du 2026-09-28, qui a fait disparaître Essentiel.
+const pro = PLAN_CARDS.find(c => c.key === 'pro')!
 
 const faqItems: FaqItem[] = [
   {
@@ -138,7 +141,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien ça coûte ?',
     answer:
-      `Les créneaux groupés et les frais de déplacement automatiques sont inclus dans la formule ${essentiel.name} à ${essentiel.price}€/mois, avec la réservation en ligne, l’agenda, le CRM, la facturation et les avis Google. Un mois est offert à l’inscription, sans carte bancaire.`,
+      `Les créneaux groupés et les frais de déplacement automatiques sont inclus dans la formule ${pro.name} à ${pro.price}€/mois, avec la réservation en ligne, l’agenda, la facturation et les avis Google (email et SMS). Un mois est offert à l’inscription, sans carte bancaire.`,
   },
 ]
 

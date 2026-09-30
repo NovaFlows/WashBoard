@@ -7,7 +7,8 @@ import type { Washer } from '@/types'
 import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { SectionVerrouillee } from '@/components/dashboard/SectionVerrouillee'
 import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
 import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
@@ -117,7 +118,10 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
-  const canTeam = hasFeature(washer, 'multi_laveurs')
+  const canTeam     = hasFeature(washer, 'multi_laveurs')
+  const canTrajets  = hasFeature(washer, 'frais_deplacement')
+  const canAvis     = hasFeature(washer, 'avis_email')
+  const canFacturer = hasFeature(washer, 'facturation')
 
   function addTier() {
     const mins = parseInt(tierDraft.max_minutes)
@@ -269,6 +273,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             />
           </div>
 
+          <SectionVerrouillee verrouille={!canTrajets} planLabel={requiredPlanLabel('frais_deplacement')}>
           <div>
             <label className={labelClass}>Frais de déplacement par durée</label>
             <div className="space-y-2 mb-3">
@@ -361,6 +366,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               </div>
             </div>
           )}
+          </SectionVerrouillee>
 
           <div>
             <label className={labelClass}>Nombre de laveurs</label>
@@ -386,7 +392,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
               <div className="flex items-center gap-3">
                 <input type="number" value={1} disabled className={`${inputClass} w-24 opacity-50 cursor-not-allowed`} />
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                  La gestion d&apos;équipe (RDV simultanés) fait partie du plan Pro.{' '}
+                  La gestion d&apos;équipe (RDV simultanés) fait partie de l&apos;offre {requiredPlanLabel('multi_laveurs')}.{' '}
                   <Link href="/dashboard/abonnement" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Voir les offres</Link>
                 </p>
               </div>
@@ -398,9 +404,12 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       </Card>
 
       {/* Facturation — informations portées sur les factures aux clients */}
-      <FacturationCard washer={washer} />
+      <SectionVerrouillee verrouille={!canFacturer} planLabel={requiredPlanLabel('facturation')}>
+        <FacturationCard washer={washer} />
+      </SectionVerrouillee>
 
       {/* Avis Google — suivi client */}
+      <SectionVerrouillee verrouille={!canAvis} planLabel={requiredPlanLabel('avis_email')}>
       <Card id="avis" title="Avis Google" icon={Star}>
         <form onSubmit={saveReview} noValidate className="space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
@@ -537,6 +546,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={reviewLoading} />
         </form>
       </Card>
+      </SectionVerrouillee>
 
       {/* Relances clients — Pro+ uniquement */}
       {hasFeature(washer, 'followup') && (

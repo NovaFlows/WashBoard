@@ -21,6 +21,7 @@ export type Washer = {
   smart_slot_radius_minutes: number
   smart_slot_discount_type: 'fixed' | 'percent'
   smart_slot_discount_value: number
+  reservation_jour_meme: boolean
   travel_fee_tiers: { max_minutes: number; fee: number }[]
   base_address: string | null
   travel_fee_mode: 'base' | 'previous'
@@ -28,7 +29,7 @@ export type Washer = {
   website_url: string | null
   account_status: 'active' | 'deactivated' | 'pending_deletion'
   deletion_scheduled_at: string | null
-  plan: 'essentiel' | 'pro'
+  plan: 'decouverte' | 'starter' | 'pro' | 'business'
   grandfathered: boolean
   review_enabled: boolean
   review_delay_hours: number
@@ -90,6 +91,8 @@ export type Service = {
   vehicle_types: string[]
   vehicle_price_overrides: Record<string, number>
   addons: ServiceAddon[]
+  /** En veille : conservee en base, invisible pour les clients. */
+  en_veille?: boolean
 }
 
 export type Availability = {

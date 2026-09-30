@@ -31,11 +31,16 @@ test.describe('Abonnement — offres', () => {
     await page.goto('/dashboard/abonnement')
     await expect(page.locator('text=Nos offres').first()).toBeVisible({ timeout: 15_000 })
 
-    // L'annuel est l'offre mise en avant (2 mois offerts) : le montant affiché
-    // doit correspondre exactement au calcul de `lib/plan.ts`, sinon un client
-    // paierait un montant différent de celui annoncé.
-    const premier = PLAN_CARDS[0]
-    const attendu = formatEuros(yearlyPrice(premier.price))
+    // L'annuel est l'offre mise en avant : le montant affiché doit correspondre
+    // exactement au calcul de `lib/plan.ts`, sinon un client paierait un
+    // montant différent de celui annoncé.
+    //
+    // On prend la première offre PAYANTE, pas `PLAN_CARDS[0]` : depuis la
+    // grille 2026 celle-ci est l'offre gratuite, dont le prix annuel vaut 0 —
+    // le test cherchait alors « 0 » quelque part dans la page et passait pour
+    // de mauvaises raisons.
+    const payante = PLAN_CARDS.find(c => c.price > 0)!
+    const attendu = formatEuros(yearlyPrice(payante.price))
     await expect(page.locator(`text=${attendu}`).first()).toBeVisible({ timeout: 10_000 })
   })
 

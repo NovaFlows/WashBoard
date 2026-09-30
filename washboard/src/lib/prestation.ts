@@ -1,3 +1,4 @@
+import { PLAN_LABELS, offreCatalogueIllimite } from '@/lib/plan'
 /** Règles d'une prestation valide, partagées par le formulaire du tableau de
  *  bord, les routes `/api/services` et la page de réservation publique.
  *
@@ -11,6 +12,60 @@
  *  client choisit et compte (« 2 SUV »), et ce qui fixe le prix. */
 export function estReservable(s: { vehicle_types?: unknown }): boolean {
   return Array.isArray(s.vehicle_types) && s.vehicle_types.length > 0
+}
+
+/** Une prestation mise en veille reste en base — avec son historique, ses
+ *  réservations passées et leurs factures — mais disparaît de la page de
+ *  réservation. C'est la sortie de secours quand l'offre du laveur ne permet
+ *  plus d'en afficher autant : effacer casserait les rendez-vous qui la
+ *  référencent, la veille ne casse rien. */
+export function estEnVeille(s: { en_veille?: boolean | null }): boolean {
+  return s.en_veille === true
+}
+
+/** Ce que le client voit réellement sur la page de réservation : une
+ *  prestation active ET réservable. Les deux conditions n'ont rien à voir —
+ *  l'une vient de l'offre du laveur, l'autre d'un champ oublié — mais leur
+ *  effet est le même, alors elles se lisent au même endroit. */
+export function estVisibleParLesClients(s: { vehicle_types?: unknown; en_veille?: boolean | null }): boolean {
+  return estReservable(s) && !estEnVeille(s)
+}
+
+/** Combien de prestations le laveur doit mettre en veille pour rentrer dans
+ *  son offre. 0 s'il est dans les clous, et toujours 0 si l'offre n'a pas de
+ *  plafond. */
+export function aMettreEnVeille(actives: number, plafond: number | null): number {
+  if (plafond === null) return 0
+  return Math.max(0, actives - plafond)
+}
+
+/** Ce que la page de réservation affiche vraiment, plafond compris.
+ *
+ *  Tant que le laveur n'a pas choisi lui-même quelles prestations mettre en
+ *  veille, il faut bien que quelqu'un tranche : sinon le plafond ne serait
+ *  qu'une phrase sur une page de vente, et un compte gratuit afficherait
+ *  autant de prestations qu'il veut.
+ *
+ *  Le repli garde les PREMIÈRES dans l'ordre reçu (le tableau de bord trie
+ *  par date de création) : c'est arbitraire, et c'est assumé comme tel — la
+ *  fenêtre de choix existe justement pour que le laveur reprenne la main.
+ *  Garder les dernières serait pire : ses prestations historiques, celles que
+ *  ses clients connaissent, disparaîtraient les premières. */
+export function prestationsAffichees<T extends { vehicle_types?: unknown; en_veille?: boolean | null }>(
+  services: T[],
+  plafond: number | null,
+): T[] {
+  const visibles = services.filter(estVisibleParLesClients)
+  return plafond === null ? visibles : visibles.slice(0, plafond)
+}
+
+/** Refus serveur : réactiver au-delà de ce que l'offre autorise. */
+export function erreurTropDActives(plafond: number): string {
+  // Le nom de l'offre, pas « l'offre supérieure » : un laveur à qui on dit de
+  // monter sans lui dire où ni pour combien ne monte pas, il referme.
+  const offre = PLAN_LABELS[offreCatalogueIllimite()]
+  return `Votre offre affiche ${plafond} prestation${plafond > 1 ? 's' : ''} au maximum. `
+    + `Mettez-en une autre en veille, ou passez à l’offre ${offre} pour un catalogue illimité.`
 }
 
 export type ChampPrestation = 'nom' | 'prix' | 'duree' | 'type' | 'duree_max'

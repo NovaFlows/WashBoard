@@ -7,7 +7,8 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
+> Dernière mise à jour : 2026-09-24 (grille tarifaire 2026 : 4 offres, quotas de
+> réservations et de prestations, verrous par offre). Avant : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
 > partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
 > facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
 > livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
@@ -33,6 +34,56 @@
     l'interface. Le jour où le jeton est régénéré dans Vercel, **penser à le remplacer
     aussi dans la routine**, sinon le rapport dira « signal manquant » sans autre indice.
   - Rappel : ne jamais committer sa valeur ici — le dépôt est partagé (Ryan, Yanis).
+- [ ] **Grille 2026 — décisions commerciales.** Le code est livré et testé ; ce qui suit ne
+      relève pas du code.
+  1. ~~Que devient un compte à la fin de l'essai ?~~ **Tranché le 2026-09-24 :** il retombe
+     sur Découverte au lieu d'être coupé. Voir la section « Tester la bascule » ci-dessous.
+  2. **Les anciens Pro à 69 € qui utilisent plusieurs laveurs passent en Business (129 €)**
+     par la migration `004`, sans changement de prix : leur abonnement Stripe garde son
+     tarif, et les paiements PayPal sont manuels. Ils gagnent donc le Business au prix de
+     l'ancien Pro. À arbitrer : on les y laisse (le plus simple et le plus généreux), ou on
+     les repasse au tarif Business à une date annoncée.
+
+- [ ] **TESTER LA BASCULE DE FIN D'ESSAI avant de l'étendre aux clients actuels.**
+      La règle 2026 est en place : un essai terminé sans formule choisie fait retomber le
+      compte sur Découverte (gratuit, 5 réservations/mois) au lieu de suspendre sa page.
+
+  **Qui est concerné aujourd'hui : personne d'existant.** La règle ne s'applique qu'aux
+  comptes créés à partir du `2026-09-24`
+  (`RETOUR_GRATUIT_POUR_COMPTES_CREES_DES` dans `src/lib/plan.ts`). Kookii Clean et tous
+  les comptes déjà en place gardent très exactement le comportement qu'ils connaissent :
+  suspension après 30 jours de grâce. C'est vérifié par des tests dédiés, des deux côtés.
+
+  **Comment l'essayer sans attendre un mois :**
+  1. créer un compte neuf (il sera forcément postérieur à la date de bascule) ;
+  2. reculer son échéance dans le passé :
+     `update washers set trial_ends_at = now() - interval '2 days' where slug = '<le-slug>';`
+  3. vérifier, dans cet ordre :
+     - le bandeau bleu en haut du tableau de bord (« Essai terminé — vous êtes sur l'offre
+       Découverte »), **pas** le bandeau rouge « votre essai a expiré » ;
+     - le badge d'offre en haut à droite, qui doit afficher **Découverte** ;
+     - la page Abonnement : l'encart « quelle formule vous va ? » et la jauge « 0 / 5 » ;
+     - **la page publique de réservation, qui doit continuer à accepter des rendez-vous**
+       (c'est le point qui change tout), jusqu'à la 5ᵉ du mois ;
+     - la 6ᵉ réservation refusée, avec un message qui ne parle pas d'abonnement au client ;
+     - la comptabilité, le CRM et les factures repassés en écran « changer d'offre » ;
+     - le logo et les couleurs disparus de la page publique, remplacés par la mention
+       « Réservation propulsée par WashBoard ».
+  4. remettre l'échéance d'origine sur le compte de test.
+
+  **Si quelque chose cloche, un seul endroit à toucher :** reculer ou avancer
+  `RETOUR_GRATUIT_POUR_COMPTES_CREES_DES`. La bascule est un **calcul**, rien n'est réécrit
+  en base — placer la date dans le futur remet tout comme avant, sans migration de
+  rattrapage.
+
+  **Pour l'étendre à tout le monde**, plus tard et volontairement : reculer cette même date
+  (par exemple `'2020-01-01'`). À ne faire qu'après avoir prévenu les clients concernés.
+
+- [ ] **Business : « missions et contrats récurrents » n'existe pas dans le produit.**
+      La ligne figurait sur le PDF de la grille tarifaire, elle a été **volontairement
+      retirée** des cartes d'offres : on ne vend pas ce qui n'est pas construit. La carte
+      Business annonce aujourd'hui les 3 laveurs inclus, le tarif par laveur supplémentaire
+      et le planning collectif — tout cela existe. À construire avant de la remettre.
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
@@ -617,6 +668,21 @@ nom, l'adresse et le téléphone de micro-entrepreneurs sans leur consentement
 **page d'annuaire distincte, sur opt-in**, en gardant `/book` en `noindex`.
 
 ## 🛡️ Prod-grade (observabilité + non-régression)
+
+- [ ] **Un test unitaire tombe par intermittence, jamais le meme signale.**
+      Constate deux fois le 2026-09-25/26 : `Tests 1 failed | 1169 passed`. Vitest
+      n'a pas imprime lequel (le bloc « Failed Tests » etait absent de la sortie),
+      et **quatre executions consecutives ensuite sont passees au vert**.
+  - Les deux occurrences ont eu lieu pendant que `npm run dev` **recompilait en
+    parallele** (fichiers sources modifies juste avant). Piste la plus probable :
+    un test qui lit un fichier pendant sa reecriture — `AGENTS.md` est reecrit a
+    chaque demarrage de `next dev`, et `blog.test.ts` / `guide.test.ts` lisent du
+    contenu.
+  - À faire la prochaine fois qu'il tombe : relancer aussitot avec
+    `npx vitest run --reporter=verbose` pour avoir le nom, sans rien changer
+    d'autre entre-temps.
+  - Non bloquant : la suite est verte des qu'elle tourne seule, y compris en
+    integration continue ou aucun serveur de developpement ne tourne.
 
 - [x] 2026-07-02 — **Socle prod mis en place** (commit 9342092) :
   - `lib/logger.ts` : logs structurés JSON (filtrables Vercel par event/level).
@@ -1579,6 +1645,24 @@ rien à faire, mais que le projet reste globalement sain.
 ## 📌 SQL / config en attente (à exécuter en prod si pas déjà fait)
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
+
+- [ ] **AU MOMENT DU DÉPLOIEMENT DE LA GRILLE 2026 — `supabase/migrations/004_offres_2026.sql`.**
+      Passe la colonne `washers.plan` de 2 valeurs (`essentiel`, `pro`) à 4
+      (`decouverte`, `starter`, `pro`, `business`), reprend les comptes existants, change la
+      valeur par défaut et pose une contrainte `CHECK`.
+      **À exécuter au déploiement, pas après** : tant qu'elle n'a pas tourné, un compte qui
+      utilise plusieurs laveurs (`team_size > 1`) perd le multi-laveurs, qui appartient
+      désormais au Business. Le reste ne casse pas (le code sait lire l'ancien `essentiel` et
+      le fait remonter sur Pro, au même tarif de 49 €).
+      Vérification après : `select plan, count(*) from washers group by plan order by plan;`
+      — aucune ligne hors des quatre valeurs.
+
+- [ ] **Créer les tarifs Stripe des nouvelles offres avant le déploiement.**
+      `STRIPE_PRICE_ID_STARTER` (19 €) et `STRIPE_PRICE_ID_BUSINESS` (129 €) à créer dans le
+      catalogue Stripe puis à renseigner dans Vercel. `STRIPE_PRICE_ID_PRO` reste, mais doit
+      **pointer sur un tarif à 49 €** (l'ancien Pro était à 69 €) — sinon un laveur qui
+      choisit le Pro paie l'ancien prix. `STRIPE_PRICE_ID_ESSENTIEL` n'est plus lue.
+      Sans ces variables, le bouton de paiement de l'offre concernée répond « Plan invalide ».
 
 - [ ] **`GRANT DELETE ON public.booking_funnel_events TO service_role;` manquant.**
       Constaté le 2026-09-14 en supprimant trois comptes de test : « permission denied for

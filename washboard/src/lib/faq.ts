@@ -17,10 +17,16 @@ import { freeMonthsLabel, PLAN_CARDS } from '@/lib/plan'
 
 export type FaqItem = { q: string; a: string }
 
-// Dérivé de PLAN_CARDS, jamais recopié : le prix de l'Essentiel affiché ici
-// suit son propre changement, comme freeMonthsLabel() plus bas — voir le
-// commentaire de fichier.
-const essentielPrice = PLAN_CARDS.find(c => c.key === 'essentiel')!.price
+// Dérivé de PLAN_CARDS, jamais recopié : ces prix suivent leur propre
+// changement, comme freeMonthsLabel() plus bas — voir le commentaire de
+// fichier. Grille 2026 : quatre offres, voir plan.ts pour la source.
+//
+// Fusion du 2026-09-28 : cette ligne visait `essentiel`, clé qui n'existe
+// plus depuis la grille à 4 offres — un `!.price` sur `undefined` aurait fait
+// planter le rendu de la page d'accueil en production. Remplacée par les deux
+// offres réellement citées dans les réponses ci-dessous.
+const starterPrice = PLAN_CARDS.find(c => c.key === 'starter')!.price
+const proPrice = PLAN_CARDS.find(c => c.key === 'pro')!.price
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
@@ -57,15 +63,15 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Que se passe-t-il après le mois gratuit ?',
-    a: `Tu choisis de continuer à ${essentielPrice}€/mois ou non. Ton compte est suspendu sans frais si tu arrêtes. Aucune carte n'est demandée pendant l'essai.`,
+    a: `Tu choisis une formule : Starter à ${starterPrice}€/mois ou Pro à ${proPrice}€/mois. Si tu ne choisis pas, ton compte passe tout seul sur l'offre Découverte : gratuite, limitée à 5 réservations par mois. On ne coupe rien. Aucune carte n'est demandée pendant l'essai.`,
   },
   {
     q: 'Je peux arrêter quand je veux ?',
-    a: `En mensuel, oui : sans engagement. L'annuel t'engage sur 12 mois, en échange de ${freeMonthsLabel()}.`,
+    a: `En mensuel, oui : sans engagement. L'annuel t'engage sur 12 mois, avec ${freeMonthsLabel()}.`,
   },
   {
     q: 'Ça marche avec une équipe ?',
-    a: 'Oui, avec la formule Pro. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.',
+    a: 'Oui, avec la formule Business. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.',
   },
   {
     q: 'Les clients peuvent payer en ligne ?',

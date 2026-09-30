@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendFollowupEmail } from '@/lib/email'
 import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
-import { graceEnded } from '@/lib/plan'
+import { graceEnded, hasFeature } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
 import { notifierEquipe } from '@/lib/push'
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   let washerQuery = admin
     .from('washers')
-    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
 
@@ -47,6 +47,14 @@ export async function GET(request: NextRequest) {
   let premiereCause: string | null = null
 
   for (const washer of washers ?? []) {
+    // Les relances appartiennent à l'offre Pro. Ce contrôle manquait : le job
+    // ne regardait que `followup_enabled`, une case cochée une fois et jamais
+    // relue. Un laveur qui l'avait activée pendant son essai continuait donc à
+    // envoyer des relances — des SMS facturés à WashBoard — depuis une offre
+    // qui ne les comprend pas. Devenu criant avec le retour automatique sur
+    // Découverte à la fin de l'essai.
+    if (!hasFeature(washer, 'followup')) continue
+
     // Accès coupé après la grâce de 30 jours : plus de relances envoyées en son nom
     if (washer.subscription_status !== 'active' && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) continue
 

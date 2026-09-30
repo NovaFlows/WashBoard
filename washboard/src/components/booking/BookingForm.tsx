@@ -63,6 +63,10 @@ export type WasherPublic = {
   team_size: number | null
   travel_fee_mode: 'base' | 'previous'
   travel_fee_tiers: { max_minutes: number; fee: number }[] | null
+  /** Le laveur accepte-t-il qu'on réserve pour aujourd'hui ? Sans ce champ,
+   *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
+   *  « oui » par erreur. */
+  reservation_jour_meme?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -72,6 +76,11 @@ export type WasherPublic = {
   /** Informations de facturation complètes : un booléen, jamais le SIRET ni
    *  l'adresse eux-mêmes, qui n'ont rien à faire dans la page publique. */
   facturation_prete?: boolean
+  /** Le laveur peut recevoir des clients PROFESSIONNELS : fiche société,
+   *  facture, suivi. L'offre gratuite ne l'a pas, l'onglet ne s'affiche donc
+   *  pas — plutôt que de le montrer barré, ce qui ferait porter au CLIENT le
+   *  refus d'une limite qui n'est pas la sienne. */
+  clients_pro?: boolean
   // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
 }
 
@@ -257,6 +266,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             services={services}
             categories={categories}
             factureApresPrestation={washer.facturation_prete === true}
+            clientsProAutorises={washer.clients_pro !== false}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
               // Changer de prestation invalide les options de la précédente :
@@ -340,6 +350,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             washerId={washer.id}
             hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
             travelFeeMode={washer.travel_fee_mode ?? 'base'}
+            reservationJourMeme={washer.reservation_jour_meme === true}
             onNext={(data) => { updateForm(data); setStep(4) }}
             onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}

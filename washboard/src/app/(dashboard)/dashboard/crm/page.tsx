@@ -3,11 +3,15 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmView from '@/components/dashboard/CrmView'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
-import { SITE_URL_FALLBACK } from '@/lib/plan'
+import { SITE_URL_FALLBACK, hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
+import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
+import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
+import { ApercuCrm } from '@/components/dashboard/ApercusVerrouilles'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -22,6 +26,46 @@ export default async function CrmPage() {
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'crm')
 
+  // Le CRM fait partie de l'offre Starter (et au-dessus). Le verrou est posé
+  // AVANT les lectures : inutile de parcourir une année d'événements pour
+  // afficher un écran d'invitation à changer d'offre.
+  if (!hasFeature(washer, 'crm')) {
+    // Depuis QUAND les chiffres existent déjà. La collecte tourne pour tout le
+    // monde, sans regarder l'offre (voir api/analytics/funnel) : ce qui est
+    // fermé, c'est l'affichage, jamais l'enregistrement. Le laveur doit le
+    // savoir, sinon il croit qu'attendre lui coûte son historique.
+    //
+    // La date est la PLUS RÉCENTE entre son inscription et la fenêtre d'un an
+    // que le CRM sait lire : promettre « depuis votre inscription » à quelqu'un
+    // inscrit il y a trois ans serait un mensonge le jour où il paie.
+    const debutFenetre = new Date()
+    debutFenetre.setDate(debutFenetre.getDate() - FUNNEL_HISTORY_DAYS)
+    const inscription = washer.created_at ? new Date(washer.created_at) : null
+    const depuis = inscription && !Number.isNaN(inscription.getTime()) && inscription > debutFenetre
+      ? inscription
+      : debutFenetre
+    const depuisLabel = depuis.toLocaleDateString('fr-FR', {
+      timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric',
+    })
+
+    return (
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+        <div className="p-4">
+          <div className="mb-6">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">CRM</h1>
+          </div>
+          <UpgradePrompt
+            title="Sachez d’où viennent vos clients"
+            description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning."
+            feature="crm"
+            apercu={<ApercuCrm />}
+            rassurance={`Vos visites et vos réservations sont déjà enregistrées depuis le ${depuisLabel}. Vous ne perdez rien à attendre : tout s’affichera d’un coup le jour où vous changez d’offre.`}
+          />
+        </div>
+      </DashboardShell>
+    )
+  }
+
   // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
   // erreur. Voir `toutesLesLignes`.
   const { data: bookings, error: bookingsError } = await toutesLesLignes(
@@ -34,6 +78,14 @@ export default async function CrmPage() {
       .range(debut, fin),
   )
   if (bookingsError) logger.warn('crm.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
+
+  // Le CRM est la vue la plus complète qu'on ait sur un client : téléphone,
+  // adresse, historique. Les réservations au-delà du quota n'y entrent pas —
+  // sinon le laveur récupérait ici, en deux clics, exactement ce que l'accueil
+  // et le calendrier viennent de lui cacher. Elles restent comptées sur la
+  // page Clients, nom flouté et jour seul.
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 
   const since = new Date()
   since.setDate(since.getDate() - FUNNEL_HISTORY_DAYS)
@@ -60,13 +112,13 @@ export default async function CrmPage() {
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       {/* Les statistiques se calculent désormais dans le navigateur, à partir
           des événements bruts : changer de période ne recharge pas la page, et
           les visites comme les réservations portent sur la même sélection. */}
       <CrmView
         events={funnelEvents ?? []}
-        bookings={bookings ?? []}
+        bookings={bookingsVisibles}
         websiteHost={websiteHost}
         accent={washer.brand_color ?? undefined}
       />
