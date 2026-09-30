@@ -15,7 +15,12 @@ const CARTE = 'rounded-2xl border border-slate-200 dark:border-slate-800 bg-whit
 type CampagneAvecBilan = Campagne & { bilan: BilanCampagne }
 
 function jourCourt(iso: string): string {
-  return new Date(`${iso}T12:00:00Z`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  const d = new Date(`${iso}T12:00:00Z`)
+  const jour = d.getUTCDate()
+  const mois = d.toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' })
+  // « 1er », pas « 1 » : le français l'exige, et c'est le genre de détail qui
+  // décide si un écran a l'air fini ou bâclé.
+  return `${jour === 1 ? '1er' : jour} ${mois}`
 }
 
 /** Un nombre, son intitulé, et rien d'autre. */
@@ -50,8 +55,15 @@ function CarteCampagne({ c, baseUrl, onSupprimer }: {
   // Le retour colore la carte : au-dessus de 1, la publicité a rapporté plus
   // qu'elle n'a coûté. C'est la seule lecture qui compte, et elle doit se voir
   // sans être lue.
-  const gagne = b.retour !== null && b.retour >= 1
-  const couleurRetour = b.retour === null ? undefined : gagne ? '#047857' : '#DC2626'
+  //
+  // Tant qu'aucune réservation n'est arrivée, le retour ne s'affiche pas : un
+  // « × 0,0 » en rouge sur une campagne lancée avant-hier la fait passer pour
+  // un échec avant qu'elle ait eu le temps d'exister. L'information n'est pas
+  // perdue pour autant — « 0 réservations » est juste à côté, et ne peut pas
+  // être mal lu.
+  const mesurable = b.retour !== null && b.reservations > 0
+  const gagne = mesurable && b.retour! >= 1
+  const couleurRetour = !mesurable ? undefined : gagne ? '#047857' : '#DC2626'
 
   return (
     <li className={`${CARTE} p-5`}>
@@ -84,7 +96,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer }: {
         <Chiffre
           label="Retour"
           aide={b.coutParReservation === null ? undefined : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € par client`}
-          valeur={b.retour === null ? '—' : `× ${b.retour.toFixed(1).replace('.', ',')}`}
+          valeur={!mesurable ? '—' : `× ${b.retour!.toFixed(1).replace('.', ',')}`}
           accent={couleurRetour}
         />
       </div>
