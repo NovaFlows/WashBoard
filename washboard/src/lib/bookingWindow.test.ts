@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   verdictDate, heureParis, creneauDansOuverture, BOOKING_HORIZON_DAYS, horaireAligne,
+  estAujourdhuiParis,
 } from './bookingWindow'
 
 const JOUR = 24 * 60 * 60_000
@@ -146,5 +147,23 @@ describe('horaireAligne — verrou de saisie côté serveur', () => {
   it('respecte un pas personnalisé', () => {
     expect(horaireAligne('08:15', 15)).toBe(true)
     expect(horaireAligne('08:10', 15)).toBe(false)
+  })
+})
+
+describe('estAujourdhuiParis — verrou serveur de la réservation le jour même', () => {
+  it('vrai pour un rendez-vous plus tard dans la même journée', () => {
+    expect(estAujourdhuiParis(dans(2 * 60 * 60_000), MAINTENANT)).toBe(true)
+  })
+  it('vrai pour un rendez-vous plus tôt le même jour (déjà passé, mais même date)', () => {
+    expect(estAujourdhuiParis(dans(-2 * 60 * 60_000), MAINTENANT)).toBe(true)
+  })
+  it('faux pour demain', () => {
+    expect(estAujourdhuiParis(dans(JOUR), MAINTENANT)).toBe(false)
+  })
+  it('faux pour hier', () => {
+    expect(estAujourdhuiParis(dans(-JOUR), MAINTENANT)).toBe(false)
+  })
+  it('faux pour une date illisible', () => {
+    expect(estAujourdhuiParis('pas une date', MAINTENANT)).toBe(false)
   })
 })

@@ -63,6 +63,10 @@ export type WasherPublic = {
   team_size: number | null
   travel_fee_mode: 'base' | 'previous'
   travel_fee_tiers: { max_minutes: number; fee: number }[] | null
+  /** Le laveur accepte-t-il qu'on réserve pour aujourd'hui ? Sans ce champ,
+   *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
+   *  « oui » par erreur. */
+  reservation_jour_meme?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -346,6 +350,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             washerId={washer.id}
             hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
             travelFeeMode={washer.travel_fee_mode ?? 'base'}
+            reservationJourMeme={washer.reservation_jour_meme === true}
             onNext={(data) => { updateForm(data); setStep(4) }}
             onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}

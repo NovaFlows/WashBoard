@@ -12,6 +12,7 @@
 // rendez-vous depuis son tableau de bord : lui a le droit de forcer.
 
 import { SLOT_STEP } from './slots'
+import { dateStrParis } from './dateUtils'
 
 /** Nombre de jours proposés par le formulaire, à partir de demain.
  *
@@ -71,6 +72,19 @@ export function heureParis(scheduledAt: string): { jour: number; minutes: number
 
   if (jour < 0 || !Number.isFinite(h) || !Number.isFinite(m)) return null
   return { jour, minutes: h * 60 + m }
+}
+
+/** Ce rendez-vous tombe-t-il aujourd'hui, à l'heure de Paris ?
+ *
+ *  Sert à la réservation le jour même : elle est réservée aux laveurs qui
+ *  l'ont explicitement activée (`reservation_jour_meme`), un réglage qui
+ *  n'existait pas jusqu'ici. Un appel direct à cette route pourrait sinon
+ *  glisser un rendez-vous pour aujourd'hui chez n'importe quel laveur, alors
+ *  que le formulaire ne le proposerait jamais. */
+export function estAujourdhuiParis(scheduledAt: string, nowMs: number = Date.now()): boolean {
+  const t = new Date(scheduledAt)
+  if (!Number.isFinite(t.getTime())) return false
+  return dateStrParis(t) === dateStrParis(new Date(nowMs))
 }
 
 export type PlageOuverture = { day_of_week: number; start_time: string; end_time: string }

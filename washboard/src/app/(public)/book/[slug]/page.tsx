@@ -29,7 +29,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *

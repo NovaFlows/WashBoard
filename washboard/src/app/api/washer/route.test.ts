@@ -386,6 +386,26 @@ describe('PATCH /api/washer — bornage des valeurs numériques', () => {
   })
 })
 
+describe('PATCH /api/washer — réservation le jour même', () => {
+  it('accepte l’activation dès l’offre Découverte', async () => {
+    // Contrairement aux créneaux intelligents ou aux relances, ce réglage
+    // n'appartient à aucune offre — il reste ouvert à tout le monde.
+    const { res } = await patch({ reservation_jour_meme: true })
+    expect(res.status).toBe(200)
+    expect(updates[0].reservation_jour_meme).toBe(true)
+  })
+
+  it('normalise en booléen', async () => {
+    await patch({ reservation_jour_meme: 1 })
+    expect(updates[0].reservation_jour_meme).toBe(true)
+  })
+
+  it('accepte la désactivation', async () => {
+    await patch({ reservation_jour_meme: false })
+    expect(updates[0].reservation_jour_meme).toBe(false)
+  })
+})
+
 describe('PATCH /api/washer — champs non modifiables', () => {
   it('ignore une tentative de s attribuer le plan Pro', async () => {
     // Le plan vient de Stripe, jamais du navigateur. La route ne recopie que

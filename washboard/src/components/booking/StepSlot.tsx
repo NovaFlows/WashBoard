@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 
@@ -29,6 +29,11 @@ type Props = {
   washerId: string
   hasTravelFee?: boolean
   travelFeeMode?: 'base' | 'previous'
+  /** Le laveur accepte-t-il les réservations pour aujourd'hui ? Faux par
+   *  défaut : sans ce réglage explicite, le comportement d'avant (à partir
+   *  de demain) ne doit pas changer sous les pieds d'un laveur qui n'a rien
+   *  demandé. */
+  reservationJourMeme?: boolean
   onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   onBack: () => void
   accent?: string
@@ -69,7 +74,7 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
@@ -88,10 +93,11 @@ export default function StepSlot({
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
   const [morningVisible,     setMorningVisible]     = useState(6)
   const [afternoonVisible,   setAfternoonVisible]   = useState(6)
-  // Fenêtre réservable : de demain à l'horizon que le serveur accepte.
+  // Fenêtre réservable : d'aujourd'hui (si le laveur l'a activé) ou de
+  // demain, à l'horizon que le serveur accepte.
   const [premierJour] = useState(() => {
     const d = aMinuit(new Date())
-    d.setDate(d.getDate() + 1)
+    if (!reservationJourMeme) d.setDate(d.getDate() + 1)
     return d
   })
   const [dernierJour] = useState(() => {
@@ -248,6 +254,9 @@ export default function StepSlot({
   const slotsForDay = selectedDate
     ? dayAvailabilities
         .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
+        // Sans effet un jour futur (jamais « passé ») ; retire les horaires du
+        // matin quand le jour même est réservable et qu'il est déjà l'après-midi.
+        .filter(slot => !slotEstPasse(slot, selectedDate))
         .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []

@@ -18,6 +18,7 @@ export async function PATCH(request: NextRequest) {
   const {
     name, phone, slug, logo_url, welcome_message, brand_color, team_size,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
+    reservation_jour_meme,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
     followup_enabled, followup_delay_days, followup_message,
@@ -180,6 +181,7 @@ export async function PATCH(request: NextRequest) {
   if (smart_slot_radius_minutes !== undefined) updates.smart_slot_radius_minutes = Math.min(60, Math.max(5, Number(smart_slot_radius_minutes)))
   if (smart_slot_discount_type !== undefined) updates.smart_slot_discount_type = smart_slot_discount_type
   if (smart_slot_discount_value !== undefined) updates.smart_slot_discount_value = Math.max(0, Number(smart_slot_discount_value))
+  if (reservation_jour_meme !== undefined) updates.reservation_jour_meme = Boolean(reservation_jour_meme)
   if (travel_fee_tiers !== undefined) {
     // Ne conserver que les paliers cohérents (durée > 0, frais >= 0)
     updates.travel_fee_tiers = Array.isArray(travel_fee_tiers)

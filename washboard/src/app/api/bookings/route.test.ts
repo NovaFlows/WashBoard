@@ -241,6 +241,34 @@ describe('POST /api/bookings — cloisonnement entre laveurs (H2)', () => {
   })
 })
 
+describe('POST /api/bookings — réservation le jour même', () => {
+  it('refuse un rendez-vous pour aujourd’hui si le laveur n’a pas activé le jour même', async () => {
+    // "Maintenant" simulé : 2026-09-09T09:00:00Z (mercredi, 11h à Paris).
+    const { res, body } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/jour même/)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('accepte un rendez-vous pour aujourd’hui si le laveur l’a activé', async () => {
+    avecWasher({ reservation_jour_meme: true })
+    // Le laveur par défaut n'ouvre que le vendredi ; on ouvre aussi le
+    // mercredi (day_of_week 3) pour isoler le seul contrôle qui nous intéresse.
+    plan.tables.availabilities = { data: [{ day_of_week: 3, start_time: '09:00', end_time: '18:00' }], error: null }
+    const { res } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+
+  it('un rendez-vous saisi par le laveur lui-même n’est jamais bloqué par ce contrôle', async () => {
+    // Même sans le réglage activé : c'est son métier, pas une anomalie
+    // (même principe que verdictDate/creneauDansOuverture juste au-dessus).
+    plan.utilisateur = { id: 'user-1' }
+    plan.tables.availabilities = { data: [{ day_of_week: 3, start_time: '09:00', end_time: '18:00' }], error: null }
+    const { res } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+})
+
 describe('POST /api/bookings — le moment demandé (H3)', () => {
   it('refuse une date déjà passée', async () => {
     const { res } = await poster({ scheduled_at: '2020-06-01T08:00:00Z' })
