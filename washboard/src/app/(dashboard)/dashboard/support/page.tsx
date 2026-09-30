@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // laveur qui a demandé de l'aide.
 //
 // Elle n'apparaît dans aucun menu et renvoie vers l'accueil pour quiconque
-// n'est pas dans SUPPORT_ADMIN_EMAILS — un laveur qui devinerait l'adresse ne
+// n'est pas dans SUPPORT_ADMIN_USER_IDS — un laveur qui devinerait l'adresse ne
 // doit pas même savoir qu'elle existe.
 //
 // Coque du tableau de bord (DashboardShell, avec son menu) : affichée, mais
@@ -31,15 +31,15 @@ export default async function SupportPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const liste = process.env.SUPPORT_ADMIN_EMAILS
-  if (!isSupportMember(user.email, liste)) {
+  const liste = process.env.SUPPORT_ADMIN_USER_IDS
+  if (!isSupportMember(user.id, liste)) {
     // La redirection reste muette pour le visiteur — inutile de lui révéler
     // que cette page existe. Mais sans trace côté serveur, le refus est
     // indiagnosticable : on ne sait pas distinguer « variable absente du
-    // déploiement » de « mauvaise adresse », alors que le remede diffère du
+    // déploiement » de « mauvais identifiant », alors que le remede diffère du
     // tout au tout.
     logger.warn('support.page.denied', {
-      email: user.email ?? null,
+      userId: user.id,
       listeConfiguree: !!liste,
     })
     redirect('/dashboard')

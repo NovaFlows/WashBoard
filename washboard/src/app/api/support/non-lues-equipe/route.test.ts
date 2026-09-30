@@ -39,7 +39,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 const { GET } = await import('./route')
 
 beforeEach(() => {
-  vi.stubEnv('SUPPORT_ADMIN_EMAILS', 'equipe@washboard.fr')
+  vi.stubEnv('SUPPORT_ADMIN_USER_IDS', 'u-equipe')
   adminOuvert = false
   plan = {
     utilisateur: { id: 'u-equipe', email: 'equipe@washboard.fr' },

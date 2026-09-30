@@ -4,9 +4,8 @@ import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { notifierEquipe } from '@/lib/push'
-import { reprendreApercu, annonceReprise, type ResultatReprise } from '@/lib/repriseApercu'
-import { FUSEAU } from '@/lib/dateUtils'
+import { trustedOrigin } from '@/lib/appOrigin'
+import { envoyerLienConfirmation } from '@/lib/confirmationEmail'
 
 function generateSlug(name: string): string {
   return name
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: email.trim(),
     password,
-    email_confirm: true,
+    email_confirm: false,
   })
 
   if (authError) {
@@ -147,7 +146,6 @@ export async function POST(request: NextRequest) {
   // solderait par un échec d'inscription devant un vrai prospect, sans qu'il
   // comprenne pourquoi. On retente simplement avec un autre suffixe.
   let washerError: { code?: string; message?: string } | null = null
-  let washerId = ''
   for (let essai = 0; essai < 3; essai++) {
     const id = randomUUID()
     const { error } = await supabase
@@ -163,7 +161,7 @@ export async function POST(request: NextRequest) {
       })
 
     washerError = error
-    if (!error) { washerId = id; break }
+    if (!error) break
     if (error.code !== '23505') break
     logger.warn('signup.slug_collision', { baseSlug, essai })
   }
@@ -187,47 +185,18 @@ export async function POST(request: NextRequest) {
 
   logger.info('signup.washer_created', { userId: authData.user.id })
 
-  // Le prospect s'inscrit avec le numéro de la page qu'on lui a préparée : elle
-  // passe dans son compte (voir `reprendreApercu`). APRÈS la création du compte
-  // et jamais bloquante : un raté de reprise se rattrape à la main, une
-  // inscription refusée devant le prospect ne se rattrape pas.
-  let reprise: ResultatReprise
-  try {
-    reprise = await reprendreApercu(supabase, { id: washerId, phone: telephone })
-  } catch (e) {
-    logger.error('signup.apercu_reprise_exception', { userId: authData.user.id }, e)
-    reprise = { statut: 'echec', etape: 'inattendue', fait: [] }
-  }
-  if (reprise.statut === 'reprise') {
-    logger.info('signup.apercu_repris', { userId: authData.user.id, washerId, apercu: reprise.apercu.slug })
-  } else if (reprise.statut === 'echec') {
-    logger.error('signup.apercu_reprise_echouee', { userId: authData.user.id, washerId, etape: reprise.etape, fait: reprise.fait })
-  } else if (reprise.statut !== 'aucun') {
-    logger.warn('signup.apercu_non_repris', { userId: authData.user.id, washerId, statut: reprise.statut })
-  }
-
-  // Une inscription est l'événement le plus important du produit, et rien ne le
-  // signalait : il fallait aller regarder la base pour s'en apercevoir. La
-  // notification part vers les appareils de l'équipe uniquement — jamais vers
-  // les laveurs (voir `notifierEquipe`).
+  // La reprise de l'aperçu prospect et la notification de l'équipe attendent
+  // la confirmation de l'email (voir `app/auth/confirm/route.ts`) : avant, le
+  // compte peut encore être supprimé par « recommencer l'inscription », et une
+  // page déjà reprise partirait avec lui.
   //
-  // Attendue, pas lancée dans le vide : Vercel coupe la fonction dès la réponse
-  // renvoyée, et un envoi non attendu n'aurait pas le temps de partir. La
-  // fonction n'échoue jamais, l'inscription ne peut donc pas en pâtir.
-  const finEssai = new Date(trialEndsAt).toLocaleDateString('fr-FR', { timeZone: FUSEAU,
-    day: 'numeric', month: 'long',
-  })
-  const annonce = annonceReprise(reprise)
-  await notifierEquipe({
-    title: annonce.titre,
-    body: [
-      `🏢 ${name.trim()}`,
-      `📧 ${email.trim()}`,
-      `⏳ Essai jusqu'au ${finEssai}`,
-      ...annonce.lignes,
-    ].join('\n'),
-    url: '/dashboard',
-    tag: `signup-${authData.user.id}`,
+  // Un envoi raté ne fait pas échouer l'inscription : le compte existe, et
+  // /verifier-email propose de renvoyer le lien.
+  await envoyerLienConfirmation(supabase, {
+    userId: authData.user.id,
+    email: email.trim(),
+    washerName: name.trim(),
+    origin: trustedOrigin(request.headers.get('origin')),
   })
 
   return NextResponse.json({ success: true })

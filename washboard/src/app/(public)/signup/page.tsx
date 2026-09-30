@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
@@ -18,7 +17,6 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -29,17 +27,31 @@ export default function SignupPage() {
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
     setLoading(true)
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, phone }),
-    })
-    const json = await res.json()
-    if (!res.ok) { setError(json.error ?? 'Une erreur est survenue'); setLoading(false); return }
-    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-    if (loginError) { setLoading(false); router.push('/login'); return }
-    router.push('/dashboard')
-    router.refresh()
+    // Sans ce try, un serveur injoignable faisait rejeter le fetch en silence :
+    // le bouton restait sur « Création du compte… » pour toujours.
+    let res: Response
+    try {
+      res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, phone }),
+      })
+    } catch {
+      setError('Connexion impossible. Vérifie ta connexion internet et réessaie.')
+      setLoading(false)
+      return
+    }
+    if (!res.ok) {
+      // Une erreur renvoyée par l'hébergeur plutôt que par la route n'est pas
+      // du JSON : ne pas laisser `res.json()` lever à son tour.
+      const json = await res.json().catch(() => null)
+      setError(json?.error ?? 'Une erreur est survenue. Réessaie dans un instant.')
+      setLoading(false)
+      return
+    }
+    // Pas de connexion ici : Supabase la refuse tant que l'email n'est pas
+    // confirmé.
+    router.push(`/verifier-email?email=${encodeURIComponent(email.trim())}`)
   }
 
   return (

@@ -15,6 +15,7 @@ let plan: {
 }
 
 const inserts: Record<string, unknown>[] = []
+const comptesCrees: Record<string, unknown>[] = []
 // Filtres posés sur la requête d'unicité, pour vérifier CE QUI est compté.
 const filtres: unknown[][] = []
 
@@ -39,25 +40,23 @@ vi.mock('@supabase/supabase-js', () => ({
     from: () => nouveauBuilder(),
     auth: {
       admin: {
-        createUser: async () => plan.creerUtilisateur,
+        createUser: async (params: Record<string, unknown>) => {
+          comptesCrees.push(params)
+          return plan.creerUtilisateur
+        },
         deleteUser: async () => ({ error: plan.suppressionErreur }),
       },
     },
   }),
 }))
 
-vi.mock('@/lib/push', () => ({ notifierEquipe: vi.fn(async () => {}) }))
-
-// La reprise elle-même est testée dans lib/repriseApercu.test.ts ; ici, on
-// vérifie seulement comment l'inscription s'en sert.
-const { reprendreApercu } = vi.hoisted(() => ({ reprendreApercu: vi.fn() }))
-vi.mock('@/lib/repriseApercu', async importOriginal => ({
-  ...(await importOriginal<typeof import('@/lib/repriseApercu')>()),
-  reprendreApercu,
-}))
+// La génération et l'envoi du lien sont testés dans lib/confirmationEmail.test.ts.
+const { envoyerLien } = vi.hoisted(() => ({ envoyerLien: vi.fn() }))
+vi.mock('@/lib/confirmationEmail', () => ({ envoyerLienConfirmation: envoyerLien }))
 
 const { POST } = await import('./route')
-const { notifierEquipe } = await import('@/lib/push')
+
+const ID_COMPTE = '0b7d3c2e-4f1a-4c8e-9d2b-7a6f5e4d3c2b'
 
 const NUMERO_EXEMPTE = '0684140438'
 const NUMERO_NORMAL = '0611223344'
@@ -85,16 +84,16 @@ async function inscrire(extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.stubEnv('PHONE_UNIQUENESS_EXEMPT', NUMERO_EXEMPTE)
   inserts.length = 0
+  comptesCrees.length = 0
   filtres.length = 0
   plan = {
     fichesAvecCeNumero: { data: [], error: null },
     insertErreurs: [],
-    creerUtilisateur: { data: { user: { id: 'u-1' } }, error: null },
+    creerUtilisateur: { data: { user: { id: ID_COMPTE } }, error: null },
     suppressionErreur: null,
   }
-  reprendreApercu.mockReset()
-  reprendreApercu.mockResolvedValue({ statut: 'aucun' })
-  vi.mocked(notifierEquipe).mockClear()
+  envoyerLien.mockReset()
+  envoyerLien.mockResolvedValue(true)
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -204,35 +203,38 @@ describe('POST /api/auth/signup — création du compte', () => {
   })
 })
 
-describe('POST /api/auth/signup — reprise de l’aperçu', () => {
-  const notification = () => vi.mocked(notifierEquipe).mock.calls[0][0]
-
-  it('reprend l’aperçu du numéro dans la fiche qui vient d’être créée, et le dit à l’équipe', async () => {
-    reprendreApercu.mockResolvedValue({ statut: 'reprise', apercu: { name: 'URHUS AUTO', slug: 'urhus-auto' } })
-    const { res } = await inscrire()
-    expect(res.status).toBe(200)
-    expect(reprendreApercu).toHaveBeenCalledWith(expect.anything(), { id: inserts[0].id, phone: NUMERO_NORMAL })
-    expect(notification().title).toMatch(/aperçu repris/)
-    expect(notification().body).toMatch(/URHUS AUTO/)
+describe('POST /api/auth/signup — confirmation de l’email', () => {
+  it('crée le compte NON confirmé', async () => {
+    await inscrire()
+    expect(comptesCrees[0]).toMatchObject({ email: 'test@exemple.fr', email_confirm: false })
   })
 
-  it('numéro sans aperçu : compte vide et notification habituelle', async () => {
-    const { res } = await inscrire()
-    expect(res.status).toBe(200)
-    expect(notification().title).toBe('🎉 Nouveau client WashBoard')
+  it('envoie le lien de confirmation au compte créé', async () => {
+    await inscrire({ name: ' Kooki Clean ' })
+    expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), {
+      userId: ID_COMPTE,
+      email: 'test@exemple.fr',
+      washerName: 'Kooki Clean',
+      origin: expect.any(String),
+    })
   })
 
-  it('une reprise qui plante ne fait JAMAIS échouer l’inscription', async () => {
-    reprendreApercu.mockRejectedValue(new Error('base indisponible'))
+  it('un envoi raté ne fait PAS échouer l’inscription', async () => {
+    // Le compte existe : /verifier-email propose de renvoyer le lien.
+    envoyerLien.mockResolvedValue(false)
     const { res, body } = await inscrire()
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
-    expect(notification().title).toMatch(/échouée/)
   })
 
-  it('pas de reprise quand la fiche n’a pas pu être créée', async () => {
+  it('ne pose plus aucun cookie', async () => {
+    const { res } = await inscrire()
+    expect(res.headers.get('set-cookie')).toBeNull()
+  })
+
+  it('pas de lien quand la fiche n’a pas pu être créée', async () => {
     plan.insertErreurs = [{ code: '23505' }, { code: '23505' }, { code: '23505' }]
     await inscrire()
-    expect(reprendreApercu).not.toHaveBeenCalled()
+    expect(envoyerLien).not.toHaveBeenCalled()
   })
 })

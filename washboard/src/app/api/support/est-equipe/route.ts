@@ -8,19 +8,19 @@ import { isSupportMember } from '@/lib/supportAccess'
 // authentification d'abord, appartenance ensuite.
 //
 // Appelée sur chaque page du dashboard : aucun accès base au-delà de la
-// session déjà résolue par `createClient`, la liste des adresses vit dans une
+// session déjà résolue par `createClient`, la liste des identifiants vit dans une
 // variable d'environnement (voir `isSupportMember`).
 //
 // `membre: false` avec un 200 pour un laveur connecté qui n'est pas de
 // l'équipe : ce n'est pas une erreur, c'est la réponse normale à « ai-je le
 // droit ? ». Seul un visiteur non connecté reçoit un 401. La réponse ne
-// révèle jamais rien d'autre (ni la liste des adresses, ni leur nombre).
+// révèle jamais rien d'autre (ni la liste des identifiants, ni leur nombre).
 
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const membre = isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)
+  const membre = isSupportMember(user.id, process.env.SUPPORT_ADMIN_USER_IDS)
   return NextResponse.json({ membre })
 }

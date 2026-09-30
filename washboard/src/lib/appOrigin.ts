@@ -60,3 +60,17 @@ export function trustedOrigin(
   if (candidat && autorisees.includes(candidat)) return candidat
   return autorisees[0]
 }
+
+/** L'en-tête `Origin` d'une requête correspond-il exactement à une origine du
+ *  site ?
+ *
+ *  Pour les routes POST appelées par nos propres pages : un navigateur envoie
+ *  toujours cet en-tête sur un POST, un en-tête absent ou étranger signale donc
+ *  une requête forgée depuis un autre site. */
+export function isTrustedOrigin(
+  headerOrigin: string | null | undefined,
+  envUrl: string | undefined = process.env.NEXT_PUBLIC_APP_URL,
+): boolean {
+  if (!headerOrigin) return false
+  return originesAutorisees(envUrl).includes(normaliser(headerOrigin))
+}

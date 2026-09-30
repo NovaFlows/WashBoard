@@ -11,7 +11,7 @@ import { trustedOrigin } from '@/lib/appOrigin'
 // d'un client. Trois verrous, dans cet ordre, et chacun refuse par défaut :
 //
 //   1. le demandeur est connecté ;
-//   2. son adresse figure dans SUPPORT_ADMIN_EMAILS ;
+//   2. son identifiant figure dans SUPPORT_ADMIN_USER_IDS ;
 //   3. le laveur a ouvert un accès, non expiré et non annulé.
 //
 // Le passage est ensuite horodaté dans la même ligne : le laveur voit dans ses
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  if (!isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)) {
+  if (!isSupportMember(user.id, process.env.SUPPORT_ADMIN_USER_IDS)) {
     // Volontairement identique à un refus d'authentification : inutile de
     // révéler à un curieux que cette route existe et ce qu'elle fait.
     logger.warn('support.access.denied', { userId: user.id })
