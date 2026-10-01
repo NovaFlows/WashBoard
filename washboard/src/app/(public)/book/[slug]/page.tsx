@@ -1,4 +1,5 @@
 import { cache, Suspense } from 'react'
+import Image from 'next/image'
 import RetourApercu from '@/components/booking/RetourApercu'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
@@ -6,7 +7,7 @@ import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
 import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { getBgStyle } from '@/lib/themes'
+import { getBgStyle, urlVersionnee } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
@@ -30,7 +31,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *
@@ -199,7 +200,7 @@ export default async function BookingPage({ params }: Props) {
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
 
-  const bgStyle = personnalisee ? getBgStyle(washer.background_theme) : null
+  const bgStyle = personnalisee ? getBgStyle(washer.background_theme, washer.profile_updated_at) : null
   const themed  = !!bgStyle
 
   return (
@@ -229,9 +230,18 @@ export default async function BookingPage({ params }: Props) {
           {personnalisee ? (
             <div className="flex items-center gap-3">
               {logoUrl ? (
-                <img
-                  src={logoUrl}
+                // Passe par l'optimiseur d'images de Next (redimension,
+                // compression, cache à l'edge) au lieu de resservir le
+                // fichier Supabase en entier à chaque visiteur — c'est déjà
+                // ce qui a fait dépasser le quota de bande passante une fois
+                // (voir api/washer/logo/route.ts). `?v=` évite de montrer un
+                // ancien logo après un nouvel envoi : le chemin de stockage
+                // est réutilisé (upsert), pas l'URL.
+                <Image
+                  src={urlVersionnee(logoUrl, washer.profile_updated_at)}
                   alt={washer.name}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-xl object-cover"
                 />
               ) : (

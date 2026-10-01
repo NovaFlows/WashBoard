@@ -55,14 +55,50 @@ export const BG_THEME_PRESETS: BgThemePreset[] = [
   },
 ]
 
-/** Renvoie le style CSS à appliquer sur le fond de la page booking */
-export function getBgStyle(theme: string | null | undefined): React.CSSProperties | null {
+/** Fait passer une image de fond par l'optimiseur d'images de Next (redimension,
+ *  compression, cache à l'edge Vercel) au lieu de l'URL d'origine, resservie
+ *  en entier à chaque visiteur de la page de réservation sinon — c'est déjà
+ *  ce qui a fait dépasser le quota de bande passante Supabase une fois (voir
+ *  api/washer/logo/route.ts, « un logo de 4 Mo a fait dépasser de 60 % »).
+ *
+ *  Une image CSS (`background-image`) ne peut pas passer par le composant
+ *  `<Image>` : on construit donc nous-mêmes l'URL de son point d'entrée
+ *  (`/_next/image`), ce que fait `<Image>` en coulisses de toute façon.
+ *
+ *  `version` doit changer exactement quand le fichier change. Le chemin de
+ *  stockage d'un fond envoyé par un laveur est réutilisé d'un envoi à l'autre
+ *  (`upsert`, voir api/washer/background/route.ts) : un cache long SANS
+ *  version resservirait l'ancien fond après un nouvel envoi. Sans version
+ *  fournie, l'URL d'origine est renvoyée telle quelle plutôt que mise en
+ *  cache à l'aveugle — mieux vaut repasser par Supabase à chaque fois que
+ *  risquer de montrer un fond périmé. */
+/** Ajoute `?v=<version>` à une URL, pour distinguer deux envois successifs
+ *  d'un même fichier (chemin de stockage réutilisé, voir plus haut) sans
+ *  renommer quoi que ce soit en base. `version` absente → URL inchangée. */
+export function urlVersionnee(url: string, version?: string | null): string {
+  if (!version) return url
+  return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`
+}
+
+function imageOptimisee(url: string, version?: string | null): string {
+  if (!version) return url
+  return `/_next/image?url=${encodeURIComponent(urlVersionnee(url, version))}&w=1920&q=75`
+}
+
+/** Renvoie le style CSS à appliquer sur le fond de la page booking.
+ *
+ *  `version` (facultatif) : date de dernière modification du PROFIL
+ *  (`profile_updated_at`), pour mettre en cache longtemps une image envoyée
+ *  par le laveur sans jamais montrer une version périmée après un nouvel
+ *  envoi — voir `imageOptimisee`. Les photos des thèmes prédéfinis n'en ont
+ *  pas besoin : leur URL ne change jamais. */
+export function getBgStyle(theme: string | null | undefined, version?: string | null): React.CSSProperties | null {
   if (!theme) return null
   const preset = BG_THEME_PRESETS.find(t => t.id === theme)
   if (preset) {
     if (preset.photo) {
       return {
-        backgroundImage: `linear-gradient(${OVERLAY},${OVERLAY}), url(${preset.photo})`,
+        backgroundImage: `linear-gradient(${OVERLAY},${OVERLAY}), url(${imageOptimisee(preset.photo, 'fixe')})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
@@ -73,7 +109,7 @@ export function getBgStyle(theme: string | null | undefined): React.CSSPropertie
   // Image uploadée par le laveur
   if (theme.startsWith('http')) {
     return {
-      backgroundImage: `linear-gradient(${OVERLAY},${OVERLAY}), url(${theme})`,
+      backgroundImage: `linear-gradient(${OVERLAY},${OVERLAY}), url(${imageOptimisee(theme, version)})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundAttachment: 'fixed',
