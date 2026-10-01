@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
 import { logger } from '@/lib/logger'
+import { migrationEnAttente, MESSAGE_EN_ATTENTE } from '@/lib/migrationEnAttente'
 import { erreurCampagne, estPlateforme, MESSAGES_ERREUR } from '@/lib/campagne'
 
 /** Modification d'une campagne : budget, dates, nom, plateforme.
@@ -32,7 +33,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     .eq('washer_id', washerId)
     .maybeSingle()
 
-  if (errLecture) return errorResponse('campagnes.read', errLecture, { washerId })
+  if (errLecture) {
+    if (migrationEnAttente(errLecture)) {
+      return NextResponse.json({ error: MESSAGE_EN_ATTENTE }, { status: 503 })
+    }
+    return errorResponse('campagnes.read', errLecture, { washerId })
+  }
   if (!actuelle) return NextResponse.json({ error: 'Campagne introuvable' }, { status: 404 })
 
   const nom = typeof body.nom === 'string' ? body.nom.trim().slice(0, 120) : actuelle.nom
@@ -76,7 +82,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     .eq('id', id)
     .eq('washer_id', washerId)
 
-  if (error) return errorResponse('campagnes.delete', error, { washerId })
+  if (error) {
+    if (migrationEnAttente(error)) {
+      return NextResponse.json({ error: MESSAGE_EN_ATTENTE }, { status: 503 })
+    }
+    return errorResponse('campagnes.delete', error, { washerId })
+  }
   logger.info('campagnes.deleted', { washerId })
   return NextResponse.json({ ok: true })
 }

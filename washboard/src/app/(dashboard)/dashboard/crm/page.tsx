@@ -16,6 +16,7 @@ import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { ApercuCrm, ApercuCampagnes } from '@/components/dashboard/ApercusVerrouilles'
 import {
@@ -42,6 +43,15 @@ async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
     .eq('washer_id', washerId)
     .order('debut', { ascending: false })
 
+  // Table absente : la fonctionnalité n'est pas en service. On le remonte à
+  // l'écran plutôt que d'afficher une liste vide — sinon le laveur remplit un
+  // formulaire de campagne qui ne peut pas aboutir, et ne comprend l'échec
+  // qu'après avoir tout saisi.
+  if (errCampagnes && migrationEnAttente(errCampagnes)) {
+    logger.warn('campagnes.migration_en_attente', { washerId })
+    return { campagnes: [] as CampagneAffichee[], indisponible: true }
+  }
+
   // Sans trace, une liste vide ne se distinguerait pas d'un laveur sans
   // campagne — et il croirait avoir perdu son travail.
   if (errCampagnes) logger.error('campagnes.list.read_failed', { washerId }, errCampagnes)
@@ -59,7 +69,7 @@ async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
     fin: (c.fin as string | null) ?? null,
   }))
 
-  if (liste.length === 0) return { campagnes: [] as CampagneAffichee[] }
+  if (liste.length === 0) return { campagnes: [] as CampagneAffichee[], indisponible: false }
 
   // Les créations, s'il y en a. Table absente = migration 008 non exécutée :
   // les campagnes s'affichent quand même, sans le détail par vidéo. Le code
@@ -143,7 +153,7 @@ async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
     return { ...c, bilan, creations: parCreation, reste: resteHorsCreations(bilan, parCreation) }
   }
 
-  return { campagnes: liste.map(assembler) }
+  return { campagnes: liste.map(assembler), indisponible: false }
 }
 
 export default async function CrmPage({ searchParams }: {
@@ -229,7 +239,7 @@ export default async function CrmPage({ searchParams }: {
       )
     }
 
-    const { campagnes } = await chargerCampagnes(supabase, washer.id)
+    const { campagnes, indisponible } = await chargerCampagnes(supabase, washer.id)
     return coque(
       <div>
         {onglets}
@@ -237,6 +247,7 @@ export default async function CrmPage({ searchParams }: {
           campagnes={campagnes}
           baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`}
           accent={washer.brand_color ?? undefined}
+          indisponible={indisponible}
         />
       </div>,
     )

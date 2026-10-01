@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronDown, Copy, Check, Plus, Trash2, Play, ImageIcon, Images, Megaphone,
+  ChevronDown, Copy, Check, Plus, Trash2, Play, ImageIcon, Images, Megaphone, Clock,
 } from 'lucide-react'
 import { formatEuros } from '@/lib/plan'
 import {
@@ -447,13 +447,16 @@ const FILTRES: { cle: Filtre; label: string }[] = [
   { cle: 'terminees', label: 'Terminées' },
 ]
 
-export default function CampagnesView({ campagnes, baseUrl, accent }: {
+export default function CampagnesView({ campagnes, baseUrl, accent, indisponible }: {
   campagnes: CampagneAffichee[]
   baseUrl: string
   accent?: string
+  /** Vrai quand la base n'a pas encore la table : le suivi n'est pas en
+   *  service. L'écran le dit au lieu d'offrir un formulaire qui échouerait. */
+  indisponible?: boolean
 }) {
   const router = useRouter()
-  const [ouvert, setOuvert] = useState(campagnes.length === 0)
+  const [ouvert, setOuvert] = useState(campagnes.length === 0 && !indisponible)
   const [filtre, setFiltre] = useState<Filtre>('toutes')
   const [nom, setNom] = useState('')
   const [plateforme, setPlateforme] = useState<Plateforme>('meta')
@@ -514,7 +517,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent }: {
             Ce que vous dépensez, ce que ça rapporte, et laquelle de vos vidéos y est pour quelque chose.
           </p>
         </div>
-        {!ouvert && (
+        {!ouvert && !indisponible && (
           <button onClick={() => setOuvert(true)}
             className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97]"
             style={{ backgroundColor: BLEU }}>
@@ -528,6 +531,37 @@ export default function CampagnesView({ campagnes, baseUrl, accent }: {
         <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl px-4 py-3">
           {erreur}
         </p>
+      )}
+
+      {/* ── Pas encore en service ────────────────────────────────────────── */}
+      {/* Deux choses à dire, et seulement deux : ce n'est pas cassé, et ce
+          n'est pas lui. Le troisième point — que l'origine d'un clic n'est pas
+          encore conservée — est désagréable mais nécessaire : sans lui, le
+          laveur lancerait sa publicité aujourd'hui en croyant qu'elle sera
+          mesurée rétroactivement. */}
+      {indisponible && (
+        <div className={`${CARTE} p-5`}>
+          <div className="flex items-start gap-3">
+            <span className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Clock size={16} strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 dark:text-slate-100">
+                Le suivi des publicités n’est pas encore activé
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                Rien n’est cassé de votre côté : cette partie du CRM attend une dernière mise en
+                service. Vos visites et vos réservations continuent d’être enregistrées
+                normalement.
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                En revanche, l’origine publicitaire d’un clic n’est pas encore conservée : une
+                campagne lancée aujourd’hui ne sera comptée qu’à partir de l’activation. Si vous
+                prévoyez d’en lancer une, attendez-la.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── La synthèse, lisible sans rien déplier ───────────────────────── */}
@@ -563,7 +597,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent }: {
       )}
 
       {/* ── Le formulaire de campagne ────────────────────────────────────── */}
-      {ouvert && (
+      {ouvert && !indisponible && (
         <div className={`${CARTE} p-5 space-y-4`}>
           <p className="font-bold text-slate-900 dark:text-slate-100">Nouvelle campagne</p>
 
@@ -662,7 +696,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent }: {
         </p>
       )}
 
-      {campagnes.length === 0 && !ouvert && (
+      {campagnes.length === 0 && !ouvert && !indisponible && (
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">
           Aucune campagne pour l’instant.
         </p>

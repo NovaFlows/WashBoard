@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import { migrationEnAttente, MESSAGE_EN_ATTENTE } from '@/lib/migrationEnAttente'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import {
   cleDepuisNom, cleUnique, erreurCreation, estFormat, MESSAGES_ERREUR_CREATION,
@@ -76,15 +77,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .eq('campagne_id', campagneId)
     .eq('washer_id', washer.id)
 
-  // Table absente : la migration 008 n'a pas encore été exécutée. Le dire
-  // franchement plutôt que de rendre une erreur 500 qui ferait chercher un bug
-  // là où il n'y en a pas.
   if (errLecture) {
-    logger.error('creations.cles.read_failed', { washerId: washer.id }, errLecture)
-    return NextResponse.json(
-      { error: 'Le suivi par vidéo n’est pas encore activé sur ce compte.' },
-      { status: 503 },
-    )
+    // Table absente : la fonctionnalité n'est pas en service, ce n'est pas une
+    // panne. Même message que partout ailleurs — un laveur qui lit deux
+    // formulations différentes pour la même cause croit à deux problèmes.
+    if (migrationEnAttente(errLecture)) {
+      logger.warn('creations.migration_en_attente', { washerId: washer.id })
+      return NextResponse.json({ error: MESSAGE_EN_ATTENTE }, { status: 503 })
+    }
+    return errorResponse('creations.cles.read', errLecture, { washerId: washer.id })
   }
 
   if ((existantes ?? []).length >= CREATIONS_MAX) {
@@ -103,7 +104,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .select('id, campagne_id, nom, format, cle, budget')
     .single()
 
-  if (error) return errorResponse('creations.insert', error, { washerId: washer.id })
+  if (error) {
+    if (migrationEnAttente(error)) {
+      return NextResponse.json({ error: MESSAGE_EN_ATTENTE }, { status: 503 })
+    }
+    return errorResponse('creations.insert', error, { washerId: washer.id })
+  }
 
   logger.info('creations.created', { washerId: washer.id, format })
   return NextResponse.json({ data }, { status: 201 })

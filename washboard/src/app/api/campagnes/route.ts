@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import { migrationEnAttente, MESSAGE_EN_ATTENTE } from '@/lib/migrationEnAttente'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import {
   cleDepuisNom, cleUnique, erreurCampagne, estPlateforme, MESSAGES_ERREUR,
@@ -54,7 +55,17 @@ export async function POST(request: NextRequest) {
     .select('cle')
     .eq('washer_id', washer.id)
 
-  if (errLecture) return errorResponse('campagnes.cles.read', errLecture, { washerId: washer.id })
+  if (errLecture) {
+    // Table absente : la fonctionnalité n'est pas en service, ce n'est pas une
+    // panne. Le dire, plutôt que renvoyer « une erreur interne est survenue »
+    // et un errorId — le laveur écrirait au support pour un défaut qui n'existe
+    // pas, et l'équipe chercherait un bug là où il n'y en a pas.
+    if (migrationEnAttente(errLecture)) {
+      logger.warn('campagnes.migration_en_attente', { washerId: washer.id })
+      return NextResponse.json({ error: MESSAGE_EN_ATTENTE }, { status: 503 })
+    }
+    return errorResponse('campagnes.cles.read', errLecture, { washerId: washer.id })
+  }
 
   const cle = cleUnique(cleDepuisNom(nom), (existantes ?? []).map(c => c.cle as string))
   if (!cle) return NextResponse.json({ error: MESSAGES_ERREUR.cle }, { status: 400 })
@@ -65,7 +76,12 @@ export async function POST(request: NextRequest) {
     .select('id, nom, plateforme, budget, cle, debut, fin')
     .single()
 
-  if (error) return errorResponse('campagnes.insert', error, { washerId: washer.id })
+  if (error) {
+    if (migrationEnAttente(error)) {
+      return NextResponse.json({ error: MESSAGE_EN_ATTENTE }, { status: 503 })
+    }
+    return errorResponse('campagnes.insert', error, { washerId: washer.id })
+  }
 
   logger.info('campagnes.created', { washerId: washer.id, plateforme })
   return NextResponse.json({ data }, { status: 201 })
