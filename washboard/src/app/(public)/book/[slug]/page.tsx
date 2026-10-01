@@ -13,6 +13,8 @@ import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetour
 import { prestationsAffichees } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
+import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
+import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -31,7 +33,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *
@@ -195,6 +197,19 @@ export default async function BookingPage({ params }: Props) {
   const plafondMensuel = quotaReservations(washer)
   const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(admin, washer)
   const plafondAtteint = plafondMensuel !== null && utiliseesCeMois !== null && utiliseesCeMois >= plafondMensuel
+
+  // Le Pixel du laveur, s'il en a déclaré un. `null` sinon — et dans ce cas
+  // aucun bandeau ne s'affiche, aucun script tiers n'est injecté, aucun cookie
+  // n'est déposé. Une page sans Pixel reste exactement ce qu'elle était.
+  //
+  // Lu et validé ici plutôt que passé tel quel : la valeur vient de la base,
+  // où une contrainte la garde déjà, mais elle traverse ensuite jusqu'à un
+  // `<script>` — c'est le genre de chemin où l'on vérifie deux fois.
+  // La simulation locale l'emporte, et elle n'existe qu'en développement
+  // (voir pixelIdDev) : elle permet de voir le bandeau sans avoir à écrire en
+  // base, et ne peut pas fuir en production.
+  const pixelId = pixelIdDev()
+    ?? (pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null)
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
@@ -393,7 +408,18 @@ export default async function BookingPage({ params }: Props) {
             </a>
           </p>
         )}
+        {/* « Gérer mes cookies » : n'apparaît que si le laveur a un Pixel,
+            donc que s'il y a quelque chose à gérer. */}
+        {pixelId && (
+          <p className="mt-6 text-center">
+            <LienGererCookies pixelId={pixelId} />
+          </p>
+        )}
       </main>
+
+      {/* Le bandeau, et le chargement du Pixel qu'il commande. Sans Pixel
+          déclaré, ce composant ne rend rien et n'injecte rien. */}
+      <ConsentementCookies pixelId={pixelId} slug={washer.slug} />
     </div>
     </>
   )

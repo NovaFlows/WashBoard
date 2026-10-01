@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import { dureeTotale } from '@/lib/pricing'
-import { trackFunnelStep, type FunnelStep } from '@/lib/funnelTracking'
+import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
+import { evenementPixel } from '@/lib/metaPixel'
 import StepService from './StepService'
 import StepOptions from './StepOptions'
 import StepSlot from './StepSlot'
@@ -127,6 +128,23 @@ export default function BookingForm({ washer, services, categories, availabiliti
     trackFunnelStep(washer.id, FUNNEL_STEP_NAMES[step])
   }, [step, washer.id])
 
+  // ── Pixel Meta : « réservation commencée » ────────────────────────────────
+  //
+  // À la DEUXIÈME étape, pas à l'arrivée sur la page. Arriver n'est pas
+  // commencer : le PageView couvre déjà la visite, et envoyer
+  // InitiateCheckout dès le montage rendrait les deux événements identiques —
+  // Meta optimiserait alors pour des gens qui ouvrent la page et repartent.
+  //
+  // `evenementPixel` ne fait rien s'il n'y a pas de Pixel chargé, c'est-à-dire
+  // si le laveur n'en a pas déclaré ou si le visiteur a refusé. Ce composant
+  // n'a donc rien à vérifier.
+  const checkoutEnvoye = useRef(false)
+  useEffect(() => {
+    if (step < 2 || checkoutEnvoye.current) return
+    checkoutEnvoye.current = true
+    evenementPixel('InitiateCheckout')
+  }, [step])
+
   // Stepper : 4 étapes si options dispo, 3 sinon
   const STEPS = hasAddons
     ? ['Prestation', 'Options', 'Créneau', 'Coordonnées']
@@ -166,6 +184,12 @@ export default function BookingForm({ washer, services, categories, availabiliti
       washer_id:      washer.id,
       is_smart_slot:  form.is_smart_slot ?? false,
       smart_discount: form.smart_discount ?? 0,
+      // L'origine est figée ICI, au moment de la réservation, et jamais
+      // recalculée ensuite. C'est ce qui permet de dire plus tard combien
+      // d'argent une campagne a rapporté — les événements de visite, eux, ne
+      // portent aucun prix et sont purgés à treize mois.
+      utm_campaign:   resolveCampagne(typeof window === 'undefined' ? '' : window.location.search),
+      utm_content:    resolveCreation(typeof window === 'undefined' ? '' : window.location.search),
     }
     try {
       const res = await fetch('/api/bookings', {
@@ -177,6 +201,22 @@ export default function BookingForm({ washer, services, categories, availabiliti
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
       setBookingId(json.data.id)
       setStep(5)
+
+      // ── Pixel Meta : « réservation confirmée » ──────────────────────────
+      //
+      // Le montant vient de la RÉPONSE du serveur, jamais du formulaire : le
+      // prix envoyé par le client est délibérément ignoré à l'enregistrement
+      // (voir api/bookings), et remonter à Meta un montant que WashBoard n'a
+      // pas retenu fausserait l'optimisation du laveur sur toutes ses
+      // campagnes.
+      //
+      // Appelé APRÈS l'affichage de la confirmation : un échec de mesure ne
+      // doit jamais retarder ce que le client attend.
+      const montant = Number(json.data?.booked_price)
+      evenementPixel('Purchase', {
+        currency: 'EUR',
+        value: Number.isFinite(montant) && montant > 0 ? montant : undefined,
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Une erreur est survenue')
     } finally {

@@ -68,6 +68,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const bgFileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState(washer.welcome_message ?? '')
   const [websiteUrl, setWebsiteUrl] = useState(washer.website_url ?? '')
+  const [pixelId, setPixelId] = useState(washer.meta_pixel_id ?? '')
   const [color, setColor] = useState(washer.brand_color ?? '#2563eb')
   const [colorSaving, setColorSaving] = useState(false)
   const [colorSaved, setColorSaved] = useState(false)
@@ -242,6 +243,10 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       body: JSON.stringify({
         welcome_message: message,
         website_url: websiteUrl.trim() || null,
+        // Vidé, il efface le Pixel : c'est ainsi que le laveur le retire, et
+        // sa page redevient exactement ce qu'elle était — sans bandeau de
+        // consentement ni script tiers.
+        meta_pixel_id: pixelId.trim() || null,
       }),
     })
     if (res.ok) {
@@ -463,6 +468,29 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             className={inputClass}
           />
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Les avis clients visibles sur votre site seront récupérés automatiquement</p>
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Pixel Meta <span className="font-normal text-slate-400">(facultatif)</span>
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={pixelId}
+            onChange={e => setPixelId(e.target.value)}
+            placeholder="123456789012345"
+            className={inputClass}
+          />
+          {/* Ce que ça déclenche, dit avant d'être subi : le laveur doit
+              savoir qu'il ajoute un bandeau sur sa propre page de réservation,
+              et qu'un bandeau se paie en réservations. */}
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+            Pour mesurer vos publicités Facebook et Instagram. Renseigné, un bandeau de
+            consentement apparaît sur votre page de réservation — la loi l’exige, et le
+            Pixel ne se charge qu’après acceptation du visiteur. Laissez vide si vous ne
+            faites pas de publicité.
+          </p>
         </div>
       </div>
 

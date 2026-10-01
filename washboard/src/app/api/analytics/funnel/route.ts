@@ -38,6 +38,12 @@ const FunnelEventSchema = z.object({
   session_id:    z.string().uuid(),
   step:          z.enum(['prestation', 'options', 'creneau', 'coordonnees', 'confirmation']),
   referrer_host: z.string().max(255).optional(),
+  // Clé de campagne publicitaire (voir campagne.ts). Bornée ici aussi :
+  // la valeur vient d'une URL publique, donc de n'importe qui.
+  utm_campaign:  z.string().max(64).optional(),
+  // Création (la vidéo) à l'intérieur de la campagne. Même borne, même raison :
+  // ça vient d'une URL publique.
+  utm_content:   z.string().max(64).optional(),
   device:        z.enum(['mobile', 'tablet', 'desktop']).optional(),
 })
 
@@ -65,7 +71,28 @@ export async function POST(req: Request) {
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('booking_funnel_events').insert(parsed.data)
+  const { utm_campaign, utm_content, ...sansAttribution } = parsed.data
+  let { error } = await admin.from('booking_funnel_events').insert(parsed.data)
+
+  // Colonnes d'attribution absentes : les migrations 006 (`utm_campaign`) et
+  // 008 (`utm_content`) n'ont pas forcément tourné. On retente en retirant la
+  // plus récente d'abord, puis les deux — plutôt que de perdre TOUT le suivi
+  // de trafic en attendant. Le code peut ainsi partir avant les migrations, ou
+  // après, dans n'importe quel ordre : c'est la seule façon de ne pas avoir à
+  // synchroniser un déploiement Vercel avec une exécution SQL à la main.
+  //
+  // On retente sur n'importe quelle erreur plutôt que sur le code 42703 : une
+  // insertion ne renvoie pas toujours de code exploitable, et un essai de plus
+  // ne coûte qu'une ligne de journal.
+  if (error && utm_content) {
+    const sansCreation = { ...sansAttribution, ...(utm_campaign ? { utm_campaign } : {}) }
+    const seconde = await admin.from('booking_funnel_events').insert(sansCreation)
+    error = seconde.error
+  }
+  if (error && utm_campaign) {
+    const troisieme = await admin.from('booking_funnel_events').insert(sansAttribution)
+    error = troisieme.error
+  }
 
   // On log sans jamais faire échouer la requête côté client : un raté de
   // tracking ne doit pas se voir sur la page de réservation.

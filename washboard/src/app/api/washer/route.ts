@@ -6,6 +6,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
+import { pixelIdValide, nettoyerPixelId } from '@/lib/consentement'
 import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
 import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
 import { widgetsValides } from '@/lib/dashboardWidgets'
@@ -20,6 +21,7 @@ export async function PATCH(request: NextRequest) {
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     reservation_jour_meme,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
+    meta_pixel_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
     followup_enabled, followup_delay_days, followup_message,
     zone_config, dashboard_widgets,
@@ -42,6 +44,26 @@ export async function PATCH(request: NextRequest) {
     if (!telephoneNormalise) {
       return NextResponse.json(
         { error: 'Numéro de téléphone invalide (format attendu : 06 12 34 56 78)' },
+        { status: 400 },
+      )
+    }
+  }
+
+  // ── Pixel Meta ──────────────────────────────────────────────────────────
+  // Quinze ou seize chiffres. Vérifié ici ET par une contrainte en base : un
+  // identifiant invalide ne casse rien de visible, il fait juste échouer la
+  // mesure en silence — la panne la plus coûteuse, celle qu'on ne découvre
+  // qu'en cherchant pourquoi les chiffres sont vides depuis des semaines.
+  //
+  // Une chaîne vide EFFACE le Pixel, elle ne le met pas à vide : c'est ainsi
+  // que le laveur le retire, et la page redevient exactement ce qu'elle était,
+  // sans bandeau ni script tiers.
+  let pixelNettoye: string | null = null
+  if (meta_pixel_id !== undefined) {
+    pixelNettoye = nettoyerPixelId(meta_pixel_id)
+    if (pixelNettoye !== null && !pixelIdValide(pixelNettoye)) {
+      return NextResponse.json(
+        { error: 'Identifiant de Pixel Meta invalide : il compte 15 ou 16 chiffres.' },
         { status: 400 },
       )
     }
@@ -193,6 +215,7 @@ export async function PATCH(request: NextRequest) {
   if (travel_fee_mode !== undefined) updates.travel_fee_mode = travel_fee_mode
   if (background_theme !== undefined) updates.background_theme = background_theme || null
   if (website_url !== undefined) updates.website_url = website_url?.trim() || null
+  if (meta_pixel_id !== undefined) updates.meta_pixel_id = pixelNettoye
   if (google_place_id !== undefined) updates.google_place_id = google_place_id?.trim() || null
   if (review_enabled !== undefined) updates.review_enabled = Boolean(review_enabled)
   if (review_delay_hours !== undefined) updates.review_delay_hours = Math.min(168, Math.max(0, Math.floor(Number(review_delay_hours)) || 0))

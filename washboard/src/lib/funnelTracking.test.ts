@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { detectDevice, extractReferrerHost, resolveReferrerHost, getOrCreateSessionId } from './funnelTracking'
+import { detectDevice, extractReferrerHost, resolveReferrerHost, getOrCreateSessionId, resolveCampagne, resolveCreation } from './funnelTracking'
 
 describe('detectDevice', () => {
   it('classe en mobile sous 640px', () => {
@@ -88,5 +88,79 @@ describe('getOrCreateSessionId — stockage indisponible', () => {
     })
     expect(() => getOrCreateSessionId()).not.toThrow()
     expect(getOrCreateSessionId()).toBe('')
+  })
+})
+
+describe('resolveCampagne / resolveCreation', () => {
+  // Ces deux valeurs décident à quel budget et à quelle vidéo une réservation
+  // est rattachée. Si l'une se perd entre la première et la dernière étape du
+  // formulaire, le laveur conclut que sa pub ne marche pas.
+  const vrai = Object.getOwnPropertyDescriptor(globalThis, 'window')
+
+  function fausseFenetre(): void {
+    const memoire = new Map<string, string>()
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        sessionStorage: {
+          getItem: (k: string) => memoire.get(k) ?? null,
+          setItem: (k: string, v: string) => { memoire.set(k, v) },
+        },
+      },
+    })
+  }
+
+  afterEach(() => {
+    if (vrai) Object.defineProperty(globalThis, 'window', vrai)
+    else Reflect.deleteProperty(globalThis, 'window')
+  })
+
+  it('lit les deux paramètres du lien d’une vidéo', () => {
+    fausseFenetre()
+    const url = '?utm_source=facebook&utm_campaign=pub-rentree&utm_content=avant-apres'
+    expect(resolveCampagne(url)).toBe('pub-rentree')
+    expect(resolveCreation(url)).toBe('avant-apres')
+  })
+
+  it('retient la création pour la suite du formulaire', () => {
+    // Les étapes suivantes n'ont plus les paramètres dans l'URL : sans cette
+    // mémoire, la vidéo perdrait toutes ses réservations dès l'étape 2.
+    fausseFenetre()
+    resolveCreation('?utm_content=avant-apres')
+    expect(resolveCreation('')).toBe('avant-apres')
+  })
+
+  it('ne confond pas la campagne et la création', () => {
+    // Deux mémoires distinctes : une seule clé de stockage pour les deux ferait
+    // écrire la vidéo par-dessus la campagne, et le budget disparaîtrait.
+    fausseFenetre()
+    resolveCampagne('?utm_campaign=pub-rentree')
+    resolveCreation('?utm_content=avant-apres')
+    expect(resolveCampagne('')).toBe('pub-rentree')
+    expect(resolveCreation('')).toBe('avant-apres')
+  })
+
+  it('nettoie ce qui arrive d’une URL publique', () => {
+    fausseFenetre()
+    expect(resolveCreation('?utm_content=Avant%2FAprès!')).toBe('avantaprs')
+  })
+
+  it('rend undefined sans paramètre plutôt qu’une chaîne vide', () => {
+    fausseFenetre()
+    expect(resolveCreation('')).toBeUndefined()
+    expect(resolveCreation('?utm_content=')).toBeUndefined()
+  })
+
+  it('se contente de l’URL quand le stockage est refusé', () => {
+    // Navigateurs intégrés de TikTok et Instagram : l'accès lève au lieu de
+    // rendre null. Mieux vaut une attribution qui ne survit pas à l'étape
+    // suivante qu'un formulaire qui plante.
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { get sessionStorage(): Storage { throw new Error('Access denied') } },
+    })
+    expect(resolveCreation('?utm_content=avant-apres')).toBe('avant-apres')
+    expect(() => resolveCreation('')).not.toThrow()
+    expect(resolveCreation('')).toBeUndefined()
   })
 })

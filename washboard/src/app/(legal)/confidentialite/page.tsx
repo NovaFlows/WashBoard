@@ -39,7 +39,15 @@ export default function Confidentialite() {
         <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">2.3 Données de navigation</h3>
         <ul>
           <li>Adresse IP (utilisée uniquement pour la protection anti-spam des formulaires)</li>
-          <li>Aucun cookie de traçage ou de publicité n&apos;est utilisé</li>
+          <li>
+            Mesure d&apos;audience interne : nombre de visites, étapes franchies dans le
+            formulaire, et origine du lien cliqué. Aucune donnée personnelle, aucun partage
+            avec un tiers, aucun profilage.
+          </li>
+          <li>
+            Sur la page de réservation d&apos;un prestataire qui l&apos;a activé, et
+            uniquement après votre accord : le Pixel Meta (voir §7)
+          </li>
         </ul>
       </Section>
 
@@ -129,15 +137,74 @@ export default function Confidentialite() {
         </p>
       </Section>
 
-      <Section title="7. Cookies">
+      <Section title="7. Cookies et traceurs">
+        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2">7.1 Sans consentement</h3>
         <p>
-          WashBoard n&apos;utilise pas de cookies publicitaires ou de traçage. Les seuls cookies déposés sont :
+          Ces éléments sont strictement nécessaires au service ou relèvent de la mesure
+          d&apos;audience exemptée de consentement. Ils ne sont jamais partagés et ne servent
+          à aucun ciblage publicitaire.
         </p>
         <ul>
           <li><strong>Cookie de session :</strong> nécessaire à l&apos;authentification des laveurs (cookie Supabase sécurisé, HttpOnly)</li>
-          <li><strong>Cookie de thème :</strong> mémorise la préférence d&apos;affichage clair/sombre (stockage local, aucune donnée personnelle)</li>
+          <li><strong>Préférence d&apos;affichage :</strong> mémorise le thème clair ou sombre (stockage local, aucune donnée personnelle)</li>
+          <li>
+            <strong>Mesure d&apos;audience interne :</strong> un identifiant de visite limité à
+            l&apos;onglet, et l&apos;origine du lien cliqué (campagne publicitaire du prestataire),
+            conservée 30 jours dans votre navigateur. Ces informations décrivent une
+            annonce, pas une personne : elles ne permettent pas de vous identifier, ne
+            quittent jamais WashBoard et ne sont recoupées avec aucun autre site.
+          </li>
         </ul>
-        <p>Ces cookies sont strictement nécessaires au fonctionnement du service et ne nécessitent pas de consentement.</p>
+
+        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">7.2 Avec votre consentement : le Pixel Meta</h3>
+        <p>
+          Certains prestataires font de la publicité sur Facebook et Instagram. Ceux-là
+          peuvent activer le <strong>Pixel Meta</strong> sur leur propre page de réservation,
+          afin de mesurer l&apos;efficacité de leurs annonces.
+        </p>
+        <p>
+          Le Pixel est un traceur de la société Meta Platforms Ireland Limited. Il dépose des
+          cookies et transmet à Meta votre consultation de la page ainsi que, le cas échéant,
+          le fait que vous ayez commencé puis validé une réservation et son montant. Ces
+          données peuvent servir à vous proposer des annonces ciblées.
+        </p>
+        <ul>
+          <li>
+            <strong>Rien n&apos;est chargé avant votre accord.</strong> Tant que vous n&apos;avez
+            pas cliqué sur « Accepter », le script de Meta n&apos;est pas présent dans la page
+            et aucun cookie n&apos;est déposé.
+          </li>
+          <li>
+            <strong>Refuser est aussi simple qu&apos;accepter</strong>, et n&apos;empêche en rien
+            de réserver.
+          </li>
+          <li>
+            <strong>Votre choix vaut pour ce prestataire seulement</strong>, et il est
+            conservé 6 mois sur votre appareil. Passé ce délai, la question vous est reposée.
+          </li>
+          <li>
+            <strong>Vous pouvez en changer à tout moment</strong> via le lien « Gérer mes
+            cookies » en bas de la page de réservation concernée.
+          </li>
+          <li>
+            Le bandeau n&apos;apparaît que sur les pages des prestataires ayant activé le
+            Pixel. Sur toutes les autres, aucun traceur publicitaire n&apos;existe.
+          </li>
+        </ul>
+        <p>
+          Base légale : votre consentement (article 6.1.a du RGPD et article 82 de la loi
+          Informatique et Libertés). Le prestataire qui active le Pixel est responsable de
+          traitement conjoint avec Meta pour cette mesure. Les conditions de Meta sont
+          consultables sur{' '}
+          <a
+            href="https://www.facebook.com/privacy/policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            facebook.com/privacy/policy
+          </a>.
+        </p>
       </Section>
 
       <Section title="8. Sécurité">

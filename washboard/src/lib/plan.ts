@@ -37,6 +37,7 @@ export type Feature =
   | 'creneaux_intelligents'
   | 'frais_deplacement'
   | 'followup'
+  | 'campagnes'
   | 'multi_laveurs'
 export type BillingCycle = 'monthly' | 'yearly'
 
@@ -67,6 +68,9 @@ const MIN_PLAN: Record<Feature, Plan> = {
   // façon de commencer une relation.
   frais_deplacement:     'decouverte',
   followup:              'pro',
+  // Suivi des campagnes publicitaires. Réservé au Pro : un laveur qui achète
+  // de la publicité a dépassé le stade où il compte ses cinq réservations.
+  campagnes:             'pro',
   multi_laveurs:         'business',
 }
 
@@ -556,6 +560,7 @@ export const PLAN_CARDS: PlanCard[] = [
       'Comptabilité et facturation conforme (SIRET, TVA)',
       'Avis Google automatiques — email et SMS (150/mois)',
       'Relances de suivi client',
+      'Suivi de vos campagnes publicitaires',
     ],
   },
   {
