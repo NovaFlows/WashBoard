@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { emettreFacture } from '@/lib/emettreFacture'
 import { doitEnvoyerFactureAuClient } from '@/lib/facture'
+import { quotaReservations } from '@/lib/plan'
+import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -44,6 +46,21 @@ export async function PATCH(
   if (errBooking) logger.error('bookings.id.booking.read_failed', {}, errBooking)
 
   if (!booking) return NextResponse.json({ error: 'Réservation introuvable' }, { status: 404 })
+
+  // Une réservation verrouillée (au-delà du quota de l'offre) ne peut pas être
+  // modifiée par ce chemin : la réponse renvoie la ligne complète en clair, et
+  // confirmer créerait l'événement Google Agenda avec le vrai nom — deux fuites
+  // qui videraient `masquerVerrouillees` de son sens. Aucun écran ne mène ici
+  // pour une réservation verrouillée (`BookingList` affiche `CarteVerrouillee`
+  // à la place, sans bouton d'action) : n'importe quelle requête qui l'atteint
+  // quand même n'a rien de légitime à y faire.
+  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  if (estVerrouillee(booking, seuils)) {
+    return NextResponse.json(
+      { error: 'Cette réservation dépasse le quota de votre offre. Changez d’offre pour la débloquer.' },
+      { status: 403 },
+    )
+  }
 
   // Mettre à jour le statut / les notes / l'horaire
   const updates: Record<string, unknown> = {}
