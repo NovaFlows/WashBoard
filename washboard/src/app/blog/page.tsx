@@ -2,9 +2,17 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ARTICLES, SITE_URL, THEME_LABEL, type Article, type Theme } from '@/lib/blog'
 
-const title = 'Le blog — conseils pour les pros du nettoyage à domicile | WashBoard'
+// Titre mesuré au pixel (canvas 2D, police Arial 20px — celle que Google
+// utilise pour le titre du résultat sur desktop) : 394px, sous la limite de
+// troncature généralement admise autour de 600px.
+//
+// Recentrage 2026-09 (voir layout.tsx pour la même décision sur l'accueil) :
+// le blog listait 6 métiers à égalité alors que le reste du site s'est
+// resserré sur le lavage auto & detailing. Le titre et l'intro suivent
+// maintenant le même ordre — auto d'abord — sans lister chaque métier.
+const title = 'Le blog lavage auto & detailing | WashBoard'
 const description =
-  'Conseils concrets pour développer une activité de nettoyage à domicile — lavage auto, vitres, canapés, ménage, piscines, terrasses : trouver des clients, fixer ses tarifs, organiser ses tournées, se lancer dans les règles.'
+  'Conseils concrets pour développer une activité de lavage auto & detailing à domicile, et de nettoyage de canapés et textiles : trouver des clients, fixer ses tarifs, organiser ses tournées, se lancer dans les règles. D’autres métiers mobiles (vitres, ménage, piscines, extérieur) y sont aussi couverts.'
 
 export const metadata: Metadata = {
   title,
@@ -52,9 +60,20 @@ const jsonLd = {
   ],
 }
 
-// Ordre d'affichage des métiers : le lavage auto d'abord (le plus d'articles,
-// le premier public de WashBoard), puis les autres, les conseils communs à la fin.
-const THEME_ORDER: Theme[] = ['auto', 'vitres', 'textiles', 'menage', 'piscine', 'exterieur', 'general']
+// Deux niveaux, pas six thèmes à égalité (recentrage 2026-09, voir plus haut) :
+// - piliers, chacun sa section titrée et sa pastille de filtre — l'auto
+//   d'abord (premier public de WashBoard), puis les canapés & textiles, seul
+//   autre métier mis en avant ailleurs sur le site (landing, footer).
+// - le reste (vitres, ménage, piscine, extérieur) reste consultable mais
+//   rejoint une unique rubrique secondaire : disponible pour qui le cherche,
+//   sans prétendre être un pilier du blog. `general` (conseils valables pour
+//   tous les métiers, sans lien particulier avec l'auto) rejoint ce même
+//   groupe plutôt que de former une troisième catégorie — aucun article n'y
+//   est rattaché aujourd'hui, mais le regroupement tient si ça change.
+const PRIMARY_THEMES: Theme[] = ['auto', 'textiles']
+const SECONDARY_THEMES: Theme[] = ['vitres', 'menage', 'piscine', 'exterieur', 'general']
+const SECONDARY_ID = 'autres-metiers'
+const SECONDARY_LABEL = 'Autres métiers mobiles'
 
 function ArticleRow({ article }: { article: Article }) {
   return (
@@ -83,15 +102,27 @@ function ArticleRow({ article }: { article: Article }) {
 }
 
 export default function BlogIndex() {
-  // Regroupés par métier, les plus récemment mis à jour en premier dans chaque groupe.
-  const groups = THEME_ORDER
+  // Piliers : chacun sa section, les plus récemment mis à jour en premier.
+  const primaryGroups = PRIMARY_THEMES
     .map(theme => ({
       theme,
+      label: THEME_LABEL[theme],
       articles: ARTICLES
         .filter(a => a.theme === theme)
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     }))
     .filter(g => g.articles.length > 0)
+
+  // Reste des métiers : une seule liste, tous mélangés par date de mise à
+  // jour — pas de sous-section par métier (voir commentaire plus haut).
+  const secondaryArticles = ARTICLES
+    .filter(a => SECONDARY_THEMES.includes(a.theme))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+
+  const navItems = [
+    ...primaryGroups.map(g => ({ id: g.theme, label: g.label })),
+    ...(secondaryArticles.length > 0 ? [{ id: SECONDARY_ID, label: SECONDARY_LABEL }] : []),
+  ]
 
   return (
     <>
@@ -101,32 +132,29 @@ export default function BlogIndex() {
           Le blog
         </p>
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-balance mb-3">
-          Conseils pour les pros du nettoyage à domicile
+          Lavage auto & detailing : les conseils du blog
         </h1>
         <p className="text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-          Ce qu&apos;on apprend en travaillant avec des laveurs auto, laveurs de vitres,
-          nettoyeurs de canapés, femmes et hommes de ménage, pisciniers : trouver des clients,
-          fixer ses prix, organiser ses journées, arrêter de perdre du temps sur
-          l&apos;administratif.
+          Ce que WashBoard apprend en travaillant avec des laveurs auto, des pros du detailing et du nettoyage de canapés et textiles à domicile : trouver des clients, fixer ses tarifs, organiser ses tournées, arrêter de perdre du temps sur l&apos;administratif. D&apos;autres métiers mobiles (vitres, ménage, piscines, extérieur) restent couverts, réunis plus bas dans une dernière rubrique.
         </p>
-        {/* Accès direct à chaque métier : sur mobile, la liste complète est longue. */}
+        {/* Accès direct à chaque pilier : sur mobile, la liste complète est longue. */}
         <nav aria-label="Métiers" className="mt-6 flex flex-wrap gap-2">
-          {groups.map(g => (
+          {navItems.map(item => (
             <a
-              key={g.theme}
-              href={`#${g.theme}`}
+              key={item.id}
+              href={`#${item.id}`}
               className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-[#1651E8]/10 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors"
             >
-              {THEME_LABEL[g.theme]}
+              {item.label}
             </a>
           ))}
         </nav>
       </header>
 
-      {groups.map(g => (
+      {primaryGroups.map(g => (
         <section key={g.theme} id={g.theme} className="mb-12 scroll-mt-20">
           <h2 className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.18em] pb-3 border-b border-slate-200 dark:border-slate-800">
-            {THEME_LABEL[g.theme]}
+            {g.label}
           </h2>
           <ul className="divide-y divide-slate-200 dark:divide-slate-800">
             {g.articles.map(article => (
@@ -135,6 +163,19 @@ export default function BlogIndex() {
           </ul>
         </section>
       ))}
+
+      {secondaryArticles.length > 0 && (
+        <section id={SECONDARY_ID} className="mb-12 scroll-mt-20">
+          <h2 className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.18em] pb-3 border-b border-slate-200 dark:border-slate-800">
+            {SECONDARY_LABEL}
+          </h2>
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+            {secondaryArticles.map(article => (
+              <ArticleRow key={article.slug} article={article} />
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   )
 }

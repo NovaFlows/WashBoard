@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getBgStyle, isCustomTheme, BG_THEME_PRESETS } from './themes'
+import { getBgStyle, isCustomTheme, BG_THEME_PRESETS, PALETTE, urlVersionnee } from './themes'
 
 describe('getBgStyle', () => {
   it('null/undefined/vide → null', () => {
@@ -33,6 +33,39 @@ describe('getBgStyle', () => {
   it('valeur inconnue non-http → null', () => {
     expect(getBgStyle('theme-inexistant')).toBeNull()
   })
+
+  it('URL personnalisée AVEC version → passe par l’optimiseur Next, versionnée', () => {
+    // Évite de servir un fond périmé après un nouvel envoi : le chemin de
+    // stockage est réutilisé (upsert), pas l'URL — voir imageOptimisee.
+    const url = 'https://cdn.exemple.fr/mon-fond.jpg'
+    const style = getBgStyle(url, '2026-10-01T08:00:00.000Z')
+    expect(style!.backgroundImage).toContain('/_next/image?url=')
+    // L'URL d'origine, PUIS sa version, se retrouvent encodées deux fois :
+    // une fois par urlVersionnee (le "?v="), une fois par imageOptimisee
+    // (toute l'URL passée en paramètre `url` de /_next/image).
+    expect(style!.backgroundImage).toContain(encodeURIComponent(url))
+    expect(style!.backgroundImage).toContain('%253A') // ":" de l'horodatage, doublement encodé
+  })
+
+  it('preset photo → toujours optimisé, même sans version (URL fixe, jamais réécrite)', () => {
+    const style = getBgStyle('photo1')
+    expect(style!.backgroundImage).toContain('/_next/image?url=')
+  })
+})
+
+describe('urlVersionnee', () => {
+  it('sans version, renvoie l’URL telle quelle', () => {
+    expect(urlVersionnee('https://exemple.fr/logo.png')).toBe('https://exemple.fr/logo.png')
+    expect(urlVersionnee('https://exemple.fr/logo.png', null)).toBe('https://exemple.fr/logo.png')
+  })
+  it('ajoute ?v=<version> à une URL sans paramètres', () => {
+    expect(urlVersionnee('https://exemple.fr/logo.png', '2026-10-01T08:00:00.000Z'))
+      .toBe('https://exemple.fr/logo.png?v=2026-10-01T08%3A00%3A00.000Z')
+  })
+  it('ajoute &v=<version> à une URL qui a déjà des paramètres', () => {
+    expect(urlVersionnee('https://exemple.fr/logo.png?w=100', 'v2'))
+      .toBe('https://exemple.fr/logo.png?w=100&v=v2')
+  })
 })
 
 describe('isCustomTheme', () => {
@@ -58,5 +91,26 @@ describe('BG_THEME_PRESETS (données)', () => {
   it('ids uniques', () => {
     const ids = BG_THEME_PRESETS.map(p => p.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+})
+
+describe('PALETTE (couleurs de marque)', () => {
+  // Liste recopiée de l'ancien IdentiteForm (commit 59ac1d7) : l'ordre est celui
+  // que voit le laveur, et ces 24 valeurs sont celles déjà enregistrées en base.
+  it('les 24 couleurs, dans l’ordre exact de l’ancien écran', () => {
+    expect(PALETTE).toEqual([
+      '#1e3a8a', '#1d4ed8', '#2563eb', '#0ea5e9',
+      '#0891b2', '#0284c7', '#0369a1',
+      '#15803d', '#16a34a', '#059669', '#0d9488',
+      '#6d28d9', '#7c3aed', '#9333ea',
+      '#dc2626', '#e11d48', '#db2777', '#c026d3',
+      '#c2410c', '#ea580c', '#d97706',
+      '#0f172a', '#1e293b', '#374151',
+    ])
+    expect(PALETTE).toHaveLength(24)
+  })
+  it('des hex #rrggbb en minuscules, sans doublon', () => {
+    for (const c of PALETTE) expect(c).toMatch(/^#[0-9a-f]{6}$/)
+    expect(new Set(PALETTE).size).toBe(PALETTE.length)
   })
 })

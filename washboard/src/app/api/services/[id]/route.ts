@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { errorResponse } from '@/lib/apiError'
+import { AppError, errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
-import { estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX, erreurTropDActives } from '@/lib/prestation'
+import {
+  estReservable, ERREUR_SANS_TYPE, dureeValide, ERREUR_DUREE_MAX, estRefusCleEtrangere, ERREUR_PRESTATION_RESERVEE,
+  erreurTropDActives,
+} from '@/lib/prestation'
 import { quotaPrestations, quotaDepasse } from '@/lib/plan'
 import { compterPrestationsActives } from '@/lib/compterPrestations'
 import { logger } from '@/lib/logger'
@@ -85,6 +88,16 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { supabase, washerId } = auth.ctx
 
   const { error } = await supabase.from('services').delete().eq('id', id).eq('washer_id', washerId)
-  if (error) return errorResponse('services.id.delete.db', error)
+  if (error) {
+    // Cas attendu, pas une panne : la prestation a des réservations.
+    if (estRefusCleEtrangere(error)) {
+      return errorResponse(
+        'services.id.delete.reserved',
+        new AppError('Prestation référencée par des réservations', { status: 409, publicMessage: ERREUR_PRESTATION_RESERVEE }),
+        { washerId, serviceId: id },
+      )
+    }
+    return errorResponse('services.id.delete.db', error)
+  }
   return NextResponse.json({ success: true })
 }

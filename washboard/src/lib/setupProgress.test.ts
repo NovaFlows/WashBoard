@@ -151,3 +151,34 @@ describe('computeSetupProgress — destinations', () => {
     expect(r.missing.every(m => m.href.startsWith('/dashboard'))).toBe(true)
   })
 })
+
+describe('computeSetupProgress — destinations dans l’application installée', () => {
+  // Les écrans de la refonte vivent sous /dashboard/parametres/<écran> et /dashboard/<onglet>.
+  // Les anciens, eux, sont /dashboard/admin et /dashboard/parametres#<ancre> : un lien de la
+  // PWA qui y mène fait sortir le laveur de l'application refaite (Alexandre, 2026-09-27).
+  const V1 = [
+    '/dashboard/admin',
+    '/dashboard/parametres#',
+    '/dashboard/parametres/tout',
+    '/dashboard/compta',
+    '/dashboard/crm',
+  ]
+
+  it('aucun réglage ne renvoie vers un écran de l’ancienne version', () => {
+    const r = computeSetupProgress(vide)
+    const fautifs = r.items.filter(i => V1.some(ancien => i.hrefV2.startsWith(ancien)))
+    expect(fautifs.map(i => `${i.key} → ${i.hrefV2}`)).toEqual([])
+  })
+
+  it('chaque réglage a bien une destination, et dans le tableau de bord', () => {
+    const r = computeSetupProgress(vide)
+    expect(r.items.length).toBeGreaterThan(0)
+    expect(r.items.every(i => i.hrefV2.startsWith('/dashboard/'))).toBe(true)
+  })
+
+  it('les deux destinations diffèrent partout où l’écran a été refait', () => {
+    // Si les deux se confondent, c'est qu'on a oublié de poser la nouvelle.
+    const r = computeSetupProgress(vide)
+    expect(r.items.filter(i => i.href === i.hrefV2)).toEqual([])
+  })
+})

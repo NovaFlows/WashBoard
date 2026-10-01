@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger'
 import { shouldSendOnEnter, estClavierTactile } from '@/lib/composerKeyboard'
 import { DELAI_ANNULATION_ARCHIVAGE_MS, estUnGlissementDArchivage } from '@/lib/supportArchive'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
+import AccesRapide from '@/components/dashboard/AccesRapide'
 
 /**
  * Même précaution que `fusionnerFilsAvecServeur` côté laveur
@@ -324,6 +325,11 @@ function ConversationRow({
               ? <><RotateCcw size={15} /> Rouvrir</>
               : <><CheckCircle2 size={15} /> Marquer résolue</>}
           </button>
+
+          {/* Le laveur qui écrit est souvent celui qu'on veut aider à configurer :
+              le lien est déjà connu, un bouton suffit (même route et mêmes verrous que
+              le formulaire de la page Support et de l'Assistance). */}
+          <AccesRapide slug={conv.washerSlug} nom={conv.washerName} />
         </div>
       )}
     </div>

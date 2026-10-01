@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('fiche-google-laveur-auto-mobile')!
@@ -242,7 +243,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Un bouton « Réserver » qui remplit l'agenda">
+        <Cta
+          title="Un bouton « Réserver » qui remplit l'agenda"
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard vous donne un lien de réservation à votre nom, à mettre sur votre fiche Google.
           Le client choisit son créneau et renseigne son véhicule, vous recevez la demande, et la
           demande d&apos;avis part automatiquement après la prestation.

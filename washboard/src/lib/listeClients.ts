@@ -1,15 +1,28 @@
 // Fichier clients d'un laveur : une ligne par client, tirée de ses réservations,
 // et la recherche qui permet de le retrouver.
 //
-// Un client est identifié par son email, comme dans la fiche client
-// (`clientProfile.ts`) : c'est le seul champ obligatoire et stable. Aucune
-// requête ici, du calcul pur, donc testable.
+// Un client est identifié par son email, ou à défaut par son téléphone, comme
+// dans la fiche client (`clientProfile.ts`). Aucune requête ici, du calcul pur,
+// donc testable.
+//
+// Deux sources depuis le 2026-09-27 : les réservations, et les devis et factures
+// écrits à la main — « un client comme un autre » (Alexandre). Les documents
+// sont facultatifs : sans eux, la liste est exactement celle d'avant.
+//
+// Un client « masqué » (glisser pour supprimer, 2026-09-28 — voir `ClientReglages.masque`)
+// n'apparaît PAS dans cette liste : c'est tout ce que le masquage fait. Ses réservations et
+// ses documents restent lisibles partout ailleurs (Chiffres, une fiche ouverte par un autre
+// chemin) — seul ce fichier-ci le cache.
 
-import { buildClientProfile, type ClientBooking } from './clientProfile'
+import { buildClientProfile, cleClient, type ClientBooking, type ClientDocument, type ClientReglages } from './clientProfile'
 
 export type RendezVousCourt = { service: string; date: string }
 
 export type ResumeClient = {
+  /** Ce qui identifie le client : son email, ou son téléphone préfixé `tel:` quand il n'en a
+   *  pas. C'est cette clé — et non l'email — qui rouvre sa fiche : un client né d'un devis
+   *  n'a parfois qu'un numéro, et l'ouvrir par email donnait un tap sans effet. */
+  cle: string
   email: string
   name: string
   phone: string
@@ -25,13 +38,22 @@ export type ResumeClient = {
   totalRevenue: number
   /** Date du rendez-vous le plus récent, à venir compris : sert au tri. */
   activite: string
+  /** Nombre de devis et factures écrits à la main pour ce client. */
+  documentsCount: number
+  /** A demandé à ne plus être contacté (table `clients`, SQL du 2026-09-28). */
+  nePlusContacter: boolean
 }
 
 const cle = (email: string) => email.trim().toLowerCase()
 const court = (b: ClientBooking): RendezVousCourt => ({ service: b.services?.name ?? 'Prestation', date: b.scheduled_at })
 
-/** Un client par email, le plus récemment actif en premier. */
-export function listeClients(bookings: ClientBooking[], now: Date = new Date()): ResumeClient[] {
+/** Un client par email (ou par téléphone à défaut), le plus récemment actif en premier. */
+export function listeClients(
+  bookings: ClientBooking[],
+  now: Date = new Date(),
+  documents: ClientDocument[] = [],
+  reglages: ClientReglages[] = [],
+): ResumeClient[] {
   const parClient = new Map<string, ClientBooking[]>()
   for (const b of bookings) {
     if (!b.client_email?.trim()) continue
@@ -41,11 +63,27 @@ export function listeClients(bookings: ClientBooking[], now: Date = new Date()):
     else parClient.set(k, [b])
   }
 
+  // Les documents apportent leurs propres clients : quelqu'un à qui on a fait un devis est
+  // un client, même s'il n'a jamais réservé. Ceux qui ont déjà une clé rejoignent la leur.
+  const parDocument = new Map<string, ClientDocument[]>()
+  for (const d of documents) {
+    const k = cleClient(d.contenu.client.email, d.contenu.client.telephone)
+    if (!k) continue
+    const liste = parDocument.get(k)
+    if (liste) liste.push(d)
+    else parDocument.set(k, [d])
+  }
+
+  const parReglage = new Map(reglages.map(r => [r.cle, r]))
+
   const clients: ResumeClient[] = []
-  for (const [email, siens] of parClient) {
+  for (const email of new Set([...parClient.keys(), ...parDocument.keys()])) {
+    if (parReglage.get(email)?.masque) continue
+    const siens = parClient.get(email) ?? []
+    const sesDocuments = parDocument.get(email) ?? []
     // Chaque groupe ne contient que ce client : la fiche se calcule sans
     // reparcourir toutes les réservations.
-    const p = buildClientProfile(siens, email, now)
+    const p = buildClientProfile(siens, email, now, sesDocuments, reglages)
     if (!p) continue
     const t = now.getTime()
     const faites = p.bookings.filter(b =>
@@ -55,6 +93,7 @@ export function listeClients(bookings: ClientBooking[], now: Date = new Date()):
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
 
     clients.push({
+      cle: email,
       email: p.email,
       name: p.name,
       phone: p.phone,
@@ -65,17 +104,25 @@ export function listeClients(bookings: ClientBooking[], now: Date = new Date()):
       prochain: aVenir[0] ? court(aVenir[0]) : null,
       honoredCount: p.honoredCount,
       totalRevenue: p.totalRevenue,
-      activite: p.bookings[0].scheduled_at,
+      // Un client connu par un seul devis n'a aucune réservation d'où tirer sa date.
+      activite: p.bookings[0]?.scheduled_at
+        ?? p.documents[0]?.emis_le
+        ?? p.documents[0]?.created_at
+        ?? new Date(0).toISOString(),
+      documentsCount: p.documents.length,
+      nePlusContacter: p.nePlusContacter,
     })
   }
 
   return clients.sort((a, b) => new Date(b.activite).getTime() - new Date(a.activite).getTime())
 }
 
-const sansAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export const sansAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-/** Chiffres d'un numéro, sous la forme 0XXXXXXXXX quand il est écrit en +33. */
-function chiffresTelephone(s: string): string {
+/** Chiffres d'un numéro, sous la forme 0XXXXXXXXX quand il est écrit en +33. Exporté : sert
+ *  aussi à repérer un doublon par téléphone (`lib/doublons.ts`), même besoin de comparer deux
+ *  écritures différentes du même numéro. */
+export function chiffresTelephone(s: string): string {
   const d = s.replace(/\D/g, '')
   return d.startsWith('33') && d.length > 9 ? '0' + d.slice(2) : d
 }

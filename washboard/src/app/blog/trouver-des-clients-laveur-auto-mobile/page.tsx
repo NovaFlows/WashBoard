@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('trouver-des-clients-laveur-auto-mobile')!
@@ -262,7 +263,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Lave plus. Roule moins.">
+        <Cta
+          title="Lave plus. Roule moins."
+          secondary={lienPageMetier(article.theme)}
+        >
           WashBoard s&apos;occupe des réservations, groupe vos rendez-vous par quartier, demande
           les avis à votre place et relance vos anciens clients. Vous lavez des voitures, on gère
           le reste.

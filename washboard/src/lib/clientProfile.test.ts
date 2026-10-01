@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildClientProfile, type ClientBooking } from './clientProfile'
+import { buildClientProfile, type ClientBooking, type ClientDocument } from './clientProfile'
 
 const base: ClientBooking = {
   id: '1',
@@ -97,6 +97,99 @@ describe('buildClientProfile', () => {
       mk({ id: 'c', address: 'Nouvelle', scheduled_at: '2026-07-01T09:00:00Z' }),
     ], 'alex@example.com')!
     expect(p.addresses).toEqual(['Nouvelle', 'Ancienne'])
+  })
+
+  it('rythmeJours : l’écart moyen entre visites, pas leur nombre', () => {
+    // Trois visites honorées, régulièrement espacées de 30 jours : 1er mai, 31 mai, 30 juin.
+    const p = buildClientProfile([
+      mk({ id: 'a', scheduled_at: '2026-05-01T09:00:00Z' }),
+      mk({ id: 'b', scheduled_at: '2026-05-31T09:00:00Z' }),
+      mk({ id: 'c', scheduled_at: '2026-06-30T09:00:00Z' }),
+    ], 'alex@example.com')!
+    expect(p.rythmeJours).toBe(30)
+  })
+
+  it('rythmeJours reste null avec moins de deux visites honorées', () => {
+    expect(buildClientProfile([mk({})], 'alex@example.com')!.rythmeJours).toBeNull()
+    expect(buildClientProfile([mk({ status: 'cancelled' })], 'alex@example.com')!.rythmeJours).toBeNull()
+  })
+
+  it('nePlusContacter vaut faux par défaut, et suit le réglage écrit pour cette clé', () => {
+    const sansReglage = buildClientProfile([mk({})], 'alex@example.com')!
+    expect(sansReglage.nePlusContacter).toBe(false)
+    expect(sansReglage.cle).toBe('alex@example.com')
+
+    const avecReglage = buildClientProfile(
+      [mk({})], 'alex@example.com', new Date(), [],
+      [{ cle: 'alex@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null, nom: null, telephone: null }],
+    )!
+    expect(avecReglage.nePlusContacter).toBe(true)
+
+    // Un réglage sur UN AUTRE client ne déteint pas.
+    const autreClient = buildClientProfile(
+      [mk({})], 'alex@example.com', new Date(), [],
+      [{ cle: 'quelqu-un-d-autre@example.com', nePlusContacter: true, masque: false, notes: null, vehicules: null, nom: null, telephone: null }],
+    )!
+    expect(autreClient.nePlusContacter).toBe(false)
+  })
+
+  it('notes et véhicules valent null par défaut, et suivent le réglage écrit pour cette clé', () => {
+    const sansReglage = buildClientProfile([mk({})], 'alex@example.com')!
+    expect(sansReglage.notes).toBeNull()
+    expect(sansReglage.vehicules).toBeNull()
+
+    const avecReglage = buildClientProfile(
+      [mk({})], 'alex@example.com', new Date(), [],
+      [{ cle: 'alex@example.com', nePlusContacter: false, masque: false, notes: 'Portail à code 1234', vehicules: 'Peugeot 208 grise', nom: null, telephone: null }],
+    )!
+    expect(avecReglage.notes).toBe('Portail à code 1234')
+    expect(avecReglage.vehicules).toBe('Peugeot 208 grise')
+  })
+
+  it('nom et téléphone corrigés à la main (menu « Modifier la fiche ») priment sur le calcul habituel', () => {
+    const p = buildClientProfile(
+      [mk({ client_name: 'alexx', client_phone: '0611112222' })], 'alex@example.com', new Date(), [],
+      [{ cle: 'alex@example.com', nePlusContacter: false, masque: false, notes: null, vehicules: null, nom: 'Alexandre Dupont', telephone: '0699998888' }],
+    )!
+    expect(p.name).toBe('Alexandre Dupont')
+    expect(p.phone).toBe('0699998888')
+  })
+
+  it('sans correction, nom et téléphone restent ceux calculés habituellement', () => {
+    const p = buildClientProfile([mk({ client_name: 'Alex', client_phone: '0611112222' })], 'alex@example.com')!
+    expect(p.name).toBe('Alex')
+    expect(p.phone).toBe('0611112222')
+  })
+
+  it('vehiculesReserves reprend les modèles tapés par le client en réservant, du plus récent, sans doublon', () => {
+    const p = buildClientProfile([
+      mk({ id: 'recent', scheduled_at: '2026-08-01T09:00:00Z', vehicles_detail: [{ models: ['Peugeot 208'] }] }),
+      mk({ id: 'vieux', scheduled_at: '2026-01-01T09:00:00Z', vehicles_detail: [{ models: ['Renault Clio', 'Peugeot 208'] }] }),
+    ], 'alex@example.com')!
+    expect(p.vehiculesReserves).toEqual(['Peugeot 208', 'Renault Clio'])
+  })
+
+  it('vehiculesReserves est vide sans réservation ou sans modèle renseigné', () => {
+    expect(buildClientProfile([mk({ vehicles_detail: null })], 'alex@example.com')!.vehiculesReserves).toEqual([])
+    expect(buildClientProfile([mk({ vehicles_detail: [{ models: ['  '] }] })], 'alex@example.com')!.vehiculesReserves).toEqual([])
+  })
+
+  it('vehiculesReserves reprend aussi le véhicule tapé sur un devis ou une facture écrits à la main, mêlé aux réservations par date', () => {
+    const document: ClientDocument = {
+      id: 'd1', genre: 'devis', numero: 'D-00001', statut: 'emis',
+      emis_le: '2026-07-01T09:00:00Z', created_at: '2026-07-01T09:00:00Z',
+      contenu: {
+        client: { nom: 'Alex', email: 'alex@example.com', professionnel: false, entreprise: null, adresseFacturation: '', vehicule: 'Renault Kangoo' },
+        totaux: { ttc: 90 },
+      },
+    }
+    const p = buildClientProfile(
+      [mk({ scheduled_at: '2026-08-01T09:00:00Z', vehicles_detail: [{ models: ['Peugeot 208'] }] })],
+      'alex@example.com', new Date(), [document],
+    )!
+    // Le devis (1er juillet) est plus ancien que la réservation (1er août) : la voiture la plus
+    // récente reste en tête, peu importe la source.
+    expect(p.vehiculesReserves).toEqual(['Peugeot 208', 'Renault Kangoo'])
   })
 
   it('récupère un téléphone même absent de la réservation la plus récente', () => {

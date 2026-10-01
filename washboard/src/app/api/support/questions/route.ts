@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { requireWasher } from '@/lib/requireWasher'
 import { logger } from '@/lib/logger'
 import { deriveSupportSubject } from '@/lib/supportSubject'
-import { mapThreadRow } from '@/lib/supportMapping'
+import { isThreadHiddenForWasher, mapThreadRow } from '@/lib/supportMapping'
 import { notifierEquipe } from '@/lib/push'
 import { peutOuvrirNouvelleQuestion, MESSAGE_LIMITE_QUESTIONS_ATTEINTE } from '@/lib/supportQuestionLimit'
 
@@ -14,8 +14,12 @@ import { peutOuvrirNouvelleQuestion, MESSAGE_LIMITE_QUESTIONS_ATTEINTE } from '@
 // Un fil n'a jamais de titre saisi par le laveur : il est déduit ici, côté
 // serveur, de la première ligne de son message (`deriveSupportSubject`).
 
+// `*` et non une liste : `hidden_for_washer_at` et `last_message_at` doivent être lus
+// sans casser la liste tant que la colonne du masquage n'existe pas encore en base (une
+// colonne nommée absente fait échouer toute la requête, `*` la tolère). Rien de
+// sensible ici : `mapThreadRow` ne renvoie au navigateur que ce qu'il choisit.
 const THREAD_QUERY =
-  'id, subject, status, is_read_by_washer, is_read_by_team, last_read_by_washer_at, support_messages(id, author_type, body, created_at)'
+  '*, support_messages(id, author_type, body, created_at)'
 
 const MAX_MESSAGE_LENGTH = 8000
 
@@ -42,7 +46,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Impossible de charger vos questions. Réessayez.' }, { status: 503 })
   }
 
-  return NextResponse.json({ threads: (data ?? []).map(mapThreadRow) })
+  // Les fils que le laveur a supprimés de sa liste n'y reviennent qu'avec un nouveau message.
+  const visibles = (data ?? []).filter(row => !isThreadHiddenForWasher(row.hidden_for_washer_at, row.last_message_at ?? ''))
+  return NextResponse.json({ threads: visibles.map(mapThreadRow) })
 }
 
 export async function POST(request: NextRequest) {

@@ -83,6 +83,21 @@ describe('estVerrouillee', () => {
 // lisible. Il suffisait d'attendre pour obtenir gratuitement ce qu'on vend.
 // ─────────────────────────────────────────────────────────────────────────────
 
+describe('un rendez-vous saisi par le laveur n’est jamais verrouillé', () => {
+  it('reste lisible même arrivé après l’épuisement du quota', () => {
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.001Z', saisie_par_laveur: true }, PERIODES)).toBe(false)
+  })
+
+  it('reste lisible dans la liste masquée, avec ses coordonnées', () => {
+    const [r] = masquerVerrouillees(
+      [{ created_at: '2026-09-25T10:00:00.001Z', saisie_par_laveur: true, client_phone: '0612345678' }],
+      PERIODES,
+    )
+    expect(r.verrouillee).toBe(false)
+    expect(r.client_phone).toBe('0612345678')
+  })
+})
+
 describe('le verrou ne saute pas au changement de période', () => {
   const DEUX: Periode[] = [
     { debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z' },

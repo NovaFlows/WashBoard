@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { trustedOrigin } from './appOrigin'
+import { trustedOrigin, isTrustedOrigin } from './appOrigin'
 
 const PROD = 'https://www.washboard.fr'
 
@@ -52,5 +52,30 @@ describe('trustedOrigin', () => {
 
     vi.stubEnv('NODE_ENV', 'production')
     expect(trustedOrigin('http://localhost:3000', PROD)).toBe(PROD)
+  })
+})
+
+describe('isTrustedOrigin', () => {
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('accepte les origines du site, avec et sans www', () => {
+    expect(isTrustedOrigin(PROD, PROD)).toBe(true)
+    expect(isTrustedOrigin('https://washboard.fr/', PROD)).toBe(true)
+  })
+
+  it('refuse un en-tête absent, étranger ou imitant le domaine', () => {
+    expect(isTrustedOrigin(null, PROD)).toBe(false)
+    expect(isTrustedOrigin(undefined, PROD)).toBe(false)
+    expect(isTrustedOrigin('', PROD)).toBe(false)
+    expect(isTrustedOrigin('https://attaquant.tld', PROD)).toBe(false)
+    expect(isTrustedOrigin('https://www.washboard.fr.attaquant.tld', PROD)).toBe(false)
+    expect(isTrustedOrigin('http://www.washboard.fr', PROD)).toBe(false)
+  })
+
+  it('n\'accepte localhost qu\'en développement', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    expect(isTrustedOrigin('http://localhost:3000', PROD)).toBe(true)
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(isTrustedOrigin('http://localhost:3000', PROD)).toBe(false)
   })
 })

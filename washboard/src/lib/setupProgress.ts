@@ -46,8 +46,15 @@ export type SetupItem = {
   blocking: boolean
   /** Fait partie de l'essentiel (par opposition au confort). */
   essential: boolean
-  /** Où aller pour le renseigner. */
+  /** Où aller pour le renseigner, sur le SITE (écrans v1). */
   href: string
+  /** Où le même réglage se trouve dans l'APPLICATION installée (écrans v2 de la refonte).
+   *
+   *  Les deux existent parce que les deux écrans existent : envoyer un laveur de la PWA vers
+   *  `/dashboard/admin#prestations` le faisait sortir de l'application refaite pour atterrir
+   *  sur l'ancienne (Alexandre, 2026-09-27). Obligatoire, pour qu'un réglage ajouté plus tard
+   *  ne puisse pas oublier sa destination. */
+  hrefV2: string
 }
 
 export type SetupProgress = {
@@ -80,6 +87,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.servicesCount > 0,
       blocking: true, essential: true,
       href: '/dashboard/admin#prestations',
+      hrefV2: '/dashboard/parametres/prestations?vue=prestations',
     },
     {
       key: 'availabilities',
@@ -87,6 +95,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.availabilitiesCount > 0,
       blocking: true, essential: true,
       href: '/dashboard/admin#disponibilites',
+      hrefV2: '/dashboard/parametres/horaires',
     },
     {
       key: 'baseAddress',
@@ -96,6 +105,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: rempli(input.baseAddress),
       blocking: true, essential: true,
       href: '/dashboard/parametres#profil',
+      hrefV2: '/dashboard/parametres/profil',
     },
     {
       key: 'phone',
@@ -103,6 +113,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: rempli(input.phone),
       blocking: false, essential: true,
       href: '/dashboard/parametres#profil',
+      hrefV2: '/dashboard/parametres/profil',
     },
     {
       key: 'logo',
@@ -110,6 +121,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: rempli(input.logoUrl),
       blocking: false, essential: true,
       href: '/dashboard/admin#identite',
+      hrefV2: '/dashboard/parametres/apparence',
     },
   ]
 
@@ -120,6 +132,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.zoneEnabled,
       blocking: false, essential: false,
       href: '/dashboard/admin#zone',
+      hrefV2: '/dashboard/parametres/prestations#zone',
     },
     {
       key: 'reviews',
@@ -127,6 +140,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.reviewsEnabled,
       blocking: false, essential: false,
       href: '/dashboard/parametres#avis',
+      hrefV2: '/dashboard/clients/messages',
     },
     {
       key: 'followup',
@@ -134,6 +148,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.followupEnabled,
       blocking: false, essential: false,
       href: '/dashboard/parametres#relances',
+      hrefV2: '/dashboard/clients/messages',
     },
     {
       key: 'calendar',
@@ -141,6 +156,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.googleCalendarConnected,
       blocking: false, essential: false,
       href: '/dashboard/admin#agenda',
+      hrefV2: '/dashboard/calendrier?google=ouvrir',
     },
     {
       key: 'smartSlot',
@@ -148,6 +164,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: input.smartSlotEnabled,
       blocking: false, essential: false,
       href: '/dashboard/admin#creneaux',
+      hrefV2: '/dashboard/clients#creneaux',
     },
     {
       key: 'welcome',
@@ -155,6 +172,7 @@ export function computeSetupProgress(input: SetupInput): SetupProgress {
       done: rempli(input.welcomeMessage),
       blocking: false, essential: false,
       href: '/dashboard/admin#identite',
+      hrefV2: '/dashboard/parametres/apparence',
     },
   ]
 

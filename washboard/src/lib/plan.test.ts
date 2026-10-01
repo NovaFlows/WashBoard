@@ -588,6 +588,64 @@ describe('essaiTermineSansFormule', () => {
       subscription_ends_at: new Date(BASCULE + 120 * JOUR).toISOString(),
     }, MAINTENANT)).toBe(false)
   })
+
+  // Vérification demandée par Alexandre le 2026-09-29 : le code confondait
+  // encore les deux avant ce jour — même échéance passée, même traitement,
+  // qu'il s'agisse d'un essai jamais payé ou d'un abonnement qui s'arrête.
+  describe('un essai qui se termine n’a AUCUN délai de grâce', () => {
+    it('bascule le jour même où trial_ends_at passe, sans subscription_ends_at', () => {
+      const finEssai = new Date(BASCULE + 60 * JOUR)
+      expect(essaiTermineSansFormule(
+        { subscription_status: 'trial', trial_ends_at: finEssai.toISOString() },
+        new Date(finEssai.getTime() + JOUR), // le lendemain, pas +30 jours
+      )).toBe(true)
+    })
+  })
+
+  describe('un abonnement PAYANT qui s’arrête a 30 jours de grâce', () => {
+    // `subscription_ends_at` n'est écrit que par le webhook Stripe : sa seule
+    // présence signe un abonnement réel, jamais un simple essai.
+    const abonnementLapse = (finAbonnement: Date, extra: Record<string, unknown> = {}) => ({
+      subscription_status: 'expired',
+      subscription_ends_at: finAbonnement.toISOString(),
+      ...extra,
+    })
+
+    it('reste faux le lendemain de l’échéance — la carte peut encore repasser', () => {
+      const finAbonnement = new Date(BASCULE + 60 * JOUR)
+      expect(essaiTermineSansFormule(
+        abonnementLapse(finAbonnement),
+        new Date(finAbonnement.getTime() + JOUR),
+      )).toBe(false)
+    })
+
+    it('reste faux le 30ᵉ jour pile — le délai n’est pas encore dépassé', () => {
+      const finAbonnement = new Date(BASCULE + 60 * JOUR)
+      expect(essaiTermineSansFormule(
+        abonnementLapse(finAbonnement),
+        new Date(finAbonnement.getTime() + 30 * JOUR),
+      )).toBe(false)
+    })
+
+    it('devient vrai le 31ᵉ jour', () => {
+      const finAbonnement = new Date(BASCULE + 60 * JOUR)
+      expect(essaiTermineSansFormule(
+        abonnementLapse(finAbonnement),
+        new Date(finAbonnement.getTime() + 31 * JOUR),
+      )).toBe(true)
+    })
+
+    it('la grâce ne protège pas indéfiniment : bascule quand même, seulement plus tard', () => {
+      // Le point du délai est de décaler la bascule, pas de l'annuler : un
+      // abonnement qui ne reprend jamais finit par retomber sur Découverte,
+      // exactement comme un essai — 30 jours plus tard, jamais suspendu.
+      const finAbonnement = new Date(BASCULE + 60 * JOUR)
+      expect(essaiTermineSansFormule(
+        abonnementLapse(finAbonnement),
+        new Date(finAbonnement.getTime() + 90 * JOUR),
+      )).toBe(true)
+    })
+  })
 })
 
 describe('planEffectif — l’offre qui s’applique vraiment', () => {

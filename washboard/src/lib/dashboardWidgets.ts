@@ -1,9 +1,11 @@
 // Widgets configurables du tableau de bord.
 //
-// Quatre blocs, chacun affichable ou masquable depuis le bouton « Configurer » :
-// aucune réorganisation, l'ordre reste toujours celui déclaré ici. Ce qui n'est
-// PAS dans ce registre — la carte de démarrage et la liste des réservations —
-// reste toujours affiché : masquer ses propres rendez-vous n'aurait aucun sens.
+// Sept blocs, chacun affichable ou masquable depuis le bouton « Configurer »,
+// et RÉORDONNABLE (flèches haut/bas du configurateur) : le tableau stocké porte
+// à la fois la sélection et l'ordre, `WIDGETS` ci-dessous ne donne que l'ordre
+// par défaut. Ce qui n'est PAS dans ce registre — la carte de démarrage et la
+// liste des réservations — reste toujours affiché : masquer ses propres
+// rendez-vous n'aurait aucun sens.
 //
 // La préférence est stockée sur `washers.dashboard_widgets` (tableau de clés).
 // `null` (compte jamais personnalisé) veut dire « tout afficher », pas « rien

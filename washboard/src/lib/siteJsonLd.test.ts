@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { buildSiteJsonLd } from './siteJsonLd'
 import { PLAN_CARDS } from './plan'
+import { FAQ_ITEMS } from './faq'
 
 const graphe = buildSiteJsonLd('https://exemple.test')
-const noeud = (type: string) =>
-  graphe['@graph'].find((n: { '@type': string }) => n['@type'] === type)!
+// Le graphe mélange quatre formes d'objet différentes : on passe par
+// `Record<string, unknown>` pour pouvoir ensuite re-caster chaque nœud vers
+// la forme précise attendue par chaque test, sans que TypeScript ne rejette
+// le cast faute de recouvrement structurel entre les quatre types.
+const graphNodes = graphe['@graph'] as Array<Record<string, unknown>>
+const noeud = (type: string) => graphNodes.find((n) => n['@type'] === type)!
 
 describe('buildSiteJsonLd', () => {
   it('produit un JSON strictement valide', () => {
@@ -15,7 +20,7 @@ describe('buildSiteJsonLd', () => {
     expect(brut).not.toMatch(/&quot;|&amp;|&#/)
   })
 
-  it('déclare le contexte et les deux entités attendues', () => {
+  it('déclare le contexte et les entités de marque/produit', () => {
     expect(graphe['@context']).toBe('https://schema.org')
     expect(noeud('Organization')).toBeTruthy()
     expect(noeud('SoftwareApplication')).toBeTruthy()
@@ -73,5 +78,31 @@ describe('buildSiteJsonLd', () => {
       expect(url).not.toContain('exemple.test')
       expect(url).toMatch(/^https:\/\//)
     }
+  })
+
+  it('déclare une entité WebSite reliée à l’organisation', () => {
+    const site = noeud('WebSite') as { url: string; name: string; publisher: { '@id': string } }
+    const org = noeud('Organization') as { '@id': string }
+    expect(site.url).toBe('https://exemple.test')
+    expect(site.name).toBe('WashBoard')
+    expect(site.publisher['@id']).toBe(org['@id'])
+  })
+
+  it('génère le FAQPage à partir de FAQ_ITEMS, sans copie manuelle', () => {
+    const faq = noeud('FAQPage') as {
+      mainEntity: Array<{ '@type': string; name: string; acceptedAnswer: { '@type': string; text: string } }>
+    }
+    expect(faq.mainEntity).toHaveLength(FAQ_ITEMS.length)
+    faq.mainEntity.forEach((entry, i) => {
+      expect(entry['@type']).toBe('Question')
+      expect(entry.name).toBe(FAQ_ITEMS[i].q)
+      expect(entry.acceptedAnswer['@type']).toBe('Answer')
+      expect(entry.acceptedAnswer.text).toBe(FAQ_ITEMS[i].a)
+    })
+  })
+
+  it('déclare les quatre entités attendues dans le graphe', () => {
+    const types = graphe['@graph'].map((n: { '@type': string }) => n['@type'])
+    expect(types).toEqual(['Organization', 'SoftwareApplication', 'WebSite', 'FAQPage'])
   })
 })

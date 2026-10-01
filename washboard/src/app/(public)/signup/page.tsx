@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
@@ -15,10 +14,10 @@ export default function SignupPage() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [cgvAcceptees, setCgvAcceptees] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -28,18 +27,33 @@ export default function SignupPage() {
     if (!isValidPhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78)'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
+    if (!cgvAcceptees) { setError('Merci d\'accepter les CGV pour continuer'); return }
     setLoading(true)
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, phone }),
-    })
-    const json = await res.json()
-    if (!res.ok) { setError(json.error ?? 'Une erreur est survenue'); setLoading(false); return }
-    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-    if (loginError) { setLoading(false); router.push('/login'); return }
-    router.push('/dashboard')
-    router.refresh()
+    // Sans ce try, un serveur injoignable faisait rejeter le fetch en silence :
+    // le bouton restait sur « Création du compte… » pour toujours.
+    let res: Response
+    try {
+      res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, phone, cgv_acceptees: cgvAcceptees }),
+      })
+    } catch {
+      setError('Connexion impossible. Vérifie ta connexion internet et réessaie.')
+      setLoading(false)
+      return
+    }
+    if (!res.ok) {
+      // Une erreur renvoyée par l'hébergeur plutôt que par la route n'est pas
+      // du JSON : ne pas laisser `res.json()` lever à son tour.
+      const json = await res.json().catch(() => null)
+      setError(json?.error ?? 'Une erreur est survenue. Réessaie dans un instant.')
+      setLoading(false)
+      return
+    }
+    // Pas de connexion ici : Supabase la refuse tant que l'email n'est pas
+    // confirmé.
+    router.push(`/verifier-email?email=${encodeURIComponent(email.trim())}`)
   }
 
   return (
@@ -100,6 +114,23 @@ export default function SignupPage() {
                 <label htmlFor="confirm" className="wb-label">Confirmer le mot de passe</label>
                 <input id="confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" autoComplete="new-password" className="wb-input" />
               </div>
+
+              <label htmlFor="cgv" className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-white/60 cursor-pointer">
+                <input
+                  id="cgv"
+                  type="checkbox"
+                  checked={cgvAcceptees}
+                  onChange={e => setCgvAcceptees(e.target.checked)}
+                  required
+                  className="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-white/20 text-[#1651E8] focus:ring-[#1651E8] shrink-0"
+                />
+                <span>
+                  J&apos;ai lu et j&apos;accepte les{' '}
+                  <Link href="/cgv" target="_blank" className="text-[#1651E8] dark:text-[#6A9FFF] font-semibold hover:underline underline-offset-2">
+                    conditions générales de vente
+                  </Link>
+                </span>
+              </label>
 
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl">

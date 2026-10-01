@@ -25,16 +25,24 @@ begin;
 update washers
    set plan = 'business'
  where coalesce(team_size, 1) > 1
-   and coalesce(plan, '') in ('essentiel', 'pro');
+   and coalesce(plan, '') not in ('decouverte', 'starter', 'pro', 'business');
 
 -- 2. Tout le reste de l'existant atterrit sur Pro : c'est ce que ces comptes
 --    avaient (essentiel à 49 €, ou pro à 69 €), au même prix ou moins cher.
 --    Les comptes sans plan renseigné en font partie : ils tournaient jusqu'ici
 --    sur la valeur par défaut de la colonne, c'est-à-dire l'ancien Essentiel.
+--
+--    `not in (...4 offres...)` plutôt que la liste des deux anciennes valeurs
+--    connues : la première tentative d'exécution, le 2026-09-28, a échoué au
+--    verrou de l'étape 4 sur une ligne à `free` — une valeur qu'aucun code,
+--    ancien ou nouveau, n'écrit (compte de test modifié à la main). Ce n'est
+--    pas la dernière chaîne imprévue qu'on croisera sur une base vivante ;
+--    autant que la migration absorbe tout ce qu'elle ne reconnaît pas plutôt
+--    que de re-planter au prochain cas.
 update washers
    set plan = 'pro'
  where plan is null
-    or plan in ('essentiel', 'pro');
+    or plan not in ('decouverte', 'starter', 'pro', 'business');
 
 -- 3. Les nouveaux comptes démarrent sur l'offre gratuite. L'essai de 30 jours
 --    reste posé explicitement à l'inscription (PLAN_ESSAI, route signup) :

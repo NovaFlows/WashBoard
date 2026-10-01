@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { randomBytes } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { getGoogleAuthUrl } from '@/lib/google-calendar'
+import { getGoogleAuthUrl } from '@/lib/google-calendar'
 import { logger } from '@/lib/logger'
+import { etatConnexionGoogle, STATE_COOKIE } from '@/lib/googleAgendaRetour'
 
 // Départ de la connexion Google Agenda.
 //
@@ -14,11 +15,12 @@ import { logger } from '@/lib/logger'
 // et l'adresse de ses clients. Signalé par un audit externe le 2026-09-05.
 //
 // Le `state` est désormais un jeton aléatoire, déposé en cookie inaccessible au
-// JavaScript, et vérifié au retour.
+// JavaScript (`STATE_COOKIE`, dans `lib/googleAgendaRetour.ts`), et vérifié au retour.
 
-export const STATE_COOKIE = 'wb_gcal_state'
-
-export async function GET() {
+// `?retour=agenda` : la connexion part de l'Agenda de la PWA et doit y revenir (voir
+// `lib/googleAgendaRetour.ts`). Sans ce paramètre, comportement historique du site.
+export async function GET(request: NextRequest) {
+  const versAgenda = request.nextUrl.searchParams.get('retour') === 'agenda'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL))
@@ -29,7 +31,7 @@ export async function GET() {
   if (errWasher) logger.error('auth.google-calendar.washer.read_failed', {}, errWasher)
   if (!washer) return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL))
 
-  const state = randomBytes(32).toString('hex')
+  const state = etatConnexionGoogle(randomBytes(32).toString('hex'), versAgenda)
   const response = NextResponse.redirect(getGoogleAuthUrl(state))
 
   response.cookies.set(STATE_COOKIE, state, {

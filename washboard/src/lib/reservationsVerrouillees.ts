@@ -21,8 +21,12 @@ import {
 // d'offre, tout ce qui était masqué s'ouvre d'un coup, sans migration ni
 // rattrapage. Une colonne aurait figé une décision qui doit pouvoir changer.
 
-/** Réservation minimale pour décider du verrouillage. */
-type Datee = { created_at?: string | null }
+/** Réservation minimale pour décider du verrouillage.
+ *
+ *  `saisie_par_laveur` : posée quand le laveur a lui-même saisi le rendez-vous dans son agenda
+ *  (un client trouvé de son côté). Ce client n'est pas venu par WashBoard : il n'y a rien à
+ *  débloquer, donc jamais masqué et jamais compté dans le quota. */
+type Datee = { created_at?: string | null; saisie_par_laveur?: boolean | null }
 
 /** Une période de quota, et l'instant après lequel tout y est verrouillé.
  *
@@ -73,6 +77,7 @@ export function estVerrouillee(
   periodes: SeuilsVerrouillage | null | undefined,
 ): boolean {
   if (!periodes || periodes.length === 0 || !r?.created_at) return false
+  if (r.saisie_par_laveur) return false
 
   // Le plafond ne vaut que pour l'avenir. Les clients que le laveur avait
   // AVANT restent à lui : il les a lavés, appelés, facturés. Deuxième garde-fou
@@ -217,6 +222,7 @@ export async function seuilsVerrouillage(
     .select('created_at')
     .eq('washer_id', laveur.id)
     .neq('status', 'cancelled')
+    .eq('saisie_par_laveur', false)
     .gte('created_at', depart.toISOString())
     .order('created_at', { ascending: true })
     .limit(LIGNES_MAX)
@@ -281,6 +287,7 @@ export async function compterReservationsDeLaPeriode(
     .select('id', { count: 'exact', head: true })
     .eq('washer_id', laveur.id)
     .neq('status', 'cancelled')
+    .eq('saisie_par_laveur', false)
     .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(laveur.created_at, now)).toISOString())
 
   if (error || count === null || count === undefined) return null

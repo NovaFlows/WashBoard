@@ -1,0 +1,460 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ChevronLeft, Plus } from 'lucide-react'
+import { useOffre } from '@/components/dashboard/OffreContext'
+import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
+import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
+import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
+import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
+import FeuilleActionsDocumentV2 from '@/components/dashboard/FeuilleActionsDocumentV2'
+import {
+  devisExpire, libelleGenre, libelleStatut, totalDocument, tonStatut,
+  type Document, type GenreDocument, type SaisieDocument,
+} from '@/lib/documents'
+import {
+  creerDocument, envoyerDocument, facturerDevis, lireDocuments, marquerPayee, repondreDevis,
+  supprimerDevis,
+} from '@/lib/documentsApi'
+import { aujourdhuiParis } from '@/lib/chiffresPeriode'
+import { confirmerEnvoi } from '@/lib/confirmationEnvoi'
+
+// « Devis et factures » — refonte 2026, destination NEUVE (Alexandre, 2026-09-27 : « on va
+// créer une section nouveau devis facture qui existe pas pour en générer un ou une »).
+//
+// Ce que cet écran ajoute au produit : jusqu'ici une facture ne pouvait naître que d'un
+// rendez-vous pris sur la page de réservation. Deux situations restaient sans réponse —
+// chiffrer un travail avant de le faire (le client veut un prix avant de dire oui), et
+// facturer un chantier arrivé par le bouche-à-oreille, qui n'a jamais eu de créneau.
+//
+// Réservé à la PWA installée (voir `Documents.tsx`, le garde-fou). L'adresse est sous
+// `/dashboard/chiffres/` pour que « Chiffres » reste allumé dans la barre du bas.
+//
+// Les factures de rendez-vous restent où elles sont (`/dashboard/factures`) : elles naissent
+// toutes seules quand un rendez-vous passe à « Terminé », et n'ont rien à faire dans un écran
+// dont le sujet est « ce que j'écris à la main ».
+//
+// PAYÉE OU PAS (2026-09-27). Une facture à la main n'est pas de l'argent reçu : le chantier
+// facturé à une entreprise se règle par virement, plus tard. Toute facture qui naît ici pose
+// donc la question tout de suite (`FeuillePaiement`), et seules les payées entrent dans
+// l'« Encaissé » de Chiffres. Ne pas répondre vaut « pas encore » : on ne compte jamais d'argent
+// qu'on n'a pas. Le rendez-vous, lui, est payé sur place — la question ne s'y pose pas.
+
+const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
+
+const COULEUR_TON = { gris: 'var(--v2-color-gris)', ambre: 'var(--v2-color-ambre)', vert: 'var(--v2-color-vert)' } as const
+
+const jourCourt = (iso: string) =>
+  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+
+function Pastille({ document: d, aujourdhui }: { document: Document; aujourdhui: string }) {
+  // Un devis périmé se lit d'un coup d'œil : le prix ne tient plus, il faut le refaire.
+  const perime = d.genre === 'devis' && d.statut !== 'transforme' && d.statut !== 'refuse'
+    && devisExpire(d.valable_jusquau, aujourdhui)
+  const ton = perime ? 'gris' : tonStatut(d)
+  return (
+    <span className={`flex items-center gap-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+      <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: COULEUR_TON[ton] }} aria-hidden />
+      {perime ? 'Expiré' : libelleStatut(d)}
+    </span>
+  )
+}
+
+/** La question posée dès qu'une facture naît : l'argent est-il déjà là ?
+ *
+ *  Demandée tout de suite, parce que c'est le moment où le laveur le sait (Alexandre,
+ *  2026-09-27 : « quand un devis se transforme en facture on met un pop up payé ou pas encore
+ *  payé »). « Pas encore » n'est pas un abandon : la facture attend dans la liste avec sa
+ *  pastille ambre, et son bouton « Marquer payée » la fait entrer dans l'encaissé le jour où
+ *  le virement tombe. Fermer la feuille sans répondre revient à « pas encore » — le défaut
+ *  prudent, celui qui ne compte pas d'argent qu'on n'a pas. */
+function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
+  numero: string | null
+  montant: number
+  occupe: boolean
+  onRepondre: (paye: boolean) => void
+  onClose: () => void
+}) {
+  const secondaire = `${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`
+  return (
+    <Feuille
+      titre={`Facture ${numero ?? ''}`.trim()}
+      sousTitre={`${euros.format(montant)} · déjà payée ?`}
+      onClose={onClose}
+    >
+      <div className="flex flex-col gap-2.5">
+        <button
+          type="button"
+          onClick={() => onRepondre(true)}
+          disabled={occupe}
+          className={`${BOUTON} w-full text-white`}
+          style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
+        >
+          Oui, encaissée
+        </button>
+        <button type="button" onClick={() => onRepondre(false)} disabled={occupe} className={secondaire} style={PRESSION}>
+          Pas encore
+        </button>
+        <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+          Seules les factures encaissées comptent dans vos chiffres. Une facture en attente reste
+          dans votre liste, et vous la marquerez payée le jour où l’argent arrive.
+        </p>
+      </div>
+    </Feuille>
+  )
+}
+
+/** La flèche revient d'où l'on vient : le « + » de la barre du bas est accessible de partout,
+ *  et renvoyer à Chiffres après un devis écrit depuis l'Accueil ou les Clients faisait perdre
+ *  le fil (Alexandre, 2026-09-30). Sans historique (écran ouvert en direct), Chiffres reste le
+ *  parent. Le « + » tapé ici même remplace l'adresse au lieu de l'empiler (BarreBasV2), sinon
+ *  un retour ne ferait que revenir à cet écran. */
+function FlecheRetourDocuments() {
+  const router = useRouter()
+  return (
+    <Link
+      href="/dashboard/chiffres"
+      aria-label="Retour à Chiffres"
+      onClick={e => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+          e.preventDefault()
+          router.back()
+        }
+      }}
+      className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+    >
+      <ChevronLeft size={22} strokeWidth={2} />
+    </Link>
+  )
+}
+
+type PropsDocuments = {
+  prestations: { id: string; name: string; price: number }[]
+  /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
+  nomLaveur: string
+}
+
+/** La facturation conforme fait partie de l'offre Pro (comme `/dashboard/factures`
+ *  sur le site). Sous cette offre, l'écran entier est remplacé par la carte
+ *  d'offre : ne pas proposer d'écrire un document qu'on ne pourra pas émettre. */
+export default function DocumentsV2(props: PropsDocuments) {
+  const { peut } = useOffre()
+  if (peut('facturation')) return <DocumentsOuvertsV2 {...props} />
+  return (
+    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
+      <div className="flex items-center gap-1 pb-2">
+        <FlecheRetourDocuments />
+        <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
+      </div>
+      <div className="mt-2">
+        <OffreVerrouilleeV2
+          titre="Éditez des devis et des factures conformes"
+          description="Mentions légales, SIRET, TVA, numérotation continue : des documents que votre comptable accepte."
+          feature="facturation"
+        />
+      </div>
+    </div>
+  )
+}
+
+function DocumentsOuvertsV2({ prestations, nomLaveur }: {
+  prestations: { id: string; name: string; price: number }[]
+  /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
+  nomLaveur: string
+}) {
+  const [aujourdhui] = useState(() => aujourdhuiParis(Date.now()))
+  const [documents, setDocuments] = useState<Document[] | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
+  // Le « + » de la barre du bas arrive avec `?nouveau=1` : il emmène à la SAISIE, pas à la
+  // liste — c'est le geste qu'on vient faire.
+  //
+  // C'est l'ADRESSE qui dit si la feuille est ouverte, pas un état lu une fois au montage :
+  // quand on était déjà sur cet écran, retaper le « + » ne changeait pas l'adresse, rien ne
+  // se remontait, et le bouton semblait mort (Alexandre, 2026-09-27). Refermer la feuille
+  // retire donc le paramètre, pour que le tap suivant soit bien une navigation.
+  const router = useRouter()
+  const chemin = usePathname()
+  const paramsUrl = useSearchParams()
+  const ouvertParUrl = paramsUrl.get('nouveau') !== null
+  const [nouveau, setNouveau] = useState<GenreDocument | null>(null)
+  const feuilleNouveau = nouveau ?? (ouvertParUrl ? 'devis' : null)
+
+  // Pré-remplissage depuis la Fiche entreprise (Alexandre, 2026-09-28 : « il faut que ce soit
+  // pré rempli avec les informations de l'entreprise dans le devis »), transporté par l'adresse
+  // au même titre que `nouveau=1` (voir FicheEntrepriseV2.tsx, `hrefNouveauDevis`). Ignoré si la
+  // feuille a été rouverte par le « + » de cet écran (`nouveau` local, pas `ouvertParUrl`) : ce
+  // geste-là veut un formulaire vide, pas les paramètres d'une navigation précédente.
+  const prefill: Partial<SaisieDocument> | undefined = nouveau === null && ouvertParUrl && paramsUrl.get('entreprise')
+    ? {
+        clientNom: paramsUrl.get('nom') ?? '',
+        clientTelephone: paramsUrl.get('tel') ?? '',
+        clientEmail: paramsUrl.get('email') ?? '',
+        clientAdresse: paramsUrl.get('adresse') ?? '',
+        professionnel: true,
+        entreprise: paramsUrl.get('entreprise') ?? '',
+      }
+    : undefined
+
+  function fermerNouveau() {
+    setNouveau(null)
+    if (ouvertParUrl) router.replace(chemin ?? '/dashboard/chiffres/documents', { scroll: false })
+  }
+  // L'ouverture retient un IDENTIFIANT, pas une copie du document : après « Accepté », la
+  // feuille doit proposer « Transformer en facture », pas répéter le choix déjà fait. Avec une
+  // copie figée, elle montrait l'état d'avant l'action (constaté le 2026-09-27, en base réelle).
+  const [ouvertId, setOuvertId] = useState<string | null>(null)
+  // La facture qui vient de naître et dont on ne sait pas encore si elle est payée.
+  const [paiement, setPaiement] = useState<{ id: string; numero: string | null; montant: number } | null>(null)
+  const [occupe, setOccupe] = useState(false)
+  const [suppression, setSuppression] = useState<Document | null>(null)
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false)
+  const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const charger = useCallback(async () => {
+    const r = await lireDocuments()
+    // Une panne ne vide pas la liste : on garde ce qui est affiché et on le dit.
+    if (r.ok) { setDocuments(r.data); setErreur(null) }
+    else setErreur(r.message)
+  }, [])
+
+  useEffect(() => { void charger() }, [charger])
+
+  /** Une action sur le document ouvert.
+   *
+   *  `fermer` dit si le geste est terminé : noter la réponse du client ne l'est pas — la
+   *  facture se fait dans la foulée, dans la même feuille, qui se met à jour toute seule
+   *  puisqu'elle relit la liste. Transformer, envoyer ou supprimer, si. */
+  async function agir(
+    action: () => Promise<{ ok: true } | { ok: false; message: string }>,
+    succes: string,
+    { fermer = true } = {},
+  ) {
+    if (occupe) return
+    setOccupe(true)
+    setErreur(null)
+    const r = await action()
+    setOccupe(false)
+    if (!r.ok) { setErreur(r.message); setOuvertId(null); return }
+    setMessage(succes)
+    if (fermer) setOuvertId(null)
+    await charger()
+  }
+
+  /** Le devis devient facture, puis la question du paiement. Écrit à la main plutôt que passé
+   *  par `agir` : il faut l'identifiant de la facture née pour pouvoir la marquer payée. */
+  async function facturer(devis: Document) {
+    if (occupe) return
+    setOccupe(true)
+    setErreur(null)
+    const r = await facturerDevis(devis.id)
+    setOccupe(false)
+    if (!r.ok) { setErreur(r.message); setOuvertId(null); return }
+    setMessage(`Facture ${r.data.numero ?? ''} créée depuis le devis.`.replace('  ', ' '))
+    setOuvertId(null)
+    await charger()
+    // `deja` : la facture existait (double tap) — sa situation de paiement est déjà connue.
+    if (!r.data.deja) {
+      setPaiement({ id: r.data.id, numero: r.data.numero, montant: devis.contenu.totaux.ttc })
+    }
+  }
+
+  /** Payée, ou plus payée. Le seul drapeau qui décide de l'entrée dans l'« Encaissé ». */
+  async function payer(id: string, paye: boolean) {
+    if (occupe) return
+    setOccupe(true)
+    setErreur(null)
+    const r = await marquerPayee(id, paye)
+    setOccupe(false)
+    setPaiement(null)
+    if (!r.ok) { setErreur(r.message); return }
+    setMessage(paye ? 'Facture encaissée : elle compte dans vos chiffres.' : 'Facture remise en attente de paiement.')
+    await charger()
+  }
+
+  async function confirmerSuppression() {
+    if (!suppression || suppressionEnCours) return
+    setSuppressionEnCours(true)
+    setSuppressionErreur(null)
+    const r = await supprimerDevis(suppression.id)
+    setSuppressionEnCours(false)
+    if (!r.ok) { setSuppressionErreur(r.message); return }
+    setDocuments(ds => (ds ?? []).filter(d => d.id !== suppression.id))
+    setSuppression(null)
+  }
+
+  const devis = (documents ?? []).filter(d => d.genre === 'devis')
+  const factures = (documents ?? []).filter(d => d.genre === 'facture')
+  // Toujours relu dans la liste : la feuille ne peut pas montrer un état périmé.
+  const ouvert = (documents ?? []).find(d => d.id === ouvertId) ?? null
+
+  return (
+    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
+      <div className="flex items-center gap-1 pb-2">
+        <FlecheRetourDocuments />
+        <div className="min-w-0 flex-1">
+          <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            Écrits à la main, sans rendez-vous
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setNouveau('devis')}
+          aria-label="Nouveau devis ou nouvelle facture"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
+          style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
+        >
+          <Plus size={22} strokeWidth={2.4} aria-hidden />
+        </button>
+      </div>
+
+      {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+      {message && (
+        <div className="mt-2">
+          <p role="status" className={`text-[13.5px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>{message}</p>
+        </div>
+      )}
+
+      {documents === null ? (
+        <p className={`py-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chargement…</p>
+      ) : documents.length === 0 ? (
+        <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-7">
+          <p className={`text-[15px] ${corpsFort}`}>Rien pour l’instant</p>
+          <p className={`mt-1.5 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+            Un client demande un prix pour des tapis, un canapé, une remise en état ? Faites-lui un
+            devis. Un chantier est arrivé par le bouche-à-oreille, sans passer par votre page ?
+            Faites la facture ici.
+          </p>
+          <div className="mt-4 flex gap-2.5">
+            <button
+              type="button"
+              onClick={() => setNouveau('devis')}
+              className={`${BOUTON} flex-1 text-white`}
+              style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
+            >
+              Nouveau devis
+            </button>
+            <button
+              type="button"
+              onClick={() => setNouveau('facture')}
+              className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
+              style={PRESSION}
+            >
+              Nouvelle facture
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {([['Devis', devis], ['Factures', factures]] as const).map(([intitule, liste]) => liste.length === 0 ? null : (
+            <section key={intitule} aria-label={intitule} className="mt-[26px]">
+              <h2 className={`px-0.5 pb-1.5 text-[19px] leading-tight ${titre}`}>{intitule}</h2>
+              <div className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
+                <ul className="divide-y divide-[color:var(--v2-filet)] px-4">
+                  {liste.map(d => (
+                    <li key={d.id}>
+                      <button
+                        type="button"
+                        onClick={() => { setMessage(null); setOuvertId(d.id) }}
+                        className="flex min-h-[62px] w-full items-center gap-3 py-2.5 text-left"
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className={`truncate text-[15px] ${nom}`}>
+                            {d.contenu.client.entreprise || d.contenu.client.nom}
+                          </span>
+                          <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                            {d.numero} · {d.emis_le ? jourCourt(d.emis_le) : jourCourt(d.created_at)}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end gap-0.5">
+                          <span className={`text-[15px] ${corpsFort} tabular-nums`}>
+                            {euros.format(d.contenu.totaux.ttc)}
+                          </span>
+                          <Pastille document={d} aujourdhui={aujourdhui} />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          ))}
+        </>
+      )}
+
+      {feuilleNouveau && (
+        <FeuilleDocumentV2
+          aujourdhui={aujourdhui}
+          prestations={prestations}
+          genreInitial={feuilleNouveau}
+          prefill={prefill}
+          onEnregistrer={async saisie => {
+            const r = await creerDocument(saisie)
+            if (!r.ok) return r.message
+            setMessage(`${libelleGenre(saisie.genre)} ${r.data.numero ?? ''} créé${saisie.genre === 'facture' ? 'e' : ''}.`)
+            await charger()
+            // Une facture écrite directement pose la même question qu'une facture née d'un
+            // devis : l'argent est-il déjà là ? Même feuille, même défaut prudent.
+            if (saisie.genre === 'facture') {
+              setPaiement({ id: r.data.id, numero: r.data.numero, montant: totalDocument(saisie) })
+            }
+            return null
+          }}
+          onClose={fermerNouveau}
+        />
+      )}
+
+      {ouvert && (
+        <FeuilleActionsDocumentV2
+          document={ouvert}
+          nomLaveur={nomLaveur}
+          occupe={occupe}
+          onEnvoyer={() => void agir(async () => {
+            const r = await envoyerDocument(ouvert.id)
+            if (r.ok) confirmerEnvoi({ titre: 'Email envoyé', detail: `${libelleGenre(ouvert.genre)} ${ouvert.numero ?? ''} pour ${ouvert.contenu.client.nom}`.replace(/\s+/g, ' ').trim() })
+            return r
+          }, 'Envoyé au client.')}
+          onRepondre={statut => void agir(
+            () => repondreDevis(ouvert.id, statut),
+            statut === 'accepte' ? 'Devis accepté. Vous pouvez le transformer en facture.' : 'Devis marqué refusé.',
+            // La feuille reste ouverte : « Transformer en facture » y prend la place des deux
+            // boutons de réponse, et c'est le geste suivant.
+            { fermer: statut === 'refuse' },
+          )}
+          onFacturer={() => void facturer(ouvert)}
+          onPayer={paye => void payer(ouvert.id, paye)}
+          onSupprimer={() => { setSuppressionErreur(null); setSuppression(ouvert); setOuvertId(null) }}
+          onClose={() => setOuvertId(null)}
+        />
+      )}
+
+      {paiement && (
+        <FeuillePaiement
+          numero={paiement.numero}
+          montant={paiement.montant}
+          occupe={occupe}
+          onRepondre={paye => {
+            // « Pas encore » n'écrit rien : la colonne est déjà nulle à la naissance.
+            if (paye) void payer(paiement.id, true)
+            else setPaiement(null)
+          }}
+          onClose={() => setPaiement(null)}
+        />
+      )}
+
+      {suppression && (
+        <ConfirmationSuppression
+          titre={`Supprimer le devis ${suppression.numero} ?`}
+          texte="Il disparaît de votre liste. Le client garde le PDF que vous lui avez envoyé."
+          enCours={suppressionEnCours}
+          erreur={suppressionErreur}
+          onConfirmer={confirmerSuppression}
+          onClose={() => setSuppression(null)}
+        />
+      )}
+    </div>
+  )
+}

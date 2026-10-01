@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import { etapeDemarrage, type SetupProgress } from '@/lib/setupProgress'
 
 // Carte d'accueil d'un compte qui ne peut pas encore prendre de réservation.
@@ -19,6 +22,9 @@ const BOUTON: Record<string, string> = {
 }
 
 export function DemarrageCard({ progress }: { progress: SetupProgress }) {
+  // Le même réglage vit à deux endroits : l'ancien écran sur le site, le nouveau dans
+  // l'application installée. Sans ce choix, le bouton faisait sortir de la PWA refaite.
+  const isPwa = usePwaStandalone()
   const etape = etapeDemarrage(progress)
   if (!etape) return null
   const indispensables = progress.items.filter(i => i.blocking)
@@ -60,7 +66,7 @@ export function DemarrageCard({ progress }: { progress: SetupProgress }) {
       </ol>
 
       <Link
-        href={etape.href}
+        href={isPwa ? etape.hrefV2 : etape.href}
         className="mt-5 inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl bg-[#1651E8] hover:bg-[#1244c4] text-white text-sm font-semibold transition-colors"
       >
         {BOUTON[etape.key] ?? 'Continuer la configuration'}

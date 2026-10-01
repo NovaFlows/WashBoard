@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
+// Hôte du stockage Supabase, dérivé de la même variable que le reste du
+// code plutôt que recopié en dur : si le projet Supabase change un jour,
+// cette ligne suit sans qu'on s'en souvienne.
+function hoteSupabase(): string | undefined {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname
+  } catch {
+    return undefined
+  }
+}
+
 // En-têtes de sécurité.
 //
 // L'application n'en envoyait aucun : ni protection contre l'inclusion dans
@@ -36,7 +47,32 @@ const ENTETES_DASHBOARD = [
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Numéro de version visible en bas de l'écran « Plus » de la PWA (voir
+  // DiagnosticPwa.tsx) : permet de savoir en un coup d'œil si un téléphone
+  // affiche le dernier déploiement. Vercel fournit l'empreinte du commit au
+  // moment du build ; hors Vercel (développement), « local ».
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7),
+  },
   serverExternalPackages: ['@react-pdf/renderer'],
+
+  // Logos et fonds de page envoyés par les laveurs (bucket Supabase Storage)
+  // et photos des thèmes prédéfinis (Unsplash) : optimisés et mis en cache
+  // à l'edge Vercel au lieu d'être reservis en entier à chaque visiteur de
+  // la page de réservation — déjà la cause d'un dépassement du quota de
+  // bande passante Supabase (voir api/washer/logo/route.ts).
+  //
+  // `minimumCacheTTL` à un an : sûr parce que les URLs qui en ont besoin
+  // sont versionnées (`?v=<profile_updated_at>`, voir lib/themes.ts) — un
+  // nouvel envoi change l'URL demandée, jamais le contenu d'une URL déjà en
+  // cache.
+  images: {
+    remotePatterns: [
+      ...(hoteSupabase() ? [{ protocol: 'https' as const, hostname: hoteSupabase()!, pathname: '/storage/v1/object/public/**' }] : []),
+      { protocol: 'https' as const, hostname: 'images.unsplash.com' },
+    ],
+    minimumCacheTTL: 31536000,
+  },
 
   async headers() {
     return [

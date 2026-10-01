@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Send, CheckCircle2, MessageCircle, ChevronLeft, Plus, AlertCircle } from 'lucide-react'
+import { X, Send, CheckCircle2, MessageCircle, ChevronLeft, Plus, AlertCircle, Trash2 } from 'lucide-react'
+import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
+import { ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
 import { formatSupportDate, type SupportThread } from '@/lib/support'
 import type { SupportSendError } from '@/lib/useSupportThreads'
 import { shouldSendOnEnter, estClavierTactile } from '@/lib/composerKeyboard'
@@ -33,11 +36,65 @@ function triParRecence(threads: SupportThread[]): SupportThread[] {
   })
 }
 
-function ListeFils({ threads, onOuvrir, onNouvelle }: {
+// Une ligne de la liste, glissable vers la gauche pour révéler « Supprimer » — PWA
+// installée seulement (le site garde sa liste telle quelle). Même geste que les
+// prestations de « Prestations et prix » (voir `useLigneGlissante`).
+function LigneFilGlissante({ nom, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer, children }: {
+  nom: string
+  ouverte: boolean
+  onOuvrirLigne: () => void
+  onFermerLigne: () => void
+  onSupprimer: () => void
+  children: (clicAbsorbe: () => boolean) => React.ReactNode
+}) {
+  const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante<HTMLDivElement>({
+    ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
+  })
+  return (
+    <div ref={refLigne} className="relative overflow-hidden">
+      <button
+        type="button"
+        onClick={onSupprimer}
+        tabIndex={ouverte ? 0 : -1}
+        aria-hidden={!ouverte}
+        aria-label={`Supprimer la conversation ${nom}`}
+        className="absolute inset-y-1 right-0 flex flex-col items-center justify-center gap-1 rounded-xl text-[12px] font-semibold text-white"
+        style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
+      >
+        <Trash2 size={20} strokeWidth={2} aria-hidden />
+        Supprimer
+      </button>
+      <div {...poignee} style={styleContenu} className="bg-white dark:bg-slate-900 motion-reduce:!transition-none">
+        {children(clicAbsorbe)}
+      </div>
+    </div>
+  )
+}
+
+function ListeFils({ threads, onOuvrir, onNouvelle, onSupprimer }: {
   threads: SupportThread[]
   onOuvrir: (id: string) => void
   onNouvelle: () => void
+  /** Supprime la conversation de la liste ; rend `null` si c'est fait, sinon la phrase d'échec. */
+  onSupprimer?: (id: string) => Promise<string | null>
 }) {
+  const isPwa = usePwaStandalone()
+  const glissable = isPwa && !!onSupprimer
+  const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
+  const [aSupprimer, setASupprimer] = useState<SupportThread | null>(null)
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function confirmer() {
+    if (!aSupprimer || !onSupprimer || enCours) return
+    setEnCours(true)
+    setErreur(null)
+    const message = await onSupprimer(aSupprimer.id)
+    setEnCours(false)
+    if (message) setErreur(message)
+    else setASupprimer(null)
+  }
+
   return (
     <div className="p-4">
       <button
@@ -57,11 +114,11 @@ function ListeFils({ threads, onOuvrir, onNouvelle }: {
           // même — jamais l'un sans l'autre.
           const nonLuesCount = t.nonLuesCount ?? 0
           const estNonLu = nonLuesCount > 0
-          return (
+          const ligne = (clicAbsorbe?: () => boolean) => (
             <button
               key={t.id}
               type="button"
-              onClick={() => onOuvrir(t.id)}
+              onClick={() => { if (!clicAbsorbe?.()) onOuvrir(t.id) }}
               className="w-full flex items-center gap-3 py-3 text-left min-h-11 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-1.5 -mx-1.5 transition-colors"
             >
               <UnreadCountBadge count={t.nonLuesCount} label={unreadLabel(nonLuesCount)} />
@@ -87,8 +144,32 @@ function ListeFils({ threads, onOuvrir, onNouvelle }: {
               <StatutBadge statut={t.status} />
             </button>
           )
+          if (!glissable) return ligne()
+          return (
+            <LigneFilGlissante
+              key={t.id}
+              nom={t.title}
+              ouverte={ligneOuverte === t.id}
+              onOuvrirLigne={() => setLigneOuverte(t.id)}
+              onFermerLigne={() => setLigneOuverte(cur => (cur === t.id ? null : cur))}
+              onSupprimer={() => { setLigneOuverte(null); setErreur(null); setASupprimer(t) }}
+            >
+              {clicAbsorbe => ligne(clicAbsorbe)}
+            </LigneFilGlissante>
+          )
         })}
       </div>
+
+      {aSupprimer && (
+        <ConfirmationSuppression
+          titre={`Supprimer « ${aSupprimer.title} » ?`}
+          texte="Elle disparaît de votre liste. L’équipe garde l’échange, et la conversation revient si elle vous répond."
+          enCours={enCours}
+          erreur={erreur}
+          onConfirmer={confirmer}
+          onClose={() => setASupprimer(null)}
+        />
+      )}
     </div>
   )
 }
@@ -190,6 +271,7 @@ export default function SupportConversation({
   threads,
   onSend,
   onOpenThread,
+  onDeleteThread,
   sendError,
   onDismissSendError,
   vue,
@@ -202,6 +284,9 @@ export default function SupportConversation({
   /** threadId à null pour une nouvelle question. Retourne l'id du fil (créé ou existant). */
   onSend: (texte: string, threadId: string | null) => string
   onOpenThread: (threadId: string) => void
+  /** Supprimer une conversation de la liste (glisser vers la gauche, PWA installée
+   *  seulement) : rend `null` si c'est fait, sinon la phrase d'échec. Absent : pas de geste. */
+  onDeleteThread?: (threadId: string) => Promise<string | null>
   sendError?: SupportSendError | null
   onDismissSendError?: () => void
   vue: SupportVue
@@ -293,6 +378,7 @@ export default function SupportConversation({
             threads={threads}
             onOuvrir={ouvrirFil}
             onNouvelle={() => allerA({ type: 'nouvelle' })}
+            onSupprimer={onDeleteThread}
           />
         </div>
       )}

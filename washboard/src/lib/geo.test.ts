@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { haversineKm } from './geo'
+import { haversineKm, estimateTravelMinutes } from './geo'
 
 describe('haversineKm', () => {
   it('retourne 0 pour deux points identiques', () => {
@@ -62,5 +62,21 @@ describe('haversineKm — cas qui comptent pour la zone d’intervention', () =>
     expect(Number.isNaN(d)).toBe(false)
     expect(d).toBeGreaterThan(0)
     expect(d).toBeLessThan(0.05)
+  })
+})
+
+// À 60 km/h, 1 km ≈ 1 minute : la formule extraite de CalendrierDashboard.tsx
+// (feasibilityWarn) simplifie exactement à ça, vérifié ici pour ne pas
+// dériver silencieusement d'une future modification.
+describe('estimateTravelMinutes', () => {
+  it('vaut environ la distance en km, à 60 km/h', () => {
+    expect(estimateTravelMinutes(18)).toBe(18)
+  })
+  it('arrondit à la minute la plus proche', () => {
+    expect(estimateTravelMinutes(9.2)).toBe(9)
+    expect(estimateTravelMinutes(9.5)).toBe(10)
+  })
+  it('vaut 0 pour une distance nulle', () => {
+    expect(estimateTravelMinutes(0)).toBe(0)
   })
 })

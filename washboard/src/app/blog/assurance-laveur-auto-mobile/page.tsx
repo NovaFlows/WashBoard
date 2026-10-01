@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('assurance-laveur-auto-mobile')!
@@ -229,7 +230,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Chaque prestation documentée, sans y penser">
+        <Cta
+          title="Chaque prestation documentée, sans y penser"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, chaque rendez-vous garde le véhicule, la prestation, l&apos;adresse et
           l&apos;heure. Le jour où un client conteste, vous avez l&apos;historique complet sous la
           main.

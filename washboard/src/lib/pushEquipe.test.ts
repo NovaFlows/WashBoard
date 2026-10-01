@@ -7,11 +7,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const envoyer = vi.fn()
 const traces = { error: vi.fn(), warn: vi.fn(), info: vi.fn() }
 
-let comptes: { id: string; email: string }[] = []
-let erreurComptes: unknown = null
 let fiches: { id: string }[] = []
 let erreurFiches: unknown = null
 let abonnementsPar: Record<string, unknown[]> = {}
+// Identifiants demandés à la table `washers` : ce qui décide qui est notifié.
+const demandes: string[][] = []
 
 vi.mock('web-push', () => ({
   default: {
@@ -24,14 +24,16 @@ vi.mock('@/lib/logger', () => ({ logger: traces }))
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
-    auth: {
-      admin: {
-        listUsers: async () => ({ data: { users: comptes }, error: erreurComptes }),
-      },
-    },
     from: (table: string) => {
       if (table === 'washers') {
-        return { select: () => ({ in: async () => ({ data: fiches, error: erreurFiches }) }) }
+        return {
+          select: () => ({
+            in: async (_col: string, ids: string[]) => {
+              demandes.push(ids)
+              return { data: fiches, error: erreurFiches }
+            },
+          }),
+        }
       }
       // push_subscriptions
       return {
@@ -47,7 +49,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 const { notifierEquipe } = await import('./push')
 
-const ADMIN = 'novaflows.pro@gmail.com'
+const ADMIN = '72164139-29f0-4594-b133-410ad5bde6dc'
 const message = { title: 'Nouveau client', body: 'Kooki Clean' }
 
 function appareil(n: string) {
@@ -57,17 +59,13 @@ function appareil(n: string) {
 beforeEach(() => {
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'cle-publique'
   process.env.VAPID_PRIVATE_KEY = 'cle-privee'
-  process.env.SUPPORT_ADMIN_EMAILS = ADMIN
+  process.env.SUPPORT_ADMIN_USER_IDS = ADMIN
+  demandes.length = 0
 
   envoyer.mockReset().mockResolvedValue(undefined)
   traces.error.mockReset(); traces.warn.mockReset(); traces.info.mockReset()
 
-  erreurComptes = null
   erreurFiches = null
-  comptes = [
-    { id: 'u-admin', email: ADMIN },
-    { id: 'u-laveur', email: 'kookii@exemple.fr' },
-  ]
   fiches = [{ id: 'w-admin' }]
   abonnementsPar = { 'w-admin': [appareil('1')], 'w-laveur': [appareil('9')] }
 })
@@ -75,7 +73,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   delete process.env.VAPID_PRIVATE_KEY
-  delete process.env.SUPPORT_ADMIN_EMAILS
+  delete process.env.SUPPORT_ADMIN_USER_IDS
 })
 
 describe('notifierEquipe — qui reçoit', () => {
@@ -86,12 +84,10 @@ describe('notifierEquipe — qui reçoit', () => {
     expect(JSON.parse(envoyer.mock.calls[0][1])).toEqual(message)
   })
 
-  it('n\'envoie rien aux laveurs qui ne sont pas dans la liste', async () => {
+  it('ne cherche les fiches QUE des comptes de la liste', async () => {
     // Le cœur du sujet : une inscription ne doit prévenir que l'équipe.
-    fiches = [{ id: 'w-laveur' }]
-    comptes = [{ id: 'u-laveur', email: 'kookii@exemple.fr' }]
     await notifierEquipe(message)
-    expect(envoyer).not.toHaveBeenCalled()
+    expect(demandes).toEqual([[ADMIN]])
   })
 
   it('couvre tous les appareils quand un membre a plusieurs fiches', async () => {
@@ -102,21 +98,21 @@ describe('notifierEquipe — qui reçoit', () => {
   })
 
   it('ignore la casse et les espaces dans la liste', async () => {
-    process.env.SUPPORT_ADMIN_EMAILS = `  ${ADMIN.toUpperCase()} , autre@exemple.fr `
+    process.env.SUPPORT_ADMIN_USER_IDS = `  ${ADMIN.toUpperCase()} , u-autre `
     await notifierEquipe(message)
-    expect(envoyer).toHaveBeenCalledTimes(1)
+    expect(demandes).toEqual([[ADMIN, 'u-autre']])
   })
 })
 
 describe('notifierEquipe — refus par défaut', () => {
-  it('n\'envoie rien si aucune adresse n\'est configurée', async () => {
-    delete process.env.SUPPORT_ADMIN_EMAILS
+  it('n\'envoie rien si aucun identifiant n\'est configuré', async () => {
+    delete process.env.SUPPORT_ADMIN_USER_IDS
     await notifierEquipe(message)
     expect(envoyer).not.toHaveBeenCalled()
   })
 
   it('n\'envoie rien si la liste est vide', async () => {
-    process.env.SUPPORT_ADMIN_EMAILS = '   '
+    process.env.SUPPORT_ADMIN_USER_IDS = '   '
     await notifierEquipe(message)
     expect(envoyer).not.toHaveBeenCalled()
   })
@@ -129,20 +125,13 @@ describe('notifierEquipe — refus par défaut', () => {
 })
 
 describe('notifierEquipe — pannes', () => {
-  it('signale une adresse configurée sans compte correspondant', async () => {
+  it('signale un identifiant configuré sans fiche correspondante', async () => {
     // Typiquement une faute de frappe dans la variable. Silencieux, ce serait
     // indétectable : on croirait recevoir les notifications.
-    comptes = [{ id: 'u-laveur', email: 'kookii@exemple.fr' }]
+    fiches = []
     await notifierEquipe(message)
     expect(envoyer).not.toHaveBeenCalled()
     expect(traces.warn).toHaveBeenCalledWith('push.equipe.aucun_compte_correspondant', {})
-  })
-
-  it('trace un échec de lecture des comptes sans lever', async () => {
-    erreurComptes = { message: 'auth indisponible' }
-    await expect(notifierEquipe(message)).resolves.toBeUndefined()
-    expect(envoyer).not.toHaveBeenCalled()
-    expect(traces.error).toHaveBeenCalled()
   })
 
   it('trace un échec de lecture des fiches sans lever', async () => {

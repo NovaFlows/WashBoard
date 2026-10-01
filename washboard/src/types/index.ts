@@ -21,6 +21,7 @@ export type Washer = {
   smart_slot_radius_minutes: number
   smart_slot_discount_type: 'fixed' | 'percent'
   smart_slot_discount_value: number
+  reservation_jour_meme: boolean
   travel_fee_tiers: { max_minutes: number; fee: number }[]
   base_address: string | null
   travel_fee_mode: 'base' | 'previous'
@@ -42,6 +43,10 @@ export type Washer = {
   followup_delay_days: number
   followup_message: string | null
   created_at: string
+  // Preuve d'acceptation des CGV à l'inscription (voir api/auth/signup).
+  // `null` pour tout compte créé avant ce contrôle.
+  cgv_acceptees_le: string | null
+  cgv_acceptees_ip: string | null
   // Widgets affichés sur l'accueil (voir lib/dashboardWidgets.ts). `undefined`
   // tant que la colonne n'existe pas en base, `null` tant que le laveur n'a
   // jamais ouvert le réglage — les deux valent « tout afficher ».
@@ -59,6 +64,14 @@ export type Washer = {
   facture_taux_tva?: number
   facture_numero_tva?: string | null
   facture_prochain_numero?: number
+  // Drapeau de la refonte 2026 (passe 4) : autorise la barre du bas v2 en
+  // plus du menu latéral, dans la PWA installée uniquement (voir
+  // usePwaStandalone). `undefined` tant que la colonne `beta_refonte`
+  // n'existe pas en base (le SQL n'est pas encore passé), `null`/`false`
+  // pour un laveur qui n'a pas encore rejoint le bêta — les trois valent
+  // « éteint », jamais une erreur. Même convention que `dashboard_widgets`
+  // un peu plus haut.
+  beta_refonte?: boolean | null
 }
 
 export type ServiceAddon = {

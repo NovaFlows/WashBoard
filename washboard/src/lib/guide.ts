@@ -4,6 +4,24 @@
 // porte sur la chaîne brute, et les liens internes s'écrivent en ligne au
 // format [libellé](/dashboard/xxx) — c'est ce qui produit les mots en bleu
 // qui renvoient vers la bonne page.
+//
+// UN SEUL TEXTE, DEUX NAVIGATIONS (2026-09-27). Ce guide est lu depuis le site
+// et depuis l'application refaite, qui n'ont ni les mêmes écrans ni les mêmes
+// noms d'écrans : « Réglages de la page, onglet Prestations » d'un côté, un
+// écran « Prestations » de l'autre ; « Comptabilité » devenue « Chiffres » ;
+// « Paramètres » devenu « Plus ». Une réponse qui décrit un chemin est donc
+// fausse pour la moitié des lecteurs.
+//
+// La règle, appliquée partout ici : ON NOMME LA CHOSE, PAS L'ENDROIT. Le texte
+// dit « vos prestations », « vos horaires », « votre profil » ; c'est le LIEN
+// qui sait où c'est. Dans l'application, `lib/lienV2.ts` le traduit vers
+// l'écran refait — donc chaque adresse écrite ici doit y avoir son entrée
+// (`lienV2.test.ts` échoue sinon). Un lien précis se pointe avec l'ancre de
+// l'ancien écran (`/dashboard/admin#zone`), pas avec sa page seule : c'est
+// l'ancre qui porte la traduction.
+//
+// Restent volontairement des « onglet » : ceux du NAVIGATEUR, qui n'ont rien à
+// voir avec la navigation de WashBoard.
 
 export type GuideEntry = {
   id: string
@@ -31,14 +49,14 @@ export const GUIDE: GuideSection[] = [
         id: 'premiers-pas',
         question: 'Par où commencer ?',
         answer:
-          "Trois points bloquent la mise en ligne tant qu'ils ne sont pas faits, et la carte « Démarrage » de votre [tableau de bord](/dashboard) suit votre avancement. D'abord vos prestations et vos tarifs dans [Réglages de la page](/dashboard/admin), onglet Prestations — une prestation se range toujours dans une catégorie, donc créez la catégorie d'abord, sinon vous ne pourrez rien enregistrer. Ensuite vos horaires de travail, onglet Disponibilités. Enfin votre adresse de départ dans [Paramètres](/dashboard/parametres), carte « Mon profil » : elle sert à calculer vos trajets et votre zone, et sans elle un client trop éloigné peut réserver un créneau que vous ne pourrez pas honorer. Votre téléphone et votre logo comptent aussi, mais ils ne bloquent pas la page.",
+          "Trois points bloquent la mise en ligne tant qu'ils ne sont pas faits, et votre [tableau de bord](/dashboard) suit votre avancement. D'abord [vos prestations et vos tarifs](/dashboard/admin#prestations) — une prestation se range toujours dans une catégorie, donc créez la catégorie d'abord, sinon vous ne pourrez rien enregistrer. Ensuite [vos horaires de travail](/dashboard/admin#disponibilites). Enfin [votre adresse de départ](/dashboard/parametres#profil) : elle sert à calculer vos trajets et votre zone, et sans elle un client trop éloigné peut réserver un créneau que vous ne pourrez pas honorer. Votre téléphone et votre logo comptent aussi, mais ils ne bloquent pas la page.",
         keywords: ['debuter', 'commencer', 'configuration', 'installation', 'demarrage', 'etape'],
       },
       {
         id: 'lien-reservation',
         question: 'Où trouver mon lien de réservation ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Votre lien de réservation ». Vous pouvez y modifier la fin de l'adresse pour qu'elle porte le nom de votre activité. C'est ce lien que vous mettez dans votre fiche Google, votre bio Instagram et vos messages : vos clients réservent sans avoir à créer de compte.",
+          "C'est [votre lien de réservation](/dashboard/parametres#lien-reservation). Vous pouvez y modifier la fin de l'adresse pour qu'elle porte le nom de votre activité. C'est ce lien que vous mettez dans votre fiche Google, votre bio Instagram et vos messages : vos clients réservent sans avoir à créer de compte.",
         keywords: ['url', 'adresse', 'slug', 'partager', 'lien client'],
       },
       {
@@ -59,21 +77,21 @@ export const GUIDE: GuideSection[] = [
         id: 'prestations',
         question: 'Comment créer mes prestations et mes tarifs ?',
         answer:
-          "Dans [Réglages de la page](/dashboard/admin), onglet Prestations. Commencez par créer une catégorie — ce que vous traitez : Voiture, Canapé, Piscine, ce que vous voulez. Une prestation appartient toujours à une catégorie, donc sans catégorie vous ne pourrez pas l'enregistrer. Chaque catégorie a ensuite ses types, et c'est là que se joue le tarif : pour Voiture ce sera citadine, berline, SUV ; pour Canapé, le nombre de places. Vous pouvez donner un prix différent à chaque type, puisqu'ils ne demandent pas le même temps. Enfin la prestation elle-même a un nom, une durée et un prix. Les options supplémentaires se paramètrent au même endroit.",
+          "Tout se passe dans [vos prestations](/dashboard/admin#prestations). Commencez par créer une catégorie — ce que vous traitez : Voiture, Canapé, Piscine, ce que vous voulez. Une prestation appartient toujours à une catégorie, donc sans catégorie vous ne pourrez pas l'enregistrer. Chaque catégorie a ensuite ses types, et c'est là que se joue le tarif : pour Voiture ce sera citadine, berline, SUV ; pour Canapé, le nombre de places. Vous pouvez donner un prix différent à chaque type, puisqu'ils ne demandent pas le même temps. Enfin la prestation elle-même a un nom, une durée et un prix. Les options supplémentaires se paramètrent au même endroit.",
         keywords: ['prix', 'tarif', 'service', 'prestation', 'duree', 'option', 'categorie', 'type'],
       },
       {
         id: 'personnalisation',
         question: 'Comment mettre mon logo et mes couleurs ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Personnalisation de la page client » pour le thème et la couleur d'accent, et dans [Réglages de la page](/dashboard/admin), onglet Identité, pour le logo et le message d'accueil. Le logo sert aussi d'icône dans l'onglet du navigateur de vos clients.",
+          "Le thème et la couleur d'accent sont dans [l'apparence de votre page client](/dashboard/parametres#personnalisation) ; le logo et le message d'accueil dans [l'identité de votre page](/dashboard/admin#identite). Le logo sert aussi d'icône dans l'onglet du navigateur de vos clients.",
         keywords: ['logo', 'couleur', 'theme', 'personnaliser', 'identite', 'marque'],
       },
       {
         id: 'zones',
         question: 'Comment limiter ma zone d’intervention ?',
         answer:
-          "Cela se règle à deux endroits. Votre adresse de départ et vos frais de déplacement sont dans [Paramètres](/dashboard/parametres), carte « Mon profil ». Le rayon que vous acceptez est dans [Réglages de la page](/dashboard/admin), onglet Identité, section Zone d'intervention — vous pouvez le définir à vol d'oiseau, par la route, ou par départements. Une adresse hors zone est refusée automatiquement, avant même que le client ne choisisse un créneau.",
+          "Cela se règle à deux endroits. Votre adresse de départ et vos frais de déplacement sont dans [votre profil](/dashboard/parametres#profil). Le rayon que vous acceptez est dans [votre zone d'intervention](/dashboard/admin#zone) — vous pouvez le définir à vol d'oiseau, par la route, ou par départements. Une adresse hors zone est refusée automatiquement, avant même que le client ne choisisse un créneau.",
         keywords: ['zone', 'rayon', 'perimetre', 'distance', 'deplacement', 'frais', 'km'],
       },
     ],
@@ -94,7 +112,7 @@ export const GUIDE: GuideSection[] = [
         id: 'terminer',
         question: 'Que se passe-t-il quand je marque un RDV « terminé » ?',
         answer:
-          "C'est l'action qui déclenche tout le suivi. Le chiffre d'affaires est comptabilisé dans la [Comptabilité](/dashboard/compta), la demande d'avis Google part automatiquement après le délai que vous avez choisi, et votre facture est créée — envoyée par email si le client a réservé en tant que professionnel. Si vous oubliez de marquer vos rendez-vous terminés, vous n'aurez ni chiffres justes, ni demandes d'avis, ni factures.",
+          "C'est l'action qui déclenche tout le suivi. Le chiffre d'affaires est compté dans [vos chiffres](/dashboard/compta), la demande d'avis Google part automatiquement après le délai que vous avez choisi, et votre facture est créée — envoyée par email si le client a réservé en tant que professionnel. Si vous oubliez de marquer vos rendez-vous terminés, vous n'aurez ni chiffres justes, ni demandes d'avis, ni factures.",
         keywords: ['termine', 'fini', 'avis', 'facture'],
       },
       {
@@ -108,14 +126,14 @@ export const GUIDE: GuideSection[] = [
         id: 'rappel-soir',
         question: 'À quoi sert la notification de 22 h ?',
         answer:
-          "Chaque soir à 22 h, si des rendez-vous du jour ne sont toujours pas marqués « Terminé », WashBoard vous envoie une notification sur votre téléphone pour vous éviter de les oublier — donc d'oublier les factures qui vont avec. Attention : ce rappel passe uniquement par les notifications de l'application, il n'existe ni en email ni en SMS. Si vous ne les avez jamais activées, vous ne le recevrez pas ; la carte Notifications de vos [Paramètres](/dashboard/parametres) vous le rappelle tant qu'elles sont inactives. Voir la section Application mobile pour les activer. Vos réservations, elles, continuent de vous arriver par email quoi qu'il arrive.",
+          "Chaque soir à 22 h, si des rendez-vous du jour ne sont toujours pas marqués « Terminé », WashBoard vous envoie une notification sur votre téléphone pour vous éviter de les oublier — donc d'oublier les factures qui vont avec. Attention : ce rappel passe uniquement par les notifications de l'application, il n'existe ni en email ni en SMS. Si vous ne les avez jamais activées, vous ne le recevrez pas ; [vos notifications](/dashboard/parametres#notifications) vous le rappellent tant qu'elles sont inactives. Voir la section Application mobile pour les activer. Vos réservations, elles, continuent de vous arriver par email quoi qu'il arrive.",
         keywords: ['rappel', 'notification', '22h', 'soir', 'oubli', 'relance'],
       },
       {
         id: 'conges',
         question: 'Comment bloquer des jours de congé ?',
         answer:
-          "Dans [Réglages de la page](/dashboard/admin), onglet Disponibilités, ajoutez une indisponibilité avec sa date de début et de fin. Ces journées disparaissent immédiatement des créneaux proposés : personne ne pourra réserver dessus.",
+          "Dans [vos horaires](/dashboard/admin#disponibilites), ajoutez une indisponibilité avec sa date de début et de fin. Ces journées disparaissent immédiatement des créneaux proposés : personne ne pourra réserver dessus.",
         keywords: ['conge', 'vacances', 'absence', 'indisponible', 'bloquer', 'fermer'],
       },
       {
@@ -136,28 +154,42 @@ export const GUIDE: GuideSection[] = [
         id: 'crm',
         question: 'Où retrouver l’historique d’un client ?',
         answer:
-          "Le plus simple est l'onglet [Clients](/dashboard/clients) : c'est votre fichier complet, avec une recherche par nom, téléphone, email ou même adresse déjà utilisée. Tapez les premiers chiffres d'un numéro et vous retrouvez la personne en une seconde — pratique quand un client vous appelle. Cliquez sur sa ligne pour ouvrir sa fiche : coordonnées, adresses, nombre de prestations, chiffre d'affaires, panier moyen et historique complet. Si le client n'est pas revenu depuis plus de trois mois, la fiche vous le signale.",
+          "Le plus simple est votre fichier [Clients](/dashboard/clients) : tous vos clients, avec une recherche par nom, téléphone, email ou même adresse déjà utilisée. Tapez les premiers chiffres d'un numéro et vous retrouvez la personne en une seconde — pratique quand un client vous appelle. Cliquez sur sa ligne pour ouvrir sa fiche : coordonnées, adresses, nombre de prestations, chiffre d'affaires, panier moyen et historique complet. Si le client n'est pas revenu depuis plus de trois mois, la fiche vous le signale.",
         keywords: ['client', 'historique', 'fiche', 'contact', 'profil', 'rechercher', 'annuaire', 'telephone'],
       },
       {
         id: 'clients-vs-crm',
-        question: 'Quelle différence entre l’onglet Clients et le CRM ?',
+        question: 'Quelle différence entre mon fichier clients et mes statistiques ?',
         answer:
-          "Ils ne servent pas à la même chose. L'onglet [Clients](/dashboard/clients) est votre annuaire : tous vos clients, sans limite de date, avec une vraie recherche. C'est là qu'il faut aller pour retrouver quelqu'un. Le [CRM](/dashboard/crm) est un tableau de bord de statistiques sur une période que vous choisissez — d'où viennent vos visiteurs, combien se transforment en réservation, quels appareils ils utilisent. Il n'affiche que les dernières réservations de la période et n'a pas de recherche, donc un client ancien y est souvent introuvable. Les deux ouvrent la même fiche client.",
+          "Ils ne servent pas à la même chose. Votre fichier [Clients](/dashboard/clients) est votre annuaire : tous vos clients, sans limite de date, avec une vraie recherche. C'est là qu'il faut aller pour retrouver quelqu'un. Les [statistiques de réservation](/dashboard/crm) sont un tableau de bord sur une période que vous choisissez — d'où viennent vos visiteurs, combien se transforment en réservation, quels appareils ils utilisent. Elles n'affichent que les dernières réservations de la période et n'ont pas de recherche, donc un client ancien y est souvent introuvable. Les deux ouvrent la même fiche client.",
         keywords: ['crm', 'clients', 'difference', 'statistiques', 'annuaire', 'entonnoir'],
+      },
+      {
+        id: 'pro-vs-entreprise',
+        question: 'Quelle différence entre un client « pro » et une « entreprise » ?',
+        answer:
+          "Ce ne sont pas la même chose, et elles ne se règlent pas au même endroit. « Professionnel » est une case cochée PAR LE CLIENT au moment de réserver, sur CE rendez-vous précis — c'est ce qui déclenche une vraie facture (avec SIRET et raison sociale) plutôt qu'un simple récapitulatif. Rien à faire de votre côté, c'est automatique. « Entreprise », c'est autre chose : un rattachement que VOUS faites, à la main, quand plusieurs personnes différentes travaillent pour le même compte — Karim qui réserve les lavages, Sophie qui reçoit les factures, par exemple. Une seule réservation ne peut pas deviner qu'ils sont liés : ouvrez la fiche de l'un d'eux dans [Clients](/dashboard/clients), menu « … », « Rattacher à une entreprise ». Vous retrouvez ensuite toutes vos entreprises depuis votre fichier [Clients](/dashboard/clients), avec tous leurs contacts, leurs sites (instructions d'accès comprises) et leur chiffre d'affaires cumulé. Un client pro solo — l'artisan qui coche juste la case pour sa facture — n'a besoin de rien de tout ça.",
+        keywords: ['pro', 'professionnel', 'entreprise', 'siret', 'contact', 'site', 'difference', 'rattacher'],
+      },
+      {
+        id: 'menu-fiche-client',
+        question: 'À quoi sert le menu « … » d’une fiche client ?',
+        answer:
+          "Ouvrez la fiche d'un client dans [Clients](/dashboard/clients) et tapez sur « … » en haut à droite. Six actions : « Modifier la fiche » corrige le nom, le téléphone, ajoute des notes ou les véhicules du client (ce qu'il a tapé en réservant s'affiche déjà tout seul — ce champ sert surtout pour un client né d'un devis, ou pour un détail comme la plaque). « Ajouter une tâche » pose un pense-bête court sur la fiche — « Rappeler », « Proposer l'intérieur » — coché une fois fait. « Fusionner un doublon » n'apparaît que si une autre fiche ressemble à celle-ci (même téléphone ou même nom) : elle absorbe l'autre, irréversible. « Ne plus contacter » exclut le client des relances et des demandes d'avis automatiques. « Exporter ses données » télécharge tout ce que vous savez sur lui, à lui remettre s'il le demande (droit d'accès RGPD). « Anonymiser la fiche » efface nom, email, téléphone et adresse partout — les montants et numéros de facture restent, la loi impose de les garder dix ans — action irréversible, à réserver à une vraie demande du client (droit à l'effacement RGPD).",
+        keywords: ['menu', 'options', 'modifier', 'tache', 'rappel', 'doublon', 'fusionner', 'rgpd', 'export', 'exporter', 'anonymiser', 'effacement', 'supprimer donnees', 'vehicule'],
       },
       {
         id: 'avis',
         question: 'Comment demander des avis Google automatiquement ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Avis Google ». Collez le lien vers votre fiche, choisissez le canal (email ou SMS) et le délai après le rendez-vous. La demande part ensuite toute seule dès que vous marquez un rendez-vous terminé. Le jour même fonctionne mieux : l'effet « tout propre » est encore frais.",
+          "Dans [vos avis Google](/dashboard/parametres#avis). Collez le lien vers votre fiche, choisissez le canal (email ou SMS) et le délai après le rendez-vous. La demande part ensuite toute seule dès que vous marquez un rendez-vous terminé. Le jour même fonctionne mieux : l'effet « tout propre » est encore frais.",
         keywords: ['avis', 'google', 'etoiles', 'note', 'reputation', 'sms'],
       },
       {
         id: 'relances',
         question: 'Comment relancer mes anciens clients ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Relances clients », disponible avec la formule Pro. Vous activez l'interrupteur, choisissez un délai — 90 jours par exemple — et écrivez votre message une seule fois. Écrivez {{nom}} dedans et le prénom du client s'y met automatiquement. Ensuite tout se fait seul : chaque client qui n'est pas revenu depuis ce délai reçoit votre message, par email ou par SMS selon le canal choisi dans la carte « Avis Google », et toujours à votre nom. Deux sécurités : un client qui a déjà repris rendez-vous ne reçoit rien, et personne n'est relancé deux fois. Pensez à mettre votre lien de réservation dans le message, sinon le client n'a nulle part où cliquer.",
+          "Dans [vos relances clients](/dashboard/parametres#relances), disponibles avec la formule Pro. Vous activez l'interrupteur, choisissez un délai — 90 jours par exemple — et écrivez votre message une seule fois. Écrivez {{nom}} dedans et le prénom du client s'y met automatiquement. Ensuite tout se fait seul : chaque client qui n'est pas revenu depuis ce délai reçoit votre message, par email ou par SMS selon le canal choisi pour [vos avis Google](/dashboard/parametres#avis), et toujours à votre nom. Deux sécurités : un client qui a déjà repris rendez-vous ne reçoit rien, et personne n'est relancé deux fois. Pensez à mettre votre lien de réservation dans le message, sinon le client n'a nulle part où cliquer.",
         keywords: ['relance', 'fidelisation', 'revenir', 'inactif', 'reactivation', 'pro', 'sms'],
       },
     ],
@@ -171,35 +203,35 @@ export const GUIDE: GuideSection[] = [
         id: 'facturation-infos',
         question: 'Que dois-je remplir pour pouvoir facturer ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), carte « Facturation ». Indiquez d'abord votre statut : micro-entreprise ou entreprise individuelle d'un côté, société de l'autre. Il faut ensuite votre nom légal ou votre raison sociale, votre SIRET, votre adresse professionnelle, et votre régime de TVA. Une société ajoute sa forme juridique, son capital et son immatriculation RCS ; si vous facturez la TVA, votre numéro de TVA intracommunautaire est également demandé. Tant qu'il manque quelque chose, l'onglet [Factures](/dashboard/factures) affiche un bandeau qui vous dit précisément quoi.",
+          "Dans [vos informations de facturation](/dashboard/parametres#facturation). Indiquez d'abord votre statut : micro-entreprise ou entreprise individuelle d'un côté, société de l'autre. Il faut ensuite votre nom légal ou votre raison sociale, votre SIRET, votre adresse professionnelle, et votre régime de TVA. Une société ajoute sa forme juridique, son capital et son immatriculation RCS ; si vous facturez la TVA, votre numéro de TVA intracommunautaire est également demandé. Tant qu'il manque quelque chose, [vos factures](/dashboard/factures) affichent un bandeau qui vous dit précisément quoi.",
         keywords: ['facture', 'facturation', 'siret', 'tva', 'statut', 'societe', 'micro', 'auto entrepreneur'],
       },
       {
         id: 'facture-quand',
         question: 'Quand mes factures sont-elles créées ?',
         answer:
-          "Automatiquement, au moment où vous marquez un rendez-vous « Terminé ». Vous n'avez rien à faire de plus. Si vos informations de facturation sont incomplètes, le rendez-vous passe quand même en terminé mais aucune facture n'est créée : le client reçoit un simple récapitulatif. Une fois les informations complétées, vous pourrez émettre la facture manquante depuis la fiche du rendez-vous, avec le bouton « Émettre la facture ». Toutes vos factures se retrouvent dans l'onglet [Factures](/dashboard/factures).",
+          "Automatiquement, au moment où vous marquez un rendez-vous « Terminé ». Vous n'avez rien à faire de plus. Si vos informations de facturation sont incomplètes, le rendez-vous passe quand même en terminé mais aucune facture n'est créée : le client reçoit un simple récapitulatif. Une fois les informations complétées, vous pourrez émettre la facture manquante depuis la fiche du rendez-vous, avec le bouton « Émettre la facture ». Toutes vos factures se retrouvent au même endroit : [vos factures](/dashboard/factures).",
         keywords: ['facture', 'quand', 'automatique', 'emettre', 'termine', 'recapitulatif'],
       },
       {
         id: 'facture-qui-recoit',
         question: 'Mon client reçoit-il sa facture par email ?',
         answer:
-          "Uniquement s'il a réservé en tant que professionnel. C'est le client qui choisit « Particulier » ou « Professionnel » au début de la réservation — vous n'avez rien à cocher. S'il choisit professionnel, il doit donner sa raison sociale et son SIRET, et sa facture lui est envoyée par email dès que vous marquez le rendez-vous terminé. Un particulier ne reçoit pas d'envoi séparé : sa facture existe bien, vous la retrouvez dans votre onglet Factures, et lui y accède depuis son lien de confirmation.",
+          "Uniquement s'il a réservé en tant que professionnel. C'est le client qui choisit « Particulier » ou « Professionnel » au début de la réservation — vous n'avez rien à cocher. S'il choisit professionnel, il doit donner sa raison sociale et son SIRET, et sa facture lui est envoyée par email dès que vous marquez le rendez-vous terminé. Un particulier ne reçoit pas d'envoi séparé : sa facture existe bien, vous la retrouvez dans [vos factures](/dashboard/factures), et lui y accède depuis son lien de confirmation.",
         keywords: ['facture', 'email', 'client', 'professionnel', 'particulier', 'envoi', 'pro'],
       },
       {
         id: 'facture-numero',
         question: 'Comment fonctionne la numérotation des factures ?',
         answer:
-          "WashBoard s'en charge : vos factures sont numérotées à la suite, au format F-00001, et le numéro est attribué au moment de l'émission. Si vous facturiez déjà avant d'arriver, vous pouvez reprendre votre propre numérotation : dans [Paramètres](/dashboard/parametres), carte « Facturation », renseignez le numéro de la prochaine facture. Attention, ce numéro ne peut jamais reculer — c'est une obligation comptable, et WashBoard refusera une valeur inférieure à une facture déjà émise. Réglez-le donc avant votre première facture.",
+          "WashBoard s'en charge : vos factures sont numérotées à la suite, au format F-00001, et le numéro est attribué au moment de l'émission. Si vous facturiez déjà avant d'arriver, vous pouvez reprendre votre propre numérotation : dans [vos informations de facturation](/dashboard/parametres#facturation), renseignez le numéro de la prochaine facture. Attention, ce numéro ne peut jamais reculer — c'est une obligation comptable, et WashBoard refusera une valeur inférieure à une facture déjà émise. Réglez-le donc avant votre première facture.",
         keywords: ['numero', 'numerotation', 'suite', 'continu', 'depart', 'reprendre'],
       },
       {
         id: 'factures-import',
         question: 'Puis-je récupérer mes anciennes factures ?',
         answer:
-          "Oui, dans l'onglet [Factures](/dashboard/factures). Vous pouvez les déposer une par une, en PDF, JPG ou PNG, ou tout envoyer d'un coup dans un fichier ZIP — jusqu'à 200 factures. WashBoard tente de lire la date de chaque facture, mais vérifiez-la : une facture sans date ne peut pas être enregistrée. Le montant et le numéro d'origine sont facultatifs, et une facture importée garde son numéro d'origine, elle ne prend pas de numéro WashBoard. Un point important : cet import est réservé à vos factures de vente, celles que vous avez émises. Les factures d'achat auront leur propre espace, encore en développement.",
+          "Oui, depuis [vos factures](/dashboard/factures). Vous pouvez les déposer une par une, en PDF, JPG ou PNG, ou tout envoyer d'un coup dans un fichier ZIP — jusqu'à 200 factures. WashBoard tente de lire la date de chaque facture, mais vérifiez-la : une facture sans date ne peut pas être enregistrée. Le montant et le numéro d'origine sont facultatifs, et une facture importée garde son numéro d'origine, elle ne prend pas de numéro WashBoard. Un point important : cet import est réservé à vos factures de vente, celles que vous avez émises. Les factures d'achat auront leur propre espace, encore en développement.",
         keywords: ['import', 'importer', 'anciennes', 'zip', 'reprise', 'pdf', 'achat', 'vente'],
       },
     ],
@@ -213,7 +245,7 @@ export const GUIDE: GuideSection[] = [
         id: 'compta',
         question: 'Où voir mon chiffre d’affaires ?',
         answer:
-          "Dans la [Comptabilité](/dashboard/compta) : recettes, dépenses et résultat, mois par mois. Seuls les rendez-vous marqués « terminé » sont comptés, d'où l'importance de tenir votre agenda à jour.",
+          "Dans [vos chiffres](/dashboard/compta) : recettes, dépenses et résultat, mois par mois. Seuls les rendez-vous marqués « terminé » sont comptés, d'où l'importance de tenir votre agenda à jour.",
         keywords: ['ca', 'chiffre', 'revenu', 'compta', 'depense', 'benefice', 'resultat'],
       },
       {
@@ -227,7 +259,7 @@ export const GUIDE: GuideSection[] = [
         id: 'compte',
         question: 'Comment changer mon mot de passe ou mon email ?',
         answer:
-          "Dans [Paramètres](/dashboard/parametres), cartes « Adresse email » et « Mot de passe ». C'est également là que vous pouvez mettre votre compte en pause ou le supprimer.",
+          "Votre adresse email et votre mot de passe se changent dans [votre compte](/dashboard/parametres#compte). La mise en pause et la suppression définitive, elles, sont tout en bas de [tous les réglages](/dashboard/parametres/tout).",
         keywords: ['mot de passe', 'email', 'compte', 'securite', 'supprimer', 'pause'],
       },
     ],
@@ -255,7 +287,7 @@ export const GUIDE: GuideSection[] = [
         id: 'app-notifications',
         question: 'Comment activer les notifications ?',
         answer:
-          "Une fois l'application ajoutée à l'écran d'accueil, ouvrez-la depuis son icône — pas depuis le navigateur — puis allez dans [Paramètres](/dashboard/parametres) et activez les notifications. Votre téléphone demandera l'autorisation : acceptez-la. Un essai vous confirme que tout fonctionne. Sur iPhone, l'ordre compte : Apple interdit les notifications tant que l'application n'a pas été ajoutée à l'écran d'accueil, donc installez d'abord, activez ensuite.",
+          "Une fois l'application ajoutée à l'écran d'accueil, ouvrez-la depuis son icône — pas depuis le navigateur — puis ouvrez [vos notifications](/dashboard/parametres#notifications) et activez-les. Votre téléphone demandera l'autorisation : acceptez-la. Un essai vous confirme que tout fonctionne. Sur iPhone, l'ordre compte : Apple interdit les notifications tant que l'application n'a pas été ajoutée à l'écran d'accueil, donc installez d'abord, activez ensuite.",
         keywords: ['notification', 'activer', 'autorisation', 'permission', 'alerte', 'push'],
       },
       {

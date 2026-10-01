@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
+import { lienPageMetier } from '@/lib/metiers'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('lavage-auto-sans-eau')!
@@ -216,7 +217,10 @@ export default function Page() {
 
         <Faq items={faq} />
 
-        <Cta title="Réservez plus de parkings d'entreprise">
+        <Cta
+          title="Réservez plus de parkings d'entreprise"
+          secondary={lienPageMetier(article.theme)}
+        >
           Avec WashBoard, vos clients pros réservent sur un lien à votre nom, indiquent le parking
           et le nombre de véhicules, et vos rendez-vous sont groupés par secteur. Vous arrivez avec
           vos microfibres, le reste est déjà organisé.

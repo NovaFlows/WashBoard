@@ -200,8 +200,21 @@ export const PLAN_HISTORIQUE: Plan = 'pro'
  *    - la désactiver entièrement        → la placer dans le futur.
  *
  *  Pour l'ESSAYER sans attendre 30 jours : créer un compte (il sera forcément
- *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé. */
-export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-09-24T00:00:00.000Z'
+ *  postérieur à cette date), puis reculer son `trial_ends_at` dans le passé.
+ *
+ *  Reculée du 24/09 au 20/08 le 2026-09-29, à la demande explicite
+ *  d'Alexandre : « mes clients en essai gratuit, fin de période d'essai + pas
+ *  de paiement = plan gratuit, automatique ». Vérifié avant de reculer la
+ *  date : sur les 9 comptes alors en essai, 7 étaient antérieurs au 24/09 et
+ *  seraient tombés sur l'ancien mécanisme (suspension après 30 jours de
+ *  grâce) au lieu de la bascule automatique vers Découverte. Le plus ancien
+ *  de ces sept, BellAuto89, a été créé le 20/08 — la date couvre exactement
+ *  ce groupe, sans remonter plus loin que nécessaire. Aucun compte payant
+ *  n'est concerné par ce recul : le seul compte historique de la période
+ *  (ADMIN RYAN, grandfathered) reste hors de cette règle dans tous les cas
+ *  (voir `essaiTermineSansFormule`). Kookii Clean (17/06) n'est pas couvert
+ *  et garde l'ancien comportement — décision distincte, pas encore tranchée. */
+export const RETOUR_GRATUIT_POUR_COMPTES_CREES_DES = '2026-08-20T00:00:00.000Z'
 
 /** Date à partir de laquelle le plafond de réservations masque quelque chose.
  *
@@ -245,7 +258,26 @@ export function debutSoumisAuPlafond(debut: Date): Date {
  *  est dans le code, pas dans une variable d'environnement : c'est une règle
  *  qui décide qui est rétrogradé, elle doit se relire dans l'historique Git. */
 export const COMPTES_TEST_RETOUR_GRATUIT: string[] = [
-  // Exemple : 'mon-compte-de-test'
+  // ysclean (créé le 20/06, offre Pro active, PAS client historique) : seul
+  // compte réel, payant et non `grandfathered`, créé avant le 20/08 — donc le
+  // seul que le recul de date ci-dessus ne couvrait pas. Ajouté le 2026-09-29
+  // à la demande explicite d'Alexandre : « même règle que les nouveaux » pour
+  // la question posée sur ce cas précis — si son paiement s'arrête un jour,
+  // il a droit aux mêmes 30 jours de grâce puis à la bascule vers Découverte,
+  // jamais à la coupure de sa page de réservation.
+  'ysclean-066d',
+]
+
+/** Fiches laveur de l'équipe ou de test, à écarter de toute diffusion
+ *  commerciale (annonce des offres, de l'application...) — ce sont des
+ *  comptes actifs comme les autres, rien dans la base ne les distingue d'un
+ *  vrai client. Liste centralisée ici plutôt que recopiée dans chaque route
+ *  de diffusion : un nouveau compte de test oublié d'un seul endroit a déjà
+ *  fait rater l'exclusion une fois (« test ryan », 2026-10-01). */
+export const COMPTES_INTERNES_EXCLUS_DIFFUSION: string[] = [
+  'kookiclean-1f09',  // ADMIN RYAN
+  'test-config-15d2', // Test Config (le compte de test de l'équipe)
+  'test-ryan-6ca5',   // test ryan
 ]
 
 /** Ce qu'il faut savoir d'un compte pour trancher la fin d'essai. Tous les
@@ -316,7 +348,26 @@ export function suitRetourGratuit(
   return cree.getTime() >= new Date(RETOUR_GRATUIT_POUR_COMPTES_CREES_DES).getTime()
 }
 
-/** L'essai (ou la période payée) est terminé et aucune formule n'est réglée. */
+/** Jours de grâce accordés à un abonnement PAYANT qui s'arrête, avant la
+ *  bascule vers l'offre gratuite. Un essai qui se termine n'en a aucun — il
+ *  n'y a rien à retarder sur quelque chose qui n'a jamais été payé, et
+ *  retarder la bascule gratuite d'un essai reculerait sans raison le moment
+ *  où le laveur peut enfin réserver de nouveau sans y avoir été invité. */
+const JOURS_GRACE_ABONNEMENT_PAYANT = 30
+
+/** L'essai (ou la période payée) est terminé et aucune formule n'est réglée.
+ *
+ *  Deux échéances, deux traitements — vérifié le 2026-09-29 après une
+ *  question directe d'Alexandre, le code confondait les deux :
+ *
+ *  - un ESSAI qui se termine (`trial_ends_at` seul, jamais de
+ *    `subscription_ends_at`) : bascule IMMÉDIATE vers Découverte, sans délai.
+ *  - un ABONNEMENT PAYANT qui s'arrête (`subscription_ends_at` renseigné —
+ *    cette colonne n'est écrite QUE par le webhook Stripe, voir
+ *    stripe/webhook/route.ts : sa seule présence prouve qu'un abonnement réel
+ *    a existé) : délai de grâce de 30 jours avant la bascule, pour un client
+ *    qui payait déjà et dont la carte peut simplement avoir besoin d'être
+ *    mise à jour. */
 export function essaiTermineSansFormule(
   w: AbonnementInfo | null | undefined,
   now: Date = new Date(),
@@ -325,7 +376,16 @@ export function essaiTermineSansFormule(
   // `past_due` = prélèvement en échec, relance Stripe en cours : l'accès est
   // conservé le temps de la relance, on ne rétrograde pas quelqu'un qui paie.
   if (w?.subscription_status === 'active' || w?.subscription_status === 'past_due') return false
-  const fin = w?.subscription_ends_at ?? w?.trial_ends_at
+
+  if (w?.subscription_ends_at) {
+    const echeance = new Date(w.subscription_ends_at)
+    if (Number.isNaN(echeance.getTime())) return false
+    const finGrace = new Date(echeance)
+    finGrace.setDate(finGrace.getDate() + JOURS_GRACE_ABONNEMENT_PAYANT)
+    return now.getTime() > finGrace.getTime()
+  }
+
+  const fin = w?.trial_ends_at
   if (!fin) return false
   const echeance = new Date(fin)
   if (Number.isNaN(echeance.getTime())) return false

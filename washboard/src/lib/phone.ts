@@ -29,6 +29,20 @@ export function isValidPhone(brut: string | null | undefined): boolean {
   return normalizePhone(brut) !== null
 }
 
+/** Un numéro sous la forme attendue par une URL `wa.me` (WhatsApp) : chiffres
+ *  seuls, préfixés `33` à la place d'un `0` initial français. Extraite de
+ *  `contact.ts` (`openWhatsapp`) le 2026-09-24 pour être testée et réutilisée
+ *  ailleurs (agenda v2, « Proposer ce créneau ») — comportement inchangé au
+ *  chiffre près : contrairement à `normalizePhone`, elle ne valide rien et ne
+ *  renvoie jamais `null`. Un numéro imparfait déjà en base (fixe, étranger,
+ *  saisie libre) continue donc de produire un lien WhatsApp, comme avant
+ *  cette extraction — l'appelant doit vérifier que le téléphone existe avant
+ *  d'appeler cette fonction, elle ne le fait pas non plus. */
+export function whatsappDigits(brut: string): string {
+  const chiffres = brut.replace(/\D/g, '')
+  return chiffres.startsWith('0') ? '33' + chiffres.slice(1) : chiffres
+}
+
 /** Est-ce un mobile (06 ou 07) ? Utile quand un SMS doit pouvoir arriver —
  *  un fixe accepterait la saisie mais ne recevrait jamais le message. */
 export function isMobilePhone(brut: string | null | undefined): boolean {

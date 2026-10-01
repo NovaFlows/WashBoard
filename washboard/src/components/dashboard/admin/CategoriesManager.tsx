@@ -10,7 +10,7 @@ const EMPTY: Draft = { name: '', types: [] }
 // `keys` (optionnel) = IDs fixes ; pour « Voiture » on réutilise les clés
 // historiques afin que les images de véhicules s'affichent côté client.
 // Sinon, les IDs sont générés à l'application (navigateur uniquement).
-const PRESETS: { name: string; types: { name: string; id?: string }[] }[] = [
+export const PRESETS: { name: string; types: { name: string; id?: string }[] }[] = [
   {
     name: 'Voiture',
     types: [

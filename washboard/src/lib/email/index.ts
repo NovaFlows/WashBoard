@@ -4,7 +4,7 @@ import { escapeHtml } from '@/lib/escapeHtml'
 import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
-import { PLAN_PRICES, BOOKING_QUOTA, formatEuros } from '@/lib/plan'
+import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -444,6 +444,79 @@ export async function sendFacture(params: SendFactureParams) {
       <a href="${escapeHtml(url)}"
          style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
         Télécharger la facture (PDF)
+      </a>
+    </div>
+    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email 6 : devis ou facture écrits à la main ───────────────────────────
+//
+// Envoyé à la demande du laveur, depuis l'écran « Devis et factures ». Le PDF part en PIÈCE
+// JOINTE (demande d'Alexandre, 2026-09-27 : un client veut recevoir le document, pas un lien
+// à aller chercher), ET le lien reste dans le message : la pièce jointe se perd dans un fil
+// de discussion, le lien sert toujours la dernière version.
+type SendDocumentParams = {
+  to: string
+  clientName: string
+  washerName: string
+  /** Réponses du client (acceptation d'un devis, question) : elles doivent arriver au laveur,
+   *  pas dans le vide de `noreply@`. */
+  washerEmail?: string | null
+  genre: 'devis' | 'facture'
+  numero: string
+  documentId: string
+  montantTtc: number
+  /** Devis : jusqu'à quand le prix tient, déjà mis en forme (« 27 octobre 2026 »). */
+  valableJusquau?: string | null
+  /** Le PDF lui-même, joint au message. */
+  piece?: { nom: string; contenu: Buffer } | null
+  appUrl?: string
+}
+
+export async function sendDocument(params: SendDocumentParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const appUrl = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const url = `${appUrl}/api/documents/${params.documentId}/pdf`
+  const devis = params.genre === 'devis'
+  const titre = devis ? 'Devis' : 'Facture'
+  const montant = `${params.montantTtc.toFixed(2).replace('.', ',')} €`
+
+  return resend.emails.send({
+    from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
+    to: params.to,
+    ...(params.washerEmail ? { replyTo: params.washerEmail } : {}),
+    subject: `${titre} ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
+    ...(params.piece ? { attachments: [{ filename: params.piece.nom, content: params.piece.contenu }] } : {}),
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651E8;padding:28px 40px;">
+      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">${titre} ${escapeHtml(params.numero)}</p>
+      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        ${devis
+          ? `Voici le devis demandé à <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`
+          : `Merci pour votre confiance. Voici la facture de <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`}
+      </p>
+      ${devis && params.valableJusquau
+        ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.6;background:#f8fafc;border-left:3px solid #1651E8;padding:10px 14px;">Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.</p>`
+        : ''}
+      <p style="margin:0 0 16px;font-size:13px;color:#475569;">Le PDF est joint à ce message.</p>
+      <a href="${escapeHtml(url)}"
+         style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
+        Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne
       </a>
     </div>
     <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
@@ -954,6 +1027,181 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
         </a>
       </div>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : confirmation de l'adresse à l'inscription ─────────────────────
+// Le nom de l'entreprise est saisi par l'inscrit lui-même : il est échappé,
+// sinon n'importe qui pourrait glisser un lien de sa composition dans un email
+// parti de noreply@washboard.fr vers l'adresse qu'il a tapée.
+export async function sendEmailConfirmation({ to, washerName, confirmUrl }: {
+  to: string; washerName: string | null; confirmUrl: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const salutation = washerName ? `Bonjour <strong>${escapeHtml(washerName)}</strong>,` : 'Bonjour,'
+  const lien = escapeHtml(confirmUrl)
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: 'Confirme ton adresse email — WashBoard',
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#2563eb;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Confirme ton adresse email</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Dernière étape avant d&apos;accéder à ton tableau de bord</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">${salutation}</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+        Ton compte WashBoard est créé. Pour l&apos;activer, confirme que cette adresse est bien la tienne.
+      </p>
+      <div style="text-align:center;">
+        <a href="${lien}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Confirmer mon email
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;line-height:1.6;word-break:break-all;">
+        Le bouton ne fonctionne pas ? Copie ce lien dans ton navigateur :<br>${lien}
+      </p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
+        Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : annonce des 4 offres 2026 (diffusion unique à tous les laveurs) ─
+//
+// Le message ne doit rien promettre de faux à personne : un client historique
+// (`grandfathered`) garde son accès complet quoi qu'il arrive, et un compte
+// migré automatiquement a atterri au même tarif ou moins cher (voir
+// 004_offres_2026.sql). Le texte reste donc volontairement rassurant et
+// n'affirme jamais « votre offre a changé » — pour la plupart des lecteurs,
+// rien n'a changé, il y a juste plus de choix qu'avant.
+export async function sendNouvellesOffres({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `Nouveau chez WashBoard : 4 offres, dont une gratuite`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651e8;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Quatre offres, une seule idée 🚗</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Payer pour ce qu&apos;on utilise vraiment</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        WashBoard passe de 2 à 4 offres. Rien ne change pour vous aujourd&apos;hui :
+        votre accès actuel reste exactement le même, au même tarif. Ce qui change,
+        c&apos;est le choix disponible pour la suite.
+      </p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.decouverte};margin-right:8px;"></span>
+            <strong>Découverte</strong> — gratuite
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.decouverte} résa/mois</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.starter};margin-right:8px;"></span>
+            <strong>Starter</strong> — ${formatEuros(PLAN_PRICES.starter)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.starter} résa/mois, page perso, CRM</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.pro};margin-right:8px;"></span>
+            <strong>Pro</strong> — ${formatEuros(PLAN_PRICES.pro)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">résa illimitées, compta, avis Google</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.business};margin-right:8px;"></span>
+            <strong>Business</strong> — ${formatEuros(PLAN_PRICES.business)}€/mois
+          </td>
+          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">3 laveurs inclus, planning collectif</td>
+        </tr>
+      </table>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Voir le détail des offres →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Aucune action requise · Vous restez sur votre offre actuelle si vous ne changez rien</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+// ── Email : annonce de la nouvelle application (diffusion unique) ──────────
+export async function sendAnnoncePwa({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `WashBoard évolue — venez essayer la nouvelle version`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651e8;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">WashBoard évolue 🚀</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Une nouvelle version, pensée pour le téléphone</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Venez essayer la nouvelle version de WashBoard : une application que vous installez
+        sur votre téléphone, plus rapide et pensée pour une journée sur la route — agenda,
+        clients et chiffres repensés pour s&apos;utiliser d&apos;une main, entre deux rendez-vous.
+      </p>
+      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#1d4ed8;font-weight:600;">
+          Vos données sont les mêmes, rien à reconfigurer — c&apos;est le même compte, juste une
+          autre façon d&apos;y accéder.
+        </p>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/guide#guide-application" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Installer l&apos;application →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Le site reste disponible normalement si vous préférez</p>
       <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
     </div>
   </div>

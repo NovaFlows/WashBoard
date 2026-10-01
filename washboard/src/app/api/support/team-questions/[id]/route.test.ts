@@ -59,7 +59,7 @@ async function patch(body: Record<string, unknown>) {
 }
 
 beforeEach(() => {
-  vi.stubEnv('SUPPORT_ADMIN_EMAILS', 'equipe@washboard.fr')
+  vi.stubEnv('SUPPORT_ADMIN_USER_IDS', 'u-equipe')
   updates.length = 0
   adminOuvert = false
   plan = {

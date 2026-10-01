@@ -35,6 +35,9 @@ export type SupportQuestionRow = {
   // les curseurs de lecture ci-dessus — une sélection qui ne les demande pas
   // ne doit pas casser le typage.
   hidden_for_team_at?: string | null
+  // Masquage côté laveur (« supprimer » une conversation de sa liste, PWA) : même
+  // règle, voir `isThreadHiddenForWasher`.
+  hidden_for_washer_at?: string | null
   last_message_at?: string
   support_messages?: SupportMessageRow[] | null
 }
@@ -106,6 +109,17 @@ export function isThreadHiddenForTeam(
   const m = new Date(lastMessageAt).getTime()
   if (!Number.isFinite(h) || !Number.isFinite(m)) return false
   return h > m
+}
+
+/** Un fil que le LAVEUR a supprimé de sa liste (glisser vers la gauche, PWA) : masqué
+ *  pour lui seul, l'équipe le garde. Même règle que côté équipe : un message
+ *  postérieur au masquage — la réponse de l'équipe, typiquement — le fait
+ *  réapparaître, pour qu'une réponse ne se perde jamais. */
+export function isThreadHiddenForWasher(
+  hiddenAt: string | null | undefined,
+  lastMessageAt: string,
+): boolean {
+  return isThreadHiddenForTeam(hiddenAt, lastMessageAt)
 }
 
 /** Vue laveur d'un fil : `nonLue` reflète son propre indicateur de lecture,

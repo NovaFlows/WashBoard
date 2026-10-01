@@ -88,6 +88,16 @@ export const ARTICLES: Article[] = [
     readingMinutes: 9,
   },
   {
+    slug: 'assurance-nettoyage-haute-pression',
+    title: 'Quelle assurance pour le nettoyage haute pression : terrasses, façades, toitures',
+    description:
+      'RC pro et biens confiés élargis au bâtiment, autorisation de voirie pour l’échafaudage, garantie décennale, prévoyance en l’absence de régime accident du travail pour les indépendants : ce qu’il faut vérifier avant un chantier en hauteur.',
+    theme: 'exterieur',
+    publishedAt: '2026-09-27',
+    updatedAt: '2026-09-27',
+    readingMinutes: 8,
+  },
+  {
     slug: 'lavage-auto-sans-eau',
     theme: 'auto',
     title: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi',

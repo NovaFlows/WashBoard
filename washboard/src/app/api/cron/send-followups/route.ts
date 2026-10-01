@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendFollowupEmail } from '@/lib/email'
-import { sendSms } from '@/lib/sms'
+import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
 import { graceEnded, hasFeature } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
+import { notifierEquipe } from '@/lib/push'
 import { repartirParClient, decisionPlusRecents } from '@/lib/relances'
+import { cleClient } from '@/lib/clientProfile'
 
-// `followup_sent_at` = relance TRAITÉE : envoyée, ou devenue inutile (voir
-// lib/relances.ts). Sans cette marque sur les rendez-vous écartés, ils restaient
+// `followup_sent_at` = relance TRAITÉE : envoyée, devenue inutile (voir
+// lib/relances.ts), OU le client a demandé qu'on le laisse tranquille (table `clients`,
+// réglage du 2026-09-28). Sans cette marque sur les rendez-vous écartés, ils restaient
 // candidats pour toujours et encombraient le lot de 500.
+//
+// Écart connu, assumé : `messagesAutomatiques.ts` (écran « Messages automatiques ») ne
+// connaît pas ce réglage et peut donc afficher, pendant sa fenêtre de 7 jours, un client
+// opposé comme « relance envoyée » — la marque est bien la même dans les deux cas, rien ne
+// les distingue sans lire `clients.ne_plus_contacter`. Aucun message n'est réellement
+// envoyé : seul le libellé de l'écran serait trompeur, pas l'envoi.
 const LOT_CLOTURE = 100
 
 export async function GET(request: NextRequest) {
@@ -43,6 +52,7 @@ export async function GET(request: NextRequest) {
   // totalement inaperçue.
   let failed = 0
   let clos = 0
+  let premiereCause: string | null = null
 
   for (const washer of washers ?? []) {
     // Les relances appartiennent à l'offre Pro. Ce contrôle manquait : le job
@@ -81,10 +91,28 @@ export async function GET(request: NextRequest) {
     // Un seul message par client ; ses rendez-vous plus anciens sont clos.
     const { porteurs, aClore } = repartirParClient(candidates)
 
+    // Qui a demandé qu'on le laisse tranquille (table `clients`, réglage du 2026-09-28) : un
+    // seul aller-retour pour tout le laveur, pas un par candidat.
+    const { data: refus, error: errRefus } = await admin
+      .from('clients')
+      .select('cle')
+      .eq('washer_id', washer.id)
+      .eq('ne_plus_contacter', true)
+    if (errRefus) logger.error('cron.send-followups.refus.read_failed', { washerId: washer.id }, errRefus)
+    const clesRefusees = new Set((refus ?? []).map(r => r.cle))
+
     const channel = washer.review_channel ?? 'email'
 
     for (const booking of porteurs) {
       const clientEmail = booking.client_email
+
+      // Une relance TRAITÉE, comme n'importe quel rendez-vous devenu inutile — sinon ce
+      // candidat resterait éligible pour toujours et reviendrait charger le lot chaque jour.
+      if (clesRefusees.has(cleClient(booking.client_email, booking.client_phone))) {
+        aClore.push(booking.id)
+        continue
+      }
+
       // Les plus proches d'abord : s'il existe un rendez-vous passé, il est dans
       // les premiers lus.
       const { data: plusRecents, error: errRecents } = await admin
@@ -112,7 +140,9 @@ export async function GET(request: NextRequest) {
 
       try {
         if (channel === 'sms' && booking.client_phone) {
-          const sender = (washer.sms_sender ?? washer.name).slice(0, 11)
+          // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
+          // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
+          const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
           await sendSms({ to: booking.client_phone, sender, content: message })
           smsSent++
         } else {
@@ -131,6 +161,9 @@ export async function GET(request: NextRequest) {
           .eq('id', booking.id)
       } catch (e) {
         failed++
+        // La cause telle quelle, pour la notification : « not enough credit »
+        // dit quoi faire, « 3 échecs » envoie fouiller les journaux.
+        premiereCause ??= e instanceof Error ? e.message : String(e)
         logger.error('cron.followups.send_failed', { bookingId: booking.id }, e)
       }
     }
@@ -148,6 +181,23 @@ export async function GET(request: NextRequest) {
       if (errClore) logger.error('cron.send-followups.close_failed', { washerId: washer.id, nombre: paquet.length }, errClore)
       else clos += paquet.length
     }
+  }
+
+  // Ici, un envoi en échec restait déjà candidat pour la prochaine exécution
+  // (`followup_sent_at` n'est posé qu'après un envoi réussi) — mais sans que
+  // personne ne l'apprenne. `tag` fixe : les notifications se remplacent au
+  // lieu de s'empiler tant que la panne dure.
+  if (failed > 0) {
+    await notifierEquipe({
+      title: '⚠️ Relances en échec',
+      body: [
+        `${failed} relance${failed > 1 ? 's' : ''} non envoyée${failed > 1 ? 's' : ''}`,
+        premiereCause ? `Cause : ${premiereCause.slice(0, 160)}` : null,
+        'Nouvelle tentative à la prochaine exécution.',
+      ].filter(Boolean).join('\n'),
+      url: '/dashboard',
+      tag: 'envois-relance-echec',
+    })
   }
 
   return NextResponse.json({ ok: failed === 0, emailSent, smsSent, failed, clos, test: test.enabled })

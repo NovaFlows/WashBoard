@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import AbonnementPanel from '@/components/dashboard/AbonnementPanel'
+import Abonnement, { EnteteAbonnement } from '@/components/dashboard/Abonnement'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutPeriodeQuota, debutSoumisAuPlafond, libelleRemiseAZero } from '@/lib/plan'
 import { logger } from '@/lib/logger'
@@ -47,15 +47,13 @@ export default async function AbonnementPage() {
       trialEndsAt={washer.trial_ends_at}
       subscriptionStatus={washer.subscription_status}
       plan={washer.plan}
-      grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug}
+      grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
+      betaRefonte={washer.beta_refonte}
     >
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Abonnement</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gérez votre abonnement WashBoard</p>
-      </div>
-      <AbonnementPanel
+      <EnteteAbonnement />
+      <Abonnement
         subscriptionStatus={washer.subscription_status ?? 'trial'}
         trialEndsAt={washer.trial_ends_at ?? null}
         subscriptionEndsAt={washer.subscription_ends_at ?? null}

@@ -6,6 +6,11 @@ import { FUSEAU } from '@/lib/dateUtils'
 // l'émission (`bookings.facture_contenu`) : elle reste identique même si le
 // laveur change ensuite d'adresse, de nom ou de prix.
 //
+// Sert aussi aux documents écrits à la main (`documents.contenu`, voir
+// `lib/documents.ts`), facture comme DEVIS : même mise en page, même contenu,
+// seuls changent le titre, la validité et les mentions du bas. Deux gabarits
+// auraient divergé au premier changement de mentions obligatoires.
+//
 // Mise en page volontairement classique — celle d'une facture d'artisan :
 // papier blanc, une seule couleur (celle de la marque du laveur, sur un filet),
 // pas de bandeaux ni de titres en capitales espacées.
@@ -40,6 +45,12 @@ const s = StyleSheet.create({
   totRang:     { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2.5 },
   totFinal:    { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: ENCRE, paddingTop: 6, marginTop: 4 },
   totFinalTxt: { fontFamily: 'Helvetica-Bold', fontSize: 11.5 },
+  note:        { marginTop: 26, fontSize: 9, lineHeight: 1.5 },
+  accord:      { marginTop: 26, borderWidth: 0.5, borderColor: FILET, borderRadius: 3, padding: 12 },
+  accordTitre: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
+  accordAide:  { fontSize: 8, color: GRIS, marginBottom: 26 },
+  signature:   { flexDirection: 'row', justifyContent: 'space-between' },
+  signCase:    { width: 200, borderTopWidth: 0.5, borderTopColor: FILET, paddingTop: 4, fontSize: 7.5, color: GRIS },
   mentions:    { marginTop: 34, fontSize: 8, color: GRIS, lineHeight: 1.55 },
   pied:        { position: 'absolute', bottom: 30, left: 48, right: 48, fontSize: 7.5, color: '#94a3b8', textAlign: 'center', borderTopWidth: 0.5, borderTopColor: FILET, paddingTop: 8 },
 })
@@ -54,10 +65,19 @@ const jour = (iso: string) =>
 const heure = (iso: string) =>
   new Date(iso).toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
 
+// Un jour seul (`YYYY-MM-DD`) : midi UTC, sinon la conversion vers Paris peut
+// reculer d'une journée et un devis paraîtrait expirer la veille.
+const jourSeul = (date: string) => jour(`${date}T12:00:00.000Z`)
+
+// La date d'une prestation planifiée porte une heure ; celle d'un devis, non.
+const quandPrestation = (iso: string) =>
+  iso.length <= 10 ? `Le ${jourSeul(iso)}` : `Le ${jour(iso)} à ${heure(iso)}`
+
 type Props = { numero: string; emiseLe: string; contenu: FactureContenu; logo?: Buffer | null }
 
 export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
   const { vendeur, client, prestation, lignes, remiseTtc, totaux } = contenu
+  const devis = contenu.genre === 'devis'
   const franchise = vendeur.regimeTva === 'franchise'
   const ht = (ttc: number) => prixHt(ttc, vendeur.regimeTva, vendeur.tauxTva)
   const taux = String(vendeur.tauxTva).replace('.', ',')
@@ -68,7 +88,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
     : ''
 
   return (
-    <Document title={`Facture ${numero}`} author={vendeur.nomLegal}>
+    <Document title={`${devis ? 'Devis' : 'Facture'} ${numero}`} author={vendeur.nomLegal}>
       <Page size="A4" style={s.page}>
 
         {/* Laveur à gauche, numéro et date à droite */}
@@ -87,9 +107,12 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             </View>
           </View>
           <View>
-            <Text style={s.titre}>Facture</Text>
+            <Text style={s.titre}>{devis ? 'Devis' : 'Facture'}</Text>
             <Text style={s.meta}>N° <Text style={s.metaFort}>{numero}</Text></Text>
-            <Text style={s.meta}>Émise le {jour(emiseLe)}</Text>
+            <Text style={s.meta}>{devis ? 'Établi' : 'Émise'} le {jour(emiseLe)}</Text>
+            {devis && contenu.valableJusquau ? (
+              <Text style={s.meta}>Valable jusqu&apos;au <Text style={s.metaFort}>{jourSeul(contenu.valableJusquau)}</Text></Text>
+            ) : null}
           </View>
         </View>
 
@@ -103,13 +126,16 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             <Text style={client.entreprise ? {} : s.fort}>{client.nom}</Text>
             <Text>{client.adresseFacturation}</Text>
             {client.siren ? <Text>SIREN {client.siren}</Text> : null}
-            <Text style={{ color: GRIS }}>{client.email}</Text>
+            {client.email ? <Text style={{ color: GRIS }}>{client.email}</Text> : null}
+            {client.telephone ? <Text style={{ color: GRIS }}>{client.telephone}</Text> : null}
           </View>
           <View style={s.bloc}>
             <Text style={s.etiquette}>Prestation</Text>
             <Text>{prestation.nature}</Text>
-            <Text>Le {jour(prestation.date)} à {heure(prestation.date)}</Text>
-            <Text>{prestation.lieu}</Text>
+            {/* Un devis chiffre un travail qui n'a pas encore de date : le dire vaut mieux
+                que d'imprimer la date du jour, que le client lirait comme un rendez-vous. */}
+            <Text>{prestation.date ? quandPrestation(prestation.date) : 'Date à convenir'}</Text>
+            {prestation.lieu ? <Text>{prestation.lieu}</Text> : null}
           </View>
         </View>
 
@@ -130,7 +156,10 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
         ))}
         {remiseTtc > 0 ? (
           <View style={s.rang}>
-            <Text style={s.cDesig}>Remise créneau optimisé</Text>
+            {/* Sur une facture de réservation, la remise ne peut venir que du créneau
+                optimisé, et le client l'a vue nommée ainsi en réservant. Sur un document
+                écrit à la main, c'est une remise, point. */}
+            <Text style={s.cDesig}>{contenu.genre ? 'Remise' : 'Remise créneau optimisé'}</Text>
             <Text style={s.cQte}>1</Text>
             <Text style={s.cPu}>{euros(-ht(remiseTtc))}</Text>
             <Text style={s.cTot}>{euros(-ht(remiseTtc))}</Text>
@@ -151,11 +180,36 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
           </View>
         </View>
 
+        {/* Mot du laveur : conditions, accès au chantier, délai d'intervention */}
+        {contenu.note ? <Text style={s.note}>{contenu.note}</Text> : null}
+
+        {/* Le devis ne vaut rien tant que le client ne l'a pas signé : la case est
+            l'objet même du document, elle ne peut pas être une mention en petit. */}
+        {devis ? (
+          <View style={s.accord} wrap={false}>
+            <Text style={s.accordTitre}>Bon pour accord</Text>
+            <Text style={s.accordAide}>
+              Pour accepter ce devis, retournez-le daté et signé, avec la mention « Bon pour accord ».
+            </Text>
+            <View style={s.signature}>
+              <Text style={s.signCase}>Date</Text>
+              <Text style={s.signCase}>Signature du client</Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* Mentions obligatoires */}
         <View style={s.mentions}>
           {franchise ? <Text>TVA non applicable, art. 293 B du CGI.</Text> : null}
-          <Text>Paiement comptant le jour de la prestation. Pas d&apos;escompte pour paiement anticipé.</Text>
-          {client.professionnel ? (
+          {devis ? (
+            <>
+              <Text>Devis gratuit et sans engagement. Prix garantis jusqu&apos;à la date de validité indiquée.</Text>
+              <Text>Paiement comptant le jour de la prestation.</Text>
+            </>
+          ) : (
+            <Text>Paiement comptant le jour de la prestation. Pas d&apos;escompte pour paiement anticipé.</Text>
+          )}
+          {client.professionnel && !devis ? (
             <Text>
               En cas de retard de paiement : pénalités au taux de trois fois le taux d&apos;intérêt légal,
               et indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).

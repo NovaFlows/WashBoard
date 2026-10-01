@@ -1,4 +1,5 @@
 import { formatHeure } from '@/lib/dateUtils'
+import { whatsappDigits } from '@/lib/phone'
 type ContactBooking = {
   client_name: string
   client_email: string
@@ -28,7 +29,6 @@ export function openWhatsapp(b: ContactBooking): void {
   const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const timeStr = formatHeure(date)
   const text    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, ''].join('\n')
-  let phone = b.client_phone.replace(/\D/g, '')
-  if (phone.startsWith('0')) phone = '33' + phone.slice(1)
+  const phone = whatsappDigits(b.client_phone)
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
 }

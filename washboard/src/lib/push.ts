@@ -1,7 +1,7 @@
 import webpush from 'web-push'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isSupportMember } from '@/lib/supportAccess'
+import { supportMemberIds } from '@/lib/supportAccess'
 
 // Notifications push (Web Push).
 //
@@ -97,7 +97,7 @@ export async function notifierLaveur(washerId: string, payload: PushPayload): Pr
  *  Sert aux événements qui concernent WashBoard en tant qu'entreprise — une
  *  nouvelle inscription, par exemple — et non un laveur en particulier.
  *
- *  La liste des destinataires est `SUPPORT_ADMIN_EMAILS`, la même variable qui
+ *  La liste des destinataires est `SUPPORT_ADMIN_USER_IDS`, la même variable qui
  *  garde déjà l'accès support. Elle vit dans l'environnement et jamais dans le
  *  code : le dépôt est public. Variable absente = personne n'est notifié, ce
  *  qui est le bon comportement pour un déploiement mal configuré.
@@ -105,34 +105,12 @@ export async function notifierLaveur(washerId: string, payload: PushPayload): Pr
  *  Ne lève jamais : une notification est un confort, elle ne doit pas faire
  *  échouer l'inscription qui l'a déclenchée. */
 export async function notifierEquipe(payload: PushPayload): Promise<void> {
-  const liste = process.env.SUPPORT_ADMIN_EMAILS
-  if (!liste?.trim()) return
+  const idsAdmins = supportMemberIds(process.env.SUPPORT_ADMIN_USER_IDS)
+  if (!idsAdmins.length) return
   if (!configurer()) return
 
   try {
     const supabase = createAdminClient()
-
-    // L'adresse email vit dans `auth.users`, pas dans `washers` : il faut donc
-    // passer par l'API d'administration pour retrouver qui est qui. Une seule
-    // page suffit très largement au volume actuel, et le jour où elle ne
-    // suffira plus, ce sera un problème agréable à avoir.
-    const { data: comptes, error: errComptes } =
-      await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    if (errComptes) {
-      logger.error('push.equipe.users_read_failed', {}, errComptes)
-      return
-    }
-
-    const idsAdmins = (comptes?.users ?? [])
-      .filter(u => isSupportMember(u.email, liste))
-      .map(u => u.id)
-
-    if (!idsAdmins.length) {
-      // Adresse configurée mais aucun compte correspondant : typiquement une
-      // faute de frappe dans la variable. Silencieux, ce serait indétectable.
-      logger.warn('push.equipe.aucun_compte_correspondant', {})
-      return
-    }
 
     // Un membre de l'équipe peut avoir plusieurs fiches laveur (compte de test
     // et compte réel) : on notifie les appareils rattachés à chacune.
@@ -140,6 +118,14 @@ export async function notifierEquipe(payload: PushPayload): Promise<void> {
       .from('washers').select('id').in('user_id', idsAdmins)
     if (errFiches) {
       logger.error('push.equipe.washers_read_failed', {}, errFiches)
+      return
+    }
+
+    if (!fiches?.length) {
+      // Identifiant configuré mais aucune fiche correspondante : typiquement
+      // une faute de frappe dans la variable. Silencieux, ce serait
+      // indétectable.
+      logger.warn('push.equipe.aucun_compte_correspondant', {})
       return
     }
 

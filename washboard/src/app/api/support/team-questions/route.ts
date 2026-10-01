@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  if (!isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)) {
+  if (!isSupportMember(user.id, process.env.SUPPORT_ADMIN_USER_IDS)) {
     // Refus identique à celui d'un défaut d'authentification : inutile de
     // révéler à un curieux que cette route existe.
     logger.warn('support.team-questions.get.denied', { userId: user.id })

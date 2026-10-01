@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PLAN_LABELS, PLAN_PRICES, SERVICE_QUOTA, type Plan } from '@/lib/plan'
+import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 
 type PrestationChoisissable = {
   id: string
@@ -34,38 +35,36 @@ const OFFRE_SANS_PLAFOND = OFFRES.find(p => SERVICE_QUOTA[p] === null) ?? 'start
  *  l'intérieur d'un bandeau sombre, donc une boîte dans une boîte dans une
  *  carte : trois surfaces empilées, du texte translucide sur du bleu nuit, et
  *  plus rien de net. Ici il n'y a qu'un seul encadré, et il porte le message. */
-function ApercuPage({ actives, plafond }: { actives: PrestationChoisissable[]; plafond: number }) {
+/** Habillage : tout ce qui change entre le site (v1) et l'application (v2).
+ *  Uniquement des classes et des couleurs — jamais une règle de gestion. */
+type Habit = { [clef: string]: string }
+
+function ApercuPage({ actives, plafond, habit }: {
+  actives: PrestationChoisissable[]
+  plafond: number
+  habit: Habit
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <p className={`${SURTITRE} text-slate-400 dark:text-slate-500 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800`}>
+    <div className={habit.carteInterne}>
+      <p className={`${habit.surtitre} ${habit.petit} px-3.5 py-2.5 border-b border-current/10`}>
         Votre page de réservation
       </p>
-      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+      <div className={habit.ligne}>
         {actives.map((svc, i) => {
           const masquee = i >= plafond
           return (
             <div
               key={svc.id}
-              className={`flex items-center gap-3 px-3.5 py-2.5 ${
-                masquee ? 'bg-slate-50 dark:bg-slate-800/40' : ''
-              }`}
+              className={`flex items-center gap-3 px-3.5 py-2.5 ${masquee ? habit.ligneEteinte : ''}`}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${masquee ? 'bg-slate-300 dark:bg-slate-600' : ''}`}
-                style={masquee ? undefined : { backgroundColor: BLEU }}
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: masquee ? 'currentColor' : habit.accent, opacity: masquee ? 0.35 : 1 }}
               />
-              <span className={`flex-1 truncate text-sm ${
-                masquee
-                  ? 'text-slate-400 dark:text-slate-500 line-through'
-                  : 'font-medium text-slate-800 dark:text-slate-200'
-              }`}>
+              <span className={`flex-1 truncate text-sm ${masquee ? habit.nomEteint : habit.nom}`}>
                 {svc.name}
               </span>
-              <span className={`text-xs shrink-0 ${
-                masquee
-                  ? `${SURTITRE} text-slate-400 dark:text-slate-500`
-                  : 'font-semibold text-slate-400 dark:text-slate-500'
-              }`}>
+              <span className={`shrink-0 ${masquee ? `${habit.surtitre} ${habit.petit}` : `text-xs ${habit.petit}`}`}>
                 {masquee ? 'masquée' : `${svc.price}€`}
               </span>
             </div>
@@ -103,6 +102,12 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   offre: Plan
 }) {
   const router = useRouter()
+  // Deux habillages, une seule mécanique (voir plus bas, `V`) : dans la PWA la
+  // fenêtre monte du bas comme les autres feuilles de la refonte et prend le
+  // papier, les filets et la police v2 ; sur le site elle garde exactement la
+  // carte blanche centrée d'avant. Alexandre, 2026-09-29 : une fenêtre du site
+  // posée par-dessus l'application « n'a rien à voir » avec le reste.
+  const isPwa = usePwaStandalone()
   // La fenêtre gère sa propre disparition : le layout la rend sur chaque page,
   // il ne peut pas savoir qu'on vient de la fermer.
   const [ferme, setFerme] = useState(false)
@@ -172,24 +177,77 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   const principal = 'px-5 py-3 text-white text-[15px] font-semibold rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100'
   const secondaire = 'px-4 py-3 text-[15px] font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40'
 
+  // ── Les deux habillages, côte à côte ───────────────────────────────────────
+  //
+  // Un seul arbre JSX, deux jeux de classes : dupliquer 150 lignes de contenu
+  // pour changer des couleurs aurait garanti que les deux versions divergent au
+  // premier correctif. Ce qui change ici est de la présentation pure — aucune
+  // condition ne touche à la logique de choix ni aux appels réseau.
+  const POLICE = '[font-family:var(--font-archivo)]'
+  const V: Habit = isPwa
+    ? {
+        voile: 'fixed inset-0 z-50 overflow-y-auto bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px]',
+        boite: `mx-auto max-w-md px-3 py-3 min-h-full flex flex-col justify-end sm:justify-center ${POLICE}`,
+        carte: 'bg-[color:var(--v2-color-surface)] rounded-[var(--v2-radius-feuille)] border border-[color:var(--v2-filet)] p-5 text-[color:var(--v2-color-encre)]',
+        accent: 'var(--v2-color-accent)',
+        accentSombre: 'var(--v2-color-accent)',
+        inactif: 'var(--v2-filet-fort)',
+        surtitre: 'text-[11px] font-black uppercase tracking-[0.18em]',
+        titre: 'text-[21px] leading-tight [font-weight:var(--v2-type-titre-poids)] [font-stretch:var(--v2-type-titre-largeur)] tracking-[var(--v2-type-titre-tracking)]',
+        texte: 'text-[14px] leading-snug text-[color:var(--v2-color-gris)]',
+        petit: 'text-[12.5px] leading-snug text-[color:var(--v2-color-gris)]',
+        carteInterne: 'rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] overflow-hidden',
+        ligne: 'divide-y divide-[color:var(--v2-filet)]',
+        ligneEteinte: 'bg-[color:var(--v2-filet)]/40',
+        choixRetire: 'border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-filet)]/40',
+        choixGarde: 'border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]',
+        nom: 'text-[15px] [font-weight:var(--v2-type-nom-poids)] [font-stretch:var(--v2-type-nom-largeur)]',
+        nomEteint: 'text-[color:var(--v2-color-gris)] line-through',
+        principal: `${principal} rounded-[var(--v2-radius-bouton)]`,
+        secondaire: 'px-4 py-3 text-[15px] rounded-[var(--v2-radius-bouton)] text-[color:var(--v2-color-gris)] transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40',
+        pied: '-mx-5 -mb-5 mt-5 px-5 py-3.5 border-t border-[color:var(--v2-filet)] rounded-b-[var(--v2-radius-feuille)]',
+      }
+    : {
+        voile: 'fixed inset-0 z-50 overflow-y-auto bg-[#0B1828]/60 backdrop-blur-[2px]',
+        boite: 'mx-auto max-w-md px-4 py-4 sm:py-8 min-h-full flex flex-col justify-center',
+        carte: 'bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 p-6',
+        accent: BLEU,
+        accentSombre: BLEU_SOMBRE,
+        inactif: '#cbd5e1',
+        surtitre: SURTITRE,
+        titre: 'text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] text-balance',
+        texte: 'text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed',
+        petit: 'text-[13px] text-slate-400 dark:text-slate-500 leading-relaxed',
+        carteInterne: 'rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden',
+        ligne: 'divide-y divide-slate-100 dark:divide-slate-800',
+        ligneEteinte: 'bg-slate-50 dark:bg-slate-800/40',
+        choixRetire: 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40',
+        choixGarde: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900',
+        nom: 'text-[15px] font-semibold text-slate-900 dark:text-slate-100',
+        nomEteint: 'text-slate-400 dark:text-slate-500 line-through',
+        principal,
+        secondaire,
+        pied: '-mx-6 -mb-6 mt-5 px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl bg-slate-50/60 dark:bg-slate-950/30',
+      }
+
   return (
     // `overflow-y-auto` sur le VOILE, pas sur la carte : si le contenu dépasse
     // l'écran, c'est l'arrière-plan qui défile et la carte garde un seul bloc.
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1828]/60 backdrop-blur-[2px]">
-      <div className="mx-auto max-w-md px-4 py-4 sm:py-8 min-h-full flex flex-col justify-center">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 p-6">
+    <div className={V.voile}>
+      <div className={V.boite}>
+        <div className={V.carte}>
 
           {/* ── Bandeau : offre + avancement ─────────────────────────────── */}
           <div className="flex items-center justify-between gap-3 mb-5">
-            <span className={SURTITRE} style={{ color: BLEU }}>Offre {PLAN_LABELS[offre]}</span>
+            <span className={V.surtitre} style={{ color: V.accent }}>Offre {PLAN_LABELS[offre]}</span>
             <span className="flex items-center gap-1.5" aria-label={`Étape ${etape} sur 2`}>
               <span
                 className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
-                style={{ backgroundColor: etape === 1 ? BLEU : '#e2e8f0' }}
+                style={{ backgroundColor: etape === 1 ? V.accent : V.inactif }}
               />
               <span
                 className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
-                style={{ backgroundColor: etape === 2 ? BLEU : '#e2e8f0' }}
+                style={{ backgroundColor: etape === 2 ? V.accent : V.inactif }}
               />
             </span>
           </div>
@@ -197,43 +255,41 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Écran 1 : ce qui se passe, et pourquoi ───────────────────── */}
           {etape === 1 && (
             <>
-              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] text-balance">
+              <h2 className={V.titre}>
                 {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length} seulement sont en ligne
               </h2>
 
-              <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed mt-3">
-                L’offre <strong className="text-slate-700 dark:text-slate-200">{PLAN_LABELS[offre]}</strong> en
+              <p className={`${V.texte} mt-3`}>
+                L’offre <strong>{PLAN_LABELS[offre]}</strong> en
                 affiche {plafond} au maximum. Faute de décision de votre part,{' '}
                 {masqueesAujourdhui.length > 0 && (
-                  <strong className="text-slate-700 dark:text-slate-200">
-                    {masqueesAujourdhui.map(s => `« ${s.name} »`).join(', ')}
-                  </strong>
+                  <strong>{masqueesAujourdhui.map(s => `« ${s.name} »`).join(', ')}</strong>
                 )}{' '}
                 {pluriel ? 'ont été masquées' : 'a été masquée'} par défaut.
               </p>
 
               <div className="mt-5">
-                <ApercuPage actives={actives} plafond={plafond} />
+                <ApercuPage actives={actives} plafond={plafond} habit={V} />
               </div>
 
               {/* Dit avant toute décision : c'est la crainte d'effacer qui fait
                   qu'on n'ose pas trancher, et donc qu'on repousse. */}
-              <p className="text-[13px] text-slate-400 dark:text-slate-500 leading-relaxed mt-4">
+              <p className={`${V.petit} mt-4`}>
                 Rien n’est effacé : vos rendez-vous, vos factures et votre historique restent intacts,
                 et une prestation en veille revient dès que vous changez d’offre.
               </p>
 
               <div className="flex items-center justify-end gap-1 mt-6">
-                <button type="button" onClick={reporter} disabled={loading} className={secondaire}>
+                <button type="button" onClick={reporter} disabled={loading} className={V.secondaire}>
                   Plus tard
                 </button>
                 <button
                   type="button"
                   onClick={() => setEtape(2)}
-                  className={principal}
-                  style={{ backgroundColor: BLEU }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = BLEU_SOMBRE)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = BLEU)}
+                  className={V.principal}
+                  style={{ backgroundColor: V.accent }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = V.accentSombre)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = V.accent)}
                 >
                   Choisir
                 </button>
@@ -241,19 +297,19 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
 
               {/* L'autre issue. N'offrir que la mise en veille reviendrait à
                   faire croire qu'il faut forcément renoncer à quelque chose. */}
-              <div className="-mx-6 -mb-6 mt-5 px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl bg-slate-50/60 dark:bg-slate-950/30">
+              <div className={V.pied}>
                 {/* Deux lignes VOULUES plutot qu'une phrase qui deborde : sur
                     un petit telephone, la ligne unique repassait a la ligne et
                     laissait la fleche seule en dessous, ce qui se lit comme un
                     bloc casse. L'espace insecable avant la fleche l'empeche
                     d'etre orpheline quelle que soit la largeur. */}
-                <p className="text-xs text-slate-400 dark:text-slate-500">
+                <p className={V.petit}>
                   Vous préférez tout garder ?
                 </p>
                 <Link
                   href="/dashboard/abonnement"
                   className="block text-sm font-bold hover:underline mt-0.5"
-                  style={{ color: BLEU }}
+                  style={{ color: V.accent }}
                 >
                   Offre {PLAN_LABELS[OFFRE_SANS_PLAFOND]} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois{' '}→
                 </Link>
@@ -264,10 +320,10 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Écran 2 : le choix ───────────────────────────────────────── */}
           {etape === 2 && (
             <>
-              <h2 className="text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] text-balance">
+              <h2 className={V.titre}>
                 {pluriel ? 'Lesquelles retirer' : 'Laquelle retirer'} de votre page ?
               </h2>
-              <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
+              <p className={`${V.texte} mt-2`}>
                 {pluriel ? 'Les prestations déjà masquées sont sélectionnées' : 'La prestation déjà masquée est sélectionnée'}.
                 Touchez une autre carte pour changer.
               </p>
@@ -282,9 +338,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                       onClick={() => basculer(svc.id)}
                       aria-pressed={retiree}
                       className={`w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.99] ${
-                        retiree
-                          ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+                        retiree ? V.choixRetire : V.choixGarde
                       }`}
                     >
                       {/* La sélection ÉTEINT au lieu de cocher : la carte
@@ -292,9 +346,9 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                           résultat de son clic, pas une case de plus à décoder. */}
                       <span
                         className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center border-2 transition-colors duration-150 ease-out ${
-                          retiree ? 'border-slate-300 dark:border-slate-600' : 'border-transparent'
+                          retiree ? 'border-current/30' : 'border-transparent'
                         }`}
-                        style={retiree ? undefined : { backgroundColor: BLEU }}
+                        style={retiree ? undefined : { backgroundColor: V.accent }}
                       >
                         {!retiree && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
@@ -303,16 +357,14 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                         )}
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className={`block text-[15px] font-semibold truncate ${
-                          retiree ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-slate-100'
-                        }`}>
+                        <span className={`block truncate ${retiree ? `${V.nom} ${V.nomEteint}` : V.nom}`}>
                           {svc.name}
                         </span>
-                        <span className="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        <span className={`block mt-0.5 ${V.petit}`}>
                           {svc.price}€ · {svc.duration_minutes} min
                         </span>
                       </span>
-                      <span className={`shrink-0 ${SURTITRE} text-slate-400 dark:text-slate-500`}>
+                      <span className={`shrink-0 ${V.surtitre} ${V.petit}`}>
                         {retiree ? 'retirée' : ''}
                       </span>
                     </button>
@@ -320,22 +372,26 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                 })}
               </div>
 
-              {error && <p className="text-sm font-medium text-red-600 dark:text-red-400 mt-4">{error}</p>}
+              {error && (
+                <p className="text-sm font-medium mt-4" style={{ color: isPwa ? 'var(--v2-color-rouge)' : undefined }}>
+                  <span className={isPwa ? '' : 'text-red-600 dark:text-red-400'}>{error}</span>
+                </p>
+              )}
 
               <div className="flex items-center justify-between gap-3 mt-6">
-                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                <span className={`text-xs font-bold ${V.petit}`}>
                   {choisies.length} / {aRanger} {pluriel ? 'retirées' : 'retirée'}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => setEtape(1)} disabled={loading} className={secondaire}>
+                  <button type="button" onClick={() => setEtape(1)} disabled={loading} className={V.secondaire}>
                     Retour
                   </button>
                   <button
                     type="button"
                     onClick={confirmer}
                     disabled={!pret || loading}
-                    className={principal}
-                    style={{ backgroundColor: pret && !loading ? BLEU : '#cbd5e1' }}
+                    className={V.principal}
+                    style={{ backgroundColor: pret && !loading ? V.accent : V.inactif }}
                   >
                     {loading ? 'Enregistrement…' : 'Confirmer'}
                   </button>

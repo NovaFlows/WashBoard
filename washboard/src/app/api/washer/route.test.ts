@@ -386,6 +386,26 @@ describe('PATCH /api/washer — bornage des valeurs numériques', () => {
   })
 })
 
+describe('PATCH /api/washer — réservation le jour même', () => {
+  it('accepte l’activation dès l’offre Découverte', async () => {
+    // Contrairement aux créneaux intelligents ou aux relances, ce réglage
+    // n'appartient à aucune offre — il reste ouvert à tout le monde.
+    const { res } = await patch({ reservation_jour_meme: true })
+    expect(res.status).toBe(200)
+    expect(updates[0].reservation_jour_meme).toBe(true)
+  })
+
+  it('normalise en booléen', async () => {
+    await patch({ reservation_jour_meme: 1 })
+    expect(updates[0].reservation_jour_meme).toBe(true)
+  })
+
+  it('accepte la désactivation', async () => {
+    await patch({ reservation_jour_meme: false })
+    expect(updates[0].reservation_jour_meme).toBe(false)
+  })
+})
+
 describe('PATCH /api/washer — champs non modifiables', () => {
   it('ignore une tentative de s attribuer le plan Pro', async () => {
     // Le plan vient de Stripe, jamais du navigateur. La route ne recopie que
@@ -400,6 +420,63 @@ describe('PATCH /api/washer — champs non modifiables', () => {
     await patch({ user_id: 'quelqu-un-d-autre', id: 'un-autre-laveur', name: 'Test' })
     expect(updates[0]).not.toHaveProperty('user_id')
     expect(updates[0]).not.toHaveProperty('id')
+  })
+})
+
+describe('PATCH /api/washer — expéditeur SMS', () => {
+  // Cas réel du 2026-09-27 : « AutoNettoyage » (13 car.) était accepté, puis
+  // tronqué à l'envoi en « AutoNettoya ». L'opérateur remplaçait ce nom coupé
+  // par un autre, et le laveur ne comprenait pas pourquoi ses SMS ne portaient
+  // pas le nom affiché dans ses réglages.
+  it('refuse un nom trop long au lieu de le tronquer', async () => {
+    const { res, body } = await patch({ sms_sender: 'AutoNettoyage' })
+    expect(res.status).toBe(400)
+    expect(body.error).toContain('13 caractères')
+    expect(updates).toHaveLength(0)
+  })
+
+  it('refuse un espace, un tiret ou un accent', async () => {
+    for (const nom of ['Kooki Clean', 'Auto-Net', 'Propreté']) {
+      updates.length = 0
+      const { res } = await patch({ sms_sender: nom })
+      expect(res.status, nom).toBe(400)
+      expect(updates).toHaveLength(0)
+    }
+  })
+
+  it('accepte un nom conforme, et le vide', async () => {
+    const { res } = await patch({ sms_sender: 'KookiClean' })
+    expect(res.status).toBe(200)
+    expect(updates[0].sms_sender).toBe('KookiClean')
+
+    updates.length = 0
+    await patch({ sms_sender: '  ' })
+    expect(updates[0].sms_sender).toBeNull()
+  })
+})
+
+describe('PATCH /api/washer — horodatage de la modification du laveur', () => {
+  it('pose profile_updated_at quand le laveur change quelque chose', async () => {
+    const avant = Date.now()
+    const { res } = await patch({ name: 'Test' })
+    expect(res.status).toBe(200)
+    const pose = new Date(String(updates[0].profile_updated_at)).getTime()
+    expect(pose).toBeGreaterThanOrEqual(avant)
+    expect(pose).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('ne pose rien quand aucun champ connu n est envoyé', async () => {
+    // Un formulaire renvoyé sans modification ne doit pas faire croire à un
+    // laveur actif : c'est exactement le faux signal qu'on cherche à éviter.
+    await patch({ champ_inconnu: 'peu importe' })
+    expect(updates[0]).not.toHaveProperty('profile_updated_at')
+  })
+
+  it('ignore une date envoyée par le client', async () => {
+    // Sinon n'importe qui pourrait antidater sa fiche et se rendre invisible
+    // dans le suivi des inscrits qui décrochent.
+    await patch({ name: 'Test', profile_updated_at: '2020-01-01T00:00:00.000Z' })
+    expect(updates[0].profile_updated_at).not.toBe('2020-01-01T00:00:00.000Z')
   })
 })
 

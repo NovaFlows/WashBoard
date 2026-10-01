@@ -7,8 +7,7 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-24 (grille tarifaire 2026 : 4 offres, quotas de
-> réservations et de prestations, verrous par offre). Avant : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
+> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
 > partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
 > facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
 > livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
@@ -16,58 +15,178 @@
 
 ---
 
+## 🔔 À FAIRE PAR ALEXANDRE — à lui rappeler à chaque conversation (2026-09-25)
+
+> Actions que seul Alexandre peut faire (accès Vercel / Supabase). Tant qu'une case est
+> ouverte, le lui redire en fin de réponse. Cocher + dater quand c'est fait.
+
+- [~] **Vercel → projet `wash-board` → Settings → Environment Variables → `SUPPORT_ADMIN_EMAILS` :
+      cocher « Preview » en plus de « Production »** — *fait par Alexandre le 2026-09-26 (vérifié :
+      la variable est bien en Production + Preview), mais l'accès équipe n'apparaît toujours pas sur
+      l'essai : lire la ligne de diagnostic au bas de « Plus » (compte · équipe · liste du
+      déploiement) pour savoir si c'est l'adresse du compte ou la variable.* (même valeur), sauvegarder, puis
+      redéployer la branche `refonte-pwa`. Sans ça, la PWA de test ne le reconnaît pas comme
+      équipe : ni le formulaire « Prendre la main sur un compte » (Assistance), ni le bouton
+      dans les conversations, ni la ligne « Support (équipe) » de Plus n'apparaissent.
+- [x] 2026-09-26 (dit par Alexandre) — **Supabase (SQL Editor) — colonne de suppression des conversations d'Assistance côté
+      laveur** (sans elle, le glisser-supprimer répond « Impossible de supprimer », la liste
+      continue de marcher) :
+      ```sql
+      ALTER TABLE support_questions ADD COLUMN IF NOT EXISTS hidden_for_washer_at timestamptz;
+      GRANT SELECT, UPDATE (hidden_for_washer_at) ON support_questions TO authenticated;
+      ```
+- [x] 2026-09-27 — **Supabase (SQL Editor) — table `documents` (devis et factures écrits à la
+      main)**, sans laquelle l'écran Chiffres › « Devis et factures à la main » ne peut rien
+      enregistrer. Le SQL complet (table, compteur `devis_prochain_numero`, RLS, GRANT, fonction
+      `emettre_document`) a été donné dans la conversation du 2026-09-27, et vérifié en
+      production le même jour (D-00001 → F-00015). Format des numéros : `F-00014` — préfixe +
+      compteur sur cinq chiffres, **sans l'année** ; `emettre_document` doit produire exactement
+      cette forme (`D-` pour les devis), sinon la suite des factures se casse en deux.
+- [ ] **Supabase (SQL Editor) — colonne de paiement des factures à la main**, sans laquelle le
+      bouton « Marquer payée » répond une erreur et l'« Encaissé » reste incomplet :
+      ```sql
+      alter table public.documents add column if not exists paye_le timestamptz;
+      ```
+      Rien d'autre à faire : les GRANT de `documents` portent sur la table entière
+      (`grant select, update, delete on public.documents to authenticated`), pas colonne par
+      colonne, et la policy d'`update` vaut déjà pour ce champ.
+- [ ] **Supabase (SQL Editor) — table `clients` (réglages écrits à la main)**, sans laquelle
+      « Ne plus contacter » dans la Fiche client répond une erreur et l'onglet « À relancer »
+      de Clients ne reflète jamais un opt-out. Premier morceau d'un vrai CRM, proposé par Yanis
+      (canevas partagé le 2026-09-28) et discuté avec Alexandre le même jour :
+      ```sql
+      create table public.clients (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        cle text not null,
+        ne_plus_contacter boolean not null default false,
+        notes text,
+        cree_le timestamptz not null default now(),
+        maj_le timestamptz not null default now(),
+        unique (washer_id, cle)
+      );
+
+      alter table public.clients enable row level security;
+
+      create policy "clients_select" on public.clients
+        for select using (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "clients_insert" on public.clients
+        for insert with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "clients_update" on public.clients
+        for update using (washer_id in (select id from public.washers where user_id = auth.uid()));
+
+      grant select, insert, update on public.clients to authenticated;
+      grant all on public.clients to service_role;
+      ```
+      `notes` est ajoutée tout de suite bien que rien ne l'écrive encore : le prochain morceau du
+      CRM (fiche entreprise, tâches) en aura besoin, mieux vaut une seule migration que deux.
+      `service_role` reçoit tout : les deux crons (`send-followups`, `send-reviews`) lisent
+      cette table avec le client admin pour exclure les clients opposés.
+- [ ] **Supabase (SQL Editor) — tables `entreprises` et `sites` (fiche entreprise)**, À EXÉCUTER
+      APRÈS le bloc `clients` ci-dessus (la dernière ligne y ajoute deux colonnes). Sans ce SQL,
+      la Fiche entreprise ne peut rien créer ni rattacher. Construite le 2026-09-28 :
+      ```sql
+      create table public.entreprises (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        nom text not null,
+        delai_paiement_jours integer,
+        cree_le timestamptz not null default now(),
+        maj_le timestamptz not null default now()
+      );
+
+      alter table public.entreprises enable row level security;
+
+      create policy "entreprises_select" on public.entreprises
+        for select using (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "entreprises_insert" on public.entreprises
+        for insert with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "entreprises_update" on public.entreprises
+        for update using (washer_id in (select id from public.washers where user_id = auth.uid()));
+      create policy "entreprises_delete" on public.entreprises
+        for delete using (washer_id in (select id from public.washers where user_id = auth.uid()));
+
+      grant select, insert, update, delete on public.entreprises to authenticated;
+      grant all on public.entreprises to service_role;
+
+      create table public.sites (
+        id uuid primary key default gen_random_uuid(),
+        entreprise_id uuid not null references public.entreprises(id) on delete cascade,
+        adresse text not null,
+        note text,
+        cree_le timestamptz not null default now()
+      );
+
+      alter table public.sites enable row level security;
+
+      create policy "sites_select" on public.sites
+        for select using (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+      create policy "sites_insert" on public.sites
+        for insert with check (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+      create policy "sites_update" on public.sites
+        for update using (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+      create policy "sites_delete" on public.sites
+        for delete using (entreprise_id in (
+          select id from public.entreprises where washer_id in (select id from public.washers where user_id = auth.uid())
+        ));
+
+      grant select, insert, update, delete on public.sites to authenticated;
+      grant all on public.sites to service_role;
+
+      alter table public.clients add column if not exists entreprise_id uuid references public.entreprises(id) on delete set null;
+      alter table public.clients add column if not exists role_entreprise text;
+      alter table public.clients add column if not exists masque_le timestamptz;
+      ```
+      Un « contact » d'entreprise EST un client (table `clients`) : `entreprise_id` le rattache,
+      `role_entreprise` porte son rôle libre (« Chef d'atelier ») — pas de table `contacts`
+      séparée. Conséquence assumée dans `lib/entrepriseProfile.ts` : on ne peut rattacher qu'un
+      client déjà connu (au moins une réservation ou un document), jamais quelqu'un qui n'a
+      jamais rien pris — ce serait résoudre les « prospects » en douce, pas encore fait.
+      `masque_le` (2026-09-28) sert « supprimer un client » (glisser la ligne dans Clients) :
+      un MASQUAGE, jamais une vraie suppression — voir `ClientReglages.masque` dans
+      `lib/clientProfile.ts` pour pourquoi (numérotation des factures, obligation légale de
+      conservation).
+- [ ] **Supabase (SQL Editor) — colonne `clients.vehicules`** (2026-09-28, « les modèles de
+      voitures des gens »), sans laquelle le champ Véhicules de la fiche répond une erreur :
+      ```sql
+      alter table public.clients add column if not exists vehicules text;
+      ```
+- [ ] **Supabase (SQL Editor) — menu « Options » refait : colonnes `clients.nom`/`.telephone`,
+      tables `client_taches` et `client_rgpd_journal`, fonctions `fusionner_clients` et
+      `anonymiser_client`** (2026-09-28) — sans ce SQL, « Modifier la fiche » (nom/téléphone),
+      « Ajouter une tâche », « Fusionner un doublon » et « Anonymiser la fiche » répondent tous
+      une erreur (« Exporter ses données » fonctionne sans, il ne journalise juste rien). SQL
+      complet donné plus bas, section « Roadmap produit » › **Menu « Options » de la fiche
+      refait**, À EXÉCUTER APRÈS le bloc `entreprises`/`sites` ci-dessus (même table `clients`).
+- [ ] (optionnel, pour tester Google Agenda sur la version d'essai) ajouter l'adresse de
+      retour de l'essai dans la console Google Cloud et régler `GOOGLE_REDIRECT_URI` /
+      `NEXT_PUBLIC_APP_URL` sur Preview — voir le bloc « Google Agenda » de la refonte.
+
+---
+
 ## 🔴 Priorité haute
 
-- [ ] **Grille 2026 — décisions commerciales.** Le code est livré et testé ; ce qui suit ne
-      relève pas du code.
-  1. ~~Que devient un compte à la fin de l'essai ?~~ **Tranché le 2026-09-24 :** il retombe
-     sur Découverte au lieu d'être coupé. Voir la section « Tester la bascule » ci-dessous.
-  2. **Les anciens Pro à 69 € qui utilisent plusieurs laveurs passent en Business (129 €)**
-     par la migration `004`, sans changement de prix : leur abonnement Stripe garde son
-     tarif, et les paiements PayPal sont manuels. Ils gagnent donc le Business au prix de
-     l'ancien Pro. À arbitrer : on les y laisse (le plus simple et le plus généreux), ou on
-     les repasse au tarif Business à une date annoncée.
-
-- [ ] **TESTER LA BASCULE DE FIN D'ESSAI avant de l'étendre aux clients actuels.**
-      La règle 2026 est en place : un essai terminé sans formule choisie fait retomber le
-      compte sur Découverte (gratuit, 5 réservations/mois) au lieu de suspendre sa page.
-
-  **Qui est concerné aujourd'hui : personne d'existant.** La règle ne s'applique qu'aux
-  comptes créés à partir du `2026-09-24`
-  (`RETOUR_GRATUIT_POUR_COMPTES_CREES_DES` dans `src/lib/plan.ts`). Kookii Clean et tous
-  les comptes déjà en place gardent très exactement le comportement qu'ils connaissent :
-  suspension après 30 jours de grâce. C'est vérifié par des tests dédiés, des deux côtés.
-
-  **Comment l'essayer sans attendre un mois :**
-  1. créer un compte neuf (il sera forcément postérieur à la date de bascule) ;
-  2. reculer son échéance dans le passé :
-     `update washers set trial_ends_at = now() - interval '2 days' where slug = '<le-slug>';`
-  3. vérifier, dans cet ordre :
-     - le bandeau bleu en haut du tableau de bord (« Essai terminé — vous êtes sur l'offre
-       Découverte »), **pas** le bandeau rouge « votre essai a expiré » ;
-     - le badge d'offre en haut à droite, qui doit afficher **Découverte** ;
-     - la page Abonnement : l'encart « quelle formule vous va ? » et la jauge « 0 / 5 » ;
-     - **la page publique de réservation, qui doit continuer à accepter des rendez-vous**
-       (c'est le point qui change tout), jusqu'à la 5ᵉ du mois ;
-     - la 6ᵉ réservation refusée, avec un message qui ne parle pas d'abonnement au client ;
-     - la comptabilité, le CRM et les factures repassés en écran « changer d'offre » ;
-     - le logo et les couleurs disparus de la page publique, remplacés par la mention
-       « Réservation propulsée par WashBoard ».
-  4. remettre l'échéance d'origine sur le compte de test.
-
-  **Si quelque chose cloche, un seul endroit à toucher :** reculer ou avancer
-  `RETOUR_GRATUIT_POUR_COMPTES_CREES_DES`. La bascule est un **calcul**, rien n'est réécrit
-  en base — placer la date dans le futur remet tout comme avant, sans migration de
-  rattrapage.
-
-  **Pour l'étendre à tout le monde**, plus tard et volontairement : reculer cette même date
-  (par exemple `'2020-01-01'`). À ne faire qu'après avoir prévenu les clients concernés.
-
-- [ ] **Business : « missions et contrats récurrents » n'existe pas dans le produit.**
-      La ligne figurait sur le PDF de la grille tarifaire, elle a été **volontairement
-      retirée** des cartes d'offres : on ne vend pas ce qui n'est pas construit. La carte
-      Business annonce aujourd'hui les 3 laveurs inclus, le tarif par laveur supplémentaire
-      et le planning collectif — tout cela existe. À construire avant de la remettre.
+- [x] 2026-09-27 — **Les factures écrites à la main comptent dans le chiffre d'affaires**, mais
+      seulement PAYÉES (choix d'Alexandre : « quand un devis se transforme en facture on met un
+      pop up payé ou pas encore payé ; si c'est payé ça va dans l'encaissé, sinon on met un
+      bouton payé »). Colonne `documents.paye_le`, question posée à la naissance de toute
+      facture (`FeuillePaiement` dans `DocumentsV2.tsx`), bouton « Marquer payée » ensuite,
+      projection en lignes d'encaissement par `encaissementsDesFactures` (`chiffresArgent.ts`).
+      Elles comptent au jour de la PRESTATION, pas au jour du paiement — comme un rendez-vous
+      clôturé en retard, qui compte le jour de son créneau.
+- [ ] **La liste `/dashboard/factures` ignore les factures écrites à la main** — et c'est le
+      trou comptable qui reste. Les deux sortes partagent LE MÊME compteur : une suite réelle
+      peut être `F-00014` (rendez-vous), `F-00015` et `F-00016` (à la main), `F-00017`
+      (rendez-vous), alors que la liste n'affiche que les premières et les dernières. Une suite
+      de factures ne peut pas avoir de trous. À faire : y ajouter les documents de genre
+      `facture` (avec leur PDF, `/api/documents/:id/pdf`) pour que la suite se relise d'un bout
+      à l'autre. Écran encore v1 : à traiter en même temps que sa refonte.
 
 - [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
       le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
@@ -439,22 +558,1281 @@
   - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
         (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
 
-## 🛡️ Prod-grade (observabilité + non-régression)
+## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
 
-- [ ] **Un test unitaire tombe par intermittence, jamais le meme signale.**
-      Constate deux fois le 2026-09-25/26 : `Tests 1 failed | 1169 passed`. Vitest
-      n'a pas imprime lequel (le bloc « Failed Tests » etait absent de la sortie),
-      et **quatre executions consecutives ensuite sont passees au vert**.
-  - Les deux occurrences ont eu lieu pendant que `npm run dev` **recompilait en
-    parallele** (fichiers sources modifies juste avant). Piste la plus probable :
-    un test qui lit un fichier pendant sa reecriture — `AGENTS.md` est reecrit a
-    chaque demarrage de `next dev`, et `blog.test.ts` / `guide.test.ts` lisent du
-    contenu.
-  - À faire la prochaine fois qu'il tombe : relancer aussitot avec
-    `npx vitest run --reporter=verbose` pour avoir le nom, sans rien changer
-    d'autre entre-temps.
-  - Non bloquant : la suite est verte des qu'elle tourne seule, y compris en
-    integration continue ou aucun serveur de developpement ne tourne.
+> Écrit par le Claude de Ryan en fin de session, pour que celui de Yanis ou
+> d'Alexandre reprenne sans redécouvrir. **Passes 0 à 3 faites, la 4 est la
+> suivante.** Le plan de vol complet est dans `.claude/agents/refonte.md`.
+
+- [ ] **CHANGEMENT D'ARCHITECTURE (2026-09-22, pas encore commité) — v2
+      seulement dans la PWA installée, jamais sur le site.** Alexandre : « moi
+      je veux que la PWA ressemble a une app mais que le site web que ce soit
+      sur mobile ou ordinateur reste comme actuellement ». Les passes 2 et 3
+      avaient posé la v2 **sans aucune condition** (n'importe quel visiteur du
+      site la voyait) — retrofité par un Claude dédié, en attente de relecture
+      et de commit par l'orchestrateur :
+  - Deux mécanismes de détection, documentés en détail dans
+    `.claude/agents/refonte.md` (section « v1 sur le site, v2 seulement dans
+    la PWA installée ») : la classe `wb-pwa` posée sur `<html>` par un script
+    `beforeInteractive` (`layout.tsx`) pour un changement purement visuel, et
+    le hook `usePwaStandalone()` (`src/hooks/usePwaStandalone.ts`, basé sur
+    `src/lib/pwaStandalone.ts`) pour un changement de FORME.
+  - `ClientsView.tsx` et `ClientProfileModal.tsx` sont redevenus des points
+    de branchement (comparaison v1/v2 : structure trop différente pour du CSS
+    seul → hook, pas de classe). Le code v1 vient de `git show
+    8a1efa6:washboard/src/components/dashboard/<fichier>.tsx` repris à
+    l'identique dans `ClientsViewV1.tsx` / `ClientProfileModalV1.tsx` ;
+    l'ancien contenu (v2) est devenu `ClientsViewV2.tsx` /
+    `ClientProfileModalV2.tsx`. `CrmDashboard.tsx` (l'ancien CRM, pas migré)
+    importe toujours `ClientProfileModal` sans rien savoir du branchement.
+  - Vérifié : `tsc`, `eslint` (33 avertissements, baseline 32 + 1 attendu —
+    pattern `mounted` déjà présent sur `ThemeToggle`/`NotificationsToggle`),
+    `vitest run --coverage` (nouveau test `pwaStandalone.test.ts`, 100 % sur
+    le fichier), `next build` propre, et un script Playwright jetable
+    (jamais commité) qui capture Clients + la fiche en 4 combinaisons
+    (site/PWA émulée × clair/sombre) sur `npm run dev` **et** sur
+    `npm run build && npm run start` — 16 captures au total, toutes
+    conformes. **Non fait : installation réelle de la PWA sur un appareil.**
+  - **Pour la suite (passes 4 à 8) : poser ce branchement DÈS L'ÉCRITURE de
+    l'écran**, schéma `EcranV1.tsx` / `EcranV2.tsx` + `Ecran.tsx` en point
+    d'entrée — voir `.claude/agents/refonte.md`, mis à jour avec un exemple
+    complet.
+- [x] **Passe 0** `e630338` — socle mobile. Rien ne bouge à l'écran. Les règles
+      qui auraient changé une page publique (tirer-pour-rafraîchir, sélection
+      des liens) sont limitées au dashboard via `body.wb-dashboard-active`.
+- [x] **Passe 1** `8a1efa6` — jetons v2 sous le préfixe `--v2-` dans
+      `globals.css`, Archivo variable exposée en `--font-archivo`, appliquée
+      nulle part. Archivo pèse ~88 Ko contre ~29 Ko pour Geist : mesuré, assumé.
+- [x] **Passe 2** `d6e6623` — liste Clients, écran pilote, premier écran en v2.
+      Voir le changement d'architecture ci-dessus : retrofité le 2026-09-22
+      pour ne s'appliquer qu'à la PWA installée.
+- [x] **Passe 3** `31a42de` — fiche client en feuille, plus Appeler/Message,
+      piège de focus et retour du focus. Même retrofit que la passe 2.
+- [x] **Passe 4 — barre du bas derrière `washers.beta_refonte`** (code écrit,
+      **en attente du SQL** — la colonne n'existe pas encore en base, voir
+      plus bas pour l'instruction exacte à donner à Ryan) :
+  - `BarreBasV2.tsx` (nouveau) — les 5 destinations de la maquette
+    (`project/Main.dc.html`), verre de châssis (nouveaux jetons `--v2-verre-*`
+    dans `globals.css`, première utilisation réelle de cette matière : les
+    passes 2/3 sont des surfaces opaques). Mapping **interimaire** faute
+    d'écrans finaux pour Chiffres et Plus (passes 5/6 pas faites) : Chiffres
+    → `/dashboard/compta`, Plus → `/dashboard/parametres` — à corriger dès que
+    ces passes livrent leurs vrais écrans. Signalé dans le compte rendu de
+    passe pour arbitrage si une autre priorité se dessine avant la passe 5.
+  - `DashboardShell.tsx` : branchement par `usePwaStandalone()` (la FORME du
+    châssis change, une nav en plus apparaît) **+** nouvelle prop
+    `betaRefonte`. **Additif, pas un fork V1/V2** — contrairement au schéma
+    `EcranV1/EcranV2` des passes 2-3 : le menu latéral, l'en-tête et le
+    contenu ne changent pas de JSX, seule une barre en plus apparaît quand
+    `isPwa && !!betaRefonte`. Le menu latéral (Sidebar) n'est conditionné par
+    rien de tout ça — toujours rendu, jamais cette règle à revoir avant les
+    passes 5/6.
+  - `washer.beta_refonte?: boolean | null` ajouté au type `Washer`, même
+    convention que `dashboard_widgets` (absent = colonne pas en base,
+    `null`/`false` = pas encore dans le bêta, les trois « éteint », jamais une
+    erreur). 11 des 12 pages du dashboard passent `betaRefonte={washer.beta_refonte}`
+    à `DashboardShell` ; `assistance` et `guide` sont passées de
+    `select('name, ...')` à `select('*')` (même règle que ci-dessus : un
+    `select` à colonnes nommées casserait tant que `beta_refonte` n'existe pas
+    en base) ; `/dashboard/support` (outil interne, hors des 5 destinations,
+    n'apparaît dans aucun menu) n'a volontairement pas été touchée.
+  - **SQL à donner à Ryan, jamais un fichier de migration** (relecture `cyber`
+    d'abord) :
+    ```sql
+    ALTER TABLE washers ADD COLUMN IF NOT EXISTS beta_refonte boolean DEFAULT false;
+    ```
+    Une seule colonne sur une table déjà exposée (RLS déjà en place sur
+    `washers`) : pas de nouveau `GRANT` nécessaire.
+  - Vérifié que le code tourne colonne absente : tous les `select` restent
+    `'*'` ou explicites-mais-sans-`beta_refonte`, `!!undefined` → `false`
+    partout, aucun risque de casser l'écran pour un laveur réel aujourd'hui.
+  - Liste des 12 pages du dashboard vérifiée une à une (voir le compte rendu
+    complet de la passe) : aucune ne devient orpheline, le menu latéral reste
+    le filet de secours pour CRM, Factures, Guide, Assistance, Abonnement,
+    Admin (accessible depuis des liens sur l'accueil, pas depuis un menu) et
+    Support (déjà hors menu par conception, avant cette passe).
+  - **Piège rencontré, à connaître pour la suite** : l'émulation DevTools
+    « Rendering → display-mode: standalone » (Chrome réel) ne se reproduit
+    PAS via le CDP `Emulation.setEmulatedMedia` en Playwright avec le
+    Chromium 149 fourni (testé headless et headed, `matchMedia` reste
+    `false`) — contrairement à `prefers-color-scheme`, qui lui fonctionne.
+    Contournement fiable : `page.addInitScript` qui remplace
+    `window.matchMedia` pour la seule requête `display-mode: standalone`
+    avant tout script de page. Le thème sombre de ce projet n'est pas non
+    plus piloté par `prefers-color-scheme` (cookie `theme` lu serveur,
+    `layout.tsx`) : `page.emulateMedia({colorScheme})` seul ne change rien,
+    il faut poser le cookie (`context.addCookies`).
+- [x] **Passe 5 — Chiffres = CRM + Comptabilité fusionnés**, 2026-09-23.
+      Nouvelle destination `/dashboard/chiffres`, 3 onglets (Argent ·
+      Acquisition · Clients) — voir `project/Chiffres.dc.html`,
+      `ChiffresAcquisition.dc.html`, `ChiffresClients.dc.html`. Le mapping
+      interimaire de `BarreBasV2.tsx` (Chiffres → `/dashboard/compta`) est
+      corrigé, il pointe maintenant vers `/dashboard/chiffres`.
+  - **Nouveaux fichiers** : `app/(dashboard)/dashboard/chiffres/page.tsx`
+    (charge réservations + événements d'entonnoir + un compte de factures,
+    même requêtes que `crm/page.tsx`), `components/dashboard/Chiffres.tsx`
+    (garde-fou), `ChiffresV2.tsx` (les 3 onglets), `ChiffresArgent.tsx`,
+    `ChiffresAcquisition.tsx`, `ChiffresClients.tsx`.
+  - **`CrmDashboard.tsx` et `ComptaDashboard.tsx` ne deviennent PAS des
+    points de branchement v1/v2** — décision de cette passe, à ne pas
+    rouvrir sans le dire. Contrairement à `ClientsView`/`ClientProfileModal`
+    (même URL, contenu qui bascule), « Chiffres » est une destination
+    **neuve**, absente de toute navigation v1 : le site n'a jamais de raison
+    d'atteindre `/dashboard/chiffres`. `Chiffres.tsx` vérifie quand même
+    `isPwaStandalone()` au montage et renvoie vers `/dashboard/crm` sinon
+    (lien copié, favori...) — rien pendant la vérification, jamais de flash
+    v2 côté site. `/dashboard/crm` et `/dashboard/compta` restent
+    entièrement inchangés, joignables par le menu latéral comme avant.
+  - **Logique réutilisée telle quelle, aucune requête dupliquée** :
+    `crmStats.ts` (`ecartRelatif`, `getLast6Months`, `comptePourLeCA`,
+    `effectivePrice`), `comptaPeriod.ts` (`getPeriodRange`,
+    `navigatePeriod`), `funnelStats.ts` (`buildFunnelSummary`,
+    `restrictToSessionsReaching`, `comparePeriods`,
+    `buildReferrerBreakdown`, `buildDeviceBreakdown`,
+    `buildVisitTimingBreakdown`, `formatConversionRate`), `crmPeriod.ts`
+    (`getCrmPeriodBounds`, `previousCrmPeriod`), `listeClients.ts`,
+    `clientProfile.ts`/`buildClientProfile`, et les mêmes routes API que
+    `ComptaDashboard.tsx` (`/api/expenses`, `/api/compta/revenue`,
+    `/api/compta/year-summary`) — vérifié qu'elles acceptent n'importe
+    quelle plage `start`/`end`, y compris une année entière, donc aucune
+    route n'a eu besoin d'être touchée. `ClientProfileModal` (déjà v2)
+    s'ouvre depuis l'onglet Clients sans rien savoir du nouvel appelant.
+    `CATEGORIES` exporté depuis `ComptaDashboard.tsx` (`const` →
+    `export const`, seul changement dans ce fichier — son rendu ne bouge
+    pas) pour ne pas dupliquer les libellés de catégorie de dépense.
+  - **Trois coupes assumées, faute de donnée ou de logique existante** (à
+    signaler si Alexandre veut les construire — ce sont des chantiers `dev`,
+    pas de la présentation) :
+    1. Période de l'onglet Argent : Jour/Semaine/Mois/Année (celle de
+       `comptaPeriod.ts`) plutôt que Mois/Semaine/Année/**Tout** de la
+       maquette — « Tout » sur l'argent demanderait une nouvelle requête
+       d'agrégat sur tout l'historique, qui n'existe pas.
+    2. Onglets Acquisition et Clients : pas de sélecteur de période (fixés
+       au mois courant / à tout l'historique), la maquette n'en montre pas
+       sur ces deux écrans — contrairement à l'ancien CRM qui en propose
+       un. Un laveur qui veut naviguer les mois reste sur `/dashboard/crm`.
+    3. Onglet Clients : ni les cohortes « reviennent, par mois d'arrivée »,
+       ni « gagnés/perdus ce mois », ni « Les relances qui marchent »
+       (canal + résultat d'une relance : rien dans la base ne relie
+       aujourd'hui une relance envoyée à son canal ni à si le client est
+       revenu — voir « Les deux automatismes de message » plus haut, et
+       l'étape 4 du plan CRM, `client_events`, pas construite). Remplacé
+       par une note honnête plutôt qu'un faux chiffre. Gardés : valeur
+       moyenne par client, meilleurs clients (classement par CA, agrégat
+       direct de `listeClients`), part CA/RDV pro vs particulier.
+  - **Vérifié qu'aucune page ne devient orpheline** : parcours des liens de
+    l'ancien CRM (export Excel, filtre Tous/Particuliers/Professionnels,
+    fiche client, liens par réseau) et de la Comptabilité (formulaire
+    d'ajout de frais, frais récurrents, 4 vues de période, export) — tous
+    restent sur `/dashboard/crm`/`/dashboard/compta`, atteignables par le
+    menu latéral, non touchés par cette passe. Le nouvel écran renvoie vers
+    eux plutôt que de les dupliquer (« + Ajouter un frais » → `/dashboard/
+    compta`, « Factures » → `/dashboard/factures`).
+  - **Vérifié en local** (compte Kooki Clean, plan Pro) : `tsc`, `eslint`
+    (0 erreur, seuls les avertissements `set-state-in-effect` déjà acceptés
+    par le projet), `vitest run --coverage` (1006/1006, seuils respectés),
+    `next build` propre, et capture Playwright (contournement documenté
+    plus bas) sur `/dashboard/crm`, `/dashboard/compta`, `/dashboard/
+    chiffres` (3 onglets + fiche client), site et PWA émulée, clair et
+    sombre. `/dashboard/crm` et `/dashboard/compta` rendent des captures
+    **strictement identiques en octets** entre site et PWA — aucune fuite
+    de v2. `/dashboard/chiffres` en mode site redirige vers `/dashboard/crm`
+    (capture identique à `/dashboard/crm` normal). **Non vérifié** : l'état
+    verrouillé (`UpgradePrompt`) de l'onglet Argent pour un plan Essentiel
+    — le seul compte de test disponible (Kooki Clean) est en Pro ; le code
+    réutilise exactement le même `hasFeature`/`UpgradePrompt` que
+    `/dashboard/compta`, déjà éprouvé là-bas.
+- [x] **Passe 5 bis — Chiffres : les graphiques suivent la période**,
+      2026-09-24 (demande d'Alexandre : « les diagrammes sont fixes et ne
+      s'adaptent pas à la période et aux filtres »). **En attente de
+      relecture/commit** (l'agent ne commite jamais).
+  - **La période vit dans `ChiffresV2.tsx`** (type + jour de référence,
+    défaut : mois en cours) et se partage entre les 3 onglets, elle survit au
+    changement d'onglet. Nouveau `SelecteurPeriodeV2.tsx` : Jour/Semaine/Mois/
+    Année + flèches précédent/suivant (« suivant » désactivé quand la période
+    contient aujourd'hui), cibles 44 px. Nouveau `GraphiqueBarres.tsx` : un
+    seul composant pour Argent et Acquisition — toucher/glisser (ou flèches
+    du clavier) lit la barre, ligne de zéro, perte = barre vers le bas ET
+    rouge, animation coupée sous `prefers-reduced-motion`, `aria-label` de
+    résumé.
+  - **Argent** : le graphique montre le DÉTAIL de la période (semaine 7
+    barres, mois 28–31, année 12, jour = une barre par heure 6 h–21 h élargie
+    aux heures qui ont de la donnée). Valeur = résultat du créneau
+    (encaissé − dépensé). **Exception vue « Jour »** : les frais n'ont pas
+    d'heure, les barres montrent l'encaissé par heure (le titre le dit), le
+    résultat du jour reste dans le héros.
+  - **Définition du CA = celle de la Compta** (terminé seulement, net de
+    remise, `revenuNet`) dans l'onglet Argent ; **celle du CRM** (confirmé +
+    terminé, `booked_price ?? services.price`) dans l'onglet Clients — l'écran
+    le dit en bas de l'onglet Clients. `/api/compta/revenue` et
+    `/api/compta/year-summary` ne sont PLUS appelées par Chiffres : l'encaissé
+    est calculé côté client depuis `bookings` (déjà chargées page par page,
+    jamais tronquées), donc somme des barres = « Encaissé » par construction.
+    Les dépenses viennent toujours de `/api/expenses?start&end`.
+  - **Écart connu avec la Compta (v1), non corrigé** : `/api/compta/revenue`
+    et `/api/compta/year-summary` bornent en UTC (`start + 'T00:00:00'` sans
+    fuseau ; `getMonth()` serveur) — un RDV entre minuit et 2 h (Paris) à une
+    frontière de période compte dans la période d'avant. Chiffres découpe à
+    l'heure de Paris. Vérifié sur le compte de test (semaine, mois, année,
+    mois d'août) : mêmes montants au demi-euro près. À corriger côté API par
+    `dev` si on veut que les deux écrans concordent aussi pour un RDV de nuit.
+  - **Bugs existants relevés, non touchés (hors périmètre)** :
+    `comptaPeriod.navigatePeriod` déborde sur les mois courts (`setMonth`
+    depuis un 31 : le 31 octobre « précédent » retombe le 1er octobre) — la
+    Compta v1 est concernée les jours 29–31. Chiffres a sa propre navigation
+    (`chiffresPeriode.deplacer`, testée). `/api/expenses?start&end` appelle
+    `materializeRecurring` : naviguer vers une période passée CRÉE des lignes
+    de frais récurrents dans ces mois passés (aucun gabarit actif sur le
+    compte de test, donc rien créé pendant la vérification).
+  - **Acquisition** : entonnoir, sources, appareils, horaires, comparaison à
+    la période précédente ET nouveau graphique « Visiteurs par jour/heure/
+    mois » se recalculent (bornes de Paris). Fenêtre de visites = 365 jours
+    (`page.tsx`, passée en `evenementsDepuis`) : période entièrement avant →
+    « Pas de données avant le … » ; à cheval → mention ; comparaison masquée
+    si la période précédente n'est pas entièrement chargée.
+  - **Clients** : période + filtre Tous / Particuliers / Pros (sur
+    `is_professional` de chaque RÉSERVATION, comme l'ancien CRM). Défaut
+    passé de « tout l'historique » à « mois en cours » (pas de « Tout » dans
+    le sélecteur commun — à ajouter si Alexandre y tient).
+  - Lisibilité : barres à 60 % d'encre (au lieu de `--v2-filet-fort`, 10 %,
+    illisible), 30 % pendant qu'on lit une autre barre ; nouveau jeton
+    `--v2-color-encre-pale`. Chevrons et barres d'entonnoir/sources en dur
+    (`rgba(22,22,26,…)`, invisibles en sombre) remplacés par des jetons.
+  - Un RDV `done` daté dans le futur (constaté : 27 sept. sur le compte de
+    test) garde sa barre : « à venir » n'est posé que sur un créneau vide.
+  - **Non vérifié** : tap réel sur un téléphone (testé avec
+    `touchscreen.tap` Playwright + clavier), état verrouillé Essentiel (pas
+    de compte), périodes de plus de 1 000 frais.
+- [x] **Passe 6 — « Plus » (menu de réglages)**, 2026-09-23. Écrit par un
+      agent `refonte` dédié, **en attente de relecture/commit par
+      l'orchestrateur** (l'agent ne commite jamais — voir plus bas). Même URL
+      qu'avant (`/dashboard/parametres`) : vérifié avant d'écrire que c'était
+      bien le cas « même URL qu'un écran v1 existant » (schéma
+      `EcranV1.tsx`/`EcranV2.tsx`), pas le cas « destination neuve » de la
+      passe 5 (Chiffres) — les deux se ressemblent mais n'ont pas la même
+      architecture, voir `.claude/agents/refonte.md`.
+  - **Nouveaux fichiers** : `ParametresFormV1.tsx` (reprend à l'identique
+    l'ancien `ParametresForm.tsx`, deux onglets, formulaire complet — seul
+    ajout : un `id="lien-reservation"` sur la carte du lien, sans effet
+    visuel, qui sert de cible d'ancrage), `ParametresFormV2.tsx` (le nouveau
+    menu « Plus », planche `project/Reglages.dc.html`), et une route neuve
+    `app/(dashboard)/dashboard/parametres/tout/page.tsx` qui rend
+    `ParametresFormV1` tel quel, sans passer par le branchement v1/v2.
+    `ParametresForm.tsx` redevient un point de branchement
+    (`usePwaStandalone()`), même schéma que `ClientsView.tsx`.
+  - **Pourquoi la route `/tout` existe, alors qu'elle n'est dans aucune
+    maquette** : la maquette « Plus » ne montre que 12 lignes de menu. Le
+    formulaire v1 en contient bien plus — email, mot de passe, notifications,
+    accès support, zone de danger, facturation — qui n'ont pas de ligne
+    dédiée dans ce menu. Sans un filet de secours, ces réglages deviendraient
+    inatteignables depuis la PWA dès que `/dashboard/parametres` affiche le
+    menu v2 (le menu latéral y renvoie aussi) : exactement le bug des « six
+    pages orphelines » qui a coûté la première version du CRM. `Ligne`
+    « Messages automatiques » → `#avis`, « Équipe » → `#profil`, « Un lien
+    par réseau » → `#lien-reservation`, plus une ligne « Tous les réglages »
+    en bas de l'écran v2 pour le reste. À répartir sur ses propres lignes du
+    menu au fur et à mesure que ces réglages ont leur écran v2 dédié — pas
+    fait dans cette passe, volume trop important pour une seule passe qui
+    reste vérifiable.
+  - **Trois lignes de la maquette non construites, faute de logique
+    existante** (même réflexe qu'à la passe 5 : signalées, pas approximées) :
+    1. **« Modèles de messages » (7 dans la maquette)** — le code n'a qu'un
+       seul message d'avis (codé en dur dans `api/cron/send-reviews`) et un
+       seul message de relance personnalisable. Aucune notion de modèles
+       multiples nulle part.
+    2. **« Importer mes clients »** — la table `clients` et son import
+       (étape 1 du plan CRM, `.claude/agents/refonte.md`) n'existent pas
+       encore. Rien à lier à cette ligne.
+    3. **Résumé « Lun–Sam » de la ligne Horaires** — aucune fonction du
+       projet ne réduit une liste de créneaux (`availabilities`) à un résumé
+       de jours ouverts ; `DisponibilitesManager.tsx` a bien un tableau
+       `DAYS_SHORT` mais rien qui calcule cette phrase. La ligne s'affiche
+       sans valeur plutôt qu'un résumé inventé.
+  - **Valeurs affichées, toutes réelles, aucune approximée** : « Messages
+    automatiques » compte `review_enabled`/`followup_enabled` ; « Équipe »
+    lit `team_size` (affiche « Pro » plutôt qu'un nombre pour un compte sans
+    `multi_laveurs`, comme le fait déjà l'ancien formulaire) ; « Prestations
+    et prix » réutilise le comptage déjà fait par `page.tsx` pour la barre
+    d'avancement (`servicesCount`, nouvelle prop facultative, aucune requête
+    ajoutée — `undefined` si la lecture a échoué, pas un zéro inventé) ;
+    « Zone et déplacement » lit `zone_config` tel quel (`X km` ou
+    `X départements` selon le type stocké — pas de « communes », qui n'existe
+    dans aucune des trois formes de zone) ; « Apparence de ma page » montre un
+    point de la couleur `brand_color` réelle, jamais un nom de couleur inventé
+    (« Bleu » dans la maquette) faute de fonction de nommage ; « Abonnement »
+    réutilise `PLAN_LABELS`/`grandfathered`, sans le compte à rebours d'essai
+    (les champs `trial_ends_at`/`subscription_status` ne sont pas passés à ce
+    composant aujourd'hui — pas ajoutés dans cette passe, ce serait un
+    changement de logique, pas de présentation).
+  - **Deux réglages du menu qui n'ouvrent rien d'autre** (déviations
+    assumées par rapport à la maquette, comme `ChiffresArgent.tsx` à la passe
+    5) : « Apparence » (thème) bascule sur place via `useTheme()` — même hook
+    que `ThemeToggle.tsx` — au lieu de renvoyer vers l'artboard de référence
+    `Sombre.dc.html`, qui n'est pas un écran de réglage ; « Déconnexion »
+    réutilise exactement le même `<form action="/api/auth/logout"
+    method="POST">` que l'en-tête du dashboard (`DashboardShell.tsx`), pas
+    une seconde implémentation.
+  - **Repéré en construisant cette passe, non corrigé (hors périmètre)** :
+    `ChiffresArgent.tsx` (passe 5) colore ses chevrons en
+    `stroke="rgba(22,22,26,0.28)"` codé en dur, sans variante sombre — presque
+    invisible sur fond sombre. `ParametresFormV2.tsx` utilise à la place
+    `var(--v2-color-gris)` (posé via `style`, une propriété CSS `stroke`
+    accepte une variable), correctement contrasté dans les deux thèmes. À
+    corriger dans `ChiffresArgent.tsx` si Alexandre le confirme utile.
+  - **Vérifié** (compte de test `novaflows.pro@gmail.com`, plan grandfathered,
+    slug `autonettoyage`) : `tsc` (0 erreur), `eslint` sur les 5 fichiers
+    touchés (0 avertissement), `vitest run --coverage` (1006/1006, seuils
+    respectés, inchangé), `next build` propre (`/dashboard/parametres/tout`
+    listée parmi les routes). Capture Playwright (contournements
+    `display-mode`/cookie `theme` déjà documentés) : site (affiche l'ancien
+    formulaire, identique à avant) et PWA (affiche le nouveau menu) × clair
+    × sombre, 4 captures. Vérifié en plus que l'ancre `#avis` de
+    `/dashboard/parametres/tout` fonctionne (défilement jusqu'à la carte Avis
+    Google). **Non vérifié** : un compte non-`grandfathered` en plan
+    Essentiel (la ligne « Équipe » afficherait « Pro », jamais testé en
+    conditions réelles) ; l'installation réelle de la PWA sur un appareil.
+- [~] **Passe 7 — Agenda, sous-lots 1, 2 et 3 sur 3**, 2026-09-23.
+      Écrite par trois agents `refonte` dédiés (un par sous-lot, contexte neuf
+      à chaque fois — voir plus bas « Comment les passes ont été menées »),
+      **en attente de relecture/commit par l'orchestrateur** (l'agent ne
+      commite jamais). `CalendrierDashboard.tsx` (1727 lignes avant cette
+      passe) est le plus gros fichier du dépôt — le plan de vol annonçait
+      « au moins trois passes », ce sous-lot 2 est la deuxième.
+  - **Découpe en 3 sous-lots** (décidée en lisant le fichier réel et
+    `project/Agenda.dc.html`, pas devinée à l'avance) :
+    1. *(fait)* Branchement v1/v2 + la liste du jour en LECTURE SEULE :
+       bandeau de 7 jours, cartes de rendez-vous, temps de route estimé entre
+       deux jobs, créneaux libres notables, résumé de bas de journée. Ouvrir
+       un rendez-vous montrait une fiche v2, mais sans aucune action.
+    2. *(fait ici)* Fiche de rendez-vous ACTIONNABLE : changer de statut,
+       reprogrammer, écrire une note, émettre une facture, plus le lien de
+       notification `?rdv=<id>` réparé côté v2 — voir le compte rendu détaillé
+       ci-dessous.
+    3. *(fait — voir « Sous-lot 3 » plus bas)* RDV manuel (le « + » de la
+       maquette) et congés/indisponibilités — aucun des deux n'apparaît sur l'artboard
+       `Agenda.dc.html` (pas de bouton « + » visible dans le HTML exporté, pas
+       d'indicateur de congé) : la maquette ne couvre pas ces deux flux sur cet
+       écran précis, donc rien à construire à l'identique d'elle. Les
+       construire en v2 correctement (feuilles dédiées, jetons v2) est un
+       sous-lot à part entière. Le menu latéral (Sidebar) reste le filet de
+       secours pour ces deux flux tant que ce sous-lot n'est pas fait.
+  - **Nouveaux fichiers** : `CalendrierDashboardV1.tsx` (copie du dernier
+    commit avant cette passe, deux extractions de logique pure près — voir
+    plus bas), `CalendrierDashboardV2.tsx` (l'agenda du jour).
+    `CalendrierDashboard.tsx` redevient un point de branchement
+    (`usePwaStandalone()`), même schéma que `ClientsView.tsx` — vérifié avant
+    d'écrire que c'était bien le cas « même URL qu'un écran v1 existant »
+    (`/dashboard/calendrier`, déjà le lien « Agenda » de `BarreBasV2.tsx`) et
+    pas une destination neuve comme Chiffres (passe 5).
+  - **Deux extractions de logique PURE, comportement inchangé** (préparent le
+    sous-lot 2 autant que ce sous-lot-ci) : `cleStatut` (« Délai dépassé »
+    plutôt que « Terminé » sur un rendez-vous clôturé en retard) déplacée de
+    `CalendrierDashboard.tsx` vers `@/lib/calendarLayout.ts` ; le calcul
+    « km → minutes de trajet à 60 km/h » (dupliqué deux fois dans
+    l'avertissement de faisabilité d'un rendez-vous manuel) déplacé vers
+    `@/lib/geo.ts` (`estimateTravelMinutes`). Les deux sont maintenant
+    importées par `CalendrierDashboardV1.tsx` (résultat identique à avant,
+    vérifié par des tests dédiés) et par `CalendrierDashboardV2.tsx` (qui les
+    réutilise pour son propre affichage plutôt que d'en garder une copie).
+    `Booking`/`CalendrierProps`/etc. exportés depuis `CalendrierDashboardV1.tsx`
+    pour la même raison (une seule définition de la forme des données
+    envoyées par `calendrier/page.tsx`).
+  - **Trois coupes assumées par rapport à la maquette, faute de logique
+    existante** (même réflexe qu'aux passes 5 et 6, signalées, pas
+    approximées) :
+    1. Pas de bouton « Proposer » sur un créneau libre — rien dans le code ne
+       sait proposer un créneau à un client (aucune table, aucune route).
+    2. Pas de nom de ville par rendez-vous (« Pessac », « Mérignac »...) —
+       `ClientProfileModalV2.tsx` avait déjà tranché cette question pour la
+       fiche client (« extraire une ville serait deviner un format qui n'est
+       pas garanti », l'adresse est un champ libre) : même règle reprise ici.
+    3. La ligne 2 de chaque carte montre catégorie·prestation (même repli que
+       le modal de détail v1), pas le véhicule/l'option que montre la
+       maquette au cas par cas (« Lavage complet · Tiguan »,
+       « 4 véhicules VO · sans eau ») — en déduire une règle de mise en forme
+       fiable pour chaque type de prestation n'est couvert par aucune
+       fonction existante.
+  - **Vérifié** (compte de test, plan grandfathered) : `tsc` (0 erreur),
+    `eslint` sur les 7 fichiers touchés (0 avertissement nouveau — le seul
+    avertissement de `CalendrierDashboardV1.tsx`, `set-state-in-effect` sur le
+    lien `?rdv=`, existait déjà avant cette passe), `vitest run --coverage`
+    (1013/1013, +7 tests pour les deux extractions, seuils respectés),
+    `next build` propre (`/dashboard/calendrier` listée). Capture Playwright
+    (contournements `display-mode`/cookie `theme` déjà documentés) : site
+    (grille mois, identique à avant) et PWA (agenda du jour) × clair × sombre,
+    4 captures. Zoom supplémentaire sur le bandeau de jours en sombre pour
+    vérifier que le jour actif (fond clair, texte foncé — inversion du
+    fond/encre standard du thème sombre, même mécanisme que le filtre actif
+    de `ClientsViewV2.tsx`) n'est pas illisible : correct à l'œil.
+    **Non vérifié** : l'installation réelle de la PWA sur un appareil, un
+    compte avec plusieurs rendez-vous le même jour à des adresses différentes
+    (le seul compte de test disponible n'avait qu'un rendez-vous le jour
+    capturé — le calcul de trajet et le créneau libre n'ont donc été vérifiés
+    que par la logique/les tests, pas par une capture qui les montre à
+    l'écran), la lisibilité au soleil, le poids réel d'une agenda très
+    chargée (30+ rendez-vous un jour donné, jamais simulé).
+  - **Sous-lot 2 — fiche actionnable + lien de notification**, 2026-09-23.
+    Écrit par un second agent `refonte`, sur la base du sous-lot 1 livré et
+    commité entretemps par l'orchestrateur.
+    - **Logique partagée, extraite en hook plutôt que dupliquée** :
+      `src/hooks/useRendezVousFiche.ts` (nouveau) reprend tel quel l'état
+      `selected` et les fonctions `openBooking`/`startReschedule`/
+      `saveReschedule`/`updateStatus`/`emettreFactureManuelle`/`saveNotes`
+      qui vivaient dans `CalendrierDashboardV1.tsx` (~250 lignes retirées de
+      ce fichier) — comportement inchangé, mêmes requêtes, mêmes conditions,
+      mêmes messages d'erreur. `CalendrierDashboardV1.tsx` et
+      `CalendrierDashboardV2.tsx` appellent tous les deux ce hook avec leurs
+      propres `bookings`/`unavailabilities`/`teamSize` ; seule la
+      présentation (le JSX) diverge. Choix fait après avoir comparé les deux
+      options prévues par le sous-lot 1 (composant partagé vs réécriture v2) :
+      un **hook** plutôt qu'un composant, parce que la présentation change
+      complètement de forme entre v1 (modale centrée, boutons Gmail/WhatsApp
+      avec message pré-rempli) et v2 (feuille qui monte du bas, boutons
+      Appeler/Message en liens `tel:`/`sms:` simples) — rien à mutualiser côté
+      JSX, seulement l'état et les appels réseau.
+    - **`ConfirmerClotureV2.tsx`** (nouveau) — même logique que
+      `ConfirmerCloture.tsx` (`doitDemanderConfirmation`, inchangée), habillé
+      avec les jetons v2 : seule pièce dupliquée de ce sous-lot, en
+      présentation pure, pour la même raison que `ClientProfileModalV1`/`V2`
+      divergent sur les statuts (aucune source commune de styles entre les
+      deux langages visuels).
+    - **Lien de notification `?rdv=<id>` réparé côté v2** : un second effet
+      `useSearchParams`/`useRef`, propre à `CalendrierDashboardV2.tsx` (pas
+      dans le hook partagé — il doit aussi positionner `dayDate`, ce qui
+      diffère de la navigation mois/semaine/jour de v1). Contrairement à v1
+      (préservé à l'identique, voir plus bas), il appelle `openBooking(rdv)`
+      plutôt que d'écrire l'état sélectionné directement : la note existante
+      est donc bien pré-remplie dans le champ éditable dès l'arrivée par ce
+      lien, ce que v1 ne fait pas (voir juste en dessous) — code neuf, sans
+      contrainte de non-régression, autant qu'il n'ait pas ce défaut.
+    - **Quirk préexistant de v1 repéré et délibérément PAS corrigé** : le
+      chemin `?rdv=` de `CalendrierDashboardV1.tsx` appelait déjà
+      `setSelected(rdv)` directement (pas la fonction `openBooking`), donc le
+      champ notes s'ouvre vide même si le rendez-vous a une note enregistrée,
+      tant que la fiche n'a pas été refermée puis rouverte à la main. Vérifié
+      en conditions réelles pendant cette passe (capture `10-site-notification-
+      rdv.png`, voir plus bas) : le comportement est identique à avant
+      l'extraction, seulement relocalisé dans le hook. Corrigé pour v2, pas
+      pour v1 : le site doit rester identique pixel et comportement pour
+      point, un correctif de bug est un chantier `dev` séparé, pas cette
+      passe.
+    - **Fiche v2, ce qui devient actionnable** : point+statut, nom, date/heure
+      avec un lien « Modifier » qui bascule sur un formulaire date+heure
+      inline (Enregistrer en accent plein, Annuler en filet) ; notes internes
+      en `<textarea>` éditable (`onBlur` enregistre, identique à v1) ; boutons
+      Confirmer/Marquer terminé/Annuler (masqués une fois le rendez-vous
+      Terminé ou Annulé, mêmes règles qu'en v1, y compris le cas « en attente »
+      qui autorise de passer direct à Terminé) ; fenêtre de confirmation avant
+      clôture tardive (`ConfirmerClotureV2`) ; bouton Émettre la facture /
+      lien de téléchargement une fois Terminé, avec le message d'erreur et le
+      lien « Compléter mes informations » (pointant vers
+      `/dashboard/parametres/tout#facturation`, la route filet-de-secours de
+      la passe 6 — `/dashboard/parametres` seul, en v2, n'a plus le formulaire
+      de facturation).
+    - **Pas construit dans ce sous-lot, par choix de conception, pas oubli** :
+      les boutons Gmail/WhatsApp de v1 qui pré-remplissent un message
+      (`openGmail`/`openWhatsapp`, `lib/contact.ts`) n'ont pas d'équivalent en
+      v2 — `ClientProfileModalV2.tsx` (passe 3) avait déjà tranché ce point
+      pour la fiche client avec de simples liens `tel:`/`sms:`, repris ici à
+      l'identique pour la cohérence entre les deux fiches v2.
+    - **Couleurs** : aucune couleur en dur — jetons `--v2-color-vert`/`-rouge`/
+      `-accent`/`-ambre`, vérifiés dans `globals.css` avant usage : ces quatre
+      jetons ne sont PAS redéfinis dans le bloc sombre (seuls fond/surface/
+      encre/gris le sont), donc une même valeur hexadécimale sert de couleur
+      de texte/bordure dans les deux thèmes sans risque de contraste inversé
+      (contrairement à `--v2-color-encre`, écarté pour un fond plein + texte
+      blanc — bon en clair, imbuvable en sombre où `encre` devient presque
+      blanc). `color-mix()` envisagé puis abandonné pour les fonds teintés de
+      `ConfirmerClotureV2` (support navigateur incertain sur un Android
+      ancien, aucun précédent dans le projet) : remplacé par des `rgba()`
+      fixes.
+    - **Vérifié** (compte de test `novaflows.pro@gmail.com`, plan
+      grandfathered, un vrai rendez-vous confirmé du jour) : `tsc` (0 erreur),
+      `eslint` sur l'ensemble du projet (35 avertissements avant cette passe
+      → 36 après, +1 exactement — le même avertissement
+      `react-hooks/set-state-in-effect` que celui déjà accepté sur le chemin
+      `?rdv=` de v1, cette fois sur son équivalent v2, mesuré par comparaison
+      avant/après avec `git stash`), `vitest run --coverage` (1013/1013,
+      inchangé — le hook et `ConfirmerClotureV2` sont des fichiers React,
+      hors du périmètre mesuré par `vitest.config.ts`, `src/lib` +
+      `src/app/api` uniquement, même convention que les autres hooks du
+      projet), `next build` propre (`/dashboard/calendrier` toujours listée).
+      Capture Playwright (contournements `display-mode`/cookie `theme` déjà
+      documentés, session réutilisée depuis `e2e/auth.setup.ts`) : site clair/
+      sombre (grille mois, identique à avant, non modifiée), PWA clair/sombre
+      (liste + fiche ouverte), fiche avec la note en cours d'enregistrement,
+      formulaire de reprogrammation ouvert, et le lien `?rdv=<id>` capturé des
+      **deux côtés** (site et PWA) sur le même vrai rendez-vous — 10 captures
+      au total. La capture côté site confirme au passage le quirk décrit
+      plus haut (notes vides malgré une note enregistrée). Note de test posée
+      puis retirée par appel direct à l'API après la capture, pour ne rien
+      laisser sur la donnée réelle du compte de test.
+    - **Non vérifié, signalé plutôt qu'approximé** : les boutons Confirmer/
+      Marquer terminé/Annuler et Émettre la facture n'ont pas été cliqués
+      pendant la vérification (le seul rendez-vous disponible sur le compte
+      de test est un vrai enregistrement encore utile aux passes suivantes ;
+      cliquer « Marquer terminé » y aurait déclenché une émission de facture
+      réelle) — la logique elle-même n'a pas changé de comportement (extraite
+      telle quelle de `CalendrierDashboardV1.tsx`, déjà exercée par ce
+      dernier), mais le câblage JSX précis de ces quatre boutons en v2 n'a été
+      vérifié que par lecture de code et par le rendu visuel, pas par un clic
+      réel de bout en bout. Aussi non vérifié : l'installation réelle de la
+      PWA sur un appareil, le rendu avec un rendez-vous professionnel (aucun
+      dans les données de test disponibles), une erreur réseau pendant une
+      des quatre actions (simulable seulement avec des outils de coupure
+      réseau, pas testé), la lisibilité au soleil.
+  - **Sous-lot 3 — RDV manuel et congés en v2**, 2026-09-23. Écrit par un
+    troisième agent `refonte`, qui a repris l'extraction de logique laissée
+    inachevée (non commitée) par un agent interrompu — relue et vérifiée
+    avant usage, pas supposée correcte.
+    - **Deux hooks partagés, comportement du site strictement inchangé** :
+      `src/hooks/useRendezVousManuel.ts` (validation, capacité d'équipe
+      compte tenu des congés, avertissement de faisabilité du trajet,
+      création) et `src/hooks/useConges.ts` (lister, bloquer, supprimer).
+      Vérifié par comparaison mécanique (diff normalisé de l'indentation)
+      contre le fichier d'origine `git show HEAD:…/CalendrierDashboardV1.tsx` :
+      le corps des fonctions est identique, seule la variable `unavails`
+      devient le paramètre `unavailabilities`. Le JSX de V1 n'a pas été
+      touché. Une seule addition, pas un changement de comportement : un
+      paramètre facultatif `onCree` (rappel appelé une fois, après l'ajout du
+      rendez-vous à la liste) que V1 ne passe pas — l'agenda v2 s'en sert pour
+      se placer sur le jour du rendez-vous créé.
+    - **Preuve de non-régression du site** : mêmes scénarios rejoués sur le
+      site (v1) et la PWA (v2) — corps de la requête `POST /api/bookings`
+      identique octet pour octet entre les deux, mêmes messages (« Nom du
+      client requis », « Créneau complet — 1/1 laveur déjà occupé à cet
+      horaire », « Impossible — toute l'équipe est en congés ce jour-là »,
+      avertissement de faisabilité « RDV précédent se termine à 12:00 —
+      seulement 10 min d'écart… »), même séquence réseau pour les congés
+      (`POST` puis `DELETE /api/unavailabilities/<id>`).
+    - **Entrée dans l'agenda : un « + » en en-tête, à droite du titre**, qui
+      ouvre une feuille à deux choix (« Nouveau rendez-vous » / « Bloquer une
+      période »). Pourquoi pas un bouton flottant : la barre du bas
+      (`BarreBasV2`) et le bouton Support l'occupent déjà, un troisième objet
+      flottant y serait touché par erreur. Pourquoi une feuille à deux choix
+      plutôt que deux boutons : un seul point d'entrée à retenir ; coût
+      assumé : un tap de plus pour l'action la plus fréquente (le rendez-vous
+      manuel). Les deux formulaires se préremplissent avec le jour affiché.
+      Alternative écartée : « + » qui ouvre directement le rendez-vous, avec
+      les congés en lien discret — à rouvrir si les retours disent que le tap
+      en plus gêne.
+    - **Congés visibles** (« voir ») : bandeau en tête du jour concerné avec
+      « Supprimer » (période, motif, nombre de laveurs si équipe > 1), petit
+      point ambre sous le jour dans le bandeau des 7 jours, liste « Congés à
+      venir » en bas d'écran (une ligne par période, appui = feuille de
+      suppression). Poser : feuille « Bloquer une période » (dates, motifs
+      rapides ou libre, nombre de laveurs si équipe > 1) — mêmes champs que v1,
+      sans règle nouvelle.
+    - **Nouveaux fichiers** : `FeuilleV2.tsx` (feuille du bas générique + les
+      classes de champs/boutons partagées par les trois autres),
+      `RendezVousManuelV2.tsx`, `CongesV2.tsx`. `FeuilleV2` recopie la
+      mécanique de `DetailRendezVous` (Échap, piège de focus, retour du
+      focus, masque le bouton Support) plutôt que d'en extraire une base
+      commune : `DetailRendezVous` est livré et commité, y toucher aurait
+      mélangé refactorisation et fonctionnalité — à unifier quand une
+      quatrième feuille apparaîtra. Un formulaire ne se ferme pas d'un tap à
+      côté (mains mouillées, saisie perdue) : croix, « Annuler » ou Échap.
+    - **Lisibilité** : erreurs et avertissements en « point plein + le
+      mot », texte en encre, jamais en rouge/ambre : ces deux jetons ne sont
+      pas redéfinis en sombre et donnent ~2,3:1 (rouge) et ~3,3:1 (ambre) sur
+      `--v2-color-surface` sombre — sous le seuil pour du texte courant.
+      Bouton Supprimer : fond `--v2-color-rouge` + texte blanc (lisible dans
+      les deux thèmes).
+    - **Limites connues, non corrigées ici** :
+      1. L'**email reste obligatoire** pour un rendez-vous manuel (même
+         règle que v1) : le rendre facultatif est l'étape 3 du plan CRM, un
+         chantier `dev` (route `/api/bookings`, schéma), pas une refonte
+         visuelle.
+      2. La **liste de suggestions d'adresse** (`AddressAutocomplete.tsx`)
+         garde le style v1 (slate) : ce composant est partagé avec le flux de
+         réservation public, que la refonte ne touche pas. Lisible dans les
+         deux thèmes mais hors jetons ; à habiller par une prop facultative
+         quand ce sera décidé.
+      3. Les **icônes natives** des champs date/heure sont grisées en sombre
+         (rendu du navigateur, pas des jetons).
+      4. Pré-existant du sous-lot 1, repéré en passant : à 390 px de large, les
+         7 jours du bandeau dépassent de ~14 px et défilent un peu (le « L »
+         de lundi se coupe après un appui sur un jour du bout).
+    - **Vérifié** (compte de test `novaflows.pro@gmail.com`, plan
+      grandfathered, équipe de 1) : `tsc` 0 erreur ; `eslint .` 36
+      avertissements, 0 erreur — identique à avant ce sous-lot (les deux
+      `set-state-in-effect` sur `?rdv=`, v1 et v2, existaient déjà) ;
+      `vitest run --coverage` 1013/1013 (inchangé : hooks et composants React
+      hors du périmètre mesuré) ; `next build` propre. Captures Playwright
+      (390×844 pour la PWA émulée, 1280×900 pour le site, mêmes
+      contournements `display-mode`/cookie `theme`) : PWA clair et sombre —
+      agenda avec « + », feuille de choix, formulaire (haut, erreur, client
+      professionnel, rempli, après création), avertissement de faisabilité,
+      erreur « équipe en congés », bandeau de congé, feuille de suppression,
+      feuille d'ajout ; site clair et sombre — grille mois, modale de
+      suppression, ajout de congé, avertissement de faisabilité.
+    - **Données réelles touchées, dites explicitement** : (a) **Congés** :
+      créés puis supprimés par les vraies routes, sur des dates lointaines
+      (11 avril 2027 côté PWA, 15 octobre 2026 côté site), 4 aller-retours
+      `POST` + `DELETE` ; le compte de test a un congé préexistant le 26
+      septembre 2026, jamais modifié — contrôlé en fin de test : seul ce
+      congé reste. (b) **Rendez-vous** : **aucun n'a été créé**. `POST
+      /api/bookings` était intercepté par Playwright (jamais envoyé) :
+      il n'existe pas de route de suppression d'un rendez-vous, une vraie
+      création aurait été irréversible (et aurait déclenché les emails de
+      confirmation). Conséquence : la création réelle de bout en bout n'a pas
+      été exercée en v2 ; seul le corps de la requête envoyée a été comparé
+      à v1.
+    - **Non vérifié** : appareil réel (clavier iOS/Android qui recouvre le pied
+      de la feuille malgré `interactive-widget=resizes-content` ; tap sur les
+      champs date/heure natifs), équipe de plus d'un laveur (le sélecteur
+      « laveurs indisponibles » et les libellés « capacité réduite » n'ont
+      jamais été affichés), avertissement de faisabilité avec coordonnées
+      GPS (chemin « trajet estimé ~N min pour ~K km » : même hook, jamais
+      exercé en v2 faute d'adresse sélectionnée dans la liste), rendu de la
+      feuille sur grand écran (`sm:` — non capturé), lecteur d'écran.
+- [~] **Ajout hors sous-lot — « Proposer » un créneau libre à un client**,
+      2026-09-24. Demande d'Alexandre : la maquette montrait un lien
+      « Proposer » sur la ligne de créneau libre sans dire vers quoi (le
+      sous-lot 3 l'avait donc coupé, voir juste au-dessus) ; décidé ce jour-là :
+      il ouvre une feuille listant les clients du laveur, en choisir un part
+      vers WhatsApp ou SMS avec un message déjà écrit, modifiable avant envoi.
+      **En attente de relecture/commit par l'orchestrateur.**
+  - **Nouveaux fichiers** : `ProposerCreneauV2.tsx`. Modifiés :
+    `CalendrierDashboardV2.tsx` (le bouton « Proposer » sur la ligne de trou,
+    plus la ville du rendez-vous qui précède le trou via `villeDepuisAdresse`,
+    déjà utilisée ailleurs dans ce fichier), `src/lib/phone.ts`/`phone.test.ts`
+    (nouvelle fonction `whatsappDigits`, voir plus bas), `src/lib/contact.ts`
+    (la réutilise, comportement inchangé — `openWhatsapp` sert toujours le
+    site v1).
+  - **Rien de nouveau en base, aucune route ajoutée** : ce sont des liens
+    `wa.me`/`sms:`, comme les boutons Appeler/Message existants
+    (`ClientProfileModalV2.tsx`). Réutilise `listeClients`/`rechercherClients`
+    (`@/lib/listeClients`) sur les réservations déjà chargées par l'agenda —
+    aucune requête ajoutée.
+  - **Ordre de la liste** : le client sans nouvelle depuis le plus longtemps
+    en premier (tri croissant sur `activite`, le champ que `listeClients`
+    calcule déjà — simple inversion de son tri par défaut, aucun nouveau
+    calcul). Raisonnement : proposer ce créneau EST une relance déguisée ; un
+    client revenu récemment ou qui a déjà un rendez-vous à venir n'en a pas
+    besoin, et son `activite` récente le fait naturellement descendre en fin
+    de liste.
+  - **Client sans téléphone** : affiché quand même (le masquer aurait laissé
+    croire qu'il n'existe pas), mais sans les boutons WhatsApp/SMS — une ligne
+    « Pas de téléphone — impossible de le lui proposer ainsi. » à la place,
+    pour ne jamais laisser une action échouer en silence.
+  - **Message suggéré** (via `messageCreneau`, `ProposerCreneauV2.tsx`) :
+    `Bonjour {prénom}, j'ai un créneau libre {jeudi 24 septembre} de {10h00} à
+    {12h00}. Ça vous intéresse ?` — ne mentionne pas la ville, déjà donnée par
+    la ligne du créneau quand l'adresse la fournit.
+  - **`whatsappDigits` extraite de `contact.ts`** (`openWhatsapp` faisait
+    cette normalisation en dur) vers `@/lib/phone.ts`, testée
+    (`phone.test.ts`), réutilisée par `openWhatsapp` **et** par
+    `ProposerCreneauV2.tsx` — comportement de `openWhatsapp` vérifié
+    inchangé (elle ne valide rien, contrairement à `normalizePhone` : un
+    numéro imparfait continue de produire un lien).
+  - **Limite découverte en testant sur le compte réel** (pas introduite par
+    cet ajout, déjà vraie pour l'écran Clients) : `listeClients` exige un
+    email pour regrouper un client (son unique identifiant stable
+    aujourd'hui) — un rendez-vous sans email (le RDV manuel n'en a jamais
+    exigé un dans la maquette, et l'étape 3 du plan CRM veut le rendre
+    facultatif partout) n'apparaît dans AUCUNE liste de clients, y compris
+    celle-ci, alors que « Proposer » ne se sert justement que du téléphone.
+    Vérifié sur le compte de test : deux rendez-vous du jour (« Yanis Zidi »,
+    « ad ») ont un email vide et n'apparaissent ni ici ni dans `/dashboard/
+    clients`. Pas corrigé ici — changer la clé d'identification d'un client
+    est une décision de logique métier partagée (étape 1 du plan CRM, table
+    `clients` dédiée), pas une présentation.
+  - **Séparateur `sms:?body=` vs `sms:&body=`** : iOS et Android n'acceptent
+    pas le même séparateur avant `body` — détection par `navigator.userAgent`
+    (`/iPad|iPhone|iPod/`, même test que `NotificationsToggle.tsx`), câblée
+    directement dans `ProposerCreneauV2.tsx` sans extraction (composant, pas
+    logique pure testable côté `src/lib` sans DOM).
+  - **Vérifié** (compte de test `novaflows.pro@gmail.com`) : `tsc` 0 erreur ;
+    `eslint` sur les fichiers touchés (0 erreur, 1 avertissement
+    `set-state-in-effect` préexistant sur `?rdv=`, déjà présent avant cet
+    ajout) ; `vitest run --coverage` 1042/1042 (+7 tests `whatsappDigits`,
+    seuils respectés) ; `next build` propre. Captures Playwright (mêmes
+    contournements `display-mode`/cookie `theme` que les passes précédentes,
+    390×900) sur les VRAIES données du compte de test (un trou réel de 30 min
+    ce jour-là) : PWA clair/sombre — agenda avec « Proposer », feuille
+    ouverte (8 clients existants, triés du moins récent au plus récent),
+    recherche filtrée ; site clair/sombre — grille mois v1, inchangée, pas de
+    « Proposer ».
+  - **Non vérifié** : le rendu de la ligne « Pas de téléphone » — tous les
+    clients du compte de test ont un numéro enregistré, aucun cas réel
+    disponible pour la capturer ; la branche est simple
+    (`{c.phone ? … : …}`, vérifiée par relecture et par le typage) mais pas
+    prouvée à l'écran. Le séparateur `sms:` selon iOS/Android (un seul
+    appareil disponible). L'ouverture réelle de WhatsApp/l'app SMS avec le
+    texte prérempli (les liens `wa.me`/`sms:` n'ont pas été cliqués jusqu'au
+    bout, pour ne rien envoyer). Appareil réel, lecteur d'écran.
+- [~] **Ajout hors sous-lot — vue du mois dans l'agenda (PWA)**, 2026-09-24.
+      Demande d'Alexandre, modèle : le Calendrier d'Apple sur iPhone, vue du
+      mois — « on change de mois en scrollant, on peut choisir une date et ça
+      se met sur la semaine avec la vue actuelle ; on arrive sur la semaine
+      mais il faut pouvoir accéder à la vue mois ».
+      **En attente de relecture/commit par l'orchestrateur.**
+  - **Nouveaux fichiers** : `MoisV2.tsx` (la vue), `src/lib/vueMois.ts` +
+    `vueMois.test.ts` (calculs purs : plage de mois, semaines d'un mois,
+    comptage des rendez-vous actifs par jour, points sous un numéro — 19
+    tests). Modifié : `CalendrierDashboardV2.tsx` uniquement (v1 et tous les
+    autres écrans intouchés — la vue n'existe pas sur le site).
+  - **Comportement** : le bouton grille (à gauche du « + ») ou le titre du mois
+    ouvrent une couche plein écran (`fixed`, sous la barre du bas, sous le menu
+    latéral) qui se cale sur le mois du jour affiché. Défilement continu de
+    12 mois avant à 24 mois après le mois courant ; titre du mois aligné sur la colonne du 1er
+    (comme sur iPhone), année ajoutée hors de l'année en cours ; initiales L M
+    M J V S D + « ‹ Semaine » + « Aujourd'hui » dans un en-tête collant en
+    verre (voile de la couleur de fond + flou : seul élément translucide, la
+    grille est sur papier opaque). Aujourd'hui = rond plein accent, jour affiché
+    dans l'agenda = rond encre (même convention que le bandeau de 7 jours),
+    week-ends en gris. Toucher un jour ferme la vue, place l'agenda sur ce jour
+    et le remonte en haut de page ; « ‹ Semaine » et Échap ferment sans
+    choisir. `?rdv=` n'est pas touché : la vue ne s'ouvre que sur un geste.
+  - **Indicateurs** : un point encre par rendez-vous non annulé (`compterActifs
+    ParJour`, sur le `byDate` déjà tenu par l'agenda) jusqu'à 3, puis 3 points
+    et un « + » (un chiffre exact ne tient pas dans 55 px à côté des points, et
+    le détail est un tap plus loin) ; un point ambre pour un congé (même
+    convention que le bandeau de 7 jours, via `getUnavail`). Aucun chargement
+    supplémentaire.
+  - **Coût, mesuré** (Playwright, Chromium headless, `next dev` — donc PLUS
+    LENT qu'en production ; ordre de grandeur seulement) : ouverture de la vue
+    entre le tap et la deuxième frame. Première version (37 mois rendus d'un
+    coup, `content-visibility: auto` par bloc) : ~120–325 ms sans limitation
+    CPU, ~2 000 ms avec CPU ×4. `content-visibility` seul n'y changeait rien
+    (le coût est le rendu React de ~1 100 boutons, pas la mise en page). Version
+    livrée : chaque mois est un bloc à hauteur exacte (titre + semaines × 60 px)
+    dont le contenu n'est rendu que lorsqu'il approche de l'écran
+    (IntersectionObserver, un écran d'avance) ou est voisin du mois cible :
+    ~50 ms sans limitation, ~150–450 ms en CPU ×4 ; 245 boutons montés à
+    l'ouverture au lieu de 1 126. `content-visibility: auto` est gardé en
+    complément pour les mois déjà rendus et dépassés (défilement long — non
+    mesuré).
+  - **Indépendance vis-à-vis de l'en-tête d'appli** : la vue est en `fixed`, son
+    en-tête colle au haut de l'écran quoi qu'il y ait dessus ; l'agenda, lui,
+    garde son `-mt-6 pt-6` — capturé avec `header{display:none}` : le titre
+    reste à 24 px du haut, rien ne dépend de la barre. Le manifeste est en
+    `statusBarStyle: "default"` : pas de recouvrement de la barre d'état, donc
+    pas de marge d'encoche à ajouter en haut (un `env(safe-area-inset-top)` est
+    quand même posé sur l'en-tête de la vue, à 0 aujourd'hui).
+  - **Vérifié** : `tsc` 0 erreur ; `eslint` sur les 4 fichiers (0 erreur, 1
+    avertissement `set-state-in-effect` préexistant sur `?rdv=`) ; `vitest run
+    --coverage` 88 fichiers / 1 061 tests verts ; Playwright PWA émulée
+    390×844 clair et sombre (agenda avec le nouveau bouton, vue ouverte sur
+    septembre 2026 avec rendez-vous le 24 et congé le 26, mois suivant, saut
+    lointain puis « Aujourd'hui », choix du 29 → agenda sur mardi 29, réouverture
+    avec le 29 en rond encre, retour et Échap) + 1280×800 clair + agenda sans
+    en-tête ; site 1280 px : aucun bouton « Voir le mois ». Aucune donnée créée,
+    modifiée ni supprimée.
+  - **Non vérifié** : le geste de défilement sur un vrai téléphone (fluidité,
+    élan, arrivée sur un bloc pas encore rendu en défilement très rapide : un
+    vide d'une frame est possible, le rendu se fait un écran d'avance mais pas
+    plus) ; le rendu en verre de l'en-tête sur un Android ancien
+    (`backdrop-filter`) ; le texte agrandi par le système (hauteurs de ligne
+    fixes en px) ; `inert` sur iOS Safari (supporté depuis 15.5) ; le bouton Retour d'Android : il quitte l'agenda au lieu de fermer
+    la vue (pas d'entrée d'historique — à décider : `pushState` interfère avec
+    le routeur de Next, non tenté) ; lecteur d'écran.
+  - **Constat hors périmètre** : les feuilles de l'agenda (`Feuille`,
+    `DetailRendezVous`) retirent `wb-hide-fab` du `<body>` à leur fermeture, ce
+    qui, d'après le code (non vérifié à l'écran), réaffiche le bouton WhatsApp
+    par-dessus la barre du bas dans la PWA bêta
+    tant qu'on ne recharge pas la page — la vue du mois n'y touche donc pas.
+- [x] **Passe 8 — « Aujourd'hui » en v2**, 2026-09-23. Écrite par un agent
+      `refonte`, relue et commitée par l'orchestrateur. Dernière passe du plan
+      de vol.
+  - **Correction de fait, au passage** : le briefing annonçait que les widgets
+    ne se réordonnent pas. **C'est faux** — `WidgetsConfigurator` a une
+    fonction `deplacer()`, et `widgetsVisibles(pref)` respecte l'ordre
+    enregistré. C'est **l'en-tête de `lib/dashboardWidgets.ts` qui est périmé**
+    (« Quatre blocs » alors qu'il y en a 7, « aucune réorganisation » alors
+    qu'elle existe) : commentaire corrigé dans un commit séparé, puisque c'est
+    du code v1. Seul le *glisser* de la maquette n'existe pas ; le
+    réordonnancement, si.
+  - **Décision : la v2 impose sa colonne vertébrale, les widgets pilotent le
+    reste.** Les deux autres options ont été écartées pour de bonnes raisons :
+    rhabiller les 7 widgets en v2 (5 sur 7 sont des tuiles « libellé / gros
+    chiffre » — le tic explicitement interdit — et 5 sur 7 doublonnent des
+    destinations que la v2 a déjà) ; les ignorer (jetterait un réglage déjà
+    stocké et rendrait le bouton « Configurer » du site menteur d'un appareil à
+    l'autre). Retenu : **même colonne `washers.dashboard_widgets`, même
+    registre, même `widgetsVisibles()`, même `PATCH /api/washer`.** Un widget
+    masqué sur le site reste masqué dans la PWA, et l'ordre du laveur est
+    respecté.
+  - **Deux écarts assumés dans cette décision** : (1) la colonne vertébrale
+    (héros + la journée + à confirmer) **n'est pas gouvernée par la clé
+    `today`** — en v1 la masquer laissait « À venir » juste dessous, donc on
+    masquait un doublon ; en v2 la journée EST l'écran, appliquer cette clé
+    viderait la destination de son seul rôle. La clé continue de piloter le
+    widget du site, inchangée. (2) Les six autres deviennent **des lignes, pas
+    des tuiles**, regroupées dans une carte commune ; `upcoming` garde sa
+    section (« Ensuite ») parce qu'une liste de rendez-vous n'est pas une ligne.
+  - **Le vrai piège de cette passe, désamorcé** : `PersonnaliserV2` réinjecte
+    `today` **exactement à sa position stockée** au moment d'enregistrer. Sans
+    ça, régler son accueil dans la PWA aurait modifié celui du navigateur en
+    douce.
+  - **Pas de `AccueilV1.tsx`, et c'est délibéré** — seule entorse au schéma des
+    passes 2/3/7. L'accueil v1 n'est pas un composant : c'est l'assemblage fait
+    par `page.tsx`, dont plusieurs morceaux (`StatsWidget`, `ClientsWidget`,
+    `ZoneWidget`) sont des composants **serveur**. Le recopier dans un fichier
+    client les aurait poussés dans le navigateur et aurait changé le rendu du
+    site. Il passe donc tel quel, déjà rendu, dans la prop `v1` de
+    `Accueil.tsx`. Diff de `page.tsx` : 60 ajouts, 3 suppressions, JSX v1
+    déplacé verbatim dans un fragment, widgets non touchés, aucune requête
+    ajoutée.
+  - **Nouveaux fichiers** : `Accueil.tsx` (branchement `usePwaStandalone()`),
+    `AccueilV2.tsx` (l'écran), `PersonnaliserV2.tsx` (la feuille de réglage).
+  - **Deux ajouts hors maquette, assumés** : si la journée est vide, le héros
+    bascule sur le **prochain rendez-vous tout court** avec sa date (un écran
+    vide un jour de repos n'aide personne) ; et le sous-titre distingue
+    « Journée terminée » de « Rien de prévu aujourd'hui ».
+  - **Coupes assumées** : (1) la section **« À faire »** de la maquette — les
+    tâches n'existent nulle part dans le produit, ni table ni route ; (2) le
+    **« 12 min de route » du héros** — c'est le trajet depuis la position du
+    laveur, or `washers.base_address` est un texte libre jamais géocodé ; le
+    temps de route n'apparaît donc que là où il est calculable et déjà éprouvé
+    (entre deux rendez-vous, et en total de journée) ; (3) **« portail 1234 »**
+    — aucun champ « code d'accès » n'existe, `notes` est la note interne du
+    laveur ; (4) **six des douze blocs de `Personnaliser.dc.html`** (météo,
+    avis reçus, devis, factures impayées, créneaux libres, tâches) n'existent
+    nulle part ; (5) poignées de glissement → **flèches**, le mécanisme réel ;
+    (6) l'historique et « Charger plus » ne sont pas sur l'accueil v2 —
+    vérifié non orphelin (l'agenda v2 navigue les jours passés, la fiche client
+    garde l'historique).
+  - **Vérifié** : `tsc` 0 erreur · `eslint` sur les 4 fichiers 0 avertissement,
+    et `eslint src` mesuré par `git stash` → **34 avertissements avant comme
+    après, zéro nouveau** · `vitest` 1013/1013 · `next build` propre,
+    `/dashboard` toujours listée, aucune route parasite. 6 captures 390×844
+    clair et sombre (accueil, personnaliser, journée terminée). Trois défauts
+    trouvés grâce à ces captures et corrigés : « Mercredi 23 **S**eptembre »
+    (`capitalize` → `first-letter:uppercase`), « Sam. 26 » qui passait à la
+    ligne dans la colonne de 40 px, et le prix du héros avalé par les points de
+    suspension d'une prestation à nom long.
+  - **NON vérifié, à faire dès que `.env.local` existe sur le poste** : il n'y
+    a **ni `.env.local` ni `.env.test.local`**, donc aucune connexion possible.
+    Les captures viennent d'une **route jetable** (`/apercu-passe8`) rendant
+    `AccueilV2` avec des données fabriquées dans le même châssis DOM —
+    supprimée depuis, arbre propre. Elles prouvent le rendu, la mise en page,
+    le sombre et la feuille ; elles **ne prouvent pas le branchement ni le
+    câblage des données**. Restent à vérifier : que le site rende v1 et la PWA
+    v2 sur `/dashboard` réel (4 captures + comparaison octet à octet du site
+    avant/après, comme aux passes 5 à 7) · le `PATCH /api/washer` de
+    `PersonnaliserV2`, jamais envoyé · le lien Itinéraire sur un vrai téléphone
+    (sur iOS sans l'app Google Maps, il ouvrira Safari) · un compte neuf (la
+    `DemarrageCard` en haut de l'écran v2) · un plan Essentiel (CA masqué) ·
+    l'installation réelle, la lisibilité au soleil.
+  - **Deux détails signalés, non corrigés** : les flèches de réordonnancement
+    font 32 px et non 44 (deux cibles de 44 empilées donneraient des lignes de
+    88 px ; l'interrupteur, lui, fait bien 44×44) ; et le fond papier s'arrête
+    où le contenu s'arrête, laissant apparaître le `slate-50`/`slate-950` du
+    châssis en bas d'écran — même comportement qu'à la passe 7, le corriger
+    proprement toucherait `DashboardShell` et tous les écrans encore en v1.
+
+
+- [x] **Retrait de l'en-tête et du menu latéral dans la PWA en bêta**,
+      2026-09-24. Demande d'Alexandre : « Supprime le header, on est en mode
+      vraiment ressembler à une app. » Écrit par un agent `refonte`, **non
+      commité, rendu vérifié par relecture seulement** (voir plus bas).
+  - **Condition** : la même que la barre du bas — PWA installée
+    (`html.wb-pwa`) ET `washer.beta_refonte`. **Site (mobile et ordinateur) et
+    PWA sans bêta : en-tête et menu inchangés d'un iota** (les classes ajoutées
+    ne s'activent que sous `html.wb-pwa`).
+  - **Mécanisme : CSS, pas le hook.** Contrairement à la barre du bas (un ajout,
+    un flash accepté), un en-tête qui apparaît puis disparaît au montage
+    provoquerait un saut de mise en page. `DashboardShell` pose donc
+    `wb-entete-beta` sur le `<header>` dès que le serveur sait que le laveur est
+    dans le bêta, et `wb-entete-barre` sur la rangée ☰ / « WashBoard » / badge de
+    plan / déconnexion / thème ; `globals.css` (bloc juste sous la convention
+    `wb-pwa`) masque la rangée et rend au `<header>` un rôle de simple bloc en
+    flux normal (plus collant, sans fond ni filet). Zéro flash. Le `Sidebar`,
+    lui, n'est plus monté quand `showBarreBas` (il était fermé hors écran, mais
+    ses liens restaient focalisables au clavier).
+  - **Bandeaux conservés** : `TrialBanner` (fin d'essai, essai expiré, carte
+    enregistrée, résiliation programmée — l'information commerciale) et
+    `AppBetaBanner` restent dans le `<header>`, donc visibles, en haut de page,
+    en flux normal (ils défilent avec la page au lieu de rester collés).
+    Aucun changement de composant ni d'état : pas de remontage.
+  - **Compteur de messages non lus** : il ne peut plus être sur un ☰ (il n'y en
+    a plus dans ce mode). Il est porté par la ligne **« Aide et assistance »**
+    de « Plus » (point plein + « 3 non lus », `9+` au-delà), et celui de
+    l'équipe par la ligne **« Support (équipe) »**. Nouveau
+    `SupportBadgesContext.tsx` : `DashboardShell` continue d'interroger
+    `/api/support/non-lues`, `/non-lues-equipe` et `/est-equipe` une seule fois
+    par page et redistribue le résultat — aucune requête ajoutée.
+    **Contrepartie assumée** : le signal n'est plus visible d'un coup d'œil
+    depuis n'importe quel écran ; il faut ouvrir « Plus ». Piste si c'est trop
+    discret : un point sur l'onglet « Plus » de la barre du bas (fichier
+    `BarreBasV2.tsx`, un `unreadSupportCount` de plus) — non fait, à arbitrer.
+  - **Ce que le menu latéral donnait vs ce qui est atteignable maintenant**,
+    page par page (les 14 pages de `app/(dashboard)/dashboard/`, vérifiées une
+    à une dans le code, pas de mémoire) :
+    | Page | Avant (PWA bêta) | Maintenant |
+    |---|---|---|
+    | `/dashboard` | menu « Tableau de bord » | barre du bas › Aujourd'hui |
+    | `/dashboard/calendrier` | menu « Calendrier » | barre du bas › Agenda |
+    | `/dashboard/clients` | menu « Clients » | barre du bas › Clients |
+    | `/dashboard/chiffres` | barre du bas | barre du bas › Chiffres |
+    | `/dashboard/compta` | menu « Comptabilité » | Chiffres › Argent (lien « + Ajouter un frais », `ChiffresArgent.tsx` — la compta entière n'a pas d'autre entrée, mais c'est l'entrée existante depuis la passe 5) |
+    | `/dashboard/factures` | menu « Factures » | Chiffres › Argent (ligne « Factures · N émises ») |
+    | `/dashboard/crm` | menu « CRM » | **« Plus » › De temps en temps › « Export et liens par réseau » (ajouté)** |
+    | `/dashboard/guide` | menu « Guide » | **« Plus » › Mon compte › « Guide d'utilisation » (ajouté)** ; aussi le lien du bandeau d'annonce |
+    | `/dashboard/assistance` | menu « Assistance » + compteur | « Plus » › Mon compte › « Aide et assistance » + compteur (existait, compteur ajouté) |
+    | `/dashboard/abonnement` | menu + badge de plan du ☰ + bandeaux | « Plus » › Mon compte › « Abonnement » (affiche déjà le plan) ; liens des bandeaux |
+    | `/dashboard/parametres` | menu « Paramètres » | barre du bas › Plus |
+    | `/dashboard/parametres/tout` | via Paramètres | « Plus » › « Tous les réglages » (email, mot de passe, notifications, accès support, zone de danger) |
+    | `/dashboard/admin` | accueil, Paramètres | « Plus » › Une fois (prestations, horaires, zone, apparence de ma page) |
+    | `/dashboard/support` | menu « Support (équipe) » — équipe seulement | **« Plus » › Outil interne › « Support (équipe) » + compteur (ajouté), visible uniquement si `/api/support/est-equipe` confirme** |
+    Aussi disparus avec l'en-tête, déjà dans « Plus » : déconnexion, thème
+    (« Apparence »), badge de plan (ligne « Abonnement »). **Non repris** : les
+    icônes Instagram / TikTok du pied de menu (liens externes, pas des pages).
+  - **Corrigé au passage** : `/dashboard/support` ne transmettait pas
+    `betaRefonte` au châssis (son `select` nommait ses colonnes) — la barre du
+    bas y aurait disparu et l'en-tête serait revenu. Passé à `select('*')`
+    (même règle que guide/assistance, passe 4) + `betaRefonte` transmis.
+  - **Haut de page** : `main` garde `pt-6`. `layout.tsx` déclare
+    `appleWebApp.statusBarStyle: "default"` : sur iOS le contenu commence sous
+    la barre d'état opaque (`safe-area-inset-top` vaut 0), aucune réserve à
+    ajouter. Les quatre écrans v2 qui se calent sur l'ancien en-tête
+    (`-mt-6` : Accueil, Agenda, Clients, Chiffres) restent corrects — leur fond
+    papier remonte simplement jusqu'en haut de l'écran et leur `pt-6` donne
+    24 px d'air. **Non modifiés.**
+  - **À signaler, non traité** : (1) `CrmDashboard.tsx` (v1, inchangé) affiche
+    toujours un titre « CRM » : un laveur qui ouvre « Export et liens par
+    réseau » le voit. Le changer touche le site, donc arbitrage d'Alexandre —
+    piste : `usePwaStandalone()` dans ce seul titre. (2) `themeColor` de
+    `layout.tsx` reste `#ffffff` / sombre : sans en-tête blanc dessous, la barre
+    d'état Android peut jurer avec le fond papier `#F6F5F3` des écrans v2 (à
+    voir sur un vrai téléphone ; le changer ici modifierait aussi la couleur du
+    navigateur sur le site). (3) `AppBetaBanner` (« Recevez vos réservations en
+    notification ») s'affiche dans la PWA déjà installée, où l'annonce est
+    presque sans objet — gardé à la demande, à reconsidérer. (4) Les écrans
+    encore en v1 sous le châssis (Compta, Factures, Guide, Assistance...)
+    gardent le fond `slate-50` du châssis, pas le papier.
+  - **Vérifié** : `tsc` 0 erreur · `eslint` sur les 5 fichiers touchés 0
+    avertissement · `vitest run` 1061/1061 (88 fichiers). **NON vérifié** :
+    aucun rendu — ni `next build`, ni serveur de dev, ni Playwright (un autre
+    agent travaillait dans le même dossier `.next`). À faire : 4 captures
+    (site / PWA émulée × clair / sombre) sur `/dashboard`, `/dashboard/parametres`
+    et une page à bandeau (compte en essai) ; vérifier que le site est
+    strictement identique ; qu'un compte en essai voit bien son bandeau sans
+    en-tête ; que « Plus » affiche « Support (équipe) » pour un membre de
+    l'équipe et rien pour un laveur ; le compteur sur un vrai fil non lu.
+
+- [x] **« Messages automatiques » en v2**, 2026-09-24 (hors plan de vol : demande
+      d'Alexandre après la passe 8). Écrite par un agent `refonte` neuf, relue et
+      commitée par l'orchestrateur. Planches `ARelancer.dc.html` (la page) et
+      `Automatisme.dc.html` (le réglage). Destination neuve : troisième cas de
+      `refonte.md` (comme Chiffres).
+  - **Fichiers** : route `/dashboard/parametres/messages` (sous `parametres` pour
+    que « Plus » reste allumé dans la barre du bas), `MessagesAutomatiques.tsx`
+    (garde-fou : le site est renvoyé vers `/dashboard/parametres/tout#avis`),
+    `MessagesAutomatiquesV2.tsx` (la page), `ReglageAutomatismeV2.tsx` (les deux
+    feuilles de réglage), `lib/messagesAutomatiques.ts` (tout le calcul, 50 tests),
+    `lib/enregistrerReglages.ts` (l'appel `PATCH /api/washer`, 6 tests). La ligne
+    « Messages automatiques » de `ParametresFormV2.tsx` pointe vers la nouvelle
+    route et compte ce qui part VRAIMENT (un avis « activé » sans lien Google, ou
+    une relance sans message, ne part pas : le cron les traite sans rien envoyer).
+    `ParametresFormV1.tsx` et les crons : intacts.
+  - **Ce que la donnée permet, élément par élément** : (a) interrupteurs et résumés
+    (délai, canal) : réels. (b) « Programmé » : calculable avec la règle exacte des
+    crons — avis = `review_request_at` non nul et `review_request_sent_at` nul ;
+    relance = dernier rendez-vous non annulé du client (regroupé par `client_email`
+    à l'identique, comme le cron), confirmé/terminé, non marqué, + délai. (c)
+    « Parti » : SMS d'avis = lu (`review_sms_sent_at`) ; email d'avis et relance =
+    DÉDUITS (aucun accusé n'est enregistré : `review_request_sent_at` est posé aussi
+    sur les demandes écartées ou en échec, `followup_sent_at` aussi sur les
+    rendez-vous clos sans envoi). L'écran le dit. Résultats : « a réservé depuis »
+    (rendez-vous pris après la relance) oui ; « 5 étoiles reçues » et « pas de
+    réponse » non — rien ne relie une demande d'avis à l'avis reçu, ni ne
+    enregistre les réponses.
+  - **Coupé, faute de donnée** : le lien « passer » (aucun moyen d'annuler l'envoi
+    d'un message précis) ; la section « clients écartés et pourquoi » (aucune trace
+    d'opposition à être contacté : « ne souhaite plus être contacté » est
+    inconstructible — **à soumettre à `legal` : aucune relance ne propose de STOP**) ;
+    le canal WhatsApp ; les variables `{{prénom}}`, `{{lien}}`, `{{prestation}}`,
+    `{{véhicule}}` (le cron ne remplace que `{{nom}}`) ; l'heure exacte d'une
+    relance (le code ne connaît pas l'heure du cron, réglée dans cron-job.org : on
+    annonce un jour, « dès jeudi »).
+  - **À signaler, non corrigé** : le canal est UN SEUL réglage (`review_channel`)
+    pour l'avis ET la relance — les deux feuilles le disent. Le message d'avis est
+    codé en dur dans le cron : montré en lecture seule. Le cron de relance ne
+    contrôle pas le plan (un compte repassé en Essentiel avec relances actives
+    continue d'envoyer). Le planificateur externe de `send-followups` n'est
+    documenté nulle part dans le dépôt (seul `send-reviews`, toutes les heures) :
+    à vérifier dans cron-job.org, sinon « Programmé » annonce des envois qui ne
+    partent jamais. Le premier passage après activation d'une relance sur un
+    vieux fichier clients peut viser des centaines de clients d'un coup : l'écran
+    montre « au prochain envoi » et le compte avant que ça parte.
+  - **Vérifié** : `tsc` 0 ; `eslint` 0 erreur (1 avertissement `set-state-in-effect`
+    sur le garde-fou, même motif que `Chiffres.tsx`) ; `vitest run --coverage`
+    95 fichiers / 1 237 tests verts ; `next build` propre. Captures Playwright PWA
+    390×844 clair et sombre : compte de test réel (vide), banc d'essai jetable
+    (plein, vide, avis sans lien / relance sans message, Essentiel, lecture
+    incomplète, interrupteur en échec réseau, feuilles de réglage, aperçu recalculé
+    au changement de délai). Site : `/dashboard/parametres/messages` renvoie bien
+    vers `/dashboard/parametres/tout#avis`. Toutes les écritures ont été
+    interceptées (`page.route`) : aucun `PATCH` n'a atteint le compte.
+  - **Non vérifié** : appareil réel ; les listes « Programmé/Parti » sur des
+    données réelles non vides (le compte de test n'avait rien à montrer) ; le
+    contraste de l'ambre et du rouge en sombre (jetons hérités du clair).
+
+- [x] **« Prestations et prix » en v2**, 2026-09-24 (hors plan de vol : la maquette
+      n'a aucun écran pour gérer les prestations ; demande d'Alexandre « même design,
+      mêmes fonctionnalités qu'avant »). Destination neuve, troisième cas de
+      `refonte.md`. Conception validée par `designer`, état vide proposé par `ideas`.
+  - **Fichiers** : route `/dashboard/parametres/prestations` (le site est renvoyé vers
+    `/dashboard/admin#prestations` par `Prestations.tsx`), `PrestationsV2.tsx` (liste,
+    une carte par catégorie, confirmations de suppression), `FeuillePrestationV2.tsx`,
+    `FeuilleCategorieV2.tsx`, `PrestationsEtatVideV2.tsx` (retirable, voir ci-dessous),
+    `PrestationsUiV2.tsx`, `hooks/usePrestationsV2.ts`, `lib/prestationForm.ts` (règles
+    de saisie, 59 tests) et `lib/prestationsApi.ts` (appels, 16 tests). Lien « Prestations
+    et prix » de `ParametresFormV2` et « La plus demandée » d'`AccueilV2` repointés.
+  - **Le site n'a pas bougé** : `PrestationsManager`, `CategoriesManager` (hors un mot,
+    `export` devant `PRESETS`) et `AdminTabs` sont intacts. Règles **dupliquées** dans
+    `lib/prestationForm.ts` (correspondance écrite en tête du fichier) : `changeCategory`,
+    `toggleVehicle`, le prix par type, `payload()`, la fusion locale de `update()`,
+    `startAdd`/`startEdit`, l'avertissement de durée, `applyPreset`. À rapprocher du v1
+    (extraction faisable, diff court) quand la cliente aura validé le v2.
+  - **Route `DELETE /api/services/[id]`** : une prestation déjà réservée ne se supprime
+    pas (`bookings.service_id` sans `ON DELETE`, code 23503) ; la route répondait 500
+    « erreur interne ». Elle répond désormais 409 avec une phrase claire (additif,
+    testé). **Le site n'en dit toujours rien** (`if (res.ok)` muet) : à reprendre côté v1.
+  - **Trou produit à trancher** : une prestation réservée ne peut ni être supprimée ni
+    être rendue invisible (une prestation sans type est refusée, écran et serveur). Il
+    manque un « archiver » (colonne `services.active` ou `archived_at`, filtrée par la
+    page publique) — demandé nulle part, non construit.
+  - **Types orphelins** : retirer un type d'une catégorie, ou supprimer la catégorie,
+    laisse l'id dans `services.vehicle_types` ; le tunnel client l'affiche sous son id
+    brut (un UUID pour un type personnalisé). Non corrigé côté données ; l'écran v2 le
+    signale (avant d'enregistrer la catégorie, dans la confirmation de suppression) et
+    propose « Retirer » dans la prestation concernée.
+  - **Non vérifié** : appareil réel, clavier ouvert (feuille + pied fixe), 360 px de large
+    (titre + « + Prestation » serrés à 390).
+
+- [x] **« Horaires » en v2**, 2026-09-24 (même demande d'Alexandre que « Prestations et prix » :
+      « même design, mêmes fonctionnalités qu'avant »). Destination neuve, troisième cas de
+      `refonte.md`. Conception validée par `designer` et `ideas`.
+  - **Fichiers** : route `/dashboard/parametres/horaires` (le site est renvoyé vers
+    `/dashboard/admin#disponibilites` par `Horaires.tsx`), `HorairesV2.tsx` (une carte, sept
+    lignes lundi → dimanche, section Congés), `FeuillePlageV2.tsx` (ajout), `FeuilleJourV2.tsx`
+    (plages d'un jour, retrait), `HorairesEtatVideV2.tsx` (retirable), `hooks/useHorairesV2.ts`,
+    `lib/horaires.ts` (résumé, chevauchement, échec partiel, verrou `unSeulALaFois`) et
+    `lib/horairesApi.ts`. Congés : `useConges`, `CongesAVenir`, `FeuilleAjoutConge`,
+    `FeuilleSuppressionConge` réutilisés tels quels. Ligne « Horaires » de Plus repointée, avec le
+    résumé (« Lun–Ven 8h–18h ») en valeur.
+  - **Le site n'a pas bougé** : `DisponibilitesManager`, `AdminTabs` et les routes
+    `/api/availabilities` sont intacts. Seule modif côté page partagée : `parametres/page.tsx` lit
+    maintenant les plages (3 colonnes) au lieu de les compter (`head`) — même barre d'avancement.
+  - **Durcissements et ajouts hors « mêmes fonctionnalités »** : jours à choix multiple (un POST par
+    jour, échec partiel dit jour par jour, jours en échec restent cochés) ; chevauchement de deux
+    plages refusé avant l'envoi (ni la route ni la base ne l'interdisent ; `StepSlot` proposerait
+    l'horaire en double) ; état vide « Quand travaillez-vous ? » à un tap (fichier isolé) ; phrase de
+    résumé ; « Fermé » à la place d'« Indisponible » ; la liste « Passées » des congés disparaît
+    (la liste v2 ne montre que l'à venir).
+  - **Plages qui se touchent** (8–12 puis 12–14) : confirmé, une prestation ne peut plus enjamber
+    midi (`generateSlots` découpe chaque plage séparément, `creneauDansOuverture` aussi côté
+    serveur). Message informatif dans la feuille d'ajout, aucune fusion automatique.
+  - **`useConges` (partagé avec le site), trous constatés, non corrigés** : `saveUnavail` n'affiche
+    rien si le serveur refuse (seule la feuille v2 grise maintenant « Bloquer » quand fin < début) et
+    reste bloqué sur « Enregistrement… » si la réponse n'est pas du JSON ; `deleteUnavail` retire le
+    congé de la liste même si le DELETE a échoué (écriture optimiste : le créneau reste bloqué en
+    base). À corriger dans le hook, de façon additive.
+  - **Non vérifié** : appareil réel (iOS : liste native des heures, date), clavier ouvert, 360 px.
+
+- [x] **« Apparence de ma page » en v2**, 2026-09-24 (même demande d'Alexandre : « même design,
+      mêmes fonctionnalités qu'avant »). Destination neuve, troisième cas de `refonte.md`.
+      Périmètre décidé par lui : les CINQ premières cartes de `IdentiteForm` seulement (Logo,
+      Couleur, Fond, Message d'accueil, Présence en ligne = le site web) — voir le bloc « À NE
+      PAS OUBLIER » plus bas pour les trois autres. Conception validée par `designer` et `ideas`.
+  - **Fichiers** : route `/dashboard/parametres/apparence` (le site est renvoyé vers
+    `/dashboard/admin#identite` par `Apparence.tsx`), `ApparenceV2.tsx` (aperçu en héros, « Voir
+    ma page », carte de cinq lignes), `ApercuPageV2.tsx`, cinq feuilles `FeuilleLogoV2`,
+    `FeuilleCouleurV2`, `FeuilleFondV2`, `FeuilleMessageV2`, `FeuilleSiteV2`,
+    `ApparenceUiV2.tsx`, `hooks/useApparenceV2.ts` (état des envois d'image : il vit dans
+    l'écran, fermer une feuille n'annule rien), `hooks/retirerLeFond.ts` (détourage imgly isolé),
+    `lib/apparence.ts` et `lib/apparenceApi.ts` (testés). La page serveur n'envoie au navigateur
+    que les colonnes utiles (jamais `*`). Ligne « Apparence de ma page » de Plus repointée
+    (pastille gardée) ; deux lignes **PROVISOIRES** ajoutées dans Plus (« Créneaux intelligents »
+    → `/dashboard/admin#creneaux`, « Google Agenda » → `#agenda`), à supprimer avec le bloc
+    « À NE PAS OUBLIER ».
+  - **Le site n'a pas bougé, à un remplacement d'import près** : `IdentiteForm.tsx` n'a changé
+    que par `PALETTE` (24 couleurs), déplacée dans `lib/themes.ts` et réimportée (test : les 24
+    valeurs et leur ordre) ; `themes.ts` exporte aussi `OVERLAY` (voile 52 %, valeur inchangée).
+    Aucune route API modifiée. `prestationsApi.ts` a gagné (additif) l'action « envoyer » et
+    `echecDepuisReponse`, extraite d'`appeler` pour les envois d'image.
+  - **Ajouts hors « mêmes fonctionnalités »** (chacun retirable) : « Retirer le logo » (le v1 n'a
+    aucun moyen d'en retirer un ; API `logo_url: null`) et confirmation avant de retirer la
+    photo de fond ; avertissement de contraste du blanc sous 4,5:1 (`contrasteBlanc`, 8 couleurs
+    sur 24, jamais bloquant) ; site web validé et normalisé à la saisie (`https://` ajouté, autre
+    schéma refusé — le v1 acceptait « monsite.fr » puis l'ignorait sans un mot) ; compteur
+    indicatif du message à 120 caractères ; annulation avec message quand le choix d'un fond
+    ou d'une couleur échoue (le v1 échouait sans rien dire) ; « max 5 Mo » du v1 (faux) remplacé.
+  - **Constats sur la page publique** : le logo y est en `object-cover` 48 px (un logo large est
+    rogné ; l'ancien aperçu le montrait entier) ; le message d'accueil n'est ni tronqué ni
+    limité (une ligne d'en-tête + description des aperçus de lien) ; un fond retire bien le
+    bouton clair/sombre ; les avis du site sont lus une fois par jour (`revalidate: 86400`) et
+    **une redirection les fait disparaître** (`redirect: 'error'`) : la feuille le dit.
+  - **Même adresse de fichier à chaque envoi** (`<user_id>.<ext>`, `upsert`) : un logo ou un fond
+    remplacé garde son URL. Les fichiers observés répondent `Cache-Control: no-cache` + ETag
+    (le navigateur revalide) mais les aperçus de lien (og:image) et tout cache tiers clé sur
+    l'URL peuvent garder l'ancien. L'écran ajoute `?t=` en local seulement. Non corrigé côté
+    serveur ; à rapporter à `dev`.
+  - **Non vérifié** : appareil réel (sélecteur de fichier iOS/Android, HEIC, clavier ouvert
+    devant le pied fixe, 360 px), le vrai détourage (modèle imgly non téléchargé pendant les
+    tests, remplacé par un stub — voir le compte rendu), le rendu au soleil des anneaux.
+
+- [x] **Zone d'intervention et Créneaux intelligents dans « Prestations et prix »**,
+      2026-09-25 (demande d'Alexandre : les deux réglages rejoignent l'écran v2, **avec un
+      design revu**, pas un simple déplacement). Conception validée par `designer` et `ideas`.
+  - **Où** : deux sections sous « + Ajouter une catégorie », titre en phrase gris, sans
+    compteur — « Où vous intervenez » (`#zone`) et « Créneaux intelligents » (`#creneaux`),
+    chacune une carte d'**une seule ligne à deux niveaux** qui ouvre une feuille. Aucun
+    réglage sur la page elle-même. Elles sont dans le même écran que les prix parce qu'elles
+    répondent à la même question que lui : ce que le client final voit et peut réserver.
+  - **Fichiers neufs** : `FeuilleZoneV2.tsx`, `FeuilleCreneauxV2.tsx`, `AdresseV2.tsx`
+    (autocomplétion en ligne, style v2), `lib/zoneForm.ts`, `lib/creneauxForm.ts`,
+    `lib/zoneApi.ts` — les trois `lib` testés (100 % lignes/branches). Modifiés :
+    `PrestationsV2.tsx` (sections + feuilles + un seul `PATCH` par feuille), `Prestations.tsx`
+    (le garde-fou du site renvoie aussi `#zone`/`#creneaux` vers l'ancien écran),
+    `parametres/prestations/page.tsx` (colonnes ÉNUMÉRÉES, + `zone_config`, `smart_slot_*`,
+    `base_address`), `ParametresFormV2.tsx` (deux lignes retirées, sous-libellé
+    « Zone, créneaux »), `AccueilV2.tsx` (lien de zone repointé, v2 seulement).
+    `Interrupteur` et la ligne à deux niveaux sont remontés dans `PrestationsUiV2.tsx`,
+    `Puces` est exporté de `ReglageAutomatismeV2.tsx` — mêmes composants, mêmes
+    comportements, juste partagés.
+  - **Le site n'a pas bougé** : aucune route API touchée, `IdentiteForm.tsx`, `AdminTabs.tsx`,
+    `ParametresFormV1.tsx`, `setupProgress.ts` et `ZoneWidget` sont intacts. Les liens du site
+    continuent donc d'atterrir sur `/dashboard/admin` — c'est voulu.
+  - **Design revu, pas déplacé** : des mots de laveur (« En ligne droite », « Selon les
+    routes ») à la place de « vol d'oiseau » / « distance routière » ; **plus de curseurs**
+    (10 · 20 · 30 · 50 · 100 km + « Autre » ; 5 · 10 · 15 · 20 · 30 min + « Autre ») — un
+    curseur ne se vise pas les mains mouillées ; la liste des 101 départements ne s'ouvre
+    plus par défaut (pastilles retirables + recherche + `Repliable`).
+  - **Durcissements** (ni le v1 ni la route ne les font) : recherche de département
+    insensible aux accents et à la casse (le v1 ne trouvait pas « herault ») ; une zone
+    « départements » **vide est refusée** (le v1 laissait enregistrer une zone qui bloque
+    tous les clients) ; remise en pourcentage plafonnée à 50 %, remise en euros plafonnée au
+    prix de la prestation la moins chère, valeur vide ou négative refusée. **Ce ne sont pas
+    des protections** : voir la faille ci-dessous.
+  - **Ajouts hors « mêmes fonctionnalités »** (chacun retirable) : la puce « Utiliser mon
+    adresse de départ » (`base_address`, les deux adresses restent DISTINCTES, rien n'est
+    fusionné) ; l'avertissement ambre « Choisissez une suggestion » quand l'adresse est tapée
+    à la main (non bloquant : `verdictZone` laisse passer quand Google ne reconnaît pas
+    l'adresse) ; la phrase vivante « Jusqu'à 20 km en ligne droite autour de … » ;
+    l'exemple chiffré des créneaux (calculé par `smartPrice`, aucune route ajoutée) ; les
+    deux points d'alerte des configurations cassées (voir juste en dessous).
+  - **Ce que « proche » veut dire**, relu dans `api/slots/smart/route.ts` et écrit tel quel
+    dans la feuille : un rendez-vous **du même jour** (hors annulés), un temps de voiture
+    (Distance Matrix) de ce rendez-vous vers le client **≤ `smart_slot_radius_minutes`**, et
+    un créneau qui tombe entre **90 min avant le début** et **90 min après la fin** du
+    rendez-vous (`WINDOW_MIN = 90`, **codé en dur**, ni réglable ni stocké ; la fin tient
+    compte de la durée × nombre de véhicules). Sans clé Google, sans rendez-vous ce jour-là
+    ou si Distance Matrix échoue : aucun créneau optimisé, la réservation passe quand même.
+  - **Deux configurations cassées, signalées et non corrigées en base** : une zone par rayon
+    sans adresse de centre (point **ambre** « Adresse manquante : la limite n'est pas
+    appliquée » — le géocodage ne rend rien et `verdictZone` laisse passer) ; une zone
+    « départements » vide (point **rouge** « Aucun département : personne ne peut réserver »).
+    L'écran les dit ; il n'écrit rien de lui-même.
+  - **Trous préexistants constatés, non corrigés** : `/api/places/autocomplete` répond
+    `{ suggestions: [] }` aussi bien pour « rien trouvé » que pour « Google en panne »
+    (`fetchGoogleMaps` rend `null`, la route l'aplatit) — depuis le navigateur, une clé
+    expirée se lit « Aucune adresse trouvée » ; le message « hors zone » du tunnel de
+    réservation (`StepSlot`, « Adresse hors zone d'intervention ») est **sec** alors que
+    `/api/zone/check` renvoie déjà `distance_km` et `radius_km` : il pourrait dire « à 34 km,
+    votre zone s'arrête à 20 km » ; `PATCH /api/washer` n'écrête pas `zone_config` (un rayon
+    à 100 000 km passe) et ne valide pas `smart_slot_discount_type`.
+  - **Non vérifié** : appareil réel (clavier ouvert devant le pied fixe, sélection d'une
+    suggestion au doigt), la vraie autocomplétion Google (toutes les réponses `places` ont été
+    simulées, aucun appel réel), le comportement d'un compte **sans aucune prestation**
+    (l'exemple retombe sur « un lavage à 80 € », non capturé sur un vrai compte vide).
+  - ⚠️ **Faille connue, traitée à part par `dev` + `cyber` — pas par cette passe** :
+    `POST /api/bookings` accepte `is_smart_slot` et `smart_discount` tels que le client les
+    envoie (`z.number().min(0)` seulement, `bookings/route.ts` ~l. 37-38 et 398-399) : un
+    visiteur peut réclamer une remise énorme et obtenir un prix à 0 €, répercuté dans l'email,
+    le PDF, la facture et la compta. `PATCH /api/washer` ne plafonne pas non plus une remise en
+    pourcentage à 100 %. Les garde-fous de la feuille (≤ 50 %, ≤ prix le plus bas) sont **de
+    l'interface**, ils ne ferment rien.
+
+- [ ] **À NE PAS OUBLIER — trois réglages à replacer ailleurs dans la PWA** (décision
+      d'Alexandre, 2026-09-24). L'écran v2 « Apparence de ma page » ne reprend que
+      Logo, Couleur de la marque, Fond, Message d'accueil et Présence en ligne. Ces
+      trois cartes de l'ancien onglet Identité (`admin/IdentiteForm.tsx`) n'y sont
+      **volontairement pas** : elles doivent trouver **leur propre place** dans la
+      refonte, à décider avec lui. **Deux sur trois sont placées.**
+  - [x] **Zone d'intervention** (`#zone`) — **placée le 2026-09-25** dans l'écran
+    « Prestations et prix » (`/dashboard/parametres/prestations#zone`), section
+    « Où vous intervenez ». La ligne « Zone et déplacement » a disparu de Plus.
+  - [x] **Créneaux intelligents** (`#creneaux`) — **placés le 2026-09-25** dans le même
+    écran (`/dashboard/parametres/prestations#creneaux`), section « Créneaux
+    intelligents ». La ligne provisoire de Plus a disparu.
+  - [x] **Google Agenda** (`#agenda`) — **placé dans l'Agenda**, 2026-09-25 (demande
+    d'Alexandre) : ligne « Google Agenda » en bas de l'écran + feuille
+    (`FeuilleGoogleAgendaV2.tsx`). La connexion part de `/api/auth/google-calendar?retour=agenda`
+    et revient sur `/dashboard/calendrier?google=…` (voir `lib/googleAgendaRetour.ts`, le choix
+    voyage dans le `state` OAuth). La ligne provisoire de Plus a disparu. Le site garde son
+    retour sur `/dashboard/admin`, inchangé.
+  - [ ] **Google Agenda — fiabiliser la connexion depuis la PWA iPhone (à faire plus tard,
+    décision d'Alexandre 2026-09-25).** Deux constats du test sur la version d'essai :
+    1. *Limite de l'environnement d'essai* : `GOOGLE_REDIRECT_URI` pointe vers
+       `washboard.fr` (production), donc Google ramène sur le vrai site, qui n'a pas le
+       retour vers l'Agenda ; le cookie `wb_gcal_state` posé sur l'adresse d'essai n'y est
+       pas non plus. Pour tester avant la mise en ligne : ajouter l'adresse de retour de
+       l'essai dans la console Google Cloud + régler `GOOGLE_REDIRECT_URI` (et
+       `NEXT_PUBLIC_APP_URL`) sur l'environnement Preview de Vercel.
+    2. *Risque réel en production, à vérifier sur iPhone* : depuis la PWA installée, iOS
+       ouvre Google dans une fenêtre séparée qui ne partage pas les cookies de la PWA ;
+       le contrôle du `state` (cookie httpOnly) peut alors échouer. Remède envisagé :
+       `state` **signé côté serveur** (HMAC : identifiant du laveur + jeton + expiration
+       courte, idéalement à usage unique), écriture du jeton sans dépendre de la session
+       de la fenêtre, et page de fin « Connecté, vous pouvez revenir à WashBoard » ;
+       l'Agenda rafraîchit l'état au retour au premier plan. Route sensible : `dev` +
+       `cyber` (l'audit du 2026-09-05 a fixé le `state` aléatoire lié au cookie).
+    3. Deux défauts préexistants du retour, au passage : `exchangeCode` non capturé (une
+       erreur de code donne une page 500 au lieu d'un retour à l'Agenda) et cookie
+       `wb_gcal_state` supprimé seulement en cas de succès.
+  - [ ] **Export Excel des réservations — plus d'entrée dans la PWA** (2026-09-25). La ligne
+    « Export et liens par réseau » de Plus est devenue « Mes liens »
+    (`/dashboard/parametres/liens`, liens seulement, à la demande d'Alexandre). L'export
+    (`CrmDashboard.tsx`, `handleExport`, exceljs) n'existe plus que sur le site
+    (`/dashboard/crm`). À replacer en v2 si Alexandre le veut (extraire `handleExport` dans
+    un module partagé sans changer le fichier Excel produit).
+  - [ ] **Frais de déplacement à replacer avec la zone (passe suivante)** — ils vivent
+    dans `ParametresFormV1.tsx` (~l. 294-370, « Mon profil », atteint depuis Plus par la
+    ligne « Équipe ») et n'ont **aucun écran v2**. `designer` recommande qu'ils voisinent
+    avec la zone : même question (« jusqu'où je vais, et à quel prix »), même endroit.
+    Non construits le 2026-09-25, exprès — hors périmètre de la passe.
+  - **Accès en attendant** : les trois cartes restent sur l'ancien écran
+    `/dashboard/admin` (onglet Identité), toujours joignable — c'est là qu'atterrissent
+    les liens du **site** (`setupProgress.ts`, `ZoneWidget`, non modifiés) et le garde-fou
+    PWA de `Prestations.tsx`, qui renvoie `#zone` et `#creneaux` vers `admin#zone` et
+    `admin#creneaux`. Rien n'est perdu, mais ce n'est pas le design final.
+
+**La maquette v2 est lisible en local**, dans `WashBoard/maquette_v2/` sur le
+poste de Ryan (hors dépôt, ~12 Mo) : les 20 écrans en image plus, pour chacun,
+la taille de police et la position exactes de chaque ligne de texte. Utile si
+l'outil Artifact n'est pas accessible. Lire `LISEZMOI.md` d'abord. Source :
+l'artifact « WashBoard — direction v2 » exporté en PDF.
+
+**Comment les passes ont été menées** — à reprendre tel quel, ça a bien marché :
+un agent `refonte` **neuf par passe** (son contexte se dégrade sinon, son propre
+plan de vol le dit), l'agent **ne commite jamais** (l'orchestrateur relit le
+diff, relance typecheck + eslint + `vitest run --coverage`, puis commite), et
+chaque passe rend une capture clair **et** sombre comparée à la maquette.
+Depuis le retrofit du 2026-09-22 : **quatre captures par écran qui change de
+forme**, pas deux — site (display-mode: browser) et PWA (display-mode:
+standalone, émulée dans Chrome DevTools → Rendering), chacun clair et sombre.
+Une capture « site » qui montre du v2 est un bug bloquant, pas un détail.
+
+**Trois pièges rencontrés, qui ne se voient dans aucun outil :**
+- un motif entre crochets écrit **dans un commentaire** JSX est lu par le
+  scanner de classes de Tailwind v4, qui tente d'en faire du CSS et fait
+  planter la compilation. Ni `tsc`, ni `eslint`, ni `vitest` ne le voient :
+  seul le lancement réel de l'app le montre ;
+- après un `next dev` interrompu, `npm run typecheck` échoue sur un fichier de
+  types généré à moitié → `rm -rf .next` avant de conclure quoi que ce soit ;
+- `npm install` remet un `"dev": true` sur `fsevents` dans `package-lock.json`,
+  et `next dev` réécrit `AGENTS.md` : à écarter de chaque commit.
+
+**Valeurs encore non vérifiées, signalées en commentaire dans `globals.css` :**
+l'ambre et le rouge en sombre, et `--v2-filet-fort` en sombre (extrapolé) —
+aucun écran sombre de la maquette ne permet de les mesurer.
+
+## 🛡️ Prod-grade (observabilité + non-régression)
 
 - [x] 2026-07-02 — **Socle prod mis en place** (commit 9342092) :
   - `lib/logger.ts` : logs structurés JSON (filtrables Vercel par event/level).
@@ -950,6 +2328,340 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟡 Roadmap produit
 
+- **Un vrai CRM de suivi client** — Yanis (l'associé d'Alexandre) a proposé cinq écrans dans un
+  canevas partagé le 2026-09-28 : Prospects (avant la première réservation), À relancer, Fiche
+  client (timeline), Fiche entreprise (plusieurs sites/contacts, délai de paiement), et un menu
+  d'options (tâche, fusion de doublons, « ne plus contacter », export/anonymisation RGPD).
+  Discuté avec Alexandre le même jour : le vrai obstacle n'est pas l'écran, c'est qu'aujourd'hui
+  un « client » n'est qu'un CALCUL (`lib/clientProfile.ts`, tiré des réservations et documents à
+  la volée) — rien ne peut s'y écrire. Presque tout ce que Yanis propose suppose une fiche
+  qu'on peut relire ET réécrire.
+  - [x] 2026-09-28 — **Premier morceau, tranché par Alexandre : le socle + « à relancer » +
+        « ne plus contacter »** plutôt que les prospects ou tout d'un coup. Table `clients`
+        (SQL ci-dessus, section « à faire par Alexandre »), overlay facultatif sur
+        `buildClientProfile`/`listeClients` (même principe que les documents). Onglet
+        **« À relancer »** dans Clients (`lib/clientsARelancer.ts`) : réutilise TEL QUEL le calcul
+        du cron (`lib/messagesAutomatiques.ts`, `relanceActive`/`momentRelance`) plutôt que de le
+        refaire à côté — seul ajout, l'exclusion des clients opposés. **« Ne plus contacter »**
+        dans la Fiche client (`ClientProfileModalV2.tsx`), câblé dans les DEUX crons
+        (`send-followups`, `send-reviews`) : c'est le premier moyen, pour un laveur, d'exclure UN
+        client précis des messages automatiques (avant, seul un interrupteur global existait).
+        Écart connu et documenté en tête de `api/cron/send-followups/route.ts` et de
+        `MessagesAutomatiquesV2.tsx` : `followup_sent_at` ne distingue pas « relance envoyée » de
+        « client opposé, rendez-vous clos sans envoi » — l'écran Messages automatiques peut donc
+        afficher un libellé trompeur pendant sa fenêtre de 7 jours, mais **aucun message n'est
+        réellement envoyé** dans les deux cas.
+  - [x] 2026-09-28 — **La fiche client se rapproche du canevas** (`333b91d`) : « son rythme »
+        (écart moyen entre deux visites) remplace le panier moyen tant qu'il y a assez
+        d'historique, timeline mélangée prestations/avis/relances (`lib/clientTimeline.ts`,
+        relance reproduite exactement, avis déduit — pas de note ni d'étoile inventée, WashBoard
+        n'a aucune API qui lirait un vrai avis Google), et menu « … » dans l'en-tête (une seule
+        entrée pour l'instant, « ne plus contacter »).
+  - [ ] **Récupérer le vrai contenu d'un avis Google, quand ce sera possible.** Aujourd'hui
+        WashBoard n'est relié à AUCUNE API Google qui lirait un avis réel : `review_request_sent_at`
+        prouve seulement qu'une DEMANDE est partie, jamais ce que le client a écrit ni sa note.
+        C'est pour ça que la timeline de la fiche (`lib/clientTimeline.ts`) affiche « Demande
+        d'avis envoyée » et rien de plus, alors que le canevas de Yanis montre « Avis Google 5
+        étoiles · "Voiture nickel, ponctuel" ». Pour combler l'écart il faudrait la **Google
+        Business Profile API** (lecture des avis de la fiche d'établissement du laveur) : chaque
+        laveur devrait connecter SON compte Google Business (comme pour l'Agenda), et il faudrait
+        relier un avis reçu à LA bonne demande envoyée — pas garanti (Google ne renvoie ni
+        l'identité de l'auteur ni de référence vers la demande), donc un rapprochement par date +
+        éventuellement le nom laissé sur l'avis, avec un vrai risque de faux positifs sur un
+        laveur qui reçoit plusieurs avis le même jour. Pas commencé, pas scoping précis : à
+        reprendre depuis zéro le jour où ça devient prioritaire.
+  - [ ] **Bouton « + Rendez-vous » de la fiche client** : chantier à part, pas un ajout rapide.
+        Suppose de brancher l'écran Clients sur le formulaire de rendez-vous manuel de l'Agenda
+        (`RendezVousManuelV2.tsx`, `useRendezVousManuel.ts`), qui charge ses propres données
+        (services, capacité d'équipe restante, avertissement de faisabilité du trajet) —
+        aujourd'hui seulement disponibles sur l'écran Calendrier. `ManualBooking` a déjà tous les
+        champs d'identité (`client_name`, `client_email`, `client_phone`, `address`,
+        `is_professional`, `company_name`) : pré-remplir depuis une fiche est possible une fois
+        le formulaire atteignable depuis Clients — reste à décider comment (navigation vers
+        `/dashboard/calendrier` avec le client en paramètre, ou dupliquer une version plus légère
+        du formulaire pour Clients).
+  - [ ] **Relancer les devis sans réponse** — pas seulement les clients silencieux. Un devis
+        `envoyé` sans réponse (`repondu_le` toujours nul) depuis N jours, c'est de l'argent qui
+        dort ; la fiche entreprise du canevas le montre déjà (« Devis « 6 véhicules VO / mois »
+        en retard de 2 jours » › Faire). Généralisable à toute la liste Documents, pas qu'aux
+        pros. Coût de construction bas : la donnée existe déjà dans `documents`
+        (`statut`, `repondu_le`, `emis_le`), même genre de calcul pur que `clientsARelancer.ts`.
+  - [ ] **Prospects** : pas encore construit. Piste retenue en discussion — faire naître un
+        prospect automatiquement quand un DEVIS est écrit pour quelqu'un qui n'a jamais réservé
+        (`FeuilleDocumentV2.tsx`), plus une capture manuelle (« + Prospect » après un appel).
+        Nécessite un vrai statut (prospect → client) et une date de conversion, que la table
+        `clients` ne porte pas encore.
+  - [x] 2026-09-28 — **Fiche entreprise construite** (jugée représentative par Alexandre —
+        fréquent chez ses laveurs, pas un cas isolé de Yanis). Tables `entreprises`/`sites`
+        (SQL ci-dessus) ; un « contact » d'entreprise EST un client (`clients.entreprise_id` +
+        `role_entreprise`), pas une table à part. Agrégation (chiffre d'affaires, véhicules,
+        derniers passages, devis en attente) calculée dans le navigateur à partir des mêmes
+        réservations/documents que le reste de l'écran (`lib/entrepriseProfile.ts`), jamais
+        d'une requête séparée — même principe que `buildClientProfile`. Nouvel écran
+        `FicheEntrepriseV2.tsx`, atteint depuis le menu « … » d'un contact déjà lié, ou en
+        rattachant un client existant à une entreprise (nouvelle ou existante) depuis ce même
+        menu. Écarts assumés avec le canevas de Yanis, documentés en tête du fichier :
+        - le chiffre d'affaires est TOUT L'HISTORIQUE (« au total »), pas « cette année » —
+          aucun autre chiffre de la fiche client ne se borne à l'année en cours, introduire
+          cette seule exception aurait été incohérent ;
+        - l'alerte de devis dit seulement DEPUIS COMBIEN DE TEMPS il attend une réponse, jamais
+          « en retard » — aucun seuil de retard n'est réglé nulle part (rejoint « Relancer les
+          devis sans réponse » ci-dessus, pas encore construit) ;
+        - un contact ne peut être qu'un client DÉJÀ connu (au moins une réservation ou un
+          document) — créer quelqu'un qui n'a jamais rien pris reviendrait à résoudre les
+          « prospects » en douce, pas encore fait.
+  - [x] 2026-09-28 — **Bug relevé par Alexandre en testant, corrigé le jour même** : créer une
+        entreprise puis s'y rattacher ne menait nulle part (l'écran essayait d'ouvrir la fiche
+        avec l'ancienne liste d'entreprises, d'avant la création — `router.refresh()` manquant
+        dans `FeuilleRattacherV2`, ClientProfileModalV2.tsx). Même occasion : **onglet
+        « Entreprises »** ajouté à Clients (masqué tant qu'aucune n'existe) — avant, une
+        entreprise ne se retrouvait qu'en rouvrant le contact qui avait servi à la créer, ce
+        qu'Alexandre a buté dessus dans la foulée du bug ci-dessus.
+  - [x] 2026-09-28 — **Guide mis à jour** avec la différence « pro » (case cochée par le client,
+        par réservation) vs « entreprise » (rattachement fait à la main par le laveur) —
+        `lib/guide.ts`, entrée `pro-vs-entreprise`.
+  - [x] 2026-09-28 — **Supprimer une entreprise** : sans risque pour les réservations ni les
+        factures — ses sites disparaissent avec elle (cascade), ses contacts redeviennent de
+        simples clients (`entreprise_id` repasse à `null`). Depuis le menu « … » de sa fiche,
+        ET en glissant sa ligne dans l'onglet « Entreprises » (même geste, ajouté le même jour
+        — Alexandre a buté sur son absence juste après avoir testé le menu).
+  - [x] 2026-09-28 — **« Supprimer » un client, en glissant sa ligne vers la gauche dans
+        Clients** (demande d'Alexandre — geste natif, comme sur iPhone, même mécanique que les
+        dépenses et l'Assistance : `useLigneGlissante`). En réalité un MASQUAGE
+        (`clients.masque_le`), jamais une vraie suppression : un client n'est pas une ligne
+        qu'on peut effacer, c'est un calcul tiré de ses réservations et de ses documents, et
+        certains portent une facture dont la numérotation ne doit jamais avoir de trou, que la
+        loi oblige à garder 10 ans. Il disparaît du fichier, rien d'autre ne bouge — ni ses
+        réservations, ni ses documents, ni les chiffres passés. Retiré de l'écran tout de suite
+        (optimiste), sans attendre le prochain chargement. Pas construit : « démasquer » un
+        client (annuler la suppression) — aucun écran ne le propose aujourd'hui, seule la
+        colonne existe pour ça plus tard si besoin.
+  - [x] 2026-09-28 — **Même geste dans « À relancer », sens différent** (Alexandre : « il faut
+        aussi pouvoir supprimer dans relance ce qui annule la relance de ce client »). Glisser
+        une ligne là n'est PAS un masquage : c'est « ne plus contacter » (même réglage que le
+        menu de la fiche). La ligne ne disparaît donc pas, elle passe en « Ne veut plus » — un
+        client opposé reste volontairement visible dans cette liste (déjà le cas depuis la
+        construction de l'onglet). Un seul mécanisme d'overlay local (`reglagesLocaux`,
+        ClientsViewV2.tsx) porte maintenant les deux gestes (masquer, ne plus contacter), et
+        s'applique partout où `reglages` comptait avant — la fiche ouverte juste après reflète
+        déjà le changement, sans attendre `router.refresh()`.
+  - [x] 2026-09-28 — **Bug relevé par Alexandre en testant : une facture comptait AVANT d'être
+        payée.** `ClientDocument` (`lib/clientProfile.ts`) ne connaissait pas `paye_le` — une
+        facture écrite à la main comptait dans le total d'un client dès sa création, payée ou
+        non, contrairement à l'« Encaissé » de Chiffres qui n'a compté que le payé dès le
+        départ. Un client dont la facture attendait encore son virement paraissait déjà avoir
+        payé. Corrigé partout où `ClientDocument` circule : la fiche client (« au total »), la
+        fiche entreprise (même calcul, sommé) et le fichier Clients. Au passage : la fiche
+        client affiche maintenant « Encaissée »/« À encaisser » sur chaque facture, et la fiche
+        entreprise gagne une alerte **factures impayées** (montant + depuis combien de temps),
+        symétrique à celle des devis en attente.
+  - [x] 2026-09-28 — **« + Devis » pré-rempli depuis la Fiche entreprise** (Alexandre : « il faut
+        que ce soit pré rempli avec les informations de l'entreprise dans le devis »). Le lien
+        transporte le nom de l'entreprise et les coordonnées du premier contact joignable en
+        paramètres d'adresse (`?nouveau=1&entreprise=...&nom=...&tel=...&email=...&adresse=...`),
+        lus par `DocumentsV2.tsx` — même mécanisme que `nouveau=1` lui-même. Ignoré si la feuille
+        est rouverte par le « + » propre à cet écran : ce geste-là veut un formulaire vide.
+  - [x] 2026-09-28 — **« délai de paiement » au lieu de « paiement »** sur la tuile-chiffre de la
+        fiche entreprise (Alexandre : « ne met pas paiement mais delai de paiement pour qu'on
+        comprenne du coup ») — le chiffre n'a pas changé, seul le mot au-dessus était ambigu.
+  - [x] 2026-09-28 — **Alerte « factures impayées » cliquable** sur la fiche entreprise : tape
+        dessus, ça ouvre la MÊME feuille d'actions que Documents et factures (télécharger,
+        envoyer, marquer payée), plus un nouveau bouton **Appeler** (visible même sur une facture
+        pro, pas réservé aux devis). `FeuilleActions` de `DocumentsV2.tsx` extraite en composant
+        partagé `FeuilleActionsDocumentV2.tsx` pour ça — `ClientDocument` (forme minimale de la
+        fiche) n'a pas de quoi construire le message WhatsApp, donc la fiche entreprise charge le
+        `Document` complet à la demande (`lireDocuments()`, mis en cache) plutôt que de forcer
+        `ClientDocument` à porter des champs qu'il n'a jamais eus.
+  - [x] 2026-09-28 — **Véhicules et notes sur la fiche client** (Alexandre : « j'aimerais qu'on
+        mette dans la fiche client de particulier / pro / entreprise les modeles de voitures
+        comme ca on sait les voitures des gens »). Deux champs texte libre sur `clients`
+        (`vehicules` neuf, `notes` déjà posé le 2026-09-28 mais jamais câblé) : SQL —
+        ```sql
+        alter table public.clients add column if not exists vehicules text;
+        ```
+        Modifiables depuis le menu « … » de la fiche (particulier/pro), « Modifier la fiche » ;
+        affichés dans le corps de la fiche quand non vides. Côté entreprise, le véhicule de
+        chaque contact apparaît sous son nom dans la liste Contacts — pas de note d'entreprise
+        (une entreprise n'a pas de fiche propre, seulement ses contacts, voir plus haut).
+        Optimiste comme le reste de l'écran (`router.refresh()` avant de refermer la feuille).
+        **Corrigé le même jour, relevé par Alexandre** (« si justement on a dans le lien de
+        réservation demandé le modèle au client ») : la réservation publique demande DÉJÀ le
+        modèle au client (`StepService.tsx`, un champ texte libre par véhicule, stocké dans
+        `bookings.vehicles_detail`) — le champ manuel ci-dessus, seul, obligeait à retaper une
+        donnée déjà donnée par le client. `ClientProfile.vehiculesReserves` (nouveau,
+        `clientProfile.ts`) reprend ces modèles depuis l'historique de réservations, du plus
+        récent, sans doublon ; la fiche les affiche EN PREMIER, le champ manuel restant un
+        complément (plaque, couleur) ou un secours pour un client sans réservation (né d'un
+        devis). `COLONNES` de `clients/page.tsx` élargi à `vehicles_detail` pour ça.
+        **Même jour, même logique étendue aux devis/factures écrits à la main** (Alexandre :
+        « demandé le véhicule dans les devis du coup quand on les fait à la main ») : un devis
+        n'a pas de réservation derrière, donc pas de `vehicles_detail` à reprendre — la feuille
+        `FeuilleDocumentV2.tsx` demande maintenant le véhicule au même endroit que le reste du
+        client (sous l'adresse), champ facultatif `clientVehicule` sur `SaisieDocument`, gardé
+        dans `FactureContenu.client.vehicule` (`lib/facture.ts`, `lib/documents.ts`).
+        `vehiculesReserves` mêle les deux sources par date (réservation ou document, la plus
+        récente d'abord) plutôt que de les empiler sans ordre.
+  - [x] 2026-09-28 — **Menu « Options » de la fiche refait** (canevas de Yanis, « Fiche >
+        Options ») : passé d'une petite liste de mots à une vraie feuille (icône + titre +
+        sous-titre par action), avec six actions. `lib/guide.ts`, entrée `menu-fiche-client`.
+    - **Modifier la fiche étendue** : portait seulement notes/véhicules, porte maintenant aussi
+      nom et téléphone (`ClientReglages.nom`/`.telephone`, `clientProfile.ts`) — une CORRECTION
+      qui prime sur le calcul habituel (le plus récent d'une réservation ou d'un document),
+      jamais une réécriture de l'historique.
+    - **Ajouter une tâche** : pense-bête court, table `client_taches` (SQL ci-dessous),
+      `/api/clients/[cle]/taches` (GET/POST), `/api/taches/[id]` (PATCH/DELETE). Chargée à
+      l'ouverture de la fiche, pas dans `clients/page.tsx` — la plupart des fiches n'en ont
+      aucune. Cochée = disparaît (pas d'historique des tâches faites, pas demandé).
+    - **Fusionner un doublon** : repéré par `lib/doublons.ts` (même téléphone, sinon même nom
+      sans accent ni casse — jamais l'email, c'est justement ce qui diffère entre deux fiches
+      de la même personne). N'apparaît dans le menu QUE si un doublon est trouvé. La fusion
+      elle-même (`/api/clients/fusionner`, fonction SQL `fusionner_clients` ci-dessous)
+      réassigne réservations et documents de la fiche source vers la fiche cible (email/
+      téléphone réécrits), combine leurs réglages (notes, véhicules, ne plus contacter — la
+      cible garde les siens en priorité), puis supprime la ligne de réglages de la source.
+      Irréversible.
+    - **Exporter ses données (RGPD, article 15)** : libellé et mécanique revus par l'agent
+      `legal` avant construction (voir le compte rendu de la conversation du 2026-09-28). Un
+      fichier texte lisible directement, PAS un JSON brut (`lib/exportClient.ts`,
+      `texteExportClient`), généré entièrement dans le navigateur depuis la fiche déjà
+      chargée — aucune requête pour construire le fichier. `/api/clients/[cle]/rgpd` ne fait
+      que journaliser l'action (table `client_rgpd_journal`, SQL ci-dessous), pour la
+      responsabilité du laveur en cas de contrôle (article 5.2) — jamais le contenu exporté.
+    - **Anonymiser la fiche (RGPD, article 17, exception comptable 17.3.b)** : remplace nom,
+      email, téléphone et adresse par des valeurs anonymes sur TOUTES les réservations et TOUS
+      les documents de ce client — jamais montants, dates ni numéros de facture (fonction SQL
+      `anonymiser_client` ci-dessous, même mécanique que `fusionner_clients`). Confirmation
+      avec case à cocher obligatoire (texte exact fourni par l'agent `legal`), bouton
+      désactivé tant qu'elle n'est pas cochée. Irréversible, ferme la fiche après coup.
+      **Limite connue, signalée par `legal`** : les champs libres (notes, véhicules) qui
+      mentionneraient le nom du client en toutes lettres ne sont PAS balayés automatiquement —
+      la confirmation le dit, mais rien ne le vérifie. Hors périmètre également : toute autre
+      table qui porterait les coordonnées de ce client (funnel d'abandon de réservation, par
+      exemple) — seules réservations et documents sont couverts.
+
+      SQL à exécuter dans Supabase (idempotent, un seul passage) :
+      ```sql
+      alter table public.clients add column if not exists nom text;
+      alter table public.clients add column if not exists telephone text;
+
+      create table if not exists public.client_taches (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        cle text not null,
+        texte text not null,
+        faite_le timestamptz,
+        created_at timestamptz not null default now()
+      );
+      create index if not exists client_taches_washer_cle_idx on public.client_taches(washer_id, cle);
+      alter table public.client_taches enable row level security;
+      drop policy if exists "client_taches_all" on public.client_taches;
+      create policy "client_taches_all" on public.client_taches for all
+        using (washer_id in (select id from public.washers where user_id = auth.uid()))
+        with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      grant select, insert, update, delete on public.client_taches to authenticated;
+      grant all on public.client_taches to service_role;
+
+      create table if not exists public.client_rgpd_journal (
+        id uuid primary key default gen_random_uuid(),
+        washer_id uuid not null references public.washers(id) on delete cascade,
+        cle text not null,
+        action text not null,
+        utilisateur_id uuid,
+        created_at timestamptz not null default now()
+      );
+      alter table public.client_rgpd_journal enable row level security;
+      drop policy if exists "client_rgpd_journal_all" on public.client_rgpd_journal;
+      create policy "client_rgpd_journal_all" on public.client_rgpd_journal for all
+        using (washer_id in (select id from public.washers where user_id = auth.uid()))
+        with check (washer_id in (select id from public.washers where user_id = auth.uid()));
+      grant select, insert on public.client_rgpd_journal to authenticated;
+      grant all on public.client_rgpd_journal to service_role;
+
+      -- Fusionner un doublon : la fiche SOURCE disparaît, ses réservations et documents
+      -- prennent l'email/téléphone de la fiche CIBLE. Sous un verrou (deux fusions du même
+      -- laveur en même temps ne doivent pas se marcher dessus).
+      create or replace function public.fusionner_clients(
+        p_washer_id uuid, p_cle_source text, p_email_cible text, p_telephone_cible text
+      ) returns void
+      language plpgsql security definer set search_path = public as $$
+      begin
+        perform pg_advisory_xact_lock(hashtext(p_washer_id::text || ':clients'));
+
+        update public.bookings
+        set client_email = nullif(p_email_cible, ''),
+            client_phone = coalesce(nullif(p_telephone_cible, ''), client_phone)
+        where washer_id = p_washer_id
+          and (
+            lower(trim(client_email)) = p_cle_source
+            or (
+              (client_email is null or trim(client_email) = '')
+              and ('tel:' || regexp_replace(client_phone, '\D', '', 'g')) = p_cle_source
+            )
+          );
+
+        update public.documents
+        set contenu = jsonb_set(
+              jsonb_set(contenu, '{client,email}', to_jsonb(nullif(p_email_cible, ''))),
+              '{client,telephone}', to_jsonb(nullif(p_telephone_cible, ''))
+            )
+        where washer_id = p_washer_id
+          and (
+            lower(trim(contenu->'client'->>'email')) = p_cle_source
+            or (
+              (contenu->'client'->>'email' is null or trim(contenu->'client'->>'email') = '')
+              and ('tel:' || regexp_replace(contenu->'client'->>'telephone', '\D', '', 'g')) = p_cle_source
+            )
+          );
+
+        delete from public.clients where washer_id = p_washer_id and cle = p_cle_source;
+      end;
+      $$;
+      grant execute on function public.fusionner_clients(uuid, text, text, text) to authenticated;
+
+      -- Anonymiser (droit à l'effacement, article 17) : remplace nom/email/téléphone/adresse
+      -- partout, jamais montants ni numéros de facture. Même verrou que la fusion.
+      create or replace function public.anonymiser_client(p_washer_id uuid, p_cle text) returns void
+      language plpgsql security definer set search_path = public as $$
+      begin
+        perform pg_advisory_xact_lock(hashtext(p_washer_id::text || ':clients'));
+
+        update public.bookings
+        set client_name = 'Client anonymisé', client_email = null, client_phone = null, address = 'Adresse supprimée'
+        where washer_id = p_washer_id
+          and (
+            lower(trim(client_email)) = p_cle
+            or (
+              (client_email is null or trim(client_email) = '')
+              and ('tel:' || regexp_replace(client_phone, '\D', '', 'g')) = p_cle
+            )
+          );
+
+        update public.documents
+        set contenu = jsonb_set(
+              jsonb_set(
+                jsonb_set(
+                  jsonb_set(contenu, '{client,nom}', to_jsonb('Client anonymisé'::text)),
+                  '{client,email}', 'null'::jsonb
+                ),
+                '{client,telephone}', 'null'::jsonb
+              ),
+              '{client,adresseFacturation}', to_jsonb('Adresse supprimée'::text)
+            )
+        where washer_id = p_washer_id
+          and (
+            lower(trim(contenu->'client'->>'email')) = p_cle
+            or (
+              (contenu->'client'->>'email' is null or trim(contenu->'client'->>'email') = '')
+              and ('tel:' || regexp_replace(contenu->'client'->>'telephone', '\D', '', 'g')) = p_cle
+            )
+          );
+
+        delete from public.clients where washer_id = p_washer_id and cle = p_cle;
+      end;
+      $$;
+      grant execute on function public.anonymiser_client(uuid, text) to authenticated;
+      ```
+
 - [x] 2026-09-17 — **Livré par Ryan** (`56836f2`). Tables `support_questions` /
       `support_messages` **créées à la main dans Supabase** ce jour-là, SQL donné dans la
       conversation (pas de fichier de migration). Testé de bout en bout en local contre la
@@ -1374,24 +3086,6 @@ rien à faire, mais que le projet reste globalement sain.
 ## 📌 SQL / config en attente (à exécuter en prod si pas déjà fait)
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
-
-- [ ] **AU MOMENT DU DÉPLOIEMENT DE LA GRILLE 2026 — `supabase/migrations/004_offres_2026.sql`.**
-      Passe la colonne `washers.plan` de 2 valeurs (`essentiel`, `pro`) à 4
-      (`decouverte`, `starter`, `pro`, `business`), reprend les comptes existants, change la
-      valeur par défaut et pose une contrainte `CHECK`.
-      **À exécuter au déploiement, pas après** : tant qu'elle n'a pas tourné, un compte qui
-      utilise plusieurs laveurs (`team_size > 1`) perd le multi-laveurs, qui appartient
-      désormais au Business. Le reste ne casse pas (le code sait lire l'ancien `essentiel` et
-      le fait remonter sur Pro, au même tarif de 49 €).
-      Vérification après : `select plan, count(*) from washers group by plan order by plan;`
-      — aucune ligne hors des quatre valeurs.
-
-- [ ] **Créer les tarifs Stripe des nouvelles offres avant le déploiement.**
-      `STRIPE_PRICE_ID_STARTER` (19 €) et `STRIPE_PRICE_ID_BUSINESS` (129 €) à créer dans le
-      catalogue Stripe puis à renseigner dans Vercel. `STRIPE_PRICE_ID_PRO` reste, mais doit
-      **pointer sur un tarif à 49 €** (l'ancien Pro était à 69 €) — sinon un laveur qui
-      choisit le Pro paie l'ancien prix. `STRIPE_PRICE_ID_ESSENTIEL` n'est plus lue.
-      Sans ces variables, le bouton de paiement de l'offre concernée répond « Plan invalide ».
 
 - [ ] **`GRANT DELETE ON public.booking_funnel_events TO service_role;` manquant.**
       Constaté le 2026-09-14 en supprimant trois comptes de test : « permission denied for

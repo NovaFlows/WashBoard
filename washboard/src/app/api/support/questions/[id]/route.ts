@@ -98,6 +98,27 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { supabase, washerId } = auth.ctx
 
   const body = await request.json().catch(() => null)
+
+  // « Supprimer » la conversation de SA liste (glisser vers la gauche, PWA) : un
+  // masquage, jamais un effacement — l'équipe garde le fil. La date est calculée ici,
+  // jamais lue dans le corps de la requête ; marquer lu dans le même appel évite qu'un
+  // fil masqué garde une pastille. Un message postérieur le fait réapparaître (voir
+  // `isThreadHiddenForWasher`).
+  if (body?.hidden === true) {
+    const maintenant = new Date().toISOString()
+    const { error: erreurMasquage } = await supabase
+      .from('support_questions')
+      .update({ hidden_for_washer_at: maintenant, is_read_by_washer: true, last_read_by_washer_at: maintenant })
+      .eq('id', id)
+      .eq('washer_id', washerId)
+
+    if (erreurMasquage) {
+      logger.error('support.questions.id.hide_failed', { washerId, questionId: id }, erreurMasquage)
+      return NextResponse.json({ error: 'Impossible de supprimer cette conversation. Réessayez.' }, { status: 503 })
+    }
+    return NextResponse.json({ success: true })
+  }
+
   if (body?.is_read !== true) {
     return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })
   }

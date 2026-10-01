@@ -1,22 +1,28 @@
+import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COLONNE_INCONNUE } from '@/lib/compterPrestations'
-import { COOKIE_REPORT } from '@/app/api/prestations/reporter/route'
+import { COOKIE_REPORT } from '@/lib/veilleReport'
 import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
 
 /** Enveloppe commune à tout le tableau de bord.
  *
- *  Elle ne sert aujourd'hui qu'à une chose : demander au laveur quelles
- *  prestations garder en ligne, quand il en a plus que son offre n'en affiche.
+ *  Deux rôles distincts : fermer le tableau de bord à un compte dont l'email
+ *  n'est pas confirmé (en pratique Supabase refuse déjà la connexion d'un tel
+ *  compte ; cette garde couvre toute session qui y parviendrait par un autre
+ *  chemin — elle ne remplace PAS la vérification `if (!user) redirect('/login')`
+ *  de chaque page, qui reste le filet de sécurité si la session est absente),
+ *  et demander au laveur quelles prestations garder en ligne, quand il en a
+ *  plus que son offre n'en affiche.
  *
- *  Pourquoi ici et pas sur la seule page d'accueil : le laveur n'arrive pas
- *  toujours par là. L'application installée se rouvre là où il l'avait laissée
- *  — son agenda, le plus souvent — et une notification de réservation l'emmène
- *  droit sur une fiche de rendez-vous. La question posée sur `/dashboard`
- *  seulement ne lui serait jamais arrivée, alors que sa page de réservation
- *  n'affiche déjà plus tout son catalogue.
+ *  Pourquoi ce deuxième rôle ici et pas sur la seule page d'accueil : le
+ *  laveur n'arrive pas toujours par là. L'application installée se rouvre là
+ *  où il l'avait laissée — son agenda, le plus souvent — et une notification
+ *  de réservation l'emmène droit sur une fiche de rendez-vous. La question
+ *  posée sur `/dashboard` seulement ne lui serait jamais arrivée, alors que sa
+ *  page de réservation n'affiche déjà plus tout son catalogue.
  *
  *  « Plus tard » reste toujours possible, sinon ce serait une porte fermée —
  *  et il pose un cookie, sans quoi la fenêtre resurgirait au premier clic dans
@@ -39,6 +45,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // Pas de session : les pages elles-mêmes redirigent vers la connexion.
   if (!user) return <>{children}</>
+
+  if (!user.email_confirmed_at) redirect('/verifier-email')
 
   const { data: washer } = await supabase
     .from('washers')

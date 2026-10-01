@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendSms } from '@/lib/sms'
-import { hasFeature } from '@/lib/plan'
+import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { hasFeature } from '@/lib/plan'
+
 import { logger } from '@/lib/logger'
 
 export async function POST() {
@@ -25,7 +26,9 @@ export async function POST() {
     return NextResponse.json({ error: 'Ajoutez votre numéro de téléphone dans Paramètres > Général pour recevoir le SMS test' }, { status: 400 })
   }
 
-  const sender = (washer.sms_sender ?? washer.name).slice(0, 11)
+  // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
+  // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
+  const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
   const reviewLink = washer.google_review_url ?? 'https://g.page/r/votre-lien-avis'
 
   try {

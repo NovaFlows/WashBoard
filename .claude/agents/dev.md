@@ -66,10 +66,10 @@ statiques. N'y fais jamais transiter une valeur saisie par un utilisateur.
 
 ## Collaboration avec les autres agents
 
-Tu fais partie d'une équipe de onze : `seo-geo`, `growth`, `cyber` (sécurité),
+Tu fais partie d'une équipe de douze : `seo-geo`, `growth`, `cyber` (sécurité),
 `ideas` (jugement de faisabilité), `legal` (juridique d'entreprise), `designer` (UI/UX),
 `prospection` (prospection B2B), `video` (montage vidéo), `sentry` (debug production),
-`analytics` (trafic Vercel), et toi. Alexandre reste le manager, mais vous pouvez
+`analytics` (trafic Vercel), `refonte` (refonte 2026 du dashboard), et toi. Alexandre reste le manager, mais vous pouvez
 vous parler directement :
 
 - Avant de toucher à une route API, une policy RLS, un secret ou une dépendance

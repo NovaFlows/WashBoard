@@ -42,18 +42,27 @@ export function supportAccessMinutesLeft(grant: SupportGrant | null | undefined,
   return Math.max(1, Math.ceil(restant / 60_000))
 }
 
-/** Cette adresse fait-elle partie de l'équipe support ?
+/** Identifiants (`auth.users.id`) des comptes de l'équipe support.
  *
  *  La liste vit dans une variable d'environnement, jamais dans le code : le
  *  dépôt est public. Sans variable définie, personne n'est support — un
- *  déploiement mal configuré doit fermer l'accès, pas l'ouvrir à tous. */
-export function isSupportMember(email: string | null | undefined, liste: string | undefined): boolean {
-  if (!email || !liste) return false
-  const normalise = email.trim().toLowerCase()
-  if (!normalise) return false
-  return liste
+ *  déploiement mal configuré doit fermer l'accès, pas l'ouvrir à tous.
+ *
+ *  L'identifiant et non l'adresse email : un identifiant ne change jamais,
+ *  alors qu'une adresse peut finir portée par un autre compte que celui
+ *  qu'on croit. Une liste d'adresses donnait les droits support à quiconque
+ *  parvenait à faire porter l'une d'elles à son compte (revue sécurité du
+ *  2026-09-29). */
+export function supportMemberIds(liste: string | undefined): string[] {
+  return (liste ?? '')
     .split(',')
-    .map(e => e.trim().toLowerCase())
+    .map(id => id.trim().toLowerCase())
     .filter(Boolean)
-    .includes(normalise)
+}
+
+/** Ce compte fait-il partie de l'équipe support ? */
+export function isSupportMember(userId: string | null | undefined, liste: string | undefined): boolean {
+  const normalise = userId?.trim().toLowerCase()
+  if (!normalise) return false
+  return supportMemberIds(liste).includes(normalise)
 }

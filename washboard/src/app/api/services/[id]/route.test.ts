@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ERREUR_PRESTATION_RESERVEE } from '@/lib/prestation'
 
 // Pendant de `services/route.test.ts` (POST) pour la modification d'une
 // prestation existante : même plafond (`DUREE_MAX_MINUTES`), même case
@@ -30,7 +31,7 @@ vi.mock('@/lib/requireWasher', () => ({
   requireWasher: async () => ({ ok: true, ctx: { supabase: fauxSupabase, washerId: 'washer-1' } }),
 }))
 
-const { PATCH } = await import('./route')
+const { PATCH, DELETE } = await import('./route')
 
 function requete(body: Record<string, unknown>) {
   return new Request('https://www.washboard.fr/api/services/service-1', {
@@ -45,6 +46,9 @@ const params = Promise.resolve({ id: 'service-1' })
 beforeEach(() => {
   updates.length = 0
   plan = { updateError: null }
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+  vi.spyOn(console, 'log').mockImplementation(() => {})
 })
 
 describe('PATCH /api/services/[id] — plafond de durée', () => {
@@ -72,5 +76,46 @@ describe('PATCH /api/services/[id] — plafond de durée', () => {
     const res = await PATCH(requete({ name: 'ez' }), { params })
     expect(res.status).toBe(200)
     expect(updates[0]).not.toHaveProperty('duration_minutes')
+  })
+})
+
+// Suppression : `bookings.service_id` référence `services(id)` sans `ON DELETE`,
+// donc une prestation déjà réservée ne peut pas être supprimée (violation de clé
+// étrangère, code Postgres 23503). Avant ces tests la route répondait « Une erreur
+// interne est survenue » (500) : le laveur ne savait pas que la prestation était
+// simplement utilisée. (`plan.updateError` sert ici de réponse à la suppression.)
+const appelSuppression = () =>
+  DELETE(
+    new Request('https://www.washboard.fr/api/services/service-1', { method: 'DELETE' }) as unknown as Parameters<typeof DELETE>[0],
+    { params },
+  )
+
+describe('DELETE /api/services/[id]', () => {
+  it('supprime une prestation sans réservation', async () => {
+    const res = await appelSuppression()
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+  })
+
+  it('une prestation réservée : 409 avec une phrase claire et un errorId, pas un 500 opaque', async () => {
+    plan.updateError = { code: '23503', message: 'violates foreign key constraint "bookings_service_id_fkey"' }
+    const res = await appelSuppression()
+    expect(res.status).toBe(409)
+    const corps = await res.json()
+    expect(corps.error).toBe(ERREUR_PRESTATION_RESERVEE)
+    expect(typeof corps.errorId).toBe('string')
+  })
+
+  it('le détail technique de la base ne fuit pas dans la réponse', async () => {
+    plan.updateError = { code: '23503', message: 'violates foreign key constraint "bookings_service_id_fkey"' }
+    const corps = JSON.stringify(await (await appelSuppression()).json())
+    expect(corps).not.toContain('bookings_service_id_fkey')
+  })
+
+  it('toute autre erreur de base reste une erreur interne (500) : seule la clé étrangère est un cas attendu', async () => {
+    plan.updateError = { code: '57014', message: 'canceling statement due to statement timeout' }
+    const res = await appelSuppression()
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toBe('Une erreur interne est survenue.')
   })
 })

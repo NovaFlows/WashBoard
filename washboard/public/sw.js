@@ -11,10 +11,14 @@
 // Le numéro de version force le renouvellement du cache à chaque déploiement.
 // v2 : purge les caches de la v1, qui pouvaient contenir des pages de tableau
 // de bord mises en cache avant qu'on ne les en exclue.
-const VERSION = 'washboard-v2'
-const HORS_LIGNE = '/hors-ligne'
+// v3 : écran hors ligne autonome (`/hors-ligne.html`, mis en cache à l'installation). Avant, le
+// repli visait la page `/hors-ligne` de l'application, jamais mise en cache : sans réseau, au
+// lancement, l'iPhone restait sur un écran noir (constaté par Alexandre le 2026-09-26).
+const VERSION = 'washboard-v3'
+const HORS_LIGNE = '/hors-ligne.html'
 
 const FICHIERS_FIXES = [
+  HORS_LIGNE,
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',

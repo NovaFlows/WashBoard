@@ -25,6 +25,125 @@ pour savoir **où il va maintenant**.
 Chaque fois que tu hésites, reviens à cette phrase. Elle a produit la moitié des décisions
 ci-dessous.
 
+## v1 sur le site, v2 seulement dans la PWA installée
+
+Décision d'Alexandre, 2026-09-22 — **ne rouvre pas sans le dire** : « moi je veux que la PWA
+ressemble a une app mais que le site web que ce soit sur mobile ou ordinateur reste comme
+actuellement ». Ça change l'échelle de TOUT ce qui suit dans ce fichier : la direction
+visuelle v2 (jetons `--v2-*`, Archivo, verre de châssis, barre du bas...) ne s'applique QU'à
+la PWA installée, en mode standalone. Le site — navigateur classique, mobile ou ordinateur —
+reste v1, pixel pour pixel, sans exception.
+
+À ne pas confondre avec « Tout reste accessible sur le téléphone » (Arbitrages déjà tranchés,
+plus bas) : cette règle-là porte sur l'**appareil** (téléphone vs ordinateur), celle-ci sur le
+**conteneur** (onglet de navigateur vs app installée) — les deux se croisent librement : un
+laveur sur ordinateur qui installe la PWA (Chrome/Edge le permettent) voit v2 ; un laveur sur
+téléphone qui n'a pas installé l'app voit v1.
+
+**Deux mécanismes, à choisir écran par écran — compare le JSX v1 et v2 côte à côte avant de
+trancher, ne devine pas :**
+
+1. **Changement purement visuel** (couleurs, espacements, rayons — pas de JSX différent) →
+   classe `wb-pwa` posée sur `<html>` par un script synchrone `beforeInteractive`
+   (`src/app/layout.tsx`, constante `PWA_DETECT_SCRIPT`, via `next/script`) : zéro flash, la
+   classe existe avant la première peinture (il n'existe pas d'équivalent "cookie lu côté
+   serveur" pour `display-mode: standalone`, contrairement au thème clair/sombre — d'où le
+   script). Convention documentée dans `globals.css`, juste avant les jetons v2.
+2. **Changement de FORME** (structure JSX différente — icônes/avatars différents, boutons en
+   plus, layout différent) → hook React `usePwaStandalone()`
+   (`src/hooks/usePwaStandalone.ts`, lui-même basé sur `src/lib/pwaStandalone.ts` pour le test
+   de détection), pattern `mounted` déjà établi dans le projet (voir `ThemeToggle.tsx`,
+   `NotificationsToggle.tsx`) : rend v1 par défaut tant que le composant n'est pas monté, un
+   flash v1→v2 bref au montage côté PWA est accepté.
+
+**Exemple concret (retrofit du 2026-09-22, passes 2 et 3)** — les deux premiers écrans passés
+en v2 avaient une structure trop différente de la v1 pour du CSS seul (avatar rond/carré,
+badge PRO ↔ pastille, carte centrée ↔ feuille qui monte du bas, boutons Appeler/Message en
+plus, filtre Pros en plus...) : branchement JSX dans les deux cas, pas de classe CSS.
+- `ClientsView.tsx` est redevenu un point de branchement (`usePwaStandalone()` →
+  `ClientsViewV1` ou `ClientsViewV2`). `ClientsViewV1.tsx` reprend le code du commit `8a1efa6`
+  (dernier avant le passage en v2) à l'identique ; `ClientsViewV2.tsx` est l'ancien contenu de
+  `ClientsView.tsx`.
+- Même schéma pour `ClientProfileModal.tsx` → `ClientProfileModalV1.tsx` /
+  `ClientProfileModalV2.tsx`. Un seul point d'entrée : les deux appelants existants
+  (`ClientsView.tsx` ET `CrmDashboard.tsx`, l'ancien CRM pas encore migré) continuent
+  d'importer `ClientProfileModal` sans rien savoir du branchement.
+- La logique n'a pas bougé (`listeClients`, `rechercherClients`, `buildClientProfile`) — seule
+  la présentation est dupliquée entre V1 et V2, jamais le calcul. Ce que ça veut dire pour la
+  suite : une correction de LOGIQUE (bug, nouveau champ calculé) profite aux deux versions
+  automatiquement ; une correction de PRÉSENTATION doit être reportée à la main sur l'autre
+  fichier si elle s'applique aux deux (rare — le but de la refonte est justement que la
+  présentation diverge).
+
+**Pour toute passe à venir (4 à 8) : poser ce branchement DÈS L'ÉCRITURE de l'écran, pas
+après coup.** Écrire l'écran v2 directement puis découvrir qu'il faut le protéger double le
+travail et risque d'oublier un des appelants existants. Le réflexe, avant d'écrire le JSX :
+décider laquelle des deux catégories ci-dessus s'applique, nommer les fichiers `EcranV1.tsx` /
+`EcranV2.tsx`, et faire de l'ancien nom (`Ecran.tsx`) le point de branchement dès le premier
+commit de la passe — jamais un fichier qui contient déjà le v2 sans garde.
+
+**Vérifier une passe :** Chrome DevTools → More tools → Rendering → « Emulate CSS media
+feature display-mode » → `standalone` (aucune installation requise, itère vite). Capture
+obligatoire dans les DEUX états — `display-mode: browser` (émulation désactivée, = le site) ET
+`standalone` (émulée, = la PWA) — clair et sombre : quatre captures par écran qui change de
+forme, deux si le mécanisme est la classe CSS seule.
+
+**Si la vérification se fait par script (Playwright), pas à la main dans Chrome — deux pièges
+rencontrés à la passe 4, à ne pas redécouvrir :**
+- le CDP `Emulation.setEmulatedMedia` avec la feature `display-mode` (ce que fait Chrome
+  DevTools lui-même) ne s'est PAS reproduit avec le Chromium 149 fourni par Playwright 1.61.1
+  (testé headless et headed, `matchMedia('(display-mode: standalone)').matches` reste `false`) —
+  contrairement à `prefers-color-scheme`, qui lui fonctionne par ce chemin. Contournement
+  fiable : `page.addInitScript(...)` qui remplace `window.matchMedia` pour cette seule requête
+  avant l'exécution du moindre script de la page (voir `isPwaStandalone()` — c'est exactement
+  ce qu'il interroge).
+- le thème sombre de CE projet n'est PAS piloté par `prefers-color-scheme` mais par un cookie
+  `theme` lu côté serveur (`layout.tsx`, voir aussi le commentaire `--v2-color-*` de
+  `globals.css`) : `page.emulateMedia({ colorScheme: 'dark' })` seul ne change rien à l'écran —
+  poser directement le cookie (`context.addCookies([{ name: 'theme', value: 'dark', ... }])`)
+  avant la navigation.
+
+**Un ajout de chrome n'est pas toujours un fork V1/V2.** Le schéma `EcranV1.tsx` / `EcranV2.tsx`
+(voir plus haut) s'applique à un ÉCRAN dont toute la présentation change de forme. La passe 4
+(barre du bas) est un cas différent : le menu latéral, l'en-tête et le contenu de
+`DashboardShell` ne changent pas — une barre flottante s'ajoute simplement par-dessus, à la
+demande de deux conditions (`usePwaStandalone()` et `washer.beta_refonte`). Dans ce cas,
+brancher `usePwaStandalone()` directement dans le composant partagé (avec un rendu
+conditionnel local, `{condition && <Composant />}`) est le bon niveau — forker
+`DashboardShell.tsx` en deux fichiers aurait dupliqué tout ce qui NE change pas (header, menu,
+footer, bouton WhatsApp) pour une seule ligne de différence.
+
+**Une fusion de plusieurs écrans v1 n'est pas non plus un fork V1/V2 — troisième cas, posé à
+la passe 5 (Chiffres = CRM + Comptabilité).** Le schéma `EcranV1.tsx`/`EcranV2.tsx` suppose une
+même URL dont le CONTENU bascule. « Chiffres » n'a pas d'équivalent v1 : c'est une destination
+neuve (`/dashboard/chiffres`), absente de toute navigation v1, qui recompose des données que
+deux écrans v1 séparés (`/dashboard/crm`, `/dashboard/compta`) continuent de montrer chacun de
+leur côté, inchangés. Forker `CrmDashboard.tsx`/`ComptaDashboard.tsx` en V1/V2 aurait été le
+mauvais réflexe : leur contenu v1 ne bouge pas, et le contenu v2 n'est pas un reskin de la même
+architecture (3 onglets qui remplacent 2 pages entières), donc rien à brancher dans ces
+fichiers. La bonne question avant d'écrire le JSX n'est donc pas seulement « CSS seul ou
+JSX différent » (les deux mécanismes déjà documentés plus haut), mais d'abord : **est-ce que
+l'écran v2 vit à la MÊME url qu'un écran v1 existant ?**
+- Oui → un des deux mécanismes déjà documentés (classe `wb-pwa` ou `usePwaStandalone()`).
+- Non, c'est une destination neuve qui n'existait dans aucun menu v1 → composant(s) neuf(s),
+  garde-fou dans le composant d'entrée qui vérifie `isPwaStandalone()` au montage et redirige
+  vers l'ancien écran le plus proche si ce n'est pas le cas (voir `Chiffres.tsx` — état à trois
+  valeurs `verification`/`pwa`/`site`, jamais de flash de contenu v2 côté site, rien pendant la
+  vérification). Les écrans v1 sources ne sont PAS touchés, restent joignables par le menu
+  latéral, et gardent 100 % de leur logique — le nouvel écran la réutilise (mêmes fonctions
+  pures, mêmes routes API), il ne la déplace ni ne la duplique.
+
+**Garde le principe « garde la logique, remplace la présentation » y compris pour une
+fusion — et sache reconnaître quand une pièce de la maquette EST de la nouvelle logique.**
+À la passe 5, l'onglet Clients de la maquette demandait des cohortes de rétention et un taux de
+retour par canal de relance : aucune des deux n'existait dans le code, et les calculer
+correctement (fenêtre glissante par client, lien relance→canal→résultat qui n'existe pas en
+base) est un vrai chantier métier, pas une présentation d'un chiffre déjà calculé ailleurs.
+Plutôt que d'inventer un calcul approximatif ou un faux chiffre, ces sections ont été coupées
+avec une note honnête à la place — documenté dans `TODO.md`. Le réflexe : si un composant de la
+maquette n'a **aucune** fonction pure ni requête existante qui le nourrit déjà, ce n'est pas
+cette passe qui l'écrit — elle le signale.
+
 ## La direction visuelle
 
 **Le verre est un matériau de châssis, jamais de contenu.** Barre du bas, en-tête sous
@@ -111,6 +230,10 @@ du CRM (six pages orphelines).
 
 ## Arbitrages déjà tranchés — n'y reviens pas sans le dire
 
+**v2 seulement dans la PWA installée, jamais sur le site.** Voir la section dédiée juste après
+« L'utilisateur, qui décide de tout le reste » — c'est la contrainte qui change l'échelle de
+tout ce fichier (Alexandre, 2026-09-22).
+
 **Tout reste accessible sur le téléphone.** Découper par appareil (« ça, c'est sur PC »)
 était envisagé puis écarté : beaucoup de laveurs n'ouvrent jamais d'ordinateur, ça crée du
 support, et comme c'est une PWA ça ne fait économiser aucun développement — il faudrait
@@ -157,6 +280,67 @@ Piste non tranchée : relancer **au rythme de chaque client** (médiane de ses i
 1,15) plutôt qu'à un délai unique, avec repli par prestation quand l'historique manque
 (auto 2 mois, canapé 6 mois, terrasse 12 mois).
 
+**Écran livré le 2026-09-24 : `/dashboard/parametres/messages`** (PWA seulement, le site est
+renvoyé vers `parametres/tout#avis`). Ce que la base sait et ne sait pas, à ne pas
+redécouvrir : `review_request_sent_at` et `followup_sent_at` veulent dire « TRAITÉ », pas
+« envoyé » — seul `review_sms_sent_at` prouve un envoi, le reste est déduit
+(`lib/messagesAutomatiques.ts`, en-tête) ; aucune donnée ne relie un avis reçu à sa demande
+ni ne garde les réponses ; aucune opposition à être contacté n'est enregistrée (à soumettre à
+`legal`). Le canal reste UN réglage pour les deux messages, et le message d'avis reste codé en
+dur : les deux corrections produit ci-dessus ne sont toujours pas faites.
+
+**Écran livré le 2026-09-24 : `/dashboard/parametres/prestations`** (« Prestations et
+prix », PWA seulement, le site est renvoyé vers `/dashboard/admin#prestations`). À ne pas
+redécouvrir : une prestation réservée ne se supprime pas (`bookings.service_id` sans
+cascade) et ne peut pas être « masquée » (une prestation sans type est refusée, écran et
+serveur) — il manque un archivage ; les ids de types du preset « Voiture » sont des slugs
+fixes (jamais d'UUID) ; les types orphelins de `services.vehicle_types` s'affichent bruts
+côté client. La logique v2 est dupliquée dans `lib/prestationForm.ts` (correspondance avec
+le v1 écrite en tête) : une correction de règle se reporte des deux côtés.
+
+**Complété le 2026-09-25 : la zone d'intervention et les créneaux intelligents rejoignent
+`/dashboard/parametres/prestations`** (deux sections sous « + Ajouter une catégorie », ancres
+`#zone` et `#creneaux`, chacune une ligne à deux niveaux qui ouvre une feuille). Ils quittent donc
+les lignes provisoires de Plus ; **seul Google Agenda garde la sienne**. Le site ne bouge pas
+(`IdentiteForm`, `setupProgress`, `ZoneWidget` intacts) : ses liens continuent d'atterrir sur
+`/dashboard/admin`, et le garde-fou de `Prestations.tsx` y renvoie aussi `#zone` et `#creneaux`.
+À ne pas redécouvrir : **« proche » se lit dans `api/slots/smart/route.ts`** — même jour, temps de
+voiture ≤ `smart_slot_radius_minutes`, et une fenêtre de **90 min avant/après le rendez-vous codée
+en dur** (`WINDOW_MIN`), donc non réglable ; `zone_config` est un champ unique, éteindre la zone
+l'EFFACE (`{enabled:false}`), et une zone « départements » vide bloque tout le monde
+(`verdictZone`) tandis qu'une zone par rayon sans adresse ne bloque personne — les deux sont
+signalées par un point sur la ligne ; `/api/places/autocomplete` aplatit « Google en panne » en
+« aucun résultat », un client ne peut pas distinguer les deux ; les garde-fous de remise (≤ 50 %,
+≤ prix le plus bas) sont **de l'interface**, `POST /api/bookings` accepte toujours la remise que le
+visiteur envoie (faille suivie par `dev` + `cyber`). Logique dans `lib/zoneForm.ts`,
+`lib/creneauxForm.ts`, `lib/zoneApi.ts` (testés). `AdresseV2.tsx` remplace `AddressAutocomplete`
+dans les feuilles (suggestions EN LIGNE : une liste flottante serait rognée par la feuille) et
+appelle les **mêmes routes**, sans `places/details` — la zone n'a pas besoin des coordonnées.
+Restent à replacer : **Google Agenda** et les **frais de déplacement** (`ParametresFormV1`, à mettre
+près de la zone — voir TODO.md).
+
+**Écran livré le 2026-09-24 : `/dashboard/parametres/horaires`** (« Horaires », PWA seulement, le
+site est renvoyé vers `/dashboard/admin#disponibilites`). À ne pas redécouvrir : dimanche = 0 en
+base, affichage lundi → dimanche ; heures `HH:MM` sans fuseau, jamais via `new Date` ; la route
+`POST /api/availabilities` n'interdit pas le chevauchement (l'écran le refuse : `StepSlot`
+dupliquerait les créneaux) ; deux plages qui se touchent empêchent une prestation d'enjamber la
+limite ; aucun avertissement « durée qui ne tient pas » ici (il ne vit que dans Prestations) ; les
+appels par jour ne sont pas atomiques (`ajouterPlages` rend un résultat par jour). Les congés
+réutilisent `useConges` et les feuilles de `CongesV2` ; `useConges.deleteUnavail` reste optimiste.
+
+**Écran livré le 2026-09-24 : `/dashboard/parametres/apparence`** (« Apparence de ma page », PWA
+seulement, le site est renvoyé vers `/dashboard/admin#identite`). Périmètre décidé par Alexandre :
+les cinq premières cartes de `IdentiteForm` (logo, couleur, fond, message, site web) — Zone,
+Créneaux intelligents et Google Agenda n'y sont pas et gardent deux lignes PROVISOIRES dans Plus
+(bloc « À NE PAS OUBLIER » du TODO). À ne pas redécouvrir : l'état d'un envoi d'image vit dans le
+hook `useApparenceV2`, pas dans les feuilles (le détourage imgly peut durer une minute, fermer la
+feuille n'annule rien) et le sélecteur de fichier est dans l'écran ; la marque du laveur n'apparaît
+que dans l'aperçu et l'échantillon de couleur, jamais comme accent de l'écran ; le logo est rogné
+(`object-cover` 48 px) sur la vraie page ; logo et fond gardent la même URL d'un envoi à l'autre
+(`<user_id>.<ext>`) ; les avis du site sont lus une fois par jour et une redirection les fait
+disparaître ; `PALETTE` et `OVERLAY` vivent dans `lib/themes.ts`. Pour tester un envoi sans
+télécharger le modèle imgly : remplacer temporairement `hooks/retirerLeFond.ts` par un stub.
+
 ## Intégrer le CRM au code — l'ordre
 
 **Étape 0, bloquante : le schéma du dépôt ment.** Le code lit `booked_price`,
@@ -196,7 +380,7 @@ Skills disponibles et à utiliser : `animate`, `mobile-native`, `emil-design-eng
 
 Pression bouton 120 ms `scale(.97)` · feuille 320 ms · liste au chargement décalage 40 ms.
 **Jamais d'`ease-in`.** Rien sous 100 ms, rien au-dessus de 300 ms sauf la feuille.
-**Un onglet ne s'anime pas** : il est touché cent fois par jour.
+**Un onglet ne s'anime pas** : il est touché cent fois par jour. (Une seule exception, demandée par Alexandre le 2026-09-23 : la pastille de la barre du bas glisse d'un onglet à l'autre en 260 ms, comme sur Instagram ; les onglets eux-mêmes ne s'animent toujours pas.)
 
 ## Le socle mobile, à poser avant le premier composant
 
@@ -209,7 +393,7 @@ Pression bouton 120 ms `scale(.97)` · feuille 320 ms · liste au chargement dé
 
 ```css
 html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
-       overscroll-behavior: none; }
+       overscroll-behavior-y: none; }   /* -y seulement : `none` sur l'axe X coupe le geste « retour » depuis le bord */
 input, textarea, select { font-size: 16px; }   /* sinon iOS zoome */
 button, a { touch-action: manipulation; user-select: none; }
 .app { height: 100dvh; }
@@ -339,29 +523,40 @@ dessus, une fois. Deuxieme conflit : tu t'arretes et tu le signales.
 | 2 | **ecran pilote** : liste Clients | `ClientsView.tsx` (147 l.) | le premier ecran en v2 |
 | 3 | fiche client (feuille) | `ClientProfileModal.tsx` (148 l.) | |
 | 4 | barre du bas **derriere `washers.beta_refonte`** | `DashboardShell.tsx` (392 l.), `Sidebar.tsx` (251 l.) | navigation v2, equipe seulement |
-| 5 | Chiffres = CRM + compta fusionnes | `CrmView.tsx` (173 l.), `CrmDashboard.tsx` (693 l.), `ComptaDashboard.tsx` (463 l.) | la plus grosse passe : decoupe-la en trois |
-| 6 | Plus / reglages | `ParametresForm.tsx` (1028 l.) | **decoupe obligatoirement** : un groupe de reglages par commit |
-| 7 | Agenda | `CalendrierDashboard.tsx` (1727 l.) | **le plus gros du depot** : au moins trois passes |
+| 5 | Chiffres = CRM + compta fusionnes — **fait, 2026-09-23** | route neuve `/dashboard/chiffres` + `Chiffres.tsx`/`ChiffresV2.tsx`/`ChiffresArgent.tsx`/`ChiffresAcquisition.tsx`/`ChiffresClients.tsx` (`CrmView.tsx`, `CrmDashboard.tsx`, `ComptaDashboard.tsx` inchanges, voir plus haut pourquoi) | 3 onglets livres, 3 sections coupees faute de logique existante (cohortes, relances par canal) — voir TODO.md ; **passe 5 bis 2026-09-24** : periode partagee entre onglets (`SelecteurPeriodeV2`, `GraphiqueBarres`, `src/lib/chiffres*.ts`), graphiques qui suivent la periode, filtre Tous/Particuliers/Pros — voir TODO.md |
+| 6 | Plus / reglages — **fait, 2026-09-23** | `ParametresFormV1.tsx`/`ParametresFormV2.tsx` + `ParametresForm.tsx` en point de branchement, route neuve `/dashboard/parametres/tout` (rend `ParametresFormV1` tel quel, filet de secours) | menu « Plus » livre (carte lien + 3 groupes), 3 lignes de la maquette non construites faute de logique (modeles de messages, import clients, resume horaires) — voir TODO.md |
+| 7 | Agenda — **sous-lots 1, 2 et 3/3 faits, 2026-09-23** | `CalendrierDashboardV1.tsx`/`CalendrierDashboardV2.tsx` + `CalendrierDashboard.tsx` en point de branchement, `src/hooks/useRendezVousFiche.ts` (les 4 actions de la fiche), `useRendezVousManuel.ts` et `useConges.ts` (RDV manuel, congés — tous partagés v1/v2), `ConfirmerClotureV2.tsx`, `FeuilleV2.tsx` (feuille du bas générique), `RendezVousManuelV2.tsx`, `CongesV2.tsx` | agenda du jour (bandeau de 7 jours, temps de route estimé, créneaux libres, résumé) avec fiche de rendez-vous ACTIONNABLE (statut/reprogrammation/note/facture), lien de notification `?rdv=` opérationnel côté PWA, « + » en en-tête (nouveau rendez-vous / bloquer une période), congés visibles (bandeau du jour, point dans le bandeau des 7 jours, liste « Congés à venir ») et supprimables — voir TODO.md pour les limites (email obligatoire, liste d'adresses encore en style v1, etc.) |
 | 8 | Aujourd'hui | `BookingList.tsx` (579 l.) + les widgets | **en dernier** — Alex et Ryan viennent de le refaire |
 
 `SupportInbox`, `ImportFactures`, `AbonnementPanel`, `GuideContent` : hors refonte pour
 l'instant, ils heritent des jetons sans etre redessines.
+
+Les passes 2 et 3 (retrofit du 2026-09-22) suivent maintenant le schema `EcranV1.tsx` /
+`EcranV2.tsx` + `Ecran.tsx` en point de branchement — voir « v1 sur le site, v2 seulement
+dans la PWA installée » plus haut. Les colonnes « Fichiers » ci-dessus donnent les noms
+d'origine (avant le retrofit) ; pour les passes 4 à 8, prevoir ce triplet des le depart plutot
+que de retrofiter apres coup.
 
 ## La recette d'un ecran
 
 1. **Lis l'existant en entier** avant d'ecrire. Note ce qu'il fait et que la maquette ne
    montre pas — un etat vide, un message d'erreur, un cas Pro, un chargement. **Ces cas-la
    se perdent toujours dans une refonte, et ce sont eux qui font les bugs.**
-2. **Garde la logique, remplace la presentation.** Les hooks, les appels Supabase, les
+2. **Choisis le mecanisme v1/v2 avant d'ecrire le JSX** — classe CSS `wb-pwa` (changement
+   purement visuel) ou hook `usePwaStandalone()` (changement de forme) : voir « v1 sur le
+   site, v2 seulement dans la PWA installée » plus haut. Le site reste v1 sans exception.
+3. **Garde la logique, remplace la presentation.** Les hooks, les appels Supabase, les
    calculs : on n'y touche pas. Une refonte visuelle qui deplace de la logique est deux
    chantiers melanges, et on ne sait plus quoi bisecter quand ca casse.
-3. Remplace les classes par les jetons v2. **Aucune couleur en dur.**
-4. Verifie les cas oublies : liste vide, erreur de chargement, laveur en Essentiel devant
-   une fonction Pro, texte tres long, nom a rallonge.
-5. Mode sombre.
-6. Cibles tactiles 44 px, champs de saisie a 16 px.
-7. `typecheck` + `lint` + `vitest`, puis capture clair et sombre.
-8. Commit.
+4. Remplace les classes par les jetons v2 (dans la branche v2 uniquement). **Aucune couleur
+   en dur.**
+5. Verifie les cas oublies : liste vide, erreur de chargement, laveur en Essentiel devant
+   une fonction Pro, texte tres long, nom a rallonge — **dans les deux versions**, v1 et v2.
+6. Mode sombre.
+7. Cibles tactiles 44 px, champs de saisie a 16 px.
+8. `typecheck` + `lint` + `vitest`, puis capture **site** (display-mode: browser) et **PWA**
+   (display-mode: standalone, émulée) — clair et sombre pour chacun.
+9. Commit.
 
 ## Ta manière de travailler
 
@@ -379,6 +574,44 @@ code faisait vraiment.
 
 **Une question à la fois.** Quand un arbitrage revient à Alexandre et Ryan, pose-le seul,
 avec l'option que tu recommandes et ce qu'elle coûte — pas une liste de possibilités.
+
+## Collaboration avec les autres agents
+
+Tu fais partie d'une équipe de douze : `seo-geo`, `growth`, `cyber` (sécurité), `dev` (code
+produit), `designer` (cohérence visuelle du site public), `ideas` (jugement de faisabilité),
+`legal` (juridique d'entreprise), `prospection` (prospection B2B), `video` (montage vidéo),
+`sentry` (debug production), `analytics` (trafic Vercel), et toi. Alexandre reste le
+manager, mais vous pouvez vous parler directement :
+
+- **`designer` tient le site public** (landing, blog, page de réservation), **toi le
+  dashboard.** C'est la frontière : ne redessine jamais une page publique, et préviens-le
+  si un jeton de la refonte doit un jour remonter côté public.
+- **Une logique métier à déplacer ou à écrire** (requête Supabase, calcul, route API) →
+  `dev`. Ta règle est « garde la logique, remplace la présentation » : dès que tu la
+  franchis, ce n'est plus ton chantier.
+- **La table `clients` et ses droits** (RLS, `GRANT`) → fais relire la migration par
+  `cyber` avant de l'appliquer. Une table qui porte des données personnelles de clients
+  finaux ne se pose pas sans ce regard.
+- **Les notes libres, le consentement aux messages, l'anonymisation d'une fiche** → `legal`
+  avant de les construire, pas après. La fiche client collecte des données personnelles qui
+  n'existaient pas jusqu'ici.
+- **Mesurer l'usage du dashboard avant de changer la navigation** → `analytics`. Sans ce
+  point de départ, personne ne saura si la refonte a aidé.
+- **Une erreur de production pendant la refonte** (crash React, `digest`, `errorId`) →
+  `sentry` mène le debug, tu interviens sur le rendu une fois la cause connue.
+- **Une brique du CRM qui ressemble plus à un nouveau produit qu'à une refonte** (fidélité,
+  devis en ligne, parrainage) → fais-la juger par `ideas` avant de t'y engager.
+
+**Règles de cette collaboration**, valables pour tous :
+- Un seul niveau de délégation à la fois — ne consulte pas un agent qui va lui-même en
+  consulter un autre en boucle. Si la question dépasse ta paire directe, remonte à
+  Alexandre plutôt que de chaîner.
+- Rends toujours compte du résultat final à Alexandre, même quand tu as consulté un autre
+  agent en cours de route — il doit voir la conclusion, pas deviner qu'une consultation a
+  eu lieu.
+- Respecte les limites propres à l'agent que tu consultes : `dev` ne touche pas aux données
+  de production sans confirmation, `cyber` ne corrige pas sans signaler d'abord — le fait
+  que tu le sollicites ne lève pas ces garde-fous.
 
 ## Ce qui reste ouvert
 

@@ -13,12 +13,33 @@ import {
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
 import { SOCIAL_LINKS } from '@/components/ui/socialLinks'
+import { FAQ_ITEMS } from '@/lib/faq'
+import { metierPageForTheme } from '@/lib/metiers'
+import type { Theme } from '@/lib/blog'
+import { ComparatifBesoins } from '@/components/ComparatifBesoins'
+import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 
 // Slogans courts et uniformes — pas de saut de layout
+//
+// Le premier est celui rendu au premier chargement (`useState(0)` plus bas) :
+// c'est LUI que Google et les IA lisent comme <h1>, le rendu HTML n'attend
+// pas la rotation JS. Ajouté le 2026-09-28 pour cette raison précise : le
+// H1 ne portait auparavant aucun mot-clé ("Fais plus. Gère moins."), quand
+// le title, lui, en avait — un décalage qui affaiblit le signal envoyé aux
+// moteurs. Garder ce premier slogan porteur de mots-clés (nettoyage,
+// detailing, auto, à domicile) si l'ordre change à nouveau.
+//
+// « Court » n'est pas cosmétique : une première version à 59 caractères
+// ("L'indispensable du nettoyage et detailing auto à domicile.") passait sur
+// 4 lignes en desktop et chevauchait le paragraphe du dessous — le conteneur
+// a une hauteur FIXE (h-[4em] / h-[3em] plus bas), calibrée sur les trois
+// slogans d'origine (23 à 48 caractères). Rester sous ~48 caractères, la
+// longueur du plus long des trois, garde le rendu dans les clous.
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
+  { pre: 'Nettoyage, detailing auto. ', hl: 'À domicile.', post: '' },
   { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
-  { pre: 'Un quartier, un trajet, ', hl: 'trois lavages.', post: '' },
+  { pre: 'Réservation, planning, factures. ', hl: 'Un seul outil.', post: '' },
 ]
 
 // Icônes des réseaux sociaux du pied de page : voir
@@ -76,20 +97,42 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
   )
 }
 
+// Une entrée de la grille « Et tout le reste, dans le même outil. ».
+function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boolean } }) {
+  return (
+    <FadeItem>
+      <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+        {f.titre}
+        {f.pro && (
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#1651E8] dark:text-[#6A9FFF] border border-[#1651E8]/30 dark:border-[#6A9FFF]/30 rounded-md px-1.5 py-0.5">
+            Pro
+          </span>
+        )}
+      </p>
+      <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+    </FadeItem>
+  )
+}
+
 // Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
 // PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans une offre ce qui appartient
 // à l'offre du dessus. La grille 2026 en compte quatre — Découverte, Starter,
 // Pro, Business — et c'est `plan.ts` qui en est la seule source.
+// Ordre demandé par Ryan le 2026-09-27 : la facturation remonte près du haut
+// de la grille (déjà mise en avant dans l'encart phare juste au-dessus, elle
+// mérite aussi sa place ici) ; les créneaux intelligents, eux, redescendent
+// après les statistiques puisqu'ils ont désormais leur propre section dédiée
+// plus bas sur la page ; déplacement et appli/notifications sont intervertis.
 const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
   { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
   { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
-  { titre: 'Créneaux intelligents', desc: 'Une remise proposée au client qui réserve juste à côté d’un rendez-vous déjà prévu.' },
-  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
-  { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
+  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue), envoyée automatiquement à tes clients pros dès qu’une prestation est terminée. Détail juste au-dessus.' },
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
+  { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
+  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
   { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
+  { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
-  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue) émise à chaque prestation terminée, envoyée par email à tes clients pros et accessible aux particuliers depuis leur confirmation. Import de tes anciennes factures. Tu factures des entreprises ? La facturation électronique deviendra obligatoire pour toi le 1ᵉʳ septembre 2027 — on suit le sujet de près et on te tiendra informé bien avant.' },
   { titre: 'Avis Google automatiques', desc: 'Une demande d’avis par email après chaque prestation terminée. Par SMS en formule Pro (150 par mois).' },
   { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', pro: true },
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
@@ -103,14 +146,47 @@ const ETAPES = [
   { titre: 'Partage ton lien', desc: 'Instagram, TikTok, Google, ton site : les réservations arrivent dans ton agenda.' },
 ]
 
+// Les trois étapes du mécanisme des créneaux groupés, sous l'encart dégradé.
+// Reprend en schéma ce que le paragraphe de la section décrit déjà en prose,
+// dans le même esprit que ETAPES ci-dessus. Demande de Ryan le 2026-09-27 :
+// la section « une info toute seule » manquait d'un déroulé concret.
+const ETAPES_CRENEAUX = [
+  { titre: 'Le client réserve', desc: 'Il indique son adresse en réservant, comme pour n’importe quel rendez-vous — rien à cocher de ton côté.' },
+  { titre: 'WashBoard compare les trajets', desc: 'L’adresse est comparée, via Google Maps, au trajet réel jusqu’à tous tes rendez-vous déjà prévus ce jour-là.' },
+  { titre: 'Les créneaux proches ressortent', desc: 'Les horaires sous ton seuil (5 à 30 minutes) sont mis en avant au client, avec ta remise si tu en as réglé une.' },
+]
+
+// Développé le 2026-09-27 (Ryan : « c'est vraiment le cœur du truc, le
+// tout-en-un »), puis refait le même jour : la première version listait ce
+// que fait chaque étape (Réservation, Client, Fidélisation...) — mais c'est
+// exactement ce que disent déjà l'encart Facturation juste en dessous et la
+// grille « Et tout le reste » plus bas (Ryan : « une répétition de ce qu'il
+// y a juste en dessous »). Le vrai argument tout-en-un n'est pas la liste des
+// fonctionnalités, déjà faite ailleurs — c'est qu'une seule donnée traverse
+// toutes les étapes sans ressaisie. Ce parcours le montre avec UN exemple fil
+// rouge (même cliente, même prix, du premier clic à la relance) plutôt qu'un
+// inventaire. Prix et compteur de visites sont illustratifs, comme le mockup
+// déjà utilisé plus bas pour les créneaux groupés — pas des chiffres
+// commerciaux (voir lib/plan.ts pour ceux-là).
+const PARCOURS_TOUT_EN_UN = [
+  'Mardi 14h : Sophie B. réserve un lavage complet sur ta page — 45€, elle choisit elle-même son créneau.',
+  'Le rendez-vous tombe directement dans ton agenda du mardi, une notification t’arrive aussitôt, sans que tu aies rien à recopier.',
+  'Tu interviens chez elle à l’heure prévue : l’adresse et la prestation viennent de sa réservation, rien à ressaisir.',
+  'Sa fiche client s’actualise toute seule : c’est sa 3ᵉ visite, 135€ dépensés chez toi au total.',
+  'Tu marques le rendez-vous « Terminé » : la facture des 45€ part directement, une demande d’avis Google suit.',
+  'Si elle ne revient pas d’ici 3 mois, une relance repart vers elle sans que tu aies à t’en souvenir (Pro).',
+]
+
 // Métiers de la section « Pour qui ? ». WashBoard n'en impose aucun : le
 // laveur crée ses catégories et prestations, la liste sert d'exemples.
-const METIERS = [
-  { titre: 'Lavage auto & detailing', desc: 'Intérieur, extérieur, rénovation, par véhicule ou en pack.' },
-  { titre: 'Canapés & textiles', desc: 'Canapés, matelas, tapis et moquettes, chez le client.' },
-  { titre: 'Ménage à domicile', desc: 'Ménage régulier ou ponctuel, remise en état.' },
-  { titre: 'Vitres', desc: 'Chez les particuliers comme sur les vitrines des commerces.' },
-  { titre: 'Piscines', desc: 'Entretien régulier, mise en route et hivernage.' },
+//
+// `theme` relie une carte à sa page métier dédiée (@/lib/metiers) quand elle
+// existe : voir metierPageForTheme plus bas. Une carte sans page correspondante
+// (aucune entrée dans METIER_PAGES, ou pas de theme du tout comme « Et ton
+// métier ») reste un simple encart, sans lien.
+const METIERS: { titre: string; desc: string; theme?: Theme }[] = [
+  { titre: 'Lavage auto & detailing', desc: 'Intérieur, extérieur, rénovation, par véhicule ou en pack.', theme: 'auto' },
+  { titre: 'Canapés & textiles', desc: 'Canapés, matelas, tapis et moquettes, chez le client.', theme: 'textiles' },
   { titre: 'Et ton métier', desc: 'Catégories, prestations, durées et prix : tout se configure.' },
 ]
 
@@ -504,7 +580,7 @@ export default function LandingPage() {
                 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.5 } } }}
                 className="text-xs font-black text-[#1651E8] dark:text-[#00C4D4] uppercase tracking-[0.22em] mb-8"
               >
-                Nettoyage & entretien mobile
+                Nettoyage & entretien automobile
               </motion.p>
               <motion.h1
                 variants={{ hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
@@ -512,12 +588,17 @@ export default function LandingPage() {
               >
                 <RotatingHeadline />
               </motion.h1>
+              {/* Répond dès le premier écran à « c'est pour qui ? » : le
+                  logiciel de gestion des pros qui se déplacent chez leurs
+                  clients, métiers cités en clair — pour le visiteur pressé
+                  comme pour un moteur qui lit la page. */}
               <motion.p
                 variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { duration: 0.55 } } }}
-                className="text-base sm:text-lg text-slate-600 dark:text-white/65 mb-10 max-w-md leading-relaxed"
+                className="text-base sm:text-lg text-slate-600 dark:text-white/65 mb-8 max-w-lg leading-relaxed"
               >
-                Réservation en ligne automatique. Créneaux groupés par quartier.
-                Tu arrives, tu laves, tu repars.
+                Le logiciel de gestion des pros qui se déplacent chez leurs clients&nbsp;:
+                lavage automobile, detailing, canapés & textiles.
+                Réservation en ligne, créneaux groupés.
               </motion.p>
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { duration: 0.55 } } }}
@@ -549,23 +630,36 @@ export default function LandingPage() {
               className="relative max-w-[380px] mx-auto lg:max-w-none lg:mx-0 pb-10 sm:pb-14 lg:pb-16"
             >
               <div className="wb-hero-shot rounded-2xl overflow-hidden">
+                {/* `priority` : ces deux images sont dans le hero, donc déjà
+                    visibles au premier écran. Sans elle, Next.js les charge en
+                    lazy comme n'importe quelle image plus bas sur la page —
+                    l'espace réservé par `width`/`height` ne suffit pas à lui
+                    seul, mesuré en conditions dégradées (4G lente + CPU x4) :
+                    le bloc image restait quasi vide (~40px) jusqu'à ce que le
+                    chargement démarre, puis sautait à sa taille réelle
+                    (~270px) une fois l'image récupérée — la source du CLS de
+                    0,155 relevé le 2026-09-21. */}
                 <Image
-                  src="/landing/calendrier-clair.webp" alt="Le calendrier WashBoard, avec les créneaux groupés par zone"
+                  src="/landing/calendrier-clair.webp" alt="Le calendrier WashBoard, avec les créneaux groupés marqués d une étoile"
                   width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto dark:hidden"
+                  priority
                 />
                 <Image
-                  src="/landing/calendrier-sombre.webp" alt="Le calendrier WashBoard, avec les créneaux groupés par zone"
+                  src="/landing/calendrier-sombre.webp" alt="Le calendrier WashBoard, avec les créneaux groupés marqués d une étoile"
                   width={1600} height={1240} sizes="(min-width: 1024px) 440px, 90vw" className="w-full h-auto hidden dark:block"
+                  priority
                 />
               </div>
               <div className="wb-hero-shot absolute -bottom-2 -left-4 sm:-left-6 w-[42%] max-w-[190px] rounded-2xl overflow-hidden">
                 <Image
                   src="/landing/reservation-clair.webp" alt="La page de réservation WashBoard, côté client, sur téléphone"
                   width={600} height={1000} sizes="190px" className="w-full h-auto dark:hidden"
+                  priority
                 />
                 <Image
                   src="/landing/reservation-sombre.webp" alt="La page de réservation WashBoard, côté client, sur téléphone"
                   width={600} height={1000} sizes="190px" className="w-full h-auto hidden dark:block"
+                  priority
                 />
               </div>
             </motion.div>
@@ -598,6 +692,11 @@ export default function LandingPage() {
                 title: 'Tu estimes ton CA, tu ne le sais pas vraiment',
                 desc: 'Tu penses avoir fait 1 400€ cette semaine. Tu vérifies en fin de mois et c\'est rarement ce que tu pensais.',
               },
+              {
+                n: '04',
+                title: 'Un client qui ne revient pas, tu ne le vois pas passer',
+                desc: 'Pas d\'alerte, pas de relance : le client parti depuis 3 mois se noie dans les autres, jusqu\'à ce qu\'un concurrent le récupère avant toi.',
+              },
             ].map((pain) => (
               <FadeUp
                 key={pain.n}
@@ -621,19 +720,52 @@ export default function LandingPage() {
         <FadeUp className="mb-12">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Pour qui ?</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
-            Tous les pros qui se déplacent chez leurs clients.
+            Le logiciel des pros du lavage auto et du detailing.
           </h2>
           <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Tu crées tes propres catégories et prestations : WashBoard s&apos;adapte à ton métier, pas l&apos;inverse.
+            Une activité annexe comme les canapés, ou un métier voisin ? Tu crées tes propres catégories et prestations&nbsp;: WashBoard s&apos;adapte à ton métier, pas l&apos;inverse.
           </p>
         </FadeUp>
-        <FadeGroup className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          {METIERS.map((m) => (
-            <FadeItem key={m.titre} className="bg-white dark:bg-slate-950 p-5 sm:p-6">
-              <p className="font-bold text-slate-900 dark:text-white">{m.titre}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</p>
-            </FadeItem>
-          ))}
+        {/* 3 cartes seulement depuis le recentrage automobile (METIERS) :
+            grid-cols-3 partout cassait chaque mot sur un mobile étroit
+            (360px, testé), chaque colonne ne faisant plus qu'une centaine de
+            pixels. 1 colonne sur mobile, 3 à partir de la tablette — pas
+            besoin d'un palier à 2 colonnes intermédiaire pour 3 éléments. */}
+        <FadeGroup className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+          {METIERS.map((m) => {
+            // Seuls les métiers avec une page publiée (@/lib/metiers) sont
+            // cliquables : un lien vers une page qui n'existe pas dessert plus
+            // qu'il n'aide.
+            const page = m.theme ? metierPageForTheme(m.theme) : undefined
+            const contenu = (
+              <>
+                <p className="font-bold text-slate-900 dark:text-white">{m.titre}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</p>
+                {page && (
+                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF]">
+                    En savoir plus
+                    <svg aria-hidden className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                )}
+              </>
+            )
+            return (
+              <FadeItem key={m.titre} className="bg-white dark:bg-slate-950">
+                {page ? (
+                  <Link
+                    href={`/${page.slug}`}
+                    className="block h-full p-5 sm:p-6 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8] focus-visible:ring-inset"
+                  >
+                    {contenu}
+                  </Link>
+                ) : (
+                  <div className="p-5 sm:p-6">{contenu}</div>
+                )}
+              </FadeItem>
+            )
+          })}
         </FadeGroup>
       </section>
 
@@ -645,48 +777,86 @@ export default function LandingPage() {
             L&apos;essentiel. Sans le reste.
           </h2>
           <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Un seul outil pour le pro du nettoyage à domicile : la réservation, l&apos;agenda, les clients
+            Un seul outil pour le pro du lavage automobile : la réservation, l&apos;agenda, les clients
             et les comptes. Pas dix logiciels qui ne se parlent pas.
           </p>
         </FadeUp>
 
-        {/* Feature phare */}
+        {/* Renforce « L'essentiel. Sans le reste. » plutôt que de dupliquer une
+            section : le mot « tout-en-un » devient lisible dans un titre, et
+            le parcours réservation → fidélisation, jusque-là seulement
+            implicite dans le paragraphe au-dessus, est montré explicitement. */}
+        <FadeUp className="mb-14">
+          <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Un logiciel tout-en-un, de la réservation à la fidélisation.
+          </h3>
+          <p className="mt-3 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+            Le client réserve, le rendez-vous tombe dans ton planning, tu interviens chez lui, sa fiche
+            se met à jour, WashBoard s&apos;occupe du suivi puis de le faire revenir — un seul outil du
+            premier clic à la fidélisation, jamais un logiciel différent à chaque étape.
+          </p>
+          {/* Une frise, pas une grille : la grille est déjà prise par
+              FONCTIONNALITES plus bas, et une deuxième grille aurait
+              renforcé l'impression de répétition plutôt que de la corriger. */}
+          <p className="mt-10 text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-6">Exemple, du premier clic à la relance</p>
+          <div className="max-w-2xl space-y-0">
+            {PARCOURS_TOUT_EN_UN.map((etape, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="flex flex-col items-center shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-[#1651E8] dark:bg-[#6A9FFF] mt-2" />
+                  {i < PARCOURS_TOUT_EN_UN.length - 1 && (
+                    <span className="w-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                  )}
+                </div>
+                <p className="pb-6 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{etape}</p>
+              </div>
+            ))}
+          </div>
+        </FadeUp>
+
+        {/* Feature phare — la facturation, pas un différenciateur face à la
+            concurrence (d'autres outils facturent aussi), mais la preuve la
+            plus concrète du tout-en-un : pas de logiciel de facturation à
+            payer et à raccorder en plus. Contenu repris de l'ancienne section
+            « Facturation » plus bas (id déplacé ici, section retirée pour ne
+            pas répéter le même texte deux fois sur la page). */}
         <FadeUp className="mb-4">
           <div
+            id="facturation"
             style={{ background: 'linear-gradient(135deg, #0B1828 0%, #0D2248 55%, #0B1828 100%)' }}
-            className="border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
+            className="scroll-mt-20 border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
           >
             <div>
-              <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Fonctionnalité clé</p>
+              <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Ce qui fait la différence</p>
               <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">
-                Créneaux groupés par zone
+                La facturation, sans outil en plus
               </h3>
               <p className="text-white/75 leading-relaxed mb-6 text-sm sm:text-base">
-                Un client réserve rue des Acacias. WashBoard envoie une offre à ses voisins du même bloc. Tu arrives une fois, tu enchaînes 3 prestations. Tu ne perds pas de temps sur la route.
+                Dès qu&apos;un rendez-vous passe en « Terminé », WashBoard émet la facture avec tes mentions
+                obligatoires — SIRET, régime de TVA, numérotation continue attribuée par le système, sans
+                trou ni doublon — et l&apos;envoie automatiquement par email à ton client pro. Le particulier,
+                lui, la retrouve sur son lien de confirmation. Tes anciennes factures s&apos;importent en PDF
+                ou en photo, et se rangent au même endroit que les nouvelles.
               </p>
               <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold">
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                Plusieurs prestations dans la même rue, un seul trajet
+                Un outil de facturation en moins
               </div>
+              <p className="mt-4 text-xs text-white/50 leading-relaxed">
+                Elle sort du même outil que ton agenda et ton CRM — pas de compte à ouvrir ni de logiciel
+                à payer en plus.
+              </p>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-4 space-y-1.5">
-              <p className="text-xs font-black text-white/40 uppercase tracking-wider mb-4">Bordeaux Sud — aujourd&apos;hui</p>
-              {[
-                { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
-                { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€ zone' },
-                { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart', note: '−5€ zone' },
-                { time: '14:00', label: 'Lucie M. — Pack famille', type: 'normal' },
-              ].map((item) => (
-                <div key={item.time} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#00C4D4]/10' : 'bg-white/[0.03]'}`}>
-                  <span className="text-xs font-mono text-white/40 shrink-0">{item.time}</span>
-                  <span className="text-xs text-white/80 flex-1 truncate">{item.label}</span>
-                  {item.type === 'smart' && (
-                    <span className="text-xs font-bold text-[#00C4D4] shrink-0">{item.note}</span>
-                  )}
-                </div>
-              ))}
+            <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-3 sm:p-4">
+              <div className="rounded-lg overflow-hidden">
+                <Image
+                  src="/landing/facture-demo.webp"
+                  alt="Une facture WashBoard : SIRET, TVA, numéro continu et détail de la prestation"
+                  width={1100} height={980} sizes="(min-width: 640px) 380px, 90vw" className="w-full h-auto"
+                />
+              </div>
             </div>
           </div>
         </FadeUp>
@@ -729,21 +899,84 @@ export default function LandingPage() {
             Et tout le reste, dans le même outil.
           </h3>
         </FadeUp>
+        {/* Grille classique : chaque ligne s'aligne d'une colonne à l'autre,
+            garanti par construction. Un essai précédent avait éclaté cette
+            grille en 3 colonnes indépendantes pour effacer le vide que
+            laissait la longue description de Facturation — ça a bien effacé
+            le vide, mais désaligné toutes les lignes suivantes (Facturation
+            traînait en retard sur ses voisines). Revenu à une grille simple :
+            le vrai problème était la longueur du texte de Facturation dans
+            CETTE liste, raccourci ci-dessus (le détail complet reste dans
+            l'encart juste au-dessus, rien n'est perdu). */}
         <FadeGroup className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
-          {FONCTIONNALITES.map((f) => (
-            <FadeItem key={f.titre}>
-              <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                {f.titre}
-                {f.pro && (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1651E8] dark:text-[#6A9FFF] border border-[#1651E8]/30 dark:border-[#6A9FFF]/30 rounded-md px-1.5 py-0.5">
-                    Pro
-                  </span>
-                )}
-              </p>
-              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+          {FONCTIONNALITES.map((f) => <FonctionnaliteItem key={f.titre} f={f} />)}
+        </FadeGroup>
+      </section>
+
+      {/* ── Le choix + le comparatif ── repris en doublon volontaire de
+          /meilleur-logiciel-lavage-auto (données et composant partagés via
+          lib/comparatifAuto.ts et components/ComparatifBesoins.tsx) : cette
+          page s'est révélée trop convaincante pour rester accessible
+          seulement via un lien, elle mérite sa place ici, juste après
+          l'inventaire des fonctionnalités. Angle « outils génériques », pas
+          de concurrent nommé — voir le header de la page dédiée pour le
+          détail juridique. */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp className="mb-14">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le choix</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
+            Trois façons de gérer, aucune n&apos;est absurde
+          </h2>
+        </FadeUp>
+        <FadeGroup className="grid sm:grid-cols-3 gap-8 sm:gap-10 mb-16">
+          {[
+            {
+              n: '01',
+              titre: 'À la main',
+              texte: 'WhatsApp pour les réservations, Excel pour les prix et le suivi, un carnet ou une note pour l’agenda. Zéro coût, zéro mise en place. Tient tant que le volume reste faible et que personne d’autre n’a besoin de lire ces informations.',
+            },
+            {
+              n: '02',
+              titre: 'Un outil généraliste',
+              texte: 'Calendly ou un agenda Google partagé gèrent très bien la prise de rendez-vous en ligne sans échange de messages. Ils ne savent en revanche rien du métier : ni du véhicule, ni du trajet, ni de la facture qui doit suivre.',
+            },
+            {
+              n: '03',
+              titre: 'Un logiciel dédié',
+              texte: 'Pensé pour une activité qui se déplace : prix par véhicule, frais de déplacement, créneaux qui limitent la route, facture conforme. Le compromis : un abonnement, et une mise en place initiale.',
+            },
+          ].map((etape) => (
+            <FadeItem key={etape.n}>
+              <span className="text-3xl font-black text-[#1651E8]/25 leading-none">{etape.n}</span>
+              <p className="mt-3 font-bold text-slate-900 dark:text-white">{etape.titre}</p>
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{etape.texte}</p>
             </FadeItem>
           ))}
         </FadeGroup>
+
+        <FadeUp className="mb-8">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Poste par poste</p>
+          <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-4">
+            Ce qui change vraiment selon l&apos;outil
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            Pas de note globale ni de verdict à l&apos;emporte-pièce : chaque besoin, comparé pour ce qu&apos;il
+            est. Un outil comme Calendly fait très bien la prise de rendez-vous simple — l&apos;écart se joue
+            ailleurs.
+          </p>
+        </FadeUp>
+        <FadeUp>
+          <ComparatifBesoins head={besoinsHead} rows={besoinsRows} />
+          <Link
+            href="/meilleur-logiciel-lavage-auto"
+            className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline underline-offset-4"
+          >
+            Voir le comparatif complet, avec la foire aux questions
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+        </FadeUp>
       </section>
 
       {/* ── Le produit en vrai ── */}
@@ -782,45 +1015,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Facturation ── */}
-      <section id="facturation" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
-        <FadeUp className="mb-12">
-          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Facturation</p>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
-            La facture part toute seule.
-          </h2>
-          <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Dès qu&apos;un rendez-vous passe en « Terminé », WashBoard émet la facture avec tes mentions
-            obligatoires — SIRET, régime de TVA, numérotation continue attribuée par le système, sans
-            trou ni doublon — et l&apos;envoie à ton client. Tu n&apos;as rien à recopier,
-            rien à numéroter à la main.
-          </p>
-        </FadeUp>
-        <div className="grid lg:grid-cols-[400px_minmax(0,1fr)] gap-10 items-start">
-          <Capture
-            clair="/landing/facture-demo.webp" sombre="/landing/facture-demo.webp" largeur={1100} hauteur={980}
-            alt="Une facture WashBoard : SIRET, TVA, numéro continu et détail de la prestation"
-            legende="Facture de démonstration (données fictives), telle que WashBoard la produit : ton logo, tes mentions obligatoires et un numéro attribué automatiquement."
-            className="max-w-[400px] mx-auto lg:mx-0 w-full"
-            sizes="(min-width: 1024px) 400px, 90vw"
-          />
-          <FadeGroup className="space-y-6">
-            <FadeItem>
-              <p className="font-bold text-slate-900 dark:text-white">Un numéro qui ne saute jamais</p>
-              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">La numérotation est attribuée par le système, pas par toi : une suite continue, sans trou ni doublon, même si tu émets une facture plus tard.</p>
-            </FadeItem>
-            <FadeItem>
-              <p className="font-bold text-slate-900 dark:text-white">Tes anciennes factures au même endroit</p>
-              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">Celles que tu faisais avant WashBoard s’importent en PDF ou en photo, et se rangent dans le même onglet que les nouvelles.</p>
-            </FadeItem>
-            <FadeItem>
-              <p className="font-bold text-slate-900 dark:text-white">Le client pro reçoit la sienne par email</p>
-              <p className="mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">Il en a besoin pour sa comptabilité. Le particulier, lui, retrouve la sienne depuis son lien de confirmation.</p>
-            </FadeItem>
-          </FadeGroup>
-        </div>
-      </section>
-
       {/* ── Comment ça marche ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-12">
@@ -842,25 +1036,204 @@ export default function LandingPage() {
         </FadeGroup>
       </section>
 
+      {/* ── Créneaux groupés — reprend maintenant le même habillage (dégradé
+          marine, tag turquoise) que l'encart Facturation juste au-dessus.
+          Ryan revient sur le style neutre posé précédemment (voir l'ancien
+          historique) : les deux arguments doivent avoir le même poids
+          visuel. Le tag reprend l'ancien libellé de section (« Créneaux
+          groupés ») plutôt que de répéter « Ce qui fait la différence »
+          juste après la facturation. Mockup d'agenda inchangé dans son
+          contenu (mêmes chiffres vérifiés que le texte, remise optionnelle
+          sur un seul des deux créneaux rapprochés) : ses couleurs sont
+          désormais figées en teintes sombres, puisque le fond l'est en
+          permanence et ne suit plus le thème clair/sombre du visiteur. */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+        <FadeUp>
+          <div
+            style={{ background: 'linear-gradient(135deg, #0B1828 0%, #0D2248 55%, #0B1828 100%)' }}
+            className="border border-white/[0.07] rounded-2xl p-6 sm:p-10 grid sm:grid-cols-2 gap-8 sm:gap-12 items-center"
+          >
+            <div>
+              <p className="text-xs font-black text-[#00C4D4] uppercase tracking-[0.22em] mb-5">Créneaux groupés</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">
+                Deux rendez-vous proches, un trajet en moins.
+              </h2>
+              <p className="text-white/75 leading-relaxed mb-6 text-sm sm:text-base">
+                Quand un client réserve, WashBoard compare son adresse au temps de trajet réel jusqu&apos;à tes
+                rendez-vous déjà prévus ce jour-là — pas à un découpage de quartier sur une carte. En dessous du
+                seuil que tu règles toi-même, de 5 à 30 minutes de route, les horaires juste avant ou juste après
+                un rendez-vous existant sont mis en avant au client, avec la remise que tu as réglée si tu en as
+                réglé une — en euros ou en pourcentage, à toi de choisir.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold">
+                <svg aria-hidden className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Une protection qui tourne même sans remise activée
+              </div>
+              <p className="mt-4 text-xs text-white/50 leading-relaxed">
+                WashBoard ne propose jamais à un client un horaire que le trajet réel rendrait injoignable
+                entre deux rendez-vous prévus le même jour — cette vérification tourne à chaque réservation.
+              </p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)' }} className="rounded-xl border border-white/[0.08] p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-black text-white/40 uppercase tracking-wider">
+                  Bordeaux Sud — aujourd&apos;hui
+                </p>
+                <span className="text-[10px] font-bold text-white/40 shrink-0">Seuil : 15 min</span>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  { time: '09:00', label: 'Martin D. — Lavage extérieur', type: 'normal' },
+                  { time: '10:00', label: 'Sophie B. — Lavage complet', type: 'smart', note: '−8€' },
+                  { time: '10:45', label: 'Paul R. — Lavage extérieur', type: 'smart' },
+                  { time: '14:00', label: 'Lucie M. — Pack famille', type: 'normal' },
+                ].map((item) => (
+                  <div
+                    key={item.time}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${item.type === 'smart' ? 'bg-[#6A9FFF]/10' : 'bg-white/[0.03]'}`}
+                  >
+                    <span className="text-xs font-mono text-white/40 shrink-0">{item.time}</span>
+                    <span className="text-xs text-white/80 flex-1 truncate">{item.label}</span>
+                    {item.type === 'smart' && (
+                      <span className="text-xs font-bold text-[#6A9FFF] shrink-0">{item.note ?? 'proche'}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[10px] text-white/30 leading-relaxed">
+                Exemple illustratif — la remise est optionnelle, tu peux ne jamais l&apos;activer.
+              </p>
+            </div>
+          </div>
+        </FadeUp>
+
+        {/* Approfondissement du mécanisme ci-dessus, en registre normal (pas
+            de dégradé sombre) : le fond dégradé reste réservé à l'argument
+            phare, ces deux blocs sont un développement, pas une répétition.
+            Ajout demandé par Ryan le 2026-09-27. */}
+        <div className="mt-14 sm:mt-16">
+          <FadeUp className="mb-10">
+            <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le mécanisme</p>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              Comment WashBoard repère un créneau proche.
+            </h3>
+          </FadeUp>
+          <FadeGroup className="grid sm:grid-cols-3 gap-8 sm:gap-10">
+            {ETAPES_CRENEAUX.map((e, i) => (
+              <FadeItem key={e.titre}>
+                <span className="text-4xl sm:text-5xl font-black text-[#1651E8]/25 leading-none">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <p className="mt-3 font-bold text-slate-900 dark:text-white">{e.titre}</p>
+                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{e.desc}</p>
+              </FadeItem>
+            ))}
+          </FadeGroup>
+        </div>
+
+        <FadeUp className="mt-14 sm:mt-16">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Un exemple concret</p>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-6 sm:p-8 grid sm:grid-cols-[1fr_auto_1fr] gap-6 sm:gap-8 items-center">
+            <div>
+              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Sans créneaux groupés</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Martin D. réserve un lavage extérieur à 9h à Bordeaux Sud. Lucie M. réserve un pack famille à
+                14h, à l’autre bout de la zone. Rien ne relie les deux rendez-vous : un aller-retour complet
+                s’intercale entre eux dans la journée.
+              </p>
+            </div>
+            <span aria-hidden className="hidden sm:block text-2xl font-black text-slate-300 dark:text-slate-700 justify-self-center">→</span>
+            <div>
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wider mb-2">Avec créneaux groupés</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Sophie B. réserve en ligne : parmi les horaires proposés, 10h ressort parce que son adresse est
+                à quelques minutes de route du rendez-vous de Martin D. à 9h. Elle choisit ce créneau, avec une
+                remise puisque tu en as réglé une sur ce cas de figure — un trajet en moins dans ta journée.
+              </p>
+            </div>
+          </div>
+        </FadeUp>
+      </section>
+
       {/* ── ROI ── */}
       <section className="border-t border-slate-100 dark:border-slate-800/50 py-24 sm:py-32">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <FadeUp>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <FadeUp className="mb-14">
             <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
               {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
                   assez de clients pour en publier une, et l'afficher comme un
-                  constat serait trompeur. */}
+                  constat serait trompeur. Le calcul lui-même (2 x 22 = +40) est
+                  mis en scène visuellement, pas un graphique qui suggérerait une
+                  donnée mesurée dans le temps. */}
               <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">Exemple de calcul</p>
               <p className="text-7xl sm:text-8xl lg:text-[9rem] font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
                 +40
               </p>
-              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-2">rendez-vous en plus par mois</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
-                Si les créneaux groupés te font caser 2 rendez-vous de plus par jour, sur 22 jours ouvrés.
+              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-8">rendez-vous en plus par mois</p>
+
+              <div className="inline-flex flex-wrap items-center gap-3 sm:gap-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 px-5 py-4 sm:px-7 sm:py-5">
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">2</p>
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />de plus / jour</p>
+                </div>
+                <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">×</span>
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">22</p>
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">jours ouvrés<br />par mois</p>
+                </div>
+                <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">=</span>
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">+40</p>
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />par mois</p>
+                </div>
+              </div>
+
+              <p className="mt-6 text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
                 Un ordre de grandeur, pas une promesse : tout dépend de ta zone et de ta demande.
               </p>
             </div>
           </FadeUp>
+
+          {/* Trois angles pour répondre à « est-ce que ça vaut le coup »,
+              rangés sous le calcul plutôt que dans une seule carte compagne
+              qui laissait trop de vide : réassurance (mois offert, sans CB),
+              conséquence du +40 côté charge de travail, et un fait produit
+              vérifiable (0 ressaisie). Même traitement que « 3 features
+              secondaires » plus haut (boîte à colonnes divisées). */}
+          <FadeGroup className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <FadeItem className="bg-white dark:bg-slate-900/50 p-6 sm:p-7">
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wide mb-3">Tu hésites encore ?</p>
+              <p className="font-bold text-slate-900 dark:text-white mb-3">Rien à perdre à essayer</p>
+              <ul className="space-y-1.5 mb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                <li>Un mois offert</li>
+                <li>Sans carte bancaire, sans engagement</li>
+                <li>Accompagnement inclus, par WhatsApp</li>
+              </ul>
+              <Link href="/signup" className="text-sm font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline underline-offset-4">
+                Lancer mon mois gratuit →
+              </Link>
+            </FadeItem>
+
+            <FadeItem className="bg-white dark:bg-slate-900/50 p-6 sm:p-7">
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wide mb-3">Autre effet du +40</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-2">+40</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">factures envoyées sans y penser</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Facture et demande d&apos;avis Google partent seules à chaque rendez-vous terminé.
+              </p>
+            </FadeItem>
+
+            <FadeItem className="bg-white dark:bg-slate-900/50 p-6 sm:p-7">
+              <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-wide mb-3">Ce qui ne change jamais</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-2">0</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">information à ressaisir à la main</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Adresse, prestation, prix : tout vient de la réservation du client, jusqu&apos;à la facture.
+              </p>
+            </FadeItem>
+          </FadeGroup>
         </div>
       </section>
 
@@ -881,6 +1254,14 @@ export default function LandingPage() {
               src="/tuto.mp4"
               controls
               playsInline
+              preload="none"
+              // Pas de `poster` : aucune image existante dans public/ ne
+              // correspond à une vraie vignette de cette vidéo (les captures
+              // de landing/ sont au mauvais format — écran de téléphone ou
+              // calendrier — pas un cadre 16/9 représentatif). `preload="none"`
+              // seul évite déjà le téléchargement silencieux des métadonnées
+              // par défaut du navigateur ; le fond `#09111E` occupe l'espace
+              // réservé par `aspectRatio` en attendant un clic.
               className="w-full block"
               style={{ aspectRatio: '16/9', background: '#09111E' }}
             />
@@ -1001,19 +1382,10 @@ export default function LandingPage() {
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-12">Questions</p>
         </FadeUp>
         <div className="divide-y divide-slate-200 dark:divide-slate-800">
-          {[
-            { q: 'Mes clients doivent créer un compte ?', a: 'Non. Ils réservent directement sur ta page, sans compte, sans appli. Juste leur nom, email et téléphone.' },
-            { q: 'C\'est long à configurer ?', a: 'Non. En 10 minutes tu as ta page de réservation avec tes services, tes horaires et ta zone.' },
-            { q: 'Ça marche pour d\'autres métiers que le lavage auto ?', a: 'Oui. Tu crées tes propres catégories et prestations, avec leurs durées et leurs prix : ménage, canapés, vitres, piscines… WashBoard n\'impose aucun métier.' },
-            { q: 'Comment mes clients trouvent ma page ?', a: 'Tu partages ton lien partout : bio Instagram, TikTok, fiche Google, ton site, WhatsApp. Des liens dédiés à chaque réseau te montrent ensuite d\'où viennent tes réservations.' },
-            { q: 'Je suis prévenu quand un client réserve ?', a: 'Oui, par email à chaque réservation. Et si tu installes WashBoard sur ton téléphone, aussi en notification (en bêta).' },
-            { q: 'Que se passe-t-il après le mois gratuit ?', a: 'Tu choisis une formule : Starter à 19€/mois ou Pro à 49€/mois. Si tu ne choisis pas, ton compte passe tout seul sur l’offre Découverte : gratuite, limitée à 5 réservations par mois. On ne coupe rien. Aucune carte n\'est demandée pendant l\'essai.' },
-            { q: 'Je peux arrêter quand je veux ?', a: 'En mensuel, oui : sans engagement. L\'annuel t\'engage sur 12 mois, avec un mois offert en cadeau.' },
-            { q: 'Ça marche avec une équipe ?', a: 'Oui, avec la formule Business. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.' },
-            { q: 'Les clients peuvent payer en ligne ?', a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.' },
-            { q: 'Et la facturation électronique obligatoire en 2027 ?', a: 'À partir du 1ᵉʳ septembre 2027, deux choses changent. Si tu factures des entreprises, tes factures devront être transmises dans un format électronique via une plateforme agréée par l\'État — tes factures WashBoard ont déjà toutes les mentions obligatoires, on travaille sur ce raccordement, sans engagement de date pour l\'instant. Si tu ne factures que des particuliers (le cas de la plupart des laveurs), tu n\'as pas ce format à produire, mais tu devras transmettre à l\'administration un résumé périodique de tes ventes — c\'est l\'e-reporting, et la franchise de TVA n\'en dispense pas. WashBoard n\'y est pas raccordé aujourd\'hui ; on te dira où on en est bien avant l\'échéance.' },
-            { q: 'Et mes données ?', a: 'Elles restent les tiennes. Tu peux supprimer ton compte à tout moment depuis tes paramètres : tout est effacé sous 30 jours.' },
-          ].map((item) => (
+          {/* Contenu dans lib/faq.ts, mis à jour pour la grille 2026 lors de
+              cette fusion (2026-09-28) : source unique, aussi lue par le
+              balisage JSON-LD FAQPage — voir le commentaire de ce fichier. */}
+          {FAQ_ITEMS.map((item) => (
             <FadeUp key={item.q} className="py-6 sm:py-7">
               <p className="font-bold text-slate-900 dark:text-white mb-2">{item.q}</p>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{item.a}</p>
@@ -1051,7 +1423,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 text-center">
           <p className="text-xs text-slate-400 leading-relaxed">
-            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien à domicile</strong> — lavage de véhicules, detailing, ménage, entretien de piscine et bien d&apos;autres. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants du service à domicile en France.
+            WashBoard est le logiciel de gestion dédié aux <strong className="font-medium text-slate-500">professionnels du nettoyage et de l&apos;entretien automobile</strong> — lavage de véhicules, detailing, canapés & textiles. Réservation en ligne, gestion des rendez-vous, CRM et comptabilité — conçu pour les indépendants qui se déplacent chez leurs clients en France.
           </p>
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center gap-6">
@@ -1085,11 +1457,17 @@ export default function LandingPage() {
               <Image src="/LogoWashBoard.png" alt="WashBoard" width={24} height={24} className="rounded-md" />
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">WashBoard</span>
             </div>
-            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel pour pros du nettoyage mobile · Tous droits réservés</p>
-            <div className="flex gap-4 text-xs text-slate-400">
+            <p className="text-xs text-slate-400">© 2026 WashBoard · Logiciel pour pros du lavage automobile · Tous droits réservés</p>
+            {/* `flex-wrap` : la rangée se mesurait 366 px de contenu dans une
+                fenêtre de 390 px, donc déjà rognée sur un téléphone, et le
+                lien « Tous les métiers » la portait à 421 px — « Connexion »
+                coupé à gauche, « Confidentialité » à droite. Même motif que le
+                pied de page des pages métier (MetierPageTemplate). */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
               <Link href="/login" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Connexion</Link>
               <Link href="/signup" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inscription</Link>
               <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
+              <Link href="/meilleur-logiciel-lavage-auto" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Comparatif</Link>
               <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
               <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
               <Link href="/confidentialite" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>

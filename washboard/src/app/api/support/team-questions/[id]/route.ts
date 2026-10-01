@@ -30,7 +30,7 @@ async function equipeConnectee(): Promise<{ erreur: NextResponse } | Equipe> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { erreur: NextResponse.json({ error: 'Non autorisé' }, { status: 401 }) }
 
-  if (!isSupportMember(user.email, process.env.SUPPORT_ADMIN_EMAILS)) {
+  if (!isSupportMember(user.id, process.env.SUPPORT_ADMIN_USER_IDS)) {
     logger.warn('support.team-questions.id.denied', { userId: user.id })
     return { erreur: NextResponse.json({ error: 'Non autorisé' }, { status: 401 }) }
   }

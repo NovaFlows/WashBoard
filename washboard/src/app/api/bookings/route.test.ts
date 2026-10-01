@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // route DÉCIDE, pas ce que la base répond.
 
 const rpcAppels: { nom: string; args: Record<string, unknown> }[] = []
+const majAppels: { table: string; valeurs: Record<string, unknown> }[] = []
 
 type Reponse = { data?: unknown; error?: unknown; count?: number }
 
@@ -21,6 +22,8 @@ let plan: {
   erreurCountMois: unknown
   rpc: Reponse
   utilisateur: unknown
+  /** Session du navigateur (cookies) — distincte du client admin, qui n'en a jamais. */
+  session: unknown
 }
 
 function nouveauBuilder(table: string) {
@@ -34,6 +37,7 @@ function nouveauBuilder(table: string) {
   const self = () => b
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
+    update: (valeurs: Record<string, unknown>) => { majAppels.push({ table, valeurs }); return b },
     eq: self, gte: self, lte: self, in: self, order: self, limit: self,
     neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
@@ -63,6 +67,11 @@ const fauxClient = {
 }
 
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxClient }))
+// Session du navigateur : distincte du client admin (qui n'en a pas). C'est elle qui décide
+// si l'auteur est le laveur lui-même, donc libre de forcer ses propres horaires.
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({ auth: { getUser: async () => ({ data: { user: plan.session } }) } }),
+}))
 vi.mock('@/lib/email', () => ({
   sendBookingRequest: vi.fn(async () => {}),
   sendWasherNotification: vi.fn(async () => {}),
@@ -112,6 +121,7 @@ function requete(body: Record<string, unknown>) {
 
 beforeEach(() => {
   rpcAppels.length = 0
+  majAppels.length = 0
   notifierLaveur.mockClear()
   sendWasherNotification.mockClear()
   sendWasherBookingLocked.mockClear()
@@ -122,6 +132,7 @@ beforeEach(() => {
     countMois: 0,
     erreurCountMois: null,
     utilisateur: null,
+    session: null,
     rpc: { data: { id: 'ok' }, error: null },
     tables: {
       washers: { data: {
@@ -218,7 +229,7 @@ describe('POST /api/bookings — page « proposition »', () => {
   it('refuse même au laveur lui-même', async () => {
     // Le bouton n'existe pas dans l'interface, mais la route reste appelable
     // directement : le refus doit tenir sans dépendre du navigateur.
-    plan.utilisateur = { id: 'user-1' }
+    plan.session = { id: 'user-1' }
     avecWasher({ is_preview: true })
     const { res } = await poster()
     expect(res.status).toBe(403)
@@ -231,6 +242,55 @@ describe('POST /api/bookings — page « proposition »', () => {
   })
 })
 
+describe('POST /api/bookings — le laveur qui saisit son propre rendez-vous', () => {
+  // Il connaît son métier : un lavage à 3 h du matin, un jour de congé ou daté d'hier est un
+  // rattrapage légitime, pas une anomalie. La session (cookies) est ce qui l'identifie.
+  // Le client admin, lui, ne rend jamais d'utilisateur : c'est la session qui compte.
+  beforeEach(() => { plan.utilisateur = null; plan.session = { id: 'user-1' } })
+
+  it('accepte un créneau hors de ses horaires', async () => {
+    const { res } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+
+  it('accepte un jour où il est en congé', async () => {
+    plan.tables.availabilities = { data: [{ day_of_week: 1, start_time: '09:00', end_time: '18:00' }], error: null }
+    const { res } = await poster()
+    expect(res.status).toBe(201)
+  })
+
+  it('accepte une date déjà passée', async () => {
+    const { res } = await poster({ scheduled_at: '2026-09-01T08:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+
+  it('marque le rendez-vous comme saisi par le laveur, donc jamais masqué ni compté', async () => {
+    await poster()
+    expect(majAppels).toEqual([{ table: 'bookings', valeurs: { saisie_par_laveur: true } }])
+  })
+
+  it('ne le traite pas comme une réservation au-delà du quota, même en offre Découverte pleine', async () => {
+    avecWasher({ plan: 'decouverte' })
+    plan.countMois = 5
+    await poster()
+    expect(sendWasherBookingLocked).not.toHaveBeenCalled()
+  })
+
+  it('ne lève RIEN pour la session d un autre laveur', async () => {
+    plan.session = { id: 'quelqu-un-dautre' }
+    const { res, body } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/horaires/)
+  })
+})
+
+describe('POST /api/bookings — un visiteur ne marque rien', () => {
+  it('ne pose pas la marque « saisi par le laveur » sur une réservation publique', async () => {
+    await poster()
+    expect(majAppels).toHaveLength(0)
+  })
+})
+
 describe('POST /api/bookings — cloisonnement entre laveurs (H2)', () => {
   it('refuse une prestation qui appartient à un autre laveur', async () => {
     plan.tables.services = { data: { ...SERVICE_DEFAUT, washer_id: 'un-autre-laveur' }, error: null }
@@ -238,6 +298,34 @@ describe('POST /api/bookings — cloisonnement entre laveurs (H2)', () => {
     expect(res.status).toBe(404)
     expect(body.error).toBe('Prestation introuvable')
     expect(rpcAppels).toHaveLength(0)
+  })
+})
+
+describe('POST /api/bookings — réservation le jour même', () => {
+  it('refuse un rendez-vous pour aujourd’hui si le laveur n’a pas activé le jour même', async () => {
+    // "Maintenant" simulé : 2026-09-09T09:00:00Z (mercredi, 11h à Paris).
+    const { res, body } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/jour même/)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('accepte un rendez-vous pour aujourd’hui si le laveur l’a activé', async () => {
+    avecWasher({ reservation_jour_meme: true })
+    // Le laveur par défaut n'ouvre que le vendredi ; on ouvre aussi le
+    // mercredi (day_of_week 3) pour isoler le seul contrôle qui nous intéresse.
+    plan.tables.availabilities = { data: [{ day_of_week: 3, start_time: '09:00', end_time: '18:00' }], error: null }
+    const { res } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    expect(res.status).toBe(201)
+  })
+
+  it('un rendez-vous saisi par le laveur lui-même n’est jamais bloqué par ce contrôle', async () => {
+    // Même sans le réglage activé : c'est son métier, pas une anomalie
+    // (même principe que verdictDate/creneauDansOuverture juste au-dessus).
+    plan.session = { id: 'user-1' }
+    plan.tables.availabilities = { data: [{ day_of_week: 3, start_time: '09:00', end_time: '18:00' }], error: null }
+    const { res } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    expect(res.status).toBe(201)
   })
 })
 

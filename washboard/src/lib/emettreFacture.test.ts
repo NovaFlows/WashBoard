@@ -62,7 +62,7 @@ const RESERVATION = {
 /** Client admin réduit à ce que la fonction en utilise, qui retient ses appels. */
 function adminQui(
   lecture: { data: unknown; error: unknown },
-  emission: { data: unknown; error: unknown } = { data: [{ numero: 'F-2026-0001' }], error: null },
+  emission: { data: unknown; error: unknown } = { data: [{ numero: 'F-00014' }], error: null },
 ) {
   const appels: { nom: string; args: unknown }[] = []
   const admin = {
@@ -90,7 +90,7 @@ describe('emettreFacture', () => {
 
     const r = await emettreFacture(admin, 'b1')
 
-    expect(r).toEqual({ ok: true, numero: 'F-2026-0001', nouvelle: true })
+    expect(r).toEqual({ ok: true, numero: 'F-00014', nouvelle: true })
     // Le numéro vient de la base, jamais du code : c'est elle qui verrouille.
     expect(appels).toHaveLength(1)
     expect(appels[0].nom).toBe('emettre_facture')
@@ -100,10 +100,10 @@ describe('emettreFacture', () => {
   it('accepte que la base rende un objet plutôt qu’une liste', async () => {
     const { admin } = adminQui(
       { data: reservation(), error: null },
-      { data: { numero: 'F-2026-0002' }, error: null },
+      { data: { numero: 'F-00015' }, error: null },
     )
     await expect(emettreFacture(admin, 'b1')).resolves.toEqual({
-      ok: true, numero: 'F-2026-0002', nouvelle: true,
+      ok: true, numero: 'F-00015', nouvelle: true,
     })
   })
 
@@ -111,12 +111,12 @@ describe('emettreFacture', () => {
     // Le cœur de la règle : un second appel (double clic, reprise d'un envoi
     // d'email) doit rendre le numéro existant sans en consommer un nouveau.
     const { admin, appels } = adminQui({
-      data: reservation({ facture_numero: 'F-2026-0001' }), error: null,
+      data: reservation({ facture_numero: 'F-00014' }), error: null,
     })
 
     const r = await emettreFacture(admin, 'b1')
 
-    expect(r).toEqual({ ok: true, numero: 'F-2026-0001', nouvelle: false })
+    expect(r).toEqual({ ok: true, numero: 'F-00014', nouvelle: false })
     expect(appels).toHaveLength(0)
   })
 

@@ -1,16 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { sendBookingRequest, sendWasherNotification, sendWasherBookingLocked } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { effectiveTeamSize } from '@/lib/slots'
-import { verdictDate, creneauDansOuverture } from '@/lib/bookingWindow'
+import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import type { ZoneConfig } from '@/types'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { graceEnded, quotaReservations, quotaDepasse, debutPeriodeQuota, debutSoumisAuPlafond, planEffectif, suitRetourGratuit, PLAN_LABELS } from '@/lib/plan'
+import { graceEnded, quotaReservations, quotaDepasse, debutPeriodeQuota, debutSoumisAuPlafond, suitRetourGratuit } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
@@ -73,6 +74,18 @@ const BookingSchema = z.object({
   })).optional(),
   travel_fee: z.number().min(0).optional().default(0),
 })
+
+/** Le laveur connecté, s'il y en a un. Une réservation publique n'a pas de session : ce n'est
+ *  pas une erreur, et surtout pas un motif de refus. */
+async function utilisateurConnecte() {
+  try {
+    const session = await createSessionClient()
+    const { data: { user } } = await session.auth.getUser()
+    return user
+  } catch {
+    return null
+  }
+}
 
 export const POST = withErrorHandling('bookings.create', async (req: Request) => {
   // ── Anti-spam #1 : rate-limit par IP ────────────────────────────────────
@@ -162,11 +175,18 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   const supabase = createAdminClient()
 
   // L'auteur est-il le laveur lui-même ? (réservation manuelle = autorisée à forcer)
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  //
+  // Lu sur la SESSION du navigateur, pas sur le client admin : celui-ci n'a pas de session,
+  // `auth.getUser()` y renvoyait donc toujours `null`. Résultat, le laveur qui saisissait un
+  // rendez-vous depuis son propre agenda était traité comme un visiteur anonyme, et se voyait
+  // refuser un créneau hors de ses horaires, un jour de congé ou une date passée — sur son
+  // planning à lui (signalé par Alexandre, 2026-09-26). Les contrôles restent entiers pour
+  // tous les autres : c'est bien la session du propriétaire de la fiche qui les lève.
+  const authUser = await utilisateurConnecte()
 
   // Récupérer washer + service pour l'email et le calcul du prix
   const [{ data: washer }, { data: service }] = await Promise.all([
-    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview').eq('id', bookingData.washer_id).single(),
+    supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview, reservation_jour_meme').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
 
@@ -240,6 +260,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', bookingData.washer_id)
       .neq('status', 'cancelled')
+      // Les rendez-vous que le laveur a saisis lui-même ne comptent pas : ce ne sont pas des
+      // clients venus par WashBoard.
+      .eq('saisie_par_laveur', false)
       // Jamais avant l'entrée en vigueur du plafond : sinon l'historique d'un
       // laveur remplirait sa toute première période avant qu'elle commence.
       .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(washer?.created_at)).toISOString())
@@ -251,7 +274,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     if (errMois) {
       logger.error('bookings.quotaMensuel.read_failed',
         { washerId: bookingData.washer_id }, errMois)
-    } else if (quotaDepasse(plafondMensuel, moisCount ?? 0)) {
+    } else if (!isOwner && quotaDepasse(plafondMensuel, moisCount ?? 0)) {
       auDelaDuQuota = true
       logger.info('bookings.au_dela_du_quota', {
         washerId: bookingData.washer_id,
@@ -310,6 +333,21 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Le laveur qui saisit lui-même un rendez-vous depuis son tableau de bord
   // reste libre de forcer : c'est son métier, pas une anomalie.
   if (!isOwner) {
+    // La réservation le jour même n'existe, pour le formulaire public, que si
+    // le laveur l'a explicitement activée (`reservation_jour_meme`) — sans ce
+    // verrou, un appel direct à cette route glisserait un rendez-vous pour
+    // aujourd'hui chez n'importe quel laveur, y compris ceux qui ne veulent
+    // être prévenus qu'à l'avance.
+    if (estAujourdhuiParis(bookingData.scheduled_at) && !washer?.reservation_jour_meme) {
+      logger.warn('bookings.rejected.jour_meme_non_autorise', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at,
+      })
+      return Response.json(
+        { error: 'La réservation le jour même n\'est pas activée pour ce prestataire. Merci de choisir un autre jour.' },
+        { status: 400 },
+      )
+    }
+
     const quand = verdictDate(bookingData.scheduled_at)
     if (quand !== 'ok') {
       logger.warn('bookings.rejected.date', {
@@ -392,7 +430,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Calcul des frais de déplacement (mode base ou RDV précédent)
   const computed_travel_fee = bookingData.address
-    ? await computeTravelFee(supabase, bookingData.washer_id, bookingData.address, bookingData.scheduled_at, admin)
+    ? await computeTravelFee(admin, bookingData.washer_id, bookingData.address, bookingData.scheduled_at)
     : (travel_fee ?? 0)
 
   // ── Prix : recalculé intégralement côté serveur ────────────────────────
@@ -515,6 +553,14 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       logger.warn('bookings.attribution.write_failed',
         { bookingId: id, washerId: bookingData.washer_id }, errAttribution)
     }
+  }
+
+  // Un rendez-vous saisi par le laveur dans son agenda est SON client : marqué, il n'est jamais
+  // masqué ni compté dans le quota. Posé après l'enregistrement plutôt que dans la fonction
+  // atomique, qui ne connaît pas cette colonne.
+  if (isOwner) {
+    const { error: errMarque } = await supabase.from('bookings').update({ saisie_par_laveur: true }).eq('id', id)
+    if (errMarque) logger.error('bookings.saisie_par_laveur.mark_failed', { bookingId: id }, errMarque)
   }
 
   // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)
