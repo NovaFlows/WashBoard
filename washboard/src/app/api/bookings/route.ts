@@ -587,13 +587,13 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
     // Au-dela du quota, le laveur est PREVENU sans rien apprendre : lui envoyer
     // le nom et le telephone par email viderait le masquage de son sens, il
-    // suffirait d'ouvrir sa boite mail.
+    // suffirait d'ouvrir sa boite mail. Le nom n'est meme pas transmis au
+    // gabarit : ce qui n'y entre pas ne peut pas en ressortir.
     if (washerEmail && auDelaDuQuota) {
       emailJobs.push(
         sendWasherBookingLocked({
           to: washerEmail,
           washerName: washer.name,
-          clientName: bookingData.client_name,
           scheduledAt: bookingData.scheduled_at,
         }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
       )
@@ -628,13 +628,14 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     emailJobs.push(
       notifierLaveur(bookingData.washer_id, auDelaDuQuota ? {
         // Meme regle que l'email : on annonce, on ne raconte pas.
-        // Le nom et le jour, rien de plus. Le telephone, l'adresse et l'heure
-        // restent masques : c'est ce qu'on vend.
+        // Le jour, rien de plus. Le nom, le telephone, l'adresse et l'heure
+        // restent masques : c'est ce qu'on vend. Le nom surtout, qui
+        // s'affiche sur l'ecran verrouille du telephone sans meme ouvrir
+        // l'application.
         title: '🔒 Nouvelle réservation',
         body: [
-          `👤 ${bookingData.client_name}`,
           `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })}`,
-          'Changez d’offre pour voir l’heure et les coordonnées.',
+          'Changez d’offre pour voir le nom, l’heure et les coordonnées.',
         ].join('\n'),
         url: '/dashboard/abonnement',
         tag: `booking-${id}`,

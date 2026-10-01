@@ -143,7 +143,11 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
   }
 
   const upcoming = list.filter(b => b.status !== 'done' && b.status !== 'cancelled')
-  const past     = list.filter(b => b.status === 'done'  || b.status === 'cancelled')
+  // Les lots de « Charger plus » arrivent déjà masqués (voir `bookings/historique`) ; on les
+  // écarte ici, comme la page le fait pour le premier lot, plutôt que côté serveur : `decalage`
+  // doit compter TOUTES les lignes lues, sinon un lot entièrement verrouillé se redemanderait
+  // à l'infini.
+  const past     = list.filter(b => (b.status === 'done' || b.status === 'cancelled') && !b.verrouillee)
 
   if (list.length === 0) {
     // Les widgets restent affichés même sans la moindre réservation : un
@@ -193,7 +197,7 @@ export default function BookingList({ bookings, facturationPrete, historiqueTron
           <div className="space-y-2.5">
             {upcoming.map(b => (
               b.verrouillee
-                ? <CarteVerrouillee key={b.id} clientName={b.client_name} scheduledAt={b.scheduled_at} offre={offreDeblocage ?? 'Pro'} />
+                ? <CarteVerrouillee key={b.id} scheduledAt={b.scheduled_at} offre={offreDeblocage ?? 'Pro'} />
                 : <BookingCard key={b.id} booking={b} loading={loading} onUpdate={updateStatus} facturationPrete={facturationPrete} />
             ))}
           </div>

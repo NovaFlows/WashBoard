@@ -554,12 +554,13 @@ type SendWasherNotificationParams = {
  *  d'endroits. Y ajouter des « si masqué » un peu partout, c'est garantir qu'un
  *  jour l'un d'eux sera oublié — et un seul oubli suffit à tout révéler.
  *
- *  Le laveur apprend LE NOM et LE JOUR. Assez pour savoir qu'un vrai client
- *  l'attend, trop peu pour le joindre ou pour se présenter au rendez-vous. */
-export async function sendWasherBookingLocked({ to, washerName, clientName, scheduledAt, appUrl }: {
+ *  Le laveur apprend LE JOUR, et rien d'autre. Pas même le nom : reconnu, il
+ *  suffirait à rappeler le client par ses propres moyens (voir
+ *  `masquerVerrouillees`). La fonction ne le reçoit donc pas — un paramètre
+ *  absent ne peut pas finir dans l'objet ou le corps du message. */
+export async function sendWasherBookingLocked({ to, washerName, scheduledAt, appUrl }: {
   to: string
   washerName: string
-  clientName: string
   scheduledAt: string
   appUrl?: string
 }) {
@@ -570,11 +571,12 @@ export async function sendWasherBookingLocked({ to, washerName, clientName, sche
   const jour = new Date(scheduledAt).toLocaleDateString('fr-FR', {
     timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long',
   })
+  const jourTitre = jour.charAt(0).toUpperCase() + jour.slice(1)
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
     to,
-    subject: `Nouvelle réservation — ${escapeHtml(clientName)}`,
+    subject: `Nouvelle réservation — ${jour}`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -588,11 +590,11 @@ export async function sendWasherBookingLocked({ to, washerName, clientName, sche
     <div style="padding:32px 40px;">
       <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(washerName)}</strong>,</p>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:22px;">
-        <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(clientName)}</p>
-        <p style="margin:0;font-size:14px;color:#64748b;">${jour}</p>
+        <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;">${jourTitre}</p>
+        <p style="margin:0;font-size:14px;color:#64748b;">Client masqué par votre offre</p>
       </div>
       <p style="margin:0 0 22px;font-size:14px;color:#475569;line-height:1.6;">
-        Son téléphone, son adresse et l'heure du rendez-vous sont masqués : cette réservation
+        Son nom, son téléphone, son adresse et l'heure du rendez-vous sont masqués : cette réservation
         dépasse ce que votre offre affiche ce mois-ci. Changez d'offre pour la débloquer —
         et toutes les suivantes avec.
       </p>

@@ -8,9 +8,10 @@ import { formatHeure } from '@/lib/dateUtils'
 
 export type ProchainRdv = {
   id: string
-  client_name: string
+  /** `null` sur une réservation verrouillée : `masquerVerrouillees` l'a déjà retiré. */
+  client_name: string | null
   scheduled_at: string
-  /** Reservation au-dela du quota : nom et jour seulement. */
+  /** Réservation au-delà du quota : le jour seulement. */
   verrouillee?: boolean
   services: { name: string } | null
 }
@@ -49,9 +50,16 @@ export function ProchainsRdvWidget({ bookings }: { bookings: ProchainRdv[] }) {
                     ? <span title="Heure masquée — changez d’offre pour la voir" aria-label="Heure masquée">🔒</span>
                     : formatHeure(date)}
                   </span>
-                  <span className="text-sm text-slate-800 dark:text-slate-200 truncate min-w-0">
-                    {b.client_name}
-                  </span>
+                  {b.verrouillee ? (
+                    <span className="min-w-0">
+                      <span className="sr-only">Client masqué</span>
+                      <span className="block h-3 w-20 rounded bg-slate-200 dark:bg-slate-700 blur-[3px]" aria-hidden />
+                    </span>
+                  ) : (
+                    <span className="text-sm text-slate-800 dark:text-slate-200 truncate min-w-0">
+                      {b.client_name}
+                    </span>
+                  )}
                   <span className="text-xs text-slate-400 dark:text-slate-500 truncate min-w-0 ml-auto">
                     {b.services?.name ?? 'Prestation'}
                   </span>

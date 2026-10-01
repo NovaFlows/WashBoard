@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireWasher } from '@/lib/requireWasher'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
+import { quotaReservations } from '@/lib/plan'
+import { masquerVerrouillees, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 
 // Pagination de l'historique de l'accueil : « Charger plus ».
 //
@@ -46,7 +48,22 @@ export async function GET(req: NextRequest) {
     return errorResponse('bookings.historique.get.db', error)
   }
 
-  const lignes = data ?? []
+  // Le premier lot, rendu par la page, passe par `masquerVerrouillees` ; les
+  // suivants arrivaient bruts — nom, téléphone, adresse et prix d'une
+  // réservation annulée au-delà du quota réapparaissaient au premier « Charger
+  // plus ». Les lignes verrouillées restent dans le lot, masquées, pour que le
+  // décalage tenu par le client compte juste (voir BookingList).
+  const { data: washer, error: errWasher } = await supabase
+    .from('washers')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .eq('id', washerId)
+    .single()
+  // Sans l'offre, impossible de savoir quoi masquer : on ne renvoie rien plutôt
+  // que de tout renvoyer en clair.
+  if (errWasher || !washer) return errorResponse('bookings.historique.washer.read_failed', errWasher, { washerId })
+
+  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const lignes = masquerVerrouillees(data ?? [], seuils)
   // Un lot plus court que demandé signale la fin de l'historique : le client
   // s'en sert pour savoir s'il faut encore proposer « Charger plus ».
   return NextResponse.json({ data: lignes, hasMore: lignes.length === limite })

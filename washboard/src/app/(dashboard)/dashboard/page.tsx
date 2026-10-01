@@ -294,13 +294,12 @@ export default async function DashboardPage() {
       && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui,
   )
   // Les demandes en attente qui dépassent le quota : elles s'affichent dans « À confirmer »
-  // en carte floutée avec un cadenas. On ne transmet que l'id, le nom et LE JOUR (midi UTC du
-  // jour de Paris) : l'heure n'a aucune raison de quitter le serveur.
+  // en carte floutée avec un cadenas. On ne transmet que l'id et LE JOUR (midi UTC du jour de
+  // Paris) : ni l'heure ni le nom n'ont de raison de quitter le serveur.
   const verrouillees = aVenirVisible
     .filter(b => b.verrouillee && b.status === 'pending')
     .map(b => ({
       id: b.id,
-      client_name: b.client_name,
       scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z`,
     }))
   // « Journée commencée » : au moins un rendez-vous clôturé aujourd'hui, pour

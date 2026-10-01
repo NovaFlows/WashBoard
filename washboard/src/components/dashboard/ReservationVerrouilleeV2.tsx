@@ -8,25 +8,30 @@ import { jourSeul } from '@/lib/reservationsVerrouillees'
 
 // Une réservation venue au-delà du quota de l'offre, version v2 (PWA installée).
 //
-// Même règle que `CarteVerrouillee.tsx` (site) : le NOM et le JOUR restent lisibles — assez
-// pour savoir qu'un vrai client attend — et tout le reste est une barre floutée avec un
-// cadenas, jamais une valeur inventée. Le flou n'est qu'une décoration : le téléphone, l'email,
-// l'adresse, le montant et l'heure ne sont jamais chargés (voir `masquerVerrouillees`).
+// Même règle que `CarteVerrouillee.tsx` (site) : seul le JOUR reste lisible — assez pour savoir
+// qu'un vrai client attend, trop peu pour savoir lequel — et tout le reste, nom compris, est une
+// barre floutée avec un cadenas, jamais une valeur inventée. Le flou n'est qu'une décoration :
+// le nom, le téléphone, l'email, l'adresse, le montant et l'heure ne sont jamais chargés (voir
+// `masquerVerrouillees`).
 //
 // La ligne est aussi cliquable : elle ouvre une fiche, floutée elle aussi, qui montre ce qu'on
 // obtient en changeant d'offre.
 
-export type ReservationMasquee = { id: string; client_name: string | null; scheduled_at: string }
+/** Pas de `client_name` : le nom n'existe déjà plus au sortir de la base, et un champ toujours
+ *  vide inviterait un écran à l'afficher. */
+export type ReservationMasquee = { id: string; scheduled_at: string }
 
 const jourAbrege = (iso: string): string =>
   new Date(iso).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', weekday: 'short', day: 'numeric' }).replace('.', '')
 
-/** Le nom d'un client masqué : présent mais flou, illisible à l'œil comme au lecteur d'écran. */
-function NomFlou({ nom, className = '' }: { nom: string | null; className?: string }) {
+/** La place du nom d'un client masqué : une barre, comme les autres champs de la carte.
+ *  L'ancienne version floutait le VRAI nom en CSS — il restait lisible dans le code de la page,
+ *  il suffisait de retirer le flou. */
+function NomMasque({ className = '' }: { className?: string }) {
   return (
     <span className={className}>
       <span className="sr-only">Client masqué</span>
-      <span aria-hidden className="select-none blur-[5px]">{nom || 'Client'}</span>
+      <BarreLigne className="h-3.5 w-28" />
     </span>
   )
 }
@@ -58,7 +63,7 @@ export function LigneRdvVerrouilleeV2({ reservation: r, offre }: { reservation: 
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
           <span className="flex min-w-0 items-center gap-1.5">
-            <NomFlou nom={r.client_name} className={`truncate text-[15px] ${corpsFort}`} />
+            <NomMasque className={`truncate text-[15px] ${corpsFort}`} />
             <Lock size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
           </span>
           <BarreLigne className="mt-1 h-3 w-24" />
@@ -86,7 +91,7 @@ export function LigneClientVerrouilleeV2({ reservation: r, offre }: { reservatio
           <Lock size={15} strokeWidth={2} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <NomFlou nom={r.client_name} className={`block truncate text-[15px] ${corpsFort}`} />
+          <NomMasque className={`block truncate text-[15px] ${corpsFort}`} />
           <BarreLigne className="mt-1.5 h-3 w-32 max-w-full" />
           <span className={`mt-1.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
             Réservation le {jourSeul(r.scheduled_at) ?? '—'}
@@ -120,7 +125,7 @@ export function CarteJourVerrouilleeV2({ reservation: r, offre }: { reservation:
       >
         <span className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5">
-            <NomFlou nom={r.client_name} className={`truncate text-[15px] ${corpsFort}`} />
+            <NomMasque className={`truncate text-[15px] ${corpsFort}`} />
             <Lock size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
           </span>
           <BarreLigne className="h-3.5 w-10 shrink-0" />
@@ -149,7 +154,7 @@ function LigneFloue({ icone, largeur }: { icone: React.ReactNode; largeur: strin
 function FicheVerrouilleeV2({ reservation: r, offre, onClose }: { reservation: ReservationMasquee; offre: string; onClose: () => void }) {
   return (
     <Feuille
-      titre={<NomFlou nom={r.client_name} />}
+      titre={<NomMasque />}
       sousTitre={`Réservation le ${jourSeul(r.scheduled_at) ?? '—'}`}
       onClose={onClose}
       pied={

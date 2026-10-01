@@ -532,14 +532,16 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
   })
 
   describe('ce que le laveur apprend', () => {
-    it('nomme le client mais tait l’heure, au-delà du quota', async () => {
-      // Le nom rend la demande réelle ; l'heure permettrait d'honorer le
-      // rendez-vous sans jamais payer — il suffirait d'attendre sur place.
+    it('tait le nom et l’heure, au-delà du quota : le jour seul', async () => {
+      // Le nom suffirait à rappeler le client par ses propres moyens — et il
+      // s'afficherait sur l'écran verrouillé du téléphone. L'heure permettrait
+      // d'honorer le rendez-vous sans jamais payer.
       avecWasher({ plan: 'decouverte' })
       plan.countMois = 5
       await poster()
       const envoi = notifierLaveur.mock.calls.at(-1)![1]
-      expect(envoi.body).toMatch(/Jean Test/)
+      expect(envoi.title).not.toMatch(/Jean|Test/)
+      expect(envoi.body).not.toMatch(/Jean|Test/)
       expect(envoi.body).toMatch(/vendredi 11 septembre/)
       expect(envoi.body).not.toMatch(/\d{1,2}:\d{2}/)
       expect(envoi.body).not.toMatch(/Auxerre|Colbert/)
@@ -555,7 +557,7 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       expect(envoi.url).toMatch(/calendrier/)
     })
 
-    it('reçoit un email dédié, sans adresse ni téléphone', async () => {
+    it('reçoit un email dédié, sans nom, adresse ni téléphone', async () => {
       // Gabarit à part : l'email complet compose le téléphone, l'adresse et le
       // montant à une dizaine d'endroits, un seul oubli révélerait tout.
       avecWasher({ plan: 'decouverte' })
@@ -563,7 +565,8 @@ describe('POST /api/bookings — au-delà du quota mensuel', () => {
       await poster()
       expect(sendWasherNotification).not.toHaveBeenCalled()
       const envoi = sendWasherBookingLocked.mock.calls.at(-1)![0]
-      expect(envoi.clientName).toBe('Jean Test')
+      expect(Object.keys(envoi)).not.toContain('clientName')
+      expect(JSON.stringify(envoi)).not.toMatch(/Jean|Test/)
       expect(Object.keys(envoi)).not.toContain('clientPhone')
       expect(Object.keys(envoi)).not.toContain('address')
     })

@@ -11,9 +11,9 @@ import {
 // laveur perdait un lavage sans même savoir qu'on l'avait sollicité.
 //
 // Désormais la réservation est enregistrée normalement. Ce qui est plafonné,
-// c'est ce que le laveur en VOIT : au-delà de son quota, il connaît LE NOM et
-// LE JOUR, rien d'autre. Assez pour savoir qu'un vrai client l'attend, trop peu
-// pour le joindre ou pour honorer le rendez-vous sans rien payer.
+// c'est ce que le laveur en VOIT : au-delà de son quota, il connaît LE JOUR,
+// rien d'autre. Assez pour savoir qu'un vrai client l'attend, trop peu pour
+// savoir lequel, le joindre ou honorer le rendez-vous sans rien payer.
 // La pression change de camp : elle pèse sur celui qui peut y remédier.
 //
 // Rien n'est écrit en base pour marquer ces réservations, et c'est voulu : le
@@ -97,19 +97,23 @@ export function estVerrouillee(
 
 /** Ce qu'une réservation verrouillée laisse voir, et ce qu'elle retient.
  *
- *  Le laveur garde LE NOM et LE JOUR. C'est assez pour savoir qu'un vrai
- *  client l'attend — donc pour avoir envie de le joindre — et trop peu pour le
- *  joindre. Tout masquer, nom compris, rendait la demande abstraite : une ligne
- *  « Réservation bloquée » ne donne envie de rien.
+ *  Le laveur garde LE JOUR, et rien d'autre.
  *
- *  Ce qui part : le téléphone, l'email, l'adresse, le montant, le détail des
- *  véhicules, et L'HEURE. L'heure parce qu'elle suffit à honorer le rendez-vous
- *  sans rien payer — il suffirait d'attendre sur place.
+ *  LE NOM part aussi (décision de Ryan, 2026-10-02). Il était resté visible
+ *  parce qu'il rendait la demande concrète, mais un nom suffit à contourner le
+ *  verrouillage : un client déjà servi, un voisin, une connaissance — le
+ *  laveur le reconnaît et l'appelle avec son propre carnet, sans jamais payer.
+ *  Le masquage ne vaut que s'il ne laisse rien qui identifie la personne.
+ *
+ *  Ce qui part encore : le téléphone, l'email, l'adresse, le montant, le
+ *  détail des véhicules, et L'HEURE. L'heure parce qu'elle suffit à honorer le
+ *  rendez-vous sans rien payer — il suffirait d'attendre sur place.
  *
  *  Le masquage se fait ICI, au sortir de la base, et jamais dans les écrans :
  *  un composant qui oublierait la règle afficherait le vrai numéro. À cet
  *  endroit, l'oubli est impossible — la donnée n'existe déjà plus. */
 const MASQUE = {
+  client_name: null,
   client_email: null,
   client_phone: null,
   address: null,

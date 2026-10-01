@@ -196,16 +196,15 @@ describe('masquerVerrouillees', () => {
     expect(b.verrouillee).toBe(false)
   })
 
-  it('efface de quoi joindre le client, mais garde son NOM', () => {
-    // Le nom reste : c'est ce qui rend la demande réelle. « Réservation
-    // bloquée » ne donne envie de rien, « Nadia Costa » si.
+  it('efface de quoi joindre le client, NOM compris', () => {
+    // Un nom reconnu suffit au laveur pour rappeler le client avec son propre
+    // carnet, sans jamais payer : il part avec le téléphone et l'adresse.
     const c = masquerVerrouillees(liste, PERIODES)[2]
     expect(c.verrouillee).toBe(true)
-    expect(c.client_name).toBe('Nadia Costa')
+    expect(c.client_name).toBeNull()
     expect(c.client_phone).toBeNull()
     expect(c.address).toBeNull()
   })
-
   it('garde la date brute, que les écrans réduisent au jour', () => {
     // `scheduled_at` n'est pas écrasé : il sert encore à trier et au calcul
     // des créneaux. La remplacer ici par un minuit ferait sauter le rendez-vous
@@ -282,6 +281,7 @@ describe('les clients d’avant restent au laveur', () => {
       enjambe,
     )
     expect(r.verrouillee).toBe(false)
+    expect(r.client_name).toBe('Claire Martin')
     expect(r.client_phone).toBe('0611111111')
   })
 })

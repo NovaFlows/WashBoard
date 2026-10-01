@@ -286,7 +286,7 @@ export default async function CrmPage({ searchParams }: {
   // adresse, historique. Les réservations au-delà du quota n'y entrent pas —
   // sinon le laveur récupérait ici, en deux clics, exactement ce que l'accueil
   // et le calendrier viennent de lui cacher. Elles restent comptées sur la
-  // page Clients, nom flouté et jour seul.
+  // page Clients, nom masqué et jour seul.
   const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 

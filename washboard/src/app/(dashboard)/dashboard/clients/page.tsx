@@ -49,14 +49,14 @@ export default async function ClientsPage() {
   // Réservations au-delà du quota. Elles ne rejoignent PAS l'annuaire : celui-ci
   // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
-  // au-dessus, avec le nom flouté et le jour.
+  // au-dessus, avec le jour seul — le nom est masqué comme le reste.
   const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const montantBloque = montantVerrouille(bookings, seuils)
   const marquees = masquerVerrouillees(bookings, seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
   const bloquees = marquees
     .filter(b => b.verrouillee)
-    .map(b => ({ id: b.id as string, client_name: b.client_name as string | null, scheduled_at: b.scheduled_at as string }))
+    .map(b => ({ id: b.id as string, scheduled_at: b.scheduled_at as string }))
 
   // L'offre proposée dépend du VOLUME du mois, pas du simple fait d'être
   // bloqué : à sept réservations sur une offre plafonnée à cinq, le Starter

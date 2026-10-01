@@ -261,7 +261,7 @@ type Props = {
    *  ne s'affiche alors. */
   jauge: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }
   /** Demandes en attente masquées par le plafond : elles se rangent dans « À confirmer », en
-   *  carte floutée avec un cadenas (l'id, le nom et le jour seulement — voir `dashboard/page.tsx`). */
+   *  carte floutée avec un cadenas (l'id et le jour seulement — voir `dashboard/page.tsx`). */
   verrouillees: ReservationMasquee[]
   /** L'offre la moins chère qui les débloque, nommée sur chaque carte. */
   offreDeblocage: string

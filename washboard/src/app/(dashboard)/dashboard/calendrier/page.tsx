@@ -79,7 +79,6 @@ export default async function CalendrierPage() {
     // Midi UTC du jour de Paris : le jour seul quitte le serveur, jamais l'heure.
     .map(b => ({
       id: b.id as string,
-      client_name: (b.client_name as string | null) ?? null,
       scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })}T12:00:00Z`,
     }))
   const joursMasques = masquees.map(m => m.scheduled_at)
@@ -103,7 +102,7 @@ export default async function CalendrierPage() {
         {/* Les réservations verrouillées ne figurent PAS dans l'agenda : une
             grille horaire ne sait pas placer un rendez-vous dont on cache
             l'heure, et l'y poser la révélerait. Le laveur les retrouve sur son
-            accueil, avec le nom et le jour. Elles sont en attente et il ne peut
+            accueil, avec le jour seul. Elles sont en attente et il ne peut
             pas les confirmer : son agenda ne perd donc aucun engagement réel. */}
         <CalendrierDashboard
           bookings={visibles}

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireWasher } from '@/lib/requireWasher'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
-import { minuitParisUTC } from '@/lib/dateUtils'
+import { FUSEAU, minuitParisUTC } from '@/lib/dateUtils'
+import { quotaReservations } from '@/lib/plan'
+import { masquerVerrouillees, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 
 // Un jour arbitraire pour le widget « Aujourd'hui » de l'accueil, qui se
 // navigue désormais au jour précédent ou suivant.
@@ -13,7 +15,9 @@ import { minuitParisUTC } from '@/lib/dateUtils'
 // arbitraire — hier, ou dans trois semaines — doit rester juste quel que soit
 // ce qui a déjà été chargé ailleurs sur la page.
 
-const COLONNES = 'id, client_name, scheduled_at, status, services(name)'
+// `created_at` et `saisie_par_laveur` ne s'affichent pas : sans eux, `estVerrouillee` ne
+// reconnaît aucune réservation au-delà du quota, et tout partirait en clair.
+const COLONNES = 'id, client_name, scheduled_at, status, created_at, saisie_par_laveur, services(name)'
 
 export async function GET(req: NextRequest) {
   const r = await requireWasher()
@@ -56,5 +60,23 @@ export async function GET(req: NextRequest) {
     return errorResponse('bookings.jour.get.db', error)
   }
 
-  return NextResponse.json({ data: data ?? [], date })
+  // Même masque que l'accueil qui affiche ce widget : sans lui, passer au jour
+  // suivant montrait en clair le nom et l'heure d'une réservation que la page,
+  // elle, venait de verrouiller.
+  const { data: washer, error: errWasher } = await supabase
+    .from('washers')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .eq('id', washerId)
+    .single()
+  // Sans l'offre, impossible de savoir quoi masquer : on ne renvoie rien plutôt
+  // que de tout renvoyer en clair.
+  if (errWasher || !washer) return errorResponse('bookings.jour.washer.read_failed', errWasher, { washerId })
+
+  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const lignes = masquerVerrouillees(data ?? [], seuils).map(b => b.verrouillee
+    // Midi UTC du jour de Paris, comme sur l'accueil : le jour quitte le serveur, jamais l'heure.
+    ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z` }
+    : b)
+
+  return NextResponse.json({ data: lignes, date })
 }

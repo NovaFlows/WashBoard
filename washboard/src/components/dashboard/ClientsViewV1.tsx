@@ -31,11 +31,13 @@ function dateCourte(iso: string, maintenant: number): string {
   })
 }
 
-/** Un client venu au-delà du quota. Pas d'email : il n'entre donc pas dans le
- *  regroupement de l'annuaire, qui se fait par email — les rassembler y
- *  produirait une seule fiche fantôme portant tous les noms. Ils ont leur
- *  propre ligne, DANS la même liste. */
-export type ClientBloque = { id: string; client_name: string | null; scheduled_at: string }
+/** Un client venu au-delà du quota. Ni email ni nom : il n'entre donc pas dans
+ *  le regroupement de l'annuaire, qui se fait par email — les rassembler y
+ *  produirait une seule fiche fantôme. Ils ont leur propre ligne, DANS la même
+ *  liste. Le nom n'est pas dans le type : il n'existe déjà plus au sortir de la
+ *  base (voir `masquerVerrouillees`), et un champ toujours vide inviterait un
+ *  écran à l'afficher. */
+export type ClientBloque = { id: string; scheduled_at: string }
 
 export default function ClientsViewV1({ bookings, bloques = [], offreDeblocage = 'Pro', montantBloque = 0 }: {
   bookings: ClientBooking[]
@@ -190,14 +192,14 @@ function LigneClient({ client: c, maintenant, onOuvrir }: { client: ResumeClient
 /** Une ligne d'annuaire qu'on ne peut pas ouvrir.
  *
  *  Même gabarit que `LigneClient` pour qu'elle se lise comme une fiche de plus
- *  et non comme un encart publicitaire. Ce qui reste LISIBLE : le nom et le
- *  jour — assez pour savoir qu'un vrai client attend, trop peu pour le joindre
- *  ou pour se présenter au rendez-vous. Ce qui manque est remplacé par des
- *  barres grises floutées, jamais par des valeurs inventées : un faux numéro
- *  sous un flou reste un faux numéro le jour où quelqu'un le retire, et c'est
- *  la crédibilité de tout l'écran qui tombe avec.
+ *  et non comme un encart publicitaire. Ce qui reste LISIBLE : le jour, seul —
+ *  assez pour savoir qu'un vrai client attend, trop peu pour savoir lequel.
+ *  Ce qui manque, nom compris, est remplacé par des barres grises floutées,
+ *  jamais par des valeurs inventées : un faux numéro sous un flou reste un faux
+ *  numéro le jour où quelqu'un le retire, et c'est la crédibilité de tout
+ *  l'écran qui tombe avec.
  *
- *  Le flou n'est qu'une décoration. La vraie protection est en amont :
+ *  Le flou n'est qu'une décoration. La vraie protection est en amont : nom,
  *  téléphone, email, adresse, montant et HEURE ne sont jamais chargés (voir
  *  `masquerVerrouillees`). */
 function LigneBloquee({ bloque, offre }: { bloque: ClientBloque; offre: string }) {
@@ -210,16 +212,13 @@ function LigneBloquee({ bloque, offre }: { bloque: ClientBloque; offre: string }
       </span>
 
       <span className="flex-1 min-w-0">
-        {/* Le NOM, net. C'est lui qui rend la demande réelle : « Nadia Costa »
-            donne envie de rappeler, « Client masqué » ne donne envie de rien.
-            Et la DATE, au jour près. */}
-        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-          {bloque.client_name || 'Client'}
-        </span>
+        {/* Le nom, masqué comme le reste : reconnu, il suffirait au laveur
+            pour rappeler le client sans passer par l'abonnement. */}
+        <span className="sr-only">Client masqué</span>
+        <span className="block h-3.5 w-32 max-w-full rounded bg-slate-200 dark:bg-slate-700 blur-[3px] mt-0.5" aria-hidden />
 
-        {/* Ce qui manque, en barres grises floutées : téléphone, email,
-            adresse. Jamais de fausse valeur — un faux numéro sous un flou
-            reste un faux numéro le jour où quelqu'un retire le flou. */}
+        {/* Ce qui manque encore, en barres grises floutées : téléphone,
+            email, adresse. */}
         <span className="block h-3 w-44 max-w-full rounded bg-slate-200 dark:bg-slate-700 blur-[3px] mt-1.5" aria-hidden />
 
         <span className="block text-xs mt-1.5 text-slate-700 dark:text-slate-300">

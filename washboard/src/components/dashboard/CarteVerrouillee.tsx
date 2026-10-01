@@ -10,19 +10,18 @@ const BLEU = '#1651E8'
  *  comme une publicité. À sa place dans la liste, avec la même forme que ses
  *  voisines, elle se lit comme ce qu'elle est : un rendez-vous qui manque.
  *
- *  Ce qui reste LISIBLE : le nom et le jour. Assez pour savoir qu'un vrai
- *  client attend — donc pour avoir envie de le joindre — et trop peu pour le
- *  joindre ou pour se présenter au rendez-vous.
+ *  Ce qui reste LISIBLE : le jour, et lui seul. Le nom est masqué comme le
+ *  reste — un nom reconnu suffit au laveur pour rappeler le client par ses
+ *  propres moyens (voir `masquerVerrouillees`). La carte ne le reçoit donc
+ *  même pas.
  *
  *  Le reste est une barre grise floutée, jamais une fausse valeur : une heure
  *  inventée sous un flou resterait une heure inventée le jour où quelqu'un
  *  retire le flou dans les outils du navigateur. Le flou n'est d'ailleurs
- *  qu'une décoration — la vraie serrure est en amont, où le téléphone,
- *  l'adresse, l'heure et le montant ne sont jamais chargés (voir
- *  `masquerVerrouillees`).
+ *  qu'une décoration — la vraie serrure est en amont, où le nom, le
+ *  téléphone, l'adresse, l'heure et le montant ne sont jamais chargés.
  */
-export function CarteVerrouillee({ clientName, scheduledAt, offre }: {
-  clientName: string | null
+export function CarteVerrouillee({ scheduledAt, offre }: {
   scheduledAt: string
   /** Nom de l'offre qui débloque — « Starter », « Pro ». */
   offre: string
@@ -32,12 +31,9 @@ export function CarteVerrouillee({ clientName, scheduledAt, offre }: {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
       <div className="p-4">
-        {/* Le NOM, net. C'est lui qui rend la demande réelle : une ligne
-            « Réservation bloquée » ne donne envie de rien. */}
         <div className="flex items-center gap-2 mb-2">
-          <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
-            {clientName || 'Client'}
-          </span>
+          <span className="sr-only">Client masqué</span>
+          <span className="inline-block h-3.5 w-28 rounded bg-slate-200 dark:bg-slate-700 blur-[3px]" aria-hidden />
           <span className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
               <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
