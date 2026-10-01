@@ -154,7 +154,11 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2 mt-2">
+          {/* Deux colonnes sur téléphone, quatre au-delà : à 375 px, quatre
+              colonnes laissent 70 px par chiffre, et « Transformation » comme
+              « Peu de données » se coupent sur trois lignes. Un intitulé
+              haché se relit au lieu de se lire. */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 mt-2">
             <Chiffre label="Visites" valeur={String(b.visites)} />
             <Chiffre label="Clients" valeur={String(b.reservations)} />
             {/* Sous le seuil, le taux n'est pas affiché : 1 sur 3 donne 33 % et
