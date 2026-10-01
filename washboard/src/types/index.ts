@@ -40,6 +40,10 @@ export type Washer = {
   followup_delay_days: number
   followup_message: string | null
   created_at: string
+  // Preuve d'acceptation des CGV à l'inscription (voir api/auth/signup).
+  // `null` pour tout compte créé avant ce contrôle.
+  cgv_acceptees_le: string | null
+  cgv_acceptees_ip: string | null
   // Widgets affichés sur l'accueil (voir lib/dashboardWidgets.ts). `undefined`
   // tant que la colonne n'existe pas en base, `null` tant que le laveur n'a
   // jamais ouvert le réglage — les deux valent « tout afficher ».

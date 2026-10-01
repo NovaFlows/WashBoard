@@ -76,6 +76,9 @@ async function inscrire(extra: Record<string, unknown> = {}) {
     email: 'test@exemple.fr',
     password: 'motdepasse',
     phone: NUMERO_NORMAL,
+    // Acceptée par défaut : les tests de ce fichier portent sur autre chose,
+    // sauf le bloc dédié ci-dessous.
+    cgv_acceptees: true,
     ...extra,
   }))
   return { res, body: await res.json() }
@@ -200,6 +203,42 @@ describe('POST /api/auth/signup — création du compte', () => {
     expect((await inscrire({ email: 'pas-un-email' })).res.status).toBe(400)
     expect((await inscrire({ password: '123' })).res.status).toBe(400)
     expect(inserts).toHaveLength(0)
+  })
+})
+
+describe('POST /api/auth/signup — acceptation des CGV', () => {
+  it('refuse une inscription sans la case cochée', async () => {
+    const { res, body } = await inscrire({ cgv_acceptees: false })
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/CGV/)
+    expect(inserts).toHaveLength(0)
+  })
+
+  it('refuse un appel direct qui omet le champ', async () => {
+    // Le formulaire envoie toujours cgv_acceptees — un appel qui ne passe
+    // pas par lui (requête directe à l'API) ne doit pas créer de compte
+    // sans trace d'acceptation.
+    const res = await POST(requete({
+      name: 'Test Lavage', email: 'test@exemple.fr', password: 'motdepasse', phone: NUMERO_NORMAL,
+    }))
+    expect(res.status).toBe(400)
+    expect(inserts).toHaveLength(0)
+  })
+
+  it('refuse une valeur tronquée (chaîne "true", pas un booléen)', async () => {
+    // Même principe que le prix côté réservation : une valeur qui RESSEMBLE
+    // à l'acceptation ne doit pas en tenir lieu.
+    const { res } = await inscrire({ cgv_acceptees: 'true' })
+    expect(res.status).toBe(400)
+    expect(inserts).toHaveLength(0)
+  })
+
+  it('enregistre la date ET l’IP au moment de l’inscription', async () => {
+    const avant = Date.now()
+    const { res } = await inscrire()
+    expect(res.status).toBe(200)
+    expect(new Date(inserts[0].cgv_acceptees_le as string).getTime()).toBeGreaterThanOrEqual(avant)
+    expect(inserts[0].cgv_acceptees_ip).toBeTruthy()
   })
 })
 

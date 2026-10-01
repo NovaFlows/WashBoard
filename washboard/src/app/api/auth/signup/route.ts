@@ -35,10 +35,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { name, email, password, phone } = await request.json()
+  const { name, email, password, phone, cgv_acceptees } = await request.json()
 
   if (!name?.trim() || !email?.includes('@') || !password || password.length < 6) {
     return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+  }
+
+  // Le formulaire ne permet pas de valider sans cocher la case, mais la route
+  // reste appelable directement — sans ce contrôle, un appel direct créerait
+  // un compte sans trace d'acceptation, exactement le trou que ce verrou
+  // ferme. Une inscription sans preuve d'acceptation vaut moins que pas
+  // d'inscription du tout en cas de litige.
+  if (cgv_acceptees !== true) {
+    return NextResponse.json({ error: 'Vous devez accepter les CGV pour créer un compte' }, { status: 400 })
   }
 
   // Le téléphone limite l'ouverture de plusieurs essais gratuits avec des
@@ -140,6 +149,10 @@ export async function POST(request: NextRequest) {
 
   const baseSlug = generateSlug(name.trim())
   const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  // Date ET adresse IP de l'acceptation des CGV, posées au moment précis de
+  // l'inscription — pas recalculées plus tard, qui prouverait seulement que
+  // la case EST cochée aujourd'hui, pas qu'elle l'était à l'inscription.
+  const cgvAccepteesLe = new Date().toISOString()
 
   // Le lien public est formé du nom de l'entreprise et de quatre caractères
   // tirés au hasard. La collision est improbable — il faut le même nom ET le
@@ -165,6 +178,8 @@ export async function POST(request: NextRequest) {
         // cette valeur par défaut a changé avec la grille 2026, et un compte
         // d'essai bridé à 5 réservations n'aurait plus rien d'un essai.
         plan: PLAN_ESSAI,
+        cgv_acceptees_le: cgvAccepteesLe,
+        cgv_acceptees_ip: ip,
       })
 
     washerError = error
