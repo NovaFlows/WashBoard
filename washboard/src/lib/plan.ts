@@ -264,6 +264,18 @@ export const COMPTES_TEST_RETOUR_GRATUIT: string[] = [
   'ysclean-066d',
 ]
 
+/** Fiches laveur de l'équipe ou de test, à écarter de toute diffusion
+ *  commerciale (annonce des offres, de l'application...) — ce sont des
+ *  comptes actifs comme les autres, rien dans la base ne les distingue d'un
+ *  vrai client. Liste centralisée ici plutôt que recopiée dans chaque route
+ *  de diffusion : un nouveau compte de test oublié d'un seul endroit a déjà
+ *  fait rater l'exclusion une fois (« test ryan », 2026-10-01). */
+export const COMPTES_INTERNES_EXCLUS_DIFFUSION: string[] = [
+  'kookiclean-1f09',  // ADMIN RYAN
+  'test-config-15d2', // Test Config (le compte de test de l'équipe)
+  'test-ryan-6ca5',   // test ryan
+]
+
 /** Ce qu'il faut savoir d'un compte pour trancher la fin d'essai. Tous les
  *  champs sont facultatifs : un appelant qui ne les lit pas obtient le
  *  comportement d'avant, jamais une perte d'accès par omission. */

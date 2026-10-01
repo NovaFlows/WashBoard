@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendNouvellesOffres } from '@/lib/email'
 import { notifierLaveur, notifierEquipe } from '@/lib/push'
 import { logger } from '@/lib/logger'
+import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 
 // Diffusion UNIQUE de l'annonce des 4 offres 2026 (email + notification push)
 // à tous les laveurs réels. Ce n'est volontairement PAS un cron : rien ne la
@@ -58,12 +59,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Lecture impossible' }, { status: 500 })
   }
 
-  // Comptes internes (équipe, comptes de test) : ce sont des fiches laveur
-  // actives comme les autres, rien dans la base ne les distingue d'un vrai
-  // client — d'où une liste explicite, à la main, comme pour
-  // COMPTES_TEST_RETOUR_GRATUIT dans lib/plan.ts.
-  const SLUGS_EXCLUS = ['kookiclean-1f09', 'test-config-15d2']
-  const destinataires = (washers ?? []).filter(w => !SLUGS_EXCLUS.includes(w.slug))
+  const destinataires = (washers ?? []).filter(w => !COMPTES_INTERNES_EXCLUS_DIFFUSION.includes(w.slug))
 
   if (!confirmer) {
     return NextResponse.json({

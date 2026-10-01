@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendAnnoncePwa } from '@/lib/email'
 import { notifierLaveur, notifierEquipe } from '@/lib/push'
 import { logger } from '@/lib/logger'
+import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 
 // Diffusion UNIQUE de l'annonce de la nouvelle application (email +
 // notification push) à tous les laveurs réels — même principe que
@@ -73,10 +74,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Lecture impossible' }, { status: 500 })
   }
 
-  // Comptes internes (équipe, comptes de test) — liste à la main, comme pour
-  // COMPTES_TEST_RETOUR_GRATUIT dans lib/plan.ts.
-  const SLUGS_EXCLUS = ['kookiclean-1f09', 'test-config-15d2']
-  const destinataires = (washers ?? []).filter(w => !SLUGS_EXCLUS.includes(w.slug))
+  const destinataires = (washers ?? []).filter(w => !COMPTES_INTERNES_EXCLUS_DIFFUSION.includes(w.slug))
 
   if (!confirmer) {
     return NextResponse.json({
