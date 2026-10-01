@@ -18,6 +18,7 @@ import { FUSEAU } from '@/lib/dateUtils'
 import { formatEuros } from '@/lib/plan'
 import { LigneClientVerrouilleeV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
 import AutomatismesClientsV2, { type AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
+import { Ligne, CarteListe, TitreSection } from '@/components/dashboard/ParametresFormV2'
 import type { ClientBloque } from '@/components/dashboard/ClientsViewV1'
 
 // Fichier clients du laveur, présentation v2 — réservée à la PWA installée en
@@ -533,6 +534,18 @@ export default function ClientsViewV2({
       )}
 
       {automatismes && <AutomatismesClientsV2 automatismes={automatismes} />}
+
+      {/* Raccourci vers Chiffres, dupliqué depuis « Plus » (demande d'Alexandre,
+          2026-10-01) : Chiffres reste dans « Plus », qui garde sa ligne — ici,
+          c'est le même écran, pas une copie, pour qui consulte ses chiffres
+          juste après avoir regardé ses clients plutôt que de rouvrir le
+          menu. */}
+      <section aria-label="Chiffres">
+        <TitreSection>L’argent</TitreSection>
+        <CarteListe>
+          <Ligne label="Chiffres" sousLabel="Argent, acquisition, clients" href="/dashboard/chiffres" />
+        </CarteListe>
+      </section>
 
       {fiche && (
         <ClientProfileModal
