@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SITE_URL } from '@/lib/blog'
-import { PLAN_CARDS } from '@/lib/plan'
+import { PLAN_CARDS, requiredPlan } from '@/lib/plan'
+import { tarifOffre } from '@/lib/resumeOffres'
 import type { FaqItem } from '@/components/blog/Prose'
 
 // Page pilier — angle « optimisation de tournée », distinct de
@@ -112,10 +113,13 @@ function Footer() {
   )
 }
 
-// Grille 2026 à 4 offres : créneaux intelligents et frais de déplacement
-// (le sujet de cette page) sont des fonctions Pro, pas Starter — corrigé
-// lors de la fusion du 2026-09-28, qui a fait disparaître Essentiel.
-const pro = PLAN_CARDS.find(c => c.key === 'pro')!
+// Grille 2026 à 4 offres : les deux sujets de cette page ne sont PAS dans la
+// même offre. Les créneaux groupés (MIN_PLAN.creneaux_intelligents) sont
+// réservés au Pro ; les frais de déplacement (MIN_PLAN.frais_deplacement)
+// sont ouverts dès l'offre gratuite. Offres lues via requiredPlan() : si
+// l'une bouge dans plan.ts, la phrase suit.
+const offreCreneaux = PLAN_CARDS.find(c => c.key === requiredPlan('creneaux_intelligents'))!
+const offreFrais = PLAN_CARDS.find(c => c.key === requiredPlan('frais_deplacement'))!
 
 const faqItems: FaqItem[] = [
   {
@@ -141,7 +145,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien ça coûte ?',
     answer:
-      `Les créneaux groupés et les frais de déplacement automatiques sont inclus dans la formule ${pro.name} à ${pro.price}€/mois, avec la réservation en ligne, l’agenda, la facturation et les avis Google (email et SMS). Un mois est offert à l’inscription, sans carte bancaire.`,
+      `Les frais de déplacement automatiques sont inclus dès la formule ${offreFrais.name} (${tarifOffre(offreFrais)}), comme la vérification des horaires injoignables. Les créneaux groupés demandent la formule ${offreCreneaux.name}, à ${tarifOffre(offreCreneaux)}, qui ajoute aussi la facturation et les avis Google (email et SMS). Un mois est offert à l’inscription, sans carte bancaire.`,
   },
 ]
 
@@ -224,7 +228,7 @@ export default function Page() {
         <section className="max-w-3xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Comment ça marche</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-10">
-            Deux mécanismes, un seul calcul de trajet réel
+            Trois mécanismes, un seul calcul de trajet réel
           </h2>
           <div className="space-y-10">
             <div>
@@ -243,7 +247,7 @@ export default function Page() {
                 2. Les créneaux proches d&apos;un rendez-vous existant sont mis en avant
               </h3>
               <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                Si tu actives les créneaux groupés, un horaire à moins de 15 minutes de trajet d&apos;un
+                Si tu actives les créneaux groupés (formule {offreCreneaux.name}), un horaire à moins de 15 minutes de trajet d&apos;un
                 rendez-vous déjà prévu ressort dans la liste des créneaux proposés — seuil réglable de 5
                 à 30 minutes. Tu peux y associer une remise pour encourager le client à le choisir, sans
                 y être obligé.

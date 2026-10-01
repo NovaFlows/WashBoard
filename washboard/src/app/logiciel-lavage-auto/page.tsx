@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SITE_URL } from '@/lib/blog'
-import { PLAN_CARDS, SMS_QUOTA } from '@/lib/plan'
+import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { resumeOffres } from '@/lib/resumeOffres'
 import MetierPageTemplate, { type MetierFeature, type MetierProblem } from '@/components/metiers/MetierPageTemplate'
 import type { FaqItem } from '@/components/blog/Prose'
 
@@ -20,9 +21,10 @@ import type { FaqItem } from '@/components/blog/Prose'
 // - créneaux au temps de trajet réel, seuil de 15 min par défaut (5 à 30
 //   configurable) : src/app/api/slots/smart/route.ts, src/lib/slots.ts,
 //   src/components/dashboard/admin/IdentiteForm.tsx
-// - multi-laveurs réservé à la formule Pro : src/lib/plan.ts (MIN_PLAN)
-// - avis Google par email, par SMS en Pro (150/mois) : src/lib/plan.ts
-//   (SMS_QUOTA), landing (FONCTIONNALITES)
+// - multi-laveurs réservé à la formule Business : src/lib/plan.ts (MIN_PLAN)
+// - avis Google (email et SMS, 150 SMS/mois) et créneaux intelligents
+//   réservés à la formule Pro, frais de déplacement ouverts dès l'offre
+//   gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
 // - prix des formules : src/lib/plan.ts (PLAN_CARDS), jamais recopiés
 
 const title = 'Logiciel de gestion pour laveur auto mobile | WashBoard'
@@ -95,8 +97,8 @@ const fonctionnalites: MetierFeature[] = [
     desc: (
       <>
         Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes
-        rendez-vous déjà prévus ce jour-là et met en avant les horaires proches de l&apos;un
-        d&apos;eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un
+        rendez-vous déjà prévus ce jour-là et, en formule {requiredPlanLabel('creneaux_intelligents')},
+        met en avant les horaires proches de l&apos;un d&apos;eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un
         quart d&apos;heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que
         le trajet rendrait injoignable — voir notre page sur{' '}
         <Link href="/optimisation-tournee-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
@@ -107,14 +109,14 @@ const fonctionnalites: MetierFeature[] = [
   },
   {
     titre: 'Un agenda qui suit ton équipe',
-    desc: 'Seul, tu vois tes disponibilités telles quelles. En formule Pro, tu indiques la taille de ton équipe et tes absences : WashBoard accepte autant de rendez-vous en même temps que tu as de laveurs disponibles.',
+    desc: 'Seul, tu vois tes disponibilités telles quelles. En formule Business, tu indiques la taille de ton équipe et tes absences : WashBoard accepte autant de rendez-vous en même temps que tu as de laveurs disponibles.',
   },
   {
     titre: 'Des avis Google après chaque lavage',
     desc: (
       <>
-        Une demande d&apos;avis part automatiquement par email dès qu&apos;un rendez-vous passe en
-        « Terminé » — par SMS aussi en formule Pro ({SMS_QUOTA.pro} par mois). Pour un laveur auto,
+        En formule {requiredPlanLabel('avis_email')}, une demande d&apos;avis part automatiquement dès
+        qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({SMS_QUOTA.pro} par mois). Pour un laveur auto,
         ce sont ces avis qui remplissent une{' '}
         <Link href="/blog/fiche-google-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
           fiche Google
@@ -125,13 +127,8 @@ const fonctionnalites: MetierFeature[] = [
   },
 ]
 
-// Dérivés de PLAN_CARDS, jamais recopiés : un prix qui change dans plan.ts
-// se répercute ici sans qu'il faille penser à cette page. Grille 2026 à 4
-// offres : Starter, pas Essentiel (disparu) — le multi-laveurs a quitté Pro
-// pour Business, corrigé dans la phrase ci-dessous lors de la fusion du
-// 2026-09-28.
-const starter = PLAN_CARDS.find(c => c.key === 'starter')!
-const pro = PLAN_CARDS.find(c => c.key === 'pro')!
+// Grille 2026 à 4 offres : la réponse « Combien coûte » vient de
+// resumeOffres(), dérivée de plan.ts — plus de prix ni de nom d'offre recopié.
 
 const faqItems: FaqItem[] = [
   {
@@ -147,7 +144,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Comment fonctionnent les créneaux optimisés pour un laveur auto ?',
     answer:
-      'WashBoard compare l’adresse d’un client qui réserve au temps de trajet réel jusqu’à tes rendez-vous déjà prévus ce jour-là, et met en avant les horaires les plus proches — pas un découpage de quartier sur une carte. Le seuil se règle dans tes paramètres (15 minutes par défaut, réglable de 5 à 30), avec une remise optionnelle que tu définis toi-même.',
+      `WashBoard compare l’adresse d’un client qui réserve au temps de trajet réel jusqu’à tes rendez-vous déjà prévus ce jour-là, et met en avant les horaires les plus proches — pas un découpage de quartier sur une carte. Le seuil se règle dans tes paramètres (15 minutes par défaut, réglable de 5 à 30), avec une remise optionnelle que tu définis toi-même. Cette mise en avant est incluse dans la formule ${requiredPlanLabel('creneaux_intelligents')}.`,
   },
   {
     question: 'Puis-je gérer plusieurs véhicules dans une même réservation ?',
@@ -157,12 +154,12 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien coûte WashBoard pour un laveur auto mobile ?',
     answer:
-      `${starter.price}€/mois en formule ${starter.name} (réservation, agenda, page personnalisée, CRM) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute les créneaux et frais de déplacement intelligents, la comptabilité, la facturation, les avis Google (email et SMS) et les relances de suivi. Un mois est offert à l’inscription, sans carte bancaire.`,
+      resumeOffres(),
   },
   {
     question: 'Est-ce adapté si je travaille seul ?',
     answer:
-      'Oui, la formule Essentiel est pensée pour un laveur seul. Si tu embauches ou travailles en binôme, la formule Pro accepte plusieurs rendez-vous en même temps, selon la taille d’équipe que tu renseignes.',
+      'Oui, Starter et Pro sont pensées pour un laveur qui travaille seul. Si tu embauches ou travailles en équipe, c’est la formule Business qui accepte plusieurs rendez-vous en même temps, selon la taille d’équipe que tu renseignes.',
   },
 ]
 

@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SITE_URL } from '@/lib/blog'
-import { PLAN_CARDS, freeMonthsLabel } from '@/lib/plan'
+import { freeMonthsLabel } from '@/lib/plan'
+import { resumeOffres } from '@/lib/resumeOffres'
 import type { FaqItem } from '@/components/blog/Prose'
 import { ComparatifBesoins } from '@/components/ComparatifBesoins'
 import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
@@ -43,7 +44,9 @@ import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 //   (doitEnvoyerFactureAuClient) — le client particulier la retrouve sur le
 //   même lien que sa confirmation de réservation :
 //   src/components/booking/StepConfirmation.tsx, src/app/api/bookings/[id]/pdf/route.ts
-// - avis Google par email, par SMS en formule Pro (150/mois) : src/lib/plan.ts (SMS_QUOTA)
+// - avis Google (email et SMS, 150 SMS/mois), créneaux intelligents et
+//   facturation réservés à la formule Pro, frais de déplacement ouverts dès
+//   l'offre gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
 // - prix des formules et mois offert : src/lib/plan.ts (PLAN_CARDS, freeMonthsLabel())
 // - "Un RDV confirmé = 4 messages échangés" : reprise telle quelle de la
 //   landing (src/components/landing/LandingPage.tsx, section "Ce que tu fais
@@ -127,11 +130,8 @@ function Footer() {
   )
 }
 
-// Dérivés de PLAN_CARDS, jamais recopiés. Grille 2026 à 4 offres : Starter,
-// pas Essentiel (disparu) — le multi-laveurs a quitté Pro pour Business,
-// corrigé dans la phrase ci-dessous lors de la fusion du 2026-09-28.
-const starter = PLAN_CARDS.find(c => c.key === 'starter')!
-const pro = PLAN_CARDS.find(c => c.key === 'pro')!
+// Grille 2026 à 4 offres : la réponse « Combien coûte » vient de
+// resumeOffres(), dérivée de plan.ts — plus de prix ni de nom d'offre recopié.
 
 const faqItems: FaqItem[] = [
   {
@@ -157,7 +157,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien coûte un logiciel dédié comme WashBoard ?',
     answer:
-      `${starter.price}€/mois en formule ${starter.name} (réservation, agenda, page personnalisée, CRM) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute les créneaux et frais de déplacement intelligents, la comptabilité, la facturation et les avis Google (email et SMS). Un mois est offert à l’inscription, sans carte bancaire.`,
+      resumeOffres(),
   },
 ]
 

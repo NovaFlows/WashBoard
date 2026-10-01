@@ -27,12 +27,21 @@ describe('buildSiteJsonLd', () => {
   })
 
   it('annonce exactement les prix affichés sur le site', () => {
-    const prix = PLAN_CARDS.map(c => c.price).sort((a, b) => a - b)
+    // Une offre « sur devis » n'affiche pas de prix : elle ne doit pas peser
+    // dans la fourchette annoncée, mais elle compte parmi les offres.
+    const prix = PLAN_CARDS.filter(c => !c.surDevis).map(c => c.price).sort((a, b) => a - b)
     const offres = (noeud('SoftwareApplication') as { offers: Record<string, unknown> }).offers
     expect(offres.lowPrice).toBe(String(prix[0]))
     expect(offres.highPrice).toBe(String(prix[prix.length - 1]))
     expect(offres.offerCount).toBe(PLAN_CARDS.length)
     expect(offres.priceCurrency).toBe('EUR')
+  })
+
+  it('ne publie pas le prix d’une offre affichée « sur devis »', () => {
+    const offres = (noeud('SoftwareApplication') as { offers: Record<string, unknown> }).offers
+    for (const c of PLAN_CARDS.filter(c => c.surDevis)) {
+      expect(offres.highPrice).not.toBe(String(c.price))
+    }
   })
 
   it('n’invente aucune note ni aucun avis', () => {

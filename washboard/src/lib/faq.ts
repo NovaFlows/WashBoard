@@ -13,7 +13,8 @@
 // lit maintenant `freeMonthsLabel()` : le jour où la formule change, la
 // réponse change avec elle.
 
-import { freeMonthsLabel, PLAN_CARDS } from '@/lib/plan'
+import { BOOKING_QUOTA, freeMonthsLabel, PLAN_CARDS, requiredPlanLabel } from '@/lib/plan'
+import { tarifOffre } from '@/lib/resumeOffres'
 
 export type FaqItem = { q: string; a: string }
 
@@ -25,8 +26,14 @@ export type FaqItem = { q: string; a: string }
 // plus depuis la grille à 4 offres — un `!.price` sur `undefined` aurait fait
 // planter le rendu de la page d'accueil en production. Remplacée par les deux
 // offres réellement citées dans les réponses ci-dessous.
-const starterPrice = PLAN_CARDS.find(c => c.key === 'starter')!.price
-const proPrice = PLAN_CARDS.find(c => c.key === 'pro')!.price
+//
+// Revue du 2026-10-01 : la réponse « après le mois gratuit » ne citait que
+// deux offres sur quatre (Business absent) et recopiait le quota Découverte
+// (« 5 réservations ») ; tout est maintenant lu dans plan.ts.
+const decouverte = PLAN_CARDS.find(c => c.key === 'decouverte')!
+const starter = PLAN_CARDS.find(c => c.key === 'starter')!
+const pro = PLAN_CARDS.find(c => c.key === 'pro')!
+const business = PLAN_CARDS.find(c => c.key === 'business')!
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
@@ -51,7 +58,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Comment mes clients trouvent ma page ?',
-    a: 'Tu partages ton lien partout : bio Instagram, TikTok, fiche Google, ton site, WhatsApp. Des liens dédiés à chaque réseau te montrent ensuite d\'où viennent tes réservations.',
+    a: `Tu partages ton lien partout : bio Instagram, TikTok, fiche Google, ton site, WhatsApp. Dès la formule ${requiredPlanLabel('crm')}, des liens dédiés à chaque réseau te montrent ensuite d'où viennent tes réservations.`,
   },
   {
     q: 'Je suis prévenu quand un client réserve ?',
@@ -63,7 +70,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Que se passe-t-il après le mois gratuit ?',
-    a: `Tu choisis une formule : Starter à ${starterPrice}€/mois ou Pro à ${proPrice}€/mois. Si tu ne choisis pas, ton compte passe tout seul sur l'offre Découverte : gratuite, limitée à 5 réservations par mois. On ne coupe rien. Aucune carte n'est demandée pendant l'essai.`,
+    a: `Tu choisis une formule : ${starter.name} à ${tarifOffre(starter)} ou ${pro.name} à ${tarifOffre(pro)} — ou ${business.name}, ${tarifOffre(business)}, si tu travailles en équipe. Si tu ne choisis pas, ton compte passe tout seul sur l'offre ${decouverte.name} : ${tarifOffre(decouverte)}, limitée à ${BOOKING_QUOTA.decouverte} réservations par mois. On ne coupe rien. Aucune carte n'est demandée pendant l'essai.`,
   },
   {
     q: 'Je peux arrêter quand je veux ?',

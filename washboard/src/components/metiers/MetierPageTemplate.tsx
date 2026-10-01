@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ARTICLES, THEME_LABEL, type Theme } from '@/lib/blog'
 import { PLAN_CARDS, freeMonthsLabel } from '@/lib/plan'
+import { tarifOffre } from '@/lib/resumeOffres'
 import { Faq, type FaqItem } from '@/components/blog/Prose'
 
 // Gabarit commun aux pages métier ("logiciel pour <métier>"). Une page par
@@ -259,12 +260,15 @@ export default function MetierPageTemplate({
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
         <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Ce que ça coûte</p>
         <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-6">
-          {prix[0].price}€/mois pour démarrer, sans engagement en mensuel.
+          {prix[0].price === 0 ? 'Gratuit' : `${prix[0].price}€/mois`} pour démarrer, sans engagement en mensuel.
         </h2>
         <div className="max-w-2xl space-y-3 text-slate-500 dark:text-slate-400 leading-relaxed">
           {prix.map(c => (
             <p key={c.key}>
-              <strong className="font-semibold text-slate-700 dark:text-slate-300">{c.price}€/mois — {c.name}.</strong>{' '}
+              {/* tarifOffre : « gratuite », « 19€/mois » ou « sur devis ». Le prix
+                  brut affichait « 0€/mois » pour Découverte et « 129€/mois »
+                  pour Business, que la grille de l'accueil ne publie pas. */}
+              <strong className="font-semibold text-slate-700 dark:text-slate-300">{c.name} — {tarifOffre(c)}.</strong>{' '}
               {c.features.join(', ')}.
             </p>
           ))}

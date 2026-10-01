@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SITE_URL } from '@/lib/blog'
-import { PLAN_CARDS, SMS_QUOTA } from '@/lib/plan'
+import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { resumeOffres } from '@/lib/resumeOffres'
 import MetierPageTemplate, { type MetierFeature, type MetierProblem } from '@/components/metiers/MetierPageTemplate'
 import type { FaqItem } from '@/components/blog/Prose'
 
@@ -35,9 +36,12 @@ import type { FaqItem } from '@/components/blog/Prose'
 //   de 1 à 730) : src/lib/relances.ts, src/types/index.ts
 //   (followup_delay_days), src/app/api/washer/route.ts (bornes), réservée à
 //   la formule Pro : src/lib/plan.ts (MIN_PLAN.followup)
-// - avis Google par email, par SMS en Pro (150/mois) : src/lib/plan.ts
-//   (SMS_QUOTA), src/lib/email/index.ts (demande d'avis après « Terminé »)
-// - multi-laveurs réservé à la formule Pro : src/lib/plan.ts (MIN_PLAN)
+// - avis Google (email et SMS, 150 SMS/mois) réservés à la formule Pro :
+//   src/lib/plan.ts (MIN_PLAN, SMS_QUOTA), src/lib/email/index.ts (demande
+//   d'avis après « Terminé »)
+// - créneaux intelligents réservés à la formule Pro, frais de déplacement
+//   ouverts dès l'offre gratuite : src/lib/plan.ts (MIN_PLAN)
+// - multi-laveurs réservé à la formule Business : src/lib/plan.ts (MIN_PLAN)
 // - prix des formules : src/lib/plan.ts (PLAN_CARDS), jamais recopiés
 //
 // Ce qui n'est PAS affirmé faute de preuve dans le code : aucune fonction de
@@ -100,7 +104,7 @@ const fonctionnalites: MetierFeature[] = [
   },
   {
     titre: 'Des créneaux qui limitent la route',
-    desc: 'Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes rendez-vous déjà prévus ce jour-là et met en avant les horaires proches de l’un d’eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un quart d’heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que le trajet rendrait injoignable.',
+    desc: `Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes rendez-vous déjà prévus ce jour-là et, en formule ${requiredPlanLabel('creneaux_intelligents')}, met en avant les horaires proches de l’un d’eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un quart d’heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que le trajet rendrait injoignable.`,
   },
   {
     titre: 'Une fiche client qui sait qui relancer',
@@ -108,17 +112,12 @@ const fonctionnalites: MetierFeature[] = [
   },
   {
     titre: 'Des avis Google après chaque intervention',
-    desc: `Une demande d'avis part automatiquement par email dès qu'un rendez-vous passe en « Terminé » — par SMS aussi en formule Pro (${SMS_QUOTA.pro} par mois). Dans un métier qui se vend sur un résultat visible, ce sont ces avis qui remplissent une fiche Google.`,
+    desc: `En formule ${requiredPlanLabel('avis_email')}, une demande d'avis part automatiquement dès qu'un rendez-vous passe en « Terminé », par email ou par SMS (${SMS_QUOTA.pro} par mois). Dans un métier qui se vend sur un résultat visible, ce sont ces avis qui remplissent une fiche Google.`,
   },
 ]
 
-// Dérivés de PLAN_CARDS, jamais recopiés : un prix qui change dans plan.ts
-// se répercute ici sans qu'il faille penser à cette page. Grille 2026 à 4
-// offres : Starter, pas Essentiel (disparu) — le multi-laveurs a quitté Pro
-// pour Business, corrigé dans la phrase ci-dessous lors de la fusion du
-// 2026-09-28.
-const starter = PLAN_CARDS.find(c => c.key === 'starter')!
-const pro = PLAN_CARDS.find(c => c.key === 'pro')!
+// Grille 2026 à 4 offres : la réponse « Combien coûte » vient de
+// resumeOffres(), dérivée de plan.ts — plus de prix ni de nom d'offre recopié.
 
 const faqItems: FaqItem[] = [
   {
@@ -139,7 +138,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Les créneaux optimisés ont-ils un intérêt pour des interventions ponctuelles comme celles-ci ?',
     answer:
-      'Oui. Même pour des rendez-vous espacés dans le temps, WashBoard évite de te proposer un horaire que le trajet rendrait injoignable si tu as un autre rendez-vous le même jour, et met en avant les horaires proches d’une intervention déjà prévue à proximité.',
+      `Oui. Même pour des rendez-vous espacés dans le temps, WashBoard évite de te proposer un horaire que le trajet rendrait injoignable si tu as un autre rendez-vous le même jour. En formule ${requiredPlanLabel('creneaux_intelligents')}, il met aussi en avant les horaires proches d’une intervention déjà prévue à proximité.`,
   },
   {
     question: 'Comment WashBoard aide-t-il face à un client qui ne revient qu’une ou deux fois par an ?',
@@ -149,12 +148,12 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien coûte WashBoard pour un professionnel du nettoyage de canapés ?',
     answer:
-      `${starter.price}€/mois en formule ${starter.name} (réservation, agenda, page personnalisée, CRM) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute les créneaux et frais de déplacement intelligents, la comptabilité, la facturation, les avis Google (email et SMS) et les relances de suivi. Un mois est offert à l’inscription, sans carte bancaire.`,
+      resumeOffres(),
   },
   {
     question: 'C’est adapté si le nettoyage de canapés n’est qu’une partie de mon activité ?',
     answer:
-      'Oui. Beaucoup de professionnels le combinent avec le lavage auto ou le ménage : tu crées une catégorie par activité, chacune avec ses propres prestations et son propre agenda partagé. Si tu embauches ou travailles en binôme, la formule Pro accepte plusieurs rendez-vous en même temps, selon la taille d’équipe que tu renseignes.',
+      'Oui. Beaucoup de professionnels le combinent avec le lavage auto ou le ménage : tu crées une catégorie par activité, chacune avec ses propres prestations et son propre agenda partagé. Si tu embauches ou travailles en équipe, c’est la formule Business qui accepte plusieurs rendez-vous en même temps, selon la taille d’équipe que tu renseignes.',
   },
 ]
 

@@ -39,7 +39,9 @@ const SOCIAL_SAME_AS: string[] = [
 ]
 
 export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
-  const prix = PLAN_CARDS.map(c => c.price).sort((a, b) => a - b)
+  // Seuls les prix AFFICHÉS : Business est « sur devis » (surDevis) sur la
+  // grille, annoncer ses 129 € ici ferait diverger le balisage de la page.
+  const prix = PLAN_CARDS.filter(c => !c.surDevis).map(c => c.price).sort((a, b) => a - b)
 
   const organisation = {
     '@type': 'Organization',
@@ -81,7 +83,7 @@ export function buildSiteJsonLd(siteUrl: string = SITE_URL_FALLBACK) {
       priceCurrency: 'EUR',
       lowPrice: String(prix[0]),
       highPrice: String(prix[prix.length - 1]),
-      offerCount: prix.length,
+      offerCount: PLAN_CARDS.length,
       availability: 'https://schema.org/InStock',
     },
   }

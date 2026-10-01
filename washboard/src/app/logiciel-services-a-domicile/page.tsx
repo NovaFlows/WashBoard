@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { SITE_URL } from '@/lib/blog'
-import { PLAN_CARDS, SMS_QUOTA } from '@/lib/plan'
+import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { resumeOffres } from '@/lib/resumeOffres'
 import { metierPageForTheme } from '@/lib/metiers'
 import type { Theme } from '@/lib/blog'
 import MetierPageTemplate, { type MetierCovered, type MetierFeature, type MetierProblem } from '@/components/metiers/MetierPageTemplate'
@@ -44,7 +45,7 @@ function hrefMetier(theme: Theme): string | undefined {
 //   configurable) : src/app/api/slots/smart/route.ts, src/lib/slots.ts,
 //   src/components/dashboard/admin/IdentiteForm.tsx
 // - multi-laveurs (plusieurs rendez-vous en même temps) réservé à la formule
-//   Pro : src/lib/plan.ts (MIN_PLAN.multi_laveurs)
+//   Business : src/lib/plan.ts (MIN_PLAN.multi_laveurs)
 // - facture conforme (SIRET, TVA) : src/lib/plan.ts (PLAN_CARDS, "Facturation
 //   conforme (SIRET, TVA)") ; envoi automatique par email au client
 //   PROFESSIONNEL uniquement : src/lib/facture.ts (doitEnvoyerFactureAuClient)
@@ -52,8 +53,9 @@ function hrefMetier(theme: Theme): string | undefined {
 //   de réservation, qui sert d'abord le récapitulatif puis la facture une
 //   fois émise : src/components/booking/StepConfirmation.tsx (lien
 //   /api/bookings/[id]/pdf), src/app/api/bookings/[id]/pdf/route.ts
-// - avis Google par email, par SMS en Pro (150/mois) : src/lib/plan.ts
-//   (SMS_QUOTA)
+// - avis Google (email et SMS, 150 SMS/mois), créneaux intelligents et
+//   facturation réservés à la formule Pro, frais de déplacement ouverts dès
+//   l'offre gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
 // - relance automatique des clients qui ne reviennent pas, réservée à la
 //   formule Pro : src/lib/relances.ts, src/lib/plan.ts (MIN_PLAN.followup)
 // - prix des formules : src/lib/plan.ts (PLAN_CARDS), jamais recopiés
@@ -112,22 +114,22 @@ const fonctionnalites: MetierFeature[] = [
   },
   {
     titre: 'Des créneaux qui limitent la route entre deux adresses',
-    desc: 'Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes rendez-vous déjà prévus ce jour-là et met en avant les horaires proches de l’un d’eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un quart d’heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que le trajet rendrait injoignable.',
+    desc: `Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes rendez-vous déjà prévus ce jour-là et, en formule ${requiredPlanLabel('creneaux_intelligents')}, met en avant les horaires proches de l’un d’eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un quart d’heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que le trajet rendrait injoignable.`,
   },
   {
     titre: 'Un agenda qui suit ton équipe',
-    desc: 'Seul, tu vois tes disponibilités telles quelles. En formule Pro, tu indiques la taille de ton équipe et tes absences : WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.',
+    desc: 'Seul, tu vois tes disponibilités telles quelles. En formule Business, tu indiques la taille de ton équipe et tes absences : WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.',
   },
   {
     titre: 'Une facture conforme, sans y penser',
-    desc: 'Chaque prestation terminée peut générer une facture avec les mentions obligatoires (SIRET, TVA) : elle part automatiquement par email à tes clients professionnels, et tes clients particuliers la retrouvent sur le même lien que leur confirmation de réservation.',
+    desc: `En formule ${requiredPlanLabel('facturation')}, chaque prestation terminée peut générer une facture avec les mentions obligatoires (SIRET, TVA) : elle part automatiquement par email à tes clients professionnels, et tes clients particuliers la retrouvent sur le même lien que leur confirmation de réservation.`,
   },
   {
     titre: 'Des avis Google après chaque intervention',
     desc: (
       <>
-        Une demande d&apos;avis part automatiquement par email dès qu&apos;un rendez-vous passe en
-        « Terminé » — par SMS aussi en formule Pro ({SMS_QUOTA.pro} par mois). Ce sont ces avis qui
+        En formule {requiredPlanLabel('avis_email')}, une demande d&apos;avis part automatiquement dès
+        qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({SMS_QUOTA.pro} par mois). Ce sont ces avis qui
         remplissent ta fiche Google et ton agenda de la semaine suivante.
       </>
     ),
@@ -168,13 +170,8 @@ const metiers: MetierCovered[] = [
   },
 ]
 
-// Dérivés de PLAN_CARDS, jamais recopiés : un prix qui change dans plan.ts
-// se répercute ici sans qu'il faille penser à cette page. Grille 2026 à 4
-// offres : Starter, pas Essentiel (disparu) — le multi-laveurs a quitté Pro
-// pour Business, corrigé dans la phrase ci-dessous lors de la fusion du
-// 2026-09-28.
-const starter = PLAN_CARDS.find(c => c.key === 'starter')!
-const pro = PLAN_CARDS.find(c => c.key === 'pro')!
+// Grille 2026 à 4 offres : la réponse « Combien coûte » vient de
+// resumeOffres(), dérivée de plan.ts — plus de prix ni de nom d'offre recopié.
 
 const faqItems: FaqItem[] = [
   {
@@ -190,7 +187,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Les créneaux proposés tiennent-ils compte du temps de trajet réel ?',
     answer:
-      'Oui. WashBoard compare l’adresse d’un client qui réserve au temps de trajet réel jusqu’à tes rendez-vous déjà prévus ce jour-là, et met en avant les horaires les plus proches — pas un simple découpage de quartier sur une carte. Le seuil se règle dans tes paramètres, 15 minutes par défaut, réglable de 5 à 30.',
+      `Oui. WashBoard ne propose jamais un horaire que le trajet réel rendrait injoignable depuis tes rendez-vous déjà prévus ce jour-là. En formule ${requiredPlanLabel('creneaux_intelligents')}, il met aussi en avant les horaires les plus proches — pas un simple découpage de quartier sur une carte. Le seuil se règle dans tes paramètres, 15 minutes par défaut, réglable de 5 à 30.`,
   },
   {
     question: 'WashBoard gère-t-il les rendez-vous récurrents, comme un ménage chaque semaine ?',
@@ -200,7 +197,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Puis-je facturer mes clients directement depuis WashBoard ?',
     answer:
-      'Oui. Chaque prestation terminée peut générer une facture avec les mentions obligatoires (SIRET, TVA). Elle part automatiquement par email à tes clients professionnels ; tes clients particuliers la retrouvent sur le même lien que leur confirmation de réservation.',
+      `Oui, en formule ${requiredPlanLabel('facturation')}. Chaque prestation terminée peut générer une facture avec les mentions obligatoires (SIRET, TVA). Elle part automatiquement par email à tes clients professionnels ; tes clients particuliers la retrouvent sur le même lien que leur confirmation de réservation.`,
   },
   {
     question: 'Je peux gérer plusieurs métiers dans le même compte ?',
@@ -210,7 +207,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Combien coûte WashBoard pour une activité de services à domicile ?',
     answer:
-      `${starter.price}€/mois en formule ${starter.name} (réservation, agenda, page personnalisée, CRM) ou ${pro.price}€/mois en formule ${pro.name}, qui ajoute les créneaux et frais de déplacement intelligents, la comptabilité, la facturation, les avis Google (email et SMS) et les relances de suivi. Un mois est offert à l’inscription, sans carte bancaire.`,
+      resumeOffres(),
   },
 ]
 

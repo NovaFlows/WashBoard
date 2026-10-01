@@ -8,8 +8,8 @@ import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
   lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
-  PLAN_COULEURS,
-  type BillingCycle,
+  PLAN_COULEURS, SMS_QUOTA, requiredPlan, requiredPlanLabel,
+  type BillingCycle, type Feature,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
 import { SOCIAL_LINKS } from '@/components/ui/socialLinks'
@@ -98,14 +98,18 @@ function FadeItem({ children, className, style }: { children: React.ReactNode; c
 }
 
 // Une entrée de la grille « Et tout le reste, dans le même outil. ».
-function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boolean } }) {
+function FonctionnaliteItem({ f }: { f: Fonctionnalite }) {
+  // Badge = offre minimale lue dans MIN_PLAN, jamais écrite à la main : un
+  // booléen « pro » avait laissé « Multi-laveurs » marqué Pro après son
+  // passage en Business. Rien d'affiché pour ce que l'offre gratuite ouvre.
+  const badge = f.offre && requiredPlan(f.offre) !== 'decouverte' ? requiredPlanLabel(f.offre) : null
   return (
     <FadeItem>
       <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
         {f.titre}
-        {f.pro && (
+        {badge && (
           <span className="text-[10px] font-black uppercase tracking-wider text-[#1651E8] dark:text-[#6A9FFF] border border-[#1651E8]/30 dark:border-[#6A9FFF]/30 rounded-md px-1.5 py-0.5">
-            Pro
+            {badge}
           </span>
         )}
       </p>
@@ -114,29 +118,30 @@ function FonctionnaliteItem({ f }: { f: { titre: string; desc: string; pro?: boo
   )
 }
 
-// Tout ce que fait le produit, sous la fonctionnalité phare. `pro` doit suivre
-// PLAN_CARDS (lib/plan.ts) : ne jamais annoncer dans une offre ce qui appartient
-// à l'offre du dessus. La grille 2026 en compte quatre — Découverte, Starter,
+// Tout ce que fait le produit, sous la fonctionnalité phare. `offre` pointe la
+// clé de MIN_PLAN (lib/plan.ts) : le badge en est dérivé, pour ne jamais
+// annoncer dans une offre ce qui appartient à l'offre du dessus. La grille 2026 en compte quatre — Découverte, Starter,
 // Pro, Business — et c'est `plan.ts` qui en est la seule source.
 // Ordre demandé par Ryan le 2026-09-27 : la facturation remonte près du haut
 // de la grille (déjà mise en avant dans l'encart phare juste au-dessus, elle
 // mérite aussi sa place ici) ; les créneaux intelligents, eux, redescendent
 // après les statistiques puisqu'ils ont désormais leur propre section dédiée
 // plus bas sur la page ; déplacement et appli/notifications sont intervertis.
-const FONCTIONNALITES: { titre: string; desc: string; pro?: boolean }[] = [
-  { titre: 'Page de réservation à ton image', desc: 'Ton logo, tes couleurs, tes prestations et tes prix. Tes clients réservent sans créer de compte.' },
+type Fonctionnalite = { titre: string; desc: string; offre?: Feature }
+const FONCTIONNALITES: Fonctionnalite[] = [
+  { titre: 'Page de réservation à ton image', desc: `Tes prestations et tes prix, réservables sans créer de compte. Ton logo et tes couleurs dès la formule ${requiredPlanLabel('page_personnalisee')}.` },
   { titre: 'Agenda', desc: 'Vues mois, semaine et jour. Tu ajoutes un rendez-vous à la main et tu bloques tes congés.' },
-  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue), envoyée automatiquement à tes clients pros dès qu’une prestation est terminée. Détail juste au-dessus.' },
+  { titre: 'Facturation', desc: 'Facture conforme (SIRET, TVA, numérotation continue), envoyée automatiquement à tes clients pros dès qu’une prestation est terminée. Détail juste au-dessus.', offre: 'facturation' },
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
   { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
-  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.' },
-  { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.' },
-  { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.' },
+  { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.', offre: 'frais_deplacement' },
+  { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.', offre: 'crm' },
+  { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.', offre: 'creneaux_intelligents' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
-  { titre: 'Avis Google automatiques', desc: 'Une demande d’avis par email après chaque prestation terminée. Par SMS en formule Pro (150 par mois).' },
-  { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', pro: true },
-  { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', pro: true },
-  { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', pro: true },
+  { titre: 'Avis Google automatiques', desc: `Une demande d’avis après chaque prestation terminée, par email ou par SMS (${SMS_QUOTA.pro} par mois).`, offre: 'avis_email' },
+  { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', offre: 'followup' },
+  { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', offre: 'compta' },
+  { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', offre: 'multi_laveurs' },
 ]
 
 // Les trois étapes de « Comment ça marche ».

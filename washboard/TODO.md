@@ -3007,6 +3007,31 @@ rien à faire, mais que le projet reste globalement sain.
 - [ ] **Environnement de recette/staging dédié** : seulement quand il y aura une
       équipe / un testeur, ou des migrations risquées. Inutile avant.
 
+## 🔍 Contenu & tarifs (SEO-GEO)
+
+> Suite de la revue du 2026-10-01 (`seo-geo`, Opus) : blog + FAQ + pages pilier passés en revue
+> suite au recentrage à 4 offres (Découverte/Starter/Pro/Business). Plusieurs vrais bugs de
+> contenu trouvés et corrigés (prix de Business publié dans le JSON-LD alors qu'il est sur
+> devis, avis Google par email présenté comme gratuit partout, badges Pro/Business faux sur la
+> landing). Trois points restent ouverts, pas corrigés :
+
+- [ ] **(priorité basse) Cron d'envoi d'avis (`api/cron/send-reviews`) : à vérifier qu'il
+      revérifie bien `MIN_PLAN.avis_email` au moment de l'envoi**, pas seulement à l'activation.
+      Soupçon soulevé par `seo-geo` en comparant le contenu au code, non vérifié en conditions
+      réelles : un compte rétrogradé sous Pro qui avait activé les avis pourrait continuer à en
+      envoyer. Rien d'urgent (pas de signalement client), à prendre quand `dev` a du temps.
+      Agent : `dev`.
+- [ ] **À décider : deux blocs de la landing ne précisent pas qu'ils sont réservés à la formule
+      Pro.** L'encart « La facturation, sans outil en plus » et la section « Créneaux groupés »
+      ne disent pas qu'il s'agit de fonctions Pro (contrairement à la grille « Et tout le reste »
+      juste en dessous, qui elle affiche le badge). Pas une erreur factuelle, un choix éditorial
+      — à trancher avec `growth` : le dire clairement partout, ou laisser ces deux blocs vendre
+      la fonction sans mentionner le palier.
+- [x] 2026-10-01 — **Page `/optimisation-tournee-lavage-auto` : le titre disait « Deux
+      mécanismes » alors que la section en liste trois** (le 3e, les frais de déplacement au
+      trajet réel, est un vrai différenciateur, pas un oubli à retirer). Corrigé en « Trois
+      mécanismes, un seul calcul de trajet réel ».
+
 ## 🟢 Polish / UX
 
 - [x] ~~**Bouton désactivé indistinguable d'un bouton actif en thème sombre.**~~
