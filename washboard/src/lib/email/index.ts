@@ -1161,3 +1161,51 @@ export async function sendNouvellesOffres({ to, washerName, appUrl }: {
 </html>`.trim(),
   })
 }
+
+// ── Email : annonce de la nouvelle application (diffusion unique) ──────────
+export async function sendAnnoncePwa({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `WashBoard évolue — venez essayer la nouvelle version`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="background:#1651e8;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">WashBoard évolue 🚀</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;">Une nouvelle version, pensée pour le téléphone</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
+        Venez essayer la nouvelle version de WashBoard : une application que vous installez
+        sur votre téléphone, plus rapide et pensée pour une journée sur la route — agenda,
+        clients et chiffres repensés pour s&apos;utiliser d&apos;une main, entre deux rendez-vous.
+      </p>
+      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#1d4ed8;font-weight:600;">
+          Vos données sont les mêmes, rien à reconfigurer — c&apos;est le même compte, juste une
+          autre façon d&apos;y accéder.
+        </p>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard/guide#guide-application" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Installer l&apos;application →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Le site reste disponible normalement si vous préférez</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}

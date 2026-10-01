@@ -370,6 +370,58 @@ function NouvellesOffresBanner() {
   )
 }
 
+// Annonce de la nouvelle application (refonte 2026), une seule fois par
+// laveur — et UNIQUEMENT sur le site, jamais dans l'application installée
+// (demande explicite d'Alexandre, 2026-10-01) : inviter quelqu'un à essayer
+// la nouvelle version alors qu'il s'en sert déjà n'aurait aucun sens, et
+// laisserait croire qu'il manque quelque chose à ce qu'il a sous les yeux.
+const CLE_FERMEE_ANNONCE_PWA = 'wb_annonce_pwa_2026_fermee'
+
+function AnnoncePwaBanner() {
+  const isPwa = usePwaStandalone()
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (isPwa) return
+    let annule = false
+    ;(async () => {
+      let fermee = false
+      try {
+        fermee = !!localStorage.getItem(CLE_FERMEE_ANNONCE_PWA)
+      } catch {
+        // Stockage bloqué : on affiche quand même, voir AppBetaBanner.
+      }
+      if (!annule && !fermee) setVisible(true)
+    })()
+    return () => { annule = true }
+  }, [isPwa])
+
+  if (isPwa || !visible) return null
+
+  function fermer() {
+    setVisible(false)
+    try { localStorage.setItem(CLE_FERMEE_ANNONCE_PWA, '1') } catch { /* rien à faire */ }
+  }
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
+      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-wide bg-blue-600/10 dark:bg-blue-400/15 px-1.5 py-0.5 rounded">Nouveau</span>
+          WashBoard évolue — venez essayer la nouvelle version de l&apos;application.
+        </span>
+        <Link
+          href="/dashboard/guide#guide-application"
+          className="underline font-bold whitespace-nowrap hover:opacity-70"
+        >
+          En savoir plus →
+        </Link>
+      </div>
+      <DismissButton onDismiss={fermer} />
+    </div>
+  )
+}
+
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null }) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
@@ -660,6 +712,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         style={showBarreBas ? { position: 'static', background: 'transparent', borderBottomWidth: 0 } : undefined}
       >
         <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt} />
+        <AnnoncePwaBanner />
         <NouvellesOffresBanner />
         <AppBetaBanner />
         {!showBarreBas && <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
