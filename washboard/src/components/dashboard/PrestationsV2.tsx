@@ -401,6 +401,7 @@ export default function PrestationsV2({
           type="button"
           onClick={ouvrirNouvellePrestation}
           aria-label="Ajouter une prestation"
+          data-visite-cible="prestations"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
@@ -541,7 +542,7 @@ export default function PrestationsV2({
             </Section>
           )}
 
-          <div className="mt-[22px]">
+          <div className="mt-[22px]" data-visite-cible="prestations">
             <CarteListe>
               <Ligne label="+ Ajouter une catégorie" onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
             </CarteListe>

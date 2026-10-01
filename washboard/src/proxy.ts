@@ -123,5 +123,6 @@ export const config = {
     '/dashboard/:path*',
     '/login',
     '/signup',
+    '/onboarding',
   ],
 }

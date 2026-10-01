@@ -10,6 +10,7 @@ import { pixelIdValide, nettoyerPixelId } from '@/lib/consentement'
 import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
 import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
 import { widgetsValides } from '@/lib/dashboardWidgets'
+import { slugValide, slugLibre } from '@/lib/slug'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -155,7 +156,7 @@ export async function PATCH(request: NextRequest) {
   // Slug personnalisé : format strict + unicité
   if (slug !== undefined) {
     const s = String(slug).trim().toLowerCase()
-    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/.test(s)) {
+    if (!slugValide(s)) {
       return NextResponse.json({ error: 'Lien invalide : 3 à 40 caractères, lettres minuscules, chiffres et tirets uniquement (sans tiret au début/fin).' }, { status: 400 })
     }
     // Unicité du lien.
@@ -170,24 +171,19 @@ export async function PATCH(request: NextRequest) {
     // `slug text UNIQUE` en base, deux laveurs ne peuvent pas se retrouver
     // avec le même lien. Mais celui qui tombait sur un lien déjà pris
     // recevait une erreur 500 opaque au lieu d'une phrase claire.
-    //
-    // On compare le propriétaire en JavaScript plutôt qu'avec un `.neq()` :
-    // une fiche sans `user_id` (les toutes premières, créées à la main) ne
-    // serait jamais renvoyée par un `<>` SQL, NULL ne se comparant à rien.
-    const { data: proprietaire, error: erreurUnicite } = await createAdminClient()
-      .from('washers').select('id, user_id').eq('slug', s).maybeSingle()
+    const disponibilite = await slugLibre(createAdminClient(), s, user.id)
 
-    if (erreurUnicite) {
+    if (!disponibilite.ok) {
       // Une lecture en échec renverrait « personne », donc « lien libre ». La
       // contrainte de base rattraperait le doublon, mais avec un message que
       // personne ne comprend : on préfère demander de réessayer.
-      logger.error('washer.slug.unicite_illisible', { userId: user.id }, erreurUnicite)
+      logger.error('washer.slug.unicite_illisible', { userId: user.id }, disponibilite.erreur)
       return NextResponse.json(
         { error: 'Impossible de vérifier la disponibilité de ce lien. Réessayez dans un instant.' },
         { status: 503 },
       )
     }
-    if (proprietaire && proprietaire.user_id !== user.id) {
+    if (!disponibilite.libre) {
       return NextResponse.json({ error: 'Ce lien est déjà utilisé. Choisissez-en un autre.' }, { status: 409 })
     }
     updates.slug = s

@@ -751,7 +751,7 @@ export default function PrestationsManager({ services: initialServices, categori
             ne montre pas un formulaire qui mène à une impasse, on dit par où
             commencer. */}
         {!showAdd && editId === null && categories.length === 0 && (
-          <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 px-4 py-6 text-center">
+          <div data-visite-cible="prestations" className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 px-4 py-6 text-center">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Commencez par créer une catégorie, juste au-dessus</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               Elle liste ce que vos clients peuvent choisir, par exemple Voiture avec Citadine, Berline, SUV.
@@ -780,6 +780,7 @@ export default function PrestationsManager({ services: initialServices, categori
           ) : (
             <button
               onClick={startAdd}
+              data-visite-cible="prestations"
               className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-sm font-medium transition-colors"
             >
               + Ajouter une prestation

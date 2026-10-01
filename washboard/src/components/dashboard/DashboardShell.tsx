@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
 import ConfirmationEnvoiV2 from './ConfirmationEnvoiV2'
 import RetourGesteV2 from './RetourGesteV2'
+import VisiteGuidee from './VisiteGuidee'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -43,6 +44,8 @@ type Props = {
   slug?: string | null
   /** Fin de la période payée (colonne écrite par le webhook Stripe) : décide du délai de grâce avant le retour sur Découverte. */
   subscriptionEndsAt?: string | null
+  /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche la visite guidée. */
+  visiteGuidee?: boolean
 }
 
 function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
@@ -534,7 +537,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -798,6 +801,8 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           </OffreContext.Provider>
         </SupportBadgesContext.Provider>
       </main>
+
+      <VisiteGuidee aFaire={visiteGuidee} />
 
       {/* Retiré dans la PWA en bêta : posé sous la barre du bas, il allongeait la page de
           plus d'un écran de vide et passait sous la barre (2026-09-25). */}

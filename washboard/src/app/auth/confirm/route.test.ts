@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 type Reponse = { data?: unknown; error?: unknown }
 
-let plan: { verification: Reponse; fiches: Reponse }
+let plan: { verification: Reponse; fiches: Reponse; onboarding: Reponse }
 const verifications: unknown[] = []
 
 class Redirection extends Error {
@@ -27,7 +27,12 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: () => {
       const b: Record<string, unknown> = {}
-      Object.assign(b, { select: () => b, eq: () => b, limit: async () => plan.fiches })
+      Object.assign(b, {
+        select: () => b,
+        eq: () => b,
+        limit: async () => plan.fiches,
+        maybeSingle: async () => plan.onboarding,
+      })
       return b
     },
   }),
@@ -66,14 +71,25 @@ beforeEach(() => {
   plan = {
     verification: { data: { user: { id: 'u-1', email: 'test@exemple.fr' } }, error: null },
     fiches: { data: [{ id: 'w-1', name: 'Kooki Clean', phone: '0611223344', trial_ends_at: '2026-10-29T10:00:00Z' }], error: null },
+    onboarding: { data: { slug: 'kooki-clean-1f09', onboarding_complete_at: null }, error: null },
   }
   reprendreApercu.mockResolvedValue({ statut: 'aucun' })
 })
 
 describe('GET /auth/confirm — validation du lien', () => {
-  it('valide le jeton côté serveur puis ouvre le tableau de bord', async () => {
-    expect(await ouvrir()).toBe('/dashboard')
+  it('valide le jeton côté serveur puis ouvre l’onboarding d’un nouveau compte', async () => {
+    expect(await ouvrir()).toBe('/onboarding')
     expect(verifications).toEqual([{ token_hash: 'jeton', type: 'signup' }])
+  })
+
+  it('compte dont l’onboarding est déjà fait : tableau de bord', async () => {
+    plan.onboarding = { data: { slug: 'kooki', onboarding_complete_at: '2026-09-01T10:00:00Z' }, error: null }
+    expect(await ouvrir()).toBe('/dashboard')
+  })
+
+  it('état de l’onboarding illisible : tableau de bord plutôt qu’un blocage', async () => {
+    plan.onboarding = { data: null, error: { message: 'base indisponible' } }
+    expect(await ouvrir()).toBe('/dashboard')
   })
 
   it('renvoie vers /verifier-email sur un lien incomplet, sans rien valider', async () => {
@@ -110,13 +126,13 @@ describe('GET /auth/confirm — reprise de l’aperçu', () => {
 
   it('une reprise qui plante ne bloque JAMAIS la confirmation', async () => {
     reprendreApercu.mockRejectedValue(new Error('base indisponible'))
-    expect(await ouvrir()).toBe('/dashboard')
+    expect(await ouvrir()).toBe('/onboarding')
     expect(notification().title).toMatch(/échouée/)
   })
 
   it('fiche illisible : confirmation maintenue, échec tracé', async () => {
     plan.fiches = { data: null, error: { message: 'base indisponible' } }
-    expect(await ouvrir()).toBe('/dashboard')
+    expect(await ouvrir()).toBe('/onboarding')
     expect(reprendreApercu).not.toHaveBeenCalled()
     expect(logger.error).toHaveBeenCalledWith('auth.confirm.washer_read_failed', { userId: 'u-1' }, { message: 'base indisponible' })
   })

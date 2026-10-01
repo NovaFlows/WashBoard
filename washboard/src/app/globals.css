@@ -629,3 +629,19 @@ html.wb-pwa, html.wb-pwa * { scrollbar-width: none; }
 html.wb-pwa::-webkit-scrollbar,
 html.wb-pwa body::-webkit-scrollbar,
 html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* ── Visite guidée (VisiteGuidee.tsx) : l'élément clé de l'arrêt en cours ────
+   L'attribut est posé hors de React, qui ne le connaît pas et ne l'efface donc
+   pas en re-rendant l'élément (une classe, si). Contour plutôt que bordure ou
+   ombre : il ne déplace rien et ne remplace pas le style de l'élément. */
+[data-visite-active] {
+  outline: 3px solid var(--wb-visite, #1651E8);
+  outline-offset: 4px;
+  animation: wb-visite-pouls 1.6s ease-in-out infinite;
+}
+.dark [data-visite-active] { --wb-visite: #00C4D4; }
+html.wb-pwa [data-visite-active] { --wb-visite: var(--v2-color-accent); }
+@keyframes wb-visite-pouls { 50% { outline-offset: 7px; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-visite-active] { animation: none; }
+}

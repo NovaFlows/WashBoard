@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
+import { etatOnboarding } from '@/lib/onboarding'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -22,7 +23,7 @@ export default function LoginPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
     if (!password) { setError('Mot de passe requis'); return }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       // Supabase ne répond `email_not_confirmed` qu'une fois le mot de passe
       // validé : pas besoin de le revérifier avant d'afficher /verifier-email.
@@ -32,7 +33,8 @@ export default function LoginPage() {
       }
       setError('Email ou mot de passe incorrect'); setLoading(false); return
     }
-    router.push('/dashboard')
+    const { destination } = await etatOnboarding(supabase, data.user.id)
+    router.push(destination)
     router.refresh()
   }
 

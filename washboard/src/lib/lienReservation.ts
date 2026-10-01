@@ -4,13 +4,9 @@
 // ne sert qu'à répondre tout de suite, sans aller-retour, à une faute de frappe.
 
 import { appeler, type ResultatApi } from '@/lib/prestationsApi'
+import { PHRASE_SLUG_INVALIDE, slugValide } from '@/lib/slug'
 
-// Copie exacte de la règle du serveur (`api/washer/route.ts`) : 3 à 40 caractères,
-// minuscules, chiffres et tirets, jamais de tiret au début ni à la fin.
-const FORMAT_SLUG = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/
-
-export const PHRASE_SLUG_INVALIDE =
-  '3 à 40 caractères : minuscules, chiffres et tirets (pas au début ni à la fin).'
+export { PHRASE_SLUG_INVALIDE }
 
 export type ResultatSlug = { ok: true; valeur: string } | { ok: false; message: string }
 
@@ -19,7 +15,7 @@ export type ResultatSlug = { ok: true; valeur: string } | { ok: false; message: 
  *  est refusé avec une phrase, jamais corrigé en silence (les accents, notamment). */
 export function normaliserSlug(saisie: string): ResultatSlug {
   const s = saisie.trim().toLowerCase().replace(/\s+/g, '-')
-  if (!FORMAT_SLUG.test(s)) return { ok: false, message: PHRASE_SLUG_INVALIDE }
+  if (!slugValide(s)) return { ok: false, message: PHRASE_SLUG_INVALIDE }
   return { ok: true, valeur: s }
 }
 

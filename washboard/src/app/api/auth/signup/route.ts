@@ -7,16 +7,7 @@ import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { envoyerLienConfirmation } from '@/lib/confirmationEmail'
 import { PLAN_ESSAI } from '@/lib/plan'
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 40)
-}
+import { generateSlug } from '@/lib/slug'
 
 // Route publique qui crée des comptes et des lignes en base. Sans plafond, une
 // boucle pouvait ouvrir des centaines d'essais gratuits — coût Supabase, base

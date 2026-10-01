@@ -148,7 +148,7 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
       </div>
 
       {/* ── Créneaux hebdomadaires ─────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <div data-visite-cible="horaires" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Ajouter un créneau</h2>
         <div className="mb-4">
           <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Jour</p>

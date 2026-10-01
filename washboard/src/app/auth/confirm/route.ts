@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger'
 import { notifierEquipe } from '@/lib/push'
 import { reprendreApercu, annonceReprise, type ResultatReprise } from '@/lib/repriseApercu'
 import { FUSEAU } from '@/lib/dateUtils'
+import { etatOnboarding } from '@/lib/onboarding'
 
 // Arrivée du lien de confirmation envoyé à l'inscription (voir
 // `lib/confirmationEmail`).
@@ -37,7 +38,12 @@ export async function GET(request: NextRequest) {
   logger.info('auth.confirm.email_confirmed', { userId: user.id })
 
   await suiteConfirmation(user.id, user.email ?? '')
-  redirect('/dashboard')
+
+  // C'est la toute première connexion de presque tous les inscrits : le lien de
+  // confirmation ouvre la session. Lu après la reprise de l'aperçu, qui peut
+  // changer le lien que l'onboarding va proposer.
+  const { destination } = await etatOnboarding(createAdminClient(), user.id)
+  redirect(destination)
 }
 
 /** Reprise de l'aperçu prospect puis notification de l'équipe.

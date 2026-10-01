@@ -332,7 +332,7 @@ export default async function CrmPage({ searchParams }: {
           temps, alors qu'on vient ici pour regarder ses chiffres. En tête,
           ils repoussaient les statistiques sous la ligne de flottaison. */}
       <div className="mt-6">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div data-visite-cible="lien" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Liens par réseau</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Partagez le lien correspondant sur chaque réseau pour que la source apparaisse fiablement dans les statistiques ci-dessus, même quand Instagram ou TikTok ne transmettent pas l&apos;origine du clic.

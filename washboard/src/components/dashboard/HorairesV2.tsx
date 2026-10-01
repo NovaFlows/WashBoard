@@ -187,6 +187,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
         <>
           {banniere && <div className="mb-3 mt-1"><Constat ton="rouge" role="alert">{banniere}</Constat></div>}
 
+          <div data-visite-cible="horaires">
           {vide ? (
             <>
               <div className="mt-1"><Constat ton="ambre" role="status">Aucun créneau n’est réservable pour l’instant.</Constat></div>
@@ -218,6 +219,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
               </ul>
             </CarteListe>
           )}
+          </div>
 
           <section aria-label="Réservation le jour même" className="mt-[26px]">
             <CarteListe>
