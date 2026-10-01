@@ -100,7 +100,12 @@ export type Campagne = {
   budget: number
   cle: string
   debut: string
+  /** `null` = campagne sans date de fin, qui tourne tant qu'on ne l'arrête
+   *  pas. C'est le cas le plus courant, pas l'exception. */
   fin: string | null
+  /** Quand le budget a été saisi pour la dernière fois. `null` sur une
+   *  campagne antérieure au suivi de cette date (migration 009). */
+  budget_maj_le?: string | null
 }
 
 /** Vrai si la campagne tourne encore à cette date.
@@ -489,4 +494,58 @@ export type CampagneAffichee = Campagne & {
   bilan: BilanCampagne
   creations: BilanCreation[]
   reste: { visites: number; reservations: number; chiffreAffaires: number }
+}
+
+// ── Un budget déclaré vieillit ──────────────────────────────────────────────
+//
+// Le budget est saisi à la main : WashBoard ne le récupère pas auprès de Meta.
+// Sur une campagne de deux semaines, ça ne porte pas à conséquence. Sur une
+// campagne sans date de fin — le cas courant chez les laveurs, qui laissent
+// tourner une publicité des mois — le chiffre vieillit, et il vieillit dans le
+// sens le plus dangereux.
+//
+// Les réservations, elles, continuent d'arriver et de s'additionner. Le retour
+// affiché monte donc tout seul, mois après mois, pendant que la dépense reste
+// figée à sa valeur du premier jour. Le laveur lit « × 8 » sur une campagne qui
+// lui en rapporte peut-être 2, et il remet de l'argent dessus — exactement la
+// décision que cet écran existe pour éviter.
+//
+// On ne peut pas corriger le budget à sa place. On peut lui dire depuis combien
+// de temps il n'y a pas touché, ce qui suffit.
+
+/** Au-delà de ce délai, l'écran invite à vérifier le budget d'une campagne
+ *  encore en cours.
+ *
+ *  Quatorze jours : assez long pour ne pas harceler quelqu'un qui vient de
+ *  lancer, assez court pour qu'un mois de dépenses non déclarées ne passe
+ *  jamais inaperçu. */
+export const BUDGET_A_VERIFIER_JOURS = 14
+
+/** Nombre de jours depuis la dernière saisie du budget, ou `null` si on ne
+ *  sait pas — une campagne créée avant que cette date ne soit suivie. */
+export function joursDepuisBudget(
+  c: Pick<Campagne, 'budget_maj_le'>,
+  maintenant: number = Date.now(),
+): number | null {
+  if (!c.budget_maj_le) return null
+  const t = new Date(c.budget_maj_le).getTime()
+  if (!Number.isFinite(t)) return null
+  // Jamais négatif : une horloge déréglée ne doit pas produire « il y a −3
+  // jours », qui ferait douter de tout le reste de l'écran.
+  return Math.max(0, Math.floor((maintenant - t) / 86_400_000))
+}
+
+/** Faut-il inviter le laveur à vérifier son budget ?
+ *
+ *  Seulement sur une campagne ENCORE EN COURS. Une campagne terminée a un
+ *  budget définitif : lui réclamer une mise à jour serait du bruit, et le bruit
+ *  finit par faire ignorer l'avertissement le jour où il compte. */
+export function budgetAVerifier(
+  c: Pick<Campagne, 'budget_maj_le' | 'debut' | 'fin'>,
+  aujourdHui: string,
+  maintenant: number = Date.now(),
+): boolean {
+  if (!estEnCours(c, aujourdHui)) return false
+  const jours = joursDepuisBudget(c, maintenant)
+  return jours !== null && jours >= BUDGET_A_VERIFIER_JOURS
 }

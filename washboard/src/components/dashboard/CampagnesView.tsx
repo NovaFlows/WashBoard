@@ -4,11 +4,13 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronDown, Copy, Check, Plus, Trash2, Play, ImageIcon, Images, Megaphone, Clock,
+  Pencil, AlertTriangle,
 } from 'lucide-react'
 import { formatEuros } from '@/lib/plan'
 import {
   PLATEFORMES, FORMATS, labelPlateforme, estEnCours, lienCampagne, lienCreation,
   inventaireFormats, synthese, SEUIL_FIABILITE,
+  joursDepuisBudget, budgetAVerifier,
   type BilanCreation, type CampagneAffichee, type Format, type Plateforme,
 } from '@/lib/campagne'
 
@@ -286,6 +288,110 @@ function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () =
   )
 }
 
+/** Modifier une campagne en cours de route.
+ *
+ *  Ce que ce formulaire NE touche jamais : le lien. La clé portée par l'URL est
+ *  figée à la création et l'API refuse de la réécrire. C'est la contrainte
+ *  centrale, pas un détail d'implémentation — changer l'adresse d'une annonce
+ *  déjà diffusée remet à zéro l'apprentissage de l'algorithme de la
+ *  plateforme, qui cesse alors de la mettre en avant. Le laveur perdrait sa
+ *  diffusion en croyant corriger un chiffre.
+ *
+ *  C'est écrit à l'écran, parce que c'est exactement l'inquiétude qu'on a en
+ *  cliquant « Modifier » sur une campagne qui tourne. */
+function FormModification({ c, onFait, onAnnuler }: {
+  c: CampagneAffichee
+  onFait: () => void
+  onAnnuler: () => void
+}) {
+  const [nom, setNom] = useState(c.nom)
+  const [budget, setBudget] = useState(String(c.budget))
+  const [debut, setDebut] = useState(c.debut)
+  const [fin, setFin] = useState(c.fin ?? '')
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [enCours, setEnCours] = useState(false)
+
+  async function enregistrer() {
+    setErreur(null)
+    setEnCours(true)
+    const res = await fetch(`/api/campagnes/${c.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom, budget, debut, fin: fin || null }),
+    })
+    setEnCours(false)
+    if (!res.ok) {
+      const corps = await res.json().catch(() => ({}))
+      setErreur(corps.error ?? 'Impossible d’enregistrer cette modification')
+      return
+    }
+    onFait()
+  }
+
+  return (
+    <div className="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-3">
+      {erreur && <p className="text-xs text-red-600 dark:text-red-400">{erreur}</p>}
+
+      <div>
+        <label className={LABEL} htmlFor={`mod-nom-${c.id}`}>Nom</label>
+        <input id={`mod-nom-${c.id}`} className={CHAMP} value={nom} maxLength={120}
+          onChange={e => setNom(e.target.value)} />
+      </div>
+
+      <div>
+        <label className={LABEL} htmlFor={`mod-budget-${c.id}`}>Budget dépensé à ce jour (€)</label>
+        <input id={`mod-budget-${c.id}`} className={CHAMP} value={budget}
+          onChange={e => setBudget(e.target.value)} inputMode="decimal" />
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
+          Le montant TOTAL dépensé depuis le début, pas celui d’hier. Recopiez-le depuis le
+          gestionnaire de publicités et remettez-le à jour de temps en temps : c’est lui qui sert
+          à calculer ce que chaque client vous a coûté.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={LABEL} htmlFor={`mod-debut-${c.id}`}>Début</label>
+          <input id={`mod-debut-${c.id}`} type="date" className={CHAMP} value={debut}
+            onChange={e => setDebut(e.target.value)} />
+        </div>
+        <div>
+          <label className={LABEL} htmlFor={`mod-fin-${c.id}`}>Fin</label>
+          <input id={`mod-fin-${c.id}`} type="date" className={CHAMP} value={fin}
+            onChange={e => setFin(e.target.value)} />
+          {/* Vider la date de fin remet la campagne en durée indéterminée, ce
+              qui est l'état normal d'une publicité qu'on laisse tourner. Sans
+              ce bouton, il fallait deviner qu'un champ date peut se vider. */}
+          {fin && (
+            <button onClick={() => setFin('')}
+              className="text-[11px] text-slate-500 dark:text-slate-400 underline mt-1.5 hover:text-slate-700 dark:hover:text-slate-200">
+              Retirer la date de fin (campagne sans fin prévue)
+            </button>
+          )}
+        </div>
+      </div>
+
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed bg-white dark:bg-slate-900 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
+        <strong>Vos liens ne changent pas.</strong> Vous pouvez rallonger la campagne ou corriger
+        le budget sans retoucher à votre publicité : l’adresse déjà en ligne reste valable, et
+        l’algorithme de la plateforme ne repart pas de zéro.
+      </p>
+
+      <div className="flex items-center gap-2">
+        <button onClick={enregistrer} disabled={enCours || !nom.trim()}
+          className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40"
+          style={{ backgroundColor: BLEU }}>
+          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+        <button onClick={onAnnuler}
+          className="px-4 py-2.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          Annuler
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Une campagne ────────────────────────────────────────────────────────────
 
 function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
@@ -296,11 +402,14 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
 }) {
   const [ouvert, setOuvert] = useState(false)
   const [ajout, setAjout] = useState(false)
+  const [edition, setEdition] = useState(false)
   const aujourdHui = new Date().toLocaleDateString('en-CA')
   const active = estEnCours(c, aujourdHui)
   const b = c.bilan
   const couleur = couleurRetour(b.retour, b.reservations)
   const mesurable = b.retour !== null && b.reservations > 0
+  const joursBudget = joursDepuisBudget(c)
+  const aVerifier = budgetAVerifier(c, aujourdHui)
 
   async function supprimerCreation(id: string) {
     const res = await fetch(`/api/campagnes/${c.id}/creations/${id}`, { method: 'DELETE' })
@@ -318,19 +427,33 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
             {c.creations.length > 0 && ` · ${inventaireFormats(c.creations.map(x => x.creation))}`}
           </p>
         </div>
-        <span
-          className={`shrink-0 ${SURTITRE} px-2 py-1 rounded-lg ${
-            active
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-          }`}
-        >
-          {active ? 'En cours' : 'Terminée'}
-        </span>
+        <div className="shrink-0 flex items-center gap-2">
+          <span
+            className={`${SURTITRE} px-2 py-1 rounded-lg ${
+              active
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            {active ? 'En cours' : 'Terminée'}
+          </span>
+          <button
+            onClick={() => setEdition(e => !e)}
+            aria-label={`Modifier ${c.nom}`}
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Pencil size={14} strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
+      {edition && (
+        <FormModification c={c} onAnnuler={() => setEdition(false)}
+          onFait={() => { setEdition(false); onRafraichir() }} />
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
-        <Chiffre label="Investi" valeur={`${formatEuros(c.budget)} €`} />
+        <Chiffre label="Dépensé" valeur={`${formatEuros(c.budget)} €`} />
         <Chiffre label="Encaissé" valeur={`${formatEuros(b.chiffreAffaires)} €`} />
         <Chiffre
           label="Retour"
@@ -343,6 +466,26 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
         <Chiffre label="Visites" valeur={String(b.visites)} />
         <Chiffre label="Clients" valeur={String(b.reservations)} />
       </div>
+
+      {/* Un budget figé sur une campagne qui tourne encore ne rend pas l'écran
+          « un peu moins précis » : il le rend faux dans le sens dangereux. Les
+          réservations continuent de s'additionner, donc le retour monte tout
+          seul pendant que la dépense reste à sa valeur du premier jour. Le
+          laveur lit « × 8 » et remet de l'argent sur une campagne qui lui en
+          rapporte peut-être 2. */}
+      {aVerifier && (
+        <button
+          onClick={() => setEdition(true)}
+          className="mt-3 w-full flex items-start gap-2 text-left px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+        >
+          <AlertTriangle size={14} strokeWidth={2.5} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <span className="text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed">
+            Ce budget date de {joursBudget} jours et la campagne tourne toujours. Tant qu’il n’est
+            pas actualisé, le retour affiché monte tout seul et vous paraît meilleur qu’il ne l’est.
+            <span className="underline font-semibold"> Mettre à jour</span>
+          </span>
+        </button>
+      )}
 
       {/* La phrase qui dit tout, en toutes lettres : un laveur ne lit pas un
           tableau, il lit une conclusion. */}
@@ -572,7 +715,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
       {campagnes.length > 0 && (
         <div className={`${CARTE} p-4 sm:p-5`}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Chiffre label="Investi" valeur={`${formatEuros(totaux.budget)} €`} />
+            <Chiffre label="Dépensé" valeur={`${formatEuros(totaux.budget)} €`} />
             <Chiffre label="Encaissé" valeur={`${formatEuros(totaux.chiffreAffaires)} €`} accent={accent} />
             <Chiffre
               label="Retour"
@@ -620,7 +763,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
               </select>
             </div>
             <div>
-              <label className={LABEL} htmlFor="camp-budget">Budget investi (€)</label>
+              <label className={LABEL} htmlFor="camp-budget">Budget dépensé (€)</label>
               <input id="camp-budget" className={CHAMP} value={budget} onChange={e => setBudget(e.target.value)}
                 inputMode="decimal" placeholder="80" />
             </div>
@@ -632,7 +775,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
               <input id="camp-debut" type="date" className={CHAMP} value={debut} onChange={e => setDebut(e.target.value)} />
             </div>
             <div>
-              <label className={LABEL} htmlFor="camp-fin">Fin (facultative)</label>
+              <label className={LABEL} htmlFor="camp-fin">Fin (laissez vide si sans fin prévue)</label>
               <input id="camp-fin" type="date" className={CHAMP} value={fin} onChange={e => setFin(e.target.value)} />
             </div>
           </div>
@@ -640,9 +783,25 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
           {/* Dit ici, pas découvert plus tard : le laveur doit savoir que ce
               montant vient de lui, sinon il nous reprochera l'écart avec ce
               que Meta lui facture. */}
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            Le budget est celui que vous saisissez : WashBoard ne le récupère pas auprès de la plateforme.
-          </p>
+          {/* Trois choses que le laveur doit savoir AVANT de saisir, et qu'il
+              découvrirait sinon trop tard : d'où vient le chiffre, à quoi il
+              sert, et que rien ne l'oblige à viser juste du premier coup. */}
+          <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 leading-relaxed">
+            <p>
+              <strong>À quoi sert ce montant :</strong> à calculer ce que chaque client vous a
+              coûté, et combien d’euros vous rentrent pour un euro dépensé. Sans lui, on sait
+              compter vos réservations, pas vous dire si elles valaient le prix.
+            </p>
+            <p>
+              Recopiez le montant dépensé affiché par la plateforme. WashBoard ne va pas le
+              chercher tout seul — nous n’avons pas accès à votre compte publicitaire.
+            </p>
+            <p>
+              <strong>Vous pourrez le corriger à tout moment</strong>, et rallonger la campagne,
+              sans que votre lien change. Si vous n’avez pas de date de fin en tête, laissez-la
+              vide : la campagne restera « en cours ».
+            </p>
+          </div>
 
           <div className="flex items-center gap-2">
             <button onClick={creer} disabled={enCours}

@@ -5,6 +5,7 @@ import {
   bilansParCampagne, type Campagne,
   inventaireFormats, erreurCreation, lienCreation, estFiable, SEUIL_FIABILITE,
   bilansParCreation, resteHorsCreations, synthese, type Creation,
+  joursDepuisBudget, budgetAVerifier, BUDGET_A_VERIFIER_JOURS,
 } from './campagne'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -575,5 +576,90 @@ describe('synthese', () => {
     expect(s.retour).toBeNull()
     expect(s.coutParReservation).toBeNull()
     expect(s.budget).toBe(0)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Un budget déclaré vieillit, et il vieillit dans le sens dangereux : les
+// réservations continuent de s'additionner pendant que la dépense reste figée,
+// donc le retour affiché monte tout seul. Ce qui se joue ici, c'est un laveur
+// qui remet de l'argent sur une campagne en croyant qu'elle rapporte ×8.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('joursDepuisBudget', () => {
+  const MAINTENANT = new Date('2026-10-01T12:00:00Z').getTime()
+
+  it('compte les jours depuis la dernière saisie', () => {
+    expect(joursDepuisBudget({ budget_maj_le: '2026-09-01T12:00:00Z' }, MAINTENANT)).toBe(30)
+  })
+
+  it('ne sait rien d’une campagne antérieure au suivi', () => {
+    // Migration 009 : les campagnes créées avant n'ont pas cette date. Mieux
+    // vaut ne rien dire que d'inventer « 0 jour », qui ferait passer un vieux
+    // budget pour un budget frais.
+    expect(joursDepuisBudget({ budget_maj_le: null }, MAINTENANT)).toBeNull()
+    expect(joursDepuisBudget({ budget_maj_le: undefined }, MAINTENANT)).toBeNull()
+    expect(joursDepuisBudget({ budget_maj_le: 'pas une date' }, MAINTENANT)).toBeNull()
+  })
+
+  it('ne rend jamais un nombre de jours négatif', () => {
+    // Horloge déréglée : « il y a −3 jours » ferait douter de tout l'écran.
+    expect(joursDepuisBudget({ budget_maj_le: '2026-10-05T12:00:00Z' }, MAINTENANT)).toBe(0)
+  })
+})
+
+describe('budgetAVerifier', () => {
+  const MAINTENANT = new Date('2026-10-01T12:00:00Z').getTime()
+  const vieux = '2026-08-01T12:00:00Z'   // 61 jours
+  const recent = '2026-09-28T12:00:00Z'  // 3 jours
+
+  it('alerte sur une campagne sans date de fin dont le budget traîne', () => {
+    // Le cas qui motive tout : une publicité laissée tourner des mois.
+    expect(budgetAVerifier(
+      { budget_maj_le: vieux, debut: '2026-07-01', fin: null }, '2026-10-01', MAINTENANT,
+    )).toBe(true)
+  })
+
+  it('n’alerte pas sur une campagne TERMINÉE', () => {
+    // Son budget est définitif : réclamer une mise à jour serait du bruit, et
+    // le bruit fait ignorer l'avertissement le jour où il compte.
+    expect(budgetAVerifier(
+      { budget_maj_le: vieux, debut: '2026-07-01', fin: '2026-08-15' }, '2026-10-01', MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('n’alerte pas sur une campagne qui vient d’être mise à jour', () => {
+    expect(budgetAVerifier(
+      { budget_maj_le: recent, debut: '2026-07-01', fin: null }, '2026-10-01', MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('n’alerte pas quand on ignore la date de saisie', () => {
+    expect(budgetAVerifier(
+      { budget_maj_le: null, debut: '2026-07-01', fin: null }, '2026-10-01', MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('n’alerte pas sur une campagne qui n’a pas encore commencé', () => {
+    expect(budgetAVerifier(
+      { budget_maj_le: vieux, debut: '2026-12-01', fin: null }, '2026-10-01', MAINTENANT,
+    )).toBe(false)
+  })
+
+  it('bascule pile au seuil, pas un jour avant', () => {
+    const veille = new Date(MAINTENANT - (BUDGET_A_VERIFIER_JOURS - 1) * 86400000).toISOString()
+    const seuil  = new Date(MAINTENANT - BUDGET_A_VERIFIER_JOURS * 86400000).toISOString()
+    const base = { debut: '2026-07-01', fin: null }
+    expect(budgetAVerifier({ ...base, budget_maj_le: veille }, '2026-10-01', MAINTENANT)).toBe(false)
+    expect(budgetAVerifier({ ...base, budget_maj_le: seuil }, '2026-10-01', MAINTENANT)).toBe(true)
+  })
+})
+
+describe('estEnCours — campagne sans fin prévue', () => {
+  it('reste en cours indéfiniment', () => {
+    // Le cas courant : un laveur laisse tourner sa publicité sans date de fin.
+    // Elle doit compter ses visites et ses réservations des mois plus tard.
+    expect(estEnCours({ debut: '2026-01-01', fin: null }, '2026-10-01')).toBe(true)
+    expect(estEnCours({ debut: '2026-01-01', fin: null }, '2027-06-15')).toBe(true)
   })
 })

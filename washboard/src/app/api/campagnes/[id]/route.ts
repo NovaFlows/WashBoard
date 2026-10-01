@@ -12,8 +12,11 @@ import { erreurCampagne, estPlateforme, MESSAGES_ERREUR } from '@/lib/campagne'
  *  personne ne comprenne pourquoi les chiffres se sont arrêtés. Renommer la
  *  campagne ne touche donc que son étiquette.
  *
- *  Le budget, lui, se corrige — c'est même le cas courant : on ajuste une
- *  dépense en cours de route. */
+ *  Le budget, lui, se corrige — c'est même le cas courant, et c'est pour ça
+ *  que cette route existe : on rallonge une campagne, on remet de l'argent
+ *  dessus, et le lien déjà en ligne dans la publicité ne doit surtout pas
+ *  changer. Changer l'URL d'une annonce en cours remet à zéro l'apprentissage
+ *  de la plateforme, qui cesse alors de la diffuser. */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const auth = await requireWasher()
@@ -52,13 +55,36 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const faute = erreurCampagne({ nom, budget, debut, fin })
   if (faute) return NextResponse.json({ error: MESSAGES_ERREUR[faute] }, { status: 400 })
 
-  const { data, error } = await supabase
+  // La date de saisie ne bouge QUE si le montant change. Sans cette condition,
+  // renommer sa campagne suffirait à faire croire que le budget vient d'être
+  // vérifié — et l'avertissement « ce montant date de 47 jours », qui est tout
+  // l'intérêt de la colonne, ne se déclencherait plus jamais.
+  const budgetChange = Number(budget) !== Number(actuelle.budget)
+  const champs: Record<string, unknown> = { nom, plateforme, budget, debut, fin }
+  if (budgetChange) champs.budget_maj_le = new Date().toISOString()
+
+  let { data, error } = await supabase
     .from('campagnes')
-    .update({ nom, plateforme, budget, debut, fin })
+    .update(champs)
     .eq('id', id)
     .eq('washer_id', washerId)
-    .select('id, nom, plateforme, budget, cle, debut, fin')
+    .select('id, nom, plateforme, budget, cle, debut, fin, budget_maj_le')
     .single()
+
+  // Colonne absente (migration 009 non exécutée) : on réécrit sans elle plutôt
+  // que de refuser la modification. Perdre l'horodatage est regrettable ;
+  // empêcher un laveur de corriger son budget l'est beaucoup plus.
+  if (error) {
+    const seconde = await supabase
+      .from('campagnes')
+      .update({ nom, plateforme, budget, debut, fin })
+      .eq('id', id)
+      .eq('washer_id', washerId)
+      .select('id, nom, plateforme, budget, cle, debut, fin')
+      .single()
+    data = seconde.data ? { ...seconde.data, budget_maj_le: null } : null
+    error = seconde.error
+  }
 
   if (error) return errorResponse('campagnes.update', error, { washerId })
   return NextResponse.json({ data })

@@ -37,11 +37,25 @@ const FUNNEL_HISTORY_DAYS = 365
  *  aussi charger toutes les campagnes, et l'inverse — deux fois le travail pour
  *  un écran qui n'en montre qu'un. */
 async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
-  const { data: campagnes, error: errCampagnes } = await supabase
+  let { data: campagnes, error: errCampagnes } = await supabase
     .from('campagnes')
-    .select('id, nom, plateforme, budget, cle, debut, fin')
+    .select('id, nom, plateforme, budget, cle, debut, fin, budget_maj_le')
     .eq('washer_id', washerId)
     .order('debut', { ascending: false })
+
+  // Colonne absente (migration 009) : on relit sans elle. L'écran perd le
+  // « ce montant date de 47 jours », il ne perd pas les campagnes.
+  if (errCampagnes && migrationEnAttente(errCampagnes)) {
+    const sansDate = await supabase
+      .from('campagnes')
+      .select('id, nom, plateforme, budget, cle, debut, fin')
+      .eq('washer_id', washerId)
+      .order('debut', { ascending: false })
+    if (!sansDate.error) {
+      campagnes = (sansDate.data ?? []).map(c => ({ ...c, budget_maj_le: null }))
+      errCampagnes = null
+    }
+  }
 
   // Table absente : la fonctionnalité n'est pas en service. On le remonte à
   // l'écran plutôt que d'afficher une liste vide — sinon le laveur remplit un
@@ -67,6 +81,7 @@ async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
     cle: c.cle as string,
     debut: c.debut as string,
     fin: (c.fin as string | null) ?? null,
+    budget_maj_le: (c.budget_maj_le as string | null | undefined) ?? null,
   }))
 
   if (liste.length === 0) return { campagnes: [] as CampagneAffichee[], indisponible: false }
