@@ -130,7 +130,13 @@ export function AujourdhuiWidget({ bookings, dateDuJour }: { bookings: RdvDuJour
                       rendez-vous sans jamais payer : il suffirait d'attendre
                       sur place. */}
                   {b.verrouillee
-                    ? <span title="Heure masquée — changez d’offre pour la voir" aria-label="Heure masquée">🔒</span>
+                    ? (
+                      <span title="Heure masquée — changez d’offre pour la voir" aria-label="Heure masquée">
+                        <svg className="w-3.5 h-3.5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      </span>
+                    )
                     : formatHeure(new Date(b.scheduled_at))}
                 </span>
                 {b.verrouillee ? (
