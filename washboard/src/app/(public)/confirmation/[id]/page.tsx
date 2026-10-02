@@ -1,5 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
+import { logger } from '@/lib/logger'
+import { quotaReservations } from '@/lib/plan'
+import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -19,6 +22,23 @@ export default async function ConfirmationPage({ params }: Props) {
     .single()
 
   if (!booking) notFound()
+
+  // L'id seul ouvre cette page, et le laveur le voit dans son tableau de bord
+  // même pour une réservation au-delà du quota : sans ce contrôle, elle lui
+  // rendait nom, téléphone, adresse, heure et prix en clair. Aucun lien
+  // distribué ne mène ici (le client passe par l'écran de fin de réservation
+  // et les emails, qui pointent vers /pdf) : refuser ne prive aucun client.
+  const { data: laveur, error: errLaveur } = await supabase
+    .from('washers')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .eq('id', booking.washer_id)
+    .single()
+  if (errLaveur || !laveur) {
+    logger.error('confirmation.washer.read_failed', { bookingId: id }, errLaveur)
+    notFound()
+  }
+  const seuils = await seuilsVerrouillage(supabase, laveur, quotaReservations(laveur))
+  if (estVerrouillee(booking, seuils)) notFound()
 
   const washer  = booking.washers as { name: string; phone: string | null; logo_url: string | null }
   const service = booking.services as { name: string; duration_minutes: number } | null

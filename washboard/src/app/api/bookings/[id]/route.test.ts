@@ -51,6 +51,9 @@ vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
 }))
 
 const { PATCH } = await import('./route')
+const { createCalendarEvent, patchCalendarEvent, deleteCalendarEvent } = await import('@/lib/google-calendar')
+const { sendBookingConfirmation, sendFacture } = await import('@/lib/email')
+const { emettreFacture } = await import('@/lib/emettreFacture')
 
 function requete(body: Record<string, unknown>) {
   return new NextRequest('https://www.washboard.fr/api/bookings/c', {
@@ -64,6 +67,7 @@ const WASHER = { id: 'washer-1', plan: 'decouverte', created_at: '2026-01-01T00:
 
 beforeEach(() => {
   miseAJour.mockClear()
+  vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
   plan = {
     washer: WASHER,
@@ -90,12 +94,35 @@ describe('PATCH /api/bookings/[id] — réservation verrouillée', () => {
     expect(res.status).toBe(403)
     expect(miseAJour).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['un déplacement seul', { scheduled_at: '2026-10-04T09:00:00.000Z' }],
+    ['une annulation', { status: 'cancelled' }],
+    ['une clôture', { status: 'done' }],
+    ['un corps vide', {}],
+  ])('refuse %s', async (_cas, corps) => {
+    const res = await PATCH(requete(corps), { params })
+    expect(res.status).toBe(403)
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+
+  it('ne déclenche aucun effet de bord à la confirmation', async () => {
+    plan.washer = { ...WASHER, google_refresh_token: 'rt' }
+    await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(createCalendarEvent).not.toHaveBeenCalled()
+    expect(patchCalendarEvent).not.toHaveBeenCalled()
+    expect(deleteCalendarEvent).not.toHaveBeenCalled()
+    expect(sendBookingConfirmation).not.toHaveBeenCalled()
+    expect(emettreFacture).not.toHaveBeenCalled()
+    expect(sendFacture).not.toHaveBeenCalled()
+  })
 })
 
 describe('PATCH /api/bookings/[id] — réservation dans le quota', () => {
   it('laisse passer la mise à jour', async () => {
-    // Créée avant le seuil de la période : non verrouillée.
-    plan.booking = { ...plan.booking, created_at: '2026-09-23T08:00:00.000Z' }
+    // Après l'entrée en vigueur du plafond (2026-09-24) mais avant le seuil de la période :
+    // c'est bien le seuil qui la laisse passer, pas l'antériorité au plafond.
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z' }
     plan.updated = { ...plan.booking, notes: 'Prévenir avant d’arriver' }
     const res = await PATCH(requete({ notes: 'Prévenir avant d’arriver' }), { params })
     expect(res.status).toBe(200)
