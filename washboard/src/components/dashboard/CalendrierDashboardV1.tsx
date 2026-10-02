@@ -10,6 +10,7 @@ import { openGmail, openWhatsapp } from '@/lib/contact'
 import {
   getWeekStart, buildGrid, layoutDayBookings, isSameDay, dayKey, formatHeure, formatHeureCompacte, cleStatut,
 } from '@/lib/calendarLayout'
+import { CarteVerrouillee } from '@/components/dashboard/CarteVerrouillee'
 import ConfirmerCloture from '@/components/dashboard/ConfirmerCloture'
 import { doitDemanderConfirmation } from '@/lib/cloture'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
@@ -95,7 +96,7 @@ export type Unavailability = { id: string; start_date: string; end_date: string;
 
 export type CalendrierProps = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string; facturationPrete: boolean; googleAgendaConnecte: boolean; joursMasques?: string[]; masquees?: { id: string; scheduled_at: string }[]; offreDeblocage?: string }
 
-export default function CalendrierDashboardV1({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId, facturationPrete }: CalendrierProps) {
+export default function CalendrierDashboardV1({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId, facturationPrete, masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
   // serviceTypes/typeName viennent maintenant de useRendezVousManuel (plus bas).
   const today = new Date()
   const [view,        setView]        = useState<'month' | 'week' | 'day'>('month')
@@ -203,6 +204,11 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
   const dayLabel  = dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const dayBkgsForView = byDate.get(dayKey(dayDate)) ?? []
   const unavailDay = getUnavail(dayDate)
+  // Réservations au-delà du quota, ce jour précis : sans heure (jamais
+  // chargée, voir CarteVerrouillee), donc rangées à part de la grille
+  // horaire plutôt que placées à une position inventée — même règle que la
+  // vue jour de la refonte 2026 (CarteJourVerrouilleeV2).
+  const masqueesDuJour = masquees.filter(m => dayKey(new Date(m.scheduled_at)) === dayKey(dayDate))
 
   // openBooking, startReschedule, saveReschedule, updateStatus,
   // emettreFactureManuelle, saveNotes, et les états qui les entourent
@@ -588,7 +594,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                   )
                 })}
 
-                {dayBkgsForView.length === 0 && (
+                {dayBkgsForView.length === 0 && masqueesDuJour.length === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className="text-sm text-slate-300 dark:text-slate-600">Aucun RDV ce jour</p>
                   </div>
@@ -596,6 +602,21 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
               </div>
             </div>
           </div>
+
+          {/* Clients masqués par l'offre, ce jour-là : jamais positionnés dans
+              la grille ci-dessus (ils n'ont pas d'heure), mais pas absents
+              pour autant — demande d'Alexandre, 2026-10-02, pour que le site
+              retrouve ce que montre déjà l'application installée. */}
+          {masqueesDuJour.length > 0 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                {masqueesDuJour.length} client{masqueesDuJour.length > 1 ? 's' : ''} masqué{masqueesDuJour.length > 1 ? 's' : ''} par votre offre
+              </p>
+              {masqueesDuJour.map(m => (
+                <CarteVerrouillee key={m.id} scheduledAt={m.scheduled_at} offre={offreDeblocage} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
