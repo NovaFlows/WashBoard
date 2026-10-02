@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
 import { etatOnboarding } from '@/lib/onboarding'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -99,9 +100,8 @@ export default function LoginPage() {
                     Oublié ?
                   </Link>
                 </div>
-                <input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required

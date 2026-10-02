@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { isValidPhone } from '@/lib/phone'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -108,11 +109,11 @@ export default function SignupPage() {
               </div>
               <div>
                 <label htmlFor="password" className="wb-label">Mot de passe</label>
-                <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min. 6 caractères" autoComplete="new-password" className="wb-input" />
+                <PasswordInput id="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min. 6 caractères" autoComplete="new-password" className="wb-input" />
               </div>
               <div>
                 <label htmlFor="confirm" className="wb-label">Confirmer le mot de passe</label>
-                <input id="confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" autoComplete="new-password" className="wb-input" />
+                <PasswordInput id="confirm" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" autoComplete="new-password" className="wb-input" />
               </div>
 
               <label htmlFor="cgv" className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-white/60 cursor-pointer">
