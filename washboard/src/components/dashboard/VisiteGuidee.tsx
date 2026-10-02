@@ -95,6 +95,7 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
         etape: `text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`,
         texte: `text-[15px] leading-snug ${corps}`,
         passer: `text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`,
+        chemin: `text-[12.5px] leading-snug text-[color:var(--v2-color-gris)]`,
         suivant: `rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white bg-[color:var(--v2-color-accent)]`,
         piste: 'bg-[color:var(--v2-filet)]',
         jauge: 'bg-[color:var(--v2-color-accent)]',
@@ -104,6 +105,7 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
         etape: 'text-xs font-black uppercase tracking-[0.18em] text-[#1651E8] dark:text-[#00C4D4]',
         texte: 'text-sm leading-snug',
         passer: 'text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300',
+        chemin: 'text-xs leading-snug text-slate-400 dark:text-slate-500',
         suivant: 'rounded-xl text-sm font-semibold text-white bg-[#1651E8] hover:bg-[#0F4ACC] shadow-lg shadow-[#1651E8]/20',
         piste: 'bg-slate-100 dark:bg-slate-800',
         jauge: 'bg-[#1651E8] dark:bg-[#00C4D4]',
@@ -134,6 +136,9 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
           />
         </div>
         <p aria-live="polite" className={`mt-3 ${s.texte}`}>{ETAPES_VISITE[etape].texte}</p>
+        {ETAPES_VISITE[etape].chemin && (
+          <p className={`mt-1.5 ${s.chemin}`}>{ETAPES_VISITE[etape].chemin}</p>
+        )}
         <div className="mt-3 flex justify-end">
           <button
             type="button"
