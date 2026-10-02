@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Chiffres from '@/components/dashboard/Chiffres'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, quotaReservations } from '@/lib/plan'
+import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
@@ -42,6 +43,12 @@ export default async function ChiffresPage() {
       .range(debut, fin),
   )
   if (bookingsError) logger.warn('chiffres.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
+
+  // Même règle que /dashboard/crm : les réservations au-delà du quota n'entrent pas ici.
+  // L'encaissé n'y perd rien : une réservation verrouillée ne peut pas passer à « terminé »
+  // (PATCH /api/bookings/[id] la refuse).
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 
   // Les factures écrites à la main que le laveur a marquées PAYÉES : de l'argent reçu, comme
   // un rendez-vous terminé. Sans elles, l'« Encaissé » était faux du montant de tout ce qui
@@ -95,7 +102,7 @@ export default async function ChiffresPage() {
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <Chiffres
-        bookings={bookings ?? []}
+        bookings={bookingsVisibles}
         facturesManuelles={(facturesManuelles ?? []) as unknown as FactureManuelle[]}
         events={funnelEvents ?? []}
         websiteHost={websiteHost}

@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import MessagesAutomatiques from '@/components/dashboard/MessagesAutomatiques'
-import { hasFeature, requiredPlanLabel } from '@/lib/plan'
+import { hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
+import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
@@ -22,9 +23,14 @@ import {
 //
 // Lecture seule ici : les écritures passent par `PATCH /api/washer` depuis le
 // navigateur. Aucun cron n'est déclenché, aucun message n'est envoyé.
+//
+// `saisie_par_laveur` ne s'affiche pas : sans lui, `estVerrouillee` masquerait aussi les
+// rendez-vous que le laveur a saisis lui-même.
 const COLONNES =
-  'id, client_name, client_email, client_phone, scheduled_at, created_at, status, is_professional, company_name, '
+  'id, client_name, client_email, client_phone, scheduled_at, created_at, saisie_par_laveur, status, is_professional, company_name, '
   + 'review_request_at, review_request_sent_at, review_sms_sent_at, followup_sent_at, services(name)'
+
+type RdvLu = RdvMessage & { saisie_par_laveur?: boolean | null }
 
 export default async function MessagesAutomatiquesPage() {
   const supabase = await createClient()
@@ -37,16 +43,21 @@ export default async function MessagesAutomatiquesPage() {
   // lignes sans erreur). Les colonnes d'horodatage d'envoi sont celles que lisent
   // les crons ; si l'une manquait en base la lecture échouerait — l'écran le
   // dit (`lectureIncomplete`) au lieu d'afficher des listes fausses.
-  const { data: rdvs, error, tronque } = await toutesLesLignes<RdvMessage>(
+  const { data: lus, error, tronque } = await toutesLesLignes<RdvLu>(
     (debut, fin) => supabase
       .from('bookings')
       .select(COLONNES)
       .eq('washer_id', washer.id)
       .order('created_at', { ascending: false })
       .order('id')
-      .range(debut, fin) as unknown as PromiseLike<{ data: RdvMessage[] | null; error: unknown }>,
+      .range(debut, fin) as unknown as PromiseLike<{ data: RdvLu[] | null; error: unknown }>,
   )
   if (error) logger.warn('messages-automatiques.bookings.fetch_failed', { washerId: washer.id }, error)
+
+  // Écartées plutôt que masquées, comme sur /dashboard/crm : sans nom ni email elles ne
+  // donneraient ici que des lignes anonymes, et leur heure partirait quand même au navigateur.
+  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const rdvs = masquerVerrouillees(lus, seuilsVerrou).filter(b => !b.verrouillee)
 
   // Seuls les réglages utiles passent au navigateur : la fiche laveur porte
   // aussi des jetons (Google) qui n'ont rien à y faire.

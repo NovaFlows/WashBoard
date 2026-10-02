@@ -236,6 +236,13 @@ export default async function DashboardPage() {
   // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
   const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
   const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilsVerrou)
+    .map(b => b.verrouillee
+      // Midi UTC du jour de Paris : le jour quitte le serveur, jamais l'heure.
+      ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z` }
+      : b)
+    // Re-trié après coup : laissée à sa place d'origine, la carte verrouillée trahirait son
+    // heure par ses voisines (entre le rendez-vous de 10 h et celui de 11 h).
+    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
   // Le compte porte sur les rendez-vous À VENIR : un client bloqué dont la date
   // est passée n'est plus une occasion à saisir, seulement un regret. Compter
   // les regrets ne fait pas vendre, ça décourage.
@@ -298,10 +305,7 @@ export default async function DashboardPage() {
   // Paris) : ni l'heure ni le nom n'ont de raison de quitter le serveur.
   const verrouillees = aVenirVisible
     .filter(b => b.verrouillee && b.status === 'pending')
-    .map(b => ({
-      id: b.id,
-      scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z`,
-    }))
+    .map(b => ({ id: b.id, scheduled_at: b.scheduled_at }))
   // « Journée commencée » : au moins un rendez-vous clôturé aujourd'hui, pour
   // distinguer « journée terminée » de « rien de prévu » quand il ne reste
   // rien à faire. Un booléen, pas un compte : `historique` est tronqué aux
