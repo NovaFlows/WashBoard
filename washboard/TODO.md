@@ -221,6 +221,14 @@
       bord. Deux appels suffisent. Trouvé par `cyber` le 2026-10-02. **À trancher avec Ryan** :
       faut-il compter les annulations (au moins celles faites par le laveur lui-même) dans le
       quota, ou rendre `cancelled` définitif ? **En attente de décision.**
+- [ ] **⚖️ Question légale, à croiser avec `legal` avant tout correctif.** Un laveur qui redescend
+      d'offre peut voir une réservation déjà FACTURÉE se retrouver re-verrouillée a posteriori
+      (le plafond de l'offre actuelle s'applique rétroactivement sur 12 périodes passées). Bloquer
+      l'accès du laveur à sa propre facture se heurte à l'obligation légale de pouvoir la
+      conserver/consulter. Signalé par `cyber` le 2026-10-02 en auditant `POST
+      /bookings/[id]/facture` et `/dashboard/factures` (qui affiche déjà `client_name` sans
+      masque, au passage). **En attente de décision.**
+
 - [ ] **Fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées le
       2026-10-02 (dont 3 confirmées par une vérification Playwright en conditions réelles),
       non corrigées (touchent plusieurs écrans à la fois, décision de portée à prendre avant
