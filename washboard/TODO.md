@@ -656,6 +656,18 @@
 > d'Alexandre reprenne sans redécouvrir. **Passes 0 à 3 faites, la 4 est la
 > suivante.** Le plan de vol complet est dans `.claude/agents/refonte.md`.
 
+- [ ] **Tuto PWA à la première installation de l'application** (demande
+      d'Alexandre, 2026-10-07). Distinct de la visite guidée du tableau de bord
+      (`VisiteGuidee.tsx`/`visiteGuidee.ts`, onze arrêts, déclenchée au premier
+      passage sur `/dashboard`, quel que soit le support) : ici, le
+      déclencheur est l'INSTALLATION de l'app elle-même (`usePwaStandalone()`
+      détecte le mode standalone), pour un laveur qui utilisait déjà le site
+      depuis un moment et installe l'app plus tard — il a donc déjà fait la
+      visite guidée, mais découvre une forme différente (barre du bas,
+      gestes, écrans v2) sans qu'on la lui présente. Contenu à définir : au
+      minimum la barre de navigation du bas et son bouton central, le geste
+      retour (`RetourGesteV2`), où retrouver ce qui a disparu (menu latéral →
+      « Plus »). Sujet à préciser avec Alexandre avant de lancer.
 - [ ] **CHANGEMENT D'ARCHITECTURE (2026-09-22, pas encore commité) — v2
       seulement dans la PWA installée, jamais sur le site.** Alexandre : « moi
       je veux que la PWA ressemble a une app mais que le site web que ce soit
