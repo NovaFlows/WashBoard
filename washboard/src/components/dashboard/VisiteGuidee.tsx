@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useSyncExternalStore, useTransition } from 'react'
+import { useEffect, useSyncExternalStore, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { Spinner } from '@/components/ui/Spinner'
 import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import {
   ETAPES_VISITE, abonnerVisite, ecrireVisite, etapeSuivante, etatAuChargement,
-  lireEtat, lireVisite, serialiserEtat, terminerVisite, type EtatVisite,
+  lireEtat, lireVisite, serialiserEtat, terminerVisite,
 } from '@/lib/visiteGuidee'
 
 // Carte de la visite guidée, montée par DashboardShell sur toutes les pages du
@@ -59,19 +60,6 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
   const [navigation, naviguer] = useTransition()
   const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null))
 
-  // Le prochain arrêt n'est écrit qu'une fois la page suivante réellement arrivée
-  // (voir `avancer`) : sans ce détour, la carte annonçait déjà l'arrêt suivant
-  // pendant que l'écran affichait encore l'ancien, le temps que la nouvelle page
-  // se charge.
-  const enAttente = useRef<EtatVisite | null>(null)
-
-  useEffect(() => {
-    if (!navigation && enAttente.current) {
-      ecrireVisite(enAttente.current)
-      enAttente.current = null
-    }
-  }, [navigation])
-
   useEffect(() => {
     const stocke = lireEtat(lireVisite())
     const suivant = etatAuChargement(stocke, aFaire)
@@ -91,7 +79,13 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
 
   function avancer() {
     if (suivante === null) { terminerVisite(); return }
-    enAttente.current = { statut: 'en_cours', etape: suivante }
+    // Écrit tout de suite, jamais après coup : `DashboardShell` est rendu par
+    // chaque page séparément (pas un layout partagé), donc cette instance ne
+    // survit pas à la navigation — un état « en attente » gardé dans le
+    // composant se perdrait avec lui, et la carte resterait bloquée sur
+    // l'arrêt de départ. Le flottement visuel pendant le chargement se traite
+    // à l'affichage (bouton en chargement ci-dessous), pas en retardant l'écriture.
+    ecrireVisite({ statut: 'en_cours', etape: suivante })
     naviguer(() => router.push(ETAPES_VISITE[suivante].route))
   }
 
@@ -147,7 +141,9 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
             disabled={navigation}
             className={`h-10 px-5 transition-colors disabled:opacity-50 ${s.suivant}`}
           >
-            {suivante === null ? 'Terminé' : 'Suivant'}
+            {navigation ? (
+              <span className="flex items-center justify-center gap-2"><Spinner />Chargement…</span>
+            ) : suivante === null ? 'Terminé' : 'Suivant'}
           </button>
         </div>
       </section>
