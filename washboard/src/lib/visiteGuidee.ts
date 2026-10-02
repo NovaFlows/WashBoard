@@ -22,16 +22,23 @@ export type EtapeVisite = {
 // Les arrêts 2 à 4 visent les écrans de l'application installée : sur le site,
 // leur garde-fou renvoie vers l'équivalent v1 (`/dashboard/admin#…`,
 // `/dashboard/crm`). Viser directement l'ancre v1 casserait l'enchaînement
-// 2 → 3 : `admin#prestations` → `admin#disponibilites` ne change que le
-// fragment, et AdminTabs ne relit le fragment qu'au montage.
+// prestations → disponibilités : `admin#prestations` → `admin#disponibilites`
+// ne change que le fragment, et AdminTabs ne relit le fragment qu'au montage.
+//
+// L'arrêt Lien, lui, vise directement `/dashboard/parametres` (page réelle du
+// site, pas redirigée) : l'onglet « Page client » s'ouvre tout seul grâce à
+// l'ancre `#lien-reservation` (voir le `useEffect` dédié dans
+// `ParametresFormV1.tsx`). Avant les deux autres : c'est ce qu'on voit en
+// premier dans cet onglet, « Configurer ma page client » n'étant qu'un bouton
+// plus bas dessus — Ryan, 2026-10-02, en testant l'ordre à l'écran.
 const CHEMIN_PAGE_CLIENT = 'Paramètres → onglet « Page client »'
 const CHEMIN_CONFIGURER = `${CHEMIN_PAGE_CLIENT} → « Configurer ma page client »`
 
 export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard', texte: "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil." },
+  { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
   { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations` },
   { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités` },
-  { route: '/dashboard/parametres/liens', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { route: '/dashboard/clients', texte: "Chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
   { route: '/dashboard/crm', texte: `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.` },

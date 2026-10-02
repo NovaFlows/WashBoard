@@ -51,8 +51,18 @@ type Tab = 'general' | 'client'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^[+0-9 ().-]{6,20}$/
 
+// Identifiants portés par des cartes de l'onglet « Page client » (voir le
+// commentaire de tête du fichier) : un lien vers l'un d'eux doit donc aussi
+// amener sur cet onglet, pas seulement faire défiler une page qui ne le
+// montre pas encore.
+const ANCRES_ONGLET_CLIENT = ['lien-reservation', 'personnalisation']
+
 export default function ParametresFormV1({ washer, email }: Props) {
   const [tab, setTab] = useState<Tab>('general')
+
+  useEffect(() => {
+    if (ANCRES_ONGLET_CLIENT.includes(window.location.hash.slice(1))) setTab('client')
+  }, [])
 
   return (
     <div>
@@ -892,7 +902,7 @@ function ClientTab({ washer }: { washer: Washer }) {
           Personnalisez le lien que vous partagez à vos clients. Une fois modifié,
           l&apos;ancien lien ne fonctionne plus — pensez-y s&apos;il est déjà publié quelque part.
         </p>
-        <div className="flex items-stretch gap-2">
+        <div data-visite-cible="lien" className="flex items-stretch gap-2">
           <div className="flex items-center flex-1 border border-slate-300 dark:border-slate-600 rounded-xl overflow-hidden bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-blue-500">
             <span className="px-3 text-sm text-slate-400 dark:text-slate-500 select-none whitespace-nowrap border-r border-slate-200 dark:border-slate-700">/book/</span>
             <input

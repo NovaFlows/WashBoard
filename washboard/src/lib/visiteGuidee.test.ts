@@ -39,9 +39,9 @@ describe('ETAPES_VISITE', () => {
     const { ETAPES_VISITE } = await charger()
     expect(ETAPES_VISITE.map(e => e.route)).toEqual([
       '/dashboard',
+      '/dashboard/parametres#lien-reservation',
       '/dashboard/parametres/prestations',
       '/dashboard/parametres/horaires',
-      '/dashboard/parametres/liens',
       '/dashboard/calendrier',
       '/dashboard/clients',
       '/dashboard/crm',
@@ -52,9 +52,9 @@ describe('ETAPES_VISITE', () => {
     ])
     expect(ETAPES_VISITE.map(e => e.texte)).toEqual([
       "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil.",
+      "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.",
       "Ce que tu vends : nom, prix, durée. Ta page reste vide tant que tu n'en as pas créé une.",
       'Tes dispos et tes congés : ça décide des créneaux que voient tes clients.',
-      "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.",
       'Toute ton activité en vue mois/semaine/jour.',
       "Chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
       `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.`,
@@ -68,14 +68,15 @@ describe('ETAPES_VISITE', () => {
   it('chaque arrêt pointe vers une page qui existe', async () => {
     const { ETAPES_VISITE } = await charger()
     for (const { route } of ETAPES_VISITE) {
-      expect(existsSync(join(__dirname, '..', 'app', '(dashboard)', route, 'page.tsx')), route).toBe(true)
+      const chemin = route.split('#')[0]
+      expect(existsSync(join(__dirname, '..', 'app', '(dashboard)', chemin, 'page.tsx')), route).toBe(true)
     }
   })
 
   it('seuls Prestations, Horaires et Lien mettent un élément en évidence', async () => {
     const { ETAPES_VISITE } = await charger()
     expect(ETAPES_VISITE.flatMap((e, i) => (e.cible ? [[i + 1, e.cible]] : []))).toEqual([
-      [2, 'prestations'], [3, 'horaires'], [4, 'lien'],
+      [2, 'lien'], [3, 'prestations'], [4, 'horaires'],
     ])
   })
 })
