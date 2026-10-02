@@ -172,6 +172,67 @@
 
 ## 🔴 Priorité haute
 
+- [ ] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
+      de ses propres réservations en interrogeant Supabase directement, sans passer par le site.**
+      Trouvé le 2026-10-02 par un audit `cyber` pendant le chantier de masquage des réservations
+      verrouillées (voir les 2 entrées ci-dessous). Ce n'est pas du piratage au sens classique :
+      un laveur CONNECTÉ possède déjà tout ce qu'il faut (l'adresse du projet Supabase et la clé
+      publique "anon" sont visibles dans le code source du site pour n'importe qui ; son propre
+      jeton de connexion prouve son identité à Supabase). Avec les outils développeur du
+      navigateur (F12), il peut appeler Supabase directement et récupérer nom/téléphone/adresse/
+      prix en clair sur une réservation que le site, lui, masque correctement — ou pire, écrire
+      `saisie_par_laveur: true` sur une réservation pour la déverrouiller pour de bon, en dehors
+      du quota.
+      **Tant que ce n'est pas corrigé, tout le reste du masquage (ci-dessous) reste cosmétique**
+      pour quiconque sait ouvrir les outils développeur.
+      Correctif proposé par `cyber`, à valider puis donner à `dev` (migration sur la base de prod
+      partagée, donc personne n'y a touché cette nuit) :
+      - Écriture : `REVOKE UPDATE` sur `bookings` pour `authenticated`, puis `GRANT UPDATE` limité
+        aux seules colonnes que le navigateur du laveur écrit réellement (`status`, `notes`,
+        `closed_late`, `scheduled_at`, `google_calendar_event_id`, `review_request_at`…) —
+        `dev` doit d'abord en faire l'inventaire exact.
+      - Lecture : retirer le SELECT des colonnes personnelles à `authenticated`, et servir le
+        dashboard soit via le service-role après masquage (comme le reste du site), soit par une
+        vue/RPC qui masque directement en SQL.
+      À vérifier d'abord en lecture seule (pas lancé) :
+      ```sql
+      select grantee, privilege_type, column_name from information_schema.column_privileges where table_name='bookings' and grantee in ('anon','authenticated');
+      select policyname, cmd, qual, with_check from pg_policies where tablename='bookings';
+      ```
+- [ ] **🔒 Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.** Route publique sans session :
+      l'id de réservation sert de clé d'accès pour le VRAI client (confirmation/facture sans
+      compte), mais le même id est visible du laveur dans son propre dashboard pour une
+      réservation verrouillée — il peut donc récupérer le PDF complet (nom, téléphone, adresse,
+      heure, prix) en contournant le masquage. Trouvé par `cyber` le 2026-10-02, en même temps
+      que la policy RLS ci-dessus. Plus délicat qu'un simple garde-fait : la route n'a pas de
+      session, donc impossible de distinguer "le vrai client qui retélécharge son PDF" du
+      "laveur qui contourne le verrouillage" par la seule authentification.
+      Option recommandée par `cyber` : un jeton HMAC (`HMAC-SHA256(secret, id)`), distinct de
+      l'id, envoyé au client UNIQUEMENT (réponse du POST de réservation + les 2 emails client),
+      jamais exposé au laveur. Sans jeton valide, la route refuse si la réservation est
+      verrouillée. Compromis : une nouvelle variable d'env Vercel, et les liens déjà envoyés
+      avant ce correctif casseraient si la réservation est re-verrouillée plus tard par un
+      changement d'offre (à traiter par une exception "facture déjà émise = jamais re-verrouillée
+      côté PDF"). **En attente de décision — rien d'implémenté.**
+- [ ] **Règle métier : annulation puis restauration contourne le quota de réservations
+      verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un laveur peut donc
+      annuler une réservation DANS son quota, ce qui recule le seuil et déverrouille la suivante
+      en clair (il peut même la confirmer), puis repasser l'annulée en "pending" sans effet de
+      bord. Deux appels suffisent. Trouvé par `cyber` le 2026-10-02. **À trancher avec Ryan** :
+      faut-il compter les annulations (au moins celles faites par le laveur lui-même) dans le
+      quota, ou rendre `cancelled` définitif ? **En attente de décision.**
+- [ ] **Deux fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées
+      le 2026-10-02, non corrigées (touchent plusieurs écrans à la fois, décision de portée à
+      prendre avant correctif plutôt qu'un rustine isolée) :
+      - Le prix/durée/catégorie de la PRESTATION jointe reste lisible sur une réservation
+        verrouillée (le prix du rendez-vous lui-même, `booked_price`, est bien masqué — pas celui
+        de la prestation liée). Correctif probable : ajouter `services: null` au masque central
+        de `reservationsVerrouillees.ts`, à vérifier contre tous les écrans qui l'utilisent.
+      - `dashboard/clients/page.tsx` → les cartes "bloquées" (déjà sans nom) transmettent encore
+        `scheduled_at` en entier au navigateur : l'heure exacte se lit au Ctrl+U malgré l'écran
+        qui ne l'affiche pas. Correctif d'une ligne (même règle "midi UTC" que partout ailleurs).
+      **En attente de décision.**
+
 - [x] 2026-09-27 — **Les factures écrites à la main comptent dans le chiffre d'affaires**, mais
       seulement PAYÉES (choix d'Alexandre : « quand un devis se transforme en facture on met un
       pop up payé ou pas encore payé ; si c'est payé ça va dans l'encaissé, sinon on met un
