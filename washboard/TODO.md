@@ -221,9 +221,10 @@
       bord. Deux appels suffisent. Trouvé par `cyber` le 2026-10-02. **À trancher avec Ryan** :
       faut-il compter les annulations (au moins celles faites par le laveur lui-même) dans le
       quota, ou rendre `cancelled` définitif ? **En attente de décision.**
-- [ ] **Deux fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées
-      le 2026-10-02, non corrigées (touchent plusieurs écrans à la fois, décision de portée à
-      prendre avant correctif plutôt qu'un rustine isolée) :
+- [ ] **Fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées le
+      2026-10-02 (dont 3 confirmées par une vérification Playwright en conditions réelles),
+      non corrigées (touchent plusieurs écrans à la fois, décision de portée à prendre avant
+      correctif plutôt qu'un rustine isolée) :
       - Le prix/durée/catégorie de la PRESTATION jointe reste lisible sur une réservation
         verrouillée (le prix du rendez-vous lui-même, `booked_price`, est bien masqué — pas celui
         de la prestation liée). Correctif probable : ajouter `services: null` au masque central
@@ -231,6 +232,14 @@
       - `dashboard/clients/page.tsx` → les cartes "bloquées" (déjà sans nom) transmettent encore
         `scheduled_at` en entier au navigateur : l'heure exacte se lit au Ctrl+U malgré l'écran
         qui ne l'affiche pas. Correctif d'une ligne (même règle "midi UTC" que partout ailleurs).
+      - **`ends_at`** (heure de fin exacte) part en clair sur `/dashboard` : combinée à la durée
+        de la prestation (déjà visible), elle permet de recalculer l'heure de début malgré le
+        masquage. Absent de `MASQUE` dans `reservationsVerrouillees.ts`.
+      - **`lat`/`lng`** (position GPS du client, 7 décimales) part en clair : l'équivalent exact
+        de l'adresse déjà masquée. Rare aujourd'hui (2 réservations sur 124 testées), mais présent
+        dès qu'un client partage sa position au lieu de taper une adresse.
+      - **`travel_fee`** (frais de déplacement) part en clair : donne une idée de la distance au
+        client. Présent sur 50 réservations sur 124 testées.
       **En attente de décision.**
 
 - [x] 2026-09-27 — **Les factures écrites à la main comptent dans le chiffre d'affaires**, mais
