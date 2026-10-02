@@ -170,6 +170,20 @@
 
 ---
 
+## 🎯 Priorités d'Alexandre — 3 sujets importants (2026-10-02)
+
+> Désignés par Alexandre comme importants, pas encore détaillés — à préciser avec lui
+> avant de lancer quoi que ce soit dessus.
+
+- [ ] **SMS.** Sujet à préciser.
+- [ ] **Refonte du site web.** Sujet à préciser — distinct de la refonte PWA déjà en
+      cours (voir la section dédiée plus bas, « 🎨 Refonte 2026 ») : à confirmer si ça
+      recouvre la même chose, la landing uniquement, ou autre chose encore.
+- [ ] **Refonte de la page de réservation des laveurs** (`/book/[slug]`). Sujet à
+      préciser.
+
+---
+
 ## 🔴 Priorité haute
 
 - [ ] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
