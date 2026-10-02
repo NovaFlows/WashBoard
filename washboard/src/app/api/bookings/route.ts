@@ -73,6 +73,15 @@ const BookingSchema = z.object({
     duration_minutes: z.number().optional(),
   })).optional(),
   travel_fee: z.number().min(0).optional().default(0),
+  // Le laveur saisit-il CE rendez-vous lui-même, depuis son tableau de bord ?
+  // Jamais déduit de la session seule (voir `isOwner` plus bas) : sans ce
+  // champ explicite, un laveur connecté qui ouvrait sa PROPRE page publique
+  // dans le même navigateur — pour la montrer à un prospect, ou simplement la
+  // tester — voyait sa réservation échapper au quota et au masquage, alors
+  // qu'elle vient du formulaire public, pas de son agenda. Repéré le
+  // 2026-10-06 : un compte Découverte au-delà de son plafond de 5 voyait
+  // quand même son propre test apparaître en clair dans l'agenda.
+  saisie_par_laveur: z.boolean().optional().default(false),
 })
 
 /** Le laveur connecté, s'il y en a un. Une réservation publique n'a pas de session : ce n'est
@@ -228,7 +237,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // eux, un essai terminé sans formule ne coupe rien, il fait retomber le
   // compte sur Découverte — le plafond mensuel juste en dessous s'en charge.
   // Couper ET plafonner reviendrait à appliquer deux fois la même sanction.
-  const isOwner = !!authUser && washer?.user_id === authUser.id
+  // La session seule ne suffit pas : elle dit QUI appelle, pas DEPUIS QUEL
+  // FORMULAIRE. `saisie_par_laveur` dit l'intention explicitement — c'est
+  // l'agenda du tableau de bord (useRendezVousManuel) qui l'envoie, jamais le
+  // formulaire public (BookingForm), même rempli par un laveur connecté sur
+  // sa propre page.
+  const isOwner = !!authUser && washer?.user_id === authUser.id && bookingData.saisie_par_laveur === true
   if (!isOwner && washer && washer.subscription_status !== 'active'
     && !suitRetourGratuit(washer)
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {

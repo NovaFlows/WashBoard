@@ -244,41 +244,54 @@ describe('POST /api/bookings — page « proposition »', () => {
 
 describe('POST /api/bookings — le laveur qui saisit son propre rendez-vous', () => {
   // Il connaît son métier : un lavage à 3 h du matin, un jour de congé ou daté d'hier est un
-  // rattrapage légitime, pas une anomalie. La session (cookies) est ce qui l'identifie.
-  // Le client admin, lui, ne rend jamais d'utilisateur : c'est la session qui compte.
+  // rattrapage légitime, pas une anomalie. La session (cookies) l'identifie, mais ne suffit plus
+  // seule depuis la faille du 2026-10-06 (voir le commentaire sur `isOwner` dans la route) : il
+  // faut AUSSI que la requête se déclare explicitement comme une saisie d'agenda
+  // (`saisie_par_laveur: true`), jamais envoyé par le formulaire public — d'où ce champ sur
+  // chaque appel de ce bloc, plutôt que sur la session seule.
   beforeEach(() => { plan.utilisateur = null; plan.session = { id: 'user-1' } })
 
   it('accepte un créneau hors de ses horaires', async () => {
-    const { res } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    const { res } = await poster({ scheduled_at: '2026-09-11T01:00:00Z', saisie_par_laveur: true })
     expect(res.status).toBe(201)
   })
 
   it('accepte un jour où il est en congé', async () => {
     plan.tables.availabilities = { data: [{ day_of_week: 1, start_time: '09:00', end_time: '18:00' }], error: null }
-    const { res } = await poster()
+    const { res } = await poster({ saisie_par_laveur: true })
     expect(res.status).toBe(201)
   })
 
   it('accepte une date déjà passée', async () => {
-    const { res } = await poster({ scheduled_at: '2026-09-01T08:00:00Z' })
+    const { res } = await poster({ scheduled_at: '2026-09-01T08:00:00Z', saisie_par_laveur: true })
     expect(res.status).toBe(201)
   })
 
   it('marque le rendez-vous comme saisi par le laveur, donc jamais masqué ni compté', async () => {
-    await poster()
+    await poster({ saisie_par_laveur: true })
     expect(majAppels).toEqual([{ table: 'bookings', valeurs: { saisie_par_laveur: true } }])
   })
 
   it('ne le traite pas comme une réservation au-delà du quota, même en offre Découverte pleine', async () => {
     avecWasher({ plan: 'decouverte' })
     plan.countMois = 5
-    await poster()
+    await poster({ saisie_par_laveur: true })
     expect(sendWasherBookingLocked).not.toHaveBeenCalled()
+  })
+
+  it('la session seule, SANS la déclarer, ne suffit plus : traité comme un visiteur', async () => {
+    // La faille corrigée le 2026-10-06 : un laveur connecté qui remplissait le
+    // formulaire PUBLIC (même sa propre page, par exemple pour la tester)
+    // voyait sa réservation échapper au quota et au masquage, alors qu'elle
+    // vient du même endroit qu'une réservation cliente ordinaire.
+    const { res } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    expect(res.status).toBe(409)
+    expect(majAppels).toHaveLength(0)
   })
 
   it('ne lève RIEN pour la session d un autre laveur', async () => {
     plan.session = { id: 'quelqu-un-dautre' }
-    const { res, body } = await poster({ scheduled_at: '2026-09-11T01:00:00Z' })
+    const { res, body } = await poster({ scheduled_at: '2026-09-11T01:00:00Z', saisie_par_laveur: true })
     expect(res.status).toBe(409)
     expect(body.error).toMatch(/horaires/)
   })
@@ -324,7 +337,7 @@ describe('POST /api/bookings — réservation le jour même', () => {
     // (même principe que verdictDate/creneauDansOuverture juste au-dessus).
     plan.session = { id: 'user-1' }
     plan.tables.availabilities = { data: [{ day_of_week: 3, start_time: '09:00', end_time: '18:00' }], error: null }
-    const { res } = await poster({ scheduled_at: '2026-09-09T14:00:00Z' })
+    const { res } = await poster({ scheduled_at: '2026-09-09T14:00:00Z', saisie_par_laveur: true })
     expect(res.status).toBe(201)
   })
 })

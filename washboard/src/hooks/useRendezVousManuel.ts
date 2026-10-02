@@ -249,6 +249,10 @@ export function useRendezVousManuel({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        // Dit explicitement que CE rendez-vous vient de l'agenda, pas du
+        // formulaire public — la session seule ne suffit plus à le prouver
+        // côté serveur (voir le commentaire sur `isOwner` dans la route).
+        saisie_par_laveur: true,
         washer_id:       washerId,
         service_id:      manualModal.service_id,
         vehicle_type:    manualModal.vehicle_type,
