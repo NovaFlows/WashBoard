@@ -140,6 +140,18 @@ export default async function ClientsPage() {
     contacts: contactsBruts.filter(c => c.entrepriseId === e.id),
   }))
 
+  // Les campagnes déclarées, pour le résumé de la ligne « Publicités » des
+  // Automatismes. Table seule, sans agrégation : la ligne dit un décompte et,
+  // le cas échéant, qu'un budget a vieilli — jamais un retour, qui coûterait
+  // deux agrégations complètes à chaque ouverture de l'écran.
+  //
+  // Un échec est silencieux et rend une liste vide : la migration 006 peut ne
+  // pas avoir tourné, et l'écran Clients n'a aucune raison de tomber pour ça.
+  const { data: campagnesLues } = await supabase
+    .from('campagnes')
+    .select('debut, fin, budget_maj_le')
+    .eq('washer_id', washer.id)
+
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <ClientsView
@@ -178,6 +190,13 @@ export default async function ClientsPage() {
             valeur: Number(washer.smart_slot_discount_value ?? 0),
           },
           prestationsPrix: (services ?? []).map(s => ({ nom: s.name as string, prix: minVehiclePrice(s) })),
+          campagnes: (campagnesLues ?? []).map(c => ({
+            debut: c.debut as string,
+            fin: (c.fin as string | null) ?? null,
+            budget_maj_le: (c.budget_maj_le as string | null | undefined) ?? null,
+          })),
+          publicitesAutorisees: hasFeature(washer, 'campagnes'),
+          libellePlanPublicites: requiredPlanLabel('campagnes'),
         }}
       />
     </DashboardShell>
