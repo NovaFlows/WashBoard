@@ -1,7 +1,7 @@
 'use client'
 
 import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
-import { bookingPageMode } from '@/lib/bookingPageMode'
+import { bookingPageModeEffectif, COMPTES_TEST_NOUVELLE_PAGE_RESERVATION } from '@/lib/bookingPageMode'
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
@@ -49,7 +49,8 @@ type Props = {
 }
 
 export default function ApparenceV2({ nom, slug, initial }: Props) {
-  const [pageMode, setPageMode] = useState(() => bookingPageMode(initial.pageMode))
+  const [pageMode, setPageMode] = useState(() => bookingPageModeEffectif(slug, initial.pageMode))
+  const voitSelecteurPage = COMPTES_TEST_NOUVELLE_PAGE_RESERVATION.includes(slug)
   const h = useApparenceV2(initial)
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [retrait, setRetrait] = useState<Retrait>(null)
@@ -118,7 +119,9 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
         </div>
       </div>
 
-      <BookingPageModePicker mode={pageMode} onChange={setPageMode} />
+      {/* Masqué hors de la liste de test (lib/bookingPageMode.ts) : voir la
+          même remarque dans IdentiteForm.tsx (écran v1). */}
+      {voitSelecteurPage && <BookingPageModePicker mode={pageMode} onChange={setPageMode} />}
       <div hidden={pageMode !== 'custom'} className="mt-4">
       <ApercuPageV2 nom={nom} logoUrl={h.logoUrl} message={h.message} couleur={h.couleur} fond={h.fond} />
       <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>

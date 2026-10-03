@@ -1,7 +1,7 @@
 'use client'
 
 import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
-import { bookingPageMode } from '@/lib/bookingPageMode'
+import { bookingPageModeEffectif, COMPTES_TEST_NOUVELLE_PAGE_RESERVATION } from '@/lib/bookingPageMode'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
@@ -60,7 +60,8 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
 
 export default function IdentiteForm({ washer }: { washer: Washer }) {
   const router = useRouter()
-  const [pageMode, setPageMode] = useState(() => bookingPageMode(washer.booking_page_mode))
+  const [pageMode, setPageMode] = useState(() => bookingPageModeEffectif(washer.slug, washer.booking_page_mode))
+  const voitSelecteurPage = COMPTES_TEST_NOUVELLE_PAGE_RESERVATION.includes(washer.slug)
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
   const [logoStatus, setLogoStatus] = useState<LogoStatus>('idle')
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -272,7 +273,10 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
 
   return (
     <form onSubmit={save} noValidate className="space-y-5">
-      <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>
+      {/* Masqué hors de la liste de test (lib/bookingPageMode.ts) : le réglage
+          n'aurait aucun effet visible pour les autres, montrer un choix qui
+          ne change rien serait pire que ne rien montrer. */}
+      {voitSelecteurPage && <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>}
       <div hidden={pageMode !== 'custom'} className="space-y-5">
       <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Logo */}

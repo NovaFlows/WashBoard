@@ -1,5 +1,5 @@
 import LegacyBookingPage from '@/components/booking/LegacyBookingPage'
-import { bookingPageMode } from '@/lib/bookingPageMode'
+import { bookingPageModeEffectif } from '@/lib/bookingPageMode'
 import { cache, Suspense } from 'react'
 import BookingHero from '@/components/booking/BookingHero'
 import RetourApercu from '@/components/booking/RetourApercu'
@@ -212,7 +212,7 @@ export default async function BookingPage({ params }: Props) {
   const pixelId = pixelIdDev()
     ?? (pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null)
 
-  if (bookingPageMode(washer.booking_page_mode) === 'custom') {
+  if (bookingPageModeEffectif(washer.slug, washer.booking_page_mode) === 'custom') {
     return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId} />
   }
