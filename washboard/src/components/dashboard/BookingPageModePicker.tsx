@@ -38,19 +38,17 @@ export default function BookingPageModePicker({ mode, onChange }: {
 
   return <section aria-labelledby="booking-page-mode-title" className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
     <h2 id="booking-page-mode-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">Votre page de réservation</h2>
-    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-4">Choisissez la présentation que vos clients voient en ouvrant votre lien.</p>
-    <div className="grid gap-3 sm:grid-cols-2">
-      {([
-        { value: 'default', title: 'Page par défaut', description: 'Prête à l’emploi : trois étapes sur une même page, avec le prix et le bouton toujours accessibles.' },
-        { value: 'custom', title: 'Faire ma propre page', description: 'Retrouvez la présentation classique et ses réglages de logo, couleurs et fond, selon votre offre.' },
-      ] as const).map(option => <button key={option.value} type="button" aria-pressed={mode === option.value} disabled={pending !== null}
-        onClick={() => choose(option.value)} className={'text-left rounded-xl border-2 p-4 touch-manipulation disabled:cursor-wait ' + (mode === option.value ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/30' : 'border-slate-200 dark:border-slate-700')}>
-        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{option.title}</span>
-        <span className="block text-xs leading-relaxed text-slate-500 dark:text-slate-400 mt-2">{option.description}</span>
-        <span className="block mt-3 text-xs font-semibold text-blue-700 dark:text-blue-400">{pending === option.value ? 'Enregistrement…' : mode === option.value ? 'Page active ✓' : 'Utiliser cette page'}</span>
-      </button>)}
-    </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Vous pouvez changer d’avis à tout moment. Vos réglages personnalisés sont conservés.</p>
+    <label className="flex min-h-11 items-center gap-3 mt-3 cursor-pointer touch-manipulation">
+      <input type="checkbox" checked={mode === 'default'} disabled={pending !== null}
+        onChange={e => choose(e.target.checked ? 'default' : 'custom')}
+        aria-describedby="booking-page-mode-description"
+        className="h-5 w-5 shrink-0 accent-blue-600 disabled:cursor-wait" />
+      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">Page par défaut</span>
+    </label>
+    <p id="booking-page-mode-description" className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+      {mode === 'default' ? 'Décochez pour utiliser votre page personnalisée et ouvrir ses réglages.' : 'Page personnalisée active. Retrouvez vos réglages ci-dessous.'}
+    </p>
+    {pending !== null && <p role="status" className="text-xs text-slate-500 mt-3">Enregistrement…</p>}
     {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400 mt-3">{error}</p>}
     {saved && <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400 mt-3">Le choix de votre page est enregistré.</p>}
   </section>
