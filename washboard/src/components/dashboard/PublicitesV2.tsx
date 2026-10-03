@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Copy, Check, Plus, AlertTriangle, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, Check, Plus, AlertTriangle, Clock, Megaphone } from 'lucide-react'
 import { Repliable } from '@/components/dashboard/PrestationsUiV2'
 import { Feuille, BOUTON } from '@/components/dashboard/FeuilleV2'
 import { formatEuros } from '@/lib/plan'
@@ -150,7 +150,7 @@ function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string
             donne 33 % et ressemble à un succès, alors que c'est du hasard.
             L'afficher ferait couper la bonne vidéo. */}
         <Mesure
-          label={b.fiable ? 'Transformation' : 'Transformation'}
+          label="Transformation"
           valeur={b.fiable ? pourcent(b.tauxConversion) : 'Peu de données'}
           aide={b.fiable ? undefined : `dès ${SEUIL_FIABILITE} visites`}
           pale={!b.fiable}
@@ -565,6 +565,10 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
   return (
     <div
       className={`mx-auto -mx-3 -mt-6 max-w-3xl bg-[color:var(--v2-color-fond)] px-3 pb-6 pt-3 text-[color:var(--v2-color-encre)] sm:-mx-4 sm:px-4 ${police}`}
+      // Le bouton flottant dépasse la barre du bas de 68 px : sans cette
+      // marge, il recouvrirait la dernière carte, qu'aucun défilement ne
+      // permettrait alors de dégager.
+      style={!indisponible ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -578,17 +582,6 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
           <h1 className={`text-[21px] leading-none ${titre}`}>Publicités</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</p>
         </div>
-        {!indisponible && (
-          <button
-            type="button"
-            onClick={() => setFeuille({ quoi: 'creer' })}
-            aria-label="Nouvelle campagne"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--v2-radius-pilule)]"
-            style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
-          >
-            <Plus size={19} strokeWidth={2.5} />
-          </button>
-        )}
       </div>
 
       {indisponible ? (
@@ -651,26 +644,85 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
             />
           ))}
 
+          {/* Écran vide. Pas une carte avec un titre de constat (« Aucune
+              campagne »), qui ne dit que ce qui manque : une promesse, au
+              milieu de l'espace libre, avec le mégaphone en filigrane. C'est
+              le seul endroit de l'application où quelqu'un découvre que cette
+              fonction existe — « aucune campagne » ne donne envie de rien. */}
           {campagnes.length === 0 && (
-            <Carte>
-              <div className="p-4">
-                <p className={`text-[15px] ${nom}`}>Aucune campagne pour l’instant</p>
-                <p className={`mt-1 text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-                  Déclarez votre campagne, collez son lien dans votre publicité, et voyez ce qu’elle
-                  vous rapporte — vidéo par vidéo.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setFeuille({ quoi: 'creer' })}
-                  className={`${BOUTON} mt-3 w-full`}
-                  style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
-                >
-                  Créer ma première campagne
-                </button>
-              </div>
-            </Carte>
+            <div className="relative overflow-hidden px-6 py-14 text-center">
+              <Megaphone
+                aria-hidden
+                size={168}
+                strokeWidth={1}
+                className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                style={{ color: 'var(--v2-filet-fort)' }}
+              />
+              <p className={`relative text-[19px] leading-snug ${nom}`}>
+                Avec WashBoard, suivez chaque campagne de pub
+              </p>
+              <p className={`relative mx-auto mt-2 max-w-[18rem] text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
+                Ce que vous dépensez, ce que ça vous rapporte, et laquelle de vos vidéos amène
+                vraiment des clients.
+              </p>
+              <button
+                type="button"
+                onClick={() => setFeuille({ quoi: 'creer' })}
+                className={`${BOUTON} relative mx-auto mt-5 w-full max-w-[16rem]`}
+                style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
+              >
+                Créer ma première campagne
+              </button>
+            </div>
+          )}
+          {campagnes.length > 1 && (
+            <Link
+              href="/dashboard/clients/publicites/bilan"
+              className="flex min-h-14 items-center gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 transition-transform active:scale-[.99]"
+              style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+            >
+              <span className="min-w-0 flex-1">
+                <span className={`block text-[15px] ${nom}`}>Voir le bilan</span>
+                <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                  Tout additionné, vos meilleures vidéos, vos plateformes
+                </span>
+              </span>
+              <ChevronRight size={17} strokeWidth={2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
+            </Link>
           )}
         </div>
+      )}
+
+      {/* ── Ajouter une campagne, sous le pouce ──────────────────────────────
+          En bas à droite et pas dans l'en-tête : sur un téléphone tenu d'une
+          main, le haut de l'écran demande de changer de prise. Ce bouton est
+          le seul de l'écran qu'on vient chercher exprès — les autres se
+          rencontrent en lisant.
+
+          Posé juste au-dessus de la barre du bas, qui occupe 66 px à 14 px du
+          bord (voir BarreBasV2), encoche comprise. Un z-index en dessous
+          d'elle : s'ils devaient un jour se croiser, c'est la barre qui doit
+          gagner, jamais un bouton d'ajout.
+
+          Masqué dès qu'une feuille s'ouvre : elle porte déjà son propre bouton
+          de validation au même endroit, et deux ronds superposés sous le
+          pouce, c'est un clic sur le mauvais. */}
+      {!indisponible && !feuille && (
+        <button
+          type="button"
+          onClick={() => setFeuille({ quoi: 'creer' })}
+          className={`fixed right-3 z-[14] flex h-14 items-center gap-1.5 rounded-[var(--v2-radius-pilule)] pl-4 pr-5 text-[15px] ${corpsFort} shadow-[0_6px_20px_rgba(22,22,26,.22)] transition-transform active:scale-[.96] sm:right-4`}
+          style={{
+            bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
+            background: 'var(--v2-color-encre)',
+            color: 'var(--v2-color-surface)',
+            transitionDuration: 'var(--v2-duration-press)',
+            transitionTimingFunction: 'var(--v2-ease-out)',
+          }}
+        >
+          <Plus size={20} strokeWidth={2.5} aria-hidden />
+          Campagne
+        </button>
       )}
 
       {feuille && (
