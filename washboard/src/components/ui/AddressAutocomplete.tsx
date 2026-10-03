@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 type Props = {
+  id?: string
   value: string
   onChange: (value: string) => void
   onSelectWithCoords?: (label: string, lat: number, lng: number) => void
@@ -18,7 +19,7 @@ type Props = {
 
 type Suggestion = { label: string; placeId: string }
 
-export default function AddressAutocomplete({ value, onChange, onSelectWithCoords, placeholder, className, style, allowGeolocation = false }: Props) {
+export default function AddressAutocomplete({ id, value, onChange, onSelectWithCoords, placeholder, className, style, allowGeolocation = false }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [open, setOpen]               = useState(false)
   const [locating, setLocating]       = useState(false)
@@ -116,6 +117,7 @@ export default function AddressAutocomplete({ value, onChange, onSelectWithCoord
   return (
     <div ref={containerRef} className="relative">
       <input
+        id={id}
         type="text"
         value={value}
         onChange={e => handleChange(e.target.value)}

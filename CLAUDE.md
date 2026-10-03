@@ -1,5 +1,8 @@
 # WashBoard
 
+## Continuité Claude Code / Codex
+Lire `AGENTS.md` et `PROJECT_CONTEXT.md` pour les consignes communes, les validations et l'état de la refonte. Claude Code reste l'outil principal ; Codex prend le relais quand ses crédits sont épuisés.
+
 SaaS B2B pour laveurs auto mobiles. Abonnement 49€/mois. Pitch : "Tu laves des voitures. On gère le reste."
 
 ## Stack
