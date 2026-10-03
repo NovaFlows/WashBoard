@@ -6,6 +6,7 @@ export type ZoneConfig =
   | null
 
 export type Washer = {
+  booking_page_mode?: 'default' | 'custom'
   id: string
   user_id: string | null
   name: string

@@ -1,3 +1,5 @@
+import LegacyBookingPage from '@/components/booking/LegacyBookingPage'
+import { bookingPageMode } from '@/lib/bookingPageMode'
 import { cache, Suspense } from 'react'
 import BookingHero from '@/components/booking/BookingHero'
 import RetourApercu from '@/components/booking/RetourApercu'
@@ -6,7 +8,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
 import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
-import { getBgStyle, urlVersionnee } from '@/lib/themes'
+import { urlVersionnee } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
@@ -32,7 +34,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, booking_page_mode, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *
@@ -210,11 +212,14 @@ export default async function BookingPage({ params }: Props) {
   const pixelId = pixelIdDev()
     ?? (pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null)
 
+  if (bookingPageMode(washer.booking_page_mode) === 'custom') {
+    return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
+      availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId} />
+  }
+
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
-  const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
-
-  const bgStyle = personnalisee ? getBgStyle(washer.background_theme, washer.profile_updated_at) : null
+  const accent        = '#2563eb'
 
   // Lien WhatsApp, calculé UNE fois pour les deux endroits qui s'en servent :
   // le bloc de contact en bas de page (inchangé) et le lien « Une question
@@ -231,9 +236,9 @@ export default async function BookingPage({ params }: Props) {
     {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
     <RetourApercu />
     <div className="min-h-screen bg-[#f6f5f3] dark:bg-zinc-950">
-      <BookingHero name={washer.name} message={washer.welcome_message} accent={accent}
+      <BookingHero name={washer.name} message={null} accent={accent}
         logoUrl={logoUrl ? urlVersionnee(logoUrl, washer.profile_updated_at) : null}
-        personalized={personnalisee} background={bgStyle} whatsappHref={waHref}
+        personalized={personnalisee} whatsappHref={waHref}
         reviews={washer.website_url ? <Suspense fallback={null}><ReviewSummary websiteUrl={washer.website_url} /></Suspense> : null} />
       <main id="main-content" className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
         <BookingForm
@@ -264,9 +269,8 @@ export default async function BookingPage({ params }: Props) {
           availabilities={availabilities ?? []}
           // Plus de existingBookings/unavailabilities ici : BookingForm les
           // charge lui-même via /api/booking-availability (voir plus haut).
-          // `accent` respecte la règle "personnalisation réservée aux offres
-          // payantes" — c'est washer.brand_color brut sur les offres payantes,
-          // le bleu WashBoard sinon (calculé plus haut).
+          // La page par défaut utilise le bleu standard ; les couleurs et
+          // fonds enregistrés restent disponibles dans la page classique.
           accent={accent}
           whatsappHref={waHref}
         />

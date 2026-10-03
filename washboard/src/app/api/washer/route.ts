@@ -11,6 +11,7 @@ import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
 import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
 import { widgetsValides } from '@/lib/dashboardWidgets'
 import { slugValide, slugLibre } from '@/lib/slug'
+import { BookingPageModeSchema } from '@/lib/bookingPageMode'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -18,7 +19,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const {
-    name, phone, slug, logo_url, welcome_message, brand_color, team_size,
+    name, phone, slug, logo_url, welcome_message, brand_color, team_size, booking_page_mode,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     reservation_jour_meme,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
@@ -32,6 +33,9 @@ export async function PATCH(request: NextRequest) {
   } = await request.json()
 
   // ── Validations ──────────────────────────────────────────────────────────
+  if (booking_page_mode !== undefined && !BookingPageModeSchema.safeParse(booking_page_mode).success) {
+    return NextResponse.json({ error: 'Choix de page invalide' }, { status: 400 })
+  }
   if (name !== undefined && !String(name).trim()) {
     return NextResponse.json({ error: "Le nom de l'entreprise est requis" }, { status: 400 })
   }
@@ -145,6 +149,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   const updates: Record<string, unknown> = {}
+  // Le choix du parcours est ouvert à tous ; les réglages payants conservent
+  // leurs contrôles d'offre ci-dessus. Aucun autre réglage n'est effacé.
+  if (booking_page_mode !== undefined) updates.booking_page_mode = booking_page_mode
 
   // Widgets affichés sur l'accueil. Les clés inconnues sont silencieusement
   // écartées (voir widgetsValides) plutôt que de faire échouer tout

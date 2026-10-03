@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
         phone: telephone,
         trial_ends_at: trialEndsAt,
         subscription_status: 'trial',
+        booking_page_mode: 'default',
         // Pendant l'essai, le laveur a le produit complet : c'est ce qu'on lui
         // vend, et c'est ce qu'il avait avant l'arrivée de l'offre gratuite.
         // Écrit ici plutôt que laissé à la valeur par défaut de la colonne :

@@ -1,5 +1,7 @@
 'use client'
 
+import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
+import { bookingPageMode } from '@/lib/bookingPageMode'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
@@ -58,6 +60,7 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
 
 export default function IdentiteForm({ washer }: { washer: Washer }) {
   const router = useRouter()
+  const [pageMode, setPageMode] = useState(() => bookingPageMode(washer.booking_page_mode))
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
   const [logoStatus, setLogoStatus] = useState<LogoStatus>('idle')
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -269,9 +272,11 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
 
   return (
     <form onSubmit={save} noValidate className="space-y-5">
+      <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>
+      <div hidden={pageMode !== 'custom'} className="space-y-5">
       <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Logo */}
-      <div id="identite" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <div className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Logo</h2>
         <div className="flex items-center gap-5">
           <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
@@ -454,6 +459,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         />
       </div>
 
+      </div>
       {/* Site web + Avis Google */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Présence en ligne</h2>
@@ -495,7 +501,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       </div>
 
       {/* Aperçu */}
-      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+      <div hidden={pageMode !== 'custom'} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Aperçu header client</p>
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800">
           <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0">

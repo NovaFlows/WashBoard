@@ -35,6 +35,7 @@ export const PHRASE_DETOURAGE_ECHEC =
   'Le fond n’a pas pu être retiré. Vérifiez votre connexion (un modèle se télécharge la première fois) puis réessayez.'
 
 export type ReglagesApparence = {
+  pageMode?: 'default' | 'custom'
   logoUrl: string | null
   couleur: string | null
   fond: string | null

@@ -27,7 +27,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // tableau de bord propose « Réessayer ». Un compte vide et une panne ne se
 // confondent donc pas.
 const COLONNES =
-  'id, name, slug, logo_url, brand_color, background_theme, welcome_message, website_url, ' +
+  'id, name, slug, logo_url, brand_color, background_theme, welcome_message, website_url, booking_page_mode, ' +
   'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
 
 export default async function ApparencePage() {
@@ -43,6 +43,7 @@ export default async function ApparencePage() {
         nom={washer.name}
         slug={washer.slug}
         initial={{
+          pageMode: washer.booking_page_mode,
           logoUrl: washer.logo_url ?? null,
           couleur: washer.brand_color ?? null,
           fond: washer.background_theme ?? null,

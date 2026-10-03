@@ -1,5 +1,7 @@
 'use client'
 
+import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
+import { bookingPageMode } from '@/lib/bookingPageMode'
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
@@ -20,7 +22,8 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/appar
 // n'a aucun écran pour ça ; Alexandre, 2026-09-24 : « avec le même design que les
 // autres pages et les mêmes fonctionnalités qu'avant »). Réservé à la PWA installée
 // (voir Apparence.tsx, le garde-fou : le site est renvoyé vers
-// `/dashboard/admin#identite`, l'écran v1 `IdentiteForm`, inchangé).
+// `/dashboard/admin#identite`, l'écran web `IdentiteForm`).
+// Le choix default/custom est commun aux deux surfaces et sauvegardé séparément.
 //
 // Périmètre décidé par Alexandre : les CINQ premières cartes de `IdentiteForm` —
 // Logo, Couleur de la marque, Fond de la page, Message d'accueil, Présence en ligne
@@ -46,6 +49,7 @@ type Props = {
 }
 
 export default function ApparenceV2({ nom, slug, initial }: Props) {
+  const [pageMode, setPageMode] = useState(() => bookingPageMode(initial.pageMode))
   const h = useApparenceV2(initial)
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [retrait, setRetrait] = useState<Retrait>(null)
@@ -114,17 +118,20 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
         </div>
       </div>
 
+      <BookingPageModePicker mode={pageMode} onChange={setPageMode} />
+      <div hidden={pageMode !== 'custom'} className="mt-4">
       <ApercuPageV2 nom={nom} logoUrl={h.logoUrl} message={h.message} couleur={h.couleur} fond={h.fond} />
       <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
         Aperçu approximatif de votre page.
       </p>
 
+      </div>
       <div className={etatLogoVisible ? 'mt-4' : ''} aria-live="polite">
         {etatLogoVisible && <EtatEnvoi etat={h.logo} />}
       </div>
 
       <div className="mt-4 space-y-2.5">
-        {!aLogo && (
+        {pageMode === 'custom' && !aLogo && (
           <button
             type="button"
             onClick={() => setFeuille('logo')}
@@ -146,6 +153,7 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
       <section aria-label="Réglages de la page" className="mt-[26px]">
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
+            {pageMode === 'custom' && <>
             <Ligne label="Logo" valeur={valeurLogo} onClick={() => setFeuille('logo')} />
             <Ligne
               label="Couleur de ma marque"
@@ -154,6 +162,7 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
             />
             <Ligne label="Fond de la page" valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
             <Ligne label="Message d’accueil" valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
+            </>}
             <Ligne label="Mon site web" valeur={h.site ? h.site.replace(/^https?:\/\//i, '') : 'Pas encore : aucun avis affiché'} tronquer onClick={() => setFeuille('site')} />
           </ul>
         </CarteListe>
