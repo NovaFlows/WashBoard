@@ -277,7 +277,11 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           n'aurait aucun effet visible pour les autres, montrer un choix qui
           ne change rien serait pire que ne rien montrer. */}
       {voitSelecteurPage && <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>}
-      <div hidden={pageMode !== 'custom'} className="space-y-5">
+      {/* Logo et couleur restent modifiables quel que soit le mode de page :
+          la nouvelle page (« automatique ») les utilise aussi (logo et accent
+          du header) — seuls le fond et le message d'accueil ne lui servent
+          encore à rien, eux restent dans le bloc masqué plus bas. */}
+      <div className="space-y-5">
       <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Logo */}
       <div className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
@@ -365,6 +369,8 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       </div>
 
       </SectionVerrouillee>
+      </div>
+      <div hidden={pageMode !== 'custom'} className="space-y-5">
       <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Thème de fond */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">

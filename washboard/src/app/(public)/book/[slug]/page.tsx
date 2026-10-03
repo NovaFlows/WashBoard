@@ -219,7 +219,9 @@ export default async function BookingPage({ params }: Props) {
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
-  const accent        = '#2563eb'
+  // Même règle que LegacyBookingPage.tsx : la couleur de marque sur les
+  // offres payantes, le bleu WashBoard sinon (ou si rien n'est enregistré).
+  const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
 
   // Lien WhatsApp, calculé UNE fois pour les deux endroits qui s'en servent :
   // le bloc de contact en bas de page (inchangé) et le lien « Une question
@@ -269,8 +271,9 @@ export default async function BookingPage({ params }: Props) {
           availabilities={availabilities ?? []}
           // Plus de existingBookings/unavailabilities ici : BookingForm les
           // charge lui-même via /api/booking-availability (voir plus haut).
-          // La page par défaut utilise le bleu standard ; les couleurs et
-          // fonds enregistrés restent disponibles dans la page classique.
+          // `accent` reprend la couleur de marque sur les offres payantes
+          // (calculée plus haut, même règle que LegacyBookingPage) ; seul le
+          // fond personnalisé reste réservé à la page classique.
           accent={accent}
           whatsappHref={waHref}
         />

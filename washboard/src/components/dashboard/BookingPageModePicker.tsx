@@ -36,15 +36,24 @@ export default function BookingPageModePicker({ mode, onChange }: {
     }
   }
 
+  const actif = mode === 'default'
+
   return <section aria-labelledby="booking-page-mode-title" className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
     <h2 id="booking-page-mode-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">Votre page de réservation</h2>
-    <label className="flex min-h-11 items-center gap-3 mt-3 cursor-pointer touch-manipulation">
-      <input type="checkbox" checked={mode === 'default'} disabled={pending !== null}
-        onChange={e => choose(e.target.checked ? 'default' : 'custom')}
-        aria-describedby="booking-page-mode-description"
-        className="h-5 w-5 shrink-0 accent-blue-600 disabled:cursor-wait" />
+    <div className="flex items-center justify-between gap-3 mt-3 min-h-11">
       <span className="text-sm font-medium text-slate-900 dark:text-slate-100">Page par défaut</span>
-    </label>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={actif}
+        aria-describedby="booking-page-mode-description"
+        disabled={pending !== null}
+        onClick={() => choose(actif ? 'custom' : 'default')}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-wait disabled:opacity-50 ${actif ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+      >
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${actif ? 'translate-x-6' : 'translate-x-1'}`} />
+      </button>
+    </div>
     <p id="booking-page-mode-description" className="text-sm text-slate-500 dark:text-slate-400 mt-1">
       {mode === 'default' ? 'Décochez pour utiliser votre page personnalisée et ouvrir ses réglages.' : 'Page personnalisée active. Retrouvez vos réglages ci-dessous.'}
     </p>

@@ -134,7 +134,7 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
       </div>
 
       <div className="mt-4 space-y-2.5">
-        {pageMode === 'custom' && !aLogo && (
+        {!aLogo && (
           <button
             type="button"
             onClick={() => setFeuille('logo')}
@@ -156,13 +156,17 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
       <section aria-label="Réglages de la page" className="mt-[26px]">
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
-            {pageMode === 'custom' && <>
+            {/* Logo et couleur restent modifiables quel que soit le mode de
+                page — la nouvelle page les utilise aussi. Fond et message
+                d'accueil ne lui servent encore à rien, ils restent réservés
+                à la page classique. */}
             <Ligne label="Logo" valeur={valeurLogo} onClick={() => setFeuille('logo')} />
             <Ligne
               label="Couleur de ma marque"
               pastille={h.couleur ?? COULEUR_PAR_DEFAUT}
               onClick={() => setFeuille('couleur')}
             />
+            {pageMode === 'custom' && <>
             <Ligne label="Fond de la page" valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
             <Ligne label="Message d’accueil" valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
             </>}
