@@ -310,6 +310,7 @@ export default function StepSlot({
           placeholder="12 rue de la Paix, 75001 Paris"
           className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
           style={{ '--tw-ring-color': accent } as React.CSSProperties}
+          allowGeolocation
         />
         {hasTravelFee && address.trim().length > 5 && (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">

@@ -218,6 +218,16 @@ export default async function BookingPage({ params }: Props) {
   const bgStyle = personnalisee ? getBgStyle(washer.background_theme, washer.profile_updated_at) : null
   const themed  = !!bgStyle
 
+  // Lien WhatsApp, calculé UNE fois pour les deux endroits qui s'en servent :
+  // le bloc de contact en bas de page (inchangé) et le lien « Une question
+  // avant de réserver ? » affiché PENDANT le parcours de réservation (voir
+  // BookingForm). `null` dans les deux mêmes cas qu'avant la refonte 2026-10 :
+  // pas de téléphone, ou plafond mensuel atteint (voir plus bas pourquoi le
+  // bouton disparaît alors — masquage des coordonnées du client).
+  const waHref = washer.phone && !plafondAtteint
+    ? `https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`
+    : null
+
   return (
     <>
     {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
@@ -306,7 +316,7 @@ export default async function BookingPage({ params }: Props) {
             c'est notre logo et notre nom. La vitrine est à nous, le rendez-vous
             est à lui. */}
         {!themed && (
-          <div className="mb-6">
+          <div className="mb-3">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{washer.name}</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Réservez votre lavage à domicile en quelques clics</p>
           </div>
@@ -314,9 +324,33 @@ export default async function BookingPage({ params }: Props) {
         {themed && (
           <>
             <h1 className="sr-only">Réservez votre lavage avec {washer.name}</h1>
-            <div className="mb-6" />
+            <div className="mb-3" />
           </>
         )}
+
+        {/* ── Repères de confiance, avant même d'avoir touché le formulaire ──
+            Deux affirmations, et deux seulement : toutes les autres auraient
+            demandé une donnée qu'on n'a pas encore à ce stade (prestation,
+            adresse) ou qu'on n'a pas du tout (vraie intégration d'avis
+            Google, voir plus bas). « Généralement disponible sous 48 h » est
+            volontairement NON daté : le moteur de créneaux (lib/slots) a
+            besoin de la prestation ET de l'adresse pour dire si un horaire
+            tient vraiment (trajet, frais de déplacement, créneaux
+            intelligents) — l'un et l'autre ne sont connus qu'une fois le
+            formulaire commencé. Afficher « demain 10h » ici serait un
+            horaire annoncé à l'aveugle, potentiellement intenable. */}
+        <div className={`mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm font-medium ${themed ? 'text-white/90' : 'text-slate-600 dark:text-slate-300'}`}>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 7v5l3 3" />
+            </svg>
+            Généralement disponible sous 48 h
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full ${themed ? 'bg-white/90' : 'bg-emerald-500'}`} />
+            Paiement sur place
+          </span>
+        </div>
 
         <BookingForm
           // Champs énumérés un par un, jamais l'objet entier : tout ce qui
@@ -350,6 +384,7 @@ export default async function BookingPage({ params }: Props) {
           // payantes" — c'est washer.brand_color brut sur les offres payantes,
           // le bleu WashBoard sinon (calculé plus haut).
           accent={accent}
+          whatsappHref={waHref}
         />
 
         {washer.website_url && (
@@ -378,10 +413,10 @@ export default async function BookingPage({ params }: Props) {
             À ne pas confondre avec l'écran « page suspendue » plus haut, qui
             garde son bouton d'appel : là, contacter le prestataire est la
             seule chose qui reste à faire. */}
-        {washer.phone && !plafondAtteint && (
+        {waHref && (
           <div className="mt-6 flex justify-center">
             <a
-              href={`https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`}
+              href={waHref}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold rounded-xl transition-colors"
