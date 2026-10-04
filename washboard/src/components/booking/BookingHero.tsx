@@ -14,8 +14,12 @@ export default function BookingHero({ name, message, accent, logoUrl, personaliz
   return <header className="wb-booking-hero text-white" style={{ backgroundColor: accent, ...background }}>
     <div className="max-w-lg mx-auto px-6 pt-4 pb-12">
       <div className="flex items-center justify-between mb-4">
-        {personalized ? logoUrl ? <Image src={logoUrl} alt={name} width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
-          : <span className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">{name.split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()}</span>
+        {/* Logo du laveur agrandi ×1.5 (40px → 60px, demande d'Alexandre, 2026-10-04) —
+            son repli (initiales) suit la même taille, même emplacement visuel. Le
+            logo WashBoard (offre gratuite) n'est pas concerné : ce n'est pas le logo
+            d'un laveur. */}
+        {personalized ? logoUrl ? <Image src={logoUrl} alt={name} width={60} height={60} className="w-[60px] h-[60px] rounded-full object-cover" />
+          : <span className="w-[60px] h-[60px] rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">{name.split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()}</span>
           : <span className="text-sm font-bold flex items-center gap-2"><Image src="/LogoWashBoard.png" alt="" width={36} height={36} />WashBoard</span>}
         <div className="flex items-center gap-2">
           {whatsappHref && <a href={whatsappHref} aria-label="Contacter le laveur sur WhatsApp" target="_blank" rel="noopener noreferrer" className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
