@@ -7,8 +7,10 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
-> partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
+> Dernière mise à jour : 2026-10-04 (sécurité `bookings` : bascule client admin faite par Ryan
+> et fusionnée sur master, REVOKE RLS toujours en attente ; nouvelle faille trouvée sur
+> `fusionner_clients`/`anonymiser_client`). Avant : 2026-09-21 (audit post-lancement : vitesse,
+> contraste, image de partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
 > facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
 > livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
 > fiche client, forfaits annuels)
@@ -186,7 +188,7 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
+- [~] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
       de ses propres réservations en interrogeant Supabase directement, sans passer par le site.**
       Trouvé le 2026-10-02 par un audit `cyber` pendant le chantier de masquage des réservations
       verrouillées (voir les 2 entrées ci-dessous). Ce n'est pas du piratage au sens classique :
@@ -197,22 +199,50 @@
       prix en clair sur une réservation que le site, lui, masque correctement — ou pire, écrire
       `saisie_par_laveur: true` sur une réservation pour la déverrouiller pour de bon, en dehors
       du quota.
-      **Tant que ce n'est pas corrigé, tout le reste du masquage (ci-dessous) reste cosmétique**
-      pour quiconque sait ouvrir les outils développeur.
-      Correctif proposé par `cyber`, à valider puis donner à `dev` (migration sur la base de prod
-      partagée, donc personne n'y a touché cette nuit) :
+      **2026-10-04 — moitié faite par Ryan (`5f60919`, fusionné sur `master`, en prod)** : les
+      29 fichiers serveur qui lisaient/écrivaient `bookings` via le client de SESSION passent
+      désormais par le client ADMIN avec filtre `washer_id` explicite partout — nouveau garde-fou
+      `lib/supabase/accesBookings.test.ts` qui scanne le code et échoue si `bookings` est un jour
+      relu par la session. Au passage : deux écritures du PATCH (`google_calendar_event_id`,
+      `review_request_at`) qui n'avaient PAS de filtre `washer_id` en ont reçu un.
+      **Reste à faire — le REVOKE lui-même, SQL préparé mais PAS exécuté** (c'est lui qui ferme
+      vraiment la porte F12 décrite ci-dessus ; sans lui, un laveur peut toujours interroger
+      Supabase en direct, le site ne fait plus ce chemin mais Supabase l'autorise encore) :
       - Écriture : `REVOKE UPDATE` sur `bookings` pour `authenticated`, puis `GRANT UPDATE` limité
         aux seules colonnes que le navigateur du laveur écrit réellement (`status`, `notes`,
         `closed_late`, `scheduled_at`, `google_calendar_event_id`, `review_request_at`…) —
         `dev` doit d'abord en faire l'inventaire exact.
-      - Lecture : retirer le SELECT des colonnes personnelles à `authenticated`, et servir le
-        dashboard soit via le service-role après masquage (comme le reste du site), soit par une
-        vue/RPC qui masque directement en SQL.
+      - Lecture : retirer le SELECT des colonnes personnelles à `authenticated` — fait côté code
+        (service-role après masquage, comme le reste du site), reste à retirer le GRANT lui-même.
       À vérifier d'abord en lecture seule (pas lancé) :
       ```sql
       select grantee, privilege_type, column_name from information_schema.column_privileges where table_name='bookings' and grantee in ('anon','authenticated');
       select policyname, cmd, qual, with_check from pg_policies where tablename='bookings';
       ```
+      **Ordre impératif (Ryan)** : le code bascule-admin doit être déployé AVANT le REVOKE —
+      c'est fait depuis le 2026-10-04, le REVOKE peut donc être relu par `cyber` puis exécuté par
+      Alexandre quand il est prêt.
+
+- [ ] **🔒 SÉCURITÉ — `fusionner_clients` et `anonymiser_client` n'importe quel laveur peut agir
+      sur les clients d'un AUTRE laveur.** Trouvé par Ryan le 2026-10-04 en marge de l'audit
+      ci-dessus, pas corrigé — **potentiellement plus grave que le point précédent** : destructeur
+      et inter-laveurs (fusion/suppression de fiches client), pas juste une lecture. Les deux
+      fonctions SQL (voir leur code plus bas, section « Roadmap produit » › Menu « Options » de la
+      fiche refait) sont `SECURITY DEFINER` et accordées à `authenticated`, mais ne vérifient
+      jamais que `p_washer_id` (donné par l'appelant) appartient bien à l'appelant — confirmé en
+      relisant le SQL déjà en base. Correctif attendu : ajouter dans chaque fonction un contrôle
+      `p_washer_id in (select id from washers where user_id = auth.uid())`, lever une exception
+      sinon. À transmettre à `cyber` pour validation avant correctif.
+
+- [ ] **Pistes signalées par Ryan le 2026-10-04, sans correction — à trier/prioriser** :
+      - `create_booking_atomic` : fonction absente du dépôt (vit uniquement en base), permissions
+        jamais vérifiées depuis le dépôt de code.
+      - `GET /api/booking-availability` (public) expose l'heure exacte des créneaux, y compris
+        ceux verrouillés par le masquage — nécessaire au calcul des créneaux côté client, à
+        arbitrer plutôt qu'à corriger à l'aveugle.
+      - `api/debug/reviews` répond sans masquage.
+      - `POST /bookings/[id]/facture` peut facturer une réservation verrouillée après coup.
+      - `e2e/cleanup` tourne sans authentification, actif en dev sur la base de prod partagée.
 - [ ] **🔒 Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.** Route publique sans session :
       l'id de réservation sert de clé d'accès pour le VRAI client (confirmation/facture sans
       compte), mais le même id est visible du laveur dans son propre dashboard pour une
