@@ -7,8 +7,10 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
-> partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
+> Dernière mise à jour : 2026-10-04 (sécurité `bookings` : bascule client admin faite par Ryan
+> et fusionnée sur master, REVOKE RLS toujours en attente ; nouvelle faille trouvée sur
+> `fusionner_clients`/`anonymiser_client`). Avant : 2026-09-21 (audit post-lancement : vitesse,
+> contraste, image de partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
 > facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
 > livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
 > fiche client, forfaits annuels)
@@ -210,6 +212,13 @@
       Revérifié après coup : une requête directe à l'API Supabase avec la clé publique renvoie
       bien `42501 permission denied for table bookings` ; le dashboard (accueil, Clients,
       Calendrier) continue de fonctionner normalement avec une vraie session.
+- [ ] **Non résolu, à trier/prioriser (signalé par Ryan le 2026-10-04)** :
+      - `GET /api/booking-availability` (public) expose l'heure exacte des créneaux, y
+        compris ceux verrouillés par le masquage — nécessaire au calcul des créneaux côté
+        client, à arbitrer plutôt qu'à corriger à l'aveugle.
+      - `POST /bookings/[id]/facture` peut facturer une réservation verrouillée après coup.
+      (`create_booking_atomic` : voir plus bas, vérifié sans faille. `api/debug/reviews` et
+      `e2e/cleanup` : déjà fermés en production, voir section Polish/Audit du site.)
 - [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.**
       **Code committé en local, PAS encore poussé — `BOOKING_LINK_SECRET` à ajouter sur Vercel
       (production + preview) avant déploiement, sinon la route refuse le PDF de toute réservation

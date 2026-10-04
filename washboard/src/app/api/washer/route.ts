@@ -11,6 +11,7 @@ import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
 import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
 import { widgetsValides } from '@/lib/dashboardWidgets'
 import { slugValide, slugLibre } from '@/lib/slug'
+import { BookingPageModeSchema } from '@/lib/bookingPageMode'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -18,7 +19,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const {
-    name, phone, slug, logo_url, welcome_message, brand_color, team_size,
+    name, phone, slug, logo_url, welcome_message, brand_color, team_size, booking_page_mode,
     smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value,
     reservation_jour_meme,
     travel_fee_tiers, base_address, travel_fee_mode, background_theme, website_url, google_place_id,
@@ -32,6 +33,9 @@ export async function PATCH(request: NextRequest) {
   } = await request.json()
 
   // ── Validations ──────────────────────────────────────────────────────────
+  if (booking_page_mode !== undefined && !BookingPageModeSchema.safeParse(booking_page_mode).success) {
+    return NextResponse.json({ error: 'Choix de page invalide' }, { status: 400 })
+  }
   if (name !== undefined && !String(name).trim()) {
     return NextResponse.json({ error: "Le nom de l'entreprise est requis" }, { status: 400 })
   }
@@ -65,6 +69,24 @@ export async function PATCH(request: NextRequest) {
     if (pixelNettoye !== null && !pixelIdValide(pixelNettoye)) {
       return NextResponse.json(
         { error: 'Identifiant de Pixel Meta invalide : il compte 15 ou 16 chiffres.' },
+        { status: 400 },
+      )
+    }
+  }
+
+  // ── ID de fiche Google ──────────────────────────────────────────────────
+  // Vu en pratique : le lien Google Maps complet collé à la place de
+  // l'identifiant court qu'il contient (les deux se ressemblent, se trouvent
+  // au même endroit). Google n'y voit qu'un `place_id` invalide et refuse
+  // l'appel sans un mot (`INVALID_REQUEST`, lib/googleReviews.ts) — la note
+  // disparaît simplement, sans que rien ne dise pourquoi. Un vrai identifiant
+  // ne contient jamais « :// » ni d'espace ; un lien, presque toujours les deux.
+  let placeIdNettoye: string | null = null
+  if (google_place_id !== undefined) {
+    placeIdNettoye = google_place_id?.trim() || null
+    if (placeIdNettoye && (/:\/\//.test(placeIdNettoye) || /\s/.test(placeIdNettoye))) {
+      return NextResponse.json(
+        { error: 'Ceci ressemble à un lien Google Maps, pas à un identifiant de fiche. Collez uniquement l’identifiant (ex. ChIJN1t_tDeuEmsRUsoyG83frY4).' },
         { status: 400 },
       )
     }
@@ -145,6 +167,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   const updates: Record<string, unknown> = {}
+  // Le choix du parcours est ouvert à tous ; les réglages payants conservent
+  // leurs contrôles d'offre ci-dessus. Aucun autre réglage n'est effacé.
+  if (booking_page_mode !== undefined) updates.booking_page_mode = booking_page_mode
 
   // Widgets affichés sur l'accueil. Les clés inconnues sont silencieusement
   // écartées (voir widgetsValides) plutôt que de faire échouer tout
@@ -212,7 +237,7 @@ export async function PATCH(request: NextRequest) {
   if (background_theme !== undefined) updates.background_theme = background_theme || null
   if (website_url !== undefined) updates.website_url = website_url?.trim() || null
   if (meta_pixel_id !== undefined) updates.meta_pixel_id = pixelNettoye
-  if (google_place_id !== undefined) updates.google_place_id = google_place_id?.trim() || null
+  if (google_place_id !== undefined) updates.google_place_id = placeIdNettoye
   if (review_enabled !== undefined) updates.review_enabled = Boolean(review_enabled)
   if (review_delay_hours !== undefined) updates.review_delay_hours = Math.min(168, Math.max(0, Math.floor(Number(review_delay_hours)) || 0))
   if (google_review_url !== undefined) updates.google_review_url = google_review_url?.trim() || null

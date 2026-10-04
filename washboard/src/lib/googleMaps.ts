@@ -53,10 +53,15 @@ const STATUTS_NORMAUX = new Set(['OK', 'ZERO_RESULTS'])
  * comportement de repli, mais la panne, elle, est désormais visible.
  *
  * @param event  Nom d'événement pour les logs (ex. « places.autocomplete »).
+ * @param init   Options `fetch` additionnelles (ex. `{ next: { revalidate } }`
+ *               pour un appel qu'on veut mettre en cache plutôt que rejouer à
+ *               chaque requête — absent par défaut, tous les appels existants
+ *               restent en requête vive, inchangés).
  */
 export async function fetchGoogleMaps<T extends { status?: string; error_message?: string }>(
   url: string,
   event: string,
+  init?: RequestInit,
 ): Promise<T | null> {
   const key = getMapsApiKey()
   if (!key) {
@@ -65,7 +70,7 @@ export async function fetchGoogleMaps<T extends { status?: string; error_message
   }
 
   try {
-    const res = await fetch(`${url}&key=${key}`)
+    const res = await fetch(`${url}&key=${key}`, init)
     const data = (await res.json()) as T
 
     if (data.status && !STATUTS_NORMAUX.has(data.status)) {

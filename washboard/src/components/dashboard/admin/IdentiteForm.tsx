@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
+import { bookingPageMode } from '@/lib/bookingPageMode'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
 import type { Washer, ZoneConfig } from '@/types'
@@ -58,6 +60,7 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
 
 export default function IdentiteForm({ washer }: { washer: Washer }) {
   const router = useRouter()
+  const [pageMode, setPageMode] = useState(() => bookingPageMode(washer.booking_page_mode))
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
   const [logoStatus, setLogoStatus] = useState<LogoStatus>('idle')
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -68,6 +71,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const bgFileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState(washer.welcome_message ?? '')
   const [websiteUrl, setWebsiteUrl] = useState(washer.website_url ?? '')
+  const [googlePlaceId, setGooglePlaceId] = useState(washer.google_place_id ?? '')
   const [pixelId, setPixelId] = useState(washer.meta_pixel_id ?? '')
   const [color, setColor] = useState(washer.brand_color ?? '#2563eb')
   const [colorSaving, setColorSaving] = useState(false)
@@ -75,6 +79,26 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Aperçu des avis réellement affichés sur la page publique (site + fiche
+  // Google) : pour que le laveur voie tout de suite si ses réglages donnent
+  // quelque chose, sans avoir à aller vérifier sa page lui-même — ajouté le
+  // 2026-10-04 après qu'un identifiant invalide soit resté silencieux.
+  const [avisApercu, setAvisApercu] = useState<
+    'chargement' | { aSource: boolean; aggregate: { value: number; count: number } | null } | null
+  >(null)
+  const chargerAvisApercu = useCallback(async () => {
+    setAvisApercu('chargement')
+    try {
+      const res = await fetch('/api/washer/avis-preview')
+      if (!res.ok) { setAvisApercu(null); return }
+      const data = await res.json()
+      setAvisApercu({ aSource: !!data.aSource, aggregate: data.aggregate ?? null })
+    } catch {
+      setAvisApercu(null)
+    }
+  }, [])
+  useEffect(() => { chargerAvisApercu() }, [chargerAvisApercu])
 
   // Zone d'intervention
   const zoneInit = washer.zone_config
@@ -243,6 +267,9 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       body: JSON.stringify({
         welcome_message: message,
         website_url: websiteUrl.trim() || null,
+        // Vidé, la page retombe sur ce que le site publie lui-même (s'il
+        // publie une moyenne) — voir `reviewsForWasher`, lib/googleReviews.ts.
+        google_place_id: googlePlaceId.trim() || null,
         // Vidé, il efface le Pixel : c'est ainsi que le laveur le retire, et
         // sa page redevient exactement ce qu'elle était — sans bandeau de
         // consentement ni script tiers.
@@ -252,8 +279,13 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
     if (res.ok) {
       setMsg({ ok: true, text: 'Modifications enregistrées' })
       router.refresh()
+      chargerAvisApercu()
     } else {
-      setMsg({ ok: false, text: 'Erreur lors de la sauvegarde' })
+      // La phrase du serveur (ex. identifiant de fiche Google invalide) vaut
+      // mieux qu'un message générique quand il y en a une : c'est elle qui dit
+      // QUOI corriger, pas seulement que la sauvegarde a échoué.
+      const body: { error?: string } = await res.json().catch(() => ({}))
+      setMsg({ ok: false, text: body.error || 'Erreur lors de la sauvegarde' })
     }
     setLoading(false)
   }
@@ -269,9 +301,15 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
 
   return (
     <form onSubmit={save} noValidate className="space-y-5">
+      <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>
+      {/* Logo et couleur restent modifiables quel que soit le mode de page :
+          la nouvelle page (« automatique ») les utilise aussi (logo et accent
+          du header) — seuls le fond et le message d'accueil ne lui servent
+          encore à rien, eux restent dans le bloc masqué plus bas. */}
+      <div className="space-y-5">
       <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Logo */}
-      <div id="identite" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <div className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Logo</h2>
         <div className="flex items-center gap-5">
           <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
@@ -356,6 +394,8 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       </div>
 
       </SectionVerrouillee>
+      </div>
+      <div hidden={pageMode !== 'custom'} className="space-y-5">
       <SectionVerrouillee verrouille={!peutPersonnaliser} planLabel={requiredPlanLabel('page_personnalisee')}>
       {/* Thème de fond */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
@@ -454,6 +494,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         />
       </div>
 
+      </div>
       {/* Site web + Avis Google */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Présence en ligne</h2>
@@ -469,6 +510,54 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           />
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Les avis clients visibles sur votre site seront récupérés automatiquement</p>
         </div>
+
+        <div>
+          <label className={labelClass}>
+            ID de fiche Google <span className="font-normal text-slate-400">(facultatif)</span>
+          </label>
+          <input
+            type="text"
+            value={googlePlaceId}
+            onChange={e => setGooglePlaceId(e.target.value)}
+            placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
+            className={inputClass}
+          />
+          {/* La note officielle Google prime sur ce que le site publie, mais
+              un laveur sans fiche configurée garde quand même une note si
+              son site en publie une (voir `reviewsForWasher`). */}
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+            Affiche votre vraie note Google (ex. « ★ 4,9 · 37 avis ») au lieu de celle
+            trouvée sur votre site, si vous en avez un.{' '}
+            <a
+              href="https://developers.google.com/maps/documentation/places/web-service/place-id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              Trouver l’identifiant de votre fiche
+            </a>.
+          </p>
+        </div>
+
+        {/* Preuve, pas une promesse : ce que la page publique affiche VRAIMENT
+            en ce moment avec le site/la fiche ci-dessus, recalculé à chaque
+            ouverture de l'écran et après chaque enregistrement. */}
+        {avisApercu === 'chargement' && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">Vérification de l’aperçu…</p>
+        )}
+        {avisApercu && avisApercu !== 'chargement' && avisApercu.aSource && (
+          avisApercu.aggregate ? (
+            <p className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Affiché sur votre page : ★ {avisApercu.aggregate.value.toLocaleString('fr-FR')} · {avisApercu.aggregate.count} avis
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Aucune note trouvée avec ces réglages. Vérifiez l’identifiant ou l’adresse de votre site.
+            </p>
+          )
+        )}
 
         <div>
           <label className={labelClass}>
@@ -495,7 +584,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       </div>
 
       {/* Aperçu */}
-      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+      <div hidden={pageMode !== 'custom'} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Aperçu header client</p>
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800">
           <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0">

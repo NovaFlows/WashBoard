@@ -35,71 +35,30 @@ test.describe('Réservation client complète', () => {
     await expect(page.locator('text=Application error')).not.toBeVisible()
 
     // ── 2. Sélectionner une prestation ────────────────────────────────
-    const serviceCard = page.locator('[data-testid="service-card"]').first()
-    await expect(serviceCard).toBeVisible({ timeout: 15_000 })
-    await serviceCard.click()
+    // Véhicule par défaut, prestation et options réunis dans une carte.
+    const service = page.getByRole('radio').first()
+    await expect(service).toBeVisible({ timeout: 15_000 })
+    await service.check()
+    await page.getByTestId('booking-continue').click()
 
-    // La sélection des types de véhicule apparaît
-    const vehicleIncrement = page.locator('[data-testid="vehicle-increment"]').first()
-    await expect(vehicleIncrement).toBeVisible({ timeout: 5_000 })
-    await vehicleIncrement.click()
-
-    // Le champ modèle devient obligatoire
-    const modelInput = page.locator('input[placeholder="Modèle du véhicule"]').first()
-    await expect(modelInput).toBeVisible({ timeout: 5_000 })
-    await modelInput.fill(TEST_MODEL)
-
-    // Continuer (activé une fois la prestation + véhicule + modèle remplis)
-    const continuService = page.locator('[data-testid="service-continue"]')
-    await expect(continuService).toBeEnabled({ timeout: 5_000 })
-    await continuService.click()
-
-    // ── 2 bis. Étape "Options" — seulement si la prestation a des options ──
-    // Elle est conditionnelle (voir BookingForm : « step 2 = Options (si dispo) »),
-    // donc on la passe si elle apparaît au lieu de supposer qu'elle est absente :
-    // c'est ce que ce test supposait, et il échouait dès qu'une prestation avec
-    // options était choisie.
-    const optionsContinue = page.locator('[data-testid="options-continue"]')
-    if (await optionsContinue.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await optionsContinue.click()
-    }
-
-    // ── 3. Choisir un créneau ─────────────────────────────────────────
-    // L'étape "Créneau" est rendue
-    await expect(page.locator('text=Choisissez un créneau')).toBeVisible({ timeout: 10_000 })
-
-    // Saisir l'adresse (déclenche le debounce zone 800 ms + API zone)
-    const addressInput = page.locator('input[placeholder="12 rue de la Paix, 75001 Paris"]')
-    await expect(addressInput).toBeVisible()
-    await addressInput.fill(TEST_ADDRESS)
-    // Fermer le dropdown d'autocomplete si ouvert
+    // ── 3. Adresse, puis jour et horaire ───────────────────────────────
+    await expect(page.getByRole('heading', { name: 'Où et quand ?' })).toBeVisible()
+    await page.getByLabel('Adresse du lavage').fill(TEST_ADDRESS)
     await page.keyboard.press('Escape')
+    await page.locator('[aria-label="Jours disponibles"] button').first().click()
+    const slot = page.locator('#wb-section-2 .grid.grid-cols-3 button').first()
+    await expect(slot).toBeVisible({ timeout: 15_000 })
+    await slot.click()
+    await expect(page.getByTestId('booking-continue')).toBeEnabled({ timeout: 15_000 })
+    await page.getByTestId('booking-continue').click()
 
-    // Cliquer sur le premier jour disponible (non désactivé)
-    await expect(page.locator('p:has-text("Sélectionnez un jour")')).toBeVisible()
-    const firstAvailableDay = page
-      .locator('p:has-text("Sélectionnez un jour") + div button:not([disabled])')
-      .first()
-    await expect(firstAvailableDay).toBeVisible({ timeout: 5_000 })
-    await firstAvailableDay.click()
-
-    // Les créneaux horaires s'affichent
-    await expect(page.locator('p:has-text("Heure")')).toBeVisible({ timeout: 5_000 })
-    const firstSlot = page.locator('.grid.grid-cols-4 button').first()
-    await expect(firstSlot).toBeVisible({ timeout: 5_000 })
-    await firstSlot.click()
-
-    // Attendre que la vérification de zone soit terminée + Continuer activé
-    const continuerSlot = page.getByRole('button', { name: 'Continuer' })
-    await expect(continuerSlot).toBeEnabled({ timeout: 10_000 })
-    await continuerSlot.click()
-
-    // ── 4. Remplir les coordonnées ────────────────────────────────────
-    await expect(page.locator('text=Vos coordonnées')).toBeVisible({ timeout: 10_000 })
-
-    await page.fill('input[placeholder="Jean Dupont"]', TEST_NAME)
-    await page.fill('input[placeholder="jean@email.com"]', CLIENT_EMAIL)
-    await page.fill('input[placeholder="06 00 00 00 00"]', TEST_PHONE)
+    // ── 4. Coordonnées et identification du véhicule ───────────────────
+    await expect(page.getByRole('heading', { name: 'Vos coordonnées' })).toBeVisible()
+    await page.getByLabel('Nom et prénom').fill(TEST_NAME)
+    await page.getByLabel(/Email pour/).fill(CLIENT_EMAIL)
+    await page.getByLabel('Téléphone', { exact: true }).fill(TEST_PHONE)
+    const model = page.getByLabel('Modèle du véhicule')
+    if (await model.isVisible()) await model.fill(TEST_MODEL)
 
     const confirmer = page.getByRole('button', { name: 'Confirmer la réservation' })
     await expect(confirmer).toBeEnabled({ timeout: 5_000 })
@@ -118,7 +77,7 @@ test.describe('Page réservation — états de base', () => {
   test('Page de réservation se charge', async ({ page }) => {
     await page.goto(`/book/${SLUG}`)
     await expect(page.locator('text=Application error')).not.toBeVisible()
-    await expect(page.locator('[data-testid="service-card"]').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('radio').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('Slug inexistant → 404 gracieuse', async ({ page }) => {

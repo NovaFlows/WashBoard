@@ -1,5 +1,7 @@
 'use client'
 
+import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
+import { bookingPageMode } from '@/lib/bookingPageMode'
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
@@ -14,18 +16,23 @@ import FeuilleCouleurV2 from '@/components/dashboard/FeuilleCouleurV2'
 import FeuilleFondV2 from '@/components/dashboard/FeuilleFondV2'
 import FeuilleMessageV2 from '@/components/dashboard/FeuilleMessageV2'
 import FeuilleSiteV2 from '@/components/dashboard/FeuilleSiteV2'
+import FeuilleAvisGoogleV2 from '@/components/dashboard/FeuilleAvisGoogleV2'
 import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/apparence'
 
 // « Apparence de ma page » — refonte 2026, destination NEUVE de « Plus » (la maquette
 // n'a aucun écran pour ça ; Alexandre, 2026-09-24 : « avec le même design que les
 // autres pages et les mêmes fonctionnalités qu'avant »). Réservé à la PWA installée
 // (voir Apparence.tsx, le garde-fou : le site est renvoyé vers
-// `/dashboard/admin#identite`, l'écran v1 `IdentiteForm`, inchangé).
+// `/dashboard/admin#identite`, l'écran web `IdentiteForm`).
+// Le choix default/custom est commun aux deux surfaces et sauvegardé séparément.
 //
 // Périmètre décidé par Alexandre : les CINQ premières cartes de `IdentiteForm` —
 // Logo, Couleur de la marque, Fond de la page, Message d'accueil, Présence en ligne
 // (le site web). Zone d'intervention, Créneaux intelligents et Google Agenda n'ont
 // AUCUNE trace ici : ils gardent leurs lignes provisoires dans Plus.
+// Avis Google (ID de fiche) ajouté le 2026-10-04, à la demande explicite
+// d'Alexandre : même geste que `IdentiteForm`, pour régler le même champ des
+// deux côtés sans devoir passer par le site.
 //
 // Un seul aperçu, en héros (approximation honnête de l'en-tête de la vraie page), puis
 // une carte de cinq lignes qui ouvrent chacune leur feuille. La couleur de la marque
@@ -36,7 +43,7 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/appar
 // rien. Les écritures : logo, couleur, fond au geste ; message et site par le bouton
 // Enregistrer de leur feuille.
 
-type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | null
+type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | 'avisGoogle' | null
 type Retrait = 'logo' | 'photo' | null
 
 type Props = {
@@ -46,6 +53,7 @@ type Props = {
 }
 
 export default function ApparenceV2({ nom, slug, initial }: Props) {
+  const [pageMode, setPageMode] = useState(() => bookingPageMode(initial.pageMode))
   const h = useApparenceV2(initial)
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [retrait, setRetrait] = useState<Retrait>(null)
@@ -114,11 +122,14 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
         </div>
       </div>
 
+      <BookingPageModePicker mode={pageMode} onChange={setPageMode} />
+      <div hidden={pageMode !== 'custom'} className="mt-4">
       <ApercuPageV2 nom={nom} logoUrl={h.logoUrl} message={h.message} couleur={h.couleur} fond={h.fond} />
       <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
         Aperçu approximatif de votre page.
       </p>
 
+      </div>
       <div className={etatLogoVisible ? 'mt-4' : ''} aria-live="polite">
         {etatLogoVisible && <EtatEnvoi etat={h.logo} />}
       </div>
@@ -146,14 +157,25 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
       <section aria-label="Réglages de la page" className="mt-[26px]">
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
+            {/* Logo et couleur restent modifiables quel que soit le mode de
+                page — la nouvelle page les utilise aussi. Fond et message
+                d'accueil ne lui servent encore à rien, ils restent réservés
+                à la page classique. */}
             <Ligne label="Logo" valeur={valeurLogo} onClick={() => setFeuille('logo')} />
             <Ligne
               label="Couleur de ma marque"
               pastille={h.couleur ?? COULEUR_PAR_DEFAUT}
               onClick={() => setFeuille('couleur')}
             />
+            <Ligne
+              label="Avis Google"
+              valeur={h.avisGoogle ? 'Renseigné' : 'Pas encore : note de votre site affichée'}
+              onClick={() => setFeuille('avisGoogle')}
+            />
+            {pageMode === 'custom' && <>
             <Ligne label="Fond de la page" valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
             <Ligne label="Message d’accueil" valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
+            </>}
             <Ligne label="Mon site web" valeur={h.site ? h.site.replace(/^https?:\/\//i, '') : 'Pas encore : aucun avis affiché'} tronquer onClick={() => setFeuille('site')} />
           </ul>
         </CarteListe>
@@ -216,6 +238,9 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
       )}
       {feuille === 'site' && (
         <FeuilleSiteV2 site={h.site} onEnregistrer={h.enregistrerSite} onClose={fermer} />
+      )}
+      {feuille === 'avisGoogle' && (
+        <FeuilleAvisGoogleV2 avisGoogle={h.avisGoogle} onEnregistrer={h.enregistrerAvisGoogle} onClose={fermer} />
       )}
 
       {retrait === 'logo' && (

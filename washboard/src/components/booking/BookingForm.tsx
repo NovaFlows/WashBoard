@@ -2,17 +2,25 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
-import { dureeTotale } from '@/lib/pricing'
+import { dureeTotale, formatPrice } from '@/lib/pricing'
+import { resumePrestation, resumeCreneau, montantMinimal, montantEstime } from '@/lib/bookingSummary'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
-import StepService from './StepService'
-import StepOptions from './StepOptions'
+import StepPrestation from './StepPrestation'
+import BookingAction from './BookingAction'
+import './booking.css'
 import StepSlot from './StepSlot'
-import StepContact from './StepContact'
+import ContactDetails from './ContactDetails'
 import StepConfirmation from './StepConfirmation'
 
-// Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
-// (voir migration 003 booking_funnel_events).
+// Trois cartes, options intégrées et une seule action dans la barre fixe.
+// Les étapes restent montées quand elles sont repliées pour préserver la saisie.
+// Le bouton de chaque étape est porté dans la barre par BookingAction : sa
+// validation et son gestionnaire restent au même endroit que ses champs.
+
+// Mappe l'étape réelle sur le nom d'étape suivi côté analytics (inchangé,
+// voir migration 003 booking_funnel_events) : la numérotation logique reste
+// la même, seule sa présentation a changé.
 const FUNNEL_STEP_NAMES: Record<number, FunnelStep> = {
   1: 'prestation',
   2: 'options',
@@ -45,6 +53,12 @@ type Props = {
    *  laveur fictif absent de la base. En production, on ne les passe pas. */
   disponibilites?: Disponibilites
   accent?: string
+  /** Lien `wa.me` déjà formaté, ou `null` si le laveur n'a pas de téléphone ou
+   *  a atteint son plafond de réservations du mois (voir page.tsx — le même
+   *  calcul commande déjà le bouton WhatsApp du bas de page, pas de raison de
+   *  le refaire ici). Affiche le lien « Une question avant de réserver ? »
+   *  de la maquette, juste sous la carte en cours. */
+  whatsappHref?: string | null
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -87,9 +101,16 @@ export type WasherPublic = {
 
 export type FormState = Partial<BookingFormData>
 
-// step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb' }: Props) {
-  const [step, setStep] = useState(1)
+/** Les trois cartes de l'accordéon. */
+type Section = 1 | 2 | 3
+
+export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', whatsappHref = null }: Props) {
+  const [section, setSection] = useState<Section>(1)
+  const [actionTarget, setActionTarget] = useState<HTMLDivElement | null>(null)
+  const priceDialog = useRef<HTMLDialogElement>(null)
+  const [slotVersion, setSlotVersion] = useState(0)
+  const [prestationComplete, setPrestationComplete] = useState(false)
+  const [screen, setScreen] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [jeton, setJeton] = useState<string | null>(null)
@@ -115,64 +136,48 @@ export default function BookingForm({ washer, services, categories, availabiliti
       .catch(() => { disposDemandees.current = false; setDisposEnEchec(true) })
   }, [washer.id])
 
-  // Filet : si le visiteur arrive à l'étape des créneaux sans avoir déclenché
+  // Filet : si le visiteur arrive à la carte des créneaux sans avoir déclenché
   // le chargement (clavier, lecteur d'écran, navigation inattendue), on le
   // lance ici plutôt que de le laisser devant un écran qui n'avance pas.
-  useEffect(() => { if (step >= 2) chargerDispos() }, [step, chargerDispos])
+  useEffect(() => { if (section >= 2) chargerDispos() }, [section, chargerDispos])
 
   const selectedService = services.find(s => s.id === form.service_id)
-  const hasAddons = (selectedService?.addons ?? []).length > 0
+
+  // Numéro d'étape « logique », pour l'analytics et le Pixel uniquement — la
+  // numérotation ne change pas avec la refonte visuelle, voir FUNNEL_STEP_NAMES.
+  const effectiveStep =
+    screen === 'done' ? 5 :
+    section === 3 ? 4 :
+    section === 2 ? 3 :
+    form.service_id && (selectedService?.addons.length ?? 0) > 0 ? 2 : 1
 
   // Un événement par étape franchie, y compris à l'arrivée sur la page
-  // (step === 1 dès le montage). Ne bloque jamais le parcours si ça échoue.
+  // (effectiveStep === 1 dès le montage). Ne bloque jamais le parcours si ça échoue.
   useEffect(() => {
-    trackFunnelStep(washer.id, FUNNEL_STEP_NAMES[step])
-  }, [step, washer.id])
+    trackFunnelStep(washer.id, FUNNEL_STEP_NAMES[effectiveStep])
+  }, [effectiveStep, washer.id])
 
   // ── Pixel Meta : « réservation commencée » ────────────────────────────────
   //
-  // À la DEUXIÈME étape, pas à l'arrivée sur la page. Arriver n'est pas
-  // commencer : le PageView couvre déjà la visite, et envoyer
+  // À la DEUXIÈME étape logique, pas à l'arrivée sur la page. Arriver n'est
+  // pas commencer : le PageView couvre déjà la visite, et envoyer
   // InitiateCheckout dès le montage rendrait les deux événements identiques —
   // Meta optimiserait alors pour des gens qui ouvrent la page et repartent.
-  //
-  // `evenementPixel` ne fait rien s'il n'y a pas de Pixel chargé, c'est-à-dire
-  // si le laveur n'en a pas déclaré ou si le visiteur a refusé. Ce composant
-  // n'a donc rien à vérifier.
   const checkoutEnvoye = useRef(false)
   useEffect(() => {
-    if (step < 2 || checkoutEnvoye.current) return
+    if (effectiveStep < 2 || checkoutEnvoye.current) return
     checkoutEnvoye.current = true
     evenementPixel('InitiateCheckout')
-  }, [step])
+  }, [effectiveStep])
 
-  // Stepper : 4 étapes si options dispo, 3 sinon
-  const STEPS = hasAddons
-    ? ['Prestation', 'Options', 'Créneau', 'Coordonnées']
-    : ['Prestation', 'Créneau', 'Coordonnées']
+  const updateForm = useCallback((data: Partial<BookingFormData>) => {
+    setForm(prev => Object.entries(data).every(([key, value]) => JSON.stringify(prev[key as keyof FormState]) === JSON.stringify(value)) ? prev : { ...prev, ...data })
+  }, [])
 
-  // Mappe le step réel sur la position dans le stepper
-  function stepperPos(s: number): number {
-    if (hasAddons) return s
-    if (s === 1) return 1
-    if (s === 3) return 2
-    if (s === 4) return 3
-    return s
-  }
-
-  const sp = stepperPos(step)
-
-  /** L'inverse de `stepperPos` : d'une position affichée vers l'étape réelle.
-   *  Sert aux libellés cliquables de la barre d'étapes. */
-  function stepDepuisPos(pos: number): number {
-    if (hasAddons) return pos
-    if (pos === 2) return 3
-    if (pos === 3) return 4
-    return pos
-  }
-
-  function updateForm(data: Partial<BookingFormData>) {
-    setForm(prev => ({ ...prev, ...data }))
+  function updatePrestation(data: FormState) {
+    updateForm({ ...data, scheduled_at: undefined, is_smart_slot: false, smart_discount: 0, travel_fee: undefined })
+    setPrestationComplete(false)
+    setSlotVersion(v => v + 1)
   }
 
   async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string }) {
@@ -200,9 +205,10 @@ export default function BookingForm({ washer, services, categories, availabiliti
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
+      updateForm(contactData)
       setBookingId(json.data.id)
       setJeton(json.data.jeton ?? null)
-      setStep(5)
+      setScreen('done')
 
       // ── Pixel Meta : « réservation confirmée » ──────────────────────────
       //
@@ -228,233 +234,294 @@ export default function BookingForm({ washer, services, categories, availabiliti
 
   const estProposition = washer.is_preview === true
 
+  // ── Barre de prix persistante (fidèle à la maquette) ──────────────────────
+  const barLabel = !form.service_id
+    ? 'À partir de'
+    : (form.address && form.travel_fee !== undefined ? 'Total, à régler sur place' : 'Total estimé, à régler sur place')
+  const barAmount = form.service_id ? montantEstime(form) : montantMinimal(services)
+
+  const complete2 = !!(form.scheduled_at && form.address)
+
+  function reouvrir(n: Section) {
+    setSection(n)
+    // Un clic sur « Modifier » doit ramener la vue sur la carte rouverte,
+    // sinon le visiteur reste scrollé devant la carte qu'il vient de
+    // refermer et ne voit pas ce qu'il a touché.
+    requestAnimationFrame(() => {
+      const card = document.getElementById(`wb-section-${n}`)
+      card?.focus({ preventScroll: true })
+      card?.scrollIntoView({ behavior: 'auto', block: 'start' })
+    })
+  }
+
   return (
     <div
-      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
-      // Au premier geste sur le formulaire — bien avant l'étape des créneaux,
-      // qui demande encore de choisir une prestation. Le temps que le visiteur
-      // clique, les disponibilités sont là : il ne voit aucune attente. Celui
-      // qui ne touche à rien (la grande majorité) ne déclenche aucune lecture.
+      id="wb-booking-accordion"
+      className="wb-booking flex flex-col gap-2.5"
+      style={{ '--booking-accent': accent } as React.CSSProperties}
+      // Au premier geste sur le formulaire — bien avant la carte des
+      // créneaux, qui demande encore de choisir une prestation. Le temps que
+      // le visiteur clique, les disponibilités sont là : il ne voit aucune
+      // attente. Celui qui ne touche à rien (la grande majorité) ne
+      // déclenche aucune lecture.
       onPointerDown={chargerDispos}
       onKeyDown={chargerDispos}
     >
-      {/* Annoncé d'emblée, et pas seulement à la dernière étape : un visiteur
-          qui parcourt trois écrans en croyant réserver, puis découvre que non,
-          est un client perdu pour le laveur. */}
-      {estProposition && (
-        <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 px-4 sm:px-6 py-3 text-sm">
-          <p className="font-bold">Aperçu — cette page n&apos;est pas encore active</p>
-          <p className="text-xs mt-0.5 leading-relaxed">
-            Elle montre à quoi ressemblerait la page de réservation de {washer.name}.
-            Aucune réservation ne peut être enregistrée pour l&apos;instant.
-          </p>
-        </div>
-      )}
-      {step < 5 && (
-        <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-start w-full">
-            {STEPS.map((label, i) => {
-              const n = i + 1
-              const done = sp > n
-              const active = sp === n
-              return (
-                <div key={n} className={`flex items-start ${n < STEPS.length ? 'flex-1' : ''}`}>
-                  {/* Une étape déjà franchie ramène directement à sa section.
-                      Les suivantes restent inertes : on ne saute pas une étape
-                      qu'on n'a pas remplie. */}
-                  <button
-                    type="button"
-                    onClick={() => { if (done) setStep(stepDepuisPos(n)) }}
-                    disabled={!done}
-                    aria-current={active ? 'step' : undefined}
-                    aria-label={done ? `Revenir à l'étape ${label}` : label}
-                    className={`flex flex-col items-center gap-1 shrink-0 rounded-lg px-1 py-0.5 transition-opacity ${
-                      done ? 'cursor-pointer hover:opacity-70' : 'cursor-default'
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                        done ? 'bg-emerald-500 text-white' :
-                        active ? 'text-white' :
-                        'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                      }`}
-                      style={active ? { backgroundColor: accent } : undefined}
-                    >
-                      {done ? (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 13l4 4L19 7"/>
-                        </svg>
-                      ) : n}
+      {screen === 'form' && (
+        <>
+          {/* Annoncé d'emblée, et pas seulement à la dernière carte : un
+              visiteur qui remplit tout en croyant réserver, puis découvre que
+              non, est un client perdu pour le laveur. */}
+          {estProposition && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3 text-sm">
+              <p className="font-bold">Aperçu — cette page n&apos;est pas encore active</p>
+              <p className="text-xs mt-0.5 leading-relaxed">
+                Elle montre à quoi ressemblerait la page de réservation de {washer.name}.
+                Aucune réservation ne peut être enregistrée pour l&apos;instant.
+              </p>
+            </div>
+          )}
+
+          <SectionCard
+            id="wb-section-1"
+            numero={1}
+            titre="Prestation"
+            etat={section === 1 ? 'open' : prestationComplete ? 'done' : 'locked'}
+            resume={resumePrestation(form, services)}
+            onModifier={() => reouvrir(1)}
+          >
+            <StepPrestation services={services} categories={categories} form={form} onChange={updatePrestation} />
+            <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
+              onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
+              {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}
+            </BookingAction>
+          </SectionCard>
+
+          <SectionCard
+            id="wb-section-2"
+            numero={2}
+            titre="Où et quand"
+            etat={section === 2 ? 'open' : complete2 ? 'done' : 'locked'}
+            resume={resumeCreneau(form)}
+            onModifier={() => reouvrir(2)}
+          >
+            {/* Tant que les disponibilités ne sont pas là, StepSlot n'est pas
+                monté du tout : avec des listes vides il montrerait tous les
+                créneaux libres et les congés comme travaillés. Mieux vaut une
+                seconde d'attente qu'une double réservation. En pratique
+                l'attente est invisible, le chargement ayant démarré au
+                premier geste. */}
+            {!dispos ? (
+              <div className="py-10 text-center">
+                {disposEnEchec ? (
+                  <>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Impossible d&apos;afficher les disponibilités
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-5">
+                      Vérifiez votre connexion : nous préférons ne rien proposer plutôt
+                      qu&apos;un horaire déjà pris.
+                    </p>
+                    <div className="flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSection(1)}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        Retour
+                      </button>
+                      <button
+                        type="button"
+                        onClick={chargerDispos}
+                        className="px-4 py-2 rounded-lg text-sm font-bold text-white"
+                        style={{ backgroundColor: accent }}
+                      >
+                        Réessayer
+                      </button>
                     </div>
-                    <span className={`text-[11px] font-medium text-center leading-tight ${
-                      active ? 'text-slate-900 dark:text-slate-100' :
-                      done ? 'text-emerald-600 dark:text-emerald-400' :
-                      'text-slate-400 dark:text-slate-500'
-                    }`}>{label}</span>
-                  </button>
-                  {n < STEPS.length && (
-                    <div className={`flex-1 h-px mt-3.5 mx-1 transition-colors ${done ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
-                  )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
+                    Recherche des créneaux disponibles…
+                  </p>
+                )}
+              </div>
+            ) : (
+              <StepSlot
+                key={slotVersion}
+                initialAddress={form.address}
+                active={section === 2}
+                actionTarget={section === 2 ? actionTarget : null}
+                onDraft={updateForm}
+                availabilities={availabilities}
+                existingBookings={dispos.bookings}
+                unavailabilities={dispos.unavailabilities}
+                teamSize={washer.team_size ?? 1}
+                // Règle unique, qui sait lire les deux formes : options rattachées
+                // à chaque véhicule, ou liste commune des anciennes réservations.
+                serviceDuration={dureeTotale(
+                  services.find(s => s.id === form.service_id)?.duration_minutes ?? 60,
+                  form.vehicles_detail,
+                  form.selected_addons,
+                  form.vehicle_count,
+                )}
+                servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
+                washerId={washer.id}
+                hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
+                travelFeeMode={washer.travel_fee_mode ?? 'base'}
+                reservationJourMeme={washer.reservation_jour_meme === true}
+                onNext={(data) => { updateForm(data); reouvrir(3) }}
+                accent={accent}
+              />
+            )}
+          </SectionCard>
+
+          <SectionCard
+            id="wb-section-3"
+            numero={3}
+            titre="Vos coordonnées"
+            etat={section === 3 ? 'open' : 'locked'}
+            resume=""
+            onModifier={() => reouvrir(3)}
+          >
+            {/* Sur une proposition, on s'arrête AVANT le formulaire de contact.
+                Le visiteur a vu les prestations, les tarifs et les créneaux —
+                c'est tout l'intérêt de la démonstration. Lui demander ensuite
+                son nom, son téléphone et son adresse collecterait des données
+                personnelles pour un laveur qui n'a rien accepté, et pour un
+                rendez-vous qui n'existera jamais. */}
+            {estProposition ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
                 </div>
-              )
-            })}
-          </div>
-        </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+                  Voilà à quoi ressemblerait votre page
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
+                  Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la
+                  pour que vos clients puissent réserver et que les rendez-vous
+                  tombent dans votre agenda.
+                </p>
+                <a
+                  href="/signup"
+                  className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: accent }}
+                >
+                  Activer ma page — 1 mois offert
+                </a>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Sans carte bancaire</p>
+                <button
+                  onClick={() => setSection(2)}
+                  className="block mx-auto mt-5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                >
+                  ← Revenir aux créneaux
+                </button>
+              </div>
+            ) : (
+              <ContactDetails
+                actionTarget={section === 3 ? actionTarget : null}
+                clientsProAutorises={washer.clients_pro !== false}
+                factureApresPrestation={washer.facturation_prete === true}
+                vehicles={form.vehicles_detail ?? []}
+                onChange={updateForm}
+                total={barAmount ?? 0}
+                whatsappHref={whatsappHref}
+                isProfessional={form.is_professional ?? false}
+                loading={loading}
+                error={error}
+                onSubmit={submitBooking}
+                accent={accent}
+              />
+            )}
+          </SectionCard>
+
+          {whatsappHref && (
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm leading-relaxed text-zinc-900 dark:text-zinc-200 py-2 px-1"
+            >
+              Une question avant de réserver ?{' '}
+              <span className="font-semibold text-slate-700 dark:text-slate-200 underline underline-offset-2">
+                Écrire sur WhatsApp
+              </span>
+            </a>
+          )}
+
+          {barAmount !== null && !(estProposition && section === 3) && (
+            <div className="wb-booking-footer">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div aria-live="polite"><p className="text-xs text-zinc-500 dark:text-zinc-400">{barLabel}</p>
+                  <p className="text-[28px] leading-tight font-bold tracking-tight tabular-nums">{formatPrice(barAmount)}</p></div>
+                {form.service_id && <button type="button" className="text-xs underline underline-offset-2 min-h-11" onClick={() => priceDialog.current?.showModal()}>Détail du prix</button>}
+              </div>
+              <div ref={setActionTarget} />
+              {section === 2 && !dispos && <button type="button" disabled className="wb-booking-continue">Chargement des disponibilités…</button>}
+            </div>
+          )}
+          <dialog ref={priceDialog} className="wb-booking-price-dialog" aria-labelledby="booking-price-title" onClick={e => { if (e.target === e.currentTarget) priceDialog.current?.close() }}>
+            <div className="flex items-center justify-between mb-5"><h2 id="booking-price-title" className="text-lg font-bold">Détail du prix</h2>
+              <button type="button" aria-label="Fermer le détail du prix" onClick={() => priceDialog.current?.close()} className="w-11 h-11 text-xl">×</button></div>
+            <div className="space-y-3 text-sm">
+              {(form.vehicles_detail ?? []).map((v, i) => <div key={i}>
+                <div className="flex justify-between gap-3"><span>{selectedService?.name} · {v.label ?? v.type}</span><span>{formatPrice(v.unit_price * v.count)}</span></div>
+                {(v.addons ?? []).map(a => <div key={a.id} className="flex justify-between gap-3 text-zinc-500 mt-2"><span>{a.label}</span><span>+{formatPrice(a.price)}</span></div>)}
+              </div>)}
+              <div className="flex justify-between gap-3"><span>Déplacement</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : 'À confirmer avec l’adresse'}</span></div>
+              {!!form.smart_discount && <div className="flex justify-between text-emerald-700"><span>Créneau avantageux</span><span>−{formatPrice(form.smart_discount)}</span></div>}
+              <div className="flex justify-between border-t border-zinc-200 pt-4 text-base font-bold"><span>Total estimé</span><span>{formatPrice(barAmount ?? 0)}</span></div>
+              <p className="text-xs text-zinc-500">À régler sur place, après la prestation.</p>
+            </div>
+          </dialog>
+        </>
       )}
 
-      <div className="p-6">
-        {step === 1 && (
-          <StepService
-            services={services}
-            categories={categories}
-            factureApresPrestation={washer.facturation_prete === true}
-            clientsProAutorises={washer.clients_pro !== false}
-            selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
-            onNext={(data) => {
-              // Changer de prestation invalide les options de la précédente :
-              // les garder fausserait le prix et la durée, d'autant qu'on peut
-              // maintenant revenir ici d'un clic sur la barre d'étapes.
-              const changeDePrestation = data.service_id !== form.service_id
-              updateForm(changeDePrestation ? { ...data, selected_addons: [] } : data)
-              const svc = services.find(s => s.id === data.service_id)
-              setStep((svc?.addons ?? []).length > 0 ? 2 : 3)
-            }}
-            accent={accent}
-          />
-        )}
-        {step === 2 && selectedService && (
-          <StepOptions
-            service={selectedService}
-            vehicules={form.vehicles_detail ?? []}
-            basePrice={form.booked_price ?? selectedService.price}
-            baseDuration={selectedService.duration_minutes}
-            onNext={(data) => { updateForm(data); setStep(3) }}
-            onBack={() => setStep(1)}
-            accent={accent}
-          />
-        )}
-        {/* Tant que les disponibilités ne sont pas là, StepSlot n'est pas monté
-            du tout : avec des listes vides il montrerait tous les créneaux
-            libres et les congés comme travaillés. Mieux vaut une seconde
-            d'attente qu'une double réservation. En pratique l'attente est
-            invisible, le chargement ayant démarré au premier geste. */}
-        {step === 3 && !dispos && (
-          <div className="py-10 text-center">
-            {disposEnEchec ? (
-              <>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  Impossible d&apos;afficher les disponibilités
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-5">
-                  Vérifiez votre connexion : nous préférons ne rien proposer plutôt
-                  qu&apos;un horaire déjà pris.
-                </p>
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep(hasAddons ? 2 : 1)}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    Retour
-                  </button>
-                  <button
-                    type="button"
-                    onClick={chargerDispos}
-                    className="px-4 py-2 rounded-lg text-sm font-bold text-white"
-                    style={{ backgroundColor: accent }}
-                  >
-                    Réessayer
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
-                Recherche des créneaux disponibles…
-              </p>
-            )}
-          </div>
-        )}
-        {step === 3 && dispos && (
-          <StepSlot
-            availabilities={availabilities}
-            existingBookings={dispos.bookings}
-            unavailabilities={dispos.unavailabilities}
-            teamSize={washer.team_size ?? 1}
-            // Règle unique, qui sait lire les deux formes : options rattachées
-            // à chaque véhicule, ou liste commune des anciennes réservations.
-            serviceDuration={dureeTotale(
-              services.find(s => s.id === form.service_id)?.duration_minutes ?? 60,
-              form.vehicles_detail,
-              form.selected_addons,
-              form.vehicle_count,
-            )}
-            servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
-            washerId={washer.id}
-            hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
-            travelFeeMode={washer.travel_fee_mode ?? 'base'}
-            reservationJourMeme={washer.reservation_jour_meme === true}
-            onNext={(data) => { updateForm(data); setStep(4) }}
-            onBack={() => setStep(hasAddons ? 2 : 1)}
-            accent={accent}
-          />
-        )}
-        {/* Sur une proposition, on s'arrête AVANT le formulaire de contact.
-            Le visiteur a vu les prestations, les tarifs et les créneaux —
-            c'est tout l'intérêt de la démonstration. Lui demander ensuite son
-            nom, son téléphone et son adresse collecterait des données
-            personnelles pour un laveur qui n'a rien accepté, et pour un
-            rendez-vous qui n'existera jamais. */}
-        {step === 4 && estProposition && (
-          <div className="text-center py-4">
-            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-              Voilà à quoi ressemblerait votre page
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
-              Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la
-              pour que vos clients puissent réserver et que les rendez-vous
-              tombent dans votre agenda.
-            </p>
-            <a
-              href="/signup"
-              className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
-              style={{ backgroundColor: accent }}
-            >
-              Activer ma page — 1 mois offert
-            </a>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Sans carte bancaire</p>
-            <button
-              onClick={() => setStep(3)}
-              className="block mx-auto mt-5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-            >
-              ← Revenir aux créneaux
-            </button>
-          </div>
-        )}
-        {step === 4 && !estProposition && (
-          <StepContact
-            isProfessional={form.is_professional ?? false}
-            loading={loading}
-            error={error}
-            onSubmit={submitBooking}
-            onBack={() => setStep(3)}
-            accent={accent}
-          />
-        )}
-        {step === 5 && (
-          <StepConfirmation
-            washerName={washer.name}
-            bookingId={bookingId!}
-            jeton={jeton}
-            form={form}
-            services={services}
-          />
-        )}
-      </div>
+      {screen === 'done' && bookingId && (
+        <StepConfirmation
+          washerName={washer.name}
+          bookingId={bookingId}
+          jeton={jeton}
+          form={form}
+          services={services}
+          whatsappHref={whatsappHref}
+        />
+      )}
     </div>
   )
+}
+
+/** Chrome commun aux trois cartes de l'accordéon : ouverte (son contenu),
+ *  validée (une ligne résumé + « Modifier »), ou verrouillée (un repère
+ *  numéroté, en pointillés — on ne montre pas un contenu qu'il n'est pas
+ *  encore temps de remplir). */
+function SectionCard({
+  id, numero, titre, etat, resume, onModifier, children,
+}: {
+  id: string
+  numero: number
+  titre: string
+  etat: 'open' | 'done' | 'locked'
+  resume: string
+  onModifier: () => void
+  children: React.ReactNode
+}) {
+  return <section id={id} tabIndex={-1} aria-label={titre} className={
+    'scroll-mt-4 outline-none rounded-2xl ' + (etat === 'locked'
+      ? 'border border-dashed border-zinc-300 dark:border-zinc-700'
+      : 'border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900')
+  }>
+    {etat !== 'open' && <div className="min-h-[58px] px-4 py-2 flex items-center gap-3">
+      <span aria-hidden="true" className={'shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-xs ' + (etat === 'done' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'border border-zinc-300 text-zinc-500')}>
+        {etat === 'done' ? '✓' : numero}
+      </span>
+      <div className="min-w-0 flex-1"><p className={etat === 'done' ? 'text-xs text-zinc-500' : 'text-sm text-zinc-500 font-medium'}>{titre}</p>
+        {etat === 'done' && <p className="text-sm truncate">{resume}</p>}</div>
+      {etat === 'done' && <button type="button" aria-label={`Modifier : ${titre}`} aria-expanded={false} aria-controls={id + '-content'} onClick={onModifier} className="text-sm underline underline-offset-2 min-h-11">Modifier</button>}
+    </div>}
+    <div id={id + '-content'} hidden={etat !== 'open'} className="p-4 sm:p-5">{children}</div>
+  </section>
 }

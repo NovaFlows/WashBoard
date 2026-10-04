@@ -106,4 +106,17 @@ describe('fetchGoogleMaps', () => {
     await fetchGoogleMaps('https://x?a=1', 'test')
     expect(String(spy.mock.calls[0][0])).toContain('key=cle-test')
   })
+
+  it('transmet les options fetch données (ex. la mise en cache) sans rien changer par défaut', async () => {
+    // Les deux paramètres sont nécessaires au typage de `spy.mock.calls[0][1]`
+    // (même remarque que pour « ajoute la clé à l’URL » ci-dessus).
+    const spy = vi.fn(async (url: string, init?: RequestInit) => ({ json: async () => ({ status: 'OK', url, init }) }))
+    vi.stubGlobal('fetch', spy)
+    await fetchGoogleMaps('https://x?a=1', 'test', { next: { revalidate: 86400 } })
+    expect(spy.mock.calls[0][1]).toEqual({ next: { revalidate: 86400 } })
+
+    spy.mockClear()
+    await fetchGoogleMaps('https://x?a=1', 'test')
+    expect(spy.mock.calls[0][1]).toBeUndefined()
+  })
 })

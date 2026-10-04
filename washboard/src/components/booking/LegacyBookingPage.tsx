@@ -1,0 +1,249 @@
+import { Suspense } from 'react'
+import Image from 'next/image'
+import RetourApercu from '@/components/booking/RetourApercu'
+import BookingForm from '@/components/booking/LegacyBookingForm'
+import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { getBgStyle, urlVersionnee } from '@/lib/themes'
+import { reviewsForWasher } from '@/lib/googleReviews'
+import { hasFeature, quotaPrestations } from '@/lib/plan'
+import { prestationsAffichees } from '@/lib/prestation'
+import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
+
+import type { Washer, Service, ServiceCategory, Availability } from '@/types'
+import type { AbonnementInfo } from '@/lib/plan'
+type Props = {
+ washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
+ services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
+ plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
+}
+/** Présentation classique : les lectures et contrôles restent dans la route publique. */
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId}: Props) {
+  const personnalisee = hasFeature(washer, 'page_personnalisee')
+  const logoUrl       = personnalisee ? washer.logo_url : null
+  const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
+
+  const bgStyle = personnalisee ? getBgStyle(washer.background_theme, washer.profile_updated_at) : null
+  const themed  = !!bgStyle
+
+  return (
+    <>
+    {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
+    <RetourApercu />
+    <div
+      className={`min-h-screen ${themed ? '' : 'bg-slate-50 dark:bg-slate-950'}`}
+      style={bgStyle ?? undefined}
+    >
+      <header className={
+        themed
+          ? 'border-b border-white/10 bg-black/30 backdrop-blur-sm'
+          : 'border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+      }>
+        <div className="w-full px-6 py-3 flex items-center justify-between">
+          {/* ── Qui signe cette page ────────────────────────────────────────
+              Sur une offre payante, le laveur : son logo, son nom. Sur
+              l'offre gratuite, WashBoard : notre logo et notre nom, exactement
+              ce que la grille tarifaire annonce (« page aux couleurs
+              WashBoard »).
+
+              L'initiale du laveur dans un carré gris ne signait rien : ni lui,
+              puisqu'il n'a pas choisi cette identité, ni nous. Son nom, lui,
+              n'a pas disparu — il reste juste en dessous, en titre de page,
+              là où le client le lit de toute façon avant de réserver. */}
+          {personnalisee ? (
+            <div className="flex items-center gap-3">
+              {logoUrl ? (
+                // Passe par l'optimiseur d'images de Next (redimension,
+                // compression, cache à l'edge) au lieu de resservir le
+                // fichier Supabase en entier à chaque visiteur — c'est déjà
+                // ce qui a fait dépasser le quota de bande passante une fois
+                // (voir api/washer/logo/route.ts). `?v=` évite de montrer un
+                // ancien logo après un nouvel envoi : le chemin de stockage
+                // est réutilisé (upsert), pas l'URL.
+                <Image
+                  src={urlVersionnee(logoUrl, washer.profile_updated_at)}
+                  alt={washer.name}
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-xl object-cover"
+                />
+              ) : (
+                <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold select-none ${
+                  themed
+                    ? 'bg-white/10 border-white/20 text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {washer.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className={`text-2xl font-extrabold leading-none tracking-tight ${themed ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
+                  {washer.name}
+                </p>
+                <p className={`text-xs mt-1 leading-none ${themed ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {washer.welcome_message || 'Réservation en ligne'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/LogoWashBoard.png"
+                alt=""
+                aria-hidden
+                className="w-10 h-10 object-contain"
+              />
+              <div>
+                <p className="text-2xl font-extrabold leading-none tracking-tight text-slate-900 dark:text-slate-100">
+                  WashBoard
+                </p>
+                <p className="text-xs mt-1 leading-none text-slate-400 dark:text-slate-500">
+                  {washer.welcome_message || 'Réservation en ligne'}
+                </p>
+              </div>
+            </div>
+          )}
+          {!themed && <ThemeToggle large />}
+        </div>
+      </header>
+
+      <main id="main-content" className="max-w-lg mx-auto px-4 py-8">
+        {/* ── Le titre de la page : chez qui on réserve ─────────────────────
+            Le nom du laveur, toujours — c'est lui que le client vient voir.
+            Ce que l'offre gratuite ne lui donne pas, c'est L'EN-TÊTE : là-haut,
+            c'est notre logo et notre nom. La vitrine est à nous, le rendez-vous
+            est à lui. */}
+        {!themed && (
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{washer.name}</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Réservez votre lavage à domicile en quelques clics</p>
+          </div>
+        )}
+        {themed && (
+          <>
+            <h1 className="sr-only">Réservez votre lavage avec {washer.name}</h1>
+            <div className="mb-6" />
+          </>
+        )}
+
+        <BookingForm
+          // Champs énumérés un par un, jamais l'objet entier : tout ce qui
+          // franchit la frontière serveur→client est sérialisé dans le HTML
+          // public, utilisé ou non. Passer `washer` publiait le
+          // `stripe_customer_id` et le `google_refresh_token` du laveur dans le
+          // code source de sa page de réservation.
+          washer={{
+            id: washer.id,
+            name: washer.name,
+            base_address: washer.base_address ?? null,
+            team_size: washer.team_size ?? null,
+            travel_fee_mode: washer.travel_fee_mode ?? 'base',
+            travel_fee_tiers: washer.travel_fee_tiers ?? null,
+            reservation_jour_meme: washer.reservation_jour_meme ?? false,
+            is_preview: washer.is_preview ?? false,
+            facturation_prete: facturationPrete,
+            // Réserver en tant qu'entreprise demande le suivi qui va avec —
+            // fiche société, facture, relance. L'offre gratuite ne l'a pas.
+            clients_pro: hasFeature(washer, 'crm'),
+          }}
+          // Une prestation sans type s'affichait, se sélectionnait, puis
+          // laissait le client devant un bouton Continuer grisé sans rien à
+          // choisir. Le tableau de bord la signale au laveur en rouge.
+          services={prestationsAffichees(services ?? [], quotaPrestations(washer))}
+          categories={categories ?? []}
+          availabilities={availabilities ?? []}
+          // Plus de existingBookings/unavailabilities ici : BookingForm les
+          // charge lui-même via /api/booking-availability (voir plus haut).
+          // `accent` respecte la règle "personnalisation réservée aux offres
+          // payantes" — c'est washer.brand_color brut sur les offres payantes,
+          // le bleu WashBoard sinon (calculé plus haut).
+          accent={accent}
+        />
+
+        {(washer.website_url || washer.google_place_id) && (
+          // L'appel externe vers le site du laveur et/ou vers l'API Google
+          // Places (voir `reviewsForWasher`) peut prendre plusieurs secondes
+          // sur un cache froid. Le rendu de l'essentiel (services, prix,
+          // disponibilités) n'a pas à l'attendre : ce bloc est streamé à part,
+          // sans skeleton (`fallback={null}`) puisqu'il n'occupe qu'un espace
+          // secondaire, sous le formulaire de réservation.
+          <Suspense fallback={null}>
+            <ReviewsSection websiteUrl={washer.website_url} googlePlaceId={washer.google_place_id ?? null} themed={themed} />
+          </Suspense>
+        )}
+
+        {/* ── Contact direct : jusqu'au plafond du mois, pas au-delà ───────
+            Le bouton reste là tant que le laveur n'a pas atteint son quota :
+            c'est son outil de travail, et le lui retirer parce qu'il est sur
+            une petite offre serait une punition, pas un modèle économique.
+            Il disparaît AU MOMENT où le plafond est atteint, et pour la seule
+            raison qui compte : au-delà, le laveur ne voit plus le téléphone ni
+            l'adresse de ses nouveaux clients. Lui laisser un bouton WhatsApp
+            annulerait tout — le client écrit, le laveur répond, et il récupère
+            par ce biais ce qu'on vient de masquer. Le mois suivant remet le
+            compteur à zéro, et le bouton revient tout seul.
+
+            À ne pas confondre avec l'écran « page suspendue » plus haut, qui
+            garde son bouton d'appel : là, contacter le prestataire est la
+            seule chose qui reste à faire. */}
+        {washer.phone && !plafondAtteint && (
+          <div className="mt-6 flex justify-center">
+            <a
+              href={`https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Nous contacter sur WhatsApp
+            </a>
+          </div>
+        )}
+        {!personnalisee && (
+          // La marque de l'offre gratuite. Discrète mais cliquable : c'est le
+          // seul canal d'acquisition que le produit s'offre à lui-même.
+          <p className="mt-10 text-center text-xs text-slate-400 dark:text-slate-500">
+            Réservation propulsée par{' '}
+            <a
+              href="https://www.washboard.fr"
+              target="_blank"
+              rel="noopener"
+              className="font-semibold text-slate-500 dark:text-slate-400 underline underline-offset-2"
+            >
+              WashBoard
+            </a>
+          </p>
+        )}
+        {/* « Gérer mes cookies » : n'apparaît que si le laveur a un Pixel,
+            donc que s'il y a quelque chose à gérer. */}
+        {pixelId && (
+          <p className="mt-6 text-center">
+            <LienGererCookies pixelId={pixelId} />
+          </p>
+        )}
+      </main>
+
+      {/* Le bandeau, et le chargement du Pixel qu'il commande. Sans Pixel
+          déclaré, ce composant ne rend rien et n'injecte rien. */}
+      <ConsentementCookies pixelId={pixelId} slug={washer.slug} />
+    </div>
+    </>
+  )
+}
+
+/** Composant serveur asynchrone séparé pour permettre le streaming (`Suspense`
+ *  dans `BookingPage`) : React peut envoyer le reste de la page pendant que
+ *  cet appel externe est encore en vol. */
+async function ReviewsSection({ websiteUrl, googlePlaceId, themed }: { websiteUrl: string | null; googlePlaceId: string | null; themed: boolean }) {
+  const reviewData = await reviewsForWasher({ website_url: websiteUrl, google_place_id: googlePlaceId })
+  const hasReviews = reviewData.reviews.length > 0 || !!reviewData.aggregate
+  if (!hasReviews) return null
+
+  return (
+    <div className="mt-6">
+      <ReviewsCarousel reviews={reviewData.reviews} aggregate={reviewData.aggregate} themed={themed} />
+    </div>
+  )
+}
