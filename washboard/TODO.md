@@ -415,7 +415,13 @@
       dans le JSON renvoyé au visiteur public — la route ne renvoie plus que les 4 champs
       documentés, verrouillé ou pas. 6 tests ajoutés (`reservationsVerrouillees.test.ts`,
       `bookings/jour/route.test.ts`, `booking-availability/route.test.ts`),
-      `tsc`/`eslint`/`vitest run` (2449 tests) et `next build` revérifiés.
+      `tsc`/`eslint`/`vitest run` (2449 tests) et `next build` revérifiés. **Vérifié en
+      conditions réelles** par `e2e/security-facture-exemption.spec.ts` (nouveau projet
+      Playwright `security`) : compte jetable créé et authentifié via le service-role (pas
+      `TEST_WASHER_*`, supprimé après coup), 5 réservations dans le quota + une 6ᵉ au-delà
+      déjà facturée + une 7ᵉ témoin sans facture — exécuté en local, les deux assertions
+      passent (la facturée reste en clair, la témoin reste masquée), nettoyage vérifié (plus
+      aucune trace en base après coup).
 - [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
       elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
       ci-dessus — à croiser avec `legal`, rien corrigé :

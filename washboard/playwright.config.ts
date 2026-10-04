@@ -73,6 +73,14 @@ export default defineConfig({
       testMatch: /(content-seo|api-public|auth-public)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // Sécurité, compte jetable : le test construit et authentifie son PROPRE
+      // compte via le service-role (créé puis supprimé), sans dépendre de
+      // `TEST_WASHER_*` ni de la session partagée du projet `washer`.
+      name: 'security',
+      testMatch: /security-.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // 3. Tests laveur — nécessite l'authentification
     {
       name: 'washer',
