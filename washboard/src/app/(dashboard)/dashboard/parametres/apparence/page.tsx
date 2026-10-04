@@ -5,8 +5,8 @@ import Apparence from '@/components/dashboard/Apparence'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // Refonte 2026 — « Apparence de ma page » : le logo, la couleur, le fond, le message
-// d'accueil et le site web de la page de réservation. Réservé à la PWA installée
-// (voir Apparence.tsx, le garde-fou : le site est renvoyé vers
+// d'accueil, le site web et l'ID de fiche Google de la page de réservation. Réservé
+// à la PWA installée (voir Apparence.tsx, le garde-fou : le site est renvoyé vers
 // `/dashboard/admin#identite`).
 //
 // L'adresse est sous `/dashboard/parametres/` pour que « Plus » reste allumé dans la
@@ -19,7 +19,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // Les colonnes sont ÉNUMÉRÉES (jamais `*`) : tout ce qui franchit la frontière
 // serveur → navigateur est sérialisé dans la page, et la fiche laveur porte des
 // jetons Google et des identifiants Stripe. Seuls partent vers le navigateur les
-// cinq réglages, le nom et le lien de la page ; le reste sert au cadre
+// six réglages, le nom et le lien de la page ; le reste sert au cadre
 // (`DashboardShell`), comme sur les autres écrans.
 //
 // Une lecture qui échoue ne rend jamais un écran « sans logo, sans message » : la
@@ -27,7 +27,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // tableau de bord propose « Réessayer ». Un compte vide et une panne ne se
 // confondent donc pas.
 const COLONNES =
-  'id, name, slug, logo_url, brand_color, background_theme, welcome_message, website_url, booking_page_mode, ' +
+  'id, name, slug, logo_url, brand_color, background_theme, welcome_message, website_url, google_place_id, booking_page_mode, ' +
   'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
 
 export default async function ApparencePage() {
@@ -49,6 +49,7 @@ export default async function ApparencePage() {
           fond: washer.background_theme ?? null,
           message: washer.welcome_message ?? null,
           site: washer.website_url ?? null,
+          avisGoogle: washer.google_place_id ?? null,
         }}
       />
     </DashboardShell>

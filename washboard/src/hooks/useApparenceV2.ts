@@ -8,15 +8,17 @@ import { DELAI_ATTENTE_LONGUE_MS, estImageAcceptee, messageNormalise, type Phase
 import { logger } from '@/lib/logger'
 import { retirerLeFond } from '@/hooks/retirerLeFond'
 
-// État de l'écran « Apparence de ma page » de la PWA (`ApparenceV2`) : les cinq
-// réglages, leurs écritures et l'état des envois d'image.
+// État de l'écran « Apparence de ma page » de la PWA (`ApparenceV2`) : les six
+// réglages, leurs écritures et l'état des envois d'image. `avisGoogle` (ID de
+// fiche Google) a rejoint les cinq réglages d'origine le 2026-10-04 : même
+// principe, mais sans image à envoyer, un simple aller-retour comme `site`.
 //
 // L'ÉTAT D'ENVOI VIT ICI, PAS DANS LES FEUILLES : le détourage du logo peut durer
 // une minute la première fois (modèle à télécharger). Fermer la feuille n'annule
 // rien, et un échec survenu feuille fermée reste affiché sur l'écran.
 //
-// Les valeurs « confirmées » (`logoUrl`, `couleur`, `fond`, `message`, `site`)
-// ne changent QU'APRÈS un succès du serveur : l'aperçu et la liste ne montrent
+// Les valeurs « confirmées » (`logoUrl`, `couleur`, `fond`, `message`, `site`,
+// `avisGoogle`) ne changent QU'APRÈS un succès du serveur : l'aperçu et la liste ne montrent
 // jamais un réglage qui n'est pas enregistré. Couleur et fond, choisis au tap,
 // exposent en plus une valeur « en attente » que la FEUILLE affiche aussitôt (anneau
 // sur la vignette touchée) ; en cas d'échec elle est simplement abandonnée, avec une
@@ -41,6 +43,7 @@ export type ReglagesApparence = {
   fond: string | null
   message: string | null
   site: string | null
+  avisGoogle: string | null
 }
 
 export function useApparenceV2(initial: ReglagesApparence) {
@@ -50,6 +53,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
   const [fond, setFond] = useState(initial.fond)
   const [message, setMessage] = useState(initial.message)
   const [site, setSite] = useState(initial.site)
+  const [avisGoogle, setAvisGoogle] = useState(initial.avisGoogle)
 
   const [logo, setLogo] = useState<EtatImage>(REPOS)
   const [fondPhoto, setFondPhoto] = useState<EtatImage>(REPOS)
@@ -223,14 +227,22 @@ export function useApparenceV2(initial: ReglagesApparence) {
     return null
   }
 
+  async function enregistrerAvisGoogle(valeur: string | null): Promise<string | null> {
+    const r = await enregistrerApparence({ google_place_id: valeur })
+    if (!r.ok) return r.message
+    setAvisGoogle(valeur)
+    rafraichir()
+    return null
+  }
+
   return {
-    logoUrl, couleur, fond, message, site,
+    logoUrl, couleur, fond, message, site, avisGoogle,
     logo, fondPhoto,
     couleurEnAttente, couleurErreur, couleurFaite,
     fondEnAttente, fondErreur,
     changerLogo, retirerLogo, acquitterLogo,
     choisirCouleur,
     choisirFond, changerPhotoFond, retirerPhoto: () => ecrireFond(null), acquitterFond,
-    enregistrerMessage, enregistrerSite,
+    enregistrerMessage, enregistrerSite, enregistrerAvisGoogle,
   }
 }

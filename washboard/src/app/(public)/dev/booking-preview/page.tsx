@@ -12,7 +12,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   const { mode } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   if (mode === 'settings-web') return <IdentiteForm washer={{ id: 'demo', name: 'Brillance Mobile', slug: 'demo', booking_page_mode: 'default', brand_color: '#7c3aed', welcome_message: 'Bienvenue chez Brillance Mobile', plan: 'business', zone_config: null } as Washer} />
-  if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="demo" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null }} />
+  if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="demo" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null, avisGoogle: null }} />
   const washerId = '00000000-0000-4000-8000-000000000001'
   const category: ServiceCategory = { id: 'cars', washer_id: washerId, name: 'Voitures', display_order: 0,
     types: [{ id: 'citadine', name: 'Citadine' }, { id: 'berline', name: 'Berline' }, { id: 'SUV', name: 'SUV' }, { id: 'utilitaire', name: 'Utilitaire' }],

@@ -5,7 +5,7 @@ import BookingForm from '@/components/booking/LegacyBookingForm'
 import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle, urlVersionnee } from '@/lib/themes'
-import { scrapeWebsiteReviews } from '@/lib/googleReviews'
+import { reviewsForWasher } from '@/lib/googleReviews'
 import { hasFeature, quotaPrestations } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
@@ -13,7 +13,7 @@ import ConsentementCookies, { LienGererCookies } from '@/components/booking/Cons
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
 type Props = {
- washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
+ washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
 }
@@ -160,15 +160,15 @@ export default function LegacyBookingPage({washer, services, categories, availab
           accent={accent}
         />
 
-        {washer.website_url && (
-          // L'appel externe vers le site du laveur (voir `scrapeWebsiteReviews`)
-          // peut prendre jusqu'à 5 s sur un cache froid, contre un site tiers
-          // qu'on ne maîtrise pas. Le rendu de l'essentiel (services, prix,
+        {(washer.website_url || washer.google_place_id) && (
+          // L'appel externe vers le site du laveur et/ou vers l'API Google
+          // Places (voir `reviewsForWasher`) peut prendre plusieurs secondes
+          // sur un cache froid. Le rendu de l'essentiel (services, prix,
           // disponibilités) n'a pas à l'attendre : ce bloc est streamé à part,
           // sans skeleton (`fallback={null}`) puisqu'il n'occupe qu'un espace
           // secondaire, sous le formulaire de réservation.
           <Suspense fallback={null}>
-            <ReviewsSection websiteUrl={washer.website_url} themed={themed} />
+            <ReviewsSection websiteUrl={washer.website_url} googlePlaceId={washer.google_place_id ?? null} themed={themed} />
           </Suspense>
         )}
 
@@ -236,8 +236,8 @@ export default function LegacyBookingPage({washer, services, categories, availab
 /** Composant serveur asynchrone séparé pour permettre le streaming (`Suspense`
  *  dans `BookingPage`) : React peut envoyer le reste de la page pendant que
  *  cet appel externe est encore en vol. */
-async function ReviewsSection({ websiteUrl, themed }: { websiteUrl: string; themed: boolean }) {
-  const reviewData = await scrapeWebsiteReviews(websiteUrl)
+async function ReviewsSection({ websiteUrl, googlePlaceId, themed }: { websiteUrl: string | null; googlePlaceId: string | null; themed: boolean }) {
+  const reviewData = await reviewsForWasher({ website_url: websiteUrl, google_place_id: googlePlaceId })
   const hasReviews = reviewData.reviews.length > 0 || !!reviewData.aggregate
   if (!hasReviews) return null
 

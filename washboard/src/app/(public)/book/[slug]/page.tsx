@@ -8,7 +8,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
 import { urlVersionnee } from '@/lib/themes'
-import { scrapeWebsiteReviews } from '@/lib/googleReviews'
+import { reviewsForWasher } from '@/lib/googleReviews'
 import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
 import { infosFacturationManquantes } from '@/lib/facture'
@@ -33,7 +33,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, booking_page_mode, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, booking_page_mode, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, google_place_id, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *
@@ -240,7 +240,9 @@ export default async function BookingPage({ params }: Props) {
       <BookingHero name={washer.name} message={null} accent={accent}
         logoUrl={logoUrl ? urlVersionnee(logoUrl, washer.profile_updated_at) : null}
         personalized={personnalisee} whatsappHref={waHref}
-        reviews={washer.website_url ? <Suspense fallback={null}><ReviewSummary websiteUrl={washer.website_url} /></Suspense> : null} />
+        reviews={(washer.website_url || washer.google_place_id)
+          ? <Suspense fallback={null}><ReviewSummary websiteUrl={washer.website_url} googlePlaceId={washer.google_place_id ?? null} /></Suspense>
+          : null} />
       <main id="main-content" className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
         <BookingForm
           // Champs énumérés un par un, jamais l'objet entier : tout ce qui
@@ -314,8 +316,8 @@ export default async function BookingPage({ params }: Props) {
 // demande d'Alexandre, 2026-10-04) — ce badge reste la seule trace d'avis
 // sur cette page, donc un texte simple plutôt qu'un lien vers une ancre
 // qui n'existe plus.
-async function ReviewSummary({ websiteUrl }: { websiteUrl: string }) {
-  const { aggregate } = await scrapeWebsiteReviews(websiteUrl)
+async function ReviewSummary({ websiteUrl, googlePlaceId }: { websiteUrl: string | null; googlePlaceId: string | null }) {
+  const { aggregate } = await reviewsForWasher({ website_url: websiteUrl, google_place_id: googlePlaceId })
   if (!aggregate || aggregate.count <= 0) return null
   return <span>★ {aggregate.value.toLocaleString('fr-FR')} · {aggregate.count} avis</span>
 }

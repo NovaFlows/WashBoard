@@ -16,6 +16,7 @@ import FeuilleCouleurV2 from '@/components/dashboard/FeuilleCouleurV2'
 import FeuilleFondV2 from '@/components/dashboard/FeuilleFondV2'
 import FeuilleMessageV2 from '@/components/dashboard/FeuilleMessageV2'
 import FeuilleSiteV2 from '@/components/dashboard/FeuilleSiteV2'
+import FeuilleAvisGoogleV2 from '@/components/dashboard/FeuilleAvisGoogleV2'
 import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/apparence'
 
 // « Apparence de ma page » — refonte 2026, destination NEUVE de « Plus » (la maquette
@@ -29,6 +30,9 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/appar
 // Logo, Couleur de la marque, Fond de la page, Message d'accueil, Présence en ligne
 // (le site web). Zone d'intervention, Créneaux intelligents et Google Agenda n'ont
 // AUCUNE trace ici : ils gardent leurs lignes provisoires dans Plus.
+// Avis Google (ID de fiche) ajouté le 2026-10-04, à la demande explicite
+// d'Alexandre : même geste que `IdentiteForm`, pour régler le même champ des
+// deux côtés sans devoir passer par le site.
 //
 // Un seul aperçu, en héros (approximation honnête de l'en-tête de la vraie page), puis
 // une carte de cinq lignes qui ouvrent chacune leur feuille. La couleur de la marque
@@ -39,7 +43,7 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/appar
 // rien. Les écritures : logo, couleur, fond au geste ; message et site par le bouton
 // Enregistrer de leur feuille.
 
-type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | null
+type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | 'avisGoogle' | null
 type Retrait = 'logo' | 'photo' | null
 
 type Props = {
@@ -166,6 +170,11 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
               pastille={h.couleur ?? COULEUR_PAR_DEFAUT}
               onClick={() => setFeuille('couleur')}
             />
+            <Ligne
+              label="Avis Google"
+              valeur={h.avisGoogle ? 'Renseigné' : 'Pas encore : note de votre site affichée'}
+              onClick={() => setFeuille('avisGoogle')}
+            />
             {pageMode === 'custom' && <>
             <Ligne label="Fond de la page" valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
             <Ligne label="Message d’accueil" valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
@@ -232,6 +241,9 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
       )}
       {feuille === 'site' && (
         <FeuilleSiteV2 site={h.site} onEnregistrer={h.enregistrerSite} onClose={fermer} />
+      )}
+      {feuille === 'avisGoogle' && (
+        <FeuilleAvisGoogleV2 avisGoogle={h.avisGoogle} onEnregistrer={h.enregistrerAvisGoogle} onClose={fermer} />
       )}
 
       {retrait === 'logo' && (

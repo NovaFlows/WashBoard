@@ -31,6 +31,11 @@ export type Washer = {
   /** Pixel Meta du laveur. `null` = aucun, donc aucun bandeau de consentement
    *  et aucun script tiers sur sa page de réservation. */
   meta_pixel_id?: string | null
+  /** Identifiant de fiche Google (`lib/googleReviews.ts`, `reviewsForWasher`).
+   *  `null`/absent : la note affichée vient uniquement de ce que le site du
+   *  laveur publie lui-même, s'il en publie une. Optionnel : absent tant que
+   *  la colonne n'existe pas encore en base (voir le reste du fichier). */
+  google_place_id?: string | null
   account_status: 'active' | 'deactivated' | 'pending_deletion'
   deletion_scheduled_at: string | null
   plan: 'decouverte' | 'starter' | 'pro' | 'business'

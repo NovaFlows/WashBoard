@@ -12,6 +12,7 @@ export type ChampsApparence = Partial<{
   background_theme: string | null
   welcome_message: string | null
   website_url: string | null
+  google_place_id: string | null
 }>
 
 /** Écrit un ou plusieurs champs de la fiche (`PATCH /api/washer`). La route est

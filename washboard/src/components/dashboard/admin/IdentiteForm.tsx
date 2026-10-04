@@ -72,6 +72,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const bgFileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState(washer.welcome_message ?? '')
   const [websiteUrl, setWebsiteUrl] = useState(washer.website_url ?? '')
+  const [googlePlaceId, setGooglePlaceId] = useState(washer.google_place_id ?? '')
   const [pixelId, setPixelId] = useState(washer.meta_pixel_id ?? '')
   const [color, setColor] = useState(washer.brand_color ?? '#2563eb')
   const [colorSaving, setColorSaving] = useState(false)
@@ -247,6 +248,9 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       body: JSON.stringify({
         welcome_message: message,
         website_url: websiteUrl.trim() || null,
+        // Vidé, la page retombe sur ce que le site publie lui-même (s'il
+        // publie une moyenne) — voir `reviewsForWasher`, lib/googleReviews.ts.
+        google_place_id: googlePlaceId.trim() || null,
         // Vidé, il efface le Pixel : c'est ainsi que le laveur le retire, et
         // sa page redevient exactement ce qu'elle était — sans bandeau de
         // consentement ni script tiers.
@@ -484,6 +488,34 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             className={inputClass}
           />
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Les avis clients visibles sur votre site seront récupérés automatiquement</p>
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            ID de fiche Google <span className="font-normal text-slate-400">(facultatif)</span>
+          </label>
+          <input
+            type="text"
+            value={googlePlaceId}
+            onChange={e => setGooglePlaceId(e.target.value)}
+            placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
+            className={inputClass}
+          />
+          {/* La note officielle Google prime sur ce que le site publie, mais
+              un laveur sans fiche configurée garde quand même une note si
+              son site en publie une (voir `reviewsForWasher`). */}
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+            Affiche votre vraie note Google (ex. « ★ 4,9 · 37 avis ») au lieu de celle
+            trouvée sur votre site, si vous en avez un.{' '}
+            <a
+              href="https://developers.google.com/maps/documentation/places/web-service/place-id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              Trouver l’identifiant de votre fiche
+            </a>.
+          </p>
         </div>
 
         <div>

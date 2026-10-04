@@ -1,3 +1,5 @@
+import { fetchGoogleMaps } from '@/lib/googleMaps'
+
 export type GoogleReview = {
   author: string
   rating: number
@@ -73,6 +75,10 @@ export async function scrapeWebsiteReviews(websiteUrl: string): Promise<GoogleRe
 
     const html = await res.text()
 
+    // La moyenne (si le site en publie une) vit dans son balisage structuré,
+    // AVANT qu'on retire les <script> ci-dessous pour lire le texte brut.
+    const aggregate = extraireAggregateRatingJsonLd(html) ?? undefined
+
     // Supprimer scripts, styles, commentaires
     const stripped = html
       .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -135,8 +141,110 @@ export async function scrapeWebsiteReviews(websiteUrl: string): Promise<GoogleRe
       return true
     })
 
-    return { reviews: unique.slice(0, 5) }
+    return { reviews: unique.slice(0, 5), aggregate }
   } catch {
     return { reviews: [] }
   }
+}
+
+/** Cherche un `aggregateRating` (vocabulaire schema.org) dans les blocs
+ *  JSON-LD de la page — la moyenne et le nombre d'avis tels que le site les
+ *  publie lui-même (widget d'avis, thème avec données structurées...),
+ *  plutôt qu'une estimation reconstituée à partir des quelques avis qu'on a
+ *  pu repérer en scannant le texte. `null` si la page n'en expose aucun. */
+function extraireAggregateRatingJsonLd(html: string): { value: number; count: number } | null {
+  for (const bloc of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    let data: unknown
+    try {
+      data = JSON.parse(bloc[1])
+    } catch {
+      continue
+    }
+    const trouve = chercherAggregateRating(data)
+    if (trouve) return trouve
+  }
+  return null
+}
+
+function chercherAggregateRating(noeud: unknown, profondeur = 0): { value: number; count: number } | null {
+  // Les JSON-LD imbriquent rarement plus de quelques niveaux : cette limite
+  // évite seulement une récursion infinie sur un document pathologique.
+  if (profondeur > 6 || !noeud || typeof noeud !== 'object') return null
+
+  if (Array.isArray(noeud)) {
+    for (const item of noeud) {
+      const trouve = chercherAggregateRating(item, profondeur + 1)
+      if (trouve) return trouve
+    }
+    return null
+  }
+
+  const objet = noeud as Record<string, unknown>
+  const agg = objet.aggregateRating
+  if (agg && typeof agg === 'object') {
+    const a = agg as Record<string, unknown>
+    const value = Number(a.ratingValue)
+    const count = Number(a.reviewCount ?? a.ratingCount)
+    if (Number.isFinite(value) && value > 0 && value <= 5 && Number.isFinite(count) && count > 0) {
+      return { value, count: Math.round(count) }
+    }
+  }
+
+  for (const valeur of Object.values(objet)) {
+    if (valeur && typeof valeur === 'object') {
+      const trouve = chercherAggregateRating(valeur, profondeur + 1)
+      if (trouve) return trouve
+    }
+  }
+  return null
+}
+
+type DetailsPlaceReponse = {
+  status?: string
+  error_message?: string
+  result?: { rating?: number; user_ratings_total?: number }
+}
+
+/** Note officielle d'un laveur sur Google, via l'API Places — seulement s'il a
+ *  renseigné l'identifiant de sa fiche (`google_place_id`). Mise en cache 24 h
+ *  comme `scrapeWebsiteReviews` : une note ne change pas d'une visite à
+ *  l'autre, et chaque appel est facturé à Google.
+ *
+ *  `null` si l'identifiant est vide, si Google ne renvoie rien d'exploitable
+ *  (fiche sans avis, identifiant invalide), ou en cas de panne — déjà tracée
+ *  par `fetchGoogleMaps` (REQUEST_DENIED, clé absente...), même leçon que
+ *  l'incident de facturation du 2026-08-26 sur les autres API Maps. */
+export async function fetchGooglePlaceRating(placeId: string): Promise<{ value: number; count: number } | null> {
+  const url =
+    `https://maps.googleapis.com/maps/api/place/details/json` +
+    `?place_id=${encodeURIComponent(placeId)}&fields=rating,user_ratings_total&language=fr`
+  const data = await fetchGoogleMaps<DetailsPlaceReponse>(url, 'places.rating', { next: { revalidate: 86400 } })
+  const { rating, user_ratings_total } = data?.result ?? {}
+  if (typeof rating !== 'number' || typeof user_ratings_total !== 'number' || user_ratings_total <= 0) return null
+  return { value: rating, count: Math.round(user_ratings_total) }
+}
+
+/** Avis à afficher sur la page de réservation d'un laveur : Google en
+ *  priorité s'il a renseigné sa fiche (`google_place_id`) — la note
+ *  officielle, à jour — sinon, ou si Google ne répond rien d'exploitable, on
+ *  retombe sur ce que son propre site publie (`scrapeWebsiteReviews`). Pensé
+ *  pour le laveur qui n'a qu'un site, sans fiche Google renseignée : il garde
+ *  quand même une note affichée si son site en publie une.
+ *
+ *  Les extraits d'avis (citations) restent ceux du site dans tous les cas :
+ *  l'API Places impose des règles d'affichage (attribution, tri, mise à jour)
+ *  pour les siens, qu'on ne gère pas ici. */
+export async function reviewsForWasher(washer: {
+  website_url: string | null
+  google_place_id?: string | null
+}): Promise<GoogleReviewResult> {
+  const site = washer.website_url ? await scrapeWebsiteReviews(washer.website_url) : { reviews: [] }
+
+  const placeId = washer.google_place_id?.trim()
+  if (placeId) {
+    const google = await fetchGooglePlaceRating(placeId)
+    if (google) return { reviews: site.reviews, aggregate: google }
+  }
+
+  return site
 }
