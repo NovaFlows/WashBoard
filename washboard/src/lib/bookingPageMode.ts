@@ -3,35 +3,23 @@ import { z } from 'zod'
 export const BookingPageModeSchema = z.enum(['default', 'custom'])
 export type BookingPageMode = z.infer<typeof BookingPageModeSchema>
 
-/** Une fiche nouvelle ou sans choix explicite utilise la nouvelle page. */
+/** Une fiche nouvelle ou sans choix explicite utilise la nouvelle page.
+ *
+ *  Politique de bascule décidée par Alexandre, 2026-10-04 : les laveurs déjà
+ *  inscrits gardent leur page personnalisée (ils peuvent activer la nouvelle
+ *  page quand ils veulent, via la case « Page par défaut » de leurs
+ *  réglages) ; les nouvelles inscriptions démarrent directement sur la
+ *  nouvelle page (voir api/auth/signup/route.ts, `booking_page_mode:
+ *  'default'` écrit explicitement à la création) et peuvent la désactiver
+ *  pour personnaliser.
+ *
+ *  Pour que cette règle tienne, la colonne doit refléter le bon choix par
+ *  défaut AU MOMENT de chaque inscription — c'est elle, et elle seule, qui
+ *  décide ensuite ce qui s'affiche ici, sans liste d'exception dans le code.
+ *  (Historique : du 2026-10-03 au 2026-10-04, une liste `COMPTES_TEST_...`
+ *  limitait la nouvelle page à deux comptes de test le temps de vérifier
+ *  qu'elle ne faisait perdre la personnalisation de personne — retirée une
+ *  fois les 24 comptes existants ramenés à `custom` en base.) */
 export function bookingPageMode(value: unknown): BookingPageMode {
   return value === 'custom' ? 'custom' : 'default'
-}
-
-/** Comptes autorisés à voir la nouvelle page (accordéon) pendant qu'elle est
- *  testée — demande explicite d'Alexandre, 2026-10-03, après avoir repéré que
- *  `default` devenait automatiquement la page de TOUS les comptes existants,
- *  y compris payants, et qu'elle ignore encore leur couleur de marque et leur
- *  fond personnalisé (régression pour l'offre « page personnalisée »).
- *
- *  Tant que cette liste n'est pas vidée, tout le monde D'AUTRE reste sur
- *  l'ancienne page personnalisable, quelle que soit la valeur réellement
- *  enregistrée dans `booking_page_mode` — y compris s'ils ont explicitement
- *  coché/décoché la case dans leurs réglages : leur choix est gardé en base
- *  (rien n'est écrasé), simplement sans effet visible tant qu'ils ne sont pas
- *  dans cette liste. Même principe que `COMPTES_TEST_RETOUR_GRATUIT` dans
- *  lib/plan.ts : une bascule anticipée, compte par compte, dans le code —
- *  pas une variable d'environnement — pour rester lisible dans l'historique
- *  Git. */
-export const COMPTES_TEST_NOUVELLE_PAGE_RESERVATION: string[] = [
-  'test-config-15d2', // Test Config
-  'autonettoyage',    // AutoNett (novaflows.pro@gmail.com)
-]
-
-/** Ce que CE compte doit réellement voir, compte tenu à la fois de son choix
- *  enregistré et de la liste de test ci-dessus. À utiliser à la place de
- *  `bookingPageMode()` seule partout où la page publique est rendue. */
-export function bookingPageModeEffectif(slug: string, value: unknown): BookingPageMode {
-  if (!COMPTES_TEST_NOUVELLE_PAGE_RESERVATION.includes(slug)) return 'custom'
-  return bookingPageMode(value)
 }

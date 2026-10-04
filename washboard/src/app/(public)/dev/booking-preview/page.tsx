@@ -11,10 +11,6 @@ import type { Service, ServiceCategory } from '@/types'
 export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   const { mode } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
-  // slug « test-config-15d2 » : un des deux comptes de la liste de test
-  // (COMPTES_TEST_NOUVELLE_PAGE_RESERVATION, lib/bookingPageMode.ts) — sans
-  // ça, le sélecteur de page et tout ce qui en dépend (logo, couleur) ne
-  // s'affichent plus du tout ici depuis que cette liste existe.
   if (mode === 'settings-web') return <IdentiteForm washer={{ id: 'demo', name: 'Brillance Mobile', slug: 'test-config-15d2', booking_page_mode: 'default', brand_color: '#7c3aed', welcome_message: 'Bienvenue chez Brillance Mobile', plan: 'business', zone_config: null } as Washer} />
   if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="test-config-15d2" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null, avisGoogle: null }} />
   const washerId = '00000000-0000-4000-8000-000000000001'

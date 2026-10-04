@@ -1,7 +1,7 @@
 'use client'
 
 import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
-import { bookingPageModeEffectif, COMPTES_TEST_NOUVELLE_PAGE_RESERVATION } from '@/lib/bookingPageMode'
+import { bookingPageMode } from '@/lib/bookingPageMode'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
@@ -60,8 +60,7 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
 
 export default function IdentiteForm({ washer }: { washer: Washer }) {
   const router = useRouter()
-  const [pageMode, setPageMode] = useState(() => bookingPageModeEffectif(washer.slug, washer.booking_page_mode))
-  const voitSelecteurPage = COMPTES_TEST_NOUVELLE_PAGE_RESERVATION.includes(washer.slug)
+  const [pageMode, setPageMode] = useState(() => bookingPageMode(washer.booking_page_mode))
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
   const [logoStatus, setLogoStatus] = useState<LogoStatus>('idle')
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -302,10 +301,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
 
   return (
     <form onSubmit={save} noValidate className="space-y-5">
-      {/* Masqué hors de la liste de test (lib/bookingPageMode.ts) : le réglage
-          n'aurait aucun effet visible pour les autres, montrer un choix qui
-          ne change rien serait pire que ne rien montrer. */}
-      {voitSelecteurPage && <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>}
+      <div id="identite" className="scroll-mt-24"><BookingPageModePicker mode={pageMode} onChange={setPageMode} /></div>
       {/* Logo et couleur restent modifiables quel que soit le mode de page :
           la nouvelle page (« automatique ») les utilise aussi (logo et accent
           du header) — seuls le fond et le message d'accueil ne lui servent
