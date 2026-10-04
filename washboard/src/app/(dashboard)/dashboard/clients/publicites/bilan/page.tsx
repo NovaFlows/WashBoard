@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import BilanPublicites from '@/components/dashboard/BilanPublicites'
@@ -23,7 +24,7 @@ export default async function BilanPublicitesPage() {
   const washer = await washerDuUtilisateur(supabase, user.id, 'publicites-bilan')
   if (!hasFeature(washer, 'campagnes')) redirect('/dashboard/clients/publicites')
 
-  const { campagnes, indisponible } = await chargerCampagnes(supabase, washer.id)
+  const { campagnes, indisponible } = await chargerCampagnes(supabase, createAdminClient(), washer.id)
   if (indisponible || campagnes.length === 0) redirect('/dashboard/clients/publicites')
 
   return (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
@@ -21,7 +22,10 @@ export async function GET(req: NextRequest) {
 
   // Page par page : au-delà de 1 000 rendez-vous sur la période, l'API aurait
   // coupé sans erreur et le chiffre d'affaires affiché aurait été faux.
-  const { data, error } = await toutesLesLignes((debut, fin) => supabase
+  // Client admin : `authenticated` ne lit plus `bookings`. Le filtre
+  // `washer_id` est la seule barrière entre laveurs.
+  const admin = createAdminClient()
+  const { data, error } = await toutesLesLignes((debut, fin) => admin
     .from('bookings')
     .select('booked_price, smart_discount, is_smart_slot')
     .eq('washer_id', washer.id)

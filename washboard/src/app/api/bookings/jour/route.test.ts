@@ -11,31 +11,46 @@ type Plan = {
   washerError: unknown
 }
 let plan: Plan
+let clientDesSeuils: unknown
 
-const fauxSupabase = {
-  from: (table: string) => {
-    const b: Record<string, unknown> = {}
-    const self = () => b
-    Object.assign(b, {
-      select: self, eq: self, neq: self, gte: self, lt: self, order: self,
-      single: () => Promise.resolve({ data: plan.washer, error: plan.washerError }),
-      then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
-        Promise.resolve(table === 'bookings' ? { data: plan.bookings, error: null } : { data: null, error: null }).then(ok, ko),
-    })
-    return b
-  },
+// La session n'a plus aucun droit sur `bookings` (le laveur y lisait en direct ce que le masque
+// cache) : son faux refuse comme Postgres. Seul le faux admin sert les réservations.
+const REFUS = { data: null, error: { code: '42501', message: 'permission denied for table bookings' } }
+function faux(role: 'session' | 'admin') {
+  return {
+    from: (table: string) => {
+      const b: Record<string, unknown> = {}
+      const self = () => b
+      Object.assign(b, {
+        select: self, eq: self, neq: self, gte: self, lt: self, order: self,
+        single: () => Promise.resolve({ data: plan.washer, error: plan.washerError }),
+        then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
+          Promise.resolve(
+            table !== 'bookings' ? { data: null, error: null }
+              : role === 'admin' ? { data: plan.bookings, error: null } : REFUS,
+          ).then(ok, ko),
+      })
+      return b
+    },
+  }
 }
+const fauxSupabase = faux('session')
+const fauxAdmin = faux('admin')
 
 vi.mock('@/lib/requireWasher', () => ({
   requireWasher: async () => ({ ok: true, ctx: { supabase: fauxSupabase, washerId: 'washer-1' } }),
 }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxAdmin }))
 
 // Le seuil de la période est fixé ici ; le masque lui-même reste le vrai.
 vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/reservationsVerrouillees')>()),
-  seuilsVerrouillage: async () => [{
-    debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z',
-  }],
+  seuilsVerrouillage: async (client: unknown) => {
+    clientDesSeuils = client
+    return [{
+      debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z',
+    }]
+  },
 }))
 
 const { GET } = await import('./route')
@@ -53,6 +68,7 @@ const AU_DELA = {
 
 beforeEach(() => {
   plan = { bookings: [DANS_LE_QUOTA, AU_DELA], washer: { id: 'washer-1', plan: 'decouverte' }, washerError: null }
+  clientDesSeuils = undefined
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -76,6 +92,11 @@ describe('GET /api/bookings/jour — réservations au-delà du quota', () => {
     expect(a.verrouillee).toBe(false)
     expect(a.client_name).toBe('Claire Martin')
     expect(a.scheduled_at).toBe('2026-10-03T07:00:00.000Z')
+  })
+
+  it('calcule les seuils sur le client admin : par la session, la lecture échouerait et ne masquerait rien', async () => {
+    await GET(requete())
+    expect(clientDesSeuils).toBe(fauxAdmin)
   })
 
   it('ne renvoie rien quand l’offre du laveur est illisible, plutôt que tout en clair', async () => {

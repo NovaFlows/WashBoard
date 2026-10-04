@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { ImportFactures } from '@/components/dashboard/ImportFactures'
@@ -140,9 +141,12 @@ export default async function FacturesPage({
 
   // Lectures paginées : au-delà de 1 000 lignes, une lecture simple serait
   // coupée sans prévenir (voir `toutesLesLignes`).
+  // Client admin : `authenticated` ne lit plus `bookings`. Le filtre
+  // `washer_id` est la seule barrière entre laveurs.
+  const admin = createAdminClient()
   const [emises, importees] = await Promise.all([
     toutesLesLignes<FactureEmise>((debut, fin) =>
-      supabase
+      admin
         .from('bookings')
         .select('id, facture_numero, facture_emise_le, scheduled_at, client_name, company_name, is_professional, montant:facture_contenu->totaux->>ttc')
         .eq('washer_id', washer.id)

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Abonnement, { EnteteAbonnement } from '@/components/dashboard/Abonnement'
@@ -20,7 +21,9 @@ export default async function AbonnementPage() {
   const plafondPrestations  = quotaPrestations(washer)
 
   const [resaCeMois, prestations] = await Promise.all([
-    plafondReservations === null ? null : supabase
+    // Client admin : `authenticated` ne lit plus `bookings`. Le filtre
+    // `washer_id` est la seule barrière entre laveurs.
+    plafondReservations === null ? null : createAdminClient()
       .from('bookings')
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', washer.id)

@@ -23,7 +23,13 @@ import {
  *  ouvert : sans cette séparation, afficher les statistiques de visite ferait
  *  aussi charger toutes les campagnes, et l'inverse — deux fois le travail pour
  *  un écran qui n'en montre qu'un. */
-export async function chargerCampagnes(supabase: SupabaseClient, washerId: string) {
+export async function chargerCampagnes(
+  supabase: SupabaseClient,
+  // `bookings` n'est plus lisible par `authenticated` : ses lectures passent
+  // par l'admin, où le filtre `washer_id` est la seule barrière entre laveurs.
+  admin: SupabaseClient,
+  washerId: string,
+) {
   let { data: campagnes, error: errCampagnes } = await supabase
     .from('campagnes')
     .select('id, nom, plateforme, budget, cle, debut, fin, budget_maj_le')
@@ -118,7 +124,7 @@ export async function chargerCampagnes(supabase: SupabaseClient, washerId: strin
         .order('created_at').order('id').range(d, f))
     : visites
 
-  const reservations = await toutesLesLignes((d, f) => supabase
+  const reservations = await toutesLesLignes((d, f) => admin
     .from('bookings')
     .select('utm_campaign, utm_content, created_at, status, booked_price')
     .eq('washer_id', washerId)
@@ -127,7 +133,7 @@ export async function chargerCampagnes(supabase: SupabaseClient, washerId: strin
     .order('created_at').order('id').range(d, f))
 
   const reservationsSures = reservations.error
-    ? await toutesLesLignes((d, f) => supabase
+    ? await toutesLesLignes((d, f) => admin
         .from('bookings')
         .select('utm_campaign, created_at, status, booked_price')
         .eq('washer_id', washerId)
