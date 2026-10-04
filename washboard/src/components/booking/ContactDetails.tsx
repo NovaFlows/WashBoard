@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import type { BookingFormData, VehicleItem } from '@/types'
 import { formatPrice } from '@/lib/pricing'
+import { normalizePhone } from '@/lib/phone'
 import BookingAction from './BookingAction'
 
 type Contact = Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & {
@@ -35,15 +36,20 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   const [hp, setHp] = useState('')
   const isVehicle = (type: string) => !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(type)
   const modelsValid = vehicles.every(v => !isVehicle(v.type) || v.models?.[0]?.trim())
-  const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && phone.replace(/\D/g, '').length === 10 && modelsValid
+  // Accepte aussi le « +33 » (et « 0033 ») : refusé avant, alors que c'est la
+  // forme que l'iPhone propose lui-même en autocomplétion — signalé par
+  // Alexandre le 2026-10-04 après l'avoir vécu en testant sur son téléphone.
+  // Même normalisation que washer/route.ts et lib/phone.ts partout ailleurs.
+  const phoneNormalise = normalizePhone(phone)
+  const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && phoneNormalise !== null && modelsValid
     && (!pro || (company.trim().length >= 2 && siret.replace(/\D/g, '').length === 14))
   const input = 'w-full min-h-12 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-3 bg-white dark:bg-zinc-900 outline-none focus:border-zinc-500'
   const label = 'block text-sm font-medium mb-2'
 
   return <form ref={ref} onSubmit={e => {
     e.preventDefault()
-    if (!valid || loading) return
-    onSubmit({ client_name: name.trim(), client_email: email.trim(), client_phone: phone, notes: notes.trim() || undefined, hp,
+    if (!valid || !phoneNormalise || loading) return
+    onSubmit({ client_name: name.trim(), client_email: email.trim(), client_phone: phoneNormalise, notes: notes.trim() || undefined, hp,
       is_professional: pro, ...(pro ? { company_name: company.trim(), siret: siret.replace(/\D/g, ''), billing_address: billing.trim() || undefined } : {}),
     })
   }}>
@@ -52,7 +58,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
     <div className="space-y-5">
       <div><label className={label} htmlFor="booking-name">Nom et prénom</label><input id="booking-name" autoComplete="name" required minLength={2} value={name} onChange={e => setName(e.target.value)} className={input} /></div>
       <div><label className={label} htmlFor="booking-phone">Téléphone</label><input id="booking-phone" autoComplete="tel" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 12 34 56 78" className={input} />
-        {!!phone && phone.replace(/\D/g, '').length !== 10 && <p className="text-xs text-zinc-500 mt-1">Indiquez un numéro à 10 chiffres.</p>}</div>
+        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">Indiquez un numéro à 10 chiffres (ou au format +33).</p>}</div>
       <div><label className={label} htmlFor="booking-email">Email <span className="font-normal text-zinc-500">pour recevoir le récapitulatif</span></label><input id="booking-email" autoComplete="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={input} /></div>
       {vehicles.map((v, i) => isVehicle(v.type) && <div key={`${v.type}-${i}`}>
         <label className={label} htmlFor={`booking-model-${i}`}>Modèle {vehicles.length > 1 ? `· ${v.label ?? v.type} ${i + 1}` : 'du véhicule'}</label>
