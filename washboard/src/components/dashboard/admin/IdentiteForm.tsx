@@ -261,7 +261,11 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       setMsg({ ok: true, text: 'Modifications enregistrées' })
       router.refresh()
     } else {
-      setMsg({ ok: false, text: 'Erreur lors de la sauvegarde' })
+      // La phrase du serveur (ex. identifiant de fiche Google invalide) vaut
+      // mieux qu'un message générique quand il y en a une : c'est elle qui dit
+      // QUOI corriger, pas seulement que la sauvegarde a échoué.
+      const body: { error?: string } = await res.json().catch(() => ({}))
+      setMsg({ ok: false, text: body.error || 'Erreur lors de la sauvegarde' })
     }
     setLoading(false)
   }

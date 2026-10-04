@@ -74,6 +74,24 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  // ── ID de fiche Google ──────────────────────────────────────────────────
+  // Vu en pratique : le lien Google Maps complet collé à la place de
+  // l'identifiant court qu'il contient (les deux se ressemblent, se trouvent
+  // au même endroit). Google n'y voit qu'un `place_id` invalide et refuse
+  // l'appel sans un mot (`INVALID_REQUEST`, lib/googleReviews.ts) — la note
+  // disparaît simplement, sans que rien ne dise pourquoi. Un vrai identifiant
+  // ne contient jamais « :// » ni d'espace ; un lien, presque toujours les deux.
+  let placeIdNettoye: string | null = null
+  if (google_place_id !== undefined) {
+    placeIdNettoye = google_place_id?.trim() || null
+    if (placeIdNettoye && (/:\/\//.test(placeIdNettoye) || /\s/.test(placeIdNettoye))) {
+      return NextResponse.json(
+        { error: 'Ceci ressemble à un lien Google Maps, pas à un identifiant de fiche. Collez uniquement l’identifiant (ex. ChIJN1t_tDeuEmsRUsoyG83frY4).' },
+        { status: 400 },
+      )
+    }
+  }
+
   // Plan réel du laveur, lu en base — jamais déduit de ce que le navigateur
   // envoie. Sans ce contrôle, un compte Essentiel activait les relances
   // automatiques et le multi-laveurs par un simple appel à cette route, et
@@ -219,7 +237,7 @@ export async function PATCH(request: NextRequest) {
   if (background_theme !== undefined) updates.background_theme = background_theme || null
   if (website_url !== undefined) updates.website_url = website_url?.trim() || null
   if (meta_pixel_id !== undefined) updates.meta_pixel_id = pixelNettoye
-  if (google_place_id !== undefined) updates.google_place_id = google_place_id?.trim() || null
+  if (google_place_id !== undefined) updates.google_place_id = placeIdNettoye
   if (review_enabled !== undefined) updates.review_enabled = Boolean(review_enabled)
   if (review_delay_hours !== undefined) updates.review_delay_hours = Math.min(168, Math.max(0, Math.floor(Number(review_delay_hours)) || 0))
   if (google_review_url !== undefined) updates.google_review_url = google_review_url?.trim() || null
