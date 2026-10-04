@@ -132,17 +132,23 @@ test('choix de page : erreur sans bascule, enregistrement et réglages conservé
     requests.push(route.request().postDataJSON())
     await route.fulfill({ status: fails ? 500 : 200, json: fails ? { error: 'Enregistrement impossible' } : { success: true } })
   })
+  // Aperçu des avis (lib/googleReviews.ts) : chargé au montage de l'écran,
+  // sans rapport avec ce que ce test vérifie — réponse neutre, pas d'appel réel.
+  await page.route('**/api/washer/avis-preview', route => route.fulfill({ json: { aSource: false, aggregate: null } }))
   await page.goto('/dev/booking-preview?mode=settings')
-  const standard = page.getByRole('checkbox', { name: 'Page par défaut' })
+  const standard = page.getByRole('switch', { name: 'Page par défaut' })
   await expect(standard).toBeChecked()
-  await expect(page.getByRole('button', { name: /Couleur de ma marque/ })).not.toBeVisible()
+  // Logo et Couleur restent visibles quel que soit le mode depuis le
+  // 2026-10-04 (demande d'Alexandre) : seul Fond, lui, reste caché en mode
+  // par défaut — c'est donc lui qui marque la bascule ici désormais.
+  await expect(page.getByRole('button', { name: /Fond de la page/ })).not.toBeVisible()
   await standard.click()
   await expect(page.getByRole('region', { name: 'Votre page de réservation' }).getByRole('alert')).toHaveText('Enregistrement impossible')
   await expect(standard).toBeChecked()
   fails = false
   await standard.click()
   await expect(standard).not.toBeChecked()
-  await expect(page.getByRole('button', { name: /Couleur de ma marque/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Fond de la page/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Message d’accueil/ })).toContainText('Bienvenue chez Brillance Mobile')
   await standard.click()
   await expect(standard).toBeChecked()
@@ -171,14 +177,20 @@ test('la page classique retrouve son en-tête et son parcours séparé', async (
 
 test('personnalisation web : les réglages classiques se retrouvent après chaque bascule', async ({ page }) => {
   await page.route('**/api/washer', route => route.fulfill({ json: { success: true } }))
+  // Aperçu des avis (lib/googleReviews.ts) : chargé au montage de l'écran,
+  // sans rapport avec ce que ce test vérifie — réponse neutre, pas d'appel réel.
+  await page.route('**/api/washer/avis-preview', route => route.fulfill({ json: { aSource: false, aggregate: null } }))
   await page.goto('/dev/booking-preview?mode=settings-web')
   await expect(page.locator('#identite')).toHaveCount(1)
-  await expect(page.getByRole('heading', { name: 'Logo', exact: true })).not.toBeVisible()
-  await page.getByRole('checkbox', { name: 'Page par défaut' }).click()
-  await expect(page.getByRole('heading', { name: 'Logo', exact: true })).toBeVisible()
+  // Logo et Couleur restent visibles quel que soit le mode depuis le
+  // 2026-10-04 (demande d'Alexandre) : seul Fond, lui, reste caché en mode
+  // par défaut — c'est donc lui qui marque la bascule ici désormais.
+  await expect(page.getByRole('heading', { name: 'Fond de la page client', exact: true })).not.toBeVisible()
+  await page.getByRole('switch', { name: 'Page par défaut' }).click()
+  await expect(page.getByRole('heading', { name: 'Fond de la page client', exact: true })).toBeVisible()
   await expect(page.locator('textarea')).toHaveValue('Bienvenue chez Brillance Mobile')
-  await page.getByRole('checkbox', { name: 'Page par défaut' }).click()
-  await expect(page.getByRole('heading', { name: 'Logo', exact: true })).not.toBeVisible()
-  await page.getByRole('checkbox', { name: 'Page par défaut' }).click()
+  await page.getByRole('switch', { name: 'Page par défaut' }).click()
+  await expect(page.getByRole('heading', { name: 'Fond de la page client', exact: true })).not.toBeVisible()
+  await page.getByRole('switch', { name: 'Page par défaut' }).click()
   await expect(page.locator('textarea')).toHaveValue('Bienvenue chez Brillance Mobile')
 })

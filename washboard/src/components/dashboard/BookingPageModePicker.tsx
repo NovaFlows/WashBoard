@@ -46,6 +46,7 @@ export default function BookingPageModePicker({ mode, onChange }: {
         type="button"
         role="switch"
         aria-checked={actif}
+        aria-label="Page par défaut"
         aria-describedby="booking-page-mode-description"
         disabled={pending !== null}
         onClick={() => choose(actif ? 'custom' : 'default')}
