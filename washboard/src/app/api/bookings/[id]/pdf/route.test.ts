@@ -69,6 +69,19 @@ beforeEach(() => {
 })
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks() })
 
+describe('GET /api/bookings/[id]/pdf — id mal formé', () => {
+  // Vu en production le 2026-10-04 : un id mal formé (lien cassé, bot, ou
+  // `undefined` interpolé côté client dans l'URL) atteignait Postgres tel
+  // quel et y déclenchait une vraie erreur serveur (invalid input syntax for
+  // type uuid) pour ce qui n'est jamais qu'un lien invalide. Voir lib/uuid.ts.
+  it('renvoie 404 sans toucher la base, avant même Postgres', async () => {
+    const res = await GET(new Request('https://www.washboard.fr/api/bookings/undefined/pdf'), { params: Promise.resolve({ id: 'undefined' }) })
+    expect(res.status).toBe(404)
+    expect(tablesLues).toEqual([])
+    expect(renderToBuffer).not.toHaveBeenCalled()
+  })
+})
+
 describe('GET /api/bookings/[id]/pdf — réservation verrouillée', () => {
   it('sert le PDF au client qui présente son jeton', async () => {
     const res = await telecharger(genererJetonReservation(ID))

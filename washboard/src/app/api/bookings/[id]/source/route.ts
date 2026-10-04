@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SourceDecouverteSchema } from '@/lib/sourceDecouverte'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { logger } from '@/lib/logger'
+import { uuidValide } from '@/lib/uuid'
 
 // Route publique : le client répond à « Comment avez-vous connu [le laveur] ? »
 // sur l'écran de confirmation, sans compte ni session. L'id de la réservation
@@ -17,6 +18,10 @@ const WINDOW_MS = 10 * 60 * 1000
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Un id mal formé (lien cassé, bot, `undefined` interpolé côté client) ne
+  // doit jamais atteindre Postgres : il répondrait une vraie erreur serveur
+  // pour un simple lien invalide. Voir lib/uuid.ts.
+  if (!uuidValide(id)) return NextResponse.json({ error: 'Réservation introuvable' }, { status: 404 })
 
   cleanupRateLimit()
   const ip = clientIp(req)

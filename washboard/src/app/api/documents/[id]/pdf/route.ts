@@ -2,12 +2,17 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { nomFichierDocument, rendreDocumentPdf } from '@/lib/pdfDocument'
 import type { FactureContenu } from '@/lib/facture'
 import { logger } from '@/lib/logger'
+import { uuidValide } from '@/lib/uuid'
 
 // Le PDF d'un devis ou d'une facture écrits à la main. Même gabarit que les factures de
 // réservation (`FacturePDF`), même régime d'accès : route publique dont l'identifiant du
 // document fait le jeton — c'est ce lien que reçoit le client par email, sans compte.
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Un id mal formé (lien cassé, bot, `undefined` interpolé côté client) ne
+  // doit jamais atteindre Postgres : il répondrait une vraie erreur serveur
+  // pour un simple lien invalide. Voir lib/uuid.ts.
+  if (!uuidValide(id)) return new Response('Not found', { status: 404 })
 
   // La RLS interdit `documents` à l'anon : service-role, ciblé sur l'id exact.
   const admin = createAdminClient()
