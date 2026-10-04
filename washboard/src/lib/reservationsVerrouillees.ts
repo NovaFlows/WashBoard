@@ -116,8 +116,10 @@ export function estVerrouillee(
  *  Le masquage ne vaut que s'il ne laisse rien qui identifie la personne.
  *
  *  Ce qui part encore : le téléphone, l'email, l'adresse, le montant, le
- *  détail des véhicules, et L'HEURE. L'heure parce qu'elle suffit à honorer le
- *  rendez-vous sans rien payer — il suffirait d'attendre sur place.
+ *  détail des véhicules, et L'HEURE (début ET fin). L'heure parce qu'elle
+ *  suffit à honorer le rendez-vous sans rien payer — il suffirait d'attendre
+ *  sur place. La position GPS et les frais de déplacement partent aussi :
+ *  tous deux trahiraient l'adresse déjà masquée, en clair ou par recoupement.
  *
  *  Le masquage se fait ICI, au sortir de la base, et jamais dans les écrans :
  *  un composant qui oublierait la règle afficherait le vrai numéro. À cet
@@ -134,6 +136,15 @@ const MASQUE = {
   company_name: null,
   siret: null,
   billing_address: null,
+  // Trois oublis trouvés le 2026-10-02 (vérification Playwright en conditions réelles) :
+  // `ends_at` combinée à la durée de la prestation (déjà visible) permet de recalculer l'heure
+  // de début malgré le masquage de `scheduled_at` dans les écrans qui le tronquent ; `lat`/`lng`
+  // sont l'équivalent exact de l'adresse déjà masquée ; `travel_fee` donne une idée de la
+  // distance au client, donc indirectement d'où il habite.
+  ends_at: null,
+  lat: null,
+  lng: null,
+  travel_fee: null,
 } as const
 
 /** Le jour d'un rendez-vous, sans son heure, à l'heure de Paris.
