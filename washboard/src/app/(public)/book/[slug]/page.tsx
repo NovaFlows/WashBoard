@@ -7,7 +7,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BookingForm from '@/components/booking/BookingForm'
-import ReviewsCarousel from '@/components/booking/ReviewsCarousel'
 import { urlVersionnee } from '@/lib/themes'
 import { scrapeWebsiteReviews } from '@/lib/googleReviews'
 import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
@@ -278,18 +277,6 @@ export default async function BookingPage({ params }: Props) {
           whatsappHref={waHref}
         />
 
-        {washer.website_url && (
-          // L'appel externe vers le site du laveur (voir `scrapeWebsiteReviews`)
-          // peut prendre jusqu'à 5 s sur un cache froid, contre un site tiers
-          // qu'on ne maîtrise pas. Le rendu de l'essentiel (services, prix,
-          // disponibilités) n'a pas à l'attendre : ce bloc est streamé à part,
-          // sans skeleton (`fallback={null}`) puisqu'il n'occupe qu'un espace
-          // secondaire, sous le formulaire de réservation.
-          <Suspense fallback={null}>
-            <ReviewsSection websiteUrl={washer.website_url} themed={false} />
-          </Suspense>
-        )}
-
         {!personnalisee && (
           // La marque de l'offre gratuite. Discrète mais cliquable : c'est le
           // seul canal d'acquisition que le produit s'offre à lui-même.
@@ -322,24 +309,13 @@ export default async function BookingPage({ params }: Props) {
   )
 }
 
-/** Composant serveur asynchrone séparé pour permettre le streaming (`Suspense`
- *  dans `BookingPage`) : React peut envoyer le reste de la page pendant que
- *  cet appel externe est encore en vol. */
-async function ReviewsSection({ websiteUrl, themed }: { websiteUrl: string; themed: boolean }) {
-  const reviewData = await scrapeWebsiteReviews(websiteUrl)
-  const hasReviews = reviewData.reviews.length > 0 || !!reviewData.aggregate
-  if (!hasReviews) return null
-
-  return (
-    <div id="booking-reviews" className="mt-6">
-      <ReviewsCarousel reviews={reviewData.reviews} aggregate={reviewData.aggregate} themed={themed} />
-    </div>
-  )
-}
-
 // Seules les notes effectivement récupérées sont affichées. Aucun avis fictif.
+// Page par défaut : plus de carousel d'avis en bas de page (retiré à la
+// demande d'Alexandre, 2026-10-04) — ce badge reste la seule trace d'avis
+// sur cette page, donc un texte simple plutôt qu'un lien vers une ancre
+// qui n'existe plus.
 async function ReviewSummary({ websiteUrl }: { websiteUrl: string }) {
   const { aggregate } = await scrapeWebsiteReviews(websiteUrl)
   if (!aggregate || aggregate.count <= 0) return null
-  return <a href="#booking-reviews" className="underline underline-offset-2">★ {aggregate.value.toLocaleString('fr-FR')} · {aggregate.count} avis</a>
+  return <span>★ {aggregate.value.toLocaleString('fr-FR')} · {aggregate.count} avis</span>
 }

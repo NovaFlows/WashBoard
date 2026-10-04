@@ -42,10 +42,10 @@ describe('contrasteBlanc (WCAG)', () => {
     expect(contrasteInsuffisant('#767676')).toBe(false) // 4,54
   })
 
-  it('8 des 24 couleurs du nuancier sont sous le seuil, et ce sont les plus claires', () => {
+  it('9 des 25 couleurs du nuancier sont sous le seuil, et ce sont les plus claires', () => {
     const sous = PALETTE.filter(contrasteInsuffisant)
-    expect(sous).toHaveLength(8)
-    expect(sous).toEqual(expect.arrayContaining(['#0ea5e9', '#16a34a', '#059669', '#d97706']))
+    expect(sous).toHaveLength(9)
+    expect(sous).toEqual(expect.arrayContaining(['#0ea5e9', '#16a34a', '#059669', '#d97706', '#f59e0b']))
     // aucune couleur sombre n'avertit à tort
     for (const sombre of ['#1e3a8a', '#0f172a', '#1e293b', '#374151']) expect(sous).not.toContain(sombre)
   })

@@ -97,17 +97,21 @@ describe('BG_THEME_PRESETS (données)', () => {
 describe('PALETTE (couleurs de marque)', () => {
   // Liste recopiée de l'ancien IdentiteForm (commit 59ac1d7) : l'ordre est celui
   // que voit le laveur, et ces 24 valeurs sont celles déjà enregistrées en base.
-  it('les 24 couleurs, dans l’ordre exact de l’ancien écran', () => {
+  // #f59e0b (ambre clair) ajouté le 2026-10-04, à la demande d'Alexandre, pour
+  // une teinte dorée plus actuelle — en plus, jamais à la place d'une valeur
+  // existante : les comptes déjà enregistrés sur une des 24 couleurs d'origine
+  // ne doivent rien voir changer.
+  it('les 25 couleurs, dans l’ordre exact de l’ancien écran + l’ajout du 2026-10-04', () => {
     expect(PALETTE).toEqual([
       '#1e3a8a', '#1d4ed8', '#2563eb', '#0ea5e9',
       '#0891b2', '#0284c7', '#0369a1',
       '#15803d', '#16a34a', '#059669', '#0d9488',
       '#6d28d9', '#7c3aed', '#9333ea',
       '#dc2626', '#e11d48', '#db2777', '#c026d3',
-      '#c2410c', '#ea580c', '#d97706',
+      '#c2410c', '#ea580c', '#d97706', '#f59e0b',
       '#0f172a', '#1e293b', '#374151',
     ])
-    expect(PALETTE).toHaveLength(24)
+    expect(PALETTE).toHaveLength(25)
   })
   it('des hex #rrggbb en minuscules, sans doublon', () => {
     for (const c of PALETTE) expect(c).toMatch(/^#[0-9a-f]{6}$/)
