@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { recurringDatesInRange, materializeRecurring } from './materializeRecurring'
 import type { SupabaseClient } from '@supabase/supabase-js'
+
+const erreurJournal = vi.fn()
+vi.mock('./logger', () => ({ logger: { error: (...a: unknown[]) => erreurJournal(...a), warn: () => {}, info: () => {} } }))
+beforeEach(() => { erreurJournal.mockClear() })
 
 describe('recurringDatesInRange', () => {
   it('une occurrence par mois dans l’intervalle', () => {
@@ -45,8 +49,13 @@ describe('recurringDatesInRange', () => {
 
 // Faux Supabase : la table des modèles est « awaitable » (resolve templates),
 // la table des dépenses expose maybeSingle (existence) et insert (capturé).
-function fakeSupabase(templates: unknown[], existingResults: unknown[], inserts: unknown[]): SupabaseClient {
+// `insertErrors` : une erreur par insert attendu, dans l'ordre (undefined = succès).
+function fakeSupabase(
+  templates: unknown[], existingResults: unknown[], inserts: unknown[],
+  insertErrors: (Record<string, unknown> | undefined)[] = [],
+): SupabaseClient {
   const queue = [...existingResults]
+  const erreurs = [...insertErrors]
   return {
     from(table: string) {
       if (table === 'washer_recurring_expenses') {
@@ -62,7 +71,7 @@ function fakeSupabase(templates: unknown[], existingResults: unknown[], inserts:
       b.gte = () => b
       b.lte = () => b
       b.maybeSingle = () => Promise.resolve({ data: queue.length ? queue.shift() : null })
-      b.insert = (obj: unknown) => { inserts.push(obj); return Promise.resolve({ data: null }) }
+      b.insert = (obj: unknown) => { inserts.push(obj); return Promise.resolve({ data: null, error: erreurs.shift() ?? null }) }
       return b
     },
   } as unknown as SupabaseClient
@@ -90,5 +99,38 @@ describe('materializeRecurring (avec Supabase mocké)', () => {
     await materializeRecurring(fakeSupabase(templates, [{ id: 'x' }, null, null], inserts), 'w1', '2026-01-01', '2026-03-31')
     expect(inserts).toHaveLength(2)
     expect((inserts as { date: string }[]).map(i => i.date)).toEqual(['2026-02-10', '2026-03-10'])
+  })
+
+  // Vu en production le 2026-10-04 (logs Supabase) : le modèle lu en tête de fonction peut être
+  // supprimé par le laveur AVANT qu'on arrive à l'insertion d'un mois suivant (fonction qui
+  // parcourt plusieurs mois en plusieurs allers-retours). Violation de clé étrangère sur
+  // `recurring_expense_id` — pas une panne, le modèle n'existe simplement plus : on continue
+  // avec le mois suivant au lieu de journaliser une alerte pour rien.
+  it('ignore silencieusement un modèle supprimé entre-temps (violation de clé étrangère)', async () => {
+    const inserts: unknown[] = []
+    const templates = [{ id: 't1', day_of_month: 10, category: 'loyer', label: 'Local', amount: 300 }]
+    const fkError = { code: '23503', message: 'insert or update on table "washer_expenses" violates foreign key constraint "washer_expenses_recurring_expense_id_fkey"' }
+    await materializeRecurring(
+      fakeSupabase(templates, [null, null, null], inserts, [fkError, undefined, undefined]),
+      'w1', '2026-01-01', '2026-03-31',
+    )
+    // Les 3 mois sont bien tentés (pas d'arrêt prématuré), seul janvier échoue en silence.
+    expect(inserts).toHaveLength(3)
+    expect(erreurJournal).not.toHaveBeenCalled()
+  })
+
+  it('journalise toujours une vraie panne d’insertion (pas une 23503 sur recurring_expense_id)', async () => {
+    const inserts: unknown[] = []
+    const templates = [{ id: 't1', day_of_month: 10, category: 'loyer', label: 'Local', amount: 300 }]
+    const autrePanne = { code: '08006', message: 'connection failure' }
+    await materializeRecurring(
+      fakeSupabase(templates, [null], inserts, [autrePanne]),
+      'w1', '2026-01-01', '2026-01-31',
+    )
+    expect(erreurJournal).toHaveBeenCalledWith(
+      'compta.recurring.insert_failed',
+      expect.objectContaining({ washerId: 'w1', templateId: 't1' }),
+      autrePanne,
+    )
   })
 })
