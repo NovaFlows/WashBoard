@@ -11,6 +11,8 @@ import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
+import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
+import type { SetupProgress } from '@/lib/setupProgress'
 
 // « Réglages » — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27 :
 // « réglage apparaît dans Mon compte, mais juste Réglages, et quand on clique dessus on voit
@@ -22,8 +24,12 @@ import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 //
 // L'ancien écran « Tous les réglages » n'est plus proposé ici : email, mot de passe, frais de
 // déplacement, pause et suppression du compte vivent dans « Mon profil » (2026-09-30).
+//
+// La carte « Configuration de votre compte » (`SetupProgressBar`) vit ici depuis le 2026-10-04,
+// à la demande d'Alexandre : le bouton qui la masque/affiche vivait déjà sur cet écran, elle ne
+// doit plus s'afficher sur « Plus » (voir `SetupProgressBarPlus`, qui l'y cache en PWA).
 
-export default function ReglagesV2() {
+export default function ReglagesV2({ progress }: { progress: SetupProgress }) {
   const { theme, setTheme } = useTheme()
   const { etat: etatNotifications } = useNotificationsPush()
   // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office, sinon le
@@ -81,6 +87,10 @@ export default function ReglagesV2() {
           />
         </CarteListe>
       </div>
+
+      {/* Se masque elle-même (lit la même préférence que le bouton ci-dessus,
+          `CLE_CARTE_CACHEE`) : pas de condition à dupliquer ici. */}
+      <SetupProgressBar progress={progress} />
 
       <div>
         <TitreSection>De l’aide</TitreSection>
