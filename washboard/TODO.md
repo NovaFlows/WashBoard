@@ -429,26 +429,22 @@
         peut être gardé pour prouver le traitement (article 5.2, éventuellement sous forme de
         hash), et si une facture déjà émise peut être réécrite (exception article 17.3.b).
 
-- [ ] **Fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées le
-      2026-10-02 (dont 3 confirmées par une vérification Playwright en conditions réelles),
-      non corrigées (touchent plusieurs écrans à la fois, décision de portée à prendre avant
-      correctif plutôt qu'un rustine isolée) :
-      - Le prix/durée/catégorie de la PRESTATION jointe reste lisible sur une réservation
-        verrouillée (le prix du rendez-vous lui-même, `booked_price`, est bien masqué — pas celui
-        de la prestation liée). Correctif probable : ajouter `services: null` au masque central
-        de `reservationsVerrouillees.ts`, à vérifier contre tous les écrans qui l'utilisent.
-      - `dashboard/clients/page.tsx` → les cartes "bloquées" (déjà sans nom) transmettent encore
-        `scheduled_at` en entier au navigateur : l'heure exacte se lit au Ctrl+U malgré l'écran
-        qui ne l'affiche pas. Correctif d'une ligne (même règle "midi UTC" que partout ailleurs).
-      - **`ends_at`** (heure de fin exacte) part en clair sur `/dashboard` : combinée à la durée
-        de la prestation (déjà visible), elle permet de recalculer l'heure de début malgré le
-        masquage. Absent de `MASQUE` dans `reservationsVerrouillees.ts`.
-      - **`lat`/`lng`** (position GPS du client, 7 décimales) part en clair : l'équivalent exact
-        de l'adresse déjà masquée. Rare aujourd'hui (2 réservations sur 124 testées), mais présent
-        dès qu'un client partage sa position au lieu de taper une adresse.
-      - **`travel_fee`** (frais de déplacement) part en clair : donne une idée de la distance au
-        client. Présent sur 50 réservations sur 124 testées.
-      **En attente de décision.**
+- [x] 2026-10-04 — **4 des 5 fuites mineures corrigées, vérifiées.** Trouvées le 2026-10-02
+      (dont 3 confirmées par une vérification Playwright en conditions réelles) :
+      - `dashboard/clients/page.tsx` → les cartes "bloquées" (déjà sans nom) ne transmettent plus
+        `scheduled_at` en entier : tronqué au jour (midi UTC), même règle que `dashboard/page.tsx`.
+      - **`ends_at`**, **`lat`/`lng`** et **`travel_fee`** ajoutés au masque central (`MASQUE`
+        dans `reservationsVerrouillees.ts`) — réparé en un seul endroit pour tous les écrans qui
+        l'utilisent (`dashboard`, `calendrier`, `clients`, `clients/messages`, `crm`, `chiffres`,
+        `/api/bookings/jour`, `/api/bookings/historique`).
+      - Vérifié : tsc, eslint (0 erreur), vitest run (2451 tests, 2 nouveaux), 7 tests Playwright,
+        next build en NODE_ENV=production.
+      **Volontairement pas corrigé maintenant, à la demande d'Alexandre** : le prix/durée/
+      catégorie de la PRESTATION jointe reste lisible sur une réservation verrouillée (le prix du
+      rendez-vous lui-même, `booked_price`, est bien masqué — pas celui de la prestation liée).
+      Correctif probable : ajouter `services: null` au masque central, à vérifier contre tous les
+      écrans qui l'utilisent (certains pourraient mal gérer une relation `services` soudainement
+      nulle). **En attente.**
 
 - [x] 2026-09-27 — **Les factures écrites à la main comptent dans le chiffre d'affaires**, mais
       seulement PAYÉES (choix d'Alexandre : « quand un devis se transforme en facture on met un

@@ -233,6 +233,22 @@ describe('masquerVerrouillees', () => {
     expect(c.client_phone).toBeNull()
     expect(c.address).toBeNull()
   })
+
+  // Trois oublis trouvés le 2026-10-02 (vérification Playwright en conditions réelles) :
+  // `ends_at` + la durée (déjà visible) recalcule l'heure de début malgré le masquage ailleurs ;
+  // `lat`/`lng` sont l'équivalent exact de l'adresse déjà masquée ; `travel_fee` trahit la
+  // distance, donc indirectement où habite le client.
+  it('efface aussi l’heure de fin, la position GPS et les frais de déplacement', () => {
+    const [c] = masquerVerrouillees(
+      [{ ...liste[2], ends_at: '2026-10-03T10:30:00.000Z', lat: 48.8566, lng: 2.3522, travel_fee: 12 }],
+      PERIODES,
+    )
+    expect(c.verrouillee).toBe(true)
+    expect(c.ends_at).toBeNull()
+    expect(c.lat).toBeNull()
+    expect(c.lng).toBeNull()
+    expect(c.travel_fee).toBeNull()
+  })
   it('garde la date brute, que les écrans réduisent au jour', () => {
     // `scheduled_at` n'est pas écrasé : il sert encore à trier et au calcul
     // des créneaux. La remplacer ici par un minuit ferait sauter le rendez-vous

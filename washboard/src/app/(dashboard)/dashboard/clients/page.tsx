@@ -13,6 +13,7 @@ import { quotaReservations, planEffectif, offreQuiCouvre, hasFeature, requiredPl
 import { minVehiclePrice } from '@/lib/pricing'
 import { DELAI_AVIS_DEFAUT_HEURES, DELAI_RELANCE_DEFAUT_JOURS } from '@/lib/messagesAutomatiques'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode, montantVerrouille } from '@/lib/reservationsVerrouillees'
+import { FUSEAU } from '@/lib/dateUtils'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -61,7 +62,13 @@ export default async function ClientsPage() {
   const visibles = marquees.filter(b => !b.verrouillee)
   const bloquees = marquees
     .filter(b => b.verrouillee)
-    .map(b => ({ id: b.id as string, scheduled_at: b.scheduled_at as string }))
+    // Midi UTC du jour de Paris : le jour quitte le serveur, jamais l'heure (même règle que
+    // dashboard/page.tsx — oubliée ici, l'heure exacte se lisait au Ctrl+U malgré l'écran qui
+    // ne l'affiche pas, trouvé le 2026-10-02).
+    .map(b => ({
+      id: b.id as string,
+      scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z`,
+    }))
 
   // L'offre proposée dépend du VOLUME du mois, pas du simple fait d'être
   // bloqué : à sept réservations sur une offre plafonnée à cinq, le Starter

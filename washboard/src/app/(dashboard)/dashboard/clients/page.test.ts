@@ -69,4 +69,14 @@ describe('/dashboard/clients — annuaire', () => {
     expect(annuaire.map(b => b.id)).toEqual(['a'])
     expect(JSON.stringify(annuaire)).not.toContain('2026-10-03T14:30')
   })
+
+  // Trouvé le 2026-10-02 : la carte « bloquée » transmettait encore l'heure complète au
+  // navigateur malgré l'écran qui n'affiche que le jour — lisible au Ctrl+U. Corrigé le
+  // 2026-10-04 (même règle « midi UTC » que dashboard/page.tsx).
+  it('ne transmet que le jour d’une réservation verrouillée, jamais son heure', async () => {
+    const page = await ClientsPage()
+    const vue = (page.props as { children: ReactElement }).children
+    const bloques = (vue.props as { bloques: { id: string; scheduled_at: string }[] }).bloques
+    expect(bloques).toEqual([{ id: 'c', scheduled_at: '2026-10-03T12:00:00Z' }])
+  })
 })
