@@ -87,6 +87,7 @@ const { notifierLaveur } = vi.mocked(await import('@/lib/push'))
 const { sendWasherNotification, sendWasherBookingLocked } = vi.mocked(await import('@/lib/email'))
 
 const { RETOUR_GRATUIT_POUR_COMPTES_CREES_DES } = await import('@/lib/plan')
+const { jetonValide } = await import('@/lib/bookingToken')
 const { POST } = await import('./route')
 
 // Vendredi 11 septembre 2026, 08:00 UTC = 10:00 à Paris (heure d'été).
@@ -187,6 +188,33 @@ describe('POST /api/bookings — chemin nominal', () => {
     await poster({ vehicle_count: 3 })
     const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
     expect(reserv.ends_at).toBe('2026-09-11T11:00:00.000Z')
+  })
+})
+
+describe('POST /api/bookings — jeton du PDF', () => {
+  beforeEach(() => { vi.stubEnv('BOOKING_LINK_SECRET', 'cle-de-test-pas-un-vrai-secret') })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('remet au client un jeton propre à SA réservation, distinct de l’id', async () => {
+    const { body } = await poster()
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(body.data.id).toBe(reserv.id)
+    expect(body.data.jeton).not.toBe(body.data.id)
+    expect(jetonValide(body.data.id, body.data.jeton)).toBe(true)
+  })
+
+  it('ne le remet jamais au laveur qui saisit son propre rendez-vous', async () => {
+    plan.session = { id: 'user-1' }
+    const { res, body } = await poster({ saisie_par_laveur: true })
+    expect(res.status).toBe(201)
+    expect(body.data.jeton).toBeNull()
+  })
+
+  it('sans clé serveur, la réservation aboutit quand même, sans jeton', async () => {
+    vi.stubEnv('BOOKING_LINK_SECRET', '')
+    const { res, body } = await poster()
+    expect(res.status).toBe(201)
+    expect(body.data.jeton).toBeNull()
   })
 })
 

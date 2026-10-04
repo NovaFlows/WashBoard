@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Une réservation verrouillée (au-delà du quota de l'offre) ne doit pas pouvoir être modifiée
@@ -74,6 +74,7 @@ const { PATCH } = await import('./route')
 const { createCalendarEvent, patchCalendarEvent, deleteCalendarEvent } = await import('@/lib/google-calendar')
 const { sendBookingConfirmation, sendFacture } = await import('@/lib/email')
 const { emettreFacture } = await import('@/lib/emettreFacture')
+const { jetonValide } = await import('@/lib/bookingToken')
 
 function requete(body: Record<string, unknown>) {
   return new NextRequest('https://www.washboard.fr/api/bookings/c', {
@@ -150,6 +151,32 @@ describe('PATCH /api/bookings/[id] — réservation dans le quota', () => {
     const res = await PATCH(requete({ notes: 'Prévenir avant d’arriver' }), { params })
     expect(res.status).toBe(200)
     expect(miseAJour).toHaveBeenCalledWith('bookings', { notes: 'Prévenir avant d’arriver' })
+  })
+})
+
+describe('PATCH /api/bookings/[id] — jeton du PDF dans les emails au client', () => {
+  beforeEach(() => {
+    vi.stubEnv('BOOKING_LINK_SECRET', 'cle-de-test-pas-un-vrai-secret')
+    plan.booking = {
+      ...plan.booking, created_at: '2026-09-24T12:00:00.000Z',
+      client_email: 'nadia@example.com', is_professional: true,
+    }
+  })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('l’email de confirmation reçoit le jeton de cette réservation', async () => {
+    vi.mocked(sendBookingConfirmation).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'confirmed' }), { params })
+    const { bookingId, jeton } = vi.mocked(sendBookingConfirmation).mock.calls[0][0]
+    expect(jetonValide(bookingId, jeton)).toBe(true)
+  })
+
+  it('l’email de facture reçoit le jeton de cette réservation', async () => {
+    vi.mocked(emettreFacture).mockResolvedValueOnce({ ok: true, numero: 'F-2026-0007', nouvelle: true })
+    vi.mocked(sendFacture).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'done' }), { params })
+    const { bookingId, jeton } = vi.mocked(sendFacture).mock.calls[0][0]
+    expect(jetonValide(bookingId, jeton)).toBe(true)
   })
 })
 

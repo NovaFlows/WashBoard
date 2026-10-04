@@ -210,7 +210,18 @@
       Revérifié après coup : une requête directe à l'API Supabase avec la clé publique renvoie
       bien `42501 permission denied for table bookings` ; le dashboard (accueil, Clients,
       Calendrier) continue de fonctionner normalement avec une vraie session.
-- [ ] **🔒 Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.** Route publique sans session :
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.**
+      **Code committé en local, PAS encore poussé — `BOOKING_LINK_SECRET` à ajouter sur Vercel
+      (production + preview) avant déploiement, sinon la route refuse le PDF de toute réservation
+      verrouillée (fail-safe voulu, voir `lib/bookingToken.ts`).** Implémenté selon le plan
+      ci-dessous (les 8 étapes), avec deux écarts mineurs documentés dans le diff : jeton en
+      base64url plutôt qu'hex, et un rendez-vous saisi par le laveur lui-même (`isOwner`) ne
+      reçoit jamais de jeton (il n'est de toute façon jamais verrouillé). Revérifié en conditions
+      réelles avec un compte jetable (créé puis supprimé) : id seul sur une réservation
+      verrouillée → 404 ; bon jeton → 200 ; jeton d'une AUTRE réservation → 404 ; réservation
+      dans le quota sans jeton → 200 (les liens déjà envoyés avant ce correctif continuent de
+      marcher) ; facture déjà émise → servie sans bloquer, jeton ou pas.
+      Route publique sans session :
       l'id de réservation sert de clé d'accès pour le VRAI client (confirmation/facture sans
       compte), mais le même id est visible du laveur dans son propre dashboard pour une
       réservation verrouillée — il peut donc récupérer le PDF complet (nom, téléphone, adresse,
@@ -219,9 +230,13 @@
       n'a pas de session, donc impossible de distinguer "le vrai client qui retélécharge son PDF"
       du "laveur qui contourne le verrouillage" par la seule authentification.
       **Décision retenue** (approche `cyber`) : un jeton HMAC, distinct de l'id, envoyé au client
-      UNIQUEMENT, jamais exposé au laveur. **Rien d'implémenté — plan détaillé ci-dessous, écrit
-      le 2026-10-04 faute de temps pour l'exécuter dans la session, pour ne pas avoir à tout
-      redériver la prochaine fois :**
+      UNIQUEMENT, jamais exposé au laveur. **Étapes 1 à 7 implémentées le 2026-10-04 (non
+      commitées)** — `src/lib/bookingToken.ts`, tests verts. **Reste avant de pousser :**
+      `BOOKING_LINK_SECRET` à ajouter sur Vercel (déjà dans `.env.local`), puis l'étape 8
+      (vérification manuelle). Écarts assumés : sans clé, `genererJetonReservation` renvoie
+      `null` (journalisé `bookings.jeton.secret_missing`) au lieu de planter — la réservation
+      aboutit, le lien part sans jeton, et une réservation verrouillée reste refusée ; le POST
+      ne renvoie pas de jeton au laveur qui saisit son propre rendez-vous. Plan d'origine :
 
       1. **Nouvelle variable d'env serveur** `BOOKING_LINK_SECRET` (longue chaîne aléatoire,
          jamais `NEXT_PUBLIC_`) — à ajouter en local ET sur Vercel.

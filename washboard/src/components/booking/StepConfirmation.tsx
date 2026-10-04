@@ -6,11 +6,12 @@ import { formatPrice } from '@/lib/pricing'
 type Props = {
   washerName: string
   bookingId: string
+  jeton: string | null
   form: FormState
   services: Service[]
 }
 
-export default function StepConfirmation({ washerName, bookingId, form, services }: Props) {
+export default function StepConfirmation({ washerName, bookingId, jeton, form, services }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -89,7 +90,7 @@ export default function StepConfirmation({ washerName, bookingId, form, services
       </div>
 
       <a
-        href={`/api/bookings/${bookingId}/pdf`}
+        href={`/api/bookings/${bookingId}/pdf${jeton ? `?jeton=${jeton}` : ''}`}
         download={`confirmation-${bookingId.slice(0, 8).toUpperCase()}.pdf`}
         className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
       >

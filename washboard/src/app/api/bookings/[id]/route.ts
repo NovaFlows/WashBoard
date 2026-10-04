@@ -8,6 +8,7 @@ import { emettreFacture } from '@/lib/emettreFacture'
 import { doitEnvoyerFactureAuClient } from '@/lib/facture'
 import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
+import { genererJetonReservation } from '@/lib/bookingToken'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -159,6 +160,7 @@ export async function PATCH(
         address:       booking.address,
         scheduledAt:   booking.scheduled_at,
         bookingId:     booking.id,
+        jeton:         genererJetonReservation(booking.id),
       }).catch(e => logger.error('bookings.update.email_failed', { bookingId: id }, e))
     }
 
@@ -206,6 +208,7 @@ export async function PATCH(
           washerName: washer.name,
           numero: facture.numero,
           bookingId: id,
+          jeton: genererJetonReservation(id),
         }).catch(e => logger.error('facture.email_failed', { bookingId: id }, e))
       }
     }

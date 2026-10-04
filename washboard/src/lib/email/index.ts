@@ -154,6 +154,10 @@ type SendConfirmationParams = {
   address: string
   scheduledAt: string
   bookingId: string
+  /** Jeton d'accès au PDF (voir bookingToken). Requis et non optionnel : un appel qui
+   *  l'oublierait enverrait un lien que le client ne pourra plus ouvrir si la réservation
+   *  est verrouillée — mieux vaut que ça ne compile pas. `null` seulement si la clé manque. */
+  jeton: string | null
   appUrl?: string
 }
 
@@ -176,7 +180,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   const basePriceStr  = Number.isInteger(params.servicePrice) ? String(params.servicePrice) : params.servicePrice.toFixed(2)
 
   const appUrl    = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const pdfUrl    = `${appUrl}/api/bookings/${params.bookingId}/pdf`
+  const pdfUrl    = `${appUrl}/api/bookings/${params.bookingId}/pdf${params.jeton ? `?jeton=${params.jeton}` : ''}`
   const vehicleStr   = params.vehiclesDetail?.length
     ? params.vehiclesDetail.map(v => {
         const lbl  = formatVehicle(v.type, v.count) ?? v.type
@@ -413,13 +417,15 @@ type SendFactureParams = {
   washerName: string
   numero: string
   bookingId: string
+  /** Même règle que `SendConfirmationParams.jeton`. */
+  jeton: string | null
   appUrl?: string
 }
 
 export async function sendFacture(params: SendFactureParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const appUrl = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const url = `${appUrl}/api/bookings/${params.bookingId}/pdf`
+  const url = `${appUrl}/api/bookings/${params.bookingId}/pdf${params.jeton ? `?jeton=${params.jeton}` : ''}`
 
   return resend.emails.send({
     from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
