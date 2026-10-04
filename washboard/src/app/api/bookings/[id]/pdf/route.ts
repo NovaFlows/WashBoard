@@ -10,9 +10,16 @@ import { logger } from '@/lib/logger'
 import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import { jetonValide } from '@/lib/bookingToken'
+import { uuidValide } from '@/lib/uuid'
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Un id mal formé (lien cassé, bot qui scanne, `undefined` interpolé côté
+  // client) ne doit jamais atteindre Postgres : il répondrait une vraie
+  // erreur serveur (invalid input syntax for type uuid) pour un simple lien
+  // invalide. Voir lib/uuid.ts.
+  if (!uuidValide(id)) return new Response('Not found', { status: 404 })
+
   const jeton = new URL(req.url).searchParams.get('jeton')
 
   // Route publique (le client télécharge sa confirmation sans être authentifié).
