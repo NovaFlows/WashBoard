@@ -212,11 +212,30 @@
       Revérifié après coup : une requête directe à l'API Supabase avec la clé publique renvoie
       bien `42501 permission denied for table bookings` ; le dashboard (accueil, Clients,
       Calendrier) continue de fonctionner normalement avec une vraie session.
-- [ ] **Non résolu, à trier/prioriser (signalé par Ryan le 2026-10-04)** :
-      - `GET /api/booking-availability` (public) expose l'heure exacte des créneaux, y
-        compris ceux verrouillés par le masquage — nécessaire au calcul des créneaux côté
-        client, à arbitrer plutôt qu'à corriger à l'aveugle.
-      - `POST /bookings/[id]/facture` peut facturer une réservation verrouillée après coup.
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — `POST /bookings/[id]/facture` facturait une
+      réservation verrouillée après coup.** `PATCH /bookings/[id]` (qui émet la facture
+      automatiquement au passage en « Terminé ») bloquait déjà une réservation verrouillée ;
+      cette route séparée (facturation manuelle, pour un rendez-vous déjà « Terminé » sans
+      facture) avait été oubliée — pas une nouvelle règle, un simple alignement sur le
+      garde-fou déjà décidé ailleurs. Risque réel : émettre la facture donne au PDF un accès
+      permanent (exception légale « facture déjà émise »), donc contournait le masquage sans
+      même avoir besoin du jeton. Même garde-fou ajouté (`estVerrouillee`/`seuilsVerrouillage`,
+      403 si verrouillée), 3 tests ajoutés (`route.test.ts`), `tsc`/`eslint`/`vitest run`
+      (2426 tests) et `next build` revérifiés.
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — `GET /api/booking-availability` (public, sans
+      session) exposait l'heure exacte de TOUS les créneaux du laveur, y compris ceux
+      verrouillés par le masquage.** Un laveur connaissant son propre id pouvait interroger
+      cette route pour voir l'heure d'un rendez-vous que son dashboard lui cache. **Décision
+      de Ryan** : le masquage doit vraiment frustrer le contournement, pas seulement
+      brouiller le dashboard. Impossible de simplement retirer l'heure comme ailleurs (cette
+      route sert aussi à empêcher un double rendez-vous sur le même créneau) : un rendez-vous
+      verrouillé est maintenant remplacé par un blocage de toute la journée (minuit à minuit,
+      heure de Paris), un seul véhicule, sans options — jamais moins prudent qu'avant,
+      parfois plus (la journée entière devient indisponible au lieu du seul créneau réel).
+      `src/app/api/booking-availability/route.ts` calcule désormais `seuilsVerrouillage` (une
+      lecture `washers` en plus, échoue plutôt que d'exposer en clair si illisible). 4 tests
+      ajoutés (`route.test.ts`), `tsc`/`eslint`/`vitest run` (2430 tests) et `next build`
+      revérifiés.
       (`create_booking_atomic` : voir plus bas, vérifié sans faille. `api/debug/reviews` et
       `e2e/cleanup` : déjà fermés en production, voir section Polish/Audit du site.)
 - [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ, POUSSÉ EN PROD — Jeton d'accès séparé pour
