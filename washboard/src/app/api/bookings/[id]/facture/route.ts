@@ -6,6 +6,8 @@ import { phraseManques, doitEnvoyerFactureAuClient } from '@/lib/facture'
 import { sendFacture } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { genererJetonReservation } from '@/lib/bookingToken'
+import { quotaReservations } from '@/lib/plan'
+import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 
 // Émission à la demande du laveur : pour un rendez-vous terminé avant qu'il
 // ait rempli ses informations de facturation. Le passage en « Terminé »
@@ -21,7 +23,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const admin = createAdminClient()
   const { data: reservation, error } = await admin
     .from('bookings')
-    .select('id, status, client_name, client_email, is_professional')
+    .select('id, status, client_name, client_email, is_professional, created_at, saisie_par_laveur')
     .eq('id', id)
     .eq('washer_id', washerId)
     .maybeSingle()
@@ -33,6 +35,27 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!reservation) return NextResponse.json({ error: 'Réservation introuvable' }, { status: 404 })
   if (reservation.status !== 'done') {
     return NextResponse.json({ error: 'La facture s\'émet une fois la prestation terminée.' }, { status: 409 })
+  }
+
+  // Même garde-fou que `PATCH /bookings/[id]` (qui émet la facture
+  // automatiquement au passage en « Terminé ») : émettre une facture sur une
+  // réservation verrouillée contourne le masquage en donnant au PDF un accès
+  // permanent (exception légale « facture déjà émise », voir la route PDF).
+  const { data: laveur, error: errLaveur } = await admin
+    .from('washers')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .eq('id', washerId)
+    .single()
+  if (errLaveur || !laveur) {
+    logger.error('facture.demande.washer_read_failed', { bookingId: id }, errLaveur)
+    return NextResponse.json({ error: 'Impossible de lire votre profil. Réessayez dans un instant.' }, { status: 503 })
+  }
+  const seuils = await seuilsVerrouillage(admin, laveur, quotaReservations(laveur))
+  if (estVerrouillee(reservation, seuils)) {
+    return NextResponse.json(
+      { error: 'Cette réservation dépasse le quota de votre offre. Changez d’offre pour la débloquer.' },
+      { status: 403 },
+    )
   }
 
   const resultat = await emettreFacture(admin, id)
