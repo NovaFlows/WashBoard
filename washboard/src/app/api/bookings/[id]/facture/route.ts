@@ -5,6 +5,7 @@ import { emettreFacture } from '@/lib/emettreFacture'
 import { phraseManques, doitEnvoyerFactureAuClient } from '@/lib/facture'
 import { sendFacture } from '@/lib/email'
 import { logger } from '@/lib/logger'
+import { genererJetonReservation } from '@/lib/bookingToken'
 
 // Émission à la demande du laveur : pour un rendez-vous terminé avant qu'il
 // ait rempli ses informations de facturation. Le passage en « Terminé »
@@ -48,6 +49,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         washerName: washer?.name ?? '',
         numero: resultat.numero,
         bookingId: id,
+        jeton: genererJetonReservation(id),
       }).catch(e => logger.error('facture.demande.email_failed', { bookingId: id }, e))
     }
     return NextResponse.json({ numero: resultat.numero })

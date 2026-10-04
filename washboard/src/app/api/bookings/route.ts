@@ -14,6 +14,7 @@ import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { graceEnded, quotaReservations, quotaDepasse, debutPeriodeQuota, debutSoumisAuPlafond, suitRetourGratuit } from '@/lib/plan'
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
+import { genererJetonReservation } from '@/lib/bookingToken'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
@@ -689,5 +690,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // formulaire est délibérément ignoré à l'enregistrement (voir plus haut), et
   // remonter à Meta un montant que WashBoard n'a pas retenu fausserait
   // l'optimisation de toutes les campagnes du laveur.
-  return Response.json({ data: { id, booked_price } }, { status: 201 })
+  //
+  // Le jeton du PDF va au client, jamais au laveur — pas même pour un
+  // rendez-vous qu'il saisit lui-même : celui-là n'est jamais verrouillé, et
+  // c'est précisément ce jeton qui ouvre le PDF d'une réservation verrouillée.
+  const jeton = isOwner ? null : genererJetonReservation(id)
+  return Response.json({ data: { id, booked_price, jeton } }, { status: 201 })
 })

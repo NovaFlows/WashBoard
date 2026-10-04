@@ -113,6 +113,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
   const [screen, setScreen] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
+  const [jeton, setJeton] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
@@ -206,6 +207,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
       updateForm(contactData)
       setBookingId(json.data.id)
+      setJeton(json.data.jeton ?? null)
       setScreen('done')
 
       // ── Pixel Meta : « réservation confirmée » ──────────────────────────
@@ -482,6 +484,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
         <StepConfirmation
           washerName={washer.name}
           bookingId={bookingId}
+          jeton={jeton}
           form={form}
           services={services}
           whatsappHref={whatsappHref}

@@ -11,6 +11,7 @@ import { SOURCES_DECOUVERTE, type SourceDecouverte } from '@/lib/sourceDecouvert
 type Props = {
   washerName: string
   bookingId: string
+  jeton: string | null
   form: FormState
   services: Service[]
   /** Même lien que celui utilisé pour « Une question avant de réserver ? »
@@ -19,7 +20,7 @@ type Props = {
   whatsappHref?: string | null
 }
 
-export default function StepConfirmation({ washerName, bookingId, form, services, whatsappHref = null }: Props) {
+export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -157,7 +158,7 @@ export default function StepConfirmation({ washerName, bookingId, form, services
         )}
 
         <a
-          href={`/api/bookings/${bookingId}/pdf`}
+          href={`/api/bookings/${bookingId}/pdf${jeton ? `?jeton=${jeton}` : ''}`}
           download={`confirmation-${bookingId.slice(0, 8).toUpperCase()}.pdf`}
           className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
         >

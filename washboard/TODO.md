@@ -188,76 +188,164 @@
 
 ## 🔴 Priorité haute
 
-- [~] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
-      de ses propres réservations en interrogeant Supabase directement, sans passer par le site.**
-      Trouvé le 2026-10-02 par un audit `cyber` pendant le chantier de masquage des réservations
-      verrouillées (voir les 2 entrées ci-dessous). Ce n'est pas du piratage au sens classique :
-      un laveur CONNECTÉ possède déjà tout ce qu'il faut (l'adresse du projet Supabase et la clé
-      publique "anon" sont visibles dans le code source du site pour n'importe qui ; son propre
-      jeton de connexion prouve son identité à Supabase). Avec les outils développeur du
-      navigateur (F12), il peut appeler Supabase directement et récupérer nom/téléphone/adresse/
-      prix en clair sur une réservation que le site, lui, masque correctement — ou pire, écrire
-      `saisie_par_laveur: true` sur une réservation pour la déverrouiller pour de bon, en dehors
-      du quota.
-      **2026-10-04 — moitié faite par Ryan (`5f60919`, fusionné sur `master`, en prod)** : les
-      29 fichiers serveur qui lisaient/écrivaient `bookings` via le client de SESSION passent
-      désormais par le client ADMIN avec filtre `washer_id` explicite partout — nouveau garde-fou
-      `lib/supabase/accesBookings.test.ts` qui scanne le code et échoue si `bookings` est un jour
-      relu par la session. Au passage : deux écritures du PATCH (`google_calendar_event_id`,
-      `review_request_at`) qui n'avaient PAS de filtre `washer_id` en ont reçu un.
-      **Reste à faire — le REVOKE lui-même, SQL préparé mais PAS exécuté** (c'est lui qui ferme
-      vraiment la porte F12 décrite ci-dessus ; sans lui, un laveur peut toujours interroger
-      Supabase en direct, le site ne fait plus ce chemin mais Supabase l'autorise encore) :
-      - Écriture : `REVOKE UPDATE` sur `bookings` pour `authenticated`, puis `GRANT UPDATE` limité
-        aux seules colonnes que le navigateur du laveur écrit réellement (`status`, `notes`,
-        `closed_late`, `scheduled_at`, `google_calendar_event_id`, `review_request_at`…) —
-        `dev` doit d'abord en faire l'inventaire exact.
-      - Lecture : retirer le SELECT des colonnes personnelles à `authenticated` — fait côté code
-        (service-role après masquage, comme le reste du site), reste à retirer le GRANT lui-même.
-      À vérifier d'abord en lecture seule (pas lancé) :
-      ```sql
-      select grantee, privilege_type, column_name from information_schema.column_privileges where table_name='bookings' and grantee in ('anon','authenticated');
-      select policyname, cmd, qual, with_check from pg_policies where tablename='bookings';
-      ```
-      **Ordre impératif (Ryan)** : le code bascule-admin doit être déployé AVANT le REVOKE —
-      c'est fait depuis le 2026-10-04, le REVOKE peut donc être relu par `cyber` puis exécuté par
-      Alexandre quand il est prêt.
-
-- [ ] **🔒 SÉCURITÉ — `fusionner_clients` et `anonymiser_client` n'importe quel laveur peut agir
-      sur les clients d'un AUTRE laveur.** Trouvé par Ryan le 2026-10-04 en marge de l'audit
-      ci-dessus, pas corrigé — **potentiellement plus grave que le point précédent** : destructeur
-      et inter-laveurs (fusion/suppression de fiches client), pas juste une lecture. Les deux
-      fonctions SQL (voir leur code plus bas, section « Roadmap produit » › Menu « Options » de la
-      fiche refait) sont `SECURITY DEFINER` et accordées à `authenticated`, mais ne vérifient
-      jamais que `p_washer_id` (donné par l'appelant) appartient bien à l'appelant — confirmé en
-      relisant le SQL déjà en base. Correctif attendu : ajouter dans chaque fonction un contrôle
-      `p_washer_id in (select id from washers where user_id = auth.uid())`, lever une exception
-      sinon. À transmettre à `cyber` pour validation avant correctif.
-
-- [ ] **Pistes signalées par Ryan le 2026-10-04, sans correction — à trier/prioriser** :
-      - `create_booking_atomic` : fonction absente du dépôt (vit uniquement en base), permissions
-        jamais vérifiées depuis le dépôt de code.
-      - `GET /api/booking-availability` (public) expose l'heure exacte des créneaux, y compris
-        ceux verrouillés par le masquage — nécessaire au calcul des créneaux côté client, à
-        arbitrer plutôt qu'à corriger à l'aveugle.
-      - `api/debug/reviews` répond sans masquage.
+- [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
+      lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
+      directement, sans passer par le site.** Trouvé le 2026-10-02 par un audit `cyber` pendant
+      le chantier de masquage des réservations verrouillées. Ce n'était pas du piratage au sens
+      classique : un laveur CONNECTÉ possédait déjà tout ce qu'il fallait (l'adresse du projet
+      Supabase et la clé publique "anon" sont visibles dans le code source du site pour n'importe
+      qui ; son propre jeton de connexion prouve son identité à Supabase). Avec les outils
+      développeur du navigateur (F12), il pouvait appeler Supabase directement et récupérer
+      nom/téléphone/adresse/prix en clair sur une réservation que le site, lui, masque
+      correctement — ou pire, écrire `saisie_par_laveur: true` pour se déverrouiller pour de bon.
+      **Corrigé en 2 temps, vérifié en conditions réelles :**
+      1. Audit complet (28 fichiers) : toute lecture/écriture serveur de `bookings` qui passait
+         par la session (`authenticated`) bascule vers le client admin, avec filtre `washer_id`
+         explicite partout (l'admin ignore la RLS, ce filtre devient la seule barrière entre
+         laveurs). Nouveau garde-fou automatique `lib/supabase/accesBookings.test.ts` qui scanne
+         le code et fait échouer les tests si `bookings` est un jour relu par la session.
+      2. SQL exécuté en prod le 2026-10-04 :
+         ```sql
+         revoke all on public.bookings from anon, authenticated;
+         grant all on public.bookings to service_role;
+         ```
+      Revérifié après coup : une requête directe à l'API Supabase avec la clé publique renvoie
+      bien `42501 permission denied for table bookings` ; le dashboard (accueil, Clients,
+      Calendrier) continue de fonctionner normalement avec une vraie session.
+- [ ] **Non résolu, à trier/prioriser (signalé par Ryan le 2026-10-04)** :
+      - `GET /api/booking-availability` (public) expose l'heure exacte des créneaux, y
+        compris ceux verrouillés par le masquage — nécessaire au calcul des créneaux côté
+        client, à arbitrer plutôt qu'à corriger à l'aveugle.
       - `POST /bookings/[id]/facture` peut facturer une réservation verrouillée après coup.
-      - `e2e/cleanup` tourne sans authentification, actif en dev sur la base de prod partagée.
-- [ ] **🔒 Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.** Route publique sans session :
+      (`create_booking_atomic` : voir plus bas, vérifié sans faille. `api/debug/reviews` et
+      `e2e/cleanup` : déjà fermés en production, voir section Polish/Audit du site.)
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.**
+      **Code committé en local, PAS encore poussé — `BOOKING_LINK_SECRET` à ajouter sur Vercel
+      (production + preview) avant déploiement, sinon la route refuse le PDF de toute réservation
+      verrouillée (fail-safe voulu, voir `lib/bookingToken.ts`).** Implémenté selon le plan
+      ci-dessous (les 8 étapes), avec deux écarts mineurs documentés dans le diff : jeton en
+      base64url plutôt qu'hex, et un rendez-vous saisi par le laveur lui-même (`isOwner`) ne
+      reçoit jamais de jeton (il n'est de toute façon jamais verrouillé). Revérifié en conditions
+      réelles avec un compte jetable (créé puis supprimé) : id seul sur une réservation
+      verrouillée → 404 ; bon jeton → 200 ; jeton d'une AUTRE réservation → 404 ; réservation
+      dans le quota sans jeton → 200 (les liens déjà envoyés avant ce correctif continuent de
+      marcher) ; facture déjà émise → servie sans bloquer, jeton ou pas.
+      Route publique sans session :
       l'id de réservation sert de clé d'accès pour le VRAI client (confirmation/facture sans
       compte), mais le même id est visible du laveur dans son propre dashboard pour une
       réservation verrouillée — il peut donc récupérer le PDF complet (nom, téléphone, adresse,
       heure, prix) en contournant le masquage. Trouvé par `cyber` le 2026-10-02, en même temps
-      que la policy RLS ci-dessus. Plus délicat qu'un simple garde-fait : la route n'a pas de
-      session, donc impossible de distinguer "le vrai client qui retélécharge son PDF" du
-      "laveur qui contourne le verrouillage" par la seule authentification.
-      Option recommandée par `cyber` : un jeton HMAC (`HMAC-SHA256(secret, id)`), distinct de
-      l'id, envoyé au client UNIQUEMENT (réponse du POST de réservation + les 2 emails client),
-      jamais exposé au laveur. Sans jeton valide, la route refuse si la réservation est
-      verrouillée. Compromis : une nouvelle variable d'env Vercel, et les liens déjà envoyés
-      avant ce correctif casseraient si la réservation est re-verrouillée plus tard par un
-      changement d'offre (à traiter par une exception "facture déjà émise = jamais re-verrouillée
-      côté PDF"). **En attente de décision — rien d'implémenté.**
+      que la policy RLS ci-dessus (déjà corrigée). Plus délicat qu'un simple garde-fou : la route
+      n'a pas de session, donc impossible de distinguer "le vrai client qui retélécharge son PDF"
+      du "laveur qui contourne le verrouillage" par la seule authentification.
+      **Décision retenue** (approche `cyber`) : un jeton HMAC, distinct de l'id, envoyé au client
+      UNIQUEMENT, jamais exposé au laveur. **Étapes 1 à 7 implémentées le 2026-10-04 (non
+      commitées)** — `src/lib/bookingToken.ts`, tests verts. **Reste avant de pousser :**
+      `BOOKING_LINK_SECRET` à ajouter sur Vercel (déjà dans `.env.local`), puis l'étape 8
+      (vérification manuelle). Écarts assumés : sans clé, `genererJetonReservation` renvoie
+      `null` (journalisé `bookings.jeton.secret_missing`) au lieu de planter — la réservation
+      aboutit, le lien part sans jeton, et une réservation verrouillée reste refusée ; le POST
+      ne renvoie pas de jeton au laveur qui saisit son propre rendez-vous. Plan d'origine :
+
+      1. **Nouvelle variable d'env serveur** `BOOKING_LINK_SECRET` (longue chaîne aléatoire,
+         jamais `NEXT_PUBLIC_`) — à ajouter en local ET sur Vercel.
+      2. **Nouveau fichier `src/lib/bookingToken.ts`** : `genererJetonReservation(bookingId)` →
+         `crypto.createHmac('sha256', process.env.BOOKING_LINK_SECRET!).update(bookingId).digest('hex')`
+         (ou base64url pour un lien plus court) ; `jetonValide(bookingId, jeton)` qui recalcule et
+         compare (en temps constant, `crypto.timingSafeEqual`, pas `===`, pour éviter une attaque
+         par mesure de temps). Tests unitaires à côté.
+      3. **`src/app/api/bookings/[id]/pdf/route.ts`** (fichier déjà lu, logique exacte connue) :
+         - Passer la signature de `GET(_req: Request, ...)` à `GET(req: Request, ...)` pour lire
+           `new URL(req.url).searchParams.get('jeton')`.
+         - Lire `washer` (déjà fait dans ce fichier pour construire le PDF) + calculer
+           `estVerrouillee()` comme dans `confirmation/[id]/page.tsx` (même pattern à copier).
+         - Si `booking.facture_numero` est déjà rempli → **toujours servir**, jeton ou pas,
+           verrouillée ou pas (exception légale : une facture déjà émise doit rester accessible
+           au client qui en a le droit, variable `facture` déjà calculée dans ce fichier un peu
+           plus bas, réutiliser la même condition).
+         - Sinon, si réservation verrouillée ET (`jeton` absent OU `jetonValide(id, jeton)` faux)
+           → 404 (même comportement que `confirmation/[id]`).
+         - Sinon → comportement actuel inchangé.
+      4. **`POST /api/bookings`** (`src/app/api/bookings/route.ts`) : ajouter `jeton:
+         genererJetonReservation(id)` dans la réponse JSON (`{ data: { id, booked_price } }`
+         actuellement — regarder la forme exacte avant de modifier, ne pas casser ce qui lit déjà
+         cette réponse côté client).
+      5. **`src/components/booking/StepConfirmation.tsx:92`** : le lien `href` du bouton PDF
+         devient `/api/bookings/${bookingId}/pdf?jeton=${jeton}` (le jeton vient de la réponse du
+         POST, à faire remonter dans le state du composant parent si ce n'est pas déjà le cas).
+      6. **`src/lib/email/index.ts`**, deux endroits précis à corriger (grep `/pdf` fait le
+         2026-10-04, lignes approximatives, à revérifier avant de patcher) :
+         - ligne ~179 (`pdfUrl` de l'email de confirmation)
+         - ligne ~422 (`url` de l'email de facture)
+         Les deux fonctions reçoivent déjà `bookingId` : leur ajouter un paramètre `jeton` (jamais
+         optionnel, pour qu'un oubli d'appel casse à la compilation plutôt qu'en silence) et
+         construire `${url}?jeton=${jeton}`. **Ne pas toucher** à la ligne ~485
+         (`/api/documents/[id]/pdf`, route différente, hors de ce chantier).
+      7. **Tests** à ajouter/adapter : route PDF (jeton valide + verrouillée → 200 ; jeton invalide
+         + verrouillée → 404 ; sans jeton + verrouillée → 404 ; sans jeton + PAS verrouillée → 200,
+         comportement actuel préservé ; facture déjà émise → 200 dans tous les cas) ; génération/
+         vérification du jeton (`bookingToken.test.ts`) ; les deux fonctions email (le jeton
+         apparaît bien dans l'URL envoyée).
+      8. **Vérification manuelle avant de pousser** : créer une réservation de test, vérifier que
+         le bouton PDF de l'écran de confirmation fonctionne, vérifier que les emails contiennent
+         bien `?jeton=`, vérifier qu'un lien SANS jeton sur cette même réservation échoue une fois
+         qu'elle devient verrouillée (compte de test au-delà du quota).
+
+      Compromis déjà acceptés, à ne pas rouvrir : les liens déjà envoyés AVANT ce correctif
+      n'ont pas de jeton — ils cassent si la réservation est re-verrouillée plus tard par un
+      changement d'offre, SAUF si une facture a déjà été émise (couvert par le point 3). C'est
+      un compromis assumé, pas un oubli.
+- [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — `fusionner_clients` et `anonymiser_client`
+      (fonctions RGPD) exécutables par n'importe quel compte connecté, SANS vérifier que le
+      `washer_id` passé en paramètre appartient à l'appelant.** Trouvé par `cyber` en marge de
+      l'audit `bookings` ci-dessus — plus grave que lui, puisque destructeur et inter-laveurs
+      (pas juste de la lecture) : n'importe quel laveur connecté pouvait fusionner ou anonymiser
+      les clients d'un AUTRE laveur, pour peu qu'il connaisse un email/téléphone client (le
+      `washer_id` cible, lui, est public). Corrigé par un garde-fou ajouté au début des deux
+      fonctions (`if not exists (select 1 from washers where id = p_washer_id and user_id =
+      auth.uid()) then raise exception`), plus un `revoke execute ... from public, anon` (ces
+      fonctions héritaient par défaut du droit d'exécution Supabase pour tout le monde, pas
+      seulement `authenticated`). Un vrai bug indépendant trouvé au passage dans
+      `fusionner_clients` et corrigé dans le même SQL : fusionner vers une fiche identifiée par
+      téléphone (sans email) pouvait effacer le contenu JSON de devis/factures du client
+      (`jsonb_set` qui reçoit un `NULL`). SQL complet dans l'historique de conversation du
+      2026-10-04. **Vérifié en conditions réelles** avec deux comptes jetables : un laveur qui
+      cible le `washer_id` d'un autre reçoit `42501 Accès refusé`, les données de la victime ne
+      bougent pas, et l'usage légitime (un laveur sur ses propres clients) continue de marcher.
+- [x] 2026-10-04 — **Vérifié, PAS de faille — `create_booking_atomic`, `emettre_facture`,
+      `emettre_document` n'ont ni `anon_exec` ni `auth_exec`** (requête `pg_proc` lancée par
+      Ryan). L'hypothèse de `cyber` ne se vérifiait pas pour ces trois-là : fausse alerte,
+      rien à corriger.
+- [ ] **Hygiène, priorité basse — `rls_auto_enable` et `support_messages_touch_question`
+      accessibles en `EXECUTE` par `anon` ET `authenticated`.** Trouvées dans la même requête
+      `pg_proc` que ci-dessus, en marge de la vérification de `create_booking_atomic`. Toutes
+      deux `SECURITY DEFINER`, sans paramètre. Analysées par `cyber` le 2026-10-04 : presque
+      certainement sans danger, ce sont des fonctions de DÉCLENCHEUR (`RETURNS trigger` /
+      `event_trigger`), que Postgres refuse d'appeler directement hors d'un trigger réel, donc
+      le droit `EXECUTE` large ne sert à rien à un attaquant.
+      - `support_messages_touch_question` : la nôtre, SQL retrouvé dans l'historique de
+        conversation (commit `717168f`, 17/09) — met à jour `support_questions` à l'insertion
+        d'un message, rattachée au trigger `trg_support_messages_touch_question`.
+      - `rls_auto_enable` : pas écrite par l'équipe — c'est l'aide que Supabase crée tout seul
+        quand on active "RLS automatique sur les nouvelles tables" dans le tableau de bord
+        (déclenchée par l'event trigger `ensure_rls`). À garder, elle protège par défaut toute
+        table oubliée.
+      **Pas urgent, mais à nettoyer par hygiène** (ne casse rien, fait taire le conseiller
+      sécurité de Supabase). Vérifier d'abord en lecture seule que le type de retour est bien
+      `trigger`/`event_trigger` :
+      ```sql
+      select p.proname, pg_get_function_result(p.oid) as returns, p.prosecdef,
+             pg_get_userbyid(p.proowner) as owner, pg_get_functiondef(p.oid) as definition
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname in ('rls_auto_enable', 'support_messages_touch_question');
+      ```
+      Puis, si confirmé :
+      ```sql
+      revoke execute on function public.rls_auto_enable()                 from public, anon, authenticated;
+      revoke execute on function public.support_messages_touch_question() from public, anon, authenticated;
+      ```
+      (le `from public` est nécessaire en plus de `anon`/`authenticated` : le droit vient de
+      `PUBLIC` par défaut, un revoke sans ce mot-clé laisserait les deux rôles en hériter).
 - [ ] **Règle métier : annulation puis restauration contourne le quota de réservations
       verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un laveur peut donc
       annuler une réservation DANS son quota, ce qui recule le seuil et déverrouille la suivante
@@ -272,6 +360,18 @@
       conserver/consulter. Signalé par `cyber` le 2026-10-02 en auditant `POST
       /bookings/[id]/facture` et `/dashboard/factures` (qui affiche déjà `client_name` sans
       masque, au passage). **En attente de décision.**
+- [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
+      elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
+      ci-dessus — à croiser avec `legal`, rien corrigé :
+      - Sur `bookings` : `lat`/`lng` (position GPS exacte), `billing_address`, `company_name`/
+        `siret`, `vehicles_detail` ne sont pas effacés.
+      - Sur `documents` : `contenu.prestation.lieu` (la même adresse que `adresseFacturation`,
+        qui elle est bien effacée), `client.vehicule`, `client.entreprise`, `client.siren`.
+      - `client_rgpd_journal` est alimenté APRÈS l'anonymisation avec l'email/téléphone en clair
+        comme `cle`, et les `client_taches` liées à cette même `cle` ne sont jamais purgées : une
+        donnée personnelle survit à la demande de suppression. `legal` doit dire si un identifiant
+        peut être gardé pour prouver le traitement (article 5.2, éventuellement sous forme de
+        hash), et si une facture déjà émise peut être réécrite (exception article 17.3.b).
 
 - [ ] **Fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées le
       2026-10-02 (dont 3 confirmées par une vérification Playwright en conditions réelles),
