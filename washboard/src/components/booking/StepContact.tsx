@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
+import { normalizePhone } from '@/lib/phone'
 
 type Props = {
   isProfessional: boolean
@@ -33,8 +34,13 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   const [billingAddress, setBillingAddress] = useState('')
   const [hp, setHp] = useState('') // honeypot anti-spam (caché aux humains)
 
-  const phoneDigits = phone.replace(/\D/g, '')
-  const phoneValid  = phoneDigits.length === 10
+  // Accepte aussi « +33 »/« 0033 » : refusé avant, alors que c'est la forme
+  // que l'iPhone propose lui-même en autocomplétion — signalé par Alexandre
+  // le 2026-10-04 en testant sur son téléphone. Même normalisation que
+  // api/washer/route.ts et lib/phone.ts partout ailleurs dans le produit.
+  const phoneDigits   = phone.replace(/\D/g, '')
+  const phoneNormalise = normalizePhone(phone)
+  const phoneValid  = phoneNormalise !== null
   const phoneError  = phoneTouched && !phoneValid
 
   const siretDigits = siret.replace(/\D/g, '')
@@ -49,11 +55,11 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
 
   function handleSubmit() {
-    if (!canSubmit) return
+    if (!canSubmit || !phoneNormalise) return
     onSubmit({
       client_name:  name,
       client_email: email,
-      client_phone: phone,
+      client_phone: phoneNormalise,
       notes:        notes.trim() || undefined,
       hp,
       ...(isProfessional && {
