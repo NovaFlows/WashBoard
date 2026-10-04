@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
 import ReglagesV2 from '@/components/dashboard/ReglagesV2'
+import type { SetupProgress } from '@/lib/setupProgress'
 
 // Point d'entrée de « Réglages » — destination NEUVE de la refonte 2026 (même schéma que
 // `Depenses.tsx`). Côté site, ces réglages vivent dans l'ancien formulaire complet : le
 // navigateur classique y est renvoyé.
 type Statut = 'verification' | 'pwa' | 'site'
 
-export default function Reglages() {
+export default function Reglages({ progress }: { progress: SetupProgress }) {
   const router = useRouter()
   const [statut, setStatut] = useState<Statut>('verification')
 
@@ -24,5 +25,5 @@ export default function Reglages() {
 
   if (statut !== 'pwa') return null
 
-  return <ReglagesV2 />
+  return <ReglagesV2 progress={progress} />
 }
