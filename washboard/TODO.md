@@ -424,16 +424,67 @@
       aucune trace en base après coup).
 - [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
       elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
-      ci-dessus — à croiser avec `legal`, rien corrigé :
-      - Sur `bookings` : `lat`/`lng` (position GPS exacte), `billing_address`, `company_name`/
-        `siret`, `vehicles_detail` ne sont pas effacés.
-      - Sur `documents` : `contenu.prestation.lieu` (la même adresse que `adresseFacturation`,
-        qui elle est bien effacée), `client.vehicule`, `client.entreprise`, `client.siren`.
-      - `client_rgpd_journal` est alimenté APRÈS l'anonymisation avec l'email/téléphone en clair
-        comme `cle`, et les `client_taches` liées à cette même `cle` ne sont jamais purgées : une
-        donnée personnelle survit à la demande de suppression. `legal` doit dire si un identifiant
-        peut être gardé pour prouver le traitement (article 5.2, éventuellement sous forme de
-        hash), et si une facture déjà émise peut être réécrite (exception article 17.3.b).
+      ci-dessus. **Analyse `legal` reçue le 2026-10-04, rien codé ni poussé — gros sujet,
+      à reprendre à tête reposée plutôt qu'en fin de session.** Décision de Ryan : on
+      implémente la partie sans ambiguïté, on suspend l'autre (ci-dessous) en attendant un
+      vrai expert-comptable.
+
+      **À effacer, sans ambiguïté (feu vert `legal`, prêt à coder)** :
+      - `bookings` : `lat`, `lng` (position GPS exacte du domicile), `billing_address`,
+        `vehicles_detail` (saisi par le CLIENT à la réservation, pas une note libre du
+        laveur — traité comme nom/email/téléphone, pas comme la limite ci-dessous).
+      - `documents` : `contenu.prestation.lieu` (la même adresse que `adresseFacturation`,
+        qui elle EST déjà effacée — vraie incohérence, pas un choix), `contenu.client.vehicule`.
+      - `client_taches` (pense-bêtes du laveur liés à ce client) : à supprimer EN MÊME TEMPS
+        que la fiche, dans la même fonction, juste avant le `delete from clients`. Contrairement
+        à la limite déjà actée le 2026-09-28 (notes/véhicules en texte libre qui pourraient
+        mentionner un nom — acceptée, pas à rouvrir), ces tâches n'ont AUCUNE autre raison
+        d'exister que ce client précis : plus de base légale de conservation une fois la fiche
+        effacée.
+      - `client_rgpd_journal.cle` (conserve aujourd'hui l'email/téléphone EN CLAIR après
+        l'anonymisation — le journal censé PROUVER l'effacement garde la donnée effacée) :
+        remplacer par un **HMAC-SHA256** avec une clé secrète serveur (même principe que
+        `BOOKING_LINK_SECRET`, voir `lib/bookingToken.ts`), jamais un hash simple (cassable
+        par dictionnaire sur un email). **Calculer le HMAC côté TypeScript** (nouveau
+        `lib/rgpdHash.ts`, nouvelle variable d'env type `RGPD_JOURNAL_HASH_SECRET`) et le
+        passer en paramètre à la fonction SQL plutôt que de gérer un secret dans Postgres —
+        cohérent avec tout le reste du produit. Implique : renommer la colonne `cle` en
+        `cle_hash` dans `client_rgpd_journal`, modifier la signature de `anonymiser_client`
+        pour recevoir `p_cle_hash` en plus de `p_cle`, mettre à jour l'appelant TypeScript
+        (route qui déclenche l'anonymisation).
+      - **Oubli signalé par `legal` à ne pas ignorer** : les lignes DÉJÀ écrites dans
+        `client_rgpd_journal` avant ce correctif contiennent encore l'email/téléphone en
+        clair — une fois le secret HMAC choisi, il faudra aussi migrer ces lignes
+        existantes (recalculer leur hash avec le même secret), pas seulement corriger la
+        fonction pour l'avenir.
+
+      **Suspendu — PAS une décision produit, à trancher avec un expert-comptable
+      (Alexandre)** : `bookings.company_name`/`.siret` et `documents.client.entreprise`/
+      `.siren`. Une facture B2B peut avoir une obligation légale d'identifier l'acheteur
+      professionnel (mentions obligatoires) ; les effacer rétroactivement sur une facture
+      déjà émise pourrait fragiliser sa conformité fiscale. Ne pas toucher à ces 4 champs
+      tant que ce point n'est pas confirmé.
+
+      SQL de départ fourni par `legal` (à affiner, pas une version validée pour la prod) :
+      ```sql
+      -- UPDATE bookings : ajouter à l'UPDATE existant
+      set lat = null,
+          lng = null,
+          billing_address = 'Adresse supprimée',
+          vehicles_detail = '[]'::jsonb
+          -- company_name/siret : SUSPENDU, voir ci-dessus
+
+      -- UPDATE documents : ajouter aux jsonb_set imbriqués existants
+      '{prestation,lieu}'   -> to_jsonb('Adresse supprimée'::text)
+      '{client,vehicule}'   -> 'null'::jsonb
+      -- client.entreprise/client.siren : SUSPENDU, voir ci-dessus
+
+      -- client_taches : avant le "delete from clients"
+      delete from public.client_taches where washer_id = p_washer_id and cle = p_cle;
+
+      -- client_rgpd_journal : cle -> cle_hash (calculé en TypeScript, passé en paramètre)
+      -- + migration des lignes déjà écrites en clair avec le même secret, une fois choisi.
+      ```
 
 - [x] 2026-10-04 — **4 des 5 fuites mineures corrigées, vérifiées.** Trouvées le 2026-10-02
       (dont 3 confirmées par une vérification Playwright en conditions réelles) :
