@@ -55,6 +55,19 @@ export async function PATCH(
 
   if (!booking) return NextResponse.json({ error: 'Réservation introuvable' }, { status: 404 })
 
+  // Une réservation annulée l'est pour de bon : aucun écran ne propose de
+  // revenir en arrière (vérifié dans tout le dashboard, 2026-10-04). Sans ce
+  // garde-fou, annuler une réservation DANS le quota puis la repasser en
+  // "pending" la sortait un instant du compte de la période — assez pour
+  // déverrouiller en clair la réservation suivante, la confirmer, et annuler
+  // l'opération une fois fait : deux appels, aucune trace. Trouvé par `cyber`
+  // le 2026-10-02, tranché par Ryan le 2026-10-04 (rendre `cancelled`
+  // définitif plutôt que de compter les annulations dans le quota, qui
+  // pénaliserait un laveur pour une annulation faite par son CLIENT).
+  if (booking.status === 'cancelled' && status !== undefined && status !== 'cancelled') {
+    return NextResponse.json({ error: 'Une réservation annulée ne peut plus changer de statut.' }, { status: 409 })
+  }
+
   // Une réservation verrouillée (au-delà du quota de l'offre) ne peut pas être
   // modifiée par ce chemin : la réponse renvoie la ligne complète en clair, et
   // confirmer créerait l'événement Google Agenda avec le vrai nom — deux fuites

@@ -375,13 +375,21 @@
       ```
       (le `from public` est nécessaire en plus de `anon`/`authenticated` : le droit vient de
       `PUBLIC` par défaut, un revoke sans ce mot-clé laisserait les deux rôles en hériter).
-- [ ] **Règle métier : annulation puis restauration contourne le quota de réservations
-      verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un laveur peut donc
-      annuler une réservation DANS son quota, ce qui recule le seuil et déverrouille la suivante
-      en clair (il peut même la confirmer), puis repasser l'annulée en "pending" sans effet de
-      bord. Deux appels suffisent. Trouvé par `cyber` le 2026-10-02. **À trancher avec Ryan** :
-      faut-il compter les annulations (au moins celles faites par le laveur lui-même) dans le
-      quota, ou rendre `cancelled` définitif ? **En attente de décision.**
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — annulation puis restauration contournait le quota
+      de réservations verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un
+      laveur pouvait donc annuler une réservation DANS son quota, ce qui reculait le seuil et
+      déverrouillait la suivante en clair (il pouvait même la confirmer), puis repasser l'annulée
+      en "pending" sans effet de bord. Deux appels suffisaient. Trouvé par `cyber` le 2026-10-02.
+      **Décision de Ryan** : rendre `cancelled` définitif plutôt que de compter les annulations
+      dans le quota (qui pénaliserait un laveur pour une annulation faite par son CLIENT). Vérifié
+      au préalable qu'aucun écran du dashboard ne permet de "désannuler" une réservation — la
+      fonctionnalité n'existait nulle part, le correctif ne retire donc rien. `PATCH
+      /bookings/[id]` refuse désormais (409) tout changement de statut une fois `cancelled`. 3
+      tests unitaires ajoutés (`route.test.ts`), plus un test Playwright de bout en bout
+      (`e2e/dashboard-annulation.spec.ts`, réservation créée par le vrai parcours public, id
+      capturé depuis la réponse réseau, contournement reproduit avec la vraie session laveur) —
+      non exécutable dans cet environnement (pas d'identifiants `TEST_WASHER_*`), à lancer côté
+      Ryan. `tsc`/`eslint`/`vitest run` (2433 tests) et `next build` revérifiés.
 - [ ] **⚖️ Question légale, à croiser avec `legal` avant tout correctif.** Un laveur qui redescend
       d'offre peut voir une réservation déjà FACTURÉE se retrouver re-verrouillée a posteriori
       (le plafond de l'offre actuelle s'applique rétroactivement sur 12 périodes passées). Bloquer

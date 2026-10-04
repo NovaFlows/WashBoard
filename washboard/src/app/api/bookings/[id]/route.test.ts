@@ -154,6 +154,32 @@ describe('PATCH /api/bookings/[id] — réservation dans le quota', () => {
   })
 })
 
+describe('PATCH /api/bookings/[id] — réservation annulée', () => {
+  beforeEach(() => {
+    // Dans le quota : seul le statut `cancelled` doit bloquer, pas le verrouillage.
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', status: 'cancelled' }
+  })
+
+  it('refuse de la repasser à un autre statut, sans écrire ni renvoyer la ligne', async () => {
+    const res = await PATCH(requete({ status: 'pending' }), { params })
+    expect(res.status).toBe(409)
+    expect(JSON.stringify(await res.json())).not.toContain('Nadia')
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+
+  it('refuse même de la confirmer', async () => {
+    const res = await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(res.status).toBe(409)
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+
+  it('laisse passer une ré-annulation (statut inchangé)', async () => {
+    plan.updated = { ...plan.booking, status: 'cancelled' }
+    const res = await PATCH(requete({ status: 'cancelled' }), { params })
+    expect(res.status).toBe(200)
+  })
+})
+
 describe('PATCH /api/bookings/[id] — jeton du PDF dans les emails au client', () => {
   beforeEach(() => {
     vi.stubEnv('BOOKING_LINK_SECRET', 'cle-de-test-pas-un-vrai-secret')
