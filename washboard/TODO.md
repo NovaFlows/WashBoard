@@ -186,33 +186,30 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
-      de ses propres réservations en interrogeant Supabase directement, sans passer par le site.**
-      Trouvé le 2026-10-02 par un audit `cyber` pendant le chantier de masquage des réservations
-      verrouillées (voir les 2 entrées ci-dessous). Ce n'est pas du piratage au sens classique :
-      un laveur CONNECTÉ possède déjà tout ce qu'il faut (l'adresse du projet Supabase et la clé
-      publique "anon" sont visibles dans le code source du site pour n'importe qui ; son propre
-      jeton de connexion prouve son identité à Supabase). Avec les outils développeur du
-      navigateur (F12), il peut appeler Supabase directement et récupérer nom/téléphone/adresse/
-      prix en clair sur une réservation que le site, lui, masque correctement — ou pire, écrire
-      `saisie_par_laveur: true` sur une réservation pour la déverrouiller pour de bon, en dehors
-      du quota.
-      **Tant que ce n'est pas corrigé, tout le reste du masquage (ci-dessous) reste cosmétique**
-      pour quiconque sait ouvrir les outils développeur.
-      Correctif proposé par `cyber`, à valider puis donner à `dev` (migration sur la base de prod
-      partagée, donc personne n'y a touché cette nuit) :
-      - Écriture : `REVOKE UPDATE` sur `bookings` pour `authenticated`, puis `GRANT UPDATE` limité
-        aux seules colonnes que le navigateur du laveur écrit réellement (`status`, `notes`,
-        `closed_late`, `scheduled_at`, `google_calendar_event_id`, `review_request_at`…) —
-        `dev` doit d'abord en faire l'inventaire exact.
-      - Lecture : retirer le SELECT des colonnes personnelles à `authenticated`, et servir le
-        dashboard soit via le service-role après masquage (comme le reste du site), soit par une
-        vue/RPC qui masque directement en SQL.
-      À vérifier d'abord en lecture seule (pas lancé) :
-      ```sql
-      select grantee, privilege_type, column_name from information_schema.column_privileges where table_name='bookings' and grantee in ('anon','authenticated');
-      select policyname, cmd, qual, with_check from pg_policies where tablename='bookings';
-      ```
+- [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
+      lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
+      directement, sans passer par le site.** Trouvé le 2026-10-02 par un audit `cyber` pendant
+      le chantier de masquage des réservations verrouillées. Ce n'était pas du piratage au sens
+      classique : un laveur CONNECTÉ possédait déjà tout ce qu'il fallait (l'adresse du projet
+      Supabase et la clé publique "anon" sont visibles dans le code source du site pour n'importe
+      qui ; son propre jeton de connexion prouve son identité à Supabase). Avec les outils
+      développeur du navigateur (F12), il pouvait appeler Supabase directement et récupérer
+      nom/téléphone/adresse/prix en clair sur une réservation que le site, lui, masque
+      correctement — ou pire, écrire `saisie_par_laveur: true` pour se déverrouiller pour de bon.
+      **Corrigé en 2 temps, vérifié en conditions réelles :**
+      1. Audit complet (28 fichiers) : toute lecture/écriture serveur de `bookings` qui passait
+         par la session (`authenticated`) bascule vers le client admin, avec filtre `washer_id`
+         explicite partout (l'admin ignore la RLS, ce filtre devient la seule barrière entre
+         laveurs). Nouveau garde-fou automatique `lib/supabase/accesBookings.test.ts` qui scanne
+         le code et fait échouer les tests si `bookings` est un jour relu par la session.
+      2. SQL exécuté en prod le 2026-10-04 :
+         ```sql
+         revoke all on public.bookings from anon, authenticated;
+         grant all on public.bookings to service_role;
+         ```
+      Revérifié après coup : une requête directe à l'API Supabase avec la clé publique renvoie
+      bien `42501 permission denied for table bookings` ; le dashboard (accueil, Clients,
+      Calendrier) continue de fonctionner normalement avec une vraie session.
 - [ ] **🔒 Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.** Route publique sans session :
       l'id de réservation sert de clé d'accès pour le VRAI client (confirmation/facture sans
       compte), mais le même id est visible du laveur dans son propre dashboard pour une
@@ -228,6 +225,44 @@
       avant ce correctif casseraient si la réservation est re-verrouillée plus tard par un
       changement d'offre (à traiter par une exception "facture déjà émise = jamais re-verrouillée
       côté PDF"). **En attente de décision — rien d'implémenté.**
+- [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — `fusionner_clients` et `anonymiser_client`
+      (fonctions RGPD) exécutables par n'importe quel compte connecté, SANS vérifier que le
+      `washer_id` passé en paramètre appartient à l'appelant.** Trouvé par `cyber` en marge de
+      l'audit `bookings` ci-dessus — plus grave que lui, puisque destructeur et inter-laveurs
+      (pas juste de la lecture) : n'importe quel laveur connecté pouvait fusionner ou anonymiser
+      les clients d'un AUTRE laveur, pour peu qu'il connaisse un email/téléphone client (le
+      `washer_id` cible, lui, est public). Corrigé par un garde-fou ajouté au début des deux
+      fonctions (`if not exists (select 1 from washers where id = p_washer_id and user_id =
+      auth.uid()) then raise exception`), plus un `revoke execute ... from public, anon` (ces
+      fonctions héritaient par défaut du droit d'exécution Supabase pour tout le monde, pas
+      seulement `authenticated`). Un vrai bug indépendant trouvé au passage dans
+      `fusionner_clients` et corrigé dans le même SQL : fusionner vers une fiche identifiée par
+      téléphone (sans email) pouvait effacer le contenu JSON de devis/factures du client
+      (`jsonb_set` qui reçoit un `NULL`). SQL complet dans l'historique de conversation du
+      2026-10-04. **Vérifié en conditions réelles** avec deux comptes jetables : un laveur qui
+      cible le `washer_id` d'un autre reçoit `42501 Accès refusé`, les données de la victime ne
+      bougent pas, et l'usage légitime (un laveur sur ses propres clients) continue de marcher.
+- [ ] **🔒 À VÉRIFIER — `create_booking_atomic`, `emettre_facture`, `emettre_document` pourraient
+      avoir le même défaut que `fusionner_clients`/`anonymiser_client` ci-dessus** (droit
+      d'exécution par défaut de Supabase à `anon`/`authenticated`, jamais retiré). Ces 3 fonctions
+      ne sont appelées QUE par le client admin côté code (`api/bookings/route.ts`,
+      `lib/emettreFacture.ts`, `api/documents/route.ts`) — aucun appel légitime ne dépend d'un
+      accès direct `anon`/`authenticated`, donc un simple `revoke` sans `grant` de remplacement
+      suffirait, comme pour `bookings`. Pas encore confirmé : ces fonctions ne sont pas dans le
+      dépôt (SQL uniquement en base), impossible de lire leur définition exacte ni leurs droits
+      sans y accéder. **Si confirmé, `create_booking_atomic` est le plus grave des trois** :
+      n'importe qui pourrait l'appeler directement via `/rest/v1/rpc/create_booking_atomic` avec
+      `p_capacity: null` et un `p_booking` de son choix, contournant le honeypot, le rate-limit
+      IP, le plafond quotidien, le quota mensuel de l'offre gratuite, le recalcul du prix et le
+      contrôle de créneau plein. Requête de lecture seule à lancer en premier (donnée par `cyber`
+      le 2026-10-04, pas encore exécutée) :
+      ```sql
+      select p.proname, pg_get_function_identity_arguments(p.oid) as args, p.prosecdef as security_definer,
+             has_function_privilege('anon', p.oid, 'execute') as anon_exec,
+             has_function_privilege('authenticated', p.oid, 'execute') as auth_exec
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' order by p.prosecdef desc, p.proname;
+      ```
 - [ ] **Règle métier : annulation puis restauration contourne le quota de réservations
       verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un laveur peut donc
       annuler une réservation DANS son quota, ce qui recule le seuil et déverrouille la suivante
@@ -242,6 +277,18 @@
       conserver/consulter. Signalé par `cyber` le 2026-10-02 en auditant `POST
       /bookings/[id]/facture` et `/dashboard/factures` (qui affiche déjà `client_name` sans
       masque, au passage). **En attente de décision.**
+- [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
+      elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
+      ci-dessus — à croiser avec `legal`, rien corrigé :
+      - Sur `bookings` : `lat`/`lng` (position GPS exacte), `billing_address`, `company_name`/
+        `siret`, `vehicles_detail` ne sont pas effacés.
+      - Sur `documents` : `contenu.prestation.lieu` (la même adresse que `adresseFacturation`,
+        qui elle est bien effacée), `client.vehicule`, `client.entreprise`, `client.siren`.
+      - `client_rgpd_journal` est alimenté APRÈS l'anonymisation avec l'email/téléphone en clair
+        comme `cle`, et les `client_taches` liées à cette même `cle` ne sont jamais purgées : une
+        donnée personnelle survit à la demande de suppression. `legal` doit dire si un identifiant
+        peut être gardé pour prouver le traitement (article 5.2, éventuellement sous forme de
+        hash), et si une facture déjà émise peut être réécrite (exception article 17.3.b).
 
 - [ ] **Fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées le
       2026-10-02 (dont 3 confirmées par une vérification Playwright en conditions réelles),
