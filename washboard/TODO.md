@@ -343,8 +343,10 @@
       `emettre_document` n'ont ni `anon_exec` ni `auth_exec`** (requête `pg_proc` lancée par
       Ryan). L'hypothèse de `cyber` ne se vérifiait pas pour ces trois-là : fausse alerte,
       rien à corriger.
-- [ ] **Hygiène, priorité basse — `rls_auto_enable` et `support_messages_touch_question`
-      accessibles en `EXECUTE` par `anon` ET `authenticated`.** Trouvées dans la même requête
+- [x] 2026-10-04 — **Hygiène, FAIT — `rls_auto_enable` et `support_messages_touch_question`
+      n'ont plus le droit `EXECUTE` par défaut pour `anon`/`authenticated`.** Confirmées
+      `event_trigger`/`trigger` par la requête `pg_proc` (lecture seule) exécutée par Ryan,
+      puis les deux `revoke` ci-dessous exécutés par Ryan. Étaient trouvées dans la même requête
       `pg_proc` que ci-dessus, en marge de la vérification de `create_booking_atomic`. Toutes
       deux `SECURITY DEFINER`, sans paramètre. Analysées par `cyber` le 2026-10-04 : presque
       certainement sans danger, ce sont des fonctions de DÉCLENCHEUR (`RETURNS trigger` /
