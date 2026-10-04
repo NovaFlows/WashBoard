@@ -2,7 +2,7 @@
 
 import BookingPageModePicker from '@/components/dashboard/BookingPageModePicker'
 import { bookingPageModeEffectif, COMPTES_TEST_NOUVELLE_PAGE_RESERVATION } from '@/lib/bookingPageMode'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
 import type { Washer, ZoneConfig } from '@/types'
@@ -80,6 +80,26 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Aperçu des avis réellement affichés sur la page publique (site + fiche
+  // Google) : pour que le laveur voie tout de suite si ses réglages donnent
+  // quelque chose, sans avoir à aller vérifier sa page lui-même — ajouté le
+  // 2026-10-04 après qu'un identifiant invalide soit resté silencieux.
+  const [avisApercu, setAvisApercu] = useState<
+    'chargement' | { aSource: boolean; aggregate: { value: number; count: number } | null } | null
+  >(null)
+  const chargerAvisApercu = useCallback(async () => {
+    setAvisApercu('chargement')
+    try {
+      const res = await fetch('/api/washer/avis-preview')
+      if (!res.ok) { setAvisApercu(null); return }
+      const data = await res.json()
+      setAvisApercu({ aSource: !!data.aSource, aggregate: data.aggregate ?? null })
+    } catch {
+      setAvisApercu(null)
+    }
+  }, [])
+  useEffect(() => { chargerAvisApercu() }, [chargerAvisApercu])
 
   // Zone d'intervention
   const zoneInit = washer.zone_config
@@ -260,6 +280,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
     if (res.ok) {
       setMsg({ ok: true, text: 'Modifications enregistrées' })
       router.refresh()
+      chargerAvisApercu()
     } else {
       // La phrase du serveur (ex. identifiant de fiche Google invalide) vaut
       // mieux qu'un message générique quand il y en a une : c'est elle qui dit
@@ -521,6 +542,26 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             </a>.
           </p>
         </div>
+
+        {/* Preuve, pas une promesse : ce que la page publique affiche VRAIMENT
+            en ce moment avec le site/la fiche ci-dessus, recalculé à chaque
+            ouverture de l'écran et après chaque enregistrement. */}
+        {avisApercu === 'chargement' && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">Vérification de l’aperçu…</p>
+        )}
+        {avisApercu && avisApercu !== 'chargement' && avisApercu.aSource && (
+          avisApercu.aggregate ? (
+            <p className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Affiché sur votre page : ★ {avisApercu.aggregate.value.toLocaleString('fr-FR')} · {avisApercu.aggregate.count} avis
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Aucune note trouvée avec ces réglages. Vérifiez l’identifiant ou l’adresse de votre site.
+            </p>
+          )
+        )}
 
         <div>
           <label className={labelClass}>
