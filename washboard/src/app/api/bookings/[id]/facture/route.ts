@@ -15,7 +15,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!auth.ok) return auth.response
   const { supabase, washerId } = auth.ctx
 
-  const { data: reservation, error } = await supabase
+  // Lecture par l'admin (`authenticated` ne lit plus `bookings`) : le filtre
+  // `washer_id` ci-dessous est ce qui garantit que la réservation est la sienne.
+  const admin = createAdminClient()
+  const { data: reservation, error } = await admin
     .from('bookings')
     .select('id, status, client_name, client_email, is_professional')
     .eq('id', id)
@@ -31,7 +34,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'La facture s\'émet une fois la prestation terminée.' }, { status: 409 })
   }
 
-  const resultat = await emettreFacture(createAdminClient(), id)
+  const resultat = await emettreFacture(admin, id)
   if (resultat.ok) {
     // Même envoi qu'au passage en « Terminé » : sans lui, le client
     // professionnel d'un laveur qui complète ses informations de facturation

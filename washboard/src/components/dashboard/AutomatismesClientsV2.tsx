@@ -16,6 +16,7 @@ import {
   type ChampsCreneaux, type PrestationExemple, type ReglagesCreneaux,
 } from '@/lib/creneauxForm'
 import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
+import { resumePublicites, type ResumePublicites } from '@/lib/resumePublicites'
 
 // Section « Automatismes » de l'écran Clients — Alexandre, 2026-09-30 : la demande d'avis Google,
 // la relance client et les créneaux intelligents quittent « Plus » et « Prestations et prix »
@@ -29,8 +30,15 @@ import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
 // Une offre qui n'inclut pas la fonction : la ligne le dit et mène à l'abonnement (avis, relance) ;
 // la feuille des créneaux porte elle-même son verrou.
 
+/** Ce qu'il faut pour résumer les publicités sans charger leurs chiffres. */
+export type CampagneResumee = { debut: string; fin: string | null; budget_maj_le?: string | null }
+
 export type AutomatismesClients = {
   messages: ReglagesMessages
+  /** Les campagnes déclarées, pour le résumé de la ligne « Publicités ». */
+  campagnes: CampagneResumee[]
+  publicitesAutorisees: boolean
+  libellePlanPublicites: string
   smsAutorise: boolean
   avisAutorise: boolean
   relanceAutorisee: boolean
@@ -45,12 +53,20 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
   const { peut } = useOffre()
   const {
     messages, smsAutorise, avisAutorise, relanceAutorisee, libellePlanAvis, libellePlanRelance, prestationsPrix,
+    campagnes, publicitesAutorisees, libellePlanPublicites,
   } = automatismes
   const [creneaux, setCreneaux] = useState(automatismes.creneaux)
   // Lien de l'accueil (`/dashboard/clients#creneaux`) : on ouvre directement la feuille.
   const [feuille, setFeuille] = useState(() => typeof window !== 'undefined' && window.location.hash === '#creneaux')
 
   const ctx = { smsAutorise }
+
+  // Même traitement que les deux lignes au-dessus : une offre qui ne couvre pas
+  // la fonction le dit sur la ligne et mène à l'abonnement, plutôt que de
+  // laisser cliquer vers un mur.
+  const publicites: ResumePublicites = publicitesAutorisees
+    ? resumePublicites(campagnes, new Date().toLocaleDateString('en-CA'))
+    : { texte: `Inclus dans l’offre ${libellePlanPublicites}` }
   const avisDisponible = avisAutorise || messages.review_enabled
   const relanceDisponible = relanceAutorisee || messages.followup_enabled
 
@@ -104,6 +120,12 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
             valeur={relance.texte}
             ton={'ton' in relance ? relance.ton : undefined}
             onClick={() => router.push(relanceDisponible ? '/dashboard/clients/messages' : '/dashboard/abonnement')}
+          />
+          <LigneDeuxNiveaux
+            label="Publicités"
+            valeur={publicites.texte}
+            ton={publicites.ton}
+            onClick={() => router.push(publicitesAutorisees ? '/dashboard/clients/publicites' : '/dashboard/abonnement')}
           />
           <LigneDeuxNiveaux
             label="Créneaux intelligents"

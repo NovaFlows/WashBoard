@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   debutPeriodeQuota, finPeriodeQuota, debutSoumisAuPlafond, PLAFOND_RESERVATIONS_APPLIQUE_DES,
 } from '@/lib/plan'
+import { logger } from '@/lib/logger'
 
 // Réservations au-delà du quota mensuel : le client réserve, le laveur ne voit
 // rien.
@@ -203,9 +204,13 @@ export function bornesPeriodes(
  *  Liste vide quand l'offre n'a pas de plafond : il n'y a alors rien à masquer,
  *  et aucune requête n'est faite. */
 export async function seuilsVerrouillage(
+  // Client ADMIN, jamais celui de la session : le rôle `authenticated` ne doit
+  // plus lire `bookings` (un laveur l'interrogeait en direct, masque compris).
+  // Avec une session, cette lecture échouerait — et un échec ne masque rien :
+  // tout partirait en clair sur l'écran appelant.
   // Le client Supabase n'est pas typé dans ce projet (voir washerCourant).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any, any, any>,
+  admin: SupabaseClient<any, any, any>,
   laveur: LaveurPeriode,
   quota: number | null,
   now: Date = new Date(),
@@ -221,7 +226,7 @@ export async function seuilsVerrouillage(
   // premier client d'après se retrouverait caché sans raison.
   const depart = debutSoumisAuPlafond(new Date(bornes[0].debut))
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('bookings')
     .select('created_at')
     .eq('washer_id', laveur.id)
@@ -233,8 +238,12 @@ export async function seuilsVerrouillage(
 
   // Sans certitude, on ne masque rien : cacher les coordonnées d'un client à un
   // laveur qui y a droit lui ferait rater un vrai rendez-vous. Le sens du
-  // doute va toujours vers le laveur.
-  if (error || !data) return []
+  // doute va toujours vers le laveur. Mais ce repli lève le masquage de tout
+  // l'écran : il ne doit jamais passer inaperçu.
+  if (error || !data) {
+    logger.error('verrouillage.seuils.read_failed', { washerId: laveur.id }, error)
+    return []
+  }
 
   return seuilsDepuisDates(data.map((l: { created_at: string }) => l.created_at), quota, bornes)
 }
@@ -281,12 +290,13 @@ export function seuilsDepuisDates(
  *  `null` en cas d'erreur, et jamais zéro : un zéro inventé ferait proposer la
  *  plus petite offre à quelqu'un qui en déborde. */
 export async function compterReservationsDeLaPeriode(
+  // Client admin, pour la même raison que `seuilsVerrouillage`.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any, any, any>,
+  admin: SupabaseClient<any, any, any>,
   laveur: LaveurPeriode,
   now: Date = new Date(),
 ): Promise<number | null> {
-  const { count, error } = await supabase
+  const { count, error } = await admin
     .from('bookings')
     .select('id', { count: 'exact', head: true })
     .eq('washer_id', laveur.id)
@@ -294,7 +304,10 @@ export async function compterReservationsDeLaPeriode(
     .eq('saisie_par_laveur', false)
     .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(laveur.created_at, now)).toISOString())
 
-  if (error || count === null || count === undefined) return null
+  if (error || count === null || count === undefined) {
+    logger.warn('verrouillage.compte_periode.read_failed', { washerId: laveur.id }, error)
+    return null
+  }
   return count
 }
 

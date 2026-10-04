@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   estVerrouillee, masquerVerrouillees, jourSeul, seuilsDepuisDates,
-  bornesPeriodes, montantVerrouille, type Periode,
+  bornesPeriodes, montantVerrouille, seuilsVerrouillage, compterReservationsDeLaPeriode, type Periode,
 } from './reservationsVerrouillees'
+import { logger } from './logger'
 import { PLAFOND_RESERVATIONS_APPLIQUE_DES, debutPeriodeQuota, finPeriodeQuota } from './plan'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -334,5 +335,82 @@ describe('montantVerrouille', () => {
       { created_at: '2026-10-23T08:00:00.000Z', booked_price: 100 },  // période neuve
     ]
     expect(montantVerrouille(liste, PERIODES)).toBe(65)
+  })
+})
+
+// ── Lecture en base ─────────────────────────────────────────────────────────
+//
+// Un échec de lecture ne masque rien (le doute profite au laveur) : c'est donc
+// tout l'écran qui part en clair. Ce repli ne doit jamais être silencieux — le
+// jour où un appelant passe la session au lieu de l'admin, c'est ici qu'on le voit.
+
+type Reponse = { data?: unknown; count?: number | null; error: unknown }
+
+function fauxClient(reponse: Reponse) {
+  const filtres: Record<string, unknown> = {}
+  const tables: string[] = []
+  const client = {
+    from: (table: string) => {
+      tables.push(table)
+      const b: Record<string, unknown> = {}
+      const self = () => b
+      Object.assign(b, {
+        select: self, neq: self, gte: self, order: self, limit: self,
+        eq: (colonne: string, valeur: unknown) => { filtres[colonne] = valeur; return b },
+        then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) => Promise.resolve(reponse).then(ok, ko),
+      })
+      return b
+    },
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { client: client as any, filtres, tables }
+}
+
+const LAVEUR = { id: 'washer-1', created_at: '2026-01-22T00:00:00.000Z' }
+const MAINTENANT = new Date('2026-10-01T12:00:00.000Z')
+
+afterEach(() => vi.restoreAllMocks())
+
+describe('seuilsVerrouillage', () => {
+  it('ne lit rien quand l’offre n’a pas de plafond', async () => {
+    const { client, tables } = fauxClient({ data: [], error: null })
+    expect(await seuilsVerrouillage(client, LAVEUR, null, MAINTENANT)).toEqual([])
+    expect(tables).toEqual([])
+  })
+
+  it('filtre sur le laveur et pose le seuil sur la N-ième réservation de la période', async () => {
+    const { client, filtres } = fauxClient({
+      data: [
+        { created_at: '2026-09-24T10:00:00.000Z' },
+        { created_at: '2026-09-25T10:00:00.000Z' },
+        { created_at: '2026-09-26T10:00:00.000Z' },
+      ],
+      error: null,
+    })
+    const seuils = await seuilsVerrouillage(client, LAVEUR, 2, MAINTENANT)
+    expect(filtres).toMatchObject({ washer_id: 'washer-1', saisie_par_laveur: false })
+    expect(seuils.at(-1)?.seuil).toBe('2026-09-25T10:00:00.000Z')
+  })
+
+  it('ne masque rien sur une lecture en échec, mais le trace', async () => {
+    const trace = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    const { client } = fauxClient({ data: null, error: { code: '42501', message: 'permission denied' } })
+    expect(await seuilsVerrouillage(client, LAVEUR, 2, MAINTENANT)).toEqual([])
+    expect(trace).toHaveBeenCalledWith('verrouillage.seuils.read_failed', { washerId: 'washer-1' }, expect.anything())
+  })
+})
+
+describe('compterReservationsDeLaPeriode', () => {
+  it('rend le compte de la période, filtré sur le laveur', async () => {
+    const { client, filtres } = fauxClient({ count: 7, error: null })
+    expect(await compterReservationsDeLaPeriode(client, LAVEUR, MAINTENANT)).toBe(7)
+    expect(filtres).toMatchObject({ washer_id: 'washer-1', saisie_par_laveur: false })
+  })
+
+  it('rend null, jamais zéro, sur une lecture en échec — et le trace', async () => {
+    const trace = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    const { client } = fauxClient({ count: null, error: { code: '42501', message: 'permission denied' } })
+    expect(await compterReservationsDeLaPeriode(client, LAVEUR, MAINTENANT)).toBeNull()
+    expect(trace).toHaveBeenCalledWith('verrouillage.compte_periode.read_failed', { washerId: 'washer-1' }, expect.anything())
   })
 })

@@ -3,7 +3,7 @@
 Dernière mise à jour : 2026-10-03.
 
 ## Continuité de travail
-L'utilisateur développe ce projet depuis plusieurs mois. Claude Code reste son outil principal ; Codex prend le relais quand les crédits de ses deux comptes Claude sont épuisés. Les assistants entretiennent les fichiers de contexte pour faciliter les reprises.
+L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
 
 ## Repères vérifiés
 - `washboard/` contient l'application et son `package.json`.
@@ -38,7 +38,16 @@ L'utilisateur développe ce projet depuis plusieurs mois. Claude Code reste son 
 - À vérifier sur téléphone physique : clavier virtuel, zones de sécurité et ressenti tactile. Les tests navigateur ne remplacent pas ce contrôle.
 - Pas de déploiement ni de modification de base effectués. La refonte visuelle précédente est poussée dans 37edb1e ; le choix des deux pages est une évolution distincte.
 
+## Depuis le 2026-10-03 (Claude, suite du travail ci-dessus)
+- Migration appliquée : `booking_page_mode` existe en base depuis le 2026-10-03 (API Management Supabase, exécutée en direct, aucun fichier commité — le fichier `010_booking_page_mode.sql` mentionné plus haut a depuis été retiré du dépôt).
+- Entre le 2026-10-03 et le 2026-10-04, la nouvelle page a été limitée à deux comptes de test (`COMPTES_TEST_NOUVELLE_PAGE_RESERVATION`, `lib/bookingPageMode.ts`) le temps de repérer et corriger une régression réelle : `default` écrasait silencieusement la couleur de marque et le fond personnalisé de comptes payants.
+- Politique définitive (Alexandre, 2026-10-04) : les 24 comptes laveurs existants ont été remis à `custom` en base (ils gardent leur page personnalisée, l'activent eux-mêmes s'ils veulent la nouvelle) ; les nouvelles inscriptions démarrent sur `default` (déjà écrit dans `api/auth/signup/route.ts`). La restriction aux deux comptes de test a été retirée du code, elle n'a plus de raison d'être.
+- Avis Google ajoutés (`lib/googleReviews.ts`) : note officielle via l'API Places si le laveur renseigne l'identifiant de sa fiche, repli sur ce que son site publie lui-même (JSON-LD) sinon. Réglable sur le site (`IdentiteForm`) et la PWA (`ApparenceV2` + `FeuilleAvisGoogleV2`), avec un aperçu en direct (`/api/washer/avis-preview`) pour que le laveur voie tout de suite si ça marche.
+- `e2e/booking-refonte.spec.ts` rejoué et corrigé le 2026-10-04 (deux régressions silencieuses de commits précédents : rôle ARIA du sélecteur de page, slug de démo hors liste — à rejouer systématiquement après toute modification du sélecteur ou des écrans de réglages, voir `washboard/CLAUDE.md`).
+- Fusionné avec `master` le 2026-10-04 : `master` avait entre-temps reçu le correctif +33 sur `StepContact.tsx`, le déplacement de la carte de configuration PWA vers Réglages, et la bascule de `bookings` vers le client admin (Ryan, audit sécurité RLS — voir commit `5f60919`). Aucun chevauchement de fichiers entre les deux branches, fusion sans conflit de code (seulement sur les fichiers de contexte partagés).
+
 ## À confirmer à la prochaine tâche
 - La colonne `bookings.source_decouverte`, utilisée par le commit Claude précédent, n'a pas de migration dans ce commit. Vérifier sa présence avant déploiement ; aucune vérification distante effectuée.
 - Le reste du produit n'a pas été audité. Les sections V1 du `CLAUDE.md` racine peuvent être historiques.
+- Le REVOKE RLS préparé par Ryan sur `bookings` (SQL écrit, pas exécuté) reste à relire avec l'agent cyber puis à faire exécuter par Alexandre, dans cet ordre (le code doit être déployé AVANT le REVOKE).
 - L'historique des conversations des comptes Claude n'a pas été importé. Reprendre à partir des fichiers disponibles et des indications de l'utilisateur.

@@ -1,6 +1,6 @@
 @AGENTS.md
 
-Lire aussi `../AGENTS.md` et `../PROJECT_CONTEXT.md` pour reprendre le travail partagé entre Claude Code et Codex.
+Pour la continuité avec Codex, lire également `../AGENTS.md` et `../PROJECT_CONTEXT.md`. Actualiser la mémoire partagée après un travail significatif.
 
 ## Présentation publique de réservation
 - `washers.booking_page_mode` : `default` pour le parcours compact, `custom` pour la présentation classique personnalisable. Colonne en base depuis le 2026-10-03 (migration appliquée directement via l'API Management Supabase, pas de fichier dans `supabase/migrations/` — convention du projet : SQL donné en direct, jamais commité).

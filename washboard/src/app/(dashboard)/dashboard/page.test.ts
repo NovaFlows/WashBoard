@@ -7,29 +7,38 @@ import { isValidElement, type ReactElement, type ReactNode } from 'react'
 
 let aVenir: Record<string, unknown>[]
 
-const fauxSupabase = {
-  auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
-  from: (table: string) => {
-    let historique = false
-    const b: Record<string, unknown> = {}
-    const self = () => b
-    Object.assign(b, {
-      select: self, eq: self, neq: self, not: self, gte: self, lte: self, order: self, range: self, limit: self,
-      in: () => { historique = true; return b },
-      single: () => Promise.resolve({
-        data: { id: 'washer-1', plan: 'decouverte', name: 'Kooki Clean', slug: 'kooki', created_at: '2026-01-01T00:00:00.000Z' },
-        error: null,
-      }),
-      then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
-        Promise.resolve(
-          table === 'bookings' && !historique ? { data: aVenir, error: null, count: 0 } : { data: [], error: null, count: 0 },
-        ).then(ok, ko),
-    })
-    return b
-  },
+// La session n'a plus aucun droit sur `bookings` (le laveur y lisait en direct ce que le masque
+// cache) : son faux refuse comme Postgres. Seul le faux admin sert les réservations.
+const REFUS = { data: null, error: { code: '42501', message: 'permission denied for table bookings' }, count: null }
+function faux(role: 'session' | 'admin') {
+  return {
+    auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
+    from: (table: string) => {
+      let historique = false
+      const b: Record<string, unknown> = {}
+      const self = () => b
+      Object.assign(b, {
+        select: self, eq: self, neq: self, not: self, gte: self, lte: self, order: self, range: self, limit: self,
+        in: () => { historique = true; return b },
+        single: () => Promise.resolve({
+          data: { id: 'washer-1', plan: 'decouverte', name: 'Kooki Clean', slug: 'kooki', created_at: '2026-01-01T00:00:00.000Z' },
+          error: null,
+        }),
+        then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
+          Promise.resolve(
+            table === 'bookings' && role === 'session' ? REFUS
+              : table === 'bookings' && !historique ? { data: aVenir, error: null, count: 0 } : { data: [], error: null, count: 0 },
+          ).then(ok, ko),
+      })
+      return b
+    },
+  }
 }
+const fauxSupabase = faux('session')
+const fauxAdmin = faux('admin')
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => fauxSupabase }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxAdmin }))
 vi.mock('next/navigation', () => ({ redirect: () => { throw new Error('NEXT_REDIRECT') } }))
 vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/reservationsVerrouillees')>()),

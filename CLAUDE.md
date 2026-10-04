@@ -1,7 +1,7 @@
 # WashBoard
 
 ## Continuité Claude Code / Codex
-Lire `AGENTS.md` et `PROJECT_CONTEXT.md` pour les consignes communes, les validations et l'état de la refonte. Claude Code reste l'outil principal ; Codex prend le relais quand ses crédits sont épuisés.
+Lire `AGENTS.md` et `PROJECT_CONTEXT.md` à la racine pour les consignes communes et l'état de reprise. Après un travail significatif, actualiser cette mémoire partagée ; mettre à jour ce fichier lorsque le contexte durable du projet change.
 
 SaaS B2B pour laveurs auto mobiles. Abonnement 49€/mois. Pitch : "Tu laves des voitures. On gère le reste."
 

@@ -36,8 +36,15 @@ export async function PATCH(
   if (scheduled_at !== undefined && isNaN(new Date(scheduled_at).getTime()))
     return NextResponse.json({ error: 'Date invalide' }, { status: 400 })
 
+  // La session a servi à savoir QUI écrit. La réservation, elle, se lit et
+  // s'écrit par l'admin : `authenticated` n'a plus de droit direct sur
+  // `bookings` (un laveur y écrivait `saisie_par_laveur` pour déverrouiller une
+  // réservation hors quota). Chaque requête ci-dessous porte donc son filtre
+  // `washer_id` — sans RLS, c'est la seule barrière entre laveurs.
+  const admin = createAdminClient()
+
   // Récupérer la réservation courante + service
-  const { data: booking, error: errBooking } = await supabase
+  const { data: booking, error: errBooking } = await admin
     .from('bookings')
     .select('*, services(name, price, duration_minutes)')
     .eq('id', id)
@@ -54,7 +61,7 @@ export async function PATCH(
   // pour une réservation verrouillée (`BookingList` affiche `CarteVerrouillee`
   // à la place, sans bouton d'action) : n'importe quelle requête qui l'atteint
   // quand même n'a rien de légitime à y faire.
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   if (estVerrouillee(booking, seuils)) {
     return NextResponse.json(
       { error: 'Cette réservation dépasse le quota de votre offre. Changez d’offre pour la débloquer.' },
@@ -69,7 +76,7 @@ export async function PATCH(
   if (closed_late  !== undefined) updates.closed_late  = closed_late
   if (scheduled_at !== undefined) updates.scheduled_at = scheduled_at
 
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await admin
     .from('bookings')
     .update(updates)
     .eq('id', id)
@@ -124,10 +131,13 @@ export async function PATCH(
           endIso,
         }, washer.id)
         if (eventId) {
-          await supabase
+          // Sans cet id, l'annulation ne retrouvera pas l'événement à supprimer.
+          const { error: errEvent } = await admin
             .from('bookings')
             .update({ google_calendar_event_id: eventId })
             .eq('id', id)
+            .eq('washer_id', washer.id)
+          if (errEvent) logger.error('bookings.id.calendar_event_id.write_failed', { bookingId: id }, errEvent)
         }
       }
 
@@ -162,10 +172,13 @@ export async function PATCH(
     if (status === 'done' && washer.review_enabled && washer.google_review_url
         && booking.client_email && !booking.review_request_sent_at) {
       const delayMs = Math.max(0, Number(washer.review_delay_hours ?? 3)) * 3_600_000
-      await supabase
+      // Sans cette date, le cron ne demandera jamais l'avis.
+      const { error: errAvis } = await admin
         .from('bookings')
         .update({ review_request_at: new Date(Date.now() + delayMs).toISOString() })
         .eq('id', id)
+        .eq('washer_id', washer.id)
+      if (errAvis) logger.error('bookings.id.review_request_at.write_failed', { bookingId: id }, errAvis)
     }
 
     if (status === 'cancelled' && booking.google_calendar_event_id && washer.google_refresh_token) {
@@ -180,7 +193,7 @@ export async function PATCH(
   // depuis le détail du rendez-vous (POST /api/bookings/[id]/facture).
   let factureNumero: string | null = null
   if (status === 'done' && booking.status !== 'done') {
-    const facture = await emettreFacture(createAdminClient(), id)
+    const facture = await emettreFacture(admin, id)
     if (facture.ok) {
       factureNumero = facture.numero
       // Même règle que l'émission à la demande (POST .../facture) : elle vit

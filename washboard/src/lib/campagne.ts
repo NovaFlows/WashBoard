@@ -549,3 +549,76 @@ export function budgetAVerifier(
   const jours = joursDepuisBudget(c, maintenant)
   return jours !== null && jours >= BUDGET_A_VERIFIER_JOURS
 }
+
+// ── Le bilan, toutes campagnes confondues ───────────────────────────────────
+//
+// L'écran des campagnes répond campagne par campagne. Ces deux fonctions
+// répondent aux questions qu'on se pose quand on en a plusieurs, et qu'aucune
+// carte isolée ne peut trancher :
+//
+//   · « de TOUTES mes vidéos, laquelle marche le mieux ? » — la meilleure
+//     vidéo d'une petite campagne peut battre celle d'une grosse ;
+//   · « est-ce que Meta me rapporte plus que TikTok ? » — comparaison qu'un
+//     laveur ne peut pas faire de tête quand il a six campagnes.
+
+/** Toutes les vidéos de toutes les campagnes, classées ensemble.
+ *
+ *  Chacune garde le nom de sa campagne : sans lui, deux vidéos appelées
+ *  « Avant/après » venues de deux campagnes seraient impossibles à distinguer
+ *  dans la liste — et c'est un nom qu'on redonne volontiers. */
+export function toutesLesCreations(
+  campagnes: readonly CampagneAffichee[],
+): (BilanCreation & { campagne: string })[] {
+  return campagnes
+    .flatMap(c => c.creations.map(b => ({ ...b, campagne: c.nom })))
+    .sort((a, b) =>
+      b.reservations - a.reservations
+      || b.chiffreAffaires - a.chiffreAffaires
+      || b.visites - a.visites
+      || a.creation.nom.localeCompare(b.creation.nom, 'fr'))
+}
+
+export type BilanPlateforme = {
+  plateforme: Plateforme
+  campagnes: number
+  budget: number
+  visites: number
+  reservations: number
+  chiffreAffaires: number
+  retour: number | null
+  coutParReservation: number | null
+}
+
+/** Ce que chaque plateforme a coûté et rapporté.
+ *
+ *  Les ratios sont RECALCULÉS sur les totaux de la plateforme, jamais moyennés
+ *  entre ses campagnes : faire la moyenne de ×3 et ×0,5 donne un nombre qui ne
+ *  correspond à rien, et ferait abandonner une plateforme rentable.
+ *
+ *  Classées par chiffre encaissé : c'est l'ordre dans lequel on veut les lire
+ *  quand on décide où remettre son budget. */
+export function parPlateforme(campagnes: readonly CampagneAffichee[]): BilanPlateforme[] {
+  const parCle = new Map<Plateforme, BilanPlateforme>()
+
+  for (const c of campagnes) {
+    const acc = parCle.get(c.plateforme) ?? {
+      plateforme: c.plateforme, campagnes: 0, budget: 0,
+      visites: 0, reservations: 0, chiffreAffaires: 0,
+      retour: null, coutParReservation: null,
+    }
+    acc.campagnes += 1
+    acc.budget += c.budget
+    acc.visites += c.bilan.visites
+    acc.reservations += c.bilan.reservations
+    acc.chiffreAffaires += c.bilan.chiffreAffaires
+    parCle.set(c.plateforme, acc)
+  }
+
+  return [...parCle.values()]
+    .map(p => ({
+      ...p,
+      retour: p.budget > 0 ? p.chiffreAffaires / p.budget : null,
+      coutParReservation: p.reservations > 0 ? p.budget / p.reservations : null,
+    }))
+    .sort((a, b) => b.chiffreAffaires - a.chiffreAffaires || b.budget - a.budget)
+}

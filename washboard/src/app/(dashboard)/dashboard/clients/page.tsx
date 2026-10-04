@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ClientsView from '@/components/dashboard/ClientsView'
@@ -32,10 +33,14 @@ export default async function ClientsPage() {
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'clients')
+  // `bookings` via l'admin : `authenticated` ne la lit plus (le laveur y
+  // contournait le masque en direct). Le filtre `washer_id` est la seule
+  // barrière entre laveurs.
+  const admin = createAdminClient()
 
   // Page par page : l'API coupe à 1 000 lignes sans erreur (voir `toutesLesLignes`).
   const { data: bookings, error } = await toutesLesLignes(
-    (debut, fin) => supabase
+    (debut, fin) => admin
       .from('bookings')
       .select(COLONNES)
       .eq('washer_id', washer.id)
@@ -50,7 +55,7 @@ export default async function ClientsPage() {
   // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
   // au-dessus, avec le jour seul — le nom est masqué comme le reste.
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const montantBloque = montantVerrouille(bookings, seuils)
   const marquees = masquerVerrouillees(bookings, seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
@@ -63,7 +68,7 @@ export default async function ClientsPage() {
   // suffit et coûte trente euros de moins que le Pro. Le comptage n'a lieu que
   // s'il y a quelque chose à débloquer — sinon c'est une requête pour rien sur
   // chaque affichage de la page.
-  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDeLaPeriode(admin, washer)
   const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
 
   // Les devis et factures écrits à la main font naître des clients qui n'ont jamais réservé
@@ -140,6 +145,18 @@ export default async function ClientsPage() {
     contacts: contactsBruts.filter(c => c.entrepriseId === e.id),
   }))
 
+  // Les campagnes déclarées, pour le résumé de la ligne « Publicités » des
+  // Automatismes. Table seule, sans agrégation : la ligne dit un décompte et,
+  // le cas échéant, qu'un budget a vieilli — jamais un retour, qui coûterait
+  // deux agrégations complètes à chaque ouverture de l'écran.
+  //
+  // Un échec est silencieux et rend une liste vide : la migration 006 peut ne
+  // pas avoir tourné, et l'écran Clients n'a aucune raison de tomber pour ça.
+  const { data: campagnesLues } = await supabase
+    .from('campagnes')
+    .select('debut, fin, budget_maj_le')
+    .eq('washer_id', washer.id)
+
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <ClientsView
@@ -178,6 +195,13 @@ export default async function ClientsPage() {
             valeur: Number(washer.smart_slot_discount_value ?? 0),
           },
           prestationsPrix: (services ?? []).map(s => ({ nom: s.name as string, prix: minVehiclePrice(s) })),
+          campagnes: (campagnesLues ?? []).map(c => ({
+            debut: c.debut as string,
+            fin: (c.fin as string | null) ?? null,
+            budget_maj_le: (c.budget_maj_le as string | null | undefined) ?? null,
+          })),
+          publicitesAutorisees: hasFeature(washer, 'campagnes'),
+          libellePlanPublicites: requiredPlanLabel('campagnes'),
         }}
       />
     </DashboardShell>

@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CalendrierDashboard from '@/components/dashboard/CalendrierDashboard'
@@ -16,6 +17,10 @@ export default async function CalendrierPage() {
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'calendrier')
+  // `bookings` via l'admin : `authenticated` ne la lit plus (le laveur y
+  // contournait le masque en direct). Le filtre `washer_id` est la seule
+  // barrière entre laveurs.
+  const admin = createAdminClient()
 
   const [
     { data: bookings, error: bookingsError },
@@ -26,7 +31,7 @@ export default async function CalendrierPage() {
     // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
     // erreur. Voir `toutesLesLignes`. Tri complété par `id` : une clé unique,
     // sinon deux pages successives peuvent se chevaucher.
-    toutesLesLignes((debut, fin) => supabase
+    toutesLesLignes((debut, fin) => admin
       .from('bookings')
       .select('*, services(name, price, duration_minutes, service_categories(name))')
       .eq('washer_id', washer.id)
@@ -58,7 +63,7 @@ export default async function CalendrierPage() {
   // Le masquage se fait ICI, au sortir de la base : un composant qui
   // oublierait la règle afficherait le vrai nom du client. À cet endroit,
   // l'oubli est impossible — la donnée n'existe déjà plus.
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const marquees = masquerVerrouillees(bookings ?? [], seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
   // Les journées concernées, pour le bandeau au-dessus de l'agenda. Le jour
@@ -82,7 +87,7 @@ export default async function CalendrierPage() {
       scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })}T12:00:00Z`,
     }))
   const joursMasques = masquees.map(m => m.scheduled_at)
-  const volumeDuMois = masquees.length === 0 ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  const volumeDuMois = masquees.length === 0 ? null : await compterReservationsDeLaPeriode(admin, washer)
   const offreDeblocage = PLAN_LABELS[offreQuiCouvre(planEffectif(washer), volumeDuMois)]
 
   // Congés, prestations et catégories : en échec, le calendrier affiche une

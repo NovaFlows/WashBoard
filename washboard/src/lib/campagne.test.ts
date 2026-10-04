@@ -6,6 +6,8 @@ import {
   inventaireFormats, erreurCreation, lienCreation, estFiable, SEUIL_FIABILITE,
   bilansParCreation, resteHorsCreations, synthese, type Creation,
   joursDepuisBudget, budgetAVerifier, BUDGET_A_VERIFIER_JOURS,
+  toutesLesCreations, parPlateforme,
+  type CampagneAffichee, type Plateforme,
 } from './campagne'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -661,5 +663,106 @@ describe('estEnCours — campagne sans fin prévue', () => {
     // Elle doit compter ses visites et ses réservations des mois plus tard.
     expect(estEnCours({ debut: '2026-01-01', fin: null }, '2026-10-01')).toBe(true)
     expect(estEnCours({ debut: '2026-01-01', fin: null }, '2027-06-15')).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le bilan additionne. Ce qui s'y joue : « laquelle de TOUTES mes vidéos
+// marche » et « quelle plateforme me rapporte » — deux questions qu'aucune
+// carte de campagne isolée ne peut trancher, et deux réponses sur lesquelles
+// un laveur déplace son budget.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function campagneFactice(
+  id: string, nomCampagne: string, plateforme: Plateforme, budget: number,
+  bilanValeurs: { visites: number; reservations: number; chiffreAffaires: number },
+  creations: { id: string; nom: string; reservations: number; chiffreAffaires: number; visites: number }[] = [],
+): CampagneAffichee {
+  return {
+    id, nom: nomCampagne, plateforme, budget, cle: id,
+    debut: '2026-01-01', fin: null, budget_maj_le: null,
+    bilan: bilanCampagne({ budget, ...bilanValeurs }),
+    creations: creations.map(c => ({
+      creation: { id: c.id, campagne_id: id, nom: c.nom, format: 'video' as const, cle: c.id, budget: null },
+      ...bilanCampagne({ budget: null, visites: c.visites, reservations: c.reservations, chiffreAffaires: c.chiffreAffaires }),
+      partReservations: null,
+      fiable: estFiable(c.visites),
+    })),
+    reste: { visites: 0, reservations: 0, chiffreAffaires: 0 },
+  }
+}
+
+describe('toutesLesCreations', () => {
+  it('mélange les campagnes pour les classer ensemble', () => {
+    // Tout l'intérêt : la meilleure vidéo d'une petite campagne peut battre
+    // celle d'une grosse, et aucune carte isolée ne le montre.
+    const liste = toutesLesCreations([
+      campagneFactice('a', 'Grosse pub', 'meta', 500, { visites: 400, reservations: 4, chiffreAffaires: 260 },
+        [{ id: 'a1', nom: 'Vidéo A', reservations: 4, chiffreAffaires: 260, visites: 400 }]),
+      campagneFactice('b', 'Petite pub', 'tiktok', 40, { visites: 60, reservations: 7, chiffreAffaires: 455 },
+        [{ id: 'b1', nom: 'Vidéo B', reservations: 7, chiffreAffaires: 455, visites: 60 }]),
+    ])
+    expect(liste.map(v => v.creation.id)).toEqual(['b1', 'a1'])
+  })
+
+  it('garde le nom de la campagne d’origine', () => {
+    // Deux vidéos « Avant/après » venues de deux campagnes seraient sinon
+    // impossibles à distinguer dans la liste.
+    const liste = toutesLesCreations([
+      campagneFactice('a', 'Pub Rentrée', 'meta', 100, { visites: 10, reservations: 1, chiffreAffaires: 65 },
+        [{ id: 'a1', nom: 'Avant/après', reservations: 1, chiffreAffaires: 65, visites: 10 }]),
+    ])
+    expect(liste[0].campagne).toBe('Pub Rentrée')
+  })
+
+  it('rend une liste vide sans créations', () => {
+    expect(toutesLesCreations([
+      campagneFactice('a', 'Pub', 'meta', 100, { visites: 10, reservations: 0, chiffreAffaires: 0 }),
+    ])).toEqual([])
+  })
+})
+
+describe('parPlateforme', () => {
+  it('regroupe les campagnes d’une même plateforme', () => {
+    const r = parPlateforme([
+      campagneFactice('a', 'Pub 1', 'meta', 100, { visites: 200, reservations: 5, chiffreAffaires: 300 }),
+      campagneFactice('b', 'Pub 2', 'meta', 50, { visites: 100, reservations: 1, chiffreAffaires: 25 }),
+    ])
+    expect(r).toHaveLength(1)
+    expect(r[0].campagnes).toBe(2)
+    expect(r[0].budget).toBe(150)
+    expect(r[0].chiffreAffaires).toBe(325)
+  })
+
+  it('RECALCULE le retour au lieu de moyenner celui des campagnes', () => {
+    // Moyenner ×3 et ×0,5 donnerait ×1,75. La vérité est 325/150 = ×2,17 :
+    // une petite campagne rentable ne doit pas peser autant qu'une grosse qui
+    // perd de l'argent, sinon on abandonne une plateforme qui marche.
+    const r = parPlateforme([
+      campagneFactice('a', 'Pub 1', 'meta', 100, { visites: 200, reservations: 5, chiffreAffaires: 300 }),
+      campagneFactice('b', 'Pub 2', 'meta', 50, { visites: 100, reservations: 1, chiffreAffaires: 25 }),
+    ])
+    expect(r[0].retour).toBeCloseTo(2.17, 2)
+    expect(r[0].coutParReservation).toBeCloseTo(25, 2)
+  })
+
+  it('sépare les plateformes et les classe par chiffre encaissé', () => {
+    const r = parPlateforme([
+      campagneFactice('a', 'Meta', 'meta', 100, { visites: 200, reservations: 2, chiffreAffaires: 130 }),
+      campagneFactice('b', 'TikTok', 'tiktok', 40, { visites: 90, reservations: 6, chiffreAffaires: 390 }),
+    ])
+    expect(r.map(p => p.plateforme)).toEqual(['tiktok', 'meta'])
+  })
+
+  it('ne divise pas par zéro sur une plateforme sans budget ni client', () => {
+    const r = parPlateforme([
+      campagneFactice('a', 'Offerte', 'autre', 0, { visites: 10, reservations: 0, chiffreAffaires: 0 }),
+    ])
+    expect(r[0].retour).toBeNull()
+    expect(r[0].coutParReservation).toBeNull()
+  })
+
+  it('ne rend rien sans campagne', () => {
+    expect(parPlateforme([])).toEqual([])
   })
 })

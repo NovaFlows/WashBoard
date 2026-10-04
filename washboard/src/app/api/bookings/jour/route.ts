@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireWasher } from '@/lib/requireWasher'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { FUSEAU, minuitParisUTC } from '@/lib/dateUtils'
@@ -46,7 +47,11 @@ export async function GET(req: NextRequest) {
   // En dehors d'aujourd'hui, un rendez-vous déjà clôturé redevient
   // pertinent : on regarde ce qui s'est passé ce jour-là, pas seulement ce
   // qu'il reste à faire. Seuls les annulés restent écartés.
-  const { data, error } = await supabase
+  // La session prouve QUI demande ; `bookings` se lit par l'admin, que
+  // `authenticated` ne peut plus lire en direct. Le filtre `washer_id` est la
+  // seule barrière entre laveurs.
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('bookings')
     .select(COLONNES)
     .eq('washer_id', washerId)
@@ -72,7 +77,7 @@ export async function GET(req: NextRequest) {
   // que de tout renvoyer en clair.
   if (errWasher || !washer) return errorResponse('bookings.jour.washer.read_failed', errWasher, { washerId })
 
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const lignes = masquerVerrouillees(data ?? [], seuils).map(b => b.verrouillee
     // Midi UTC du jour de Paris, comme sur l'accueil : le jour quitte le serveur, jamais l'heure.
     ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z` }

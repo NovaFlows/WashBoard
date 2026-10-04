@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireWasher } from '@/lib/requireWasher'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { quotaReservations } from '@/lib/plan'
@@ -34,7 +35,11 @@ export async function GET(req: NextRequest) {
   const decalage = entierBorne(req.nextUrl.searchParams.get('decalage'), 0, 0, 100_000)
   const limite   = entierBorne(req.nextUrl.searchParams.get('limite'), LOT_DEFAUT, LOT_MIN, LOT_MAX)
 
-  const { data, error } = await supabase
+  // La session prouve QUI demande ; `bookings` se lit par l'admin, que
+  // `authenticated` ne peut plus lire en direct. Le filtre `washer_id` est la
+  // seule barrière entre laveurs.
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('bookings')
     .select(COLONNES)
     .eq('washer_id', washerId)
@@ -62,7 +67,7 @@ export async function GET(req: NextRequest) {
   // que de tout renvoyer en clair.
   if (errWasher || !washer) return errorResponse('bookings.historique.washer.read_failed', errWasher, { washerId })
 
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const lignes = masquerVerrouillees(data ?? [], seuils)
   // Un lot plus court que demandé signale la fin de l'historique : le client
   // s'en sert pour savoir s'il faut encore proposer « Charger plus ».
