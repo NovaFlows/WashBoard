@@ -92,6 +92,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
+  const [jeton, setJeton] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
@@ -200,6 +201,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
       setBookingId(json.data.id)
+      setJeton(json.data.jeton ?? null)
       setStep(5)
 
       // ── Pixel Meta : « réservation confirmée » ──────────────────────────
@@ -447,6 +449,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
           <StepConfirmation
             washerName={washer.name}
             bookingId={bookingId!}
+            jeton={jeton}
             form={form}
             services={services}
           />

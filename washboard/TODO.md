@@ -219,10 +219,18 @@
       - `POST /bookings/[id]/facture` peut facturer une réservation verrouillée après coup.
       (`create_booking_atomic` : voir plus bas, vérifié sans faille. `api/debug/reviews` et
       `e2e/cleanup` : déjà fermés en production, voir section Polish/Audit du site.)
-- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.**
-      **Code committé en local, PAS encore poussé — `BOOKING_LINK_SECRET` à ajouter sur Vercel
-      (production + preview) avant déploiement, sinon la route refuse le PDF de toute réservation
-      verrouillée (fail-safe voulu, voir `lib/bookingToken.ts`).** Implémenté selon le plan
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ, POUSSÉ EN PROD — Jeton d'accès séparé pour
+      `GET /api/bookings/[id]/pdf`.** `BOOKING_LINK_SECRET` ajouté sur Vercel (production +
+      preview) et vérifié en prod par Ryan. **Trouvé en testant manuellement en prod** : le fil
+      du jeton n'avait été posé que dans `BookingForm.tsx`/`StepConfirmation.tsx` (la nouvelle
+      page) — `LegacyBookingForm.tsx`/`LegacyStepConfirmation.tsx` (la page personnalisée,
+      utilisée par les 24 comptes laveurs existants, remis sur ce mode par la refonte) n'avaient
+      reçu AUCUN de ces deux fichiers lors de la fusion puisqu'ils ont été créés par la refonte
+      après mon correctif initial. Pas de faille : la route bloquait déjà correctement côté
+      serveur (verrouillée + pas de jeton → 404) quel que soit le composant d'affichage ; seul
+      l'AVANTAGE du jeton (lien qui survit à un verrouillage ultérieur) manquait pour tous les
+      laveurs réels. Même correctif ajouté dans les deux fichiers Legacy, revérifié `tsc`/`eslint`/
+      `vitest run` (2423 tests) et `next build`. Implémenté selon le plan
       ci-dessous (les 8 étapes), avec deux écarts mineurs documentés dans le diff : jeton en
       base64url plutôt qu'hex, et un rendez-vous saisi par le laveur lui-même (`isOwner`) ne
       reçoit jamais de jeton (il n'est de toute façon jamais verrouillé). Revérifié en conditions
