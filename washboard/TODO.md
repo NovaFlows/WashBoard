@@ -310,21 +310,19 @@
       `facture` (avec leur PDF, `/api/documents/:id/pdf`) pour que la suite se relise d'un bout
       à l'autre. Écran encore v1 : à traiter en même temps que sa refonte.
 
-- [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
-      le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
-      cycle. Projects will be restricted from 05 Oct, 2026 if your organization remains over
-      quota. » Une restriction couperait les pages de réservation de tous les laveurs.
-  - Mesuré le 2026-09-14 (lecture seule) : base **14 Mo**, fichiers stockés **2,1 Mo**
-    (fonds 1,6 Mo dont un de 510 Ko, logos 0,5 Mo). Loin des limites : le dépassement est
-    très probablement la **bande passante sortante** (egress).
-  - Cause probable : les fonds et logos téléversés sont servis **directement depuis
-    Supabase** (`getBgStyle` met l'URL publique dans un `background-image`), à chaque visite
-    d'une page de réservation, sans cache Vercel. La vidéo TikTok virale du 2026-09-04 a
-    multiplié les visites.
-  - À faire : (1) confirmer le poste en cause sur la page Usage de l'organisation Supabase ;
-    (2) servir fonds et logos via l'optimisation d'images de Next (`/_next/image`, mise en
-    cache par Vercel, ~5× plus légers) ; (3) vérifier que l'organisation n'a pas d'autre
-    projet qui consomme ; (4) si besoin, passer en offre Pro Supabase avant le 5 octobre.
+- [x] 2026-10-04 — **Quota Supabase : désamorcé par le passage en offre Pro.** Alerte vue le
+      2026-09-14 : « Organization exceeded its quota... Projects will be restricted from 05 Oct,
+      2026 if your organization remains over quota. » **Vérifié aujourd'hui dans Billing** :
+      organisation sur **Pro Plan**, facture d'octobre (25 €) **payée le 2026-10-01**, les 7
+      dernières factures affichent toutes « PAID ». Le risque de coupure pure et simple n'existe
+      donc plus. Point qui reste vrai, structurellement, tant que le **spend cap** reste activé
+      (réglage volontaire : jamais facturé en plus du forfait, mais projet qui peut ralentir ou
+      passer en lecture seule en cas de dépassement du quota inclus — pas une coupure pour
+      impayé). Mesuré fin septembre (mémoire projet) : consommation retombée à 6 % du quota —
+      le risque semble loin aujourd'hui, mais pas nul tant que le spend cap reste activé.
+      Les causes probables identifiées le 2026-09-14 restent valables si la consommation
+      remonte : fonds/logos servis directement depuis Supabase (`getBgStyle`, sans passer par
+      l'optimisation d'images Next/cache Vercel), amplifiés par un pic de trafic viral.
 
 - [ ] **Audit post-lancement du 2026-09-21 (liste « 20 points à vérifier » vue sur TikTok).**
       Fait par Ryan, en lecture seule, sur www.washboard.fr et le code à jour. **15 points
