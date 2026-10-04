@@ -17,8 +17,10 @@ import { masquerVerrouillees, seuilsVerrouillage } from '@/lib/reservationsVerro
 // ce qui a déjà été chargé ailleurs sur la page.
 
 // `created_at` et `saisie_par_laveur` ne s'affichent pas : sans eux, `estVerrouillee` ne
-// reconnaît aucune réservation au-delà du quota, et tout partirait en clair.
-const COLONNES = 'id, client_name, scheduled_at, status, created_at, saisie_par_laveur, services(name)'
+// reconnaît aucune réservation au-delà du quota, et tout partirait en clair. `facture_numero`
+// non plus : sans lui, une réservation déjà facturée se re-masquerait après une rétrogradation
+// d'offre (décision `legal`, 2026-10-04).
+const COLONNES = 'id, client_name, scheduled_at, status, created_at, saisie_par_laveur, facture_numero, services(name)'
 
 export async function GET(req: NextRequest) {
   const r = await requireWasher()

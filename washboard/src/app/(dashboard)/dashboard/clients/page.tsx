@@ -25,7 +25,7 @@ import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode
 // (`StepService.tsx`), repris dans la fiche plutôt que redemandé au laveur (`clientProfile.ts`,
 // `vehiculesReserves`). `created_at` sert AUSSI au verrouillage des réservations hors quota :
 // sans lui, la règle ne peut rien trancher et l'annuaire les afficherait toutes.
-const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, saisie_par_laveur, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, vehicles_detail, services(name, price, duration_minutes)'
+const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, saisie_par_laveur, facture_numero, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, vehicles_detail, services(name, price, duration_minutes)'
 
 export default async function ClientsPage() {
   const supabase = await createClient()

@@ -106,4 +106,13 @@ describe('GET /api/bookings/jour — réservations au-delà du quota', () => {
     expect(res.status).toBeGreaterThanOrEqual(500)
     expect(JSON.stringify(await res.json())).not.toContain('Nadia')
   })
+
+  it('laisse en clair une réservation au-delà du quota mais déjà facturée', async () => {
+    plan.bookings = [DANS_LE_QUOTA, { ...AU_DELA, facture_numero: 'F-2026-0012' }]
+    const { data } = await (await GET(requete())).json()
+    const c = data.find((b: { id: string }) => b.id === 'c')
+    expect(c.verrouillee).toBe(false)
+    expect(c.client_name).toBe('Nadia Costa')
+    expect(c.scheduled_at).toBe('2026-10-03T14:30:00.000Z')
+  })
 })

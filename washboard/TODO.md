@@ -390,13 +390,32 @@
       capturé depuis la réponse réseau, contournement reproduit avec la vraie session laveur) —
       non exécutable dans cet environnement (pas d'identifiants `TEST_WASHER_*`), à lancer côté
       Ryan. `tsc`/`eslint`/`vitest run` (2433 tests) et `next build` revérifiés.
-- [ ] **⚖️ Question légale, à croiser avec `legal` avant tout correctif.** Un laveur qui redescend
-      d'offre peut voir une réservation déjà FACTURÉE se retrouver re-verrouillée a posteriori
-      (le plafond de l'offre actuelle s'applique rétroactivement sur 12 périodes passées). Bloquer
-      l'accès du laveur à sa propre facture se heurte à l'obligation légale de pouvoir la
-      conserver/consulter. Signalé par `cyber` le 2026-10-02 en auditant `POST
-      /bookings/[id]/facture` et `/dashboard/factures` (qui affiche déjà `client_name` sans
-      masque, au passage). **En attente de décision.**
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — un laveur qui redescend d'offre pouvait voir une
+      réservation déjà FACTURÉE se retrouver re-verrouillée a posteriori** (le plafond de l'offre
+      actuelle s'applique rétroactivement sur 12 périodes passées). Signalé par `cyber` le
+      2026-10-02 en auditant `POST /bookings/[id]/facture` et `/dashboard/factures` (qui affiche
+      déjà `client_name` sans masque, au passage — une incohérence, pas un trou RGPD).
+      **Analyse `legal`** : le laveur a une obligation de conservation de ses factures (10 ans,
+      Code de commerce art. L123-22 ; 6 ans côté délai de reprise fiscal, LPF art. L102 B) : un
+      accès rompu l'expose à perdre une pièce justificative — risque de service pour WashBoard,
+      pas un problème RGPD direct (le PDF, pas l'écran dashboard, porte les mentions légales de
+      facturation). Masquer le nom ailleurs dans le produit tant que la facture reste accessible
+      n'est pas un souci de conformité, mais n'a plus non plus de justification commerciale une
+      fois la prestation facturée (et potentiellement déjà réglée) — le masquage ne sert qu'à
+      inciter à upgrader AVANT facturation. **Recommandation retenue** : toute réservation
+      déjà facturée (`facture_numero` non nul) est exemptée du verrouillage PARTOUT, pas
+      seulement sur la route PDF — aligne le détail réservation sur le comportement déjà existant
+      de la liste factures, au lieu de l'inverse. Corrigé dans `estVerrouillee()`
+      (`reservationsVerrouillees.ts`), le point central déjà utilisé par tous les écrans ;
+      `facture_numero` ajouté à la liste de colonnes lue par les 4 endroits qui ne
+      sélectionnaient pas déjà `*` (`booking-availability`, `bookings/jour`,
+      `clients/page.tsx`, `clients/messages/page.tsx`). Au passage, fuite corrigée dans
+      `booking-availability` (créée par mon propre correctif du jour) : `created_at` et
+      `saisie_par_laveur`, nécessaires au calcul mais jamais prévus dans la réponse, fuitaient
+      dans le JSON renvoyé au visiteur public — la route ne renvoie plus que les 4 champs
+      documentés, verrouillé ou pas. 6 tests ajoutés (`reservationsVerrouillees.test.ts`,
+      `bookings/jour/route.test.ts`, `booking-availability/route.test.ts`),
+      `tsc`/`eslint`/`vitest run` (2449 tests) et `next build` revérifiés.
 - [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
       elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
       ci-dessus — à croiser avec `legal`, rien corrigé :

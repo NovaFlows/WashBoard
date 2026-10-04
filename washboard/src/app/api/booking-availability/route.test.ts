@@ -161,4 +161,32 @@ describe('GET /api/booking-availability — rendez-vous verrouillé par le quota
     const { bookings } = await res.json()
     expect(bookings[0].scheduled_at).toBe('2026-10-03T14:30:00.000Z')
   })
+
+  it('ne verrouille jamais un rendez-vous déjà facturé (décision legal, 2026-10-04)', async () => {
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-10-03T14:30:00.000Z', vehicle_count: 1, selected_addons: [],
+        services: { duration_minutes: 60 }, created_at: '2026-09-26T08:00:00.000Z', saisie_par_laveur: false,
+        facture_numero: 'F-2026-0012',
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(bookings[0].scheduled_at).toBe('2026-10-03T14:30:00.000Z')
+  })
+
+  it('ne renvoie jamais created_at, saisie_par_laveur ou facture_numero, verrouillé ou pas', async () => {
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-10-03T14:30:00.000Z', vehicle_count: 1, selected_addons: [],
+        services: { duration_minutes: 60 }, created_at: '2026-09-26T08:00:00.000Z', saisie_par_laveur: false,
+        facture_numero: 'F-2026-0012',
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(Object.keys(bookings[0]).sort()).toEqual(['scheduled_at', 'selected_addons', 'services', 'vehicle_count'])
+  })
 })

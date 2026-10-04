@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // libres — une double réservation. Voir `toutesLesLignes`.
     toutesLesLignes((debut, fin) => admin
       .from('bookings')
-      .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes), created_at, saisie_par_laveur')
+      .select('scheduled_at, vehicle_count, selected_addons, services(duration_minutes), created_at, saisie_par_laveur, facture_numero')
       .eq('washer_id', washerId)
       .neq('status', 'cancelled')
       // Douze heures de recul : un lavage commencé ce matin occupe encore le laveur, et le
@@ -90,8 +90,13 @@ export async function GET(request: NextRequest) {
   // restant au moins aussi prudent qu'avant (jamais moins de créneaux bloqués
   // qu'il n'y a de rendez-vous réels, parfois plus).
   const seuils = await seuilsVerrouillage(admin, laveur, quotaReservations(laveur))
+  // `created_at`, `saisie_par_laveur` et `facture_numero` ne servaient qu'à
+  // `estVerrouillee` ci-dessus : jamais dans la réponse, verrouillée ou pas —
+  // seules les 4 données déjà documentées en tête de fichier sortent d'ici.
   const bookings = (reservations.data ?? []).map(r => {
-    if (!estVerrouillee(r, seuils)) return r
+    if (!estVerrouillee(r, seuils)) {
+      return { scheduled_at: r.scheduled_at, vehicle_count: r.vehicle_count, selected_addons: r.selected_addons, services: r.services }
+    }
     const jour = new Date(r.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: FUSEAU })
     const debutJour = minuitParisUTC(jour)
     const lendemain = new Date(`${jour}T12:00:00Z`)

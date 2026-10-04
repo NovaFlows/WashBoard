@@ -99,6 +99,33 @@ describe('un rendez-vous saisi par le laveur n’est jamais verrouillé', () => 
   })
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Décision `legal` du 2026-10-04 : une réservation déjà FACTURÉE reste
+// toujours lisible, même re-classée au-delà du quota après une rétrogradation
+// d'offre (le plafond, plus bas, s'applique rétroactivement sur 12 périodes
+// passées). Le laveur a une obligation de conservation de ses factures, et le
+// masquage n'a de sens commercial qu'AVANT facturation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('un rendez-vous déjà facturé n’est jamais verrouillé', () => {
+  it('reste lisible même arrivé après l’épuisement du quota', () => {
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.001Z', facture_numero: 'F-2026-0012' }, PERIODES)).toBe(false)
+  })
+
+  it('reste lisible dans la liste masquée, avec ses coordonnées', () => {
+    const [r] = masquerVerrouillees(
+      [{ created_at: '2026-09-25T10:00:00.001Z', facture_numero: 'F-2026-0012', client_phone: '0612345678' }],
+      PERIODES,
+    )
+    expect(r.verrouillee).toBe(false)
+    expect(r.client_phone).toBe('0612345678')
+  })
+
+  it('reste verrouillé tant qu’aucune facture n’a été émise', () => {
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.001Z', facture_numero: null }, PERIODES)).toBe(true)
+  })
+})
+
 describe('le verrou ne saute pas au changement de période', () => {
   const DEUX: Periode[] = [
     { debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z' },

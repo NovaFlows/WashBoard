@@ -27,7 +27,7 @@ import { logger } from '@/lib/logger'
  *  `saisie_par_laveur` : posée quand le laveur a lui-même saisi le rendez-vous dans son agenda
  *  (un client trouvé de son côté). Ce client n'est pas venu par WashBoard : il n'y a rien à
  *  débloquer, donc jamais masqué et jamais compté dans le quota. */
-type Datee = { created_at?: string | null; saisie_par_laveur?: boolean | null }
+type Datee = { created_at?: string | null; saisie_par_laveur?: boolean | null; facture_numero?: string | null }
 
 /** Une période de quota, et l'instant après lequel tout y est verrouillé.
  *
@@ -79,6 +79,15 @@ export function estVerrouillee(
 ): boolean {
   if (!periodes || periodes.length === 0 || !r?.created_at) return false
   if (r.saisie_par_laveur) return false
+  // Décision `legal` du 2026-10-04 : une facture déjà émise garantit un accès
+  // intégral, partout — pas seulement sur la route PDF (voir son exception
+  // dédiée). Un laveur qui redescend d'offre voit son plafond, plus bas,
+  // s'appliquer rétroactivement sur 12 périodes passées ; sans cette sortie,
+  // une réservation déjà facturée (donc potentiellement déjà réglée par le
+  // client) se retrouvait re-masquée après coup, au mépris de l'obligation
+  // de conservation des factures du laveur et sans justification commerciale
+  // (le masquage n'a de sens qu'AVANT facturation, pour inciter à upgrader).
+  if (r.facture_numero) return false
 
   // Le plafond ne vaut que pour l'avenir. Les clients que le laveur avait
   // AVANT restent à lui : il les a lavés, appelés, facturés. Deuxième garde-fou
