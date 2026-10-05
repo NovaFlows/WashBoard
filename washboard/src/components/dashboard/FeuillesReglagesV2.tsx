@@ -235,7 +235,7 @@ export function FeuilleExpediteurSmsV2({
         {statut === 'en_attente' && (
           <div className="mb-3">
             <Constat ton="ambre">
-              Demande en cours. En attendant son approbation, vos SMS partent avec WashBoard.
+              Demande en cours, approuvée en moins de 24 h. En attendant, vos SMS partent avec WashBoard.
             </Constat>
           </div>
         )}

@@ -566,7 +566,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
                 )}
                 {statutSender === 'en_attente' && (
                   <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-                    Demande en cours. En attendant son approbation, vos SMS partent avec WashBoard.
+                    Demande en cours, approuvée en moins de 24 h. En attendant, vos SMS partent avec WashBoard.
                   </p>
                 )}
                 {statutSender === 'refuse' && (
