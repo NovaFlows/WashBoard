@@ -1007,6 +1007,24 @@ function DetailRendezVous({
             </span>
           </div>
 
+          {((b.selected_addons && b.selected_addons.length > 0) || (b.travel_fee ?? 0) > 0) && (
+            <div className="mt-3 space-y-1.5 px-1">
+              <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>Détail du prix</p>
+              {b.selected_addons?.map(a => (
+                <div key={a.id} className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
+                  <span>{a.label}</span>
+                  <span className="tabular-nums">+{a.price} €</span>
+                </div>
+              ))}
+              {(b.travel_fee ?? 0) > 0 && (
+                <div className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
+                  <span>Frais de déplacement</span>
+                  <span className="tabular-nums">+{b.travel_fee} €</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{b.address}</p>
 
           <div className="mt-4">
