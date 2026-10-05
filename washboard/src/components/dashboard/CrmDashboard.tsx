@@ -14,6 +14,7 @@ import {
 } from '@/lib/crmPeriod'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { caCumule, delaisDeReservation } from '@/lib/graphiquesCrm'
+import { repartitionSources } from '@/lib/sourceDecouverte'
 import CaCumule from '@/components/dashboard/CaCumule'
 import DelaiReservation from '@/components/dashboard/DelaiReservation'
 
@@ -42,6 +43,7 @@ type Booking = {
   is_professional: boolean
   company_name: string | null
   services: Service | null
+  source_decouverte?: string | null
 }
 
 // Couleurs de STATUT : elles décrivent l'état d'une réservation, et ne servent
@@ -210,6 +212,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
   const isFiltered = clientFilter !== 'all'
 
   const resume = resumeCrm(displayBookings)
+  const sourcesClients = repartitionSources(displayBookings)
 
   // Période précédente, pour situer chaque indicateur. Sur « Tout », il n'y a
   // rien avant : les écarts ne s'affichent pas.
@@ -559,6 +562,28 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
         <DelaiReservation points={delais.points} mediane={delais.mediane} teinte={TEINTE_VOLUME}
           className={cumul ? '' : 'md:col-span-2'} />
       </div>
+
+      {sourcesClients.reponses > 0 && (
+        <div className={`${carte} p-4 sm:p-5`}>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">D&apos;où viennent vos clients</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+            {nombre.format(sourcesClients.reponses)} réponse{sourcesClients.reponses > 1 ? 's' : ''} sur {nombre.format(displayBookings.length)} rendez-vous de la période
+          </p>
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {sourcesClients.lignes.map(l => (
+              <li key={l.valeur} className="flex items-baseline justify-between gap-3 py-2.5 text-sm">
+                <span className="truncate text-slate-700 dark:text-slate-200">{l.libelle}</span>
+                <span className="shrink-0 tabular-nums">
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{nombre.format(l.nombre)}</span>
+                  <span className="inline-block w-12 text-right text-slate-400 dark:text-slate-500">
+                    {Math.round((l.nombre / sourcesClients.reponses) * 100)} %
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Par prestation */}
