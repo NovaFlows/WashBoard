@@ -2,27 +2,30 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Mail, Phone, Plus, X } from 'lucide-react'
+import { CalendarX2, ChevronLeft, ChevronRight, Mail, Navigation, Phone, Plus, Users2, X } from 'lucide-react'
 import MoisV2 from '@/components/dashboard/MoisV2'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
-import { dayKey, formatHeure } from '@/lib/calendarLayout'
+import { dayKey, formatHeure, isSameDay } from '@/lib/calendarLayout'
 import { villeDepuisAdresse } from '@/lib/adresse'
 import { doitDemanderConfirmation, statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
 import { useConges } from '@/hooks/useConges'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
 import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/ProposerCreneauV2'
 import FeuilleGoogleAgendaV2, { issueDepuisParametre } from '@/components/dashboard/FeuilleGoogleAgendaV2'
 import { BandeauConge, CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
-import type { Booking, CalendrierProps } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking, CalendrierProps, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
 import { JoursMasquesV2, CarteJourVerrouilleeV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
 import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
+import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
+import { semainesDuMois, compterActifsParJour, pointsRendezVous } from '@/lib/vueMois'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -224,7 +227,46 @@ function finRendezVous(b: Booking): Date {
 
 type Trajet = { minutes: number; km: number } | null
 
+// ── Passe bureau (2026-10-06) : la grille « semaine », écran 3 de la maquette bureau ──────────
+//
+// La grille a besoin d'une plage d'heures pour positionner les rendez-vous. Aucune des horaires
+// d'ouverture (`availabilities`) n'est chargée par cet écran — ni par la v1, ni par la v2
+// mobile — et en charger ici serait une requête nouvelle, hors du périmètre de cette passe (voir
+// le rapport). La plage s'adapte donc seulement aux VRAIS rendez-vous de la semaine affichée,
+// avec un plancher raisonnable (8h-19h, la plage déjà utilisée par la maquette) qu'elle élargit
+// si besoin plutôt que de les couper.
+const HEURE_MIN_DEFAUT = 8
+const HEURE_MAX_DEFAUT = 19
+
+function plageHeuresSemaine(joursActifs: Booking[][]): { debut: number; fin: number } {
+  let debut = HEURE_MIN_DEFAUT
+  let fin = HEURE_MAX_DEFAUT
+  for (const jour of joursActifs) {
+    for (const b of jour) {
+      const d = new Date(b.scheduled_at)
+      const h = d.getHours() + d.getMinutes() / 60
+      if (h < debut) debut = Math.floor(h)
+      const f = finRendezVous(b)
+      const hf = f.getHours() + f.getMinutes() / 60
+      if (hf > fin) fin = Math.ceil(hf)
+    }
+  }
+  return { debut, fin: Math.max(fin, debut + 1) }
+}
+
 export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
+  // Passe « bureau » (2026-10-06, Alexandre, 2026-10-03) : au-delà de `SEUIL_GRAND_ECRAN_PX`
+  // (1024px, `grandEcran.ts`), même hook que ClientsViewV2.tsx/AccueilV2.tsx — pas un seuil
+  // inventé en double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc
+  // toujours en disposition téléphone, comme avant cette passe. `CalendrierDashboard.tsx` (le
+  // point de branchement) a déjà décidé plus haut si cet écran v2 se montre du tout (PWA, ou
+  // site + grand écran + `washer.beta_refonte`, voir `useDashboardV2.ts`) ; ici, la question est
+  // seulement « ai-je la place pour une grille de semaine et un panneau de fiche à côté ».
+  const grandEcran = useGrandEcran()
+  // Trois onglets du châssis bureau (planche Agenda/Agenda-semaine/Agenda-mois), distincts de
+  // `vue` plus bas (qui reste la mécanique mobile — bandeau de 7 jours / couche plein écran du
+  // mois — inchangée). Seulement lu quand `grandEcran` est vrai.
+  const [vueBureau, setVueBureau] = useState<'jour' | 'semaine' | 'mois'>('jour')
   const [today] = useState(() => new Date())
   const [dayDate, setDayDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()))
   const [bookings, setBookings] = useState(initialBookings)
@@ -321,6 +363,18 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     () => Array.from({ length: 7 }, (_, i) => { const d = new Date(dayDate); d.setDate(d.getDate() + i - 3); return d }),
     [dayDate],
   )
+  // Sur ORDINATEUR, la semaine est une vraie semaine : lundi → dimanche, celle qui contient
+  // le jour affiché. La règle du « jour au milieu » ci-dessus vaut pour le bandeau du
+  // téléphone, où elle sert à choisir un jour du bout du pouce ; une grille hebdomadaire,
+  // elle, se lit comme un calendrier — et c’est ce que montre la maquette (écran 3), en
+  // accord avec les sept points d’« Aujourd’hui » (semaineAccueil.ts, lundi → dimanche).
+  // Sans ça, les deux écrans ne disaient pas la même chose par « cette semaine ».
+  const semaineBureau = useMemo(() => {
+    const lundi = new Date(dayDate)
+    // getDay() : 0 = dimanche. On recule jusqu’au lundi qui précède (dimanche recule de 6).
+    lundi.setDate(lundi.getDate() - ((lundi.getDay() + 6) % 7))
+    return Array.from({ length: 7 }, (_, i) => { const d = new Date(lundi); d.setDate(d.getDate() + i); return d })
+  }, [dayDate])
   const bandeauRef = useRef<HTMLDivElement>(null)
   // Décalage (en jours) du jour touché par rapport au milieu, posé au toucher : lu par
   // l'effet qui suit le changement de jour pour faire glisser le bandeau.
@@ -395,6 +449,366 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   const sousTitre = estAujourdhui
     ? `Aujourd’hui · ${dayDate.toLocaleDateString('fr-FR', { day: 'numeric' })}`
     : dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })
+
+  // ── Passe bureau (2026-10-06) ───────────────────────────────────────────────────────────────
+  //
+  // Un retour séparé, AVANT le retour mobile ci-dessous (inchangé, jamais touché par cette
+  // passe) — même schéma que ClientsViewV2.tsx/AccueilV2.tsx : toutes les données et actions
+  // (bookings, byDate, jour, actifs, trajets, congés, les quatre hooks) sont déjà calculées
+  // plus haut et partagées entre les deux branches ; seule la présentation change. Trois
+  // onglets (planches Agenda / Agenda-semaine / Agenda-mois) plutôt qu'un bandeau de 7 jours +
+  // une couche plein écran : le grand écran a la place de montrer une semaine entière d'un
+  // coup, ce qu'un pouce ne permet pas (voir le rapport de la passe).
+  if (grandEcran) {
+    const nbRdvSemaine = semaineBureau.reduce(
+      (s, d) => s + (byDate.get(dayKey(d)) ?? []).filter(b => b.status !== 'cancelled').length,
+      0,
+    )
+    const sousTitreBureau = vueBureau === 'jour'
+      ? `${actifs.length} rendez-vous ${estAujourdhui ? 'aujourd’hui' : dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })}${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
+      : vueBureau === 'semaine'
+        ? `${semaineBureau[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${semaineBureau[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · ${nbRdvSemaine} rendez-vous cette semaine`
+        : `${MOIS[dayDate.getMonth()]} ${dayDate.getFullYear()} · ${dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })} sélectionné · ${actifs.length} rendez-vous${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
+
+    return (
+      <>
+      <div className={`space-y-5 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className={`text-[22px] ${titre}`}>Agenda</h1>
+            <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{sousTitreBureau}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-1 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] p-1">
+              {([['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']] as const).map(([v, libelle]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVueBureau(v)}
+                  aria-pressed={vueBureau === v}
+                  className={`h-9 rounded-[var(--v2-radius-pilule)] px-3.5 text-[13px] ${corpsFort} transition-colors ${
+                    vueBureau === v ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]' : 'text-[color:var(--v2-color-gris)]'
+                  }`}
+                >
+                  {libelle}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setMenuAjout(true)}
+              aria-haspopup="dialog"
+              className={`flex h-9 items-center gap-1.5 rounded-[var(--v2-radius-pilule)] px-4 text-[13.5px] ${corpsFort} text-white transition-transform active:scale-[.97]`}
+              style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+            >
+              <Plus size={16} strokeWidth={2.25} aria-hidden />
+              Ajouter
+            </button>
+          </div>
+        </div>
+
+        <JoursMasquesV2 dates={joursMasques} />
+
+        {vueBureau === 'jour' && (
+          <>
+            <BandeauSemaineBureauV2 weekDays={semaineBureau} dayDate={dayDate} today={today} getUnavail={getUnavail} onChoisir={setDayDate} />
+
+            {!estAujourdhui && (
+              <button
+                type="button"
+                onClick={() => setDayDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()))}
+                className={`text-[13px] ${corpsFort}`}
+                style={{ color: 'var(--v2-color-accent)' }}
+              >
+                Revenir à aujourd’hui
+              </button>
+            )}
+
+            {congeDuJour && (
+              <BandeauConge
+                conge={congeDuJour}
+                teamSize={teamSize}
+                complet={isFullyUnavailable(congeDuJour)}
+                onSupprimer={() => setDelModal(congeDuJour)}
+              />
+            )}
+
+            {/* Patron liste/fiche à côté, déjà livré par ClientsViewV2.tsx — repris tel quel
+                plutôt que d'en inventer un autre (demande explicite de cette passe) : une
+                colonne de 340px pour les créneaux de la journée, le reste pour la fiche du
+                rendez-vous choisi, en permanence. */}
+            <div className="flex gap-4" style={{ height: 'max(460px, calc(100vh - 300px))' }}>
+              <div className="flex h-full w-[340px] shrink-0 flex-col overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
+                <div className="flex-1 overflow-y-auto">
+                  {jour.length === 0 && masqueesDuJour.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 px-5 text-center">
+                      <CalendarX2 size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
+                      <div>
+                        <p className={`text-[14px] ${corpsFort}`}>Aucun rendez-vous ce jour</p>
+                        <p className={`mt-1 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                          Vos créneaux restent réservables sur votre page.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openManualModal(dayDate)}
+                        className={`flex h-10 items-center gap-1.5 rounded-[var(--v2-radius-pilule)] px-4 text-[13px] ${corpsFort} text-white transition-transform active:scale-[.97]`}
+                        style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+                      >
+                        <Plus size={15} strokeWidth={2.25} aria-hidden />
+                        Nouveau rendez-vous
+                      </button>
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-[color:var(--v2-filet)]">
+                      {jour.map(b => {
+                        const cancelled = b.status === 'cancelled'
+                        const indexActif = actifs.indexOf(b)
+                        const suivant = !cancelled && indexActif >= 0 ? actifs[indexActif + 1] : undefined
+                        const gapMin = suivant ? Math.round((new Date(suivant.scheduled_at).getTime() - finRendezVous(b).getTime()) / 60_000) : null
+                        const trajet = suivant ? trajetEntre(b, suivant) : null
+                        const villeTrou = villeDepuisAdresse(b.address)
+                        return (
+                          <li key={b.id}>
+                            <LigneRdvBureauV2
+                              booking={b}
+                              estompe={cancelled}
+                              selectionnee={selected?.id === b.id}
+                              onOuvrir={() => openBooking(b)}
+                            />
+                            {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && suivant && (
+                              <div className="flex items-center justify-between gap-2 border-t border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2">
+                                <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
+                                  {dureeLisible(gapMin)} de libre{villeTrou ? ` à ${villeTrou}` : ''}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou, origine: origineDuTrou(b, suivant) })}
+                                  aria-label={`Proposer ce créneau libre de ${dureeLisible(gapMin)} à un client`}
+                                  className={`text-[12px] ${corpsFort}`}
+                                  style={{ color: 'var(--v2-color-accent)' }}
+                                >
+                                  Proposer
+                                </button>
+                              </div>
+                            )}
+                            {suivant && trajet && (
+                              <div className={`flex items-center gap-1.5 border-t border-[color:var(--v2-filet)] px-3.5 py-1.5 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                                <IconeRoute />
+                                {trajet.minutes} min de route · {km(trajet.km)} km
+                              </div>
+                            )}
+                          </li>
+                        )
+                      })}
+                      {masqueesDuJour.map(m => (
+                        <li key={m.id}><CarteJourVerrouilleeV2 reservation={m} offre={offreDeblocage} /></li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="h-full min-w-0 flex-1 overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
+                {selected ? (
+                  <FicheRdvBureauV2
+                    booking={selected}
+                    updating={updating}
+                    editNotes={editNotes}
+                    setEditNotes={setEditNotes}
+                    notesSaving={notesSaving}
+                    saveNotes={saveNotes}
+                    rescheduling={rescheduling}
+                    setRescheduling={setRescheduling}
+                    startReschedule={startReschedule}
+                    editDate={editDate}
+                    setEditDate={setEditDate}
+                    editTime={editTime}
+                    setEditTime={setEditTime}
+                    rescheduleSaving={rescheduleSaving}
+                    rescheduleErr={rescheduleErr}
+                    saveReschedule={saveReschedule}
+                    updateStatus={updateStatus}
+                    clotureDemandee={clotureDemandee}
+                    setClotureDemandee={setClotureDemandee}
+                    facturationPrete={facturationPrete}
+                    factureEnCours={factureEnCours}
+                    factureMsg={factureMsg}
+                    emettreFactureManuelle={emettreFactureManuelle}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2.5 px-6 text-center">
+                    <Users2 size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
+                    <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                      {jour.length === 0 ? 'Créez un rendez-vous, ou choisissez un autre jour.' : 'Sélectionnez un rendez-vous pour voir sa fiche.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {actifs.length > 0 && (
+              <div className="flex items-center justify-between border-t border-[color:var(--v2-filet)] pt-3.5">
+                <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
+                  {actifs.length} rendez-vous{totalRoute !== null ? ` · ${totalRoute} min de route` : ''}
+                </span>
+                <span className={`text-[14px] ${corpsFort} tabular-nums`}>{totalPrix} €</span>
+              </div>
+            )}
+
+            <CongesAVenir
+              conges={congesAVenir}
+              teamSize={teamSize}
+              estComplet={isFullyUnavailable}
+              onOuvrir={setDelModal}
+            />
+
+            <button
+              type="button"
+              onClick={() => setFeuilleGoogle(true)}
+              aria-haspopup="dialog"
+              className="flex min-h-14 w-full items-center gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className={`block text-[15px] ${corpsFort}`}>Google Agenda</span>
+                <span className="mt-0.5 flex items-center gap-2">
+                  <span
+                    className="h-[7px] w-[7px] shrink-0 rounded-full"
+                    style={{ background: googleAgendaConnecte ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
+                    aria-hidden
+                  />
+                  <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {googleAgendaConnecte ? 'Connecté · vos rendez-vous s’y ajoutent' : 'Pas connecté'}
+                  </span>
+                </span>
+              </span>
+              <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />
+            </button>
+          </>
+        )}
+
+        {vueBureau === 'semaine' && (
+          <GrilleSemaineV2
+            weekDays={semaineBureau}
+            byDate={byDate}
+            getUnavail={getUnavail}
+            isFullyUnavailable={isFullyUnavailable}
+            dayDate={dayDate}
+            today={today}
+            trajetEntre={trajetEntre}
+            onOuvrirJour={d => { setDayDate(d); setVueBureau('jour') }}
+            onOuvrirRdv={(b, d) => { setDayDate(d); setVueBureau('jour'); openBooking(b) }}
+          />
+        )}
+
+        {vueBureau === 'mois' && (
+          <MoisBureauV2
+            dayDate={dayDate}
+            today={today}
+            byDate={byDate}
+            getUnavail={getUnavail}
+            isFullyUnavailable={isFullyUnavailable}
+            jour={jour}
+            actifs={actifs}
+            totalPrix={totalPrix}
+            totalRoute={totalRoute}
+            onChoisirJour={setDayDate}
+            onChangerMois={delta => setDayDate(d => new Date(d.getFullYear(), d.getMonth() + delta, 1))}
+            onOuvrirRdv={b => { setVueBureau('jour'); openBooking(b) }}
+          />
+        )}
+      </div>
+
+      {feuilleGoogle && (
+        <FeuilleGoogleAgendaV2
+          connecte={googleAgendaConnecte}
+          issue={issueGoogle}
+          onClose={() => {
+            setFeuilleGoogle(false)
+            if (issueGoogle) window.history.replaceState(null, '', '/dashboard/calendrier')
+          }}
+        />
+      )}
+
+      {menuAjout && (
+        <Feuille titre="Ajouter" onClose={() => setMenuAjout(false)}>
+          <ul>
+            <li>
+              <button
+                type="button"
+                onClick={() => { setMenuAjout(false); openManualModal(dayDate) }}
+                className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
+              >
+                <span className={`text-[16px] ${nom}`}>Nouveau rendez-vous</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Un client qui a appelé ou écrit</span>
+              </button>
+            </li>
+            <li className="border-t border-[color:var(--v2-filet)]">
+              <button
+                type="button"
+                onClick={() => { setMenuAjout(false); openAddModal(dayDate) }}
+                className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
+              >
+                <span className={`text-[16px] ${nom}`}>Bloquer une période</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Congés, formation, jour férié</span>
+              </button>
+            </li>
+          </ul>
+        </Feuille>
+      )}
+
+      {manualModal && (
+        <RendezVousManuelV2
+          form={manualModal}
+          setForm={setManualModal}
+          services={services}
+          serviceTypes={serviceTypes}
+          updateManual={updateManual}
+          saving={manualSaving}
+          err={manualErr}
+          feasibilityWarn={feasibilityWarn}
+          onAnnulerAvertissement={() => { setFeasibilityWarn(null); setOverrideFeasibility(false) }}
+          onConfirmerQuandMeme={() => { setOverrideFeasibility(true); submitManualBooking(true) }}
+          onSubmit={() => submitManualBooking()}
+          onClose={() => setManualModal(null)}
+        />
+      )}
+
+      {addModal && (
+        <FeuilleAjoutConge
+          form={addModal}
+          setForm={setAddModal}
+          teamSize={teamSize}
+          saving={uSaving}
+          onSave={saveUnavail}
+          onClose={() => setAddModal(null)}
+        />
+      )}
+
+      {delModal && (
+        <FeuilleSuppressionConge
+          conge={delModal}
+          teamSize={teamSize}
+          complet={isFullyUnavailable(delModal)}
+          saving={uSaving}
+          onDelete={deleteUnavail}
+          onClose={() => setDelModal(null)}
+        />
+      )}
+
+      {creneauPropose && (
+        <ProposerCreneauV2
+          bookings={bookings}
+          debut={creneauPropose.debut}
+          fin={creneauPropose.fin}
+          ville={creneauPropose.ville}
+          origine={creneauPropose.origine}
+          onClose={() => setCreneauPropose(null)}
+        />
+      )}
+      </>
+    )
+  }
 
   return (
     <>
@@ -1137,6 +1551,642 @@ function DetailRendezVous({
                 Message
               </a>
             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Composants de la passe bureau (2026-10-06) ──────────────────────────────────────────────
+//
+// Jamais utilisés en dehors de `grandEcran` (voir plus haut) : écrits à part plutôt
+// qu'en modifiant `RendezVousCarte`/`DetailRendezVous` ci-dessus, pour ne prendre AUCUN risque
+// sur la présentation mobile déjà livrée — elle reste touchée nulle part dans cette passe. La
+// LOGIQUE (les actions passées en props : `updateStatus`, `saveNotes`, `saveReschedule`,
+// `emettreFactureManuelle`...) vient des mêmes hooks que la version mobile, jamais recalculée
+// ici : seule la présentation diffère.
+
+/** Bandeau de 7 jours du haut de l'onglet « Jour » bureau — même donnée que le bandeau mobile
+ *  (`weekDays`, centré sur `dayDate`), sans l'animation de glissement au clic : elle existe côté
+ *  mobile pour un geste de doigt sur un bandeau étroit, elle n'a pas de sens à la souris sur une
+ *  rangée qui a toute la place. */
+function BandeauSemaineBureauV2({
+  weekDays, dayDate, today, getUnavail, onChoisir,
+}: {
+  weekDays: Date[]
+  dayDate: Date
+  today: Date
+  getUnavail: (d: Date) => Unavailability | null
+  onChoisir: (d: Date) => void
+}) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-1.5">
+      {weekDays.map(d => {
+        const actif = isSameDay(d, dayDate)
+        const estJourReel = isSameDay(d, today)
+        const enConge = getUnavail(d) !== null
+        return (
+          <button
+            key={dayKey(d)}
+            type="button"
+            onClick={() => onChoisir(d)}
+            aria-current={actif ? 'date' : undefined}
+            aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
+            className={`relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] transition-colors motion-reduce:transition-none ${
+              actif ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]' : 'text-[color:var(--v2-color-encre)] hover:bg-[color:var(--v2-filet)]'
+            }`}
+          >
+            <span className={`text-[11px] ${corps} capitalize opacity-70`}>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</span>
+            <span className={`text-[16px] ${corpsFort} tabular-nums ${!actif && estJourReel ? 'text-[color:var(--v2-color-accent)]' : ''}`}>
+              {d.getDate()}
+            </span>
+            {enConge && (
+              <span
+                aria-hidden
+                className="absolute bottom-[5px] h-[5px] w-[5px] rounded-full"
+                style={{ background: actif ? 'var(--v2-color-surface)' : 'var(--v2-color-ambre)' }}
+              />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Ligne d'un rendez-vous dans le panneau de gauche bureau (planche Agenda, `.client-row`) —
+ *  même donnée que `RendezVousCarte` (nom, prestation, prix, statut), présentation en ligne de
+ *  liste plutôt qu'en carte : c'est le même patron que `LigneClient` de ClientsViewV2.tsx. */
+function LigneRdvBureauV2({
+  booking: b, estompe, selectionnee, onOuvrir,
+}: {
+  booking: Booking
+  estompe: boolean
+  selectionnee: boolean
+  onOuvrir: () => void
+}) {
+  const statut = STATUT[statutAffiche(b)]
+  return (
+    <button
+      type="button"
+      onClick={onOuvrir}
+      aria-label={`Voir le rendez-vous de ${b.client_name}`}
+      aria-current={selectionnee ? 'true' : undefined}
+      className={`flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:bg-[color:var(--v2-filet)] ${
+        selectionnee ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'
+      } ${estompe ? 'opacity-50' : ''}`}
+    >
+      <span className={`w-11 shrink-0 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] tabular-nums`}>
+        {formatHeure(new Date(b.scheduled_at))}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block text-[14.5px] ${nom} truncate`}>{b.client_name}</span>
+        <span className={`block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{lignePrestation(b)}</span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-0.5">
+        <span className={`text-[13px] ${corpsFort} tabular-nums`}>{prixAffiche(b)}</span>
+        <span className={`text-[11px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
+      </span>
+    </button>
+  )
+}
+
+/** Fiche de rendez-vous du panneau de droite bureau — mêmes ACTIONS que `DetailRendezVous` plus
+ *  haut (passées en props depuis les mêmes hooks, jamais recalculées), présentation à part :
+ *  posée à demeure à côté de la liste au lieu d'une feuille qui monte du bas (pas de fond, pas
+ *  de piège de focus, pas de geste de fermeture — rien de tout ça n'a de sens pour un panneau
+ *  permanent, même raisonnement que `ClientProfileModalV2.tsx` en mode `panneau`). Les pilules de
+ *  statut remplacent les trois boutons mobiles : même action (`updateStatus`,
+ *  `doitDemanderConfirmation`), present différemment — jamais de retour vers « En attente », qui
+ *  n'a pas d'action dans le produit. Le bouton « Itinéraire » réutilise le choix
+ *  Plans/Waze/Google Maps déjà construit pour l'accueil (`ChoixItineraireV2`/`applicationsItineraire`),
+ *  pas une nouvelle logique : la maquette (planche Agenda) le montre, l'accueil l'a déjà, la
+ *  fiche de rendez-vous mobile ne l'avait pas encore — ajouté ICI seulement, jamais sur la
+ *  feuille mobile (`DetailRendezVous`, intouchée par cette passe). */
+function FicheRdvBureauV2({
+  booking: b,
+  updating,
+  editNotes, setEditNotes, notesSaving, saveNotes,
+  rescheduling, setRescheduling, startReschedule,
+  editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
+  updateStatus,
+  clotureDemandee, setClotureDemandee,
+  facturationPrete,
+  factureEnCours, factureMsg, emettreFactureManuelle,
+}: {
+  booking: Booking
+  updating: boolean
+  editNotes: string
+  setEditNotes: (v: string) => void
+  notesSaving: boolean
+  saveNotes: () => void
+  rescheduling: boolean
+  setRescheduling: (v: boolean) => void
+  startReschedule: (b: Booking) => void
+  editDate: string
+  setEditDate: (v: string) => void
+  editTime: string
+  setEditTime: (v: string) => void
+  rescheduleSaving: boolean
+  rescheduleErr: string | null
+  saveReschedule: () => void
+  updateStatus: (id: string, status: string, closedLate?: boolean) => void
+  clotureDemandee: boolean
+  setClotureDemandee: (v: boolean) => void
+  facturationPrete: boolean
+  factureEnCours: boolean
+  factureMsg: { id: string; texte: string; completer: boolean } | null
+  emettreFactureManuelle: (id: string) => void
+}) {
+  const [choixItineraire, setChoixItineraire] = useState(false)
+  const prix = montant(b)
+  const remise = b.is_smart_slot && Number(b.smart_discount) > 0
+  const modifiable = b.status !== 'cancelled' && b.status !== 'done'
+  const adresse = b.address?.trim()
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-5 pt-5 pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className={`truncate text-[21px] ${titre}`}>{b.client_name}</h2>
+            {rescheduling ? (
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={e => setEditDate(e.target.value)}
+                    aria-label="Date du rendez-vous"
+                    className={`h-10 flex-1 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[14px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+                  />
+                  <input
+                    type="time"
+                    value={editTime}
+                    onChange={e => setEditTime(e.target.value)}
+                    aria-label="Heure du rendez-vous"
+                    className={`h-10 w-28 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[14px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+                  />
+                </div>
+                {rescheduleErr && (
+                  <p className={`text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{rescheduleErr}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveReschedule}
+                    disabled={rescheduleSaving}
+                    className={`h-9 flex-1 rounded-[var(--v2-radius-bouton)] text-[13px] ${corpsFort} text-white disabled:opacity-50 transition-transform active:scale-[.97]`}
+                    style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+                  >
+                    {rescheduleSaving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRescheduling(false)}
+                    className={`h-9 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] px-3 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className={`mt-1 flex items-center gap-2 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                <span>
+                  {new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))} · {lignePrestation(b)} · {remise ? formatPrice(prix) : `${prix} €`}
+                </span>
+                {modifiable && (
+                  <button
+                    type="button"
+                    onClick={() => startReschedule(b)}
+                    className={`shrink-0 text-[12.5px] ${corpsFort}`}
+                    style={{ color: 'var(--v2-color-accent)' }}
+                  >
+                    Modifier
+                  </button>
+                )}
+              </p>
+            )}
+          </div>
+          <span className={`shrink-0 text-[28px] ${titre} tabular-nums`}>{formatHeure(new Date(b.scheduled_at))}</span>
+        </div>
+
+        {/* Statuts en pilules (planche Système : « point plein + le mot ») — lecture directe du
+            statut réel, jamais de retour vers « En attente » (aucune action ne l'autorise). */}
+        <div className="mt-4 flex gap-2">
+          {([['pending', 'En attente'], ['confirmed', 'Confirmé'], ['done', 'Terminé'], ['cancelled', 'Annulé']] as const).map(([valeur, libelle]) => {
+            const actif = b.status === valeur
+            const peutCliquer = modifiable && (valeur === 'done' || valeur === 'cancelled' || (valeur === 'confirmed' && b.status === 'pending'))
+            return (
+              <button
+                key={valeur}
+                type="button"
+                disabled={updating || (!peutCliquer && !actif)}
+                onClick={() => {
+                  if (!peutCliquer) return
+                  if (valeur === 'done') {
+                    if (doitDemanderConfirmation(b, new Date())) setClotureDemandee(true)
+                    else updateStatus(b.id, 'done')
+                  } else {
+                    updateStatus(b.id, valeur)
+                  }
+                }}
+                className={`h-9 rounded-[var(--v2-radius-pilule)] border px-3.5 text-[12.5px] ${corpsFort} transition-colors disabled:opacity-40 motion-reduce:transition-none ${
+                  actif ? 'border-transparent' : 'border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]'
+                }`}
+                style={actif ? { background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' } : undefined}
+              >
+                {libelle}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {adresse && <p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{adresse}</p>}
+
+        {(adresse || b.client_phone) && (
+          <div className="mt-3 flex gap-2.5">
+            {adresse && (
+              <button
+                type="button"
+                onClick={() => setChoixItineraire(true)}
+                aria-haspopup="dialog"
+                className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-white transition-transform active:scale-[.97]`}
+                style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                <Navigation size={15} strokeWidth={2} aria-hidden />
+                Itinéraire
+              </button>
+            )}
+            {b.client_phone && (
+              <a
+                href={`tel:${b.client_phone}`}
+                className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
+                style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                <Phone size={14} strokeWidth={2} aria-hidden />
+                Appeler
+              </a>
+            )}
+            {b.client_phone && (
+              <a
+                href={`sms:${b.client_phone}`}
+                onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `À ${b.client_name}` })}
+                className={`flex h-10 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
+                style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                Message
+              </a>
+            )}
+          </div>
+        )}
+
+        {choixItineraire && adresse && (
+          <ChoixItineraireV2 adresse={adresse} onClose={() => setChoixItineraire(false)} />
+        )}
+
+        <div className="mt-4">
+          <label htmlFor="rdv-notes-bureau" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            Notes internes
+          </label>
+          <textarea
+            id="rdv-notes-bureau"
+            value={editNotes}
+            onChange={e => setEditNotes(e.target.value)}
+            onBlur={saveNotes}
+            placeholder="Code portail, instructions particulières…"
+            rows={3}
+            className={`w-full resize-none rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3.5 py-2.5 text-[14px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
+          />
+          {notesSaving && (
+            <p className={`mt-1 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Enregistrement…</p>
+          )}
+        </div>
+
+        {clotureDemandee && (
+          <div className="mt-4">
+            <ConfirmerClotureV2
+              clientName={b.client_name}
+              quand={`${new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
+              professionnel={!!b.is_professional}
+              facturationPrete={facturationPrete}
+              onFait={() => { setClotureDemandee(false); updateStatus(b.id, 'done', true) }}
+              onPasFait={() => { setClotureDemandee(false); updateStatus(b.id, 'cancelled') }}
+              onClose={() => setClotureDemandee(false)}
+            />
+          </div>
+        )}
+
+        {b.status === 'done' && (
+          <div className="mt-4">
+            {b.facture_numero ? (
+              <a
+                href={`/api/bookings/${b.id}/pdf`}
+                className={`flex h-10 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
+                style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                Télécharger la facture {b.facture_numero}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => emettreFactureManuelle(b.id)}
+                disabled={factureEnCours}
+                className={`flex h-10 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-50 transition-transform active:scale-[.97]`}
+                style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                {factureEnCours ? 'Émission…' : 'Émettre la facture'}
+              </button>
+            )}
+            {factureMsg?.id === b.id && (
+              <p className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-ambre)' }}>
+                {factureMsg.texte}{' '}
+                {factureMsg.completer && (
+                  <a href="/dashboard/parametres/profil#facturation" className={`${corpsFort} underline`}>
+                    Compléter mes informations
+                  </a>
+                )}
+              </p>
+            )}
+          </div>
+        )}
+
+        <p className={`mt-4 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{b.client_email}</p>
+      </div>
+    </div>
+  )
+}
+
+/** Grille de 7 colonnes de l'onglet « Semaine » bureau (planche Agenda-semaine) — occupe la
+ *  hauteur restante (pourcentages dans une colonne `flex-1`), jamais figée en pixels comme le
+ *  cadre à 912px de la maquette (voir le rapport). La plage d'heures vient de
+ *  `plageHeuresSemaine` (les vrais rendez-vous de la semaine affichée, aucune horaire
+ *  d'ouverture chargée). Un jour entièrement indisponible (`isFullyUnavailable`) s'affiche
+ *  « Fermé » ; un congé partiel (équipe > 1) reste ouvert, marqué d'un point ambre sous sa date —
+ *  les deux viennent de `useConges`, rien n'est inventé. Le temps de route n'est affiché que
+ *  pour la colonne du jour SÉLECTIONNÉ (`dayDate`) : lui seul a déjà ses trajets chargés
+ *  (`trajetEntre`, partagé avec l'onglet Jour) — en demander pour les six autres colonnes aurait
+ *  multiplié par sept les appels à `/api/trajet` (Google Distance Matrix, facturé) à chaque
+ *  ouverture de cet onglet, pour un gain que l'onglet Jour donne déjà sur le jour qui compte. */
+function GrilleSemaineV2({
+  weekDays, byDate, getUnavail, isFullyUnavailable, dayDate, today, trajetEntre,
+  onOuvrirJour, onOuvrirRdv,
+}: {
+  weekDays: Date[]
+  byDate: Map<string, Booking[]>
+  getUnavail: (d: Date) => Unavailability | null
+  isFullyUnavailable: (u: Unavailability) => boolean
+  dayDate: Date
+  today: Date
+  trajetEntre: (a: Booking, b: Booking) => Trajet
+  onOuvrirJour: (d: Date) => void
+  onOuvrirRdv: (b: Booking, d: Date) => void
+}) {
+  const joursActifs = useMemo(
+    () => weekDays.map(d => (byDate.get(dayKey(d)) ?? []).filter(b => b.status !== 'cancelled').sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))),
+    [weekDays, byDate],
+  )
+  const { debut, fin } = useMemo(() => plageHeuresSemaine(joursActifs), [joursActifs])
+  const heures = useMemo(() => Array.from({ length: fin - debut }, (_, i) => debut + i), [debut, fin])
+  const pct = (h: number) => ((h - debut) / (fin - debut)) * 100
+
+  return (
+    <div
+      className="flex min-h-0 flex-1 overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]"
+      style={{ height: 'max(460px, calc(100vh - 300px))' }}
+    >
+      <div className="flex w-12 shrink-0 flex-col border-r border-[color:var(--v2-filet)]">
+        <div className="h-[52px] shrink-0 border-b border-[color:var(--v2-filet)]" />
+        <div className="relative flex-1">
+          {heures.map(h => (
+            <span
+              key={h}
+              aria-hidden
+              className={`absolute right-2 -translate-y-1/2 text-[11px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}
+              style={{ top: `${pct(h)}%` }}
+            >
+              {h}h
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="grid flex-1 grid-cols-7 divide-x divide-[color:var(--v2-filet)]">
+        {weekDays.map((d, i) => {
+          const actifsJour = joursActifs[i]
+          const estAffiche = isSameDay(d, dayDate)
+          const estAujourdhui = isSameDay(d, today)
+          const conge = getUnavail(d)
+          const ferme = conge ? isFullyUnavailable(conge) : false
+          return (
+            <div key={dayKey(d)} className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => onOuvrirJour(d)}
+                aria-current={estAffiche ? 'date' : undefined}
+                className={`flex h-[52px] shrink-0 flex-col items-center justify-center gap-0.5 border-b border-[color:var(--v2-filet)] transition-colors motion-reduce:transition-none ${
+                  estAffiche ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'
+                }`}
+              >
+                <span className={`text-[11px] ${corps} capitalize text-[color:var(--v2-color-gris)]`}>
+                  {d.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                </span>
+                <span className={`flex items-center gap-1 text-[14px] ${corpsFort} tabular-nums ${!estAffiche && estAujourdhui ? 'text-[color:var(--v2-color-accent)]' : ''}`}>
+                  {d.getDate()}
+                  {conge && !ferme && (
+                    <span aria-hidden className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--v2-color-ambre)' }} />
+                  )}
+                </span>
+              </button>
+              <div
+                className="relative flex-1"
+                style={ferme ? { background: 'color-mix(in srgb, var(--v2-color-ambre) 7%, transparent)' } : undefined}
+              >
+                {heures.map(h => (
+                  <div key={h} aria-hidden className="absolute inset-x-0 border-t border-[color:var(--v2-filet)]" style={{ top: `${pct(h)}%` }} />
+                ))}
+                {ferme ? (
+                  <span className={`absolute inset-0 flex items-center justify-center text-[11px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
+                    Fermé
+                  </span>
+                ) : (
+                  actifsJour.map((b, idx) => {
+                    const deb = new Date(b.scheduled_at)
+                    const h0 = deb.getHours() + deb.getMinutes() / 60
+                    const finB = finRendezVous(b)
+                    const hf = finB.getHours() + finB.getMinutes() / 60
+                    const top = pct(h0)
+                    const hauteur = Math.max(pct(hf) - top, 5)
+                    const statut = STATUT[statutAffiche(b)]
+                    const suivant = estAffiche ? actifsJour[idx + 1] : undefined
+                    const trajet = suivant ? trajetEntre(b, suivant) : null
+                    return (
+                      <span key={b.id} className="absolute inset-x-[2px]" style={{ top: `${top}%`, height: `${hauteur}%` }}>
+                        <button
+                          type="button"
+                          onClick={() => onOuvrirRdv(b, d)}
+                          aria-label={`${formatHeure(deb)} ${b.client_name}, ${lignePrestation(b)}`}
+                          className="flex h-full w-full flex-col overflow-hidden rounded-[6px] px-1.5 py-1 text-left transition-transform active:scale-[.98] motion-reduce:transition-none"
+                          style={{ background: `color-mix(in srgb, ${statut.couleur} 16%, var(--v2-color-surface))`, borderLeft: `2.5px solid ${statut.couleur}` }}
+                        >
+                          <span className={`block truncate text-[10.5px] ${corpsFort}`}>{formatHeure(deb)} {b.client_name}</span>
+                        </button>
+                        {trajet && (
+                          <span
+                            aria-hidden
+                            className={`absolute left-1 top-full z-10 mt-0.5 whitespace-nowrap rounded-[4px] bg-[color:var(--v2-color-surface)] px-1 text-[9.5px] ${corpsFort} text-[color:var(--v2-color-gris)] shadow-sm`}
+                          >
+                            {trajet.minutes} min
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Vue du mois bureau (planche Agenda-mois) — grille statique du mois de `dayDate` + une
+ *  colonne latérale qui montre le jour sélectionné, à la façon de l'écran « Clients » (liste à
+ *  gauche, détail à droite). Volontairement DIFFÉRENTE de `MoisV2.tsx` (la couche plein écran à
+ *  défilement continu de la PWA) : ce n'est pas le même geste — à la souris, naviguer mois par
+ *  mois avec deux flèches est la convention, pas un défilement vertical sans fin fait pour un
+ *  pouce. `semainesDuMois`/`compterActifsParJour`/`pointsRendezVous` viennent de `lib/vueMois.ts`,
+ *  réutilisés tels quels (même calcul que la PWA, seul l'habillage change). */
+function MoisBureauV2({
+  dayDate, today, byDate, getUnavail, isFullyUnavailable, jour, actifs, totalPrix, totalRoute,
+  onChoisirJour, onChangerMois, onOuvrirRdv,
+}: {
+  dayDate: Date
+  today: Date
+  byDate: Map<string, Booking[]>
+  getUnavail: (d: Date) => Unavailability | null
+  isFullyUnavailable: (u: Unavailability) => boolean
+  jour: Booking[]
+  actifs: Booking[]
+  totalPrix: number
+  totalRoute: number | null
+  onChoisirJour: (d: Date) => void
+  onChangerMois: (delta: number) => void
+  onOuvrirRdv: (b: Booking) => void
+}) {
+  const annee = dayDate.getFullYear()
+  const mois = dayDate.getMonth()
+  const semaines = useMemo(() => semainesDuMois(annee, mois), [annee, mois])
+  const compte = useMemo(() => compterActifsParJour(byDate), [byDate])
+
+  return (
+    <div className="grid grid-cols-[1fr_320px] items-start gap-4">
+      <div className="flex flex-col overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
+        <div className="flex items-center justify-between border-b border-[color:var(--v2-filet)] px-4 py-3">
+          <button
+            type="button"
+            onClick={() => onChangerMois(-1)}
+            aria-label="Mois précédent"
+            className="flex h-9 w-9 items-center justify-center text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
+          >
+            <ChevronLeft size={18} strokeWidth={2} />
+          </button>
+          <span className={`text-[15px] ${corpsFort} capitalize`}>{MOIS[mois]} {annee}</span>
+          <button
+            type="button"
+            onClick={() => onChangerMois(1)}
+            aria-label="Mois suivant"
+            className="flex h-9 w-9 items-center justify-center text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
+          >
+            <ChevronRight size={18} strokeWidth={2} />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 border-b border-[color:var(--v2-filet)] text-center">
+          {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(j => (
+            <span key={j} className={`py-2 text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>{j}</span>
+          ))}
+        </div>
+        <div>
+          {semaines.map((semaine, i) => (
+            <div key={i} className="grid grid-cols-7 border-b border-[color:var(--v2-filet)] last:border-b-0">
+              {semaine.map((j, c) => {
+                if (!j) {
+                  return <span key={c} aria-hidden className="min-h-[72px] border-r border-[color:var(--v2-filet)] last:border-r-0" />
+                }
+                const conge = getUnavail(j)
+                const ferme = conge ? isFullyUnavailable(conge) : false
+                const { points, plus } = pointsRendezVous(compte.get(dayKey(j)) ?? 0)
+                const estAffiche = isSameDay(j, dayDate)
+                const estAujourdhui = isSameDay(j, today)
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => onChoisirJour(j)}
+                    aria-current={estAffiche ? 'date' : undefined}
+                    aria-label={j.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (ferme ? ', fermé' : conge ? ', congé partiel' : '')}
+                    className="flex min-h-[72px] flex-col items-center gap-1 border-r border-[color:var(--v2-filet)] py-2 text-center transition-colors last:border-r-0 hover:bg-[color:var(--v2-filet)] motion-reduce:transition-none"
+                    style={ferme ? { background: 'color-mix(in srgb, var(--v2-color-ambre) 6%, transparent)' } : undefined}
+                  >
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-[13px] ${corpsFort} tabular-nums`}
+                      style={estAujourdhui
+                        ? { background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }
+                        : estAffiche
+                          ? { background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }
+                          : undefined}
+                    >
+                      {j.getDate()}
+                    </span>
+                    <span className="flex h-2 items-center gap-[3px]" aria-hidden>
+                      {Array.from({ length: points }, (_, k) => (
+                        <span key={k} className="h-[5px] w-[5px] rounded-full bg-[color:var(--v2-color-encre)]" />
+                      ))}
+                      {plus && <span className={`text-[9px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>+</span>}
+                      {/* Point ambre du congé, SÉPARÉ des points de rendez-vous (même erreur à ne
+                          pas refaire que la première version de cet écran, voir le rapport de la
+                          passe) — sinon un jour en congé SANS rendez-vous (congé partiel un jour
+                          calme) n'affichait aucun point du tout. Même convention que
+                          `MoisV2.tsx` (mobile), `CaseJour`. */}
+                      {conge && <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--v2-color-ambre)' }} />}
+                    </span>
+                    {estAffiche && actifs.length > 0 && (
+                      <span className={`text-[10px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{totalPrix} €</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
+        <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3">
+          <p className={`text-[15px] ${corpsFort} capitalize`}>
+            {dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          <p className={`mt-0.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
+            {actifs.length} rendez-vous{actifs.length > 0 ? ` · ${totalPrix} €` : ''}{totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {jour.length === 0 ? (
+            <p className={`px-4 py-6 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              Aucun rendez-vous ce jour.
+            </p>
+          ) : (
+            <ul className="divide-y divide-[color:var(--v2-filet)]">
+              {jour.map(b => (
+                <li key={b.id}>
+                  <LigneRdvBureauV2 booking={b} estompe={b.status === 'cancelled'} selectionnee={false} onOuvrir={() => onOuvrirRdv(b)} />
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

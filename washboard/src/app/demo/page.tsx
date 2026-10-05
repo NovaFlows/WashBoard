@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { jeuDeDonneesDemo, jeuDeDonneesAccueilDemo } from '@/lib/demo/jeuDeDonnees'
+import { jeuDeDonneesDemo, jeuDeDonneesAccueilDemo, jeuDeDonneesAgendaDemo } from '@/lib/demo/jeuDeDonnees'
 import DemoDashboard from './DemoDashboard'
 
 // Jamais mis en cache au build : les dates du jeu de données (« cette semaine ») doivent
@@ -34,6 +34,7 @@ export default function DemoPage() {
         premierJour: jeuDeDonneesAccueilDemo('premier-jour'),
         quota: jeuDeDonneesAccueilDemo('quota'),
       }}
+      agenda={jeuDeDonneesAgendaDemo()}
     />
   )
 }

@@ -5,26 +5,31 @@ import { useEffect, useState } from 'react'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 import Accueil from '@/components/dashboard/Accueil'
+import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
-import type { jeuDeDonneesDemo, AccueilDemo } from '@/lib/demo/jeuDeDonnees'
+import type { jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, AccueilDemo } from '@/lib/demo/jeuDeDonnees'
 
 type Donnees = ReturnType<typeof jeuDeDonneesDemo>
+type AgendaDonnees = ReturnType<typeof jeuDeDonneesAgendaDemo>
 type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota: AccueilDemo }
 
-// Deux écrans sont branchés ici : « Clients » (passe pilote) et « Aujourd'hui » (passe
-// « bureau », celle qui ajoute ce fichier). Les deux sont les seuls réellement migrés en v2 dont
-// les requêtes/actions se résument à des fonctions pures (`listeClients`, `buildClientProfile`,
-// `computeSetupProgress`...) sans appel réseau automatique au chargement. Agenda n'est PAS
-// branché : ses actions (clôturer un rendez-vous, reprogrammer...) appellent de VRAIES routes
-// API qui écriraient dans la base du compte réellement connecté en dev — exactement le risque
-// que cette page existe pour éviter.
+// Trois écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
+// « bureau ») et « Agenda » (passe « bureau », agenda — celle qui ajoute cette branche, voir le
+// rapport). Les trois sont les seuls réellement migrés en v2 dont les requêtes/actions se
+// résument à des fonctions pures, ou à des appels réseau sans conséquence sur la vraie base.
 //
-// `ClientsViewV2` porte deux actions de ce genre (glisser pour « Supprimer » un client, « Ne
+// `ClientsViewV2` porte deux actions d'écriture (glisser pour « Supprimer » un client, « Ne
 // plus relancer ») : elles restent câblées vers les vraies routes `/api/clients/[cle]`, parce
 // que la consigne était de montrer le VRAI composant, pas une copie — le verrou d'écriture
 // ci-dessous les bloque. L'écran « Aujourd'hui » n'a AUCUNE action d'écriture (c'est un écran de
-// lecture : héros, journée, à confirmer, widgets) : rien à bloquer de plus pour lui, le verrou
-// reste là par principe, pas parce qu'un clic ici menacerait une donnée réelle.
+// lecture : héros, journée, à confirmer, widgets) : rien à bloquer de plus pour lui.
+//
+// `CalendrierDashboardV2` (Agenda) porte, lui, PLUSIEURS actions d'écriture réelles (statut,
+// reprogrammation, facture, congés, rendez-vous manuel) : toutes bloquées par le même verrou,
+// comme pour Clients. La seule requête de LECTURE qu'il déclenche tout seul (`/api/trajet`,
+// temps de route) ne coûte rien ici : cette route exige une session (`401` sans elle, voir
+// `api/trajet/route.ts`) et `/demo` n'authentifie personne — l'appel échoue avant d'atteindre
+// Google. Voir le commentaire de `jeuDeDonneesAgendaDemo()` pour le détail.
 //
 // « Aujourd'hui » passe par le VRAI point de branchement (`Accueil.tsx`), pas directement par
 // `AccueilV2` : c'est ce qui permet à ce même écran de PROUVER, sur cette même page, que le site
@@ -33,8 +38,13 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // vrai `/dashboard` (voir le rapport de la passe). `v1` reçoit un simple repère visuel plutôt que
 // l'arbre complet du site (BookingList, widgets serveur…) : le reproduire ici déplacerait ce
 // travail dans le navigateur, l'exact contraire de ce que `Accueil.tsx` existe pour éviter.
+// « Agenda », lui, est branché directement sur `CalendrierDashboardV2` (pas sur
+// `CalendrierDashboard.tsx`, le point de branchement v1/v2) : cette page sert à juger la
+// présentation v2, pas à redémontrer le branchement v1/v2 déjà prouvé par « Aujourd'hui » —
+// `CalendrierDashboardV2` lit lui-même `useGrandEcran()` en interne, donc réduire la fenêtre
+// sous 1024px y montre aussi, à l'intérieur de l'écran, sa disposition à une seule colonne.
 
-type Ecran = 'clients' | 'aujourdhui'
+type Ecran = 'clients' | 'aujourdhui' | 'agenda'
 type EtatAujourdhui = 'normal' | 'premierJour' | 'quota'
 
 const police = '[font-family:var(--font-archivo)]'
@@ -74,14 +84,7 @@ function SelecteurDemo({
         <div className="flex gap-1.5">
           <PilulePilote actif={ecran === 'aujourdhui'} onClick={() => onEcran('aujourdhui')}>Aujourd’hui</PilulePilote>
           <PilulePilote actif={ecran === 'clients'} onClick={() => onEcran('clients')}>Clients</PilulePilote>
-          {/* Pas encore branché — voir le commentaire au-dessus de `Ecran`. */}
-          <span
-            className={`rounded-[var(--v2-radius-pilule)] border px-3 py-1.5 text-[12.5px] ${corps}`}
-            style={{ borderColor: 'var(--v2-filet-fort)', color: 'var(--v2-color-gris)' }}
-            title="Pas encore branché : ses actions écriraient dans la vraie base"
-          >
-            Agenda
-          </span>
+          <PilulePilote actif={ecran === 'agenda'} onClick={() => onEcran('agenda')}>Agenda</PilulePilote>
         </div>
         <span className={`text-[12px] ${corps}`} style={{ color: 'var(--v2-color-gris)' }}>
           Jeu de données fabriqué en mémoire — rien n’est lu ni écrit dans la base.
@@ -159,7 +162,7 @@ function useVerrouEcriture() {
  *  (`ClientsViewV2`, `Accueil`/`AccueilV2`), nourris des jeux de données fabriqués côté serveur
  *  (`jeuDeDonneesDemo()`/`jeuDeDonneesAccueilDemo()`, appelés une fois par `page.tsx` pour que
  *  les dates relatives (« cette semaine », « demain ») restent cohérentes sur toute la page). */
-export default function DemoDashboard({ donnees, accueil }: { donnees: Donnees; accueil: AccueilTroisEtats }) {
+export default function DemoDashboard({ donnees, accueil, agenda }: { donnees: Donnees; accueil: AccueilTroisEtats; agenda: AgendaDonnees }) {
   useVerrouEcriture()
   const [ecran, setEcran] = useState<Ecran>('aujourdhui')
   const [etat, setEtat] = useState<EtatAujourdhui>('normal')
@@ -199,6 +202,20 @@ export default function DemoDashboard({ donnees, accueil }: { donnees: Donnees; 
           rdvDemain={donneesAccueil.rdvDemain}
           demainStr={donneesAccueil.demainStr}
           configurationIncomplete={donneesAccueil.configurationIncomplete}
+        />
+      ) : ecran === 'agenda' ? (
+        <CalendrierDashboardV2
+          bookings={agenda.bookings}
+          unavailabilities={agenda.unavailabilities}
+          teamSize={agenda.teamSize}
+          services={agenda.services}
+          categories={agenda.categories}
+          washerId={agenda.washerId}
+          facturationPrete={agenda.facturationPrete}
+          googleAgendaConnecte={agenda.googleAgendaConnecte}
+          joursMasques={agenda.joursMasques}
+          masquees={agenda.masquees}
+          offreDeblocage={agenda.offreDeblocage}
         />
       ) : (
         <ClientsViewV2

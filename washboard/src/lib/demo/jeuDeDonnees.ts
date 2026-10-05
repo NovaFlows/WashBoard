@@ -19,6 +19,7 @@
 // partir d'AUJOURD'HUI (jamais de date figée) : ce fichier reste correct quel que soit le jour
 // où `/demo` est ouvert.
 
+import type { Booking, Category, ServiceFull, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
 import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { EntrepriseListItem } from '@/lib/entrepriseProfile'
@@ -617,5 +618,178 @@ export function jeuDeDonneesAccueilDemo(etat: EtatAccueilDemo): AccueilDemo {
     semaine, rdvDemain: [thomas, sophie], demainStr,
     progress: basePro,
     configurationIncomplete: etapeDemarrage(basePro) !== null,
+  }
+}
+
+// ── Jeu de données pour « Agenda » (CalendrierDashboardV2), passe bureau (2026-10-06) ────────
+//
+// Sûr à brancher dans `/demo` : `useTrajetsRdv` appelle `/api/trajet` en GET, mais cette route
+// exige une session (`if (!user) throw ... 401`, voir `api/trajet/route.ts`) — la page démo
+// n'authentifie personne, donc chaque appel échoue tout de suite et ne coûte RIEN à Google.
+// Toutes les autres actions de cet écran (statut, reprogrammation, facture, congés, rendez-vous
+// manuel) passent par `fetch` non-GET, déjà bloquées par le verrou d'écriture de
+// `DemoDashboard.tsx`.
+//
+// Équipe de deux (`teamSize: 2`), seule différence avec `jeuDeDonneesDemo()` (laveur seul) : il
+// fallait un compte à plusieurs pour montrer la différence entre un jour FERMÉ (toute l'équipe
+// en congé) et un congé PARTIEL (un laveur sur deux, le jour reste ouvert) — la grille semaine
+// bureau les distingue (voir `GrilleSemaineV2` dans `CalendrierDashboardV2.tsx`).
+//
+// Les sept jours par défaut (aujourd'hui ± 3, la fenêtre que l'agenda affiche à l'ouverture)
+// couvrent les quatre situations qu'Alexandre veut comparer : une journée bien remplie
+// (aujourd'hui), une journée avec des demandes en attente (demain), une journée OUVERTE sans
+// rien dedans (dans deux jours — la « journée vide », sans qu'aucun congé ne l'explique) et un
+// congé partiel ce même jour-là, puis un jour FERMÉ (dans trois jours).
+
+function versISOAgenda(offsetJours: number, heure: number, minute = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetJours)
+  d.setHours(heure, minute, 0, 0)
+  return d.toISOString()
+}
+
+function dateCivileAgendaA(offsetJours: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetJours)
+  return d.toLocaleDateString('en-CA')
+}
+
+const AGENDA_SERVICE_EXPRESS = { name: 'Extérieur express', price: 35, duration_minutes: 25 }
+const AGENDA_SERVICE_COMPLET = { name: 'Extérieur + intérieur', price: 59, duration_minutes: 50 }
+const AGENDA_SERVICE_SIEGES = { name: 'Rénovation sièges', price: 120, duration_minutes: 90 }
+const AGENDA_SERVICE_FLOTTE = { name: 'Forfait flotte', price: 210, duration_minutes: 90 }
+const AGENDA_CATEGORIE_VOITURE = { name: 'Voiture' }
+
+export function jeuDeDonneesAgendaDemo(): {
+  bookings: Booking[]
+  unavailabilities: Unavailability[]
+  teamSize: number
+  services: ServiceFull[]
+  categories: Category[]
+  washerId: string
+  facturationPrete: boolean
+  googleAgendaConnecte: boolean
+  joursMasques: string[]
+  masquees: { id: string; scheduled_at: string }[]
+  offreDeblocage: string
+} {
+  const bookings: Booking[] = [
+    {
+      id: 'demo-agenda-claire', client_name: 'Claire Martin', client_email: 'claire.martin@gmail.com', client_phone: '0612345678',
+      address: '4 Rue du Loup, Bordeaux', lat: 44.839, lng: -0.577,
+      scheduled_at: versISOAgenda(-3, 9, 0), status: 'done', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 35, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_EXPRESS, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: 'F-00061', closed_late: false, is_professional: false,
+    },
+    {
+      id: 'demo-agenda-antoine', client_name: 'Antoine Faure', client_email: 'antoine.faure@gmail.com', client_phone: '0623456789',
+      address: '30 Rue Sainte-Croix, Bordeaux', lat: 44.835, lng: -0.57,
+      scheduled_at: versISOAgenda(-2, 11, 0), status: 'done', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 59, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_COMPLET, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: 'F-00062', closed_late: false, is_professional: false,
+    },
+    {
+      id: 'demo-agenda-nathalie', client_name: 'Nathalie Petit', client_email: 'nathalie.petit@gmail.com', client_phone: '0634567890',
+      address: '9 Rue Fondaudège, Bordeaux', lat: 44.845, lng: -0.583,
+      scheduled_at: versISOAgenda(-1, 9, 30), status: 'done', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 59, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_COMPLET, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: 'F-00063', closed_late: false, is_professional: false,
+    },
+    {
+      id: 'demo-agenda-camille', client_name: 'Camille Lefebvre', client_email: 'camille.lefebvre@gmail.com', client_phone: '0671421853',
+      address: '12 Rue Fondaudège, Bordeaux', lat: 44.846, lng: -0.586,
+      scheduled_at: versISOAgenda(0, 14, 30), status: 'confirmed', notes: 'Portail code 2584, chien dans le jardin (gentil, juste bruyant).',
+      is_smart_slot: false, smart_discount: 0, booked_price: 59, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_COMPLET, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: false,
+    },
+    {
+      id: 'demo-agenda-marc', client_name: 'Marc Dubreuil', client_email: 'marc.dubreuil@gmail.com', client_phone: '0620304050',
+      address: '8 Cours de la Marne, Bordeaux', lat: 44.834, lng: -0.561,
+      scheduled_at: versISOAgenda(0, 16, 0), status: 'confirmed', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 35, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_EXPRESS, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: false,
+    },
+    {
+      id: 'demo-agenda-garage', client_name: 'Garage Renault Mérignac', client_email: 'contact@garage-renault-merignac.fr', client_phone: '0556001122',
+      address: '2 Avenue de Mérignac, Mérignac', lat: 44.839, lng: -0.651,
+      scheduled_at: versISOAgenda(0, 17, 30), status: 'pending', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 210, selected_addons: null, travel_fee: null,
+      vehicle_count: 3, vehicles_detail: [{ type: 'utilitaire', count: 3, unit_price: 70, label: 'Forfait flotte' }],
+      services: { ...AGENDA_SERVICE_FLOTTE, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: true,
+    },
+    {
+      id: 'demo-agenda-thomas', client_name: 'Thomas Girard', client_email: 'thomas.girard@gmail.com', client_phone: '0623987654',
+      address: '11 Rue du Hâ, Bordeaux', lat: 44.838, lng: -0.574,
+      scheduled_at: versISOAgenda(1, 9, 0), status: 'pending', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 59, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_COMPLET, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: false,
+    },
+    {
+      id: 'demo-agenda-sophie', client_name: 'Sophie Lambert', client_email: 'sophie.lambert@gmail.com', client_phone: '0634567123',
+      address: '5 Rue Judaïque, Bordeaux', lat: 44.841, lng: -0.588,
+      scheduled_at: versISOAgenda(1, 10, 0), status: 'pending', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 35, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_EXPRESS, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: false,
+    },
+    // Un rendez-vous annulé, visible mais estompé — même jour que Claire Martin : prouve que la
+    // ligne reste dans la liste (jamais escamotée) sans compter dans les totaux ni les trajets.
+    {
+      id: 'demo-agenda-bastien', client_name: 'Bastien Leroy', client_email: 'bastien.leroy@gmail.com', client_phone: '0658224710',
+      address: '8 Rue des Menuts, Bordeaux', lat: 44.831, lng: -0.572,
+      scheduled_at: versISOAgenda(-3, 15, 0), status: 'cancelled', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 35, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_EXPRESS, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: false,
+    },
+    // Rénovation sièges, le mois prochain — pour que la vue « Mois » montre autre chose que la
+    // semaine en cours.
+    {
+      id: 'demo-agenda-pierre', client_name: 'Pierre Moreau', client_email: 'pierre.moreau@moreauautodetail.fr', client_phone: '0611112222',
+      address: '5 Rue des Artisans, Bordeaux', lat: 44.836, lng: -0.575,
+      scheduled_at: versISOAgenda(16, 14, 0), status: 'confirmed', notes: null,
+      is_smart_slot: false, smart_discount: 0, booked_price: 120, selected_addons: null, travel_fee: null,
+      vehicle_count: 1, vehicles_detail: null, services: { ...AGENDA_SERVICE_SIEGES, service_categories: AGENDA_CATEGORIE_VOITURE },
+      facture_numero: null, closed_late: false, is_professional: true,
+    },
+  ]
+
+  // « Dans deux jours » reste un jour OUVERT sans rien dedans (aucune ligne ci-dessus, aucun
+  // congé) : c'est la « journée vide ». Un laveur sur deux est noté absent ce même jour
+  // (`team_members_off: 1` sur 2) — un congé PARTIEL, qui n'empêche pas de réserver, distinct du
+  // jour suivant, FERMÉ (`team_members_off: 2`, toute l'équipe).
+  const unavailabilities: Unavailability[] = [
+    { id: 'demo-agenda-conge-partiel', start_date: dateCivileAgendaA(2), end_date: dateCivileAgendaA(2), label: 'Formation', team_members_off: 1 },
+    { id: 'demo-agenda-conge-ferme', start_date: dateCivileAgendaA(3), end_date: dateCivileAgendaA(3), label: 'Repos', team_members_off: 2 },
+    // Une période à venir, hors de la semaine affichée par défaut — pour que « Congés à venir »
+    // et la vue « Mois » (bien après aujourd'hui) aient quelque chose à montrer.
+    { id: 'demo-agenda-conge-vacances', start_date: dateCivileAgendaA(18), end_date: dateCivileAgendaA(21), label: 'Vacances', team_members_off: 2 },
+  ]
+
+  const services: ServiceFull[] = [
+    { id: 'demo-agenda-s-express', name: AGENDA_SERVICE_EXPRESS.name, price: AGENDA_SERVICE_EXPRESS.price, duration_minutes: AGENDA_SERVICE_EXPRESS.duration_minutes, vehicle_price_overrides: {}, category_id: 'demo-agenda-cat-voiture', vehicle_types: ['citadine', 'berline', 'suv'] },
+    { id: 'demo-agenda-s-complet', name: AGENDA_SERVICE_COMPLET.name, price: AGENDA_SERVICE_COMPLET.price, duration_minutes: AGENDA_SERVICE_COMPLET.duration_minutes, vehicle_price_overrides: {}, category_id: 'demo-agenda-cat-voiture', vehicle_types: ['citadine', 'berline', 'suv'] },
+    { id: 'demo-agenda-s-sieges', name: AGENDA_SERVICE_SIEGES.name, price: AGENDA_SERVICE_SIEGES.price, duration_minutes: AGENDA_SERVICE_SIEGES.duration_minutes, vehicle_price_overrides: {}, category_id: 'demo-agenda-cat-voiture', vehicle_types: ['berline', 'suv'] },
+    { id: 'demo-agenda-s-flotte', name: AGENDA_SERVICE_FLOTTE.name, price: AGENDA_SERVICE_FLOTTE.price, duration_minutes: AGENDA_SERVICE_FLOTTE.duration_minutes, vehicle_price_overrides: {}, category_id: 'demo-agenda-cat-voiture', vehicle_types: ['utilitaire'] },
+  ]
+  const categories: Category[] = [
+    { id: 'demo-agenda-cat-voiture', name: 'Voiture', types: [{ id: 'citadine', name: 'Citadine' }, { id: 'berline', name: 'Berline' }, { id: 'suv', name: 'SUV' }, { id: 'utilitaire', name: 'Utilitaire' }] },
+  ]
+
+  return {
+    bookings, unavailabilities, teamSize: 2, services, categories,
+    washerId: 'demo-washer-agenda',
+    facturationPrete: true,
+    googleAgendaConnecte: true,
+    joursMasques: [],
+    masquees: [],
+    offreDeblocage: 'Pro',
   }
 }

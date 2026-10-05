@@ -117,6 +117,7 @@ export default async function CalendrierPage() {
           joursMasques={joursMasques}
           masquees={masquees}
           offreDeblocage={offreDeblocage}
+          betaRefonte={washer.beta_refonte}
         />
       </Suspense>
     </DashboardShell>
