@@ -13,6 +13,7 @@ import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTr
 import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
 import { FacturationCard } from '@/components/dashboard/FacturationCard'
+import { estExpediteurApprouve } from '@/lib/expediteurs'
 
 // Réglages, présentation v1 — le site (navigateur classique, mobile ou
 // ordinateur) affiche ce contenu SANS EXCEPTION, décision d'Alexandre du
@@ -226,7 +227,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     if (res.ok) {
       const nouveau = smsSender.trim()
       if (nouveau !== senderEnregistre) {
-        setStatutSender(nouveau ? 'en_attente' : 'aucun')
+        setStatutSender(!nouveau ? 'aucun' : estExpediteurApprouve(nouveau) ? 'approuve' : 'en_attente')
         setSenderEnregistre(nouveau)
       }
       router.refresh()
@@ -558,6 +559,11 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
                     <> <span className="text-amber-600 dark:text-amber-400">Limite atteinte.</span></>
                   )}
                 </p>
+                {statutSender === 'approuve' && smsSender.trim() && (
+                  <p className="mt-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+                    Nom approuvé : vos SMS partent avec {smsSender.trim()}.
+                  </p>
+                )}
                 {statutSender === 'en_attente' && (
                   <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
                     Demande en cours. En attendant son approbation, vos SMS partent avec WashBoard.

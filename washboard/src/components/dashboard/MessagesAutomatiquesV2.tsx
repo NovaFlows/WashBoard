@@ -9,6 +9,7 @@ import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { FeuilleExpediteurSmsV2 } from '@/components/dashboard/FeuillesReglagesV2'
 import { enregistrerReglages } from '@/lib/enregistrerReglages'
 import { enregistrerProfil } from '@/lib/profilApi'
+import { estExpediteurApprouve } from '@/lib/expediteurs'
 import {
   avisActif, blocageAvis, relanceActive, nombreActifs, libelleCanal, libelleDelaiAvis, libelleDelaiRelance,
   messagesPartis, messagesProgrammes, messageRelanceSuggere,
@@ -256,7 +257,7 @@ export default function MessagesAutomatiquesV2({
   async function enregistrerExpediteur(valeur: string): Promise<string | null> {
     const r = await enregistrerProfil({ sms_sender: valeur })
     if (!r.ok) return r.message
-    if (valeur !== expediteur) setStatutExpediteur(valeur ? 'en_attente' : 'aucun')
+    if (valeur !== expediteur) setStatutExpediteur(!valeur ? 'aucun' : estExpediteurApprouve(valeur) ? 'approuve' : 'en_attente')
     setExpediteur(valeur)
     router.refresh()
     return null

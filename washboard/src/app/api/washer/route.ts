@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifierEquipe } from '@/lib/push'
+import { estExpediteurApprouve } from '@/lib/expediteurs'
 import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
 import { pixelIdValide, nettoyerPixelId } from '@/lib/consentement'
@@ -269,8 +270,10 @@ export async function PATCH(request: NextRequest) {
     updates.sms_sender = expediteur || null
     // Un nom nouveau ou modifié repart en attente d'approbation : tant qu'elle n'est pas
     // donnée, les SMS partent avec WashBoard (voir `expediteurPour`).
-    if (!updates.sms_sender) updates.sms_sender_statut = 'aucun'
-    else if (updates.sms_sender !== profil.sms_sender) updates.sms_sender_statut = 'en_attente'
+    if (!expediteur) updates.sms_sender_statut = 'aucun'
+    else if (expediteur !== profil.sms_sender) {
+      updates.sms_sender_statut = estExpediteurApprouve(expediteur) ? 'approuve' : 'en_attente'
+    }
   }
   if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
   if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))

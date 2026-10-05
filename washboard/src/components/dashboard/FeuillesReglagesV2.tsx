@@ -239,6 +239,11 @@ export function FeuilleExpediteurSmsV2({
             </Constat>
           </div>
         )}
+        {statut === 'approuve' && (
+          <p className="mb-3 rounded-[var(--v2-radius-carte)] border border-emerald-300 bg-emerald-50 px-3.5 py-3 text-[13.5px] leading-snug text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+            Nom approuvé. Vos SMS partent avec ce nom.
+          </p>
+        )}
         {statut === 'refuse' && (
           <div className="mb-3">
             <Constat ton="rouge">
