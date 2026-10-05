@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
@@ -210,6 +210,56 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
   )
 }
 
+// Rhabillage du châssis bureau (passe « bureau », 2026-10-05, décision d'Alexandre) : plus de
+// carte posée sur le papier, une simple ligne discrète — le bloc de verre/carte de BandeauV2
+// se voyait trop sur un écran déjà dense (menu + rail + contenu large). Toujours sur
+// `--v2-color-surface`, un filet en bas plutôt qu'une bordure tout autour, le texte à l'encre
+// QUEL QUE SOIT LE TON (pas d'ambre, pas de rouge ici : « une ligne discrète », pas une alerte)
+// — seul le lien reste en accent, pour qu'il reste le seul élément qui invite au clic. Le
+// padding horizontal reprend celui du `<main>` du châssis bureau (34px, voir plus bas) pour que
+// le texte s'aligne avec le contenu qu'il surplombe, au lieu de partir du bord de l'écran.
+//
+// Le SITE (hors bureau) et la PWA sur téléphone gardent leur propre habillage (BandeauV2 ou la
+// bannière v1 bleue) — ce composant n'est utilisé QUE derrière `showRailBureau`.
+function BandeauBureauV2({ etiquette, children, lien, libelleLien, onDismiss }: {
+  etiquette?: string
+  children: React.ReactNode
+  lien?: string
+  libelleLien?: string
+  onDismiss?: () => void
+}) {
+  return (
+    <div className="wb-bandeau-v2 border-b border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-[34px] py-2.5">
+      <div className="flex items-center gap-3">
+        <span className={`min-w-0 flex-1 text-[13px] leading-snug ${V2_POLICE} text-[color:var(--v2-color-encre)]`}>
+          {etiquette && (
+            <span className="mr-2 text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--v2-color-gris)]">
+              {etiquette}
+            </span>
+          )}
+          {children}
+          {lien && libelleLien && (
+            <Link href={lien} className={`ml-2 ${V2_FORT}`} style={{ color: 'var(--v2-color-accent)' }}>
+              {libelleLien} →
+            </Link>
+          )}
+        </span>
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            aria-label="Fermer"
+            className="shrink-0 p-1 text-[color:var(--v2-color-gris)] transition-opacity hover:opacity-70"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Annonce de l'application mobile, en bêta.
 //
 // Deux règles pour qu'un bandeau d'annonce ne devienne pas un meuble qu'on ne
@@ -227,7 +277,20 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
 // parce qu'il ignore que c'est possible.
 const CLE_FERME = 'wb_annonce_app_beta_fermee'
 
-function AppBetaBanner() {
+/** Props communes aux quatre bandeaux, pour la coordination « un seul à la fois » (Alexandre,
+ *  2026-10-05) et le rhabillage bureau — voir `BandeauBureauV2` et le commentaire au-dessus de
+ *  `ORDRE_BANDEAUX` dans `DashboardShell`. Chaque bandeau continue de décider lui-même, comme
+ *  avant, s'il A ENVIE de s'afficher (son propre `localStorage`, ses propres conditions) ; ce
+ *  qui change, c'est qu'il le SIGNALE au châssis (`onDisponibiliteChange`) au lieu de s'afficher
+ *  directement, et n'affiche réellement son contenu que si `actif` le confirme — c'est-à-dire
+ *  si aucun bandeau de priorité plus haute n'est lui-même disponible. */
+type PropsBandeau = {
+  bureau: boolean
+  actif: boolean
+  onDisponibiliteChange: (dispo: boolean) => void
+}
+
+function AppBetaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
   // On part de « masqué » : ce qui décide de l'affichage n'existe que dans le
   // navigateur, et un rendu serveur différent provoquerait un clignotement.
   const [visible, setVisible] = useState(false)
@@ -259,11 +322,23 @@ function AppBetaBanner() {
     return () => { annule = true }
   }, [])
 
-  if (!visible) return null
+  // Signalé même quand ce bandeau n'est pas celui qu'on montre : c'est ce qui permet au
+  // suivant, dans l'ordre de priorité, de savoir qu'il doit rester caché.
+  useEffect(() => { onDisponibiliteChange(visible) }, [visible, onDisponibiliteChange])
+
+  if (!visible || !actif) return null
 
   function fermer() {
     setVisible(false)
     try { localStorage.setItem(CLE_FERME, '1') } catch { /* rien à faire */ }
+  }
+
+  if (bureau) {
+    return (
+      <BandeauBureauV2 etiquette="Bêta" lien="/dashboard/guide#guide-application" libelleLien="En savoir plus" onDismiss={fermer}>
+        Recevez vos réservations en notification sur votre téléphone.
+      </BandeauBureauV2>
+    )
   }
 
   if (isPwa) {
@@ -317,7 +392,7 @@ const CLE_BANDEAU_ESSAI = 'wb-bandeau-essai'
 // l'offre existe désormais pour en parler à un confrère.
 const CLE_FERMEE_OFFRES_2026 = 'wb_annonce_offres_2026_fermee'
 
-function NouvellesOffresBanner() {
+function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
   // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
   // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
   const [visible, setVisible] = useState(false)
@@ -339,11 +414,21 @@ function NouvellesOffresBanner() {
     return () => { annule = true }
   }, [])
 
-  if (!visible) return null
+  useEffect(() => { onDisponibiliteChange(visible) }, [visible, onDisponibiliteChange])
+
+  if (!visible || !actif) return null
 
   function fermer() {
     setVisible(false)
     try { localStorage.setItem(CLE_FERMEE_OFFRES_2026, '1') } catch { /* rien à faire */ }
+  }
+
+  if (bureau) {
+    return (
+      <BandeauBureauV2 etiquette="Nouveau" lien="/dashboard/abonnement" libelleLien="Voir les offres" onDismiss={fermer}>
+        WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+      </BandeauBureauV2>
+    )
   }
 
   if (isPwa) {
@@ -386,7 +471,7 @@ function NouvellesOffresBanner() {
 // laisserait croire qu'il manque quelque chose à ce qu'il a sous les yeux.
 const CLE_FERMEE_ANNONCE_PWA = 'wb_annonce_pwa_2026_fermee'
 
-function AnnoncePwaBanner() {
+function AnnoncePwaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
   const isPwa = usePwaStandalone()
   const [visible, setVisible] = useState(false)
 
@@ -405,11 +490,23 @@ function AnnoncePwaBanner() {
     return () => { annule = true }
   }, [isPwa])
 
-  if (isPwa || !visible) return null
+  // Jamais dans l'application installée (voir l'en-tête du fichier) : on le signale comme
+  // indisponible plutôt que de laisser le châssis attendre un signal qui ne viendra jamais.
+  useEffect(() => { onDisponibiliteChange(!isPwa && visible) }, [isPwa, visible, onDisponibiliteChange])
+
+  if (isPwa || !visible || !actif) return null
 
   function fermer() {
     setVisible(false)
     try { localStorage.setItem(CLE_FERMEE_ANNONCE_PWA, '1') } catch { /* rien à faire */ }
+  }
+
+  if (bureau) {
+    return (
+      <BandeauBureauV2 etiquette="Nouveau" lien="/dashboard/guide#guide-application" libelleLien="En savoir plus" onDismiss={fermer}>
+        WashBoard évolue — venez essayer la nouvelle version de l&apos;application.
+      </BandeauBureauV2>
+    )
   }
 
   return (
@@ -431,7 +528,9 @@ function AnnoncePwaBanner() {
   )
 }
 
-function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null }) {
+function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt, bureau, actif, onDisponibiliteChange }: {
+  trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null
+} & PropsBandeau) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
   const isPwa = usePwaStandalone()
@@ -458,6 +557,13 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     ton: TonBandeau, habitV1: keyof typeof HABIT_V1,
     texte: React.ReactNode, libelleLien: string, fermer?: () => void,
   ) => {
+    if (bureau) {
+      return (
+        <BandeauBureauV2 lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
+          {texte}
+        </BandeauBureauV2>
+      )
+    }
     if (isPwa) {
       return (
         <BandeauV2 ton={ton} lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
@@ -478,69 +584,81 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     )
   }
 
-  // Essai terminé, aucune formule choisie, et le compte suit la règle 2026 :
-  // il tourne sur Découverte. Rien n'est cassé — donc pas de rouge, pas de
-  // « votre compte va être suspendu ». Cette branche passe AVANT les autres :
-  // sans elle, le laveur lirait « Votre période d'essai a expiré » en rouge
-  // alors que sa page de réservation fonctionne toujours.
-  if (choisirFormule) {
-    return bandeau('choisir-formule', fermer => etat(
-      'accent', 'accent',
-      'Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.',
-      'Voir les offres', fermer,
-    ))
-  }
-
-  // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
-  if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
-    return bandeau(`resilie-${cancelsAt}`, fermer => etat(
-      'rouge', 'rouge',
-      <>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</>,
-      'Réactiver', fermer,
-    ))
-  }
-
-  if (!subscriptionStatus || subscriptionStatus === 'active') return null
-
-  // Client historique dont la période payée court encore (`subscription_ends_at` dans le futur) :
-  // son statut peut dire « expired » (reliquat de l'ancien essai), mais il a tout ouvert et rien
-  // n'est échu — lui afficher « votre essai a expiré » serait faux (constaté sur AutoNett,
-  // 2026-09-30 : grandfathered, échéance au 14 octobre).
-  if (grandfathered && subscriptionEndsAt && new Date(subscriptionEndsAt).getTime() > now) return null
-
-  if (subscriptionStatus === 'expired') {
-    return bandeau('expire', fermer => etat(
-      'rouge', 'expire',
-      'Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.',
-      'Voir les offres', fermer,
-    ))
-  }
-
-  if (subscriptionStatus === 'trial' && trialEndsAt) {
-    const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24))
-    const isUrgent = daysLeft <= 7
-
-    // Carte enregistrée, facturation différée
-    if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
-      return bandeau(`carte-${daysLeft}`, fermer => etat(
-        'vert', 'vert',
-        <>✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</>,
-        'Gérer', fermer,
+  // Toute la logique ci-dessous décide seulement CE QUE ce bandeau voudrait montrer
+  // (`contenu`, nullable) — jamais si on l'affiche vraiment : ça, c'est `actif` (coordination
+  // « un seul à la fois », voir `PropsBandeau`) qui en décide, plus bas. Repliée dans une
+  // fonction plutôt que des `return` directs dans `TrialBanner`, pour pouvoir signaler le
+  // résultat (`onDisponibiliteChange`) avant de rendre quoi que ce soit.
+  const contenu = ((): React.ReactElement | null => {
+    // Essai terminé, aucune formule choisie, et le compte suit la règle 2026 :
+    // il tourne sur Découverte. Rien n'est cassé — donc pas de rouge, pas de
+    // « votre compte va être suspendu ». Cette branche passe AVANT les autres :
+    // sans elle, le laveur lirait « Votre période d'essai a expiré » en rouge
+    // alors que sa page de réservation fonctionne toujours.
+    if (choisirFormule) {
+      return bandeau('choisir-formule', fermer => etat(
+        'accent', 'accent',
+        'Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.',
+        'Voir les offres', fermer,
       ))
     }
 
-    if (daysLeft <= 0) {
-      return bandeau('essai-expire', fermer => etat('rouge', 'expire', 'Votre période d’essai a expiré.', 'Activer mon abonnement', fermer))
+    // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
+    if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
+      return bandeau(`resilie-${cancelsAt}`, fermer => etat(
+        'rouge', 'rouge',
+        <>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</>,
+        'Réactiver', fermer,
+      ))
     }
 
-    return bandeau(`essai-${daysLeft}`, fermer => etat(
-      isUrgent ? 'ambre' : 'accent', isUrgent ? 'urgent' : 'accent',
-      <>Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</>,
-      'Voir l’abonnement', fermer,
-    ))
-  }
+    if (!subscriptionStatus || subscriptionStatus === 'active') return null
 
-  return null
+    // Client historique dont la période payée court encore (`subscription_ends_at` dans le futur) :
+    // son statut peut dire « expired » (reliquat de l'ancien essai), mais il a tout ouvert et rien
+    // n'est échu — lui afficher « votre essai a expiré » serait faux (constaté sur AutoNett,
+    // 2026-09-30 : grandfathered, échéance au 14 octobre).
+    if (grandfathered && subscriptionEndsAt && new Date(subscriptionEndsAt).getTime() > now) return null
+
+    if (subscriptionStatus === 'expired') {
+      return bandeau('expire', fermer => etat(
+        'rouge', 'expire',
+        'Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.',
+        'Voir les offres', fermer,
+      ))
+    }
+
+    if (subscriptionStatus === 'trial' && trialEndsAt) {
+      const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24))
+      const isUrgent = daysLeft <= 7
+
+      // Carte enregistrée, facturation différée
+      if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
+        return bandeau(`carte-${daysLeft}`, fermer => etat(
+          'vert', 'vert',
+          <>✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</>,
+          'Gérer', fermer,
+        ))
+      }
+
+      if (daysLeft <= 0) {
+        return bandeau('essai-expire', fermer => etat('rouge', 'expire', 'Votre période d’essai a expiré.', 'Activer mon abonnement', fermer))
+      }
+
+      return bandeau(`essai-${daysLeft}`, fermer => etat(
+        isUrgent ? 'ambre' : 'accent', isUrgent ? 'urgent' : 'accent',
+        <>Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</>,
+        'Voir l’abonnement', fermer,
+      ))
+    }
+
+    return null
+  })()
+
+  const dispo = contenu !== null
+  useEffect(() => { onDisponibiliteChange(dispo) }, [dispo, onDisponibiliteChange])
+
+  return actif ? contenu : null
 }
 
 export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, betaRefonte }: Props) {
@@ -701,16 +819,44 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     </SupportBadgesContext.Provider>
   )
 
-  // Bandeaux commerciaux (fin d'essai, paiement, résiliation, annonces) : chaque composant
-  // décide déjà lui-même sa propre forme via `usePwaStandalone()` interne (BandeauV2 en carte
-  // pour toute PWA, y compris sur ordinateur ; bannière v1 pleine largeur sinon) — rien à
-  // adapter ici pour le rail, qui se contente de les poser au bon endroit.
+  // Un seul bandeau visible à la fois, par ordre de priorité (Alexandre, 2026-10-05 : « je veux
+  // qu'elle apparaisse qu'une seule fois ») — avant cette passe, jusqu'à trois des quatre
+  // pouvaient s'empiler (fin d'essai + annonce PWA + nouvelles offres), trois lignes bleues
+  // en haut du châssis bureau. Chaque bandeau garde EXACTEMENT sa logique d'avant (sa propre
+  // clé `localStorage`, ses propres conditions d'affichage) : ce qui change, c'est qu'il
+  // signale sa disponibilité ici plutôt que de s'afficher directement dès qu'il le peut, et
+  // `estBandeauActif` ci-dessous ne laisse passer que le premier disponible dans cet ordre.
+  // Priorité : l'essai/la facturation (ça touche à l'argent) d'abord, puis les annonces
+  // produit, dans l'ordre où elles apparaissaient déjà.
+  const ORDRE_BANDEAUX = ['trial', 'annoncePwa', 'offres2026', 'appBeta'] as const
+  const [dispoBandeaux, setDispoBandeaux] = useState<Record<(typeof ORDRE_BANDEAUX)[number], boolean>>({
+    trial: false, annoncePwa: false, offres2026: false, appBeta: false,
+  })
+  // Identité stable (deps vides) : sans ça, chaque bandeau recevrait une fonction différente à
+  // chaque rendu de DashboardShell et redéclencherait son effet de signalement en boucle.
+  const rapporterTrial = useCallback((d: boolean) => setDispoBandeaux(s => (s.trial === d ? s : { ...s, trial: d })), [])
+  const rapporterAnnoncePwa = useCallback((d: boolean) => setDispoBandeaux(s => (s.annoncePwa === d ? s : { ...s, annoncePwa: d })), [])
+  const rapporterOffres2026 = useCallback((d: boolean) => setDispoBandeaux(s => (s.offres2026 === d ? s : { ...s, offres2026: d })), [])
+  const rapporterAppBeta = useCallback((d: boolean) => setDispoBandeaux(s => (s.appBeta === d ? s : { ...s, appBeta: d })), [])
+  const estBandeauActif = (cle: (typeof ORDRE_BANDEAUX)[number]): boolean => {
+    const rang = ORDRE_BANDEAUX.indexOf(cle)
+    return dispoBandeaux[cle] && ORDRE_BANDEAUX.slice(0, rang).every(c => !dispoBandeaux[c])
+  }
+
+  // Chaque composant décide toujours lui-même sa propre FORME via `usePwaStandalone()` interne
+  // (BandeauV2 en carte pour la PWA téléphone, bannière v1 pleine largeur sinon) ; `bureau`
+  // ci-dessous est la seule information qu'il ne pouvait pas deviner seul — le rail n'existant
+  // pas avant cette passe — et sélectionne la troisième forme, la ligne discrète (BandeauBureauV2).
   const bandeaux = (
     <>
-      <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt} />
-      <AnnoncePwaBanner />
-      <NouvellesOffresBanner />
-      <AppBetaBanner />
+      <TrialBanner
+        trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId}
+        cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt}
+        bureau={showRailBureau} actif={estBandeauActif('trial')} onDisponibiliteChange={rapporterTrial}
+      />
+      <AnnoncePwaBanner bureau={showRailBureau} actif={estBandeauActif('annoncePwa')} onDisponibiliteChange={rapporterAnnoncePwa} />
+      <NouvellesOffresBanner bureau={showRailBureau} actif={estBandeauActif('offres2026')} onDisponibiliteChange={rapporterOffres2026} />
+      <AppBetaBanner bureau={showRailBureau} actif={estBandeauActif('appBeta')} onDisponibiliteChange={rapporterAppBeta} />
     </>
   )
 

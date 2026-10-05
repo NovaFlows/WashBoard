@@ -153,6 +153,10 @@ type Filtre = 'tous' | 'pros' | 'relancer' | 'entreprises'
 /** Clients montrés d'abord sous chaque filtre, puis ajoutés à chaque « Charger plus »
  *  (Alexandre, 2026-09-30) : un fichier de plusieurs dizaines de contacts ne se déroule plus d'un bloc. */
 const PAS_AFFICHAGE = 5
+/** Sur grand écran, la colonne de liste fait toute la hauteur de la fenêtre : s’arrêter à 5
+ *  lignes y laisse un grand vide et donne l’impression d’un fichier client presque vide.
+ *  Le pas du téléphone (5) reste celui du petit écran, où chaque ligne coûte un défilement. */
+const PAS_AFFICHAGE_BUREAU = 15
 
 const CLASSE_BOUTON_PAGINATION = `flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-colors active:bg-[color:var(--v2-color-fond)] motion-reduce:transition-none`
 
@@ -225,13 +229,16 @@ export default function ClientsViewV2({
   // Passe bureau : voir l'en-tête du fichier. `false` au rendu serveur et jusqu'à l'hydratation
   // — l'écran démarre donc toujours en disposition à une colonne, comme avant cette passe.
   const grandEcran = useGrandEcran()
+  // Combien de lignes on montre avant de demander « Charger plus » : la place disponible
+  // n’est pas la même sur un téléphone et sur un écran d’ordinateur.
+  const pas = grandEcran ? PAS_AFFICHAGE_BUREAU : PAS_AFFICHAGE
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
   const [maintenant] = useState(() => Date.now())
   const [recherche, setRecherche] = useState('')
   const [filtre, setFiltre] = useState<Filtre>('tous')
   const [visibles, setVisibles] = useState<Record<Filtre, number>>({
-    tous: PAS_AFFICHAGE, pros: PAS_AFFICHAGE, relancer: PAS_AFFICHAGE, entreprises: PAS_AFFICHAGE,
+    tous: pas, pros: pas, relancer: pas, entreprises: pas,
   })
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [entrepriseOuverteId, setEntrepriseOuverteId] = useState<string | null>(null)
@@ -352,7 +359,7 @@ export default function ClientsViewV2({
   // que ClientsViewV1.tsx.
   const bloquesAffiches = filtre === 'relancer' || filtre === 'entreprises' || recherche.trim() ? [] : bloques
   const limite = visibles[filtre]
-  const chargerPlus = () => setVisibles(v => ({ ...v, [filtre]: v[filtre] + PAS_AFFICHAGE }))
+  const chargerPlus = () => setVisibles(v => ({ ...v, [filtre]: v[filtre] + pas }))
   const bloquesVus = bloquesAffiches.slice(0, limite)
   const affichesVus = affiches.slice(0, Math.max(0, limite - bloquesVus.length))
   const totalClients = bloquesAffiches.length + affiches.length
@@ -615,8 +622,14 @@ export default function ClientsViewV2({
             // l'intérieur. 600px reste une valeur à l'oeil, indépendante de la hauteur réelle de
             // la fenêtre — à revoir dans une passe qui s'attaque spécifiquement au contenu de cet
             // écran plutôt qu'à son châssis.
-            <div className="flex gap-4" style={{ height: 600 }}>
-              <div className="h-full min-w-0 w-[280px] shrink-0 space-y-3 overflow-y-auto">
+            // Hauteur : plus de 600px figés. On retranche du haut de la fenêtre ce que le
+            // châssis occupe déjà (bandeau, titre, recherche, pastilles) pour que les deux
+            // panneaux descendent jusqu’en bas de l’écran quelle qu’en soit la taille, avec
+            // un plancher pour les très petites hauteurs.
+            <div className="flex gap-4" style={{ height: 'max(420px, calc(100vh - 268px))' }}>
+              {/* 380px, la valeur de la maquette : à 280 les noms d’entreprise étaient
+                  tronqués et chaque ligne retombait sur trois niveaux. */}
+              <div className="h-full min-w-0 w-[380px] shrink-0 space-y-3 overflow-y-auto">
                 {contenuListe}
               </div>
               <div className="h-full min-w-0 flex-1">
