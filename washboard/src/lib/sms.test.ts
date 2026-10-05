@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { normalizePhone, sendSms, expediteurPour } from './sms'
 
 describe('expediteurPour', () => {
-  it('garde le nom du laveur s’il est approuvé', () => expect(expediteurPour('KookiClean')).toBe('KookiClean'))
-  it('retombe sur WashBoard pour un nom non approuvé', () => expect(expediteurPour('AutoNettoya')).toBe('WashBoard'))
+  it('retombe sur WashBoard pour un nom non approuvé', () => expect(expediteurPour('KookiClean')).toBe('WashBoard'))
   it('retombe sur WashBoard sans nom', () => {
     expect(expediteurPour(null)).toBe('WashBoard')
     expect(expediteurPour('')).toBe('WashBoard')

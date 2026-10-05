@@ -30,7 +30,7 @@ export function normalizePhone(raw: string): string | null {
 export const EXPEDITEUR_SMS_DEFAUT = 'WashBoard'
 
 /** Noms d'expéditeur approuvés chez Brevo. Un laveur n'a son propre nom que s'il figure ici. */
-export const EXPEDITEURS_APPROUVES: readonly string[] = ['KookiClean', 'Nova', 'WashBoard']
+export const EXPEDITEURS_APPROUVES: readonly string[] = ['WashBoard']
 
 /** Le nom du laveur s'il est approuvé chez Brevo, sinon WashBoard. */
 export function expediteurPour(nomSaisi: string | null | undefined): string {
