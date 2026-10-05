@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import BookingList from '@/components/dashboard/BookingList'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { logger } from '@/lib/logger'
-import { computeSetupProgress } from '@/lib/setupProgress'
+import { computeSetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 import { visiteAFaire } from '@/lib/visiteGuidee'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
@@ -473,6 +473,13 @@ export default async function DashboardPage() {
         }}
         verrouillees={verrouillees}
         offreDeblocage={offreDeblocage}
+        // `etapeDemarrage(progress) !== null` — exactement le signal que lit `DemarrageCard`
+        // (étapes BLOQUANTES seulement : prestations, horaires, adresse). `!progress.essentialsDone`
+        // aurait aussi compté le logo et le téléphone, non bloquants : un compte pleinement
+        // opérationnel mais sans logo aurait vu la carte « premier jour » à la place de son
+        // agenda dès un jour sans rendez-vous — faux signal, corrigé avant d'écrire l'écran.
+        configurationIncomplete={etapeDemarrage(progress) !== null}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

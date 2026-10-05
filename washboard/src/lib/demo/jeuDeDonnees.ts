@@ -23,6 +23,12 @@ import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/client
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { EntrepriseListItem } from '@/lib/entrepriseProfile'
 import type { AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
+import type { RdvAccueil } from '@/components/dashboard/AccueilV2'
+import type { ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
+import type { WidgetKey } from '@/lib/dashboardWidgets'
+import type { ZoneConfig } from '@/types'
+import type { Plan } from '@/lib/plan'
+import { computeSetupProgress, type SetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 
 // ── Prestations et prix (cohérents avec la grille réelle d'Éclat Mobile) ───────────────────
 const SERVICE_EXPRESS = { name: 'Extérieur express', price: 35, duration_minutes: 25 }
@@ -392,4 +398,164 @@ export function jeuDeDonneesDemo(): {
   }
 
   return { bookings, documents, reglages, reglagesMessages, entreprises, nomLaveur: 'Julien Roussel', automatismes }
+}
+
+// ── Jeu de données pour « Aujourd'hui » (AccueilV2), passe bureau ─────────────────────────────
+//
+// Les trois états dessinés par `washboard-design/maquettes/bureau-2026/index.html` pour cet
+// écran (1, 45, 46 — le 4e, la fiche d'un client verrouillé, écran 48, n'a besoin d'aucune donnée
+// de plus : c'est l'interaction déjà câblée dans `LigneRdvVerrouilleeV2`, qui s'ouvre d'elle-même
+// au clic sur une ligne de `verrouillees` ci-dessous). Même convention que `jeuDeDonneesDemo` :
+// aucune date figée, tout calculé depuis « maintenant ».
+//
+// Les écrans 45 et 46 reprennent, comme la maquette elle-même, l'offre Starter (quota 15) plutôt
+// que le Pro d'Éclat Mobile : c'est le seul cas réel où `JaugeReservationsV2` a quelque chose à
+// montrer (le Pro n'a pas de plafond, voir `lib/plan.ts`, `BOOKING_QUOTA`).
+
+export type EtatAccueilDemo = 'normal' | 'premier-jour' | 'quota'
+
+function aujourdhuiA(heure: number, minute = 0): string {
+  const d = new Date()
+  d.setHours(heure, minute, 0, 0)
+  return d.toISOString()
+}
+
+function dansNJours(jours: number, heure: number, minute = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + jours)
+  d.setHours(heure, minute, 0, 0)
+  return d.toISOString()
+}
+
+const ZONE_GIRONDE: ZoneConfig = { enabled: true, type: 'departments', departments: ['33'] }
+
+export type AccueilDemo = {
+  rdvAujourdhui: RdvAccueil[]
+  rdvProchains: RdvAccueil[]
+  aConfirmer: RdvAccueil[]
+  verrouillees: ReservationMasquee[]
+  journeeCommencee: boolean
+  dateDuJour: string
+  widgets: WidgetKey[]
+  stats: { terminesCeMois: number; caCeMois: number | null } | null
+  clients: { total: number; nouveauxCetteSemaine: number } | null
+  trafic: { visiteurs: number; conversions: number } | null
+  prestationTop: { nom: string; nombre: number } | null
+  zone: ZoneConfig
+  jauge: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }
+  offreDeblocage: string
+  /** Pour construire `<DemarrageCard progress={progress} />` : la vraie fonction du produit,
+   *  jamais une progression inventée (voir `configurationIncomplete` ci-dessous, qui lit le même
+   *  objet — exactement la paire que reçoit `AccueilV2` depuis `dashboard/page.tsx`). */
+  progress: SetupProgress
+  configurationIncomplete: boolean
+}
+
+/** Widgets par défaut, dans l'ordre de `WIDGETS` (voir `dashboardWidgets.ts`) — un compte qui n'a
+ *  jamais touché au réglage les voit tous, `today` mis à part (pas lu par `AccueilV2`). */
+const WIDGETS_DEMO: WidgetKey[] = ['stats', 'clients', 'upcoming', 'traffic', 'services', 'zone']
+
+export function jeuDeDonneesAccueilDemo(etat: EtatAccueilDemo): AccueilDemo {
+  const dateDuJour = new Date().toLocaleDateString('en-CA')
+
+  if (etat === 'premier-jour') {
+    // Écran 45 : un compte qui vient de s'inscrire, rien n'est encore configuré — exactement ce
+    // que `computeSetupProgress` calcule pour une fiche laveur toute neuve.
+    const progress = computeSetupProgress({
+      servicesCount: 0, availabilitiesCount: 0, baseAddress: null, phone: null, logoUrl: null,
+      googleCalendarConnected: false, reviewsEnabled: false, followupEnabled: false,
+      zoneEnabled: false, smartSlotEnabled: false, welcomeMessage: null,
+    })
+    return {
+      rdvAujourdhui: [], rdvProchains: [], aConfirmer: [], verrouillees: [],
+      journeeCommencee: false, dateDuJour, widgets: WIDGETS_DEMO,
+      stats: null, clients: null, trafic: null, prestationTop: null,
+      zone: { enabled: false },
+      jauge: { utilisees: 0, quota: 15, offre: 'starter' },
+      offreDeblocage: 'Pro',
+      progress,
+      configurationIncomplete: etapeDemarrage(progress) !== null,
+    }
+  }
+
+  // — La journée du jour, commune aux écrans « normal » (1) et « quota atteint » (46) : la
+  // maquette bureau réutilise elle-même les trois mêmes rendez-vous pour les deux écrans. —
+  const camille: RdvAccueil = {
+    id: 'demo-accueil-camille', client_name: 'Camille Lefebvre', client_phone: '0610203040',
+    address: '12 Rue Fondaudège, Bordeaux', lat: 44.846, lng: -0.586,
+    scheduled_at: aujourdhuiA(14, 30), status: 'confirmed', is_smart_slot: false, smart_discount: 0,
+    booked_price: 59, services: { name: 'Extérieur + intérieur', price: 59, duration_minutes: 50 },
+  }
+  const marc: RdvAccueil = {
+    id: 'demo-accueil-marc', client_name: 'Marc Dubreuil', client_phone: '0620304050',
+    address: '8 Cours de la Marne, Bordeaux', lat: 44.834, lng: -0.561,
+    scheduled_at: aujourdhuiA(16, 0), status: 'confirmed', is_smart_slot: false, smart_discount: 0,
+    booked_price: 35, services: { name: 'Extérieur express', price: 35, duration_minutes: 25 },
+  }
+  const garage: RdvAccueil = {
+    id: 'demo-accueil-garage', client_name: 'Garage Renault Mérignac', client_phone: '0556001122',
+    address: '2 Avenue de Mérignac, Mérignac', lat: 44.839, lng: -0.651,
+    scheduled_at: aujourdhuiA(17, 30), status: 'pending', is_smart_slot: false, smart_discount: 0,
+    booked_price: 210, services: { name: 'Forfait flotte · 3 véhicules', price: 210, duration_minutes: 90 },
+  }
+  // Demain — nourrit à la fois « À confirmer » (Sophie, en attente) et la section « Ensuite » des
+  // widgets de droite (Thomas ET Sophie) : même donnée, deux lectures, comme le fait réellement
+  // `AccueilV2` (voir son en-tête) — pas une coïncidence de ce jeu de données.
+  const thomas: RdvAccueil = {
+    id: 'demo-accueil-thomas', client_name: 'Thomas Girard', client_phone: '0623987654',
+    address: '11 Rue du Hâ, Bordeaux', lat: 44.838, lng: -0.574,
+    scheduled_at: dansNJours(1, 9, 0), status: 'confirmed', is_smart_slot: false, smart_discount: 0,
+    booked_price: 120, services: { name: 'Rénovation sièges', price: 120, duration_minutes: 90 },
+  }
+  const sophie: RdvAccueil = {
+    id: 'demo-accueil-sophie', client_name: 'Sophie Lambert', client_phone: '0634567890',
+    address: '5 Rue Judaïque, Bordeaux', lat: 44.841, lng: -0.588,
+    scheduled_at: dansNJours(1, 10, 0), status: 'pending', is_smart_slot: false, smart_discount: 0,
+    booked_price: 35, services: { name: 'Extérieur express', price: 35, duration_minutes: 25 },
+  }
+
+  const basePro = computeSetupProgress({
+    servicesCount: 4, availabilitiesCount: 12, baseAddress: '3 Rue Sainte-Catherine, Bordeaux',
+    phone: '0612345678', logoUrl: 'https://example.invalid/logo.png',
+    googleCalendarConnected: true, reviewsEnabled: true, followupEnabled: true,
+    zoneEnabled: true, smartSlotEnabled: true, welcomeMessage: 'Bienvenue chez Éclat Mobile !',
+  })
+
+  if (etat === 'quota') {
+    // Écran 46 : trois demandes de plus, verrouillées par le plafond Starter — cliquables, elles
+    // ouvrent la fiche floutée (écran 48) sans rien de plus à préparer ici.
+    const verrouillees: ReservationMasquee[] = [
+      { id: 'demo-accueil-verrou-1', scheduled_at: dansNJours(4, 11, 0) },
+      { id: 'demo-accueil-verrou-2', scheduled_at: dansNJours(5, 9, 0) },
+      { id: 'demo-accueil-verrou-3', scheduled_at: dansNJours(7, 14, 0) },
+    ]
+    return {
+      rdvAujourdhui: [camille, marc, garage], rdvProchains: [thomas, sophie], aConfirmer: [sophie],
+      verrouillees, journeeCommencee: false, dateDuJour, widgets: WIDGETS_DEMO,
+      stats: { terminesCeMois: 11, caCeMois: 640 },
+      clients: { total: 18, nouveauxCetteSemaine: 2 },
+      trafic: { visiteurs: 34, conversions: 6 },
+      prestationTop: { nom: 'Extérieur express', nombre: 9 },
+      zone: ZONE_GIRONDE,
+      jauge: { utilisees: 15, quota: 15, offre: 'starter', remiseAZero: '3 novembre' },
+      offreDeblocage: 'Pro',
+      progress: basePro,
+      configurationIncomplete: etapeDemarrage(basePro) !== null,
+    }
+  }
+
+  // Écran 1 : journée normale, offre Pro, aucun plafond.
+  return {
+    rdvAujourdhui: [camille, marc, garage], rdvProchains: [thomas, sophie], aConfirmer: [sophie],
+    verrouillees: [], journeeCommencee: false, dateDuJour, widgets: WIDGETS_DEMO,
+    stats: { terminesCeMois: 11, caCeMois: 640 },
+    clients: { total: 18, nouveauxCetteSemaine: 2 },
+    trafic: { visiteurs: 34, conversions: 6 },
+    prestationTop: { nom: 'Extérieur express', nombre: 9 },
+    zone: ZONE_GIRONDE,
+    jauge: { utilisees: 42, quota: null, offre: 'pro' },
+    offreDeblocage: 'Pro',
+    progress: basePro,
+    configurationIncomplete: etapeDemarrage(basePro) !== null,
+  }
 }

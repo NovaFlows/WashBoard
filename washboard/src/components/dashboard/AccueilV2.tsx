@@ -2,7 +2,8 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { MapPin, MoreHorizontal, Navigation, Phone } from 'lucide-react'
+import { Check, Lock, MapPin, MoreHorizontal, Navigation, Phone, Store } from 'lucide-react'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { formatHeure } from '@/lib/dateUtils'
 import { formatPrice, finalDisplayPrice } from '@/lib/pricing'
 import { effectivePrice } from '@/lib/crmStats'
@@ -16,7 +17,7 @@ import type { ZoneConfig } from '@/types'
 import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
-import { PLAN_LABELS, PLAN_COULEURS, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '@/lib/plan'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -83,6 +84,16 @@ const nom = `${police} [font-weight:var(--v2-type-nom-poids)] [font-stretch:var(
 const titre = `${police} [font-weight:var(--v2-type-titre-poids)] [font-stretch:var(--v2-type-titre-largeur)] tracking-[var(--v2-type-titre-tracking)]`
 const hero = `${police} [font-weight:var(--v2-type-hero-poids)] [font-stretch:var(--v2-type-hero-largeur)] tracking-[var(--v2-type-hero-tracking)]`
 
+/** Où en est le laveur de son plafond mensuel : plein, dernière place, ou encore de la marge.
+ *  Extrait de `JaugeReservationsV2` (passe « bureau ») pour que la carte de montée en offre du
+ *  second écran déclenche exactement la même condition que le lien « Changer d'offre » de la
+ *  jauge, sans la deviner à côté — un seul calcul, deux présentations. */
+function etatJauge(utilisees: number, quota: number | null): { depasse: boolean; derniere: boolean } {
+  if (quota === null || quota <= 0) return { depasse: false, derniere: false }
+  const restantes = Math.max(0, quota - utilisees)
+  return { depasse: utilisees >= quota, derniere: restantes === 1 }
+}
+
 /** Où en est le laveur de son quota du mois — équivalent v2 de `JaugeReservations.tsx` (site),
  *  même logique, jetons v2. Ne s'affiche pas sur une offre sans plafond : il n'y a alors rien à
  *  compter, une jauge pleine à 3 % serait un rappel gratuit qu'on paie. */
@@ -90,8 +101,7 @@ function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilise
   if (quota === null || quota <= 0) return null
 
   const restantes = Math.max(0, quota - utilisees)
-  const depasse = utilisees >= quota
-  const derniere = restantes === 1
+  const { depasse, derniere } = etatJauge(utilisees, quota)
   const couleur = depasse ? 'var(--v2-color-rouge)' : derniere ? 'var(--v2-color-ambre)' : 'var(--v2-color-accent)'
   const pourcent = Math.min(100, Math.round((utilisees / quota) * 100))
   const message = depasse
@@ -265,6 +275,12 @@ type Props = {
   verrouillees: ReservationMasquee[]
   /** L'offre la moins chère qui les débloque, nommée sur chaque carte. */
   offreDeblocage: string
+  /** Au moins une étape BLOQUANTE de la configuration manque encore (`etapeDemarrage(progress)
+   *  !== null`) — voir `Accueil.tsx` pour pourquoi ni `essentialsDone` ni une liste de
+   *  rendez-vous vide ne suffisent à le deviner. Sans effet sur l'écran à une colonne
+   *  (téléphone) : `demarrage` y disparaît déjà seul quand il n'a plus rien à réclamer, inchangé
+   *  par cette passe. */
+  configurationIncomplete: boolean
 }
 
 export default function AccueilV2({
@@ -283,8 +299,14 @@ export default function AccueilV2({
   jauge,
   verrouillees,
   offreDeblocage,
+  configurationIncomplete,
 }: Props) {
   const [personnaliser, setPersonnaliser] = useState(false)
+  // Passe « bureau » (2026-10-05, Alexandre, 2026-10-03) : deux colonnes au-delà de
+  // `SEUIL_GRAND_ECRAN_PX` (1024px), même hook que ClientsViewV2.tsx — pas un seuil inventé en
+  // double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc toujours en
+  // disposition à une colonne, comme avant cette passe (voir ce même hook, ClientsViewV2.tsx).
+  const grandEcran = useGrandEcran()
 
   // « Prochain » veut dire À VENIR. Le serveur met dans `rdvProchains` tout ce qui n'est ni
   // terminé ni annulé, sans borne de date : un rendez-vous d'avant-hier jamais clôturé s'y
@@ -314,31 +336,23 @@ export default function AccueilV2({
         ? 'Journée terminée'
         : 'Rien de prévu aujourd’hui'
 
-  return (
-    <div
-      className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
-    >
-      <JaugeReservationsV2 {...jauge} />
-      {demarrage}
+  // Écran 45 de la maquette bureau (« premier jour ») : la configuration manque ET il n'y a
+  // réellement rien à montrer aujourd'hui — le `&& !prochain` protège le cas, rare mais possible
+  // (services supprimés après coup), où un rendez-vous existe déjà malgré un compte « incomplet »
+  // : mieux vaut alors montrer ce rendez-vous que la carte de configuration par-dessus.
+  const premierJour = grandEcran && configurationIncomplete && !prochain
+  // Écran 46 (« quota atteint ») : exactement la même condition que le lien « Changer d'offre »
+  // de la jauge (`etatJauge`, partagé) — jamais une seconde lecture du seuil.
+  const { depasse: quotaDepasse, derniere: quotaDerniere } = etatJauge(jauge.utilisees, jauge.quota)
+  const upsell = grandEcran && !premierJour && (quotaDepasse || quotaDerniere)
 
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          {/* first-letter, pas capitalize : « Mercredi 23 septembre », et non
-              « Mercredi 23 Septembre » — un nom de mois ne prend pas de
-              majuscule en français. */}
-          <h1 className={`text-[21px] ${titre} first-letter:uppercase`}>{titreJour}</h1>
-          <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] mt-1 tabular-nums`}>{sousTitre}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setPersonnaliser(true)}
-          aria-label="Personnaliser l’accueil"
-          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] transition-colors hover:bg-[color:var(--v2-filet)]"
-        >
-          <MoreHorizontal size={21} strokeWidth={1.75} />
-        </button>
-      </div>
-
+  // La colonne « activité » du jour : héros, le reste de la journée, à confirmer — strictement
+  // le même JSX qu'avant cette passe. En variable plutôt qu'inline pour pouvoir la poser SOIT
+  // seule (écran à une colonne, comportement d'avant), SOIT à gauche du panneau de droite du
+  // châssis bureau (`grandEcran`, plus bas) — aucune logique n'a bougé, seul l'endroit où ce
+  // résultat est posé dans la page change (même principe que `contenuListe` de ClientsViewV2.tsx).
+  const colonneActivite = (
+    <>
       {prochain ? (
         <section className="mt-6">
           <TitreSection>Prochain rendez-vous</TitreSection>
@@ -388,16 +402,76 @@ export default function AccueilV2({
           </CarteListe>
         </section>
       )}
+    </>
+  )
 
-      <BlocsOptionnels
-        widgets={widgets}
-        rdvProchains={prochainsAVenir}
-        stats={stats}
-        clients={clients}
-        trafic={trafic}
-        prestationTop={prestationTop}
-        zone={zone}
-      />
+  // La colonne « widgets » (ce mois, clients, visiteurs, la plus demandée, zone, ensuite...) —
+  // même composant, même props, posé SOIT en dessous de la colonne d'activité (une colonne),
+  // SOIT dans le panneau de droite du châssis bureau (plus bas).
+  const colonneWidgets = (
+    <BlocsOptionnels
+      widgets={widgets}
+      rdvProchains={prochainsAVenir}
+      stats={stats}
+      clients={clients}
+      trafic={trafic}
+      prestationTop={prestationTop}
+      zone={zone}
+    />
+  )
+
+  return (
+    <div
+      className={`${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6'} pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+    >
+      <JaugeReservationsV2 {...jauge} />
+      {/* En écran 45 (bureau, premier jour), la carte de configuration se pose dans la colonne de
+          gauche, à la place du héros — pas ICI en plus, par-dessus (voir plus bas). */}
+      {!premierJour && demarrage}
+
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          {/* first-letter, pas capitalize : « Mercredi 23 septembre », et non
+              « Mercredi 23 Septembre » — un nom de mois ne prend pas de
+              majuscule en français. */}
+          <h1 className={`text-[21px] ${titre} first-letter:uppercase`}>{titreJour}</h1>
+          <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] mt-1 tabular-nums`}>{sousTitre}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setPersonnaliser(true)}
+          aria-label="Personnaliser l’accueil"
+          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] transition-colors hover:bg-[color:var(--v2-filet)]"
+        >
+          <MoreHorizontal size={21} strokeWidth={1.75} />
+        </button>
+      </div>
+
+      {grandEcran ? (
+        // Châssis bureau (passe « bureau », 2026-10-05) : planche `Main.dc.html` — deux colonnes,
+        // 1fr/340px, 26px d'écart, alignées en haut (exactement la grille de la maquette, pas une
+        // valeur à l'oeil). La colonne de droite change de contenu selon l'état de l'écran, les
+        // trois mêmes que ceux dessinés par la maquette (écrans 1, 45, 46) :
+        //   - premierJour  → la carte de configuration à gauche, l'aperçu de la page à droite ;
+        //   - upsell       → l'activité du jour à gauche (avec les lignes verrouillées, cliquables
+        //     — c'est elles qui ouvrent la fiche de l'écran 48), la carte de montée en offre à
+        //     droite ;
+        //   - sinon        → l'activité du jour à gauche, les widgets du laveur à droite (ce que
+        //     la maquette appelle « demain »/« cette semaine »/le résumé : voir le rapport de la
+        //     passe pour pourquoi ce sont les widgets existants, pas une nouvelle section, qui
+        //     tiennent ce rôle).
+        <div className="mt-6 grid grid-cols-[1fr_340px] gap-[26px] items-start">
+          <div>{premierJour ? demarrage : colonneActivite}</div>
+          <div>
+            {premierJour ? <ApercuPageV2 /> : upsell ? <CarteMonteeOffreV2 jauge={jauge} offreDeblocage={offreDeblocage} /> : colonneWidgets}
+          </div>
+        </div>
+      ) : (
+        <>
+          {colonneActivite}
+          {colonneWidgets}
+        </>
+      )}
 
       {personnaliser && <PersonnaliserV2 visibles={widgets} onClose={() => setPersonnaliser(false)} />}
     </div>
@@ -406,6 +480,121 @@ export default function AccueilV2({
 
 function TitreSection({ children }: { children: ReactNode }) {
   return <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>{children}</p>
+}
+
+/** Colonne de droite de l'écran 45 (bureau, « premier jour ») : l'aperçu de la page publique,
+ *  pour montrer CE QUE la configuration va débloquer plutôt que de laisser la colonne vide.
+ *  Décorative et inerte, même convention que `UpgradePrompt.tsx` (`apercu`) — pas une capture de
+ *  la vraie page : on n'a reçu ici ni le nom du laveur ni son slug, et rien n'est à inventer.
+ *  Couleurs écrites en dur, exception déjà en place dans la maquette bureau (CONTRAT.md) : cette
+ *  vignette montre une page publique, TOUJOURS claire, quel que soit le thème du tableau de
+ *  bord — les jetons `--v2-*` suivraient le thème sombre, ce que cette vignette ne doit jamais
+ *  faire. */
+function ApercuPageV2() {
+  return (
+    <div>
+      <TitreSection>Aperçu de votre page</TitreSection>
+      <div
+        className="overflow-hidden rounded-[16px] border"
+        style={{ borderColor: 'var(--v2-filet-fort)', boxShadow: '0 10px 28px rgba(22,22,26,.12)' }}
+      >
+        <div style={{ height: 26, display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px', background: '#e7e6e3' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ed6a5e' }} aria-hidden />
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f4bf4f' }} aria-hidden />
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#61c454' }} aria-hidden />
+          <span style={{ margin: '0 auto', fontSize: 9.5, color: '#6b6b76' }}>Votre page de réservation</span>
+        </div>
+        <div style={{ background: '#f8fafc' }}>
+          <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              aria-hidden
+              style={{
+                width: 42, height: 42, borderRadius: 11, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flex: 'none', background: '#f1f5f9', color: '#64748b',
+              }}
+            >
+              <Store size={18} strokeWidth={1.8} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.15, color: '#0f172a' }}>Votre entreprise</div>
+              <div style={{ fontSize: 11.5, marginTop: 3, color: '#94a3b8' }}>Bienvenue sur votre espace de réservation !</div>
+            </div>
+          </div>
+          <div style={{ padding: '6px 18px 24px' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10, color: '#0f172a' }}>Choisissez votre prestation</div>
+            <div style={{ borderRadius: 12, padding: '18px 14px', textAlign: 'center', border: '1.5px dashed #e2e8f0' }}>
+              <span style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.5 }}>Aucune prestation disponible pour le moment.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p className={`mt-2.5 text-[12px] leading-[1.6] ${corps} text-[color:var(--v2-color-gris)]`}>
+        C’est ce que voit un client sur votre page tant qu’aucune prestation n’est en ligne.
+      </p>
+    </div>
+  )
+}
+
+/** Colonne de droite de l'écran 46 (bureau, « quota atteint ») : la carte de montée en offre,
+ *  planche `Main.dc.html`. Prix et contenu lus dans `lib/plan.ts` (`PLAN_PRICES`, `PLAN_CARDS`) —
+ *  jamais un « 49 € » écrit en dur, exactement la règle du contrat de la maquette (« pas de
+ *  chiffre inventé présenté comme réel »). `offreDeblocage` est déjà la bonne offre, calculée par
+ *  `dashboard/page.tsx` (`offreQuiCouvre`) : la moins chère qui couvre le volume du mois. */
+function CarteMonteeOffreV2({ jauge, offreDeblocage }: {
+  jauge: { utilisees: number; quota: number | null; offre: Plan }
+  offreDeblocage: string
+}) {
+  const cle = (Object.entries(PLAN_LABELS).find(([, label]) => label === offreDeblocage)?.[0] as Plan | undefined) ?? 'pro'
+  const carte = PLAN_CARDS.find(c => c.key === cle)
+  const avantages = (carte?.features ?? []).slice(0, 3)
+
+  return (
+    <div>
+      <TitreSection>Débloquer plus de réservations</TitreSection>
+      <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-5">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
+            <Lock size={12} strokeWidth={2} aria-hidden />
+            Offre {offreDeblocage}
+          </span>
+          <span className={`text-[18px] ${hero} tabular-nums`}>
+            {PLAN_PRICES[cle]} €<span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>/mois</span>
+          </span>
+        </div>
+
+        <p className={`mt-3.5 text-[18px] ${titre}`}>Plus de place pour vos clients</p>
+        <p className={`mt-1.5 text-[13px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
+          Votre offre {PLAN_LABELS[jauge.offre]} s’arrête à {jauge.quota} réservations par mois. Au-delà, vos clients
+          continuent d’arriver — ils restent juste invisibles.
+        </p>
+
+        {avantages.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2 border-t border-[color:var(--v2-filet)] pt-3.5">
+            {avantages.map(a => (
+              <div key={a} className={`flex items-start gap-2 text-[13px] ${corps}`}>
+                <Check size={16} strokeWidth={2.6} className="mt-[3px] shrink-0 text-[color:var(--v2-color-vert)]" aria-hidden />
+                {a}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Link
+          href="/dashboard/abonnement"
+          className={`mt-4 flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] text-[14px] ${corpsFort} text-[color:var(--v2-color-sur-accent)] transition-transform active:scale-[.97] motion-reduce:transition-none`}
+          style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+        >
+          Passer à {PLAN_LABELS[cle]} — {PLAN_PRICES[cle]} €/mois
+        </Link>
+        <Link
+          href="/dashboard/abonnement"
+          className={`mt-2.5 block text-center text-[12px] ${corps} text-[color:var(--v2-color-gris)] hover:underline`}
+        >
+          Comparer toutes les offres
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 // Une carte-liste : surface opaque, filet de 1 px, lignes séparées par un
