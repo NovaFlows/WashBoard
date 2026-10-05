@@ -136,6 +136,7 @@ const FONCTIONNALITES: Fonctionnalite[] = [
   { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
   { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.', offre: 'frais_deplacement' },
   { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.', offre: 'crm' },
+  { titre: 'Campagnes publicitaires', desc: 'Combien de réservations viennent de chaque campagne Meta, et ce qu’elle te rapporte.', offre: 'campagnes' },
   { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.', offre: 'creneaux_intelligents' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
   { titre: 'Avis Google automatiques', desc: `Une demande d’avis après chaque prestation terminée, par email ou par SMS (${SMS_QUOTA.pro} par mois).`, offre: 'avis_email' },
@@ -1165,39 +1166,81 @@ export default function LandingPage() {
       {/* ── ROI ── */}
       <section className="border-t border-slate-100 dark:border-slate-800/50 py-24 sm:py-32">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          {/* Deux exemples côte à côte plutôt qu'un seul isolé : sur grand écran, le
+              premier seul laissait tout le bloc de droite vide (signalé par Ryan,
+              2026-10-06). Même DA que l'original (vert, gros chiffre, encart « ×…= »)
+              pour le second plutôt qu'un visuel différent (capture d'écran, etc.) :
+              les deux se lisent comme UNE même démonstration en deux temps
+              (combien de rendez-vous en plus → combien ça rapporte), pas deux
+              arguments séparés. 45€ repris du panier de Sophie B. dans la frise
+              « tout-en-un » plus bas, pour rester cohérent d'un exemple à l'autre
+              sur la page plutôt que d'inventer un second chiffre. */}
           <FadeUp className="mb-14">
-            <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
-              {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
-                  assez de clients pour en publier une, et l'afficher comme un
-                  constat serait trompeur. Le calcul lui-même (2 x 22 = +40) est
-                  mis en scène visuellement, pas un graphique qui suggérerait une
-                  donnée mesurée dans le temps. */}
-              <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">Exemple de calcul</p>
-              <p className="text-7xl sm:text-8xl lg:text-[9rem] font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
-                +40
-              </p>
-              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-8">rendez-vous en plus par mois</p>
+            <div className="grid lg:grid-cols-2 gap-14 lg:gap-10">
+              <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
+                {/* Un exemple de calcul, pas une moyenne mesurée : il n'y a pas encore
+                    assez de clients pour en publier une, et l'afficher comme un
+                    constat serait trompeur. Le calcul lui-même (2 x 20 = +40 ; 20 jours
+                    ouvrés, arrondi courant d'un mois plutôt que les ~22 réels — corrigé le
+                    2026-10-06, l'ancienne version disait 2 x 22 et affichait quand même +40) est
+                    mis en scène visuellement, pas un graphique qui suggérerait une
+                    donnée mesurée dans le temps. */}
+                <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">Exemple de calcul</p>
+                <p className="text-7xl sm:text-8xl lg:text-7xl xl:text-8xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
+                  +40
+                </p>
+                <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-8">rendez-vous en plus par mois</p>
 
-              <div className="inline-flex flex-wrap items-center gap-3 sm:gap-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 px-5 py-4 sm:px-7 sm:py-5">
-                <div className="text-center">
-                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">2</p>
-                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />de plus / jour</p>
+                <div className="inline-flex flex-wrap items-center gap-3 sm:gap-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 px-5 py-4 sm:px-7 sm:py-5">
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">2</p>
+                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />de plus / jour</p>
+                  </div>
+                  <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">×</span>
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">20</p>
+                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">jours ouvrés<br />par mois</p>
+                  </div>
+                  <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">=</span>
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">+40</p>
+                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />par mois</p>
+                  </div>
                 </div>
-                <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">×</span>
-                <div className="text-center">
-                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">22</p>
-                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">jours ouvrés<br />par mois</p>
-                </div>
-                <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">=</span>
-                <div className="text-center">
-                  <p className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">+40</p>
-                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />par mois</p>
-                </div>
+
+                <p className="mt-6 text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
+                  Un ordre de grandeur, pas une promesse : tout dépend de ta zone et de ta demande.
+                </p>
               </div>
 
-              <p className="mt-6 text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
-                Un ordre de grandeur, pas une promesse : tout dépend de ta zone et de ta demande.
-              </p>
+              <div className="border-l-4 border-emerald-500 pl-8 sm:pl-12">
+                <p className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.22em] mb-5">Et en chiffre d&apos;affaires</p>
+                <p className="text-7xl sm:text-8xl lg:text-7xl xl:text-8xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
+                  +1&nbsp;800€
+                </p>
+                <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-8">par mois, panier moyen 45€</p>
+
+                <div className="inline-flex flex-wrap items-center gap-3 sm:gap-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 px-5 py-4 sm:px-7 sm:py-5">
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">40</p>
+                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">rendez-vous<br />en plus</p>
+                  </div>
+                  <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">×</span>
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">45€</p>
+                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">panier<br />moyen</p>
+                  </div>
+                  <span aria-hidden className="text-xl font-black text-slate-300 dark:text-slate-700">=</span>
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">1 800€</p>
+                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-tight">par mois<br />en plus</p>
+                  </div>
+                </div>
+
+                <p className="mt-6 text-sm text-slate-400 dark:text-slate-500 max-w-md leading-relaxed">
+                  45€, le prix d&apos;un lavage complet pris en exemple plus bas — le tien peut être différent.
+                </p>
+              </div>
             </div>
           </FadeUp>
 
