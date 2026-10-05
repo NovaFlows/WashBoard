@@ -195,6 +195,9 @@ export default function DemoDashboard({ donnees, accueil }: { donnees: Donnees; 
           zone={donneesAccueil.zone}
           jauge={donneesAccueil.jauge}
           offreDeblocage={donneesAccueil.offreDeblocage}
+          semaine={donneesAccueil.semaine}
+          rdvDemain={donneesAccueil.rdvDemain}
+          demainStr={donneesAccueil.demainStr}
           configurationIncomplete={donneesAccueil.configurationIncomplete}
         />
       ) : (

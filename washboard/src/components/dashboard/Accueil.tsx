@@ -8,6 +8,7 @@ import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
 import type { Plan } from '@/lib/plan'
 import type { ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
+import type { JourSemaine } from '@/lib/semaineAccueil'
 
 // Point de branchement v1/v2 de l'écran d'accueil — passe 8 de la refonte
 // 2026, même règle que ClientsView.tsx, ParametresForm.tsx ou
@@ -52,6 +53,16 @@ type Props = {
   jauge: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }
   verrouillees: ReservationMasquee[]
   offreDeblocage: string
+  /** « Cette semaine » (colonne de droite, bureau uniquement) — un jour par
+   *  entrée, lundi → dimanche, voir `lib/semaineAccueil.ts`. Ignoré côté v1
+   *  et côté téléphone (v2 à une colonne) : la section ne s'y affiche pas. */
+  semaine: JourSemaine[]
+  /** « Demain » (même colonne, juste au-dessus) — déjà filtré et démasqué
+   *  par `dashboard/page.tsx`, pas de traitement de plus ici. */
+  rdvDemain: RdvAccueil[]
+  /** Le jour de demain, `AAAA-MM-JJ` à l'heure de Paris — pour l'intitulé de
+   *  la section (« Demain, vendredi 4 »). */
+  demainStr: string
   /** Au moins une étape BLOQUANTE de `computeSetupProgress` manque encore (prestations,
    *  horaires, adresse — `etapeDemarrage(progress) !== null`, voir `dashboard/page.tsx`) —
    *  passe « bureau » : décide, en v2 grand écran, de montrer la carte de configuration +

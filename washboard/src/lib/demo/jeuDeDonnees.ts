@@ -29,6 +29,7 @@ import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
 import type { Plan } from '@/lib/plan'
 import { computeSetupProgress, type SetupProgress, etapeDemarrage } from '@/lib/setupProgress'
+import { semaineAccueil, type JourSemaine, type RdvPourSemaine } from '@/lib/semaineAccueil'
 
 // ── Prestations et prix (cohérents avec la grille réelle d'Éclat Mobile) ───────────────────
 const SERVICE_EXPRESS = { name: 'Extérieur express', price: 35, duration_minutes: 25 }
@@ -427,6 +428,24 @@ function dansNJours(jours: number, heure: number, minute = 0): string {
   return d.toISOString()
 }
 
+/** `AAAA-MM-JJ`, à N jours d'aujourd'hui — même décalage que `dansNJours`, mais pour un champ
+ *  qui n'attend qu'un jour civil (`demainStr`, voir `AccueilDemo`). */
+function jourCivilDansNJours(jours: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + jours)
+  return d.toLocaleDateString('en-CA')
+}
+
+/** Un rendez-vous À VENIR, borné à la semaine en cours — même idée que `aVenirCetteSemaine`
+ *  plus haut (réservé aux rendez-vous AFFICHÉS, celle-ci porte les mêmes bornes pour le simple
+ *  comptage de « Cette semaine », qui n'a besoin que du statut et de l'heure). */
+function versISOCetteSemaine(offsetSouhaite: number, heure: number, minute = 0): string {
+  const aujourdhui = new Date()
+  const jourSemaine = (aujourdhui.getDay() + 6) % 7 // 0 = lundi … 6 = dimanche
+  const joursRestants = 6 - jourSemaine
+  return versISO(Math.max(0, Math.min(joursRestants, offsetSouhaite)), heure, minute)
+}
+
 const ZONE_GIRONDE: ZoneConfig = { enabled: true, type: 'departments', departments: ['33'] }
 
 export type AccueilDemo = {
@@ -444,6 +463,16 @@ export type AccueilDemo = {
   zone: ZoneConfig
   jauge: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }
   offreDeblocage: string
+  /** « Cette semaine » (colonne de droite, bureau) — sept jours construits par la VRAIE fonction
+   *  pure du produit (`semaineAccueil`, voir `lib/semaineAccueil.ts`), jamais une liste de points
+   *  inventée à la main : cette page sert aussi à prouver que la fonction testée produit un
+   *  résultat crédible sur un jeu de données plausible. */
+  semaine: JourSemaine[]
+  /** « Demain » (même colonne, juste au-dessus) — un sous-ensemble de `rdvProchains` (même
+   *  rendez-vous, voir plus bas), jamais une seconde liste fabriquée à côté. */
+  rdvDemain: RdvAccueil[]
+  /** Demain, `AAAA-MM-JJ` — pour l'intitulé de la section. */
+  demainStr: string
   /** Pour construire `<DemarrageCard progress={progress} />` : la vraie fonction du produit,
    *  jamais une progression inventée (voir `configurationIncomplete` ci-dessous, qui lit le même
    *  objet — exactement la paire que reçoit `AccueilV2` depuis `dashboard/page.tsx`). */
@@ -473,6 +502,12 @@ export function jeuDeDonneesAccueilDemo(etat: EtatAccueilDemo): AccueilDemo {
       zone: { enabled: false },
       jauge: { utilisees: 0, quota: 15, offre: 'starter' },
       offreDeblocage: 'Pro',
+      // Un compte tout neuf n'a encore RIEN — ni rendez-vous, ni horaires réglés : `joursOuverts`
+      // à `null` (information jamais lue, voir `semaineAccueil.ts`) plutôt qu'un ensemble vide,
+      // qui aurait affiché sept jours « fermés » au lieu de sept jours simplement calmes.
+      semaine: semaineAccueil([], dateDuJour, null),
+      rdvDemain: [],
+      demainStr: jourCivilDansNJours(1),
       progress,
       configurationIncomplete: etapeDemarrage(progress) !== null,
     }
@@ -514,6 +549,29 @@ export function jeuDeDonneesAccueilDemo(etat: EtatAccueilDemo): AccueilDemo {
     booked_price: 35, services: { name: 'Extérieur express', price: 35, duration_minutes: 25 },
   }
 
+  // « Cette semaine » (colonne de droite, bureau) : une semaine crédible — au moins un jour avec
+  // un rendez-vous confirmé, un jour avec une demande en attente, et des jours vides, construite
+  // à partir des MÊMES rendez-vous que le reste de l'écran plutôt que d'une liste séparée (aucun
+  // nom requis : `semaineAccueil` ne lit que l'heure et le statut).
+  //
+  // - Aujourd'hui et demain ont déjà camille/marc/garage et thomas/sophie : chacun des deux jours
+  //   porte une demande en attente (garage, sophie), donc l'« attente » y prime sur le confirmé —
+  //   exactement la règle de `semaineAccueil`.
+  // - Un jour confirmé SANS attente, pour montrer les trois états à la fois (le troisième, vide,
+  //   n'a besoin d'aucune entrée : les jours sans rien dedans le sont déjà).
+  const semaineBookings: RdvPourSemaine[] = [
+    { scheduled_at: aujourdhuiA(14, 30), status: 'confirmed' },
+    { scheduled_at: aujourdhuiA(17, 30), status: 'pending' },
+    { scheduled_at: dansNJours(1, 9, 0), status: 'confirmed' },
+    { scheduled_at: dansNJours(1, 10, 0), status: 'pending' },
+    { scheduled_at: versISOCetteSemaine(2, 15, 0), status: 'confirmed' },
+  ]
+  // Fermé le dimanche (0) — plausible pour un laveur mobile, et ça donne à l'écran un jour qui se
+  // distingue d'un jour simplement calme (voir `semaineAccueil.ts`, état `ferme`).
+  const joursOuvertsDemo = new Set([1, 2, 3, 4, 5, 6])
+  const semaine = semaineAccueil(semaineBookings, dateDuJour, joursOuvertsDemo)
+  const demainStr = jourCivilDansNJours(1)
+
   const basePro = computeSetupProgress({
     servicesCount: 4, availabilitiesCount: 12, baseAddress: '3 Rue Sainte-Catherine, Bordeaux',
     phone: '0612345678', logoUrl: 'https://example.invalid/logo.png',
@@ -539,6 +597,7 @@ export function jeuDeDonneesAccueilDemo(etat: EtatAccueilDemo): AccueilDemo {
       zone: ZONE_GIRONDE,
       jauge: { utilisees: 15, quota: 15, offre: 'starter', remiseAZero: '3 novembre' },
       offreDeblocage: 'Pro',
+      semaine, rdvDemain: [thomas, sophie], demainStr,
       progress: basePro,
       configurationIncomplete: etapeDemarrage(basePro) !== null,
     }
@@ -555,6 +614,7 @@ export function jeuDeDonneesAccueilDemo(etat: EtatAccueilDemo): AccueilDemo {
     zone: ZONE_GIRONDE,
     jauge: { utilisees: 42, quota: null, offre: 'pro' },
     offreDeblocage: 'Pro',
+    semaine, rdvDemain: [thomas, sophie], demainStr,
     progress: basePro,
     configurationIncomplete: etapeDemarrage(basePro) !== null,
   }

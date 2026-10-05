@@ -20,6 +20,8 @@ import { resumeClients } from '@/lib/dashboardClients'
 import { widgetsVisibles, type WidgetKey } from '@/lib/dashboardWidgets'
 import { countDistinctSessions, buildReferrerBreakdown } from '@/lib/funnelStats'
 import { FUSEAU } from '@/lib/dateUtils'
+import { ajouterJours, bornesInstants, jourParisDe } from '@/lib/chiffresPeriode'
+import { semaineAccueil } from '@/lib/semaineAccueil'
 import { AujourdhuiWidget } from '@/components/dashboard/widgets/AujourdhuiWidget'
 import { StatsWidget } from '@/components/dashboard/widgets/StatsWidget'
 import { ClientsWidget } from '@/components/dashboard/widgets/ClientsWidget'
@@ -80,6 +82,16 @@ export default async function DashboardPage() {
   // Clients (nouveaux clients) et au widget Trafic (visiteurs, conversion),
   // même convention que les vues « semaine » de la Comptabilité.
   const lundiCetteSemaine = getMondayOf(new Date())
+  // Aujourd'hui à l'heure de Paris — calculé ici, une seule fois, pour servir
+  // à la fois à la borne de la requête « Cette semaine » ci-dessous et aux
+  // calculs plus bas qui l'utilisaient déjà (journée du jour, à confirmer).
+  // Avant cette passe, ce calcul était refait plus loin, après coup : il ne
+  // dépend d'aucune donnée chargée, il n'y avait pas de raison d'attendre.
+  const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
+  // Bornes Paris de la semaine en cours (lundi 00 h 00 → lundi suivant
+  // 00 h 00) — même fonction que l'écran Chiffres (`chiffresPeriode.ts`),
+  // jamais un calcul de fuseau réinventé ici.
+  const bornesSemaine = bornesInstants({ type: 'semaine', ref: aujourdhui })
 
   // Tout part en même temps : une seule attente réseau au lieu d'une file.
   //
@@ -103,6 +115,7 @@ export default async function DashboardPage() {
     prestationsMois,
     services,
     availabilities,
+    rdvSemaine,
   ] = await Promise.all([
     // Les rendez-vous à venir restent lus en entier : c'est le travail des
     // jours qui viennent, et leur nombre est borné par la nature des choses.
@@ -181,7 +194,26 @@ export default async function DashboardPage() {
           .range(debut, fin))
       : aucuneLigne<{ services: { name: string } | { name: string }[] | null }>(),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
-    supabase.from('availabilities').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id),
+    // Les jours de la semaine (`day_of_week`) plutôt qu'un simple comptage :
+    // sert toujours à la carte de démarrage (`availabilitiesCount`), et sert
+    // maintenant AUSSI à distinguer un jour FERMÉ d'un jour simplement vide
+    // dans « Cette semaine » (voir plus bas) — sans une requête de plus,
+    // seulement une colonne de plus dans celle qui existait déjà.
+    supabase.from('availabilities').select('day_of_week').eq('washer_id', washer.id),
+    // « Cette semaine » (accueil bureau, colonne de droite) : un point par
+    // jour de la semaine en cours, lundi → dimanche. La seule requête ajoutée
+    // par cette passe — bornée à sept jours, `id`/`scheduled_at`/`status`
+    // seulement, aucun nom ni prix : ce n'est qu'un comptage par jour, pas
+    // une liste à afficher (voir `semaineAccueil.ts`, qui porte le calcul).
+    // Les annulés restent lus : la fonction pure les ignore elle-même, mais
+    // les exclure ici ferait deux endroits qui portent la même règle.
+    supabase
+      .from('bookings')
+      .select('id, scheduled_at, status')
+      .eq('washer_id', washer.id)
+      .gte('scheduled_at', bornesSemaine.debut.toISOString())
+      .lt('scheduled_at', bornesSemaine.fin.toISOString())
+      .order('scheduled_at'),
   ])
 
   // Même règle que dans les Paramètres : un comptage en échec ne doit pas
@@ -194,6 +226,7 @@ export default async function DashboardPage() {
   if (prestationsMois.error) logger.warn('dashboard.prestations_widget.fetch_failed', { washerId: washer.id }, prestationsMois.error)
   if (services.error) logger.warn('dashboard.services_count_failed', { washerId: washer.id }, services.error)
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
+  if (rdvSemaine.error) logger.warn('dashboard.semaine_widget.fetch_failed', { washerId: washer.id }, rdvSemaine.error)
 
   let pending = 0
   let confirmed = 0
@@ -210,9 +243,18 @@ export default async function DashboardPage() {
     caCeMois = revenuNet(doneMois.data)
   }
 
+  // Jours de la semaine couverts par au moins une plage d'horaires récurrente
+  // (0 = dimanche … 6 = samedi, convention `availabilities.day_of_week` —
+  // voir `lib/horaires.ts`) : sert à distinguer un jour FERMÉ d'un jour vide
+  // dans « Cette semaine ». `null` sur une lecture en échec — on ne devine
+  // aucune fermeture plutôt que d'en afficher une fausse.
+  const joursOuverts = availabilities.error
+    ? null
+    : new Set((availabilities.data ?? []).map(a => Number(a.day_of_week)))
+
   const progress = computeSetupProgress({
     servicesCount: services.error ? 1 : (services.count ?? 0),
-    availabilitiesCount: availabilities.error ? 1 : (availabilities.count ?? 0),
+    availabilitiesCount: availabilities.error ? 1 : (availabilities.data?.length ?? 0),
     baseAddress: washer.base_address ?? null,
     phone: washer.phone ?? null,
     logoUrl: washer.logo_url ?? null,
@@ -277,10 +319,9 @@ export default async function DashboardPage() {
   const passesOuverts = masquerVerrouillees(passes, seuilsVerrou).filter(b => !b.verrouillee)
   const all = [...aVenirVisible, ...passesOuverts]
 
-  // Aujourd'hui, à l'heure de Paris — calculé sur `aVenir` (déjà en main, déjà
-  // trié par heure croissante), sans requête de plus. Ne montre que ce qui
-  // reste à faire : un rendez-vous déjà clôturé n'a plus rien à demander.
-  const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
+  // `aujourdhui` est calculé plus haut, avant la requête réseau (voir son
+  // commentaire) : ne montre ici que ce qui reste à faire — un rendez-vous
+  // déjà clôturé n'a plus rien à demander.
   const rdvAujourdhui = aVenirOuvertes.filter(
     b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
@@ -314,6 +355,17 @@ export default async function DashboardPage() {
     b => b.status === 'done'
       && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
+
+  // « Cette semaine » (accueil bureau, colonne de droite) : un point par jour,
+  // porté par la fonction pure `semaineAccueil` (testée) à partir de la
+  // requête ajoutée plus haut — jamais recalculé ici à côté.
+  const semaine = semaineAccueil(rdvSemaine.data ?? [], aujourdhui, joursOuverts)
+  // « Demain » (même colonne, juste au-dessus) : un filtrage de ce qui est
+  // déjà en main (`aVenirOuvertes` — complet, déjà démasqué des réservations
+  // verrouillées), aucune requête de plus. Capé à rien : un jour calme ne
+  // montre simplement pas la section (voir AccueilV2.tsx).
+  const demainStr = ajouterJours(aujourdhui, 1)
+  const rdvDemain = aVenirOuvertes.filter(b => jourParisDe(b.scheduled_at) === demainStr)
 
   const resumeClientsWidget = resumeClients(clientsLite.data ?? [], toDateStr(lundiCetteSemaine))
 
@@ -473,6 +525,9 @@ export default async function DashboardPage() {
         }}
         verrouillees={verrouillees}
         offreDeblocage={offreDeblocage}
+        semaine={semaine}
+        rdvDemain={rdvDemain}
+        demainStr={demainStr}
         // `etapeDemarrage(progress) !== null` — exactement le signal que lit `DemarrageCard`
         // (étapes BLOQUANTES seulement : prestations, horaires, adresse). `!progress.essentialsDone`
         // aurait aussi compté le logo et le téléphone, non bloquants : un compte pleinement

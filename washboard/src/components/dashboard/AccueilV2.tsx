@@ -18,6 +18,7 @@ import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '@/lib/plan'
+import type { JourSemaine } from '@/lib/semaineAccueil'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -275,6 +276,21 @@ type Props = {
   verrouillees: ReservationMasquee[]
   /** L'offre la moins chère qui les débloque, nommée sur chaque carte. */
   offreDeblocage: string
+  /** « Cette semaine » (colonne de droite, bureau uniquement) — sept jours,
+   *  lundi → dimanche, voir `lib/semaineAccueil.ts`. Un repère discret, pas
+   *  une deuxième vedette : le héros de l'écran reste le prochain
+   *  rendez-vous. Jamais affiché sur téléphone (voir plus bas). */
+  semaine: JourSemaine[]
+  /** « Demain » (même colonne, juste au-dessus de « Cette semaine ») — déjà
+   *  filtré et démasqué par `dashboard/page.tsx` (sous-ensemble de la même
+   *  liste que « À confirmer »/« La journée »), aucun traitement de plus ici.
+   *  Vide un jour calme : la section disparaît alors plutôt que de montrer
+   *  un encart sans rien dedans. */
+  rdvDemain: RdvAccueil[]
+  /** Demain, `AAAA-MM-JJ` à l'heure de Paris — pour l'intitulé de la section
+   *  (« Demain, vendredi 4 »), jamais recalculé depuis l'horloge du
+   *  navigateur. */
+  demainStr: string
   /** Au moins une étape BLOQUANTE de la configuration manque encore (`etapeDemarrage(progress)
    *  !== null`) — voir `Accueil.tsx` pour pourquoi ni `essentialsDone` ni une liste de
    *  rendez-vous vide ne suffisent à le deviner. Sans effet sur l'écran à une colonne
@@ -299,6 +315,9 @@ export default function AccueilV2({
   jauge,
   verrouillees,
   offreDeblocage,
+  semaine,
+  rdvDemain,
+  demainStr,
   configurationIncomplete,
 }: Props) {
   const [personnaliser, setPersonnaliser] = useState(false)
@@ -456,14 +475,26 @@ export default function AccueilV2({
         //   - upsell       → l'activité du jour à gauche (avec les lignes verrouillées, cliquables
         //     — c'est elles qui ouvrent la fiche de l'écran 48), la carte de montée en offre à
         //     droite ;
-        //   - sinon        → l'activité du jour à gauche, les widgets du laveur à droite (ce que
-        //     la maquette appelle « demain »/« cette semaine »/le résumé : voir le rapport de la
-        //     passe pour pourquoi ce sont les widgets existants, pas une nouvelle section, qui
-        //     tiennent ce rôle).
+        //   - sinon        → l'activité du jour à gauche ; à droite, « Demain » puis « Cette
+        //     semaine » (passe du 2026-10-06, Alexandre a tranché de les construire pour de vrai —
+        //     voir DemainV2/CetteSemaineV2 plus bas), puis les widgets du laveur, inchangés.
+        //     Uniquement ici : sur téléphone (colonne unique, plus bas), ni « Demain » ni
+        //     « Cette semaine » ne s'affichent — la colonne de droite est une disposition de
+        //     grand écran, pas un contenu qui manquerait sur un téléphone qui ne l'a jamais eu.
         <div className="mt-6 grid grid-cols-[1fr_340px] gap-[26px] items-start">
           <div>{premierJour ? demarrage : colonneActivite}</div>
           <div>
-            {premierJour ? <ApercuPageV2 /> : upsell ? <CarteMonteeOffreV2 jauge={jauge} offreDeblocage={offreDeblocage} /> : colonneWidgets}
+            {premierJour ? (
+              <ApercuPageV2 />
+            ) : upsell ? (
+              <CarteMonteeOffreV2 jauge={jauge} offreDeblocage={offreDeblocage} />
+            ) : (
+              <>
+                {rdvDemain.length > 0 && <DemainV2 rdv={rdvDemain} demainStr={demainStr} />}
+                <CetteSemaineV2 jours={semaine} />
+                {colonneWidgets}
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -480,6 +511,124 @@ export default function AccueilV2({
 
 function TitreSection({ children }: { children: ReactNode }) {
   return <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>{children}</p>
+}
+
+/** « Lundi 29 septembre » à partir d'un jour `AAAA-MM-JJ`, sans dépendre du
+ *  fuseau de la machine qui exécute ce code (minuit UTC, lu en UTC) — même
+ *  idée que `formatJour` dans `chiffresPeriode.ts`, non exportée de là-bas,
+ *  mais seulement le jour et le quantième : la planche n'affiche jamais le
+ *  mois sur ces deux blocs (« Demain, vendredi 4 »). */
+function jourLong(jourStr: string): string {
+  return new Date(`${jourStr}T00:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' })
+}
+
+/** Colonne de droite de l'écran 1 (bureau) : les rendez-vous de demain, pour
+ *  que le laveur voie le soir ce que le pouce, sur téléphone, ne montre
+ *  jamais (planche `Main.dc.html`). Une ligne confirmée s'affiche normalement
+ *  ; une demande en attente s'affiche en gris, sans sa prestation — « si
+ *  confirmée » à la place, pour ne pas donner l'impression qu'elle est déjà
+ *  acquise. Jamais de lien : un simple coup d'œil, pas une action (même
+ *  registre que « Cette semaine » juste en dessous). */
+function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) {
+  return (
+    <div>
+      <TitreSection>Demain, {jourLong(demainStr)}</TitreSection>
+      <CarteListe>
+        {rdv.map(b => {
+          const enAttente = b.status === 'pending'
+          return (
+            <div key={b.id} className="flex items-start gap-3 py-[11px]">
+              <span className={`shrink-0 w-[42px] pt-0.5 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)] tabular-nums`}>
+                {formatHeure(new Date(b.scheduled_at))}
+              </span>
+              <span
+                className={`min-w-0 flex-1 pt-0.5 text-[13.5px] ${nom} truncate`}
+                style={enAttente ? { color: 'var(--v2-color-gris)' } : undefined}
+              >
+                {b.client_name} — {enAttente ? 'si confirmée' : lignePrestation(b)}
+              </span>
+            </div>
+          )
+        })}
+      </CarteListe>
+    </div>
+  )
+}
+
+/** Colonne de droite de l'écran 1 (bureau), juste sous « Demain » : un point
+ *  par jour de la semaine en cours — un repère discret, pas une deuxième
+ *  vedette (planche Système, « un seul héros par écran »). La donnée vient de
+ *  `semaineAccueil` (fonction pure testée, `lib/semaineAccueil.ts`) : ce
+ *  composant ne fait que choisir une couleur par état, jamais un calcul.
+ *
+ *  Couleurs reprises de `STATUT` plus haut dans ce fichier — même sémantique
+ *  que le point posé à côté de chaque rendez-vous (ambre = en attente, vert =
+ *  confirmé) — plutôt qu'un gris unique pour « il y a quelque chose » : la
+ *  planche ne montrait qu'un exemple sans jour en attente dans cette grille
+ *  précise, mais la règle posée ailleurs sur ce même écran est plus juste que
+ *  de la refondre en un seul ton ici. */
+function CetteSemaineV2({ jours }: { jours: JourSemaine[] }) {
+  return (
+    <div>
+      <TitreSection>Cette semaine</TitreSection>
+      <div
+        className="rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3 grid grid-cols-7 gap-1 text-center"
+      >
+        {jours.map(j => (
+          <div key={j.jour} title={descriptionJourSemaine(j)}>
+            <div
+              className={`text-[10.5px] ${j.aujourdhui ? corpsFort : corps}`}
+              style={{ color: j.aujourdhui ? undefined : 'var(--v2-color-gris)' }}
+            >
+              {j.lettre}
+            </div>
+            <PointJourSemaine jour={j} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Le point lui-même : aujourd'hui prime sur tout (accent, légèrement plus
+ *  gros — exactement la planche), sinon la couleur dit l'état du jour. Un
+ *  jour FERMÉ se distingue d'un jour simplement vide par un anneau creux
+ *  plutôt qu'un point plein : discret, jamais une seconde couleur de plus. */
+function PointJourSemaine({ jour }: { jour: JourSemaine }) {
+  if (jour.aujourdhui) {
+    return <span aria-hidden className="mx-auto mt-1 block h-[7px] w-[7px] rounded-full" style={{ background: 'var(--v2-color-accent)' }} />
+  }
+  if (jour.etat === 'attente') {
+    return <span aria-hidden className="mx-auto mt-[5px] block h-[6px] w-[6px] rounded-full" style={{ background: 'var(--v2-color-ambre)' }} />
+  }
+  if (jour.etat === 'confirme') {
+    return <span aria-hidden className="mx-auto mt-[5px] block h-[6px] w-[6px] rounded-full" style={{ background: 'var(--v2-color-vert)' }} />
+  }
+  if (jour.etat === 'ferme') {
+    return (
+      <span
+        aria-hidden
+        className="mx-auto mt-[5px] block h-[6px] w-[6px] rounded-full border"
+        style={{ borderColor: 'var(--v2-filet-fort)' }}
+      />
+    )
+  }
+  return <span aria-hidden className="mx-auto mt-[5px] block h-[6px] w-[6px] rounded-full" style={{ background: 'var(--v2-filet-fort)' }} />
+}
+
+/** Texte du survol (`title`) d'un jour de « Cette semaine » — la seule
+ *  explication offerte en dehors de la couleur, utile tant qu'il n'y a pas de
+ *  légende sur l'écran (planche Système : pas de légende répétée sur chaque
+ *  widget, « un point plein + le mot » veut dire au niveau de l'écran, pas de
+ *  chaque widget pris seul). */
+function descriptionJourSemaine(j: JourSemaine): string {
+  const jour = j.aujourdhui ? `Aujourd’hui, ${jourLong(j.jour)}` : jourLong(j.jour)
+  const etat =
+    j.etat === 'attente' ? 'une demande en attente'
+      : j.etat === 'confirme' ? 'des rendez-vous confirmés'
+        : j.etat === 'ferme' ? 'fermé'
+          : 'rien de prévu'
+  return `${jour} : ${etat}`
 }
 
 /** Colonne de droite de l'écran 45 (bureau, « premier jour ») : l'aperçu de la page publique,

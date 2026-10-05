@@ -14,7 +14,7 @@ const fauxSupabase = {
     const b: Record<string, unknown> = {}
     const self = () => b
     Object.assign(b, {
-      select: self, eq: self, neq: self, not: self, gte: self, lte: self, order: self, range: self, limit: self,
+      select: self, eq: self, neq: self, not: self, gte: self, lte: self, lt: self, order: self, range: self, limit: self,
       in: () => { historique = true; return b },
       single: () => Promise.resolve({
         data: { id: 'washer-1', plan: 'decouverte', name: 'Kooki Clean', slug: 'kooki', created_at: '2026-01-01T00:00:00.000Z' },
