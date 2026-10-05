@@ -183,9 +183,10 @@ export function FeuilleDeplacementV2({
 // ── Expéditeur des SMS ─────────────────────────────────────────────────────
 
 export function FeuilleExpediteurSmsV2({
-  expediteur, nomEntreprise, telephone, onEnregistrer, onClose,
+  expediteur, statut, nomEntreprise, telephone, onEnregistrer, onClose,
 }: {
   expediteur: string
+  statut: string | null
   nomEntreprise: string
   telephone: string
   onEnregistrer: Enregistrer<string>
@@ -231,6 +232,20 @@ export function FeuilleExpediteurSmsV2({
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="reglage-expediteur" />}
     >
       <form id="reglage-expediteur" onSubmit={soumettre} noValidate>
+        {statut === 'en_attente' && (
+          <div className="mb-3">
+            <Constat ton="ambre">
+              Demande en cours. En attendant son approbation, vos SMS partent avec WashBoard.
+            </Constat>
+          </div>
+        )}
+        {statut === 'refuse' && (
+          <div className="mb-3">
+            <Constat ton="rouge">
+              Ce nom n’a pas été accepté. Vos SMS partent avec WashBoard.
+            </Constat>
+          </div>
+        )}
         <Bloc titre="Nom d’expéditeur">
           <input
             type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off"

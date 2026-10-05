@@ -2,10 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { normalizePhone, sendSms, expediteurPour } from './sms'
 
 describe('expediteurPour', () => {
-  it('retombe sur WashBoard pour un nom non approuvé', () => expect(expediteurPour('KookiClean')).toBe('WashBoard'))
-  it('retombe sur WashBoard sans nom', () => {
-    expect(expediteurPour(null)).toBe('WashBoard')
-    expect(expediteurPour('')).toBe('WashBoard')
+  it('garde le nom du laveur une fois approuvé', () => {
+    expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'approuve' })).toBe('AutoNett')
+  })
+  it('reste sur WashBoard tant que la demande attend ou a été refusée', () => {
+    expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'en_attente' })).toBe('WashBoard')
+    expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'refuse' })).toBe('WashBoard')
+  })
+  it('reste sur WashBoard sans nom', () => {
+    expect(expediteurPour({ sms_sender: null, sms_sender_statut: 'approuve' })).toBe('WashBoard')
+    expect(expediteurPour({ sms_sender: '', sms_sender_statut: 'approuve' })).toBe('WashBoard')
   })
 })
 

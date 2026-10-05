@@ -12,7 +12,7 @@ export async function POST() {
 
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('name, phone, sms_sender, plan, grandfathered, google_review_url')
+    .select('name, phone, sms_sender, sms_sender_statut, plan, grandfathered, google_review_url')
     .eq('user_id', user.id)
     .single()
 
@@ -28,7 +28,7 @@ export async function POST() {
 
   // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
   // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-  const sender = expediteurPour(washer.sms_sender)
+  const sender = expediteurPour(washer)
   const reviewLink = washer.google_review_url ?? 'https://g.page/r/votre-lien-avis'
 
   try {

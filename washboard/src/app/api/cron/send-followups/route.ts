@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   let washerQuery = admin
     .from('washers')
-    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, sms_sender_statut, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
 
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
         if (channel === 'sms' && booking.client_phone) {
           // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
           // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-          const sender = expediteurPour(washer.sms_sender)
+          const sender = expediteurPour(washer)
           await sendSms({ to: booking.client_phone, sender, content: message })
           smsSent++
         } else {

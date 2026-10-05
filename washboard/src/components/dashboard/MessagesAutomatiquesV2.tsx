@@ -70,6 +70,7 @@ export type MessagesAutomatiquesProps = {
   nomLaveur: string
   /** Nom d'expéditeur des SMS (vide = le nom commun de WashBoard). */
   expediteurSms: string
+  expediteurStatut: string | null
   /** Téléphone du laveur : destinataire du SMS test. */
   telephone: string
   slug: string
@@ -221,7 +222,7 @@ function ListeMessages({
 }
 
 export default function MessagesAutomatiquesV2({
-  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, telephone, slug, rdvs, lectureIncomplete,
+  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, expediteurStatut, telephone, slug, rdvs, lectureIncomplete,
 }: MessagesAutomatiquesProps) {
   const router = useRouter()
   // Réglages locaux : mis à jour dès qu'une écriture réussit, sans attendre le
@@ -231,6 +232,7 @@ export default function MessagesAutomatiquesV2({
   const [enCours, setEnCours] = useState<'avis' | 'relance' | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [expediteur, setExpediteur] = useState(expediteurSms)
+  const [statutExpediteur, setStatutExpediteur] = useState(expediteurStatut)
   // Lu une seule fois : tout l'écran calcule sur le même « maintenant ».
   const [maintenant] = useState(() => Date.now())
   const ctx = useMemo(() => ({ smsAutorise }), [smsAutorise])
@@ -254,6 +256,7 @@ export default function MessagesAutomatiquesV2({
   async function enregistrerExpediteur(valeur: string): Promise<string | null> {
     const r = await enregistrerProfil({ sms_sender: valeur })
     if (!r.ok) return r.message
+    if (valeur !== expediteur) setStatutExpediteur(valeur ? 'en_attente' : 'aucun')
     setExpediteur(valeur)
     router.refresh()
     return null
@@ -420,6 +423,7 @@ export default function MessagesAutomatiquesV2({
       {feuille?.quoi === 'expediteur' && (
         <FeuilleExpediteurSmsV2
           expediteur={expediteur}
+          statut={statutExpediteur}
           nomEntreprise={nomLaveur}
           telephone={telephone}
           onEnregistrer={enregistrerExpediteur}
