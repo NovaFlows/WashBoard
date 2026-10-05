@@ -887,6 +887,55 @@
   - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
         (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
 
+## 🧩 Tickets permanents — Guide/tuto & Landing page (ne se ferment jamais)
+
+Deux catégories qui restent ouvertes en continu plutôt que cochées une fois pour
+toutes : chaque nouvelle fonctionnalité du produit peut mériter une ligne sur la
+landing (nouvel argument de vente) ou dans le guide/tuto (nouvelle chose à
+expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
+🔴/🟡 où elles se perdraient une fois cochées.
+
+### 📣 Landing page
+
+- [ ] **Mentionner le suivi des campagnes Meta (Ads)** — demande de Ryan,
+      2026-10-05. La fonctionnalité existe déjà en dashboard
+      (`/dashboard/clients/publicites`, derrière `hasFeature(washer, 'campagnes')`
+      — suivi du pixel Meta, rattachement des réservations à une campagne) mais
+      n'est mentionnée NULLE PART sur `LandingPage.tsx` — aucune occurrence de
+      « Meta », « campagne » ou « publicité » dans tout le fichier. **Rapide à
+      faire** : pas de nouveau composant, juste une ligne d'argument à ajouter
+      dans une liste de features existante (voir par ex. la section « 3 features
+      secondaires » déjà présente, même traitement en colonnes). Reste à écrire
+      le texte exact et choisir où l'insérer (section dédiée, ou glissée parmi
+      les features existantes) — à trancher avec Ryan/Alexandre, pas un choix
+      technique.
+- [x] 2026-10-05 — **« Trou » visuel à côté du +40 rendez-vous/mois** — signalé
+      par Ryan, qui ne savait plus si c'était déjà traité. **Déjà géré** : un
+      correctif précédent a ajouté la grille de 3 colonnes juste sous le calcul
+      (« Tu hésites encore ? » / « Autre effet du +40 » / « Ce qui ne change
+      jamais ») précisément pour combler ce vide (voir le commentaire dans
+      `LandingPage.tsx` : « rangés sous le calcul plutôt que dans une seule
+      carte compagne qui laissait trop de vide »). Rien à faire, confirmé en
+      relisant le code le 2026-10-05.
+
+### 📖 Guide / tuto
+
+- [ ] **Tuto PWA à l'installation, avec animation d'assombrissement façon
+      vraie application** — demande de Ryan, 2026-10-05, vient compléter
+      l'item déjà existant plus bas (« Tuto PWA à la première installation de
+      l'application », section Refonte 2026) : même besoin produit, mais avec
+      une exigence visuelle précise en plus — un overlay qui assombrit l'écran
+      autour de l'élément mis en avant (spotlight), comme les tutoriels des
+      applications natives (Instagram, etc.), pas une simple bulle/tooltip.
+      **Plus lent à faire que les deux items landing ci-dessus** : ce motif
+      visuel n'existe PAS encore dans le code (vérifié : `VisiteGuidee.tsx`,
+      la visite guidée du tableau de bord, n'a ni fondu ni overlay assombri —
+      juste une carte/bulle classique) — il faudrait le construire de zéro,
+      PUIS définir le contenu exact (barre de nav du bas, bouton central,
+      geste retour, menu « Plus ») qui est lui-même encore « à préciser avec
+      Alexandre avant de lancer » selon l'item original. Deux chantiers
+      empilés (le motif visuel + le contenu), ni l'un ni l'autre commencé.
+
 ## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
 
 > Écrit par le Claude de Ryan en fin de session, pour que celui de Yanis ou
