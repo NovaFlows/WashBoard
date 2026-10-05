@@ -424,7 +424,7 @@ export default function MessagesAutomatiquesV2({
       {feuille?.quoi === 'expediteur' && (
         <FeuilleExpediteurSmsV2
           expediteur={expediteur}
-          statut={statutExpediteur}
+          statut={estExpediteurApprouve(expediteur) ? 'approuve' : statutExpediteur}
           nomEntreprise={nomLaveur}
           telephone={telephone}
           onEnregistrer={enregistrerExpediteur}

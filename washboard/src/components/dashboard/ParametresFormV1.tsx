@@ -109,6 +109,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [smsSender, setSmsSender] = useState(washer.sms_sender ?? '')
   const [senderEnregistre, setSenderEnregistre] = useState(washer.sms_sender ?? '')
   const [statutSender, setStatutSender] = useState<string>(washer.sms_sender_statut ?? 'aucun')
+  const statutAffiche = estExpediteurApprouve(smsSender.trim()) ? 'approuve' : statutSender
   const [followupEnabled, setFollowupEnabled] = useState(washer.followup_enabled ?? false)
   const [followupDelayDays, setFollowupDelayDays] = useState(String(washer.followup_delay_days ?? 90))
   const [followupMessage, setFollowupMessage] = useState(washer.followup_message ?? '')
@@ -559,17 +560,17 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
                     <> <span className="text-amber-600 dark:text-amber-400">Limite atteinte.</span></>
                   )}
                 </p>
-                {statutSender === 'approuve' && smsSender.trim() && (
+                {statutAffiche === 'approuve' && smsSender.trim() && (
                   <p className="mt-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
                     Nom approuvé : vos SMS partent avec {smsSender.trim()}.
                   </p>
                 )}
-                {statutSender === 'en_attente' && (
+                {statutAffiche === 'en_attente' && (
                   <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
                     Demande en cours, approuvée en moins de 24 h. En attendant, vos SMS partent avec WashBoard.
                   </p>
                 )}
-                {statutSender === 'refuse' && (
+                {statutAffiche === 'refuse' && (
                   <p className="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
                     Ce nom n’a pas été accepté. Vos SMS partent avec WashBoard.
                   </p>

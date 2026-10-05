@@ -271,9 +271,8 @@ export async function PATCH(request: NextRequest) {
     // Un nom nouveau ou modifié repart en attente d'approbation : tant qu'elle n'est pas
     // donnée, les SMS partent avec WashBoard (voir `expediteurPour`).
     if (!expediteur) updates.sms_sender_statut = 'aucun'
-    else if (expediteur !== profil.sms_sender) {
-      updates.sms_sender_statut = estExpediteurApprouve(expediteur) ? 'approuve' : 'en_attente'
-    }
+    else if (estExpediteurApprouve(expediteur)) updates.sms_sender_statut = 'approuve'
+    else if (expediteur !== profil.sms_sender) updates.sms_sender_statut = 'en_attente'
   }
   if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
   if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))
