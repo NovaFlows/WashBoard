@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ReglageAvisV2, ReglageRelanceV2 } from '@/components/dashboard/ReglageAutomatismeV2'
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
-import { FeuilleExpediteurSmsV2 } from '@/components/dashboard/FeuillesReglagesV2'
+import { ChampExpediteurSms } from '@/components/dashboard/FeuillesReglagesV2'
 import { enregistrerReglages } from '@/lib/enregistrerReglages'
 import { enregistrerProfil } from '@/lib/profilApi'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
@@ -80,7 +80,7 @@ export type MessagesAutomatiquesProps = {
   lectureIncomplete: boolean
 }
 
-type FeuilleOuverte = { quoi: 'avis' | 'relance'; activer: boolean } | { quoi: 'expediteur' } | null
+type FeuilleOuverte = { quoi: 'avis' | 'relance'; activer: boolean } | null
 
 function LigneAutomatisme({
   libelle, resume, avertissement, actif, enCours, onBasculer, onOuvrir, href, verrouille,
@@ -416,19 +416,17 @@ export default function MessagesAutomatiquesV2({
           smsAutorise={smsAutorise}
           activer={feuille.activer}
           nomLaveur={nomLaveur}
-          onExpediteur={() => setFeuille({ quoi: 'expediteur' })}
+          champExpediteur={
+            <ChampExpediteurSms
+              expediteur={expediteur}
+              statut={estExpediteurApprouve(expediteur) ? 'approuve' : statutExpediteur}
+              nomEntreprise={nomLaveur}
+              telephone={telephone}
+              onEnregistrer={enregistrerExpediteur}
+            />
+          }
           onClose={() => setFeuille(null)}
           enregistrer={enregistrerDepuisFeuille}
-        />
-      )}
-      {feuille?.quoi === 'expediteur' && (
-        <FeuilleExpediteurSmsV2
-          expediteur={expediteur}
-          statut={estExpediteurApprouve(expediteur) ? 'approuve' : statutExpediteur}
-          nomEntreprise={nomLaveur}
-          telephone={telephone}
-          onEnregistrer={enregistrerExpediteur}
-          onClose={() => setFeuille(null)}
         />
       )}
       {feuille?.quoi === 'relance' && (

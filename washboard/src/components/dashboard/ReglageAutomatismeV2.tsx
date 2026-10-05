@@ -150,7 +150,7 @@ const PRESETS_AVIS = [0, 1, 3, 24] as const
 const libellePresetAvis = (h: number) => (h === 0 ? 'Tout de suite' : h === 24 ? '1 jour' : `${h} h`)
 
 export function ReglageAvisV2({
-  reglages, canal: canalInitial, smsAutorise, activer, nomLaveur, onExpediteur, onClose, enregistrer,
+  reglages, canal: canalInitial, smsAutorise, activer, nomLaveur, champExpediteur, onClose, enregistrer,
 }: {
   reglages: ReglagesMessages
   canal: Canal
@@ -158,8 +158,8 @@ export function ReglageAvisV2({
   /** Ouverte par l'interrupteur : « Enregistrer » allume aussi la demande. */
   activer: boolean
   nomLaveur: string
-  /** Ouvre la feuille du nom d'expéditeur SMS (et du SMS test). */
-  onExpediteur: () => void
+  /** Nom d'expéditeur SMS et SMS de test, affichés directement dans la fiche. */
+  champExpediteur: React.ReactNode
   onClose: () => void
   enregistrer: Enregistrer
 }) {
@@ -279,15 +279,7 @@ export function ReglageAvisV2({
           </p>
         </Bloc>
 
-        {smsAutorise && (
-          <button
-            type="button"
-            onClick={onExpediteur}
-            className={`flex min-h-11 items-center text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
-          >
-            Nom d’expéditeur SMS et SMS de test
-          </button>
-        )}
+        {smsAutorise && champExpediteur}
 
         <Erreur texte={erreur} />
       </form>
