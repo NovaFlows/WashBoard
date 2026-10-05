@@ -1,7 +1,7 @@
 'use client'
 
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
-import { useGrandEcran } from '@/hooks/useGrandEcran'
+import { useEcranRail } from '@/hooks/useEcranRail'
 
 // Décide si le TABLEAU DE BORD (une page entière, pas un composant isolé — pour ça voir
 // usePwaStandalone) doit s'afficher en v2. Passe « bureau » (Alexandre, 2026-10-03), qui rouvre
@@ -30,6 +30,6 @@ function bureauForceEnDev(): boolean {
 
 export function useDashboardV2(betaRefonte?: boolean | null): boolean {
   const pwa = usePwaStandalone()
-  const grandEcran = useGrandEcran()
-  return pwa || (grandEcran && (!!betaRefonte || bureauForceEnDev()))
+  const ecranRail = useEcranRail()
+  return pwa || (ecranRail && (!!betaRefonte || bureauForceEnDev()))
 }

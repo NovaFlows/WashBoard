@@ -38,3 +38,39 @@ export function sAbonnerGrandEcran(notifier: () => void): () => void {
   mql.addEventListener('change', notifier)
   return () => mql.removeEventListener('change', notifier)
 }
+
+// ── Seuil du RAIL, distinct de celui du panneau à deux colonnes ────────────────
+//
+// Posé le 2026-10-05 : Alexandre ne voyait jamais le rail, sa fenêtre étant sous les 1024px
+// (l'agrandissement d'affichage de Windows y est pour beaucoup : à 150 %, un écran de 1366px
+// n'en annonce que 910 au navigateur). Il veut qu'il apparaisse.
+//
+// On ne peut pas simplement baisser SEUIL_GRAND_ECRAN_PX : un grand téléphone tenu à
+// l'horizontale fait ≈926px, et la PWA sur téléphone doit garder sa barre du bas quelle que
+// soit l'orientation. D'où un second critère, qui sépare vraiment les deux mondes : la
+// présence d'une souris ou d'un pavé tactile. `any-pointer: fine` est vrai dès qu'un pointeur
+// précis existe — vrai sur un ordinateur portable même tactile, faux sur un téléphone, qui n'en
+// a aucun. La largeur seule ne sait pas faire cette différence.
+//
+// Le panneau à deux colonnes de Clients, lui, garde SEUIL_GRAND_ECRAN_PX (1024) : c'est une
+// vraie question de place (252 de rail + 380 de liste + la fiche), pas de type d'appareil.
+export const SEUIL_RAIL_PX = 880
+
+const REQUETE_RAIL = `(min-width: ${SEUIL_RAIL_PX}px) and (any-pointer: fine)`
+
+/** Fonction pure — à consommer via `useEcranRail()`. */
+export function estEcranRail(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.matchMedia(REQUETE_RAIL).matches
+  } catch {
+    return false
+  }
+}
+
+export function sAbonnerEcranRail(notifier: () => void): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const mql = window.matchMedia(REQUETE_RAIL)
+  mql.addEventListener('change', notifier)
+  return () => mql.removeEventListener('change', notifier)
+}

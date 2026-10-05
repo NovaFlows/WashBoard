@@ -20,7 +20,7 @@ import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import { useDashboardV2 } from '@/hooks/useDashboardV2'
-import { useGrandEcran } from '@/hooks/useGrandEcran'
+import { useEcranRail } from '@/hooks/useEcranRail'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -712,17 +712,17 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // CET écran doit être en v2 (PWA, n'importe quelle largeur ; OU site + grand écran +
   // `washer.beta_refonte`) ; `useGrandEcran` dit laquelle des deux formes de nav v2 s'applique.
   // Combinées :
-  //   - PWA sur téléphone        → estV2 vrai, grandEcran faux  → barre du bas (inchangé)
+  //   - PWA sur téléphone        → estV2 vrai, ecranRail faux  → barre du bas (inchangé)
   //   - Site, mobile ou étroit   → estV2 faux                   → v1 (menu + en-tête), inchangé
-  //   - Site, grand écran + flag → estV2 vrai, grandEcran vrai  → rail
-  //   - PWA sur ordinateur       → estV2 vrai, grandEcran vrai  → rail (cohérent avec le fait
+  //   - Site, assez large + flag  → estV2 vrai, ecranRail vrai  → rail
+  //   - PWA sur ordinateur       → estV2 vrai, ecranRail vrai  → rail (cohérent avec le fait
   //     que la PWA voit toujours la v2, quelle que soit sa largeur — voir useDashboardV2.ts)
   // Un découpage à la largeur réelle (pas à `isPwa` seul) : avant cette passe, une PWA ouverte
   // sur ordinateur recevait encore la barre du bas, pensée pour un pouce qui n'existe plus là.
   const estV2 = useDashboardV2(betaRefonte)
-  const grandEcran = useGrandEcran()
-  const showBarreBas = isPwa && !grandEcran
-  const showRailBureau = estV2 && grandEcran
+  const ecranRail = useEcranRail()
+  const showBarreBas = isPwa && !ecranRail
+  const showRailBureau = estV2 && ecranRail
   // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
   // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
   // refonte cessent de s'appliquer. On la remet dès qu'elle manque.
