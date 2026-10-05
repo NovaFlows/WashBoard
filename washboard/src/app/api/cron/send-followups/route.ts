@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendFollowupEmail } from '@/lib/email'
-import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { sendSms, expediteurPour } from '@/lib/sms'
 import { graceEnded, hasFeature } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
         if (channel === 'sms' && booking.client_phone) {
           // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
           // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-          const sender = EXPEDITEUR_SMS_DEFAUT
+          const sender = expediteurPour(washer.sms_sender)
           await sendSms({ to: booking.client_phone, sender, content: message })
           smsSent++
         } else {

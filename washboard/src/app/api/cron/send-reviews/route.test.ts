@@ -69,6 +69,7 @@ vi.mock('@/lib/sms', () => ({
   // La vraie constante, pas une valeur inventée : le test doit échouer si
   // l'identifiant approuvé change sans que Brevo soit mis à jour.
   EXPEDITEUR_SMS_DEFAUT: 'WashBoard',
+  expediteurPour: (nom: string | null) => (['KookiClean', 'Nova', 'WashBoard'].includes(nom ?? '') ? nom : 'WashBoard'),
   sendSms: async (p: { to: string; sender: string; content: string }) => {
     dernierSms = p
     if (plan.smsEchoue) throw new Error('Brevo SMS error 402: not enough credit')

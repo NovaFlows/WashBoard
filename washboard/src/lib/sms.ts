@@ -29,6 +29,15 @@ export function normalizePhone(raw: string): string | null {
  *  silencieux. */
 export const EXPEDITEUR_SMS_DEFAUT = 'WashBoard'
 
+/** Noms d'expéditeur approuvés chez Brevo. Un laveur n'a son propre nom que s'il figure ici. */
+export const EXPEDITEURS_APPROUVES: readonly string[] = ['KookiClean', 'Nova', 'WashBoard']
+
+/** Le nom du laveur s'il est approuvé chez Brevo, sinon WashBoard. */
+export function expediteurPour(nomSaisi: string | null | undefined): string {
+  const nom = nomSaisi?.trim() ?? ''
+  return EXPEDITEURS_APPROUVES.includes(nom) ? nom : EXPEDITEUR_SMS_DEFAUT
+}
+
 export async function sendSms({ to, content, sender = EXPEDITEUR_SMS_DEFAUT }: { to: string; content: string; sender?: string }): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) throw new Error('BREVO_API_KEY manquant')

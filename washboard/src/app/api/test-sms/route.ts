@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { sendSms, expediteurPour } from '@/lib/sms'
 import { hasFeature } from '@/lib/plan'
 
 import { logger } from '@/lib/logger'
@@ -28,7 +28,7 @@ export async function POST() {
 
   // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
   // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-  const sender = EXPEDITEUR_SMS_DEFAUT
+  const sender = expediteurPour(washer.sms_sender)
   const reviewLink = washer.google_review_url ?? 'https://g.page/r/votre-lien-avis'
 
   try {
