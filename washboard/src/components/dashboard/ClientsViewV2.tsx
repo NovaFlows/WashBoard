@@ -489,7 +489,18 @@ export default function ClientsViewV2({
 
   return (
     <div
-      className={`max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      // Passe « châssis bureau » (2026-10-05) : ce plafond de 768px et sa compensation de
+      // marge (`-mx-3 sm:-mx-4 -mt-6`, qui annulait le padding de l'ancien `<main>` de
+      // DashboardShell pour reposer le sien) n'ont de sens que sous CETTE largeur — c'est-à-dire
+      // quand `grandEcran` est faux. Un `ClientsViewV2` qui s'affiche avec `grandEcran` vrai ne
+      // tourne JAMAIS dans ce `<main>`-là : `ClientsView.tsx` ne choisit ce composant que
+      // derrière `useDashboardV2()`, qui est vrai dans ce cas précisément parce que
+      // DashboardShell a basculé sur le rail (voir DashboardShell.tsx, `showRailBureau`) — un
+      // châssis qui ne pose ni padding ni marge à annuler, le contenu gère directement sa
+      // propre largeur. Sans cette condition, le panneau de fiche posé à côté de la liste
+      // (`modoBureauListe` plus bas) resterait écrasé dans cette même colonne de 768px : le
+      // bug que cette passe corrige.
+      className={`${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6'} space-y-5 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div>
         <h1 className={`text-[21px] ${titre}`}>Clients</h1>
@@ -597,9 +608,13 @@ export default function ClientsViewV2({
             // Passe bureau : la liste garde EXACTEMENT le même JSX (`contenuListe`, défini
             // juste au-dessus de ce `return`) — seule la mise en page qui l'entoure change,
             // pour lui faire de la place à côté de la fiche. Hauteur fixe choisie à l'oeil
-            // (600px, pas mesurée sur la maquette) : la maquette suppose un cadre 1440×912 fixe
-            // avec son propre menu à gauche, que cette passe ne construit pas encore — voir le
-            // rapport de la passe pour ce que ça implique.
+            // (600px, pas mesurée sur la maquette) — et TOUJOURS pas corrigée à la passe
+            // « châssis bureau » (2026-10-05, DashboardShell.tsx/RailBureauV2.tsx) qui construit
+            // enfin le rail à côté : cette passe a changé l'extérieur (plus de plafond à 768px
+            // qui écrasait ce bloc, voir le commentaire de `className` plus haut), pas
+            // l'intérieur. 600px reste une valeur à l'oeil, indépendante de la hauteur réelle de
+            // la fenêtre — à revoir dans une passe qui s'attaque spécifiquement au contenu de cet
+            // écran plutôt qu'à son châssis.
             <div className="flex gap-4" style={{ height: 600 }}>
               <div className="h-full min-w-0 w-[280px] shrink-0 space-y-3 overflow-y-auto">
                 {contenuListe}

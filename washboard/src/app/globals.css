@@ -387,6 +387,17 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
      rayon fixe, donc pilule ≠ toujours pleine-hauteur/2. */
   --v2-radius-pilule: 17px;
 
+  /* Passe « bureau » (2026-10-05) — le rail vertical qui remplace le menu latéral et
+     l'en-tête sur grand écran (voir DashboardShell.tsx / RailBureauV2.tsx). Valeurs reprises
+     de `washboard-design/maquettes/bureau-2026/index.html` (`--bureau-rail-largeur`,
+     `--bureau-radius-chassis`). Préfixe `--bureau-` et pas `--v2-` à dessein : la maquette
+     elle-même les présente comme une "proposition NEUVE" (pas une valeur de la planche
+     Système) — un futur grep sur `--v2-` ne doit pas laisser croire que ces deux valeurs en
+     viennent. Identiques en clair et en sombre : une largeur et un rayon n'ont pas de
+     variante par thème. */
+  --bureau-rail-largeur: 252px;
+  --bureau-radius-chassis: 22px;
+
   /* Densité — planche Système, panneau "Densité" */
   --v2-space-gouttiere: 20px;
   --v2-space-section-min: 22px;
@@ -572,10 +583,32 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
 
 /* PWA en bêta : le papier de la refonte couvre tout l'écran, y compris derrière les
    encoches, le rebond et ce qui dépasse du contenu (voir DashboardShell). La barre du
-   bas est le repère : elle n'existe que dans ce mode. */
+   bas est le repère : elle n'existe que dans ce mode. `wb-bureau` est son équivalent passe
+   « bureau » (2026-10-05) : posée quand le rail (RailBureauV2, pas de barre du bas) est à
+   l'écran — site en grand écran avec le drapeau, ou PWA installée sur ordinateur. */
 html.wb-barre-bas,
-html.wb-barre-bas body {
+html.wb-barre-bas body,
+html.wb-bureau,
+html.wb-bureau body {
   background-color: var(--v2-color-fond);
+}
+
+/* ── Rail de navigation v2 (passe « bureau », 2026-10-05) ────────────────────────────────
+   Ce que deviennent les 5 destinations + Documents sur grand écran : le menu latéral et
+   l'en-tête disparaissent entièrement (voir DashboardShell.tsx), remplacés par cette colonne
+   verticale flottante. MÊME matière « verre de châssis » que `.wb-barre-bas-verre`
+   ci-dessus — mêmes jetons `--v2-verre-*` — mais classe séparée plutôt que réutilisée telle
+   quelle : `.wb-barre-bas-verre` ne porte aucun rayon (BarreBasV2.tsx pose `rounded-[33px]`
+   à côté, une pilule), alors que le rail est un rectangle arrondi au rayon
+   `--bureau-radius-chassis` (22px) — mêmes déclarations de fond/flou/bordure/ombre, pas la
+   même forme, donc pas le même nom : un futur grep sur "barre-bas" ne doit pas remonter un
+   élément qui n'a plus rien d'une barre du bas. Consommée par RailBureauV2.tsx. */
+.wb-rail-verre {
+  background: linear-gradient(180deg, var(--v2-verre-haut), var(--v2-verre-bas));
+  backdrop-filter: var(--v2-verre-flou);
+  -webkit-backdrop-filter: var(--v2-verre-flou);
+  border: 1px solid var(--v2-verre-bordure);
+  box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
 }
 
 /* ── Écran de lancement de la PWA installée ─────────────────────────────────

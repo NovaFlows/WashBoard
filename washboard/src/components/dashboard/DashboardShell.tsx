@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
+import { RailBureauV2 } from './RailBureauV2'
 import ConfirmationEnvoiV2 from './ConfirmationEnvoiV2'
 import RetourGesteV2 from './RetourGesteV2'
 import VisiteGuidee from './VisiteGuidee'
@@ -18,6 +19,8 @@ import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDashboardV2 } from '@/hooks/useDashboardV2'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -33,9 +36,12 @@ type Props = {
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
   cancelsAt?: string | null
-  // Ancien interrupteur du bêta (`washer.beta_refonte`). Depuis le 2026-10-01 la refonte
-  // vaut pour TOUTE application installée : la valeur n'est plus lue. La prop reste
-  // déclarée le temps que les pages cessent de la passer.
+  // `washer.beta_refonte`. Depuis le 2026-10-01, n'importe quelle application INSTALLÉE
+  // reçoit la refonte sans condition (plus besoin de ce drapeau pour la PWA). Remise en
+  // service à la passe « châssis bureau » (2026-10-05) pour un seul cas : le SITE (pas la
+  // PWA) sur grand écran — voir `useDashboardV2.ts`, qui en a besoin pour ne pas basculer
+  // toute l'équipe d'un coup sur un tableau de bord moitié migré. À retirer avec ce
+  // garde-fou, quand la dernière passe (Aujourd'hui) sera livrée.
   betaRefonte?: boolean | null
   /** Date de création de la fiche : décide si ce compte suit la règle 2026
    *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
@@ -537,7 +543,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, betaRefonte }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -582,25 +588,43 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // par cette variable : il reste le filet de secours tant que les passes 5 et 6 ne
   // sont pas faites.
   const isPwa = usePwaStandalone()
-  const showBarreBas = isPwa
+  // Passe « châssis bureau » (2026-10-05, Alexandre, 2026-10-03) : sur grand écran, les 5
+  // destinations deviennent le rail vertical (RailBureauV2) plutôt que la barre du bas — il
+  // n'y a plus de pouce à ménager, mais toujours un menu à montrer. `useDashboardV2` dit si
+  // CET écran doit être en v2 (PWA, n'importe quelle largeur ; OU site + grand écran +
+  // `washer.beta_refonte`) ; `useGrandEcran` dit laquelle des deux formes de nav v2 s'applique.
+  // Combinées :
+  //   - PWA sur téléphone        → estV2 vrai, grandEcran faux  → barre du bas (inchangé)
+  //   - Site, mobile ou étroit   → estV2 faux                   → v1 (menu + en-tête), inchangé
+  //   - Site, grand écran + flag → estV2 vrai, grandEcran vrai  → rail
+  //   - PWA sur ordinateur       → estV2 vrai, grandEcran vrai  → rail (cohérent avec le fait
+  //     que la PWA voit toujours la v2, quelle que soit sa largeur — voir useDashboardV2.ts)
+  // Un découpage à la largeur réelle (pas à `isPwa` seul) : avant cette passe, une PWA ouverte
+  // sur ordinateur recevait encore la barre du bas, pensée pour un pouce qui n'existe plus là.
+  const estV2 = useDashboardV2(betaRefonte)
+  const grandEcran = useGrandEcran()
+  const showBarreBas = isPwa && !grandEcran
+  const showRailBureau = estV2 && grandEcran
   // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
   // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
   // refonte cessent de s'appliquer. On la remet dès qu'elle manque.
   //
-  // `wb-barre-bas` dit aux règles CSS que la barre du bas est à l'écran. Ce repère était
-  // auparavant lu directement dans le DOM (`body:has(.wb-barre-bas-verre)`) : Turbopack, qui
-  // construit les déploiements, abandonne TOUT le fichier CSS à partir du premier `:has()`
-  // rencontré — la refonte partait donc en production sans ses couleurs. Voir globals.css.
+  // `wb-barre-bas` / `wb-bureau` disent aux règles CSS laquelle des deux navs v2 est à l'écran
+  // (papier de fond, voir globals.css). Ce repère était auparavant lu directement dans le DOM
+  // (`body:has(.wb-barre-bas-verre)`) : Turbopack, qui construit les déploiements, abandonne
+  // TOUT le fichier CSS à partir du premier `:has()` rencontré — la refonte partait donc en
+  // production sans ses couleurs.
   useEffect(() => {
     const html = document.documentElement
     html.classList.toggle('wb-barre-bas', showBarreBas)
+    html.classList.toggle('wb-bureau', showRailBureau)
     if (!isPwa) return
     const remettre = () => { if (!html.classList.contains('wb-pwa')) html.classList.add('wb-pwa') }
     remettre()
     const obs = new MutationObserver(remettre)
     obs.observe(html, { attributes: true, attributeFilter: ['class'] })
     return () => obs.disconnect()
-  }, [isPwa, showBarreBas])
+  }, [isPwa, showBarreBas, showRailBureau])
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
   // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
@@ -667,25 +691,49 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     // Changer de thème en séance se voit donc au lancement suivant, lui aussi.
   }, [isPwa])
 
+  // Contenu de page, identique quel que soit le châssis — isolé une seule fois pour ne pas
+  // dupliquer les deux Providers entre la branche v1/PWA-téléphone et la branche bureau.
+  const pageContent = (
+    <SupportBadgesContext.Provider value={supportBadges}>
+      <OffreContext.Provider value={offreCourante}>
+        {children}
+      </OffreContext.Provider>
+    </SupportBadgesContext.Provider>
+  )
+
+  // Bandeaux commerciaux (fin d'essai, paiement, résiliation, annonces) : chaque composant
+  // décide déjà lui-même sa propre forme via `usePwaStandalone()` interne (BandeauV2 en carte
+  // pour toute PWA, y compris sur ordinateur ; bannière v1 pleine largeur sinon) — rien à
+  // adapter ici pour le rail, qui se contente de les poser au bon endroit.
+  const bandeaux = (
+    <>
+      <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt} />
+      <AnnoncePwaBanner />
+      <NouvellesOffresBanner />
+      <AppBetaBanner />
+    </>
+  )
+
   return (
-    // PWA en bêta : tout le fond de l'écran est le papier de la refonte (`--v2-color-fond`),
-    // pas seulement le rectangle que dessine chaque écran v2 — sinon les bords et le bas
-    // de la page restent gris-bleu autour d'un rectangle beige (signalé par Alexandre,
-    // 2026-09-25). Site et PWA sans bêta : inchangé.
+    // PWA en bêta OU châssis bureau : tout le fond de l'écran est le papier de la refonte
+    // (`--v2-color-fond`), pas seulement le rectangle que dessine chaque écran v2 — sinon les
+    // bords et le bas de la page restent gris-bleu autour d'un rectangle beige (signalé par
+    // Alexandre, 2026-09-25, pour la barre du bas ; même raisonnement pour le rail). Site et
+    // PWA sans bêta : inchangé.
     <div
       className={`min-h-screen overflow-x-hidden wb-dashboard-shell ${
-        showBarreBas ? 'bg-[color:var(--v2-color-fond)]' : 'bg-slate-50 dark:bg-slate-950'
+        showBarreBas || showRailBureau ? 'bg-[color:var(--v2-color-fond)]' : 'bg-slate-50 dark:bg-slate-950'
       }`}
     >
-      {/* Menu latéral : retiré dans la PWA en bêta (refonte 2026, 2026-09-24),
-          où le bouton ☰ qui l'ouvre a disparu avec l'en-tête — le laisser
-          monté offrirait des liens focalisables au clavier sur un tiroir que
-          rien ne peut ouvrir. Tout ce qu'il donnait reste atteignable : les
-          5 destinations de la barre du bas, et « Plus » pour le reste (guide,
-          export et liens par réseau, assistance, abonnement, réglages, et
-          l'outil interne de l'équipe). Liste vérifiée page par page dans
-          TODO.md. Site et PWA sans bêta : inchangé, le menu reste monté. */}
-      {!showBarreBas && (
+      {/* Menu latéral : retiré dans la PWA en bêta (refonte 2026, 2026-09-24) et dans le
+          châssis bureau (passe « bureau », 2026-10-05) — dans les deux cas, le bouton ☰ qui
+          l'ouvre a disparu avec l'en-tête, et le laisser monté offrirait des liens
+          focalisables au clavier sur un tiroir que rien ne peut ouvrir. Tout ce qu'il donnait
+          reste atteignable : les 5 destinations (barre du bas ou rail selon l'écran), et
+          « Plus » pour le reste (guide, export et liens par réseau, assistance, abonnement,
+          réglages, et l'outil interne de l'équipe). Liste vérifiée page par page dans
+          TODO.md. Site étroit et PWA sans bêta : inchangé, le menu reste monté. */}
+      {!showBarreBas && !showRailBureau && (
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -700,113 +748,150 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       {isPwa && <ConfirmationEnvoiV2 />}
       {showBarreBas && <RetourGesteV2 />}
 
-      {/* En-tête. La classe `wb-entete-beta` le réduit, par CSS et sans flash, à ses
-          seuls bandeaux : la rangée ☰ / titre / badge de plan / déconnexion / thème
-          (`wb-entete-barre`) est masquée, et le bloc perd son statut collant, son fond
-          et son filet — voir globals.css. Les bandeaux (fin d'essai, paiement,
-          résiliation, annonce) restent : information commerciale, ils ne sont jamais
-          retirés. Ces règles sont portées par `html.wb-pwa` : sur le site, aucune ne
-          s'applique et l'en-tête est identique à celui d'avant. */}
-      <header
-        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 wb-entete-beta"
-        // Dans la PWA en bêta, l'en-tête n'est plus qu'un porte-bandeaux : décidé ici, en JSX,
-        // et pas seulement par la classe `wb-pwa` de <html> (que React peut effacer en
-        // réécrivant `className`) — sinon la rangée v1 réapparaissait au fil de la navigation.
-        style={showBarreBas ? { position: 'static', background: 'transparent', borderBottomWidth: 0 } : undefined}
-      >
-        <TrialBanner trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId} cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt} />
-        <AnnoncePwaBanner />
-        <NouvellesOffresBanner />
-        <AppBetaBanner />
-        {!showBarreBas && <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label={libelleBoutonMenu(unreadSupportCount, unreadTeamCount)}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <line x1="3" y1="18" x2="21" y2="18"/>
-              </svg>
-              {/* Filet pour qui n'a pas activé les notifications : le menu est
-                  replié derrière ce bouton sur mobile, le compteur doit donc
-                  être visible ICI, pas seulement dans le menu ouvert. Le
-                  libellé est déjà porté par l'aria-label du bouton
-                  (announce=false) pour ne pas l'annoncer deux fois. */}
-              <span className="absolute -top-1 -right-1">
-                <UnreadCountBadge
-                  count={menuBadgeCount}
-                  label=""
-                  announce={false}
-                  variant="solid"
-                  className="border-2 border-white dark:border-slate-900"
-                />
-              </span>
-            </button>
-
-            {/* Pas de logo ici : il est déjà dans le menu (trois barres). Dans
-                l'en-tête, il se répétait à côté du nom et encombrait la ligne
-                sur téléphone — retiré à la demande d'Alexandre le 2026-09-15. */}
-            <div className="min-w-0">
-              <p className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight truncate">WashBoard</p>
-              {/* Pas de fiche laveur (ex. compte support) : rien à afficher ici
-                  plutôt qu'un texte inventé — le contenu de la page se charge
-                  déjà de dire à qui appartient le compte connecté. */}
-              {washerName && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-none truncate hidden sm:block">{washerName}</p>
-              )}
-            </div>
+      {showRailBureau ? (
+        // Châssis bureau (passe « bureau », 2026-10-05) : le rail remplace l'en-tête ET le
+        // menu latéral — plus de hamburger, plus d'ancien en-tête. Rangée plutôt que colonne
+        // empilée : le rail doit occuper toute la hauteur disponible à côté du contenu, pas
+        // être poussé par lui (voir RailBureauV2.tsx pour ce qu'il porte).
+        //
+        // `h-screen` ici, PAS `min-h-screen` : un `min-height` ne fait que poser un plancher,
+        // il n'empêche pas la ligne de grandir au-delà si son contenu le demande. Avec
+        // `min-h-screen` (bug trouvé en capturant cette passe), le panneau de fiche de
+        // Clients (600px) + les bandeaux poussaient la colonne de droite, donc CETTE ligne,
+        // au-delà de la hauteur de l'écran — ce qui repoussait « Documents » et le pied du
+        // rail hors du cadre visible, qui lui s'étire pour suivre (`align-items: stretch`,
+        // par défaut). `h-screen` fixe la hauteur une fois pour toutes ; c'est `min-h-0` sur
+        // la colonne de droite et sur `<main>` (overflow-y-auto) qui fait le reste : eux
+        // défilent, le rail jamais.
+        <div className="flex h-screen overflow-hidden">
+          <RailBureauV2
+            washerName={washerName}
+            isPwa={isPwa}
+            offreLabel={complet ? 'Accès complet' : PLAN_LABELS[offreEffective]}
+            offreCouleur={complet ? null : PLAN_COULEURS[offreEffective]}
+          />
+          {/* `min-w-0`/`min-h-0` : sans eux, un enfant flex refuse de rétrécir sous la taille
+              de son contenu (ex. une ligne de tableau large, ou le panneau de fiche) et
+              pousserait le rail hors de l'écran au lieu de laisser `<main>` défiler seul. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {bandeaux}
+            {/* Plus de `max-w-3xl mx-auto` : c'est tout le but de cette passe — donner au
+                contenu la largeur restante, en particulier au panneau de fiche de Clients
+                (ClientsViewV2.tsx, qui perd ici son propre plafond interne pour en profiter
+                réellement — voir son en-tête). Les écrans pas encore migrés en v2 (Aujourd'hui,
+                Agenda, Chiffres, Plus) héritent de cette largeur sans la demander : ils
+                s'étirent, visibles sur les captures de la passe — attendu, pas corrigé ici. */}
+            <main id="main-content" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[34px] pt-[26px] pb-10">
+              {pageContent}
+            </main>
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
-                sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
-                ce qui laisserait croire à un abonnement qui n'existe pas. */}
-            {washerName && <PlanBadge grandfathered={complet} effectif={offreEffective} />}
-            <form action="/api/auth/logout" method="POST">
-              <button
-                aria-label="Se déconnecter"
-                className="h-9 min-w-9 sm:h-10 sm:min-w-10 flex items-center justify-center px-0 sm:px-4 text-xs sm:text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold border border-slate-200 dark:border-slate-700 whitespace-nowrap"
-              >
-                <span className="hidden sm:inline">Déconnexion</span>
-                <span className="sm:hidden flex">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+        </div>
+      ) : (
+        <>
+          {/* En-tête. La classe `wb-entete-beta` le réduit, par CSS et sans flash, à ses
+              seuls bandeaux : la rangée ☰ / titre / badge de plan / déconnexion / thème
+              (`wb-entete-barre`) est masquée, et le bloc perd son statut collant, son fond
+              et son filet — voir globals.css. Les bandeaux (fin d'essai, paiement,
+              résiliation, annonce) restent : information commerciale, ils ne sont jamais
+              retirés. Ces règles sont portées par `html.wb-pwa` : sur le site, aucune ne
+              s'applique et l'en-tête est identique à celui d'avant. */}
+          <header
+            className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 wb-entete-beta"
+            // Dans la PWA en bêta, l'en-tête n'est plus qu'un porte-bandeaux : décidé ici, en JSX,
+            // et pas seulement par la classe `wb-pwa` de <html> (que React peut effacer en
+            // réécrivant `className`) — sinon la rangée v1 réapparaissait au fil de la navigation.
+            style={showBarreBas ? { position: 'static', background: 'transparent', borderBottomWidth: 0 } : undefined}
+          >
+            {bandeaux}
+            {!showBarreBas && <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label={libelleBoutonMenu(unreadSupportCount, unreadTeamCount)}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
                   </svg>
-                </span>
-              </button>
-            </form>
-            <ThemeToggle header />
-          </div>
-        </div>}
-      </header>
+                  {/* Filet pour qui n'a pas activé les notifications : le menu est
+                      replié derrière ce bouton sur mobile, le compteur doit donc
+                      être visible ICI, pas seulement dans le menu ouvert. Le
+                      libellé est déjà porté par l'aria-label du bouton
+                      (announce=false) pour ne pas l'annoncer deux fois. */}
+                  <span className="absolute -top-1 -right-1">
+                    <UnreadCountBadge
+                      count={menuBadgeCount}
+                      label=""
+                      announce={false}
+                      variant="solid"
+                      className="border-2 border-white dark:border-slate-900"
+                    />
+                  </span>
+                </button>
 
-      <main
-        id="main-content"
-        className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden"
-        // La barre du bas flotte par-dessus le contenu (position: fixed) :
-        // sans réserve explicite, elle couvrirait les dernières lignes d'une
-        // longue page. `pb-24`/`sm:pb-6` ci-dessus suffisaient au bouton
-        // WhatsApp seul ; la barre est plus haute (66px + 14px d'écart + encoche)
-        // et s'affiche aussi sur grand écran (PWA installée sur ordinateur),
-        // où `sm:pb-6` (24px) ne suffit pas — d'où ce style qui prend le pas
-        // sur les deux classes Tailwind quand la barre est affichée.
-        style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 8px + env(safe-area-inset-bottom, 0px))' } : undefined}
-      >
-        <SupportBadgesContext.Provider value={supportBadges}>
-          <OffreContext.Provider value={offreCourante}>
-            {children}
-          </OffreContext.Provider>
-        </SupportBadgesContext.Provider>
-      </main>
+                {/* Pas de logo ici : il est déjà dans le menu (trois barres). Dans
+                    l'en-tête, il se répétait à côté du nom et encombrait la ligne
+                    sur téléphone — retiré à la demande d'Alexandre le 2026-09-15. */}
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight truncate">WashBoard</p>
+                  {/* Pas de fiche laveur (ex. compte support) : rien à afficher ici
+                      plutôt qu'un texte inventé — le contenu de la page se charge
+                      déjà de dire à qui appartient le compte connecté. */}
+                  {washerName && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-none truncate hidden sm:block">{washerName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
+                    sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
+                    ce qui laisserait croire à un abonnement qui n'existe pas. */}
+                {washerName && <PlanBadge grandfathered={complet} effectif={offreEffective} />}
+                <form action="/api/auth/logout" method="POST">
+                  <button
+                    aria-label="Se déconnecter"
+                    className="h-9 min-w-9 sm:h-10 sm:min-w-10 flex items-center justify-center px-0 sm:px-4 text-xs sm:text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+                  >
+                    <span className="hidden sm:inline">Déconnexion</span>
+                    <span className="sm:hidden flex">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+                      </svg>
+                    </span>
+                  </button>
+                </form>
+                <ThemeToggle header />
+              </div>
+            </div>}
+          </header>
+
+          <main
+            id="main-content"
+            className="max-w-3xl mx-auto px-3 sm:px-4 pt-6 pb-24 sm:pb-6 overflow-x-hidden"
+            // La barre du bas flotte par-dessus le contenu (position: fixed) :
+            // sans réserve explicite, elle couvrirait les dernières lignes d'une
+            // longue page. `pb-24`/`sm:pb-6` ci-dessus suffisaient au bouton
+            // WhatsApp seul ; la barre est plus haute (66px + 14px d'écart + encoche)
+            // — d'où ce style qui prend le pas sur les deux classes Tailwind quand
+            // elle est affichée (PWA sur téléphone uniquement : sur ordinateur, voir
+            // la branche `showRailBureau` ci-dessus, qui n'a plus cette barre).
+            style={showBarreBas ? { paddingBottom: 'calc(66px + 14px + 8px + env(safe-area-inset-bottom, 0px))' } : undefined}
+          >
+            {pageContent}
+          </main>
+        </>
+      )}
 
       <VisiteGuidee aFaire={visiteGuidee} />
 
-      {/* Retiré dans la PWA en bêta : posé sous la barre du bas, il allongeait la page de
-          plus d'un écran de vide et passait sous la barre (2026-09-25). */}
-      {!showBarreBas && (
+      {/* Retiré dans la PWA en bêta et dans le châssis bureau : posé sous la barre du bas, il
+          allongeait la page de plus d'un écran de vide et passait sous la barre (2026-09-25) ;
+          absent de la maquette bureau pour la même raison de principe (le rail n'a pas de
+          pied de page sous lui). */}
+      {!showBarreBas && !showRailBureau && (
       <footer className="max-w-3xl mx-auto px-3 sm:px-4 pb-6 text-center">
         <p className="text-xs text-slate-400 dark:text-slate-600">
           Créé par{' '}
