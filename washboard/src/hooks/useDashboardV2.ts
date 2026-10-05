@@ -19,8 +19,17 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 // Chiffres, Plus...) rejoignent la refonte — sans lui, l'équipe basculerait d'un coup sur un
 // tableau de bord moitié v2 (Clients) moitié v1 (tout le reste). Recommandation du README de la
 // maquette bureau ; à retirer quand la dernière passe (Aujourd'hui) sera livrée.
+/** `NEXT_PUBLIC_DEV_BUREAU=1` — fait comme si `washers.beta_refonte` etait actif, pour
+ *  pouvoir essayer la v2 bureau en local sans toucher a la vraie base (ce depot n'a pas de
+ *  base de test separee, voir e2e/helpers.ts). Jamais en production, meme sur une
+ *  previsualisation Vercel : meme motif que `NEXT_PUBLIC_DEV_OFFRE` (lib/plan.ts). */
+function bureauForceEnDev(): boolean {
+  if (process.env.NODE_ENV === 'production') return false
+  return process.env.NEXT_PUBLIC_DEV_BUREAU === '1'
+}
+
 export function useDashboardV2(betaRefonte?: boolean | null): boolean {
   const pwa = usePwaStandalone()
   const grandEcran = useGrandEcran()
-  return pwa || (grandEcran && !!betaRefonte)
+  return pwa || (grandEcran && (!!betaRefonte || bureauForceEnDev()))
 }
