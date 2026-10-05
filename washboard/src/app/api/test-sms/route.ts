@@ -28,7 +28,7 @@ export async function POST() {
 
   // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
   // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-  const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
+  const sender = EXPEDITEUR_SMS_DEFAUT
   const reviewLink = washer.google_review_url ?? 'https://g.page/r/votre-lien-avis'
 
   try {

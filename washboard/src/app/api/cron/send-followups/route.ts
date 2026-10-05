@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
         if (channel === 'sms' && booking.client_phone) {
           // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
           // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-          const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
+          const sender = EXPEDITEUR_SMS_DEFAUT
           await sendSms({ to: booking.client_phone, sender, content: message })
           smsSent++
         } else {
