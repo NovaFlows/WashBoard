@@ -5,7 +5,7 @@ import type { ResumeClient } from './listeClients'
 const client = (p: Partial<ResumeClient> & { cle: string }): ResumeClient => ({
   email: '', name: 'Quelqu’un', phone: '', isProfessional: false, companyName: null,
   addresses: [], derniere: null, prochain: null, honoredCount: 0, totalRevenue: 0,
-  activite: '2026-09-01T00:00:00Z', documentsCount: 0, nePlusContacter: false,
+  activite: '2026-09-01T00:00:00Z', documentsCount: 0, nePlusContacter: false, source: null,
   ...p,
 })
 

@@ -15,6 +15,7 @@
 // chemin) — seul ce fichier-ci le cache.
 
 import { buildClientProfile, cleClient, type ClientBooking, type ClientDocument, type ClientReglages } from './clientProfile'
+import { estSourceDecouverte, type SourceDecouverte } from './sourceDecouverte'
 
 export type RendezVousCourt = { service: string; date: string }
 
@@ -42,6 +43,8 @@ export type ResumeClient = {
   documentsCount: number
   /** A demandé à ne plus être contacté (table `clients`, SQL du 2026-09-28). */
   nePlusContacter: boolean
+  /** Comment il a connu le laveur, d'après sa réservation la plus récente qui a répondu. */
+  source: SourceDecouverte | null
 }
 
 const cle = (email: string) => email.trim().toLowerCase()
@@ -111,6 +114,7 @@ export function listeClients(
         ?? new Date(0).toISOString(),
       documentsCount: p.documents.length,
       nePlusContacter: p.nePlusContacter,
+      source: p.bookings.map(b => b.source_decouverte).find(estSourceDecouverte) ?? null,
     })
   }
 

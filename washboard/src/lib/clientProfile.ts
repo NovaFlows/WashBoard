@@ -44,6 +44,8 @@ export type ClientBooking = {
    *  voir `clientsARelancer.ts`) et pour la timeline de la fiche (`clientTimeline.ts`), qui
    *  mélange prestations, avis et relances dans un seul historique. */
   created_at?: string
+  /** Réponse à « Comment avez-vous connu … ? » (`lib/sourceDecouverte.ts`). */
+  source_decouverte?: string | null
   followup_sent_at?: string | null
   review_request_sent_at?: string | null
   /** Modèle(s) tapés par le CLIENT LUI-MÊME à la réservation (`StepService.tsx`, un texte libre

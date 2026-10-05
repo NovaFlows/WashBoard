@@ -13,6 +13,7 @@ import { clientsARelancer, type LigneARelancer, type ReglagesRelance } from '@/l
 import { buildEntrepriseProfile, type EntrepriseListItem } from '@/lib/entrepriseProfile'
 import { marquerNePlusContacter, supprimerClient, supprimerEntreprise } from '@/lib/clientsApi'
 import { trouverDoublon } from '@/lib/doublons'
+import { libelleSourceDecouverte } from '@/lib/sourceDecouverte'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
 import { FUSEAU } from '@/lib/dateUtils'
 import { formatEuros } from '@/lib/plan'
@@ -103,7 +104,8 @@ function ligneSecondaire(c: ResumeClient, maintenant: number): string {
   const prestation = c.derniere
     ? `${c.derniere.service} · ${dateCourte(c.derniere.date, maintenant)}`
     : 'Pas encore de prestation faite'
-  return [contact, prestation].filter(Boolean).join(' · ')
+  const connu = c.source ? `Connu via ${libelleSourceDecouverte(c.source)}` : null
+  return [contact, prestation, connu].filter(Boolean).join(' · ')
 }
 
 // La pastille de droite : un seul signal par ligne ("un écran = un héros, le

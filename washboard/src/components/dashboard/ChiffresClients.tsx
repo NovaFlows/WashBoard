@@ -5,7 +5,8 @@ import { Building2 } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import { buildClientProfile } from '@/lib/clientProfile'
 import { formaterJour, type PeriodeChiffres } from '@/lib/chiffresPeriode'
-import { statsClients, type FiltreClients } from '@/lib/chiffresClients'
+import { reservationsDeLaPeriode, statsClients, type FiltreClients } from '@/lib/chiffresClients'
+import { repartitionSources } from '@/lib/sourceDecouverte'
 import { finitAvant, premierJourDeDonnee } from '@/lib/chiffresArgent'
 import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
 
@@ -71,6 +72,10 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
     [bookings, periode, filtre, maintenant],
   )
   const premierJour = useMemo(() => premierJourDeDonnee(bookings), [bookings])
+  const sources = useMemo(() => {
+    const dePeriode = reservationsDeLaPeriode(bookings, periode)
+    return { ...repartitionSources(dePeriode), total: dePeriode.length }
+  }, [bookings, periode])
 
   const fiche = ouvert ? buildClientProfile(bookings, ouvert) : null
   const libelleFiltre = filtre === 'pros' ? 'professionnel' : filtre === 'particuliers' ? 'particulier' : ''
@@ -81,6 +86,27 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
         <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)]`} role="status">
           Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.
         </p>
+      )}
+
+      {sources.reponses > 0 && (
+        <div>
+          <div className="flex items-baseline justify-between px-0.5 pb-2">
+            <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>D’où viennent vos clients</span>
+            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              {nombre.format(sources.reponses)} réponse{sources.reponses > 1 ? 's' : ''} sur {nombre.format(sources.total)} rendez-vous
+            </span>
+          </div>
+          <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
+            {sources.lignes.map(l => (
+              <div key={l.valeur} className="grid grid-cols-[1fr_auto] gap-2.5 items-center py-2.5">
+                <span className={`text-[14.5px] ${corpsFort}`}>{l.libelle}</span>
+                <span className={`text-[14.5px] ${corpsFort} tabular-nums text-right`}>
+                  {nombre.format(l.nombre)} · {Math.round((l.nombre / sources.reponses) * 100)} %
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Type de client">
