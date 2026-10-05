@@ -106,6 +106,8 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [reviewDelay, setReviewDelay] = useState(String(washer.review_delay_hours ?? 3))
   const [reviewChannel, setReviewChannel] = useState<'email' | 'sms'>(washer.review_channel ?? 'email')
   const [smsSender, setSmsSender] = useState(washer.sms_sender ?? '')
+  const [senderEnregistre, setSenderEnregistre] = useState(washer.sms_sender ?? '')
+  const [statutSender, setStatutSender] = useState<string>(washer.sms_sender_statut ?? 'aucun')
   const [followupEnabled, setFollowupEnabled] = useState(washer.followup_enabled ?? false)
   const [followupDelayDays, setFollowupDelayDays] = useState(String(washer.followup_delay_days ?? 90))
   const [followupMessage, setFollowupMessage] = useState(washer.followup_message ?? '')
@@ -221,7 +223,14 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
       }),
     })
     setReviewMsg(res.ok ? { ok: true, text: 'Réglages enregistrés' } : { ok: false, text: 'Erreur lors de la mise à jour' })
-    if (res.ok) router.refresh()
+    if (res.ok) {
+      const nouveau = smsSender.trim()
+      if (nouveau !== senderEnregistre) {
+        setStatutSender(nouveau ? 'en_attente' : 'aucun')
+        setSenderEnregistre(nouveau)
+      }
+      router.refresh()
+    }
     setReviewLoading(false)
   }
 
@@ -543,12 +552,22 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
                   Nom affiché sur le SMS du client. <strong>11 caractères maximum</strong>,
                   lettres et chiffres uniquement — ni espace, ni accent, ni tiret
-                  (ex. <strong>KookiClean</strong>). C&apos;est une règle des opérateurs :
+                  (ex. <strong>AutoNett</strong>). C&apos;est une règle des opérateurs :
                   un nom qui ne la respecte pas est remplacé à l&apos;arrivée.
                   {smsSender.length >= 11 && (
                     <> <span className="text-amber-600 dark:text-amber-400">Limite atteinte.</span></>
                   )}
                 </p>
+                {statutSender === 'en_attente' && (
+                  <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                    Demande en cours. En attendant son approbation, vos SMS partent avec WashBoard.
+                  </p>
+                )}
+                {statutSender === 'refuse' && (
+                  <p className="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+                    Ce nom n’a pas été accepté. Vos SMS partent avec WashBoard.
+                  </p>
+                )}
               </div>
 
               <div className="pt-1">
