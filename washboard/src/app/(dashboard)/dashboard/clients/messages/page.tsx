@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import MessagesAutomatiques from '@/components/dashboard/MessagesAutomatiques'
@@ -39,12 +40,17 @@ export default async function MessagesAutomatiquesPage() {
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'messages-automatiques')
 
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : lu via l'admin (service_role), TOUJOURS
+  // filtré sur `washer.id` établi ci-dessus par la session.
+  const admin = createAdminClient()
+
   // Tous les rendez-vous du laveur, page par page (l'API plafonne à 1 000
   // lignes sans erreur). Les colonnes d'horodatage d'envoi sont celles que lisent
   // les crons ; si l'une manquait en base la lecture échouerait — l'écran le
   // dit (`lectureIncomplete`) au lieu d'afficher des listes fausses.
   const { data: lus, error, tronque } = await toutesLesLignes<RdvLu>(
-    (debut, fin) => supabase
+    (debut, fin) => admin
       .from('bookings')
       .select(COLONNES)
       .eq('washer_id', washer.id)
@@ -56,7 +62,7 @@ export default async function MessagesAutomatiquesPage() {
 
   // Écartées plutôt que masquées, comme sur /dashboard/crm : sans nom ni email elles ne
   // donneraient ici que des lignes anonymes, et leur heure partirait quand même au navigateur.
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const rdvs = masquerVerrouillees(lus, seuilsVerrou).filter(b => !b.verrouillee)
 
   // Seuls les réglages utiles passent au navigateur : la fiche laveur porte

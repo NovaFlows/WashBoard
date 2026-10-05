@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import {
@@ -118,7 +119,14 @@ export async function chargerCampagnes(supabase: SupabaseClient, washerId: strin
         .order('created_at').order('id').range(d, f))
     : visites
 
-  const reservations = await toutesLesLignes((d, f) => supabase
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : lu via l'admin (service_role), TOUJOURS
+  // filtré sur `washerId` reçu en paramètre (jamais sur le `supabase` de
+  // session passé par l'appelant, qui lui reste seulement un visiteur
+  // authentifié face à cette table désormais fermée).
+  const admin = createAdminClient()
+
+  const reservations = await toutesLesLignes((d, f) => admin
     .from('bookings')
     .select('utm_campaign, utm_content, created_at, status, booked_price')
     .eq('washer_id', washerId)
@@ -127,7 +135,7 @@ export async function chargerCampagnes(supabase: SupabaseClient, washerId: strin
     .order('created_at').order('id').range(d, f))
 
   const reservationsSures = reservations.error
-    ? await toutesLesLignes((d, f) => supabase
+    ? await toutesLesLignes((d, f) => admin
         .from('bookings')
         .select('utm_campaign, created_at, status, booked_price')
         .eq('washer_id', washerId)

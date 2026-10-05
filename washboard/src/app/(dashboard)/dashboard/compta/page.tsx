@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ComptaDashboard from '@/components/dashboard/ComptaDashboard'
@@ -43,8 +44,13 @@ export default async function ComptaPage() {
   const start = `${year}-${String(month).padStart(2, '0')}-01T00:00:00`
   const end   = new Date(year, month, 1).toISOString().slice(0, 10) + 'T00:00:00'
 
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : lu via l'admin (service_role), TOUJOURS
+  // filtré sur `washer.id` établi ci-dessus par la session.
+  const admin = createAdminClient()
+
   // Page par page : l'API coupe à 1 000 lignes sans erreur (voir `toutesLesLignes`).
-  const { data: bookings, error: bookingsError } = await toutesLesLignes((debut, fin) => supabase
+  const { data: bookings, error: bookingsError } = await toutesLesLignes((debut, fin) => admin
     .from('bookings')
     .select('booked_price, smart_discount, is_smart_slot')
     .eq('washer_id', washer.id)

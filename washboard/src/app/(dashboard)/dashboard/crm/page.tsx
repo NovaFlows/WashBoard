@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import CrmView from '@/components/dashboard/CrmView'
@@ -123,10 +124,15 @@ export default async function CrmPage({ searchParams }: {
   }
 
   // ── Onglet Vue d'ensemble ─────────────────────────────────────────────────
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : lu via l'admin (service_role), TOUJOURS
+  // filtré sur `washer.id` établi ci-dessus par la session.
+  const admin = createAdminClient()
+
   // Lues page par page : l'API plafonne chaque réponse à 1 000 lignes, sans
   // erreur. Voir `toutesLesLignes`.
   const { data: bookings, error: bookingsError } = await toutesLesLignes(
-    (debut, fin) => supabase
+    (debut, fin) => admin
       .from('bookings')
       .select('*, services(name, price, duration_minutes)')
       .eq('washer_id', washer.id)
@@ -141,7 +147,7 @@ export default async function CrmPage({ searchParams }: {
   // sinon le laveur récupérait ici, en deux clics, exactement ce que l'accueil
   // et le calendrier viennent de lui cacher. Elles restent comptées sur la
   // page Clients, nom masqué et jour seul.
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 
   const since = new Date()

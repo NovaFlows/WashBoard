@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Chiffres from '@/components/dashboard/Chiffres'
@@ -29,12 +30,17 @@ export default async function ChiffresPage() {
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'chiffres')
 
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : lu via l'admin (service_role), TOUJOURS
+  // filtré sur `washer.id` établi ci-dessus par la session.
+  const admin = createAdminClient()
+
   // Réservations complètes, avec le service joint : sert à la fois à
   // l'onglet Clients (meilleurs clients, répartition pro/particulier) et,
   // plus tard, à un export — même requête que CrmPage. Lues page par page :
   // l'API plafonne chaque réponse à 1 000 lignes, sans erreur.
   const { data: bookings, error: bookingsError } = await toutesLesLignes(
-    (debut, fin) => supabase
+    (debut, fin) => admin
       .from('bookings')
       .select('*, services(name, price, duration_minutes)')
       .eq('washer_id', washer.id)
@@ -47,7 +53,7 @@ export default async function ChiffresPage() {
   // Même règle que /dashboard/crm : les réservations au-delà du quota n'entrent pas ici.
   // L'encaissé n'y perd rien : une réservation verrouillée ne peut pas passer à « terminé »
   // (PATCH /api/bookings/[id] la refuse).
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const bookingsVisibles = masquerVerrouillees(bookings ?? [], seuilsVerrou).filter(b => !b.verrouillee)
 
   // Les factures écrites à la main que le laveur a marquées PAYÉES : de l'argent reçu, comme
@@ -90,7 +96,7 @@ export default async function ChiffresPage() {
   // Compte léger, pour la ligne « Factures · N émises » de l'onglet Argent —
   // même filtre que /dashboard/factures (`facture_numero` non nul), sans
   // recharger la liste complète des factures ici.
-  const { count: facturesCount, error: facturesError } = await supabase
+  const { count: facturesCount, error: facturesError } = await admin
     .from('bookings')
     .select('id', { count: 'exact', head: true })
     .eq('washer_id', washer.id)

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Abonnement, { EnteteAbonnement } from '@/components/dashboard/Abonnement'
@@ -19,8 +20,13 @@ export default async function AbonnementPage() {
   const plafondReservations = quotaReservations(washer)
   const plafondPrestations  = quotaPrestations(washer)
 
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : lu via l'admin (service_role), TOUJOURS
+  // filtré sur `washer.id` établi ci-dessus par la session.
+  const admin = createAdminClient()
+
   const [resaCeMois, prestations] = await Promise.all([
-    plafondReservations === null ? null : supabase
+    plafondReservations === null ? null : admin
       .from('bookings')
       .select('id', { count: 'exact', head: true })
       .eq('washer_id', washer.id)

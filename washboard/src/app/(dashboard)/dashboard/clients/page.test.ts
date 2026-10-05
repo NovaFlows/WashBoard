@@ -22,6 +22,10 @@ const fauxSupabase = {
 }
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => fauxSupabase }))
+// La page lit désormais `bookings` via le client admin (RLS fermée côté `authenticated`,
+// voir TODO.md) : même faux client, pour que ces tests restent sur ce qu'ils vérifient
+// (le masquage), pas sur le choix du client Supabase.
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxSupabase }))
 vi.mock('next/navigation', () => ({ redirect: () => { throw new Error('NEXT_REDIRECT') } }))
 vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/reservationsVerrouillees')>()),

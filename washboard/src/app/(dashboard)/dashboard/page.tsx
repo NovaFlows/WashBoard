@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import BookingList from '@/components/dashboard/BookingList'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
@@ -74,6 +75,13 @@ export default async function DashboardPage() {
   // on déconnecte pour éviter la boucle "profil non trouvé".
   if (!washer) redirect('/api/auth/logout')
 
+  // `bookings` n'accorde plus SELECT à `authenticated` (2026-10-05, policy RLS
+  // trop permissive — voir TODO.md) : ces lectures passent par l'admin
+  // (service_role), TOUJOURS filtrées sur `washer.id`, établi juste au-dessus
+  // par la session. L'identité reste prouvée par le client de session ; seule
+  // la lecture de `bookings` change de client.
+  const admin = createAdminClient()
+
   const visibles = widgetsVisibles(washer.dashboard_widgets)
   const mois = getPeriodRange('mois', new Date())
   // Début de la semaine en cours (lundi → maintenant) : sert au widget
@@ -107,7 +115,7 @@ export default async function DashboardPage() {
     // Les rendez-vous à venir restent lus en entier : c'est le travail des
     // jours qui viennent, et leur nombre est borné par la nature des choses.
     // `toutesLesLignes` ne coûte rien tant qu'il y en a moins de 1 000.
-    toutesLesLignes((debut, fin) => supabase
+    toutesLesLignes((debut, fin) => admin
       .from('bookings')
       .select('*, services(name, price, duration_minutes, service_categories(name))')
       .eq('washer_id', washer.id)
@@ -117,7 +125,7 @@ export default async function DashboardPage() {
       .range(debut, fin)),
     // Les plus récents d'abord : l'historique commençait jusqu'ici par le tout
     // premier rendez-vous du laveur, celui qui l'intéresse le moins.
-    supabase
+    admin
       .from('bookings')
       .select('*, services(name, price, duration_minutes, service_categories(name))')
       .eq('washer_id', washer.id)
@@ -131,9 +139,9 @@ export default async function DashboardPage() {
     // à la fois, pas besoin d'un comptage séparé.
     visibles.has('stats')
       ? Promise.all([
-          supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'pending'),
-          supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'confirmed'),
-          toutesLesLignes((debut, fin) => supabase
+          admin.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'pending'),
+          admin.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'confirmed'),
+          toutesLesLignes((debut, fin) => admin
             .from('bookings')
             .select('booked_price, smart_discount, is_smart_slot')
             .eq('washer_id', washer.id)
@@ -150,7 +158,7 @@ export default async function DashboardPage() {
     // du 18/09 sur cette même page : ne pas rapatrier des lignes complètes
     // pour un simple chiffre).
     visibles.has('clients')
-      ? toutesLesLignes((debut, fin) => supabase
+      ? toutesLesLignes((debut, fin) => admin
           .from('bookings')
           .select('client_email, created_at')
           .eq('washer_id', washer.id)
@@ -171,7 +179,7 @@ export default async function DashboardPage() {
     // Compte tout rendez-vous ayant existé (hors annulés) : c'est la demande
     // qu'on mesure, pas seulement ce qui a été facturé.
     visibles.has('services')
-      ? toutesLesLignes((debut, fin) => supabase
+      ? toutesLesLignes((debut, fin) => admin
           .from('bookings')
           .select('services(name)')
           .eq('washer_id', washer.id)
@@ -234,7 +242,7 @@ export default async function DashboardPage() {
   // (en attente, confirmés, chiffre d'affaires) restent entiers : le laveur a
   // le droit de savoir COMBIEN de demandes il a reçues, c'est même l'argument
   // qui lui donnera envie de changer d'offre. Ce qu'il n'a pas, c'est QUI.
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilsVerrou)
     .map(b => b.verrouillee
       // Midi UTC du jour de Paris : le jour quitte le serveur, jamais l'heure.
@@ -255,7 +263,7 @@ export default async function DashboardPage() {
   // Le comptage n'a lieu que sur une offre plafonnée : ailleurs il n'y a rien
   // à compter, et ce serait une requête pour rien à chaque affichage.
   const plafondMensuel = quotaReservations(washer)
-  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  const utiliseesCeMois = plafondMensuel === null ? null : await compterReservationsDeLaPeriode(admin, washer)
   // L'offre nommée sur les cartes floutées : la moins chère qui couvre le
   // volume du mois. Écrire « Pro » en dur ferait payer trente euros de plus à
   // un laveur que le Starter suffisait à débloquer.
