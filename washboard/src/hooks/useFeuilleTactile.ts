@@ -15,9 +15,16 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } fr
 let feuillesOuvertes = 0
 let debordementInitial: { html: string; body: string } | null = null
 
-/** Empêche la page de défiler derrière une feuille, tant qu'elle est montée. */
-export function useBloquerDefilement() {
+/** Empêche la page de défiler derrière une feuille, tant qu'elle est montée.
+ *
+ *  `actif` (passe bureau, 2026-10-05, défaut `true` — aucun appelant existant ne change de
+ *  comportement) : `false` pour la fiche client posée en PANNEAU fixe à côté de la liste
+ *  (`ClientProfileModalV2`, écran bureau) — elle ne couvre pas la page, bloquer son défilement
+ *  figerait aussi la liste et le reste de l'écran derrière elle, ce qui n'a aucun sens pour un
+ *  panneau permanent. */
+export function useBloquerDefilement(actif = true) {
   useEffect(() => {
+    if (!actif) return
     if (feuillesOuvertes === 0) {
       debordementInitial = {
         html: document.documentElement.style.overflow,
@@ -37,7 +44,10 @@ export function useBloquerDefilement() {
         debordementInitial = null
       }
     }
-  }, [])
+    // `actif` ne change jamais pour une même instance (voir ClientProfileModalV2.tsx : le
+    // panneau bureau force un remount par client via `key={fiche.cle}`), mais le déclarer
+    // satisfait exhaustive-deps sans rien changer en pratique.
+  }, [actif])
 }
 
 const DISTANCE_FERMETURE_PX = 100

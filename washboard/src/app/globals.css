@@ -331,7 +331,20 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
   --v2-color-surface: #FFFFFF;
   --v2-color-encre: #16161A;
   --v2-color-gris: #6B6B76;
-  --v2-color-accent: #2B59FF;
+  /* CORRIGÉ à la passe « bureau » (2026-10-05, Alexandre, 2026-10-03) : le bleu générique
+     #2B59FF cède la place au bleu de la serviette du logo, mesuré sur les pixels de
+     `washboard/public/LogoWashBoard.png` (teinte dominante, 4361 px) — voir
+     `washboard-design/maquettes/bureau-2026/README.md`. Mesuré, pas estimé, contrairement au
+     reste de ce bloc qui vient de la planche Système. Jeton PARTAGÉ avec la PWA : ce
+     changement s'applique donc aussi au téléphone, validé en connaissance de cause. */
+  --v2-color-accent: #306090;
+  /* NOUVEAU (même passe) : texte posé sur un APLAT d'accent (bouton plein, pastille pleine).
+     Jamais `#fff` en dur — en thème sombre l'accent s'éclaircit (#6E9FD0 ci-dessous) et le
+     blanc y retombe à 2,8:1, illisible. Les usages existants de `text-white` sur un fond
+     `var(--v2-color-accent)` n'ont PAS été balayés dans tout le dépôt par cette passe (hors
+     périmètre — écran Clients seulement) : seuls ClientsViewV2.tsx et ClientProfileModalV2.tsx
+     ont été corrigés, voir leur en-tête. */
+  --v2-color-sur-accent: #FFFFFF;
   --v2-color-vert: #127A4B;
   --v2-color-ambre: #9A5B00;
   --v2-color-rouge: #B3261E;
@@ -447,16 +460,24 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
                listait "Gris #6B6B76 / #9A9AA4" sans dire lequel est sombre ;
                la mesure tranche : #6B6B76 est la valeur claire (confirmée
                sur la planche), #9A9AA4 est sa contrepartie sombre.
-     Accent et Vert ont été mesurés IDENTIQUES au clair (accent #2c58ff,
-     vert #137a4b mesurés contre #2B59FF / #127A4B) : une seule couleur
-     d'action et des statuts qui ne changent pas de teinte entre les thèmes,
-     cohérent avec "une seule couleur d'action" de la planche. Ambre et
-     Rouge n'ont pas pu être échantillonnés (absents de cet écran de
-     référence) : laissés hérités du clair par hypothèse, non vérifiés. */
+     Vert a été mesuré IDENTIQUE au clair (#137a4b contre #127A4B) : les
+     statuts ne changent pas de teinte entre les thèmes. Ambre et Rouge n'ont
+     pas pu être échantillonnés (absents de cet écran de référence) : laissés
+     hérités du clair par hypothèse, non vérifiés.
+     Accent et Sur-accent : PAS mesurés sur cet écran (devenus #6E9FD0 /
+     #0E1A26 à la passe « bureau », 2026-10-05 — voir le bloc `:root`
+     ci-dessus, qui porte leur provenance réelle, la planche de la maquette
+     bureau et non ce screenshot). Ce paragraphe ne vaut donc plus pour eux. */
   --v2-color-fond: #0E0E11;
   --v2-color-surface: #17171B;
   --v2-color-encre: #F3F3F5;
   --v2-color-gris: #9A9AA4;
+  /* CORRIGÉ à la passe « bureau » (2026-10-05) — même bleu de serviette que le clair, mais
+     éclairci pour rester visible sur le fond quasi noir (#306090 n'y ferait que 2,7:1, mesuré) :
+     #6E9FD0, voir le README de la maquette bureau. `--v2-color-sur-accent` passe donc à une
+     encre foncée plutôt que du blanc : du blanc sur CE bleu clair retombait à 2,8:1. */
+  --v2-color-accent: #6E9FD0;
+  --v2-color-sur-accent: #0E1A26;
 
   /* Filet sombre — [mesuré] sur le filet interne d'une carte (page_17.png,
      entre deux rendez-vous) : #2e2d32 sur fond de carte #17171b, ce qui

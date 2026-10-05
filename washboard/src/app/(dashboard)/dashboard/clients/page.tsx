@@ -156,6 +156,7 @@ export default async function ClientsPage() {
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <ClientsView
         nomLaveur={washer.name}
+        betaRefonte={washer.beta_refonte}
         bookings={lignes}
         bloques={bloquees}
         offreDeblocage={PLAN_LABELS[offreProposee]}

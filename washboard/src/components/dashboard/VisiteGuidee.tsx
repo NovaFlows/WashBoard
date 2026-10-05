@@ -96,7 +96,7 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
         texte: `text-[15px] leading-snug ${corps}`,
         passer: `text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`,
         chemin: `text-[12.5px] leading-snug text-[color:var(--v2-color-gris)]`,
-        suivant: `rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white bg-[color:var(--v2-color-accent)]`,
+        suivant: `rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-[color:var(--v2-color-sur-accent)] bg-[color:var(--v2-color-accent)]`,
         piste: 'bg-[color:var(--v2-filet)]',
         jauge: 'bg-[color:var(--v2-color-accent)]',
       }

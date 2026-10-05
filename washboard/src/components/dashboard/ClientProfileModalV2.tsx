@@ -152,7 +152,7 @@ function FeuilleRattacherV2({
       titre="Rattacher à une entreprise"
       onClose={onClose}
       pied={
-        <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+        <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           {enCours ? 'Rattachement…' : 'Rattacher'}
         </button>
       }
@@ -232,7 +232,7 @@ function FeuilleModifierFicheV2({
       titre="Modifier la fiche"
       onClose={onClose}
       pied={
-        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           {enCours ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       }
@@ -290,7 +290,7 @@ function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjou
       titre="Ajouter une tâche"
       onClose={onClose}
       pied={
-        <button type="button" onClick={() => void ajouter()} disabled={enCours || !texte.trim()} className={`${BOUTON} w-full text-white disabled:opacity-50`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+        <button type="button" onClick={() => void ajouter()} disabled={enCours || !texte.trim()} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)] disabled:opacity-50`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           {enCours ? 'Ajout…' : 'Ajouter'}
         </button>
       }
@@ -413,6 +413,7 @@ export default function ClientProfileModalV2({
   onOuvrirEntreprise,
   doublon,
   nomLaveur = '',
+  panneau = false,
 }: {
   profile: ClientProfile
   onClose: () => void
@@ -424,13 +425,25 @@ export default function ClientProfileModalV2({
   doublon?: Doublon | null
   /** Signature du fichier exporté (article 15 du RGPD) — « Données conservées par {nomLaveur} ». */
   nomLaveur?: string
+  /** Passe bureau (2026-10-05, Alexandre, 2026-10-03) : posée en panneau fixe à côté de la
+   *  liste (ClientsViewV2.tsx) plutôt qu'en feuille/carte qui se superpose. Change UNIQUEMENT
+   *  le châssis (pas de fond assombri, pas de piège de focus, pas de blocage du défilement de
+   *  la PAGE, pas de masquage du bouton WhatsApp — rien de tout ça n'a de sens pour un panneau
+   *  qui ne couvre jamais le reste de l'écran) : le contenu de la fiche, lui, est strictement
+   *  le même, voir `corpsFiche` plus bas. L'appelant doit poser `key={profile.cle}` sur ce
+   *  composant (voir ClientsViewV2.tsx) : sans ça, passer d'un client à l'autre sans fermer le
+   *  panneau NE RÉINITIALISERAIT PAS `notes`/`vehicules`/`nePlusContacter` ci-dessous
+   *  (`useState(profile.X)` ne relit son argument qu'au montage) — on verrait les notes du
+   *  client précédent sur la fiche du suivant. Un remount forcé par la clé est plus sûr qu'un
+   *  effet de synchronisation supplémentaire pour chacun de ces champs. */
+  panneau?: boolean
 }) {
   const router = useRouter()
   const [maintenant] = useState(() => Date.now())
   const [visible, setVisible] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
-  useBloquerDefilement()
+  useBloquerDefilement(!panneau)
   const glisser = useGlisserPourFermer(onClose)
   const focusPrecedent = useRef<HTMLElement | null>(null)
 
@@ -544,29 +557,41 @@ export default function ClientProfileModalV2({
   // fermer ci-dessous, dans un effet séparé qui s'exécute avant (ordre de
   // déclaration) : au moment de la lecture, le focus est encore sur
   // l'élément d'origine.
+  //
+  // Tout ce bloc (focus volé puis rendu, piège de Tab, Échap) suppose une fenêtre qui
+  // RECOUVRE la page : du sens pour une feuille/carte superposée, aucun pour le panneau
+  // bureau (`panneau`), qui vit à demeure à côté de la liste — cliquer un autre client ne doit
+  // ni voler le focus ni rien piéger. Chaque effet se neutralise donc lui-même en panneau,
+  // plutôt que d'être conditionné à l'extérieur (règle des Hooks : ils restent appelés dans le
+  // même ordre à chaque rendu).
   useEffect(() => {
+    if (panneau) return
     focusPrecedent.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     return () => {
       if (focusPrecedent.current?.isConnected) focusPrecedent.current.focus()
     }
-  }, [])
+  }, [panneau])
 
   useEffect(() => {
+    if (panneau) return
     closeRef.current?.focus()
-  }, [])
+  }, [panneau])
 
   // Le bouton WhatsApp flottant du châssis est au même z-index que la
   // feuille et se pose par-dessus son bas. Même mécanisme que SupportPanel,
   // AssistanceContent et SupportInbox, qui le masquent déjà pendant qu'un
-  // panneau couvre l'écran (voir globals.css, body.wb-hide-fab).
+  // panneau couvre l'écran (voir globals.css, body.wb-hide-fab). Le panneau bureau ne couvre
+  // rien : le bouton reste à sa place.
   useEffect(() => {
+    if (panneau) return
     document.body.classList.add('wb-hide-fab')
     return () => document.body.classList.remove('wb-hide-fab')
-  }, [])
+  }, [panneau])
 
   // Échap pour fermer, Tab piégé dans la feuille : un menu ouvert au clavier
   // ne doit pas laisser échapper la tabulation vers la liste derrière.
   useEffect(() => {
+    if (panneau) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (optionsOuvertes) setOptionsOuvertes(false)
@@ -588,7 +613,7 @@ export default function ClientProfileModalV2({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, optionsOuvertes])
+  }, [onClose, optionsOuvertes, panneau])
 
   const titreClient = profile.isProfessional && profile.companyName ? profile.companyName : profile.name
 
@@ -623,34 +648,47 @@ export default function ClientProfileModalV2({
   ]
   const timeline = timelineClient(profile.bookings)
 
+  // Panneau bureau : ni fond assombri (rien à masquer, la liste reste utilisable à côté), ni
+  // positionnement `fixed` (le panneau vit DANS la mise en page de ClientsViewV2, pas par-dessus
+  // elle), ni animation d'entrée (voir la fiche de décisions de la refonte : « un onglet ne
+  // s'anime pas » — passer d'un client à l'autre est tout aussi fréquent). `role="region"` plutôt
+  // que `role="dialog"` : ce n'est plus une fenêtre qui s'empare de l'écran.
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      role="dialog"
-      aria-modal="true"
+      className={panneau
+        ? 'relative flex h-full w-full flex-col'
+        : 'fixed inset-0 z-50 flex items-end justify-center sm:items-center'}
+      role={panneau ? 'region' : 'dialog'}
+      aria-modal={panneau ? undefined : true}
       aria-label={`Fiche de ${titreClient}`}
     >
-      <button
-        aria-hidden
-        tabIndex={-1}
-        onClick={onClose}
-        className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
-          visible ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
-      />
+      {!panneau && (
+        <button
+          aria-hidden
+          tabIndex={-1}
+          onClick={onClose}
+          className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
+            visible ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)' }}
+        />
+      )}
 
       <div
         ref={feuilleRef}
-        className={`relative flex w-full max-h-[88dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
-          visible
-            ? 'translate-y-0 sm:scale-100 sm:opacity-100'
-            : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
-        }`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
+        className={panneau
+          ? `relative flex h-full w-full flex-col overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police}`
+          : `relative flex w-full max-h-[88dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
+              visible
+                ? 'translate-y-0 sm:scale-100 sm:opacity-100'
+                : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
+            }`}
+        style={panneau ? undefined : { transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
-        {/* Bande du haut (poignée + titre) : zone de tirage pour fermer la feuille. */}
-        <div className="shrink-0" {...glisser.poignee}>
+        {/* Bande du haut (poignée + titre) : zone de tirage pour fermer la feuille — absente
+            du panneau bureau, qui ne se ferme pas d'un geste (pas de doigt, pas de "fermer"
+            qui ait un sens quand la fiche est posée à demeure). */}
+        <div className="shrink-0" {...(panneau ? {} : glisser.poignee)}>
 <div className="flex justify-center pt-2.5 pb-3 sm:hidden" aria-hidden>
           <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
         </div>

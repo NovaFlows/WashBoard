@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { EntrepriseListItem } from '@/lib/entrepriseProfile'
@@ -19,12 +19,18 @@ import type { AutomatismesClients } from '@/components/dashboard/AutomatismesCli
 // change : filtre Pros en plus, avatar carré/rond, badge PRO ↔ pastille de
 // droite) et non une simple classe CSS.
 //
+// RÉOUVERT le 2026-10-03 (Alexandre), pour le SITE sur grand écran uniquement : voir
+// `useDashboardV2.ts`, qui remplace ici l'ancien `usePwaStandalone()` nu. PWA installée :
+// comportement inchangé. Site sur téléphone : inchangé (jamais « grand écran », voir
+// `grandEcran.ts`). Site sur ordinateur : voit désormais v2 lui aussi, sous le garde-fou
+// temporaire `washer.beta_refonte` (voir le commentaire de ce hook pour pourquoi).
+//
 // Import unique et stable pour tout le reste du dashboard : la page
 // /dashboard/clients continue d'importer ClientsView sans rien savoir du
 // branchement.
 export default function ClientsView({
   bookings, bloques = [], offreDeblocage = 'Pro', montantBloque = 0,
-  documents, reglages, reglagesMessages, entreprises, nomLaveur, automatismes,
+  documents, reglages, reglagesMessages, entreprises, nomLaveur, automatismes, betaRefonte,
 }: {
   bookings: ClientBooking[]
   /** Clients masqués par le plafond de l'offre (2026-09-28) — voir `ClientsViewV1.tsx`,
@@ -48,9 +54,12 @@ export default function ClientsView({
   nomLaveur?: string
   /** Avis Google, relance, créneaux intelligents : PWA seulement (2026-09-30). */
   automatismes?: AutomatismesClients
+  /** `washer.beta_refonte` — garde-fou temporaire du cas « site, grand écran » (voir
+   *  `useDashboardV2.ts`). Sans effet dans la PWA, où v2 s'affiche sans condition. */
+  betaRefonte?: boolean | null
 }) {
-  const isPwa = usePwaStandalone()
-  return isPwa
+  const estV2 = useDashboardV2(betaRefonte)
+  return estV2
     ? (
       <ClientsViewV2
         bookings={bookings} bloques={bloques} offreDeblocage={offreDeblocage} montantBloque={montantBloque}

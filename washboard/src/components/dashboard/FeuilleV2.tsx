@@ -199,7 +199,7 @@ export function Feuille({
             {ferme ? (
               <Link
                 href="/dashboard/abonnement"
-                className={`${BOUTON} w-full text-white`}
+                className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`}
                 style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
               >
                 Voir les offres

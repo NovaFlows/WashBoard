@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Trash2 } from 'lucide-react'
+import { Search, X, Trash2, Users2 } from 'lucide-react'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import FicheEntrepriseV2 from '@/components/dashboard/FicheEntrepriseV2'
 import { ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
@@ -53,6 +54,31 @@ import type { ClientBloque } from '@/components/dashboard/ClientsViewV1'
 // que l'écran change TOUT DE SUITE après un geste réussi, sans attendre le prochain chargement
 // des props serveur (`router.refresh()` part quand même, pour rester à jour si l'écran se
 // recompose plus tard).
+//
+// PASSE BUREAU (2026-10-05, Alexandre, 2026-10-03) : cet écran RESPIRE au-delà du palier
+// `useGrandEcran()` plutôt qu'un `ClientsViewV3Bureau.tsx` séparé — arbitrage à documenter ici
+// puisque c'est le premier écran de cette nouvelle passe et qu'il sert de modèle aux suivantes.
+// Pourquoi pas un troisième fichier (le schéma `EcranV1.tsx`/`EcranV2.tsx` de
+// `.claude/agents/refonte.md`) : ce schéma répond à un changement de FORME entre deux PUBLICS
+// différents (site vs PWA) qui n'ont presque rien en commun dans leur JSX (voir
+// ClientsViewV1.tsx vs ce fichier). Ici, c'est l'inverse : la même architecture
+// d'information (liste de clients, pastilles de filtre, fiche qui montre stats + historique)
+// s'affiche simplement avec plus de place — la liste ne change pas de contenu, la fiche ne
+// change pas de contenu (voir ClientProfileModalV2.tsx, qui garde CORPS FICHE identique et ne
+// fait varier que le châssis). Forker aurait dupliqué l'intégralité du JSX de la liste
+// (recherche, pastilles, pagination, glisser-pour-supprimer, trois onglets) pour UN SEUL
+// changement réel : la fiche sélectionnée s'affiche à côté plutôt que par-dessus. Un
+// `ClientsViewV3Bureau.tsx` aurait donc reporté deux fois chaque correction de présentation de
+// la liste (vérifié en relisant le JSX avant de trancher, comme demandé) — exactement le risque
+// que `refonte.md` signale pour le schéma à trois fichiers.
+//
+// Qui voit cette disposition : UNIQUEMENT une largeur ≥ `SEUIL_GRAND_ECRAN_PX` (1024px,
+// `grandEcran.ts`) — `ClientsView.tsx` a déjà décidé plus haut si cet écran v2 se montre du
+// tout (PWA, ou site + grand écran + `washer.beta_refonte`) ; ici, la question est seulement
+// « ai-je la place ». Une PWA installée sur ordinateur, à cette même largeur, obtient donc
+// AUSSI le panneau à côté — cohérent, et pas testé par cette passe (voir le rapport). Le site
+// sur téléphone ne peut jamais atteindre ce palier (voir `grandEcran.ts`), donc rien ne change
+// pour lui ici — la vraie garde contre ce cas-là vit dans `ClientsView.tsx`.
 
 // Rôle "corps" (14/450) et "corps fort" (15/550), largeur 100 — planche
 // Système. Les tailles en px viennent de `specs/03_Clients.txt` (position et
@@ -196,6 +222,9 @@ export default function ClientsViewV2({
   automatismes?: AutomatismesClients
 }) {
   const router = useRouter()
+  // Passe bureau : voir l'en-tête du fichier. `false` au rendu serveur et jusqu'à l'hydratation
+  // — l'écran démarre donc toujours en disposition à une colonne, comme avant cette passe.
+  const grandEcran = useGrandEcran()
   // L'instant présent, lu une seule fois : le serveur et le navigateur doivent
   // calculer la même liste.
   const [maintenant] = useState(() => Date.now())
@@ -337,6 +366,97 @@ export default function ClientsViewV2({
   // Doublon probable (menu « … » de la fiche, 2026-09-28) : calculé ici, pas dans la fiche —
   // c'est cet écran qui connaît TOUT le fichier (`clients`), une fiche ouverte ne voit qu'elle-même.
   const doublon = fiche ? trouverDoublon(fiche, clients) : null
+  // Panneau à côté plutôt que feuille par-dessus (voir l'en-tête du fichier) : seulement là où
+  // cliquer une ligne ouvre CETTE fiche (`ouvert`/`fiche` ci-dessus) — pas dans l'onglet
+  // « Entreprises », qui ouvre `FicheEntrepriseV2` en plein écran (branche `entrepriseProfil`
+  // ci-dessus), inchangée par cette passe.
+  const modoBureauListe = grandEcran && filtre !== 'entreprises'
+
+  // Le CONTENU de l'onglet courant (liste + pagination) — strictement le même JSX qu'avant
+  // cette passe, en variable plutôt qu'inline pour pouvoir le poser SOIT seul (comportement
+  // d'avant), SOIT à gauche d'un panneau de fiche (`modoBureauListe`, plus bas). Aucune logique
+  // n'a bougé ici : seul l'endroit où ce résultat est posé dans la page change.
+  const contenuListe = filtre === 'relancer' ? (
+    aRelancer.length === 0 ? (
+      <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+        Tous vos clients sont revenus, ou n’ont pas encore de quoi être relancés.
+      </p>
+    ) : (
+      <>
+      <ul aria-label="Clients à relancer" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+        {aRelancer.slice(0, limite).map(l => (
+          <LigneARelancerVue
+            key={l.cle}
+            ligne={l}
+            onOuvrir={() => setOuvert(l.cle)}
+            selectionnee={modoBureauListe && ouvert === l.cle}
+            ouverte={ligneOuverte === l.cle}
+            onOuvrirLigne={() => setLigneOuverte(l.cle)}
+            onFermerLigne={() => setLigneOuverte(o => (o === l.cle ? null : o))}
+            onSupprimer={() => { setAnnulationRelanceErreur(null); setAnnulationRelance(l) }}
+          />
+        ))}
+      </ul>
+      <PaginationListe total={aRelancer.length} limite={limite} onPlus={chargerPlus} onMoins={() => chargerMoins(aRelancer.length)} />
+      </>
+    )
+  ) : filtre === 'entreprises' ? (
+    <>
+    <ul aria-label="Entreprises" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+      {entreprisesAffichees.slice(0, limite).map(e => (
+        <LigneEntreprise
+          key={e.id}
+          entreprise={e}
+          onOuvrir={() => setEntrepriseOuverteId(e.id)}
+          ouverte={ligneOuverte === e.id}
+          onOuvrirLigne={() => setLigneOuverte(e.id)}
+          onFermerLigne={() => setLigneOuverte(o => (o === e.id ? null : o))}
+          onSupprimer={() => { setSuppressionEntrepriseErreur(null); setEntrepriseASupprimer(e) }}
+        />
+      ))}
+    </ul>
+    <PaginationListe
+      total={entreprisesAffichees.length}
+      limite={limite}
+      onPlus={chargerPlus}
+      onMoins={() => chargerMoins(entreprisesAffichees.length)}
+    />
+    </>
+  ) : (
+    <>
+      {(recherche.trim() || affiches.length === 0) && (
+        <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
+          {affiches.length === 0
+            ? recherche.trim()
+              ? `Aucun client ne correspond à « ${recherche.trim()} ».`
+              : 'Aucun client professionnel pour l’instant.'
+            : `${affiches.length} client${affiches.length > 1 ? 's' : ''} trouvé${affiches.length > 1 ? 's' : ''}`}
+        </p>
+      )}
+
+      {(affiches.length > 0 || bloquesAffiches.length > 0) && (
+        <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+          {bloquesVus.map(b => (
+            <LigneClientVerrouilleeV2 key={b.id} reservation={b} offre={offreDeblocage} />
+          ))}
+          {affichesVus.map(c => (
+            <LigneClient
+              key={c.cle}
+              client={c}
+              maintenant={maintenant}
+              onOuvrir={() => setOuvert(c.cle)}
+              selectionnee={modoBureauListe && ouvert === c.cle}
+              ouverte={ligneOuverte === c.cle}
+              onOuvrirLigne={() => setLigneOuverte(c.cle)}
+              onFermerLigne={() => setLigneOuverte(o => (o === c.cle ? null : o))}
+              onSupprimer={() => { setSuppressionErreur(null); setSuppression(c) }}
+            />
+          ))}
+        </ul>
+      )}
+      <PaginationListe total={totalClients} limite={limite} onPlus={chargerPlus} onMoins={() => chargerMoins(totalClients)} />
+    </>
+  )
 
   // La Fiche entreprise REMPLACE l'écran Clients (comme une destination à part), pas une
   // feuille par-dessus : c'est un fichier en soi (contacts, sites), pas le détail d'une ligne.
@@ -393,6 +513,28 @@ export default function ClientsViewV2({
           </p>
         )}
       </div>
+
+      {/* Fichier vide, en grand écran (écran 35 de la maquette bureau) : la ligne grise
+          au-dessus suffit sur téléphone, mais à cette largeur un simple mot perdu dans un coin
+          se lit comme un oubli plutôt qu'un choix (règle du contrat de la maquette : « un
+          écran plein, pas un écran à moitié vide »). Repris : seulement le titre en forme de
+          question et le paragraphe d'explication — la maquette propose aussi deux cartes
+          d'action (« Partager mon lien de réservation », « Importer mes clients (Excel) ») qui
+          n'ont pas été construites ici : la première demande le slug public du laveur, que cet
+          écran ne reçoit pas aujourd'hui (ajout simple mais hors de cette passe) ; la seconde ne
+          correspond à AUCUNE fonction existante dans le dépôt — l'inventer aurait affiché un
+          bouton qui ne fait rien. Voir le rapport de la passe. */}
+      {grandEcran && clients.length === 0 && bloques.length === 0 && (
+        <div className="flex h-[420px] items-center justify-center rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] px-8 text-center">
+          <div className="max-w-[420px]">
+            <p className={`text-[22px] leading-snug ${titre}`}>D’où viendront vos premiers clients ?</p>
+            <p className={`mt-2.5 text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
+              Pas besoin de les ajouter à la main : dès qu’une réservation arrive sur votre page,
+              la personne devient un client ici, avec son historique qui se construit tout seul.
+            </p>
+          </div>
+        </div>
+      )}
 
       {(clients.length > 0 || bloques.length > 0) && (
         <>
@@ -451,85 +593,42 @@ export default function ClientsViewV2({
             ))}
           </div>
 
-          {filtre === 'relancer' ? (
-            aRelancer.length === 0 ? (
-              <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                Tous vos clients sont revenus, ou n’ont pas encore de quoi être relancés.
-              </p>
-            ) : (
-              <>
-              <ul aria-label="Clients à relancer" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-                {aRelancer.slice(0, limite).map(l => (
-                  <LigneARelancerVue
-                    key={l.cle}
-                    ligne={l}
-                    onOuvrir={() => setOuvert(l.cle)}
-                    ouverte={ligneOuverte === l.cle}
-                    onOuvrirLigne={() => setLigneOuverte(l.cle)}
-                    onFermerLigne={() => setLigneOuverte(o => (o === l.cle ? null : o))}
-                    onSupprimer={() => { setAnnulationRelanceErreur(null); setAnnulationRelance(l) }}
+          {modoBureauListe ? (
+            // Passe bureau : la liste garde EXACTEMENT le même JSX (`contenuListe`, défini
+            // juste au-dessus de ce `return`) — seule la mise en page qui l'entoure change,
+            // pour lui faire de la place à côté de la fiche. Hauteur fixe choisie à l'oeil
+            // (600px, pas mesurée sur la maquette) : la maquette suppose un cadre 1440×912 fixe
+            // avec son propre menu à gauche, que cette passe ne construit pas encore — voir le
+            // rapport de la passe pour ce que ça implique.
+            <div className="flex gap-4" style={{ height: 600 }}>
+              <div className="h-full min-w-0 w-[280px] shrink-0 space-y-3 overflow-y-auto">
+                {contenuListe}
+              </div>
+              <div className="h-full min-w-0 flex-1">
+                {fiche ? (
+                  <ClientProfileModal
+                    key={fiche.cle}
+                    profile={fiche}
+                    onClose={() => setOuvert(null)}
+                    entrepriseDuContact={entrepriseParCle.get(fiche.cle) ?? null}
+                    entreprisesDisponibles={entreprisesOptions}
+                    onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
+                    doublon={doublon}
+                    nomLaveur={nomLaveur}
+                    v2
+                    panneau
                   />
-                ))}
-              </ul>
-              <PaginationListe total={aRelancer.length} limite={limite} onPlus={chargerPlus} onMoins={() => chargerMoins(aRelancer.length)} />
-              </>
-            )
-          ) : filtre === 'entreprises' ? (
-            <>
-            <ul aria-label="Entreprises" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-              {entreprisesAffichees.slice(0, limite).map(e => (
-                <LigneEntreprise
-                  key={e.id}
-                  entreprise={e}
-                  onOuvrir={() => setEntrepriseOuverteId(e.id)}
-                  ouverte={ligneOuverte === e.id}
-                  onOuvrirLigne={() => setLigneOuverte(e.id)}
-                  onFermerLigne={() => setLigneOuverte(o => (o === e.id ? null : o))}
-                  onSupprimer={() => { setSuppressionEntrepriseErreur(null); setEntrepriseASupprimer(e) }}
-                />
-              ))}
-            </ul>
-            <PaginationListe
-              total={entreprisesAffichees.length}
-              limite={limite}
-              onPlus={chargerPlus}
-              onMoins={() => chargerMoins(entreprisesAffichees.length)}
-            />
-            </>
-          ) : (
-            <>
-              {(recherche.trim() || affiches.length === 0) && (
-                <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
-                  {affiches.length === 0
-                    ? recherche.trim()
-                      ? `Aucun client ne correspond à « ${recherche.trim()} ».`
-                      : 'Aucun client professionnel pour l’instant.'
-                    : `${affiches.length} client${affiches.length > 1 ? 's' : ''} trouvé${affiches.length > 1 ? 's' : ''}`}
-                </p>
-              )}
-
-              {(affiches.length > 0 || bloquesAffiches.length > 0) && (
-                <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
-                  {bloquesVus.map(b => (
-                    <LigneClientVerrouilleeV2 key={b.id} reservation={b} offre={offreDeblocage} />
-                  ))}
-                  {affichesVus.map(c => (
-                    <LigneClient
-                      key={c.cle}
-                      client={c}
-                      maintenant={maintenant}
-                      onOuvrir={() => setOuvert(c.cle)}
-                      ouverte={ligneOuverte === c.cle}
-                      onOuvrirLigne={() => setLigneOuverte(c.cle)}
-                      onFermerLigne={() => setLigneOuverte(o => (o === c.cle ? null : o))}
-                      onSupprimer={() => { setSuppressionErreur(null); setSuppression(c) }}
-                    />
-                  ))}
-                </ul>
-              )}
-              <PaginationListe total={totalClients} limite={limite} onPlus={chargerPlus} onMoins={() => chargerMoins(totalClients)} />
-            </>
-          )}
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-6 text-center">
+                    <Users2 size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
+                    <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                      Sélectionnez un client pour voir sa fiche.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : contenuListe}
         </>
       )}
 
@@ -547,8 +646,12 @@ export default function ClientsViewV2({
         </CarteListe>
       </section>
 
-      {fiche && (
+      {/* En mode bureau, cette fiche est déjà posée dans le panneau à côté de la liste
+          (`modoBureauListe`, plus haut) : ne pas la reposer ICI en plus, par-dessus — elle
+          serait affichée deux fois. */}
+      {!modoBureauListe && fiche && (
         <ClientProfileModal
+          key={fiche.cle}
           profile={fiche}
           onClose={() => setOuvert(null)}
           entrepriseDuContact={entrepriseParCle.get(fiche.cle) ?? null}
@@ -597,10 +700,12 @@ export default function ClientsViewV2({
   )
 }
 
-function LigneClient({ client: c, maintenant, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
   client: ResumeClient
   maintenant: number
   onOuvrir: () => void
+  /** Fiche de ce client affichée dans le panneau d’à côté (mode bureau seulement). */
+  selectionnee: boolean
   ouverte: boolean
   onOuvrirLigne: () => void
   onFermerLigne: () => void
@@ -638,7 +743,10 @@ function LigneClient({ client: c, maintenant, onOuvrir, ouverte, onOuvrirLigne, 
           type="button"
           onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
           aria-label={`Voir la fiche de ${titreClient}`}
-          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+          aria-current={selectionnee ? 'true' : undefined}
+          className={`w-full flex items-start gap-3 px-4 py-3 text-left focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors ${
+            selectionnee ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'
+          }`}
         >
           <span
             className={`w-9 h-9 shrink-0 flex items-center justify-center text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)] ${
@@ -673,9 +781,11 @@ function couleurStatut(l: LigneARelancer): string {
   return 'text-[color:var(--v2-color-vert)]'
 }
 
-function LigneARelancerVue({ ligne: l, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+function LigneARelancerVue({ ligne: l, onOuvrir, selectionnee, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
   ligne: LigneARelancer
   onOuvrir: () => void
+  /** Voir `LigneClient`. */
+  selectionnee: boolean
   ouverte: boolean
   onOuvrirLigne: () => void
   onFermerLigne: () => void
@@ -709,7 +819,10 @@ function LigneARelancerVue({ ligne: l, onOuvrir, ouverte, onOuvrirLigne, onFerme
           type="button"
           onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
           aria-label={`Voir la fiche de ${l.nom}`}
-          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)] focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors"
+          aria-current={selectionnee ? 'true' : undefined}
+          className={`w-full flex items-start gap-3 px-4 py-3 text-left focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors ${
+            selectionnee ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'
+          }`}
         >
           <span className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[13px] ${corpsFort} text-[color:var(--v2-color-encre)] bg-[color:var(--v2-filet)]`}>
             {initiales(l.nom)}

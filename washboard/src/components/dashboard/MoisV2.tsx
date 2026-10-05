@@ -371,7 +371,7 @@ function CaseJour({
   // est un autre : rond encre — même convention que le bandeau de 7 jours. Le
   // week-end s'estompe (gris) tant qu'aucun rond ne le porte.
   const rond = estAujourdhui
-    ? 'bg-[color:var(--v2-color-accent)] text-white'
+    ? 'bg-[color:var(--v2-color-accent)] text-[color:var(--v2-color-sur-accent)]'
     : estAffiche
       ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]'
       : weekend ? 'text-[color:var(--v2-color-gris)]' : 'text-[color:var(--v2-color-encre)]'

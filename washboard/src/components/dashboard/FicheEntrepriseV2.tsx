@@ -87,7 +87,7 @@ function FeuilleAjouterContactV2({
       sousTitre={choisi ? undefined : 'Choisissez un client déjà connu'}
       onClose={onClose}
       pied={choisi ? (
-        <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+        <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           {enCours ? 'Rattachement…' : 'Rattacher'}
         </button>
       ) : undefined}
@@ -204,7 +204,7 @@ function FeuilleSiteV2({
       titre={site ? 'Modifier le site' : 'Nouveau site'}
       onClose={onClose}
       pied={
-        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           {enCours ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       }
@@ -268,7 +268,7 @@ function FeuilleInfosEntrepriseV2({
       titre="Modifier l’entreprise"
       onClose={onClose}
       pied={
-        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-white`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+        <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           {enCours ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       }
