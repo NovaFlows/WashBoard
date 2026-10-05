@@ -182,14 +182,14 @@ export function FeuilleDeplacementV2({
 
 // ── Expéditeur des SMS ─────────────────────────────────────────────────────
 
-export function FeuilleExpediteurSmsV2({
-  expediteur, nomEntreprise, telephone, onEnregistrer, onClose,
+export function ChampExpediteurSms({
+  expediteur, statut, nomEntreprise, telephone, onEnregistrer,
 }: {
   expediteur: string
+  statut: string | null
   nomEntreprise: string
   telephone: string
-  onEnregistrer: Enregistrer<string>
-  onClose: () => void
+  onEnregistrer: (valeur: string) => Promise<string | null>
 }) {
   const [saisie, setSaisie] = useState(expediteur)
   const [enCours, setEnCours] = useState(false)
@@ -197,17 +197,15 @@ export function FeuilleExpediteurSmsV2({
   const [test, setTest] = useState<{ enCours: boolean; erreur: string | null }>({ enCours: false, erreur: null })
 
   const suggestion = nettoyerExpediteur(nomEntreprise) || 'MonEntreprise'
+  const modifie = saisie !== expediteur
 
-  async function soumettre(e: React.FormEvent) {
-    e.preventDefault()
-    if (enCours) return
-    if (saisie === expediteur) { onClose(); return }
+  async function enregistrer() {
+    if (enCours || !modifie) return
     setErreur(null)
     setEnCours(true)
     const message = await onEnregistrer(saisie)
     setEnCours(false)
-    if (message) setErreur(message)
-    else onClose()
+    setErreur(message)
   }
 
   async function tester() {
@@ -223,19 +221,32 @@ export function FeuilleExpediteurSmsV2({
   }
 
   return (
-    <Feuille
-      titre="Expéditeur des SMS"
-      sousTitre="Le nom qui s’affiche sur le téléphone de vos clients."
-      verrou="avis_sms"
-      onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="reglage-expediteur" />}
-    >
-      <form id="reglage-expediteur" onSubmit={soumettre} noValidate>
+    <div className="space-y-3">
+        {statut === 'en_attente' && (
+          <div className="mb-3">
+            <Constat ton="ambre">
+              Demande en cours, approuvée en moins de 24 h. En attendant, vos SMS partent avec WashBoard.
+            </Constat>
+          </div>
+        )}
+        {statut === 'approuve' && (
+          <p className="mb-3 rounded-[var(--v2-radius-carte)] border border-emerald-300 bg-emerald-50 px-3.5 py-3 text-[13.5px] leading-snug text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+            Nom approuvé. Vos SMS partent avec ce nom.
+          </p>
+        )}
+        {statut === 'refuse' && (
+          <div className="mb-3">
+            <Constat ton="rouge">
+              Ce nom n’a pas été accepté. Vos SMS partent avec WashBoard.
+            </Constat>
+          </div>
+        )}
         <Bloc titre="Nom d’expéditeur">
           <input
             type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off"
             maxLength={11} value={saisie} placeholder={suggestion}
             onChange={e => { setSaisie(nettoyerExpediteur(e.target.value)); setErreur(null) }}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); enregistrer() } }}
             aria-label="Nom d’expéditeur" aria-invalid={!!erreur}
             className={CHAMP}
           />
@@ -244,6 +255,13 @@ export function FeuilleExpediteurSmsV2({
             11 caractères au maximum, lettres et chiffres uniquement : c’est la règle des opérateurs. Laissez vide pour
             utiliser le nom commun « WashBoard ».
           </p>
+          <button
+            type="button" onClick={enregistrer} disabled={!modifie || enCours}
+            className={`${BOUTON} mt-3 w-full bg-[color:var(--v2-color-accent)] text-white disabled:opacity-40`}
+            style={PRESSION}
+          >
+            {enCours ? 'Enregistrement…' : 'Enregistrer le nom'}
+          </button>
         </Bloc>
 
         <Bloc titre="Vérifier">
@@ -259,8 +277,7 @@ export function FeuilleExpediteurSmsV2({
             Enregistrez d’abord le nom, puis envoyez-vous un exemple sur le numéro de votre profil.
           </p>
         </Bloc>
-      </form>
-    </Feuille>
+    </div>
   )
 }
 

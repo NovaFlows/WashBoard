@@ -5,6 +5,7 @@ import { Building2, Search, X } from 'lucide-react'
 import ClientProfileModal from '@/components/dashboard/ClientProfileModal'
 import { buildClientProfile, type ClientBooking } from '@/lib/clientProfile'
 import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeClients'
+import { libelleSourceDecouverte } from '@/lib/sourceDecouverte'
 import { formatPhone } from '@/lib/phone'
 import { formatEuros } from '@/lib/plan'
 import { FUSEAU } from '@/lib/dateUtils'
@@ -171,6 +172,9 @@ function LigneClient({ client: c, maintenant, onOuvrir }: { client: ResumeClient
               </span>
             ) : (
               <span className="text-slate-400 dark:text-slate-500">Pas encore de prestation faite</span>
+            )}
+            {c.source && (
+              <span className="block text-slate-400 dark:text-slate-500">Connu via {libelleSourceDecouverte(c.source)}</span>
             )}
           </span>
           {c.prochain && (

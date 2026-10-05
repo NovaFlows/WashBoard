@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SOURCES_DECOUVERTE, SourceDecouverteSchema, estSourceDecouverte, libelleSourceDecouverte } from './sourceDecouverte'
+import { SOURCES_DECOUVERTE, SourceDecouverteSchema, estSourceDecouverte, libelleSourceDecouverte, repartitionSources } from './sourceDecouverte'
 
 describe('sourceDecouverte', () => {
   it('expose une liste fermée de valeurs', () => {
@@ -26,5 +26,21 @@ describe('sourceDecouverte', () => {
   it('donne un libellé lisible pour chaque valeur', () => {
     expect(libelleSourceDecouverte('camionnette')).toBe('J’ai vu la camionnette')
     expect(libelleSourceDecouverte('google')).toBe('Google')
+  })
+
+  it('compte les réponses par source, sans compter les réservations sans réponse', () => {
+    const r = repartitionSources([
+      { source_decouverte: 'tiktok' },
+      { source_decouverte: 'google' },
+      { source_decouverte: 'tiktok' },
+      { source_decouverte: null },
+      {},
+      { source_decouverte: 'faux' },
+    ])
+    expect(r.reponses).toBe(3)
+    expect(r.lignes).toEqual([
+      { valeur: 'tiktok', libelle: 'TikTok', nombre: 2 },
+      { valeur: 'google', libelle: 'Google', nombre: 1 },
+    ])
   })
 })

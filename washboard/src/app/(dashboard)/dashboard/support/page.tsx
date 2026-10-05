@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import SupportAccessForm from '@/components/dashboard/SupportAccessForm'
 import SupportInbox from '@/components/dashboard/SupportInbox'
+import SupportExpediteurs from '@/components/dashboard/SupportExpediteurs'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,6 +88,12 @@ export default async function SupportPage() {
       </p>
 
       <SupportAccessForm />
+
+      <h2 className="text-lg font-black text-slate-900 dark:text-white mt-10 mb-1">Expéditeurs SMS</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        Les noms demandés par les laveurs, à approuver après Brevo.
+      </p>
+      <SupportExpediteurs />
 
       <h2 className="text-lg font-black text-slate-900 dark:text-white mt-10 mb-1">Questions des laveurs</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">

@@ -29,6 +29,14 @@ export function normalizePhone(raw: string): string | null {
  *  silencieux. */
 export const EXPEDITEUR_SMS_DEFAUT = 'WashBoard'
 
+export type ExpediteurLaveur = { sms_sender: string | null; sms_sender_statut: string | null }
+
+/** Le nom du laveur, seulement une fois approuvé par l'équipe (demande faite dans le support). Sinon WashBoard. */
+export function expediteurPour(laveur: ExpediteurLaveur): string {
+  const nom = laveur.sms_sender?.trim()
+  return laveur.sms_sender_statut === 'approuve' && nom ? nom : EXPEDITEUR_SMS_DEFAUT
+}
+
 export async function sendSms({ to, content, sender = EXPEDITEUR_SMS_DEFAUT }: { to: string; content: string; sender?: string }): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) throw new Error('BREVO_API_KEY manquant')

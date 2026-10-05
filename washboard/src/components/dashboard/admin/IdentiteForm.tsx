@@ -78,6 +78,8 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
   const [colorSaved, setColorSaved] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [presenceLoading, setPresenceLoading] = useState(false)
+  const [presenceMsg, setPresenceMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Aperçu des avis réellement affichés sur la page publique (site + fiche
@@ -266,9 +268,28 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         welcome_message: message,
+      }),
+    })
+    if (res.ok) {
+      setMsg({ ok: true, text: 'Modifications enregistrées' })
+      router.refresh()
+    } else {
+      const body: { error?: string } = await res.json().catch(() => ({}))
+      setMsg({ ok: false, text: body.error || 'Erreur lors de la sauvegarde' })
+    }
+    setLoading(false)
+  }
+
+  // Propre à la section « Présence en ligne » : son bouton n'envoie que ces trois champs.
+  async function enregistrerPresence() {
+    setPresenceLoading(true)
+    setPresenceMsg(null)
+
+    const res = await fetch('/api/washer', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         website_url: websiteUrl.trim() || null,
-        // Vidé, la page retombe sur ce que le site publie lui-même (s'il
-        // publie une moyenne) — voir `reviewsForWasher`, lib/googleReviews.ts.
         google_place_id: googlePlaceId.trim() || null,
         // Vidé, il efface le Pixel : c'est ainsi que le laveur le retire, et
         // sa page redevient exactement ce qu'elle était — sans bandeau de
@@ -277,17 +298,14 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       }),
     })
     if (res.ok) {
-      setMsg({ ok: true, text: 'Modifications enregistrées' })
+      setPresenceMsg({ ok: true, text: 'Présence en ligne enregistrée' })
       router.refresh()
       chargerAvisApercu()
     } else {
-      // La phrase du serveur (ex. identifiant de fiche Google invalide) vaut
-      // mieux qu'un message générique quand il y en a une : c'est elle qui dit
-      // QUOI corriger, pas seulement que la sauvegarde a échoué.
       const body: { error?: string } = await res.json().catch(() => ({}))
-      setMsg({ ok: false, text: body.error || 'Erreur lors de la sauvegarde' })
+      setPresenceMsg({ ok: false, text: body.error || 'Erreur lors de la sauvegarde' })
     }
-    setLoading(false)
+    setPresenceLoading(false)
   }
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
@@ -581,6 +599,21 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             faites pas de publicité.
           </p>
         </div>
+
+        {presenceMsg && (
+          <p className={`text-sm font-medium ${presenceMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            {presenceMsg.ok ? '✓ ' : '✕ '}{presenceMsg.text}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={enregistrerPresence}
+          disabled={presenceLoading}
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
+        >
+          {presenceLoading ? 'Enregistrement...' : 'Enregistrer'}
+        </button>
       </div>
 
       {/* Aperçu */}

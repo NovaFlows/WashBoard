@@ -85,6 +85,7 @@ export default async function MessagesAutomatiquesPage() {
         libellePlanRelance={requiredPlanLabel('followup')}
         nomLaveur={washer.name}
         expediteurSms={washer.sms_sender ?? ''}
+        expediteurStatut={washer.sms_sender_statut ?? null}
         telephone={washer.phone ?? ''}
         slug={washer.slug}
         rdvs={rdvs}

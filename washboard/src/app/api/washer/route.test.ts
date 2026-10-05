@@ -8,6 +8,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // compte Essentiel activait les relances automatiques et le multi-laveurs par
 // un simple appel — et consommait des SMS facturés à WashBoard.
 
+vi.mock('@/lib/push', () => ({ notifierEquipe: vi.fn(async () => {}) }))
+
 type Reponse = { data?: unknown; error?: unknown }
 
 let plan: {

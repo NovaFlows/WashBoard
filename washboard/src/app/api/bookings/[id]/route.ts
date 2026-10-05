@@ -138,7 +138,7 @@ export async function PATCH(
             `Client : ${booking.client_name}`,
             `Tél : ${booking.client_phone}`,
             `Email : ${booking.client_email}`,
-            svc ? `Prix : ${svc.price} €` : '',
+            `Prix : ${Number(booking.booked_price ?? svc?.price ?? 0)} €`,
           ].filter(Boolean).join('\n'),
           location: booking.address,
           startIso: booking.scheduled_at,

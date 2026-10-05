@@ -35,3 +35,23 @@ export function estSourceDecouverte(valeur: unknown): valeur is SourceDecouverte
 export function libelleSourceDecouverte(valeur: SourceDecouverte): string {
   return SOURCES_DECOUVERTE.find(s => s.valeur === valeur)?.label ?? valeur
 }
+
+/** Réponses données, par source, du plus cité au moins cité. Une réservation sans réponse
+ *  ne compte ni dans `reponses` ni dans les lignes. */
+export function repartitionSources(bookings: { source_decouverte?: string | null }[]): {
+  reponses: number
+  lignes: { valeur: SourceDecouverte; libelle: string; nombre: number }[]
+} {
+  const compte = new Map<SourceDecouverte, number>()
+  let reponses = 0
+  for (const b of bookings) {
+    const valeur = b.source_decouverte
+    if (!estSourceDecouverte(valeur)) continue
+    reponses++
+    compte.set(valeur, (compte.get(valeur) ?? 0) + 1)
+  }
+  const lignes = [...compte]
+    .map(([valeur, nombre]) => ({ valeur, libelle: libelleSourceDecouverte(valeur), nombre }))
+    .sort((a, b) => b.nombre - a.nombre)
+  return { reponses, lignes }
+}
