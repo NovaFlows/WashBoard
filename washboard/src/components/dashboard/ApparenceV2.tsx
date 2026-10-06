@@ -8,7 +8,7 @@ import { BOUTON, PRESSION, corps, titre } from '@/components/dashboard/FeuilleV2
 import { CarteListe } from '@/components/dashboard/ParametresFormV2'
 import { ConfirmationSuppression, LigneDeuxNiveaux as Ligne } from '@/components/dashboard/PrestationsUiV2'
 import { EtatEnvoi } from '@/components/dashboard/ApparenceUiV2'
-import ApercuPageV2 from '@/components/dashboard/ApercuPageV2'
+import ApercuPageIframeV2 from '@/components/dashboard/ApercuPageIframeV2'
 import FeuilleLogoV2 from '@/components/dashboard/FeuilleLogoV2'
 import FeuilleCouleurV2 from '@/components/dashboard/FeuilleCouleurV2'
 import FeuilleFondV2 from '@/components/dashboard/FeuilleFondV2'
@@ -127,10 +127,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
         </div>
       </div>
 
-      <ApercuPageV2 nom={nom} logoUrl={h.logoUrl} message={h.message} couleur={h.couleur} fond={h.fond} />
-      <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-        Aperçu approximatif de votre page.
-      </p>
+      <ApercuPageIframeV2 slug={slug} />
 
       <div className={etatLogoVisible ? 'mt-4' : ''} aria-live="polite">
         {etatLogoVisible && <EtatEnvoi etat={h.logo} />}
