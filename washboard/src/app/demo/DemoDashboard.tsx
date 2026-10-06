@@ -6,17 +6,30 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 import Accueil from '@/components/dashboard/Accueil'
 import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
+import MessagesAutomatiquesV2 from '@/components/dashboard/MessagesAutomatiquesV2'
+import PublicitesV2 from '@/components/dashboard/PublicitesV2'
+import BilanPublicitesV2 from '@/components/dashboard/BilanPublicitesV2'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
-import type { jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, AccueilDemo } from '@/lib/demo/jeuDeDonnees'
+import type {
+  jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo,
+  AccueilDemo,
+} from '@/lib/demo/jeuDeDonnees'
 
 type Donnees = ReturnType<typeof jeuDeDonneesDemo>
 type AgendaDonnees = ReturnType<typeof jeuDeDonneesAgendaDemo>
+type MessagesDonnees = ReturnType<typeof jeuDeDonneesMessagesDemo>
+type PublicitesDonnees = ReturnType<typeof jeuDeDonneesPublicitesDemo>
 type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota: AccueilDemo }
 
-// Trois écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
-// « bureau ») et « Agenda » (passe « bureau », agenda — celle qui ajoute cette branche, voir le
-// rapport). Les trois sont les seuls réellement migrés en v2 dont les requêtes/actions se
-// résument à des fonctions pures, ou à des appels réseau sans conséquence sur la vraie base.
+// Six écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
+// « bureau »), « Agenda » (passe « bureau », agenda), et trois écrans de la passe « bureau,
+// Clients — suite » (2026-10-06) : « Messages automatiques » (écrans 31/32 — le réglage d'un
+// automatisme s'ouvre EN CLIQUANT une ligne, pas par un onglet séparé, exactement comme sur le
+// vrai écran), « Publicités » (écran 33) et son « Bilan » (écran 34, tab séparée plutôt que le
+// lien de l'écran Publicités : ce lien navigue vers une vraie route `/dashboard/...` qui
+// exigerait une session, ce que `/demo` ne fournit jamais). Tous sont les seuls réellement
+// migrés en v2 dont les requêtes/actions se résument à des fonctions pures, ou à des appels
+// réseau sans conséquence sur la vraie base.
 //
 // `ClientsViewV2` porte deux actions d'écriture (glisser pour « Supprimer » un client, « Ne
 // plus relancer ») : elles restent câblées vers les vraies routes `/api/clients/[cle]`, parce
@@ -44,7 +57,7 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // `CalendrierDashboardV2` lit lui-même `useGrandEcran()` en interne, donc réduire la fenêtre
 // sous 1024px y montre aussi, à l'intérieur de l'écran, sa disposition à une seule colonne.
 
-type Ecran = 'clients' | 'aujourdhui' | 'agenda'
+type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan'
 type EtatAujourdhui = 'normal' | 'premierJour' | 'quota'
 
 const police = '[font-family:var(--font-archivo)]'
@@ -81,10 +94,16 @@ function SelecteurDemo({
         <span className={`rounded-full px-3 py-1 text-[11px] ${corpsFort}`} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }}>
           Démo
         </span>
-        <div className="flex gap-1.5">
+        {/* `flex-wrap` : six pilules ne tiennent plus sur une ligne à 390px depuis que cette
+            passe en ajoute trois — sans lui, la ligne déborde et fait défiler toute la page
+            horizontalement (constaté en capturant cette passe). */}
+        <div className="flex flex-wrap gap-1.5">
           <PilulePilote actif={ecran === 'aujourdhui'} onClick={() => onEcran('aujourdhui')}>Aujourd’hui</PilulePilote>
           <PilulePilote actif={ecran === 'clients'} onClick={() => onEcran('clients')}>Clients</PilulePilote>
           <PilulePilote actif={ecran === 'agenda'} onClick={() => onEcran('agenda')}>Agenda</PilulePilote>
+          <PilulePilote actif={ecran === 'messages'} onClick={() => onEcran('messages')}>Messages automatiques</PilulePilote>
+          <PilulePilote actif={ecran === 'publicites'} onClick={() => onEcran('publicites')}>Publicités</PilulePilote>
+          <PilulePilote actif={ecran === 'bilan'} onClick={() => onEcran('bilan')}>Bilan publicités</PilulePilote>
         </div>
         <span className={`text-[12px] ${corps}`} style={{ color: 'var(--v2-color-gris)' }}>
           Jeu de données fabriqué en mémoire — rien n’est lu ni écrit dans la base.
@@ -162,7 +181,13 @@ function useVerrouEcriture() {
  *  (`ClientsViewV2`, `Accueil`/`AccueilV2`), nourris des jeux de données fabriqués côté serveur
  *  (`jeuDeDonneesDemo()`/`jeuDeDonneesAccueilDemo()`, appelés une fois par `page.tsx` pour que
  *  les dates relatives (« cette semaine », « demain ») restent cohérentes sur toute la page). */
-export default function DemoDashboard({ donnees, accueil, agenda }: { donnees: Donnees; accueil: AccueilTroisEtats; agenda: AgendaDonnees }) {
+export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites }: {
+  donnees: Donnees
+  accueil: AccueilTroisEtats
+  agenda: AgendaDonnees
+  messages: MessagesDonnees
+  publicites: PublicitesDonnees
+}) {
   useVerrouEcriture()
   const [ecran, setEcran] = useState<Ecran>('aujourdhui')
   const [etat, setEtat] = useState<EtatAujourdhui>('normal')
@@ -217,6 +242,12 @@ export default function DemoDashboard({ donnees, accueil, agenda }: { donnees: D
           masquees={agenda.masquees}
           offreDeblocage={agenda.offreDeblocage}
         />
+      ) : ecran === 'messages' ? (
+        <MessagesAutomatiquesV2 {...messages} />
+      ) : ecran === 'publicites' ? (
+        <PublicitesV2 campagnes={publicites.campagnes} baseUrl="https://app.washboard.fr/book/demo-eclat-mobile" />
+      ) : ecran === 'bilan' ? (
+        <BilanPublicitesV2 campagnes={publicites.campagnes} />
       ) : (
         <ClientsViewV2
           bookings={donnees.bookings}

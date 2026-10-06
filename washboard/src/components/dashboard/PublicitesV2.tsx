@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Copy, Check, Plus, AlertTriangle, Clock, Megaphone } from 'lucide-react'
 import { Repliable } from '@/components/dashboard/PrestationsUiV2'
 import { Feuille, BOUTON } from '@/components/dashboard/FeuilleV2'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { formatEuros } from '@/lib/plan'
 import {
   PLATEFORMES, FORMATS, labelPlateforme, estEnCours, lienCampagne, lienCreation,
@@ -31,6 +32,13 @@ import {
 //
 // L'écran se range dans « Automatismes », avec les avis et les relances : ce
 // sont les trois choses qui travaillent pendant que le laveur lave.
+//
+// PASSE BUREAU (2026-10-06) : comme MessagesAutomatiquesV2.tsx, ce composant sert maintenant
+// aussi le site en grand écran (voir Publicites.tsx) — même contenu, même logique
+// (`lib/campagne.ts`), présentation pilotée par `useGrandEcran()` : plus de plafond mobile, les
+// campagnes en deux colonnes plutôt qu'empilées (maquette, écran 33), et le bouton d'ajout
+// rejoint l'en-tête plutôt que de flotter en bas à droite — en grand écran il n'y a plus de
+// pouce à ménager, et un bouton flottant se serait superposé au bouton WhatsApp du châssis.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -548,6 +556,7 @@ export type PublicitesProps = {
 
 export default function PublicitesV2({ campagnes, baseUrl, indisponible }: PublicitesProps) {
   const router = useRouter()
+  const grandEcran = useGrandEcran()
   const [feuille, setFeuille] = useState<{ quoi: 'creer' } | { quoi: 'modifier'; c: CampagneAffichee } | null>(null)
 
   const totaux = useMemo(
@@ -564,11 +573,12 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
 
   return (
     <div
-      className={`mx-auto -mx-3 -mt-6 max-w-3xl bg-[color:var(--v2-color-fond)] px-3 pb-6 pt-3 text-[color:var(--v2-color-encre)] sm:-mx-4 sm:px-4 ${police}`}
+      className={`${grandEcran ? '' : 'mx-auto -mx-3 -mt-6 max-w-3xl px-3 pt-3 sm:-mx-4 sm:px-4'} bg-[color:var(--v2-color-fond)] pb-6 text-[color:var(--v2-color-encre)] ${police}`}
       // Le bouton flottant dépasse la barre du bas de 68 px : sans cette
       // marge, il recouvrirait la dernière carte, qu'aucun défilement ne
-      // permettrait alors de dégager.
-      style={!indisponible ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
+      // permettrait alors de dégager. En grand écran, ce bouton n'existe plus
+      // (voir plus bas, le bouton d'en-tête le remplace) : rien à réserver.
+      style={!indisponible && !grandEcran ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -582,6 +592,21 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
           <h1 className={`text-[21px] leading-none ${titre}`}>Publicités</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</p>
         </div>
+        {/* Bouton d'ajout d'en-tête (maquette, écran 33) : seulement en grand écran, et
+            seulement s'il y a déjà une campagne à côté de laquelle se montrer — l'écran vide a
+            déjà sa propre invitation (plus bas), deux boutons « créer » feraient deux héros sur
+            le même écran. */}
+        {grandEcran && !indisponible && campagnes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setFeuille({ quoi: 'creer' })}
+            className={`${BOUTON} shrink-0 gap-1.5`}
+            style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }}
+          >
+            <Plus size={16} strokeWidth={2.5} aria-hidden />
+            Nouvelle campagne
+          </button>
+        )}
       </div>
 
       {indisponible ? (
@@ -634,15 +659,21 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
             </Carte>
           )}
 
-          {campagnes.map(c => (
-            <CarteCampagne
-              key={c.id}
-              c={c}
-              baseUrl={baseUrl}
-              onRafraichir={() => router.refresh()}
-              onModifier={() => setFeuille({ quoi: 'modifier', c })}
-            />
-          ))}
+          {campagnes.length > 0 && (
+            // Deux colonnes en grand écran (maquette, écran 33) : la place existe, et une
+            // seule colonne pleine largeur aurait laissé chaque carte à moitié vide.
+            <div className={grandEcran ? 'grid grid-cols-2 gap-4' : 'space-y-3'}>
+              {campagnes.map(c => (
+                <CarteCampagne
+                  key={c.id}
+                  c={c}
+                  baseUrl={baseUrl}
+                  onRafraichir={() => router.refresh()}
+                  onModifier={() => setFeuille({ quoi: 'modifier', c })}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Écran vide. Pas une carte avec un titre de constat (« Aucune
               campagne »), qui ne dit que ce qui manque : une promesse, au
@@ -706,8 +737,12 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
 
           Masqué dès qu'une feuille s'ouvre : elle porte déjà son propre bouton
           de validation au même endroit, et deux ronds superposés sous le
-          pouce, c'est un clic sur le mauvais. */}
-      {!indisponible && !feuille && (
+          pouce, c'est un clic sur le mauvais.
+
+          Masqué aussi en grand écran : le bouton d'en-tête le remplace (il n'y a plus de
+          pouce à ménager), et un rond fixe aurait flotté par-dessus le bouton WhatsApp du
+          châssis bureau, au même coin. */}
+      {!indisponible && !feuille && !grandEcran && (
         <button
           type="button"
           onClick={() => setFeuille({ quoi: 'creer' })}

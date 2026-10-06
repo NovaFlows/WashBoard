@@ -64,6 +64,7 @@ export default async function MessagesAutomatiquesPage() {
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <MessagesAutomatiques
+        betaRefonte={washer.beta_refonte}
         reglages={{
           review_enabled: !!washer.review_enabled,
           review_delay_hours: washer.review_delay_hours ?? DELAI_AVIS_DEFAUT_HEURES,

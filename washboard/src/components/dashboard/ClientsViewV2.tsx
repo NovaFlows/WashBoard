@@ -626,7 +626,14 @@ export default function ClientsViewV2({
             // châssis occupe déjà (bandeau, titre, recherche, pastilles) pour que les deux
             // panneaux descendent jusqu’en bas de l’écran quelle qu’en soit la taille, avec
             // un plancher pour les très petites hauteurs.
-            <div className="flex gap-4" style={{ height: 'max(420px, calc(100vh - 268px))' }}>
+            //
+            // Hauteur RÉDUITE quand « Automatismes » suit (voir plus bas) : la maquette (écran
+            // 30) donne au split une hauteur FIXE plutôt que `flex:1` précisément pour ce cas —
+            // sans ça, ce panneau mangerait tout le premier écran et Automatismes n'apparaîtrait
+            // qu'après un second défilement, alors que la place existe pour montrer les deux à
+            // la fois. `automatismes` est rendu pour tous les filtres (pas seulement « Tous »),
+            // donc cette réduction s'applique de la même façon à chacun.
+            <div className="flex gap-4" style={{ height: automatismes ? 'min(560px, max(360px, calc(100vh - 460px)))' : 'max(420px, calc(100vh - 268px))' }}>
               {/* 380px, la valeur de la maquette : à 280 les noms d’entreprise étaient
                   tronqués et chaque ligne retombait sur trois niveaux. */}
               <div className="h-full min-w-0 w-[380px] shrink-0 space-y-3 overflow-y-auto">

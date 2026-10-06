@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ReglageAvisV2, ReglageRelanceV2 } from '@/components/dashboard/ReglageAutomatismeV2'
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { FeuilleExpediteurSmsV2 } from '@/components/dashboard/FeuillesReglagesV2'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { enregistrerReglages } from '@/lib/enregistrerReglages'
 import { enregistrerProfil } from '@/lib/profilApi'
 import {
@@ -42,6 +43,17 @@ import {
 // « Parti », comme si sa relance avait été envoyée — `followup_sent_at` ne distingue pas les
 // deux cas (voir `api/cron/send-followups`). Aucun message n'est réellement envoyé, seul ce
 // libellé serait trompeur.
+//
+// PASSE BUREAU (2026-10-06) : ce composant sert maintenant aussi le site en grand écran (voir
+// MessagesAutomatiques.tsx, le point de branchement) — même contenu, même logique, deux
+// adaptations de présentation pilotées par `useGrandEcran()` (le seuil de la fiche Clients,
+// 1024px) : le conteneur perd son plafond et ses marges négatives pensés pour le `<main>`
+// mobile (le `<main>` du rail bureau, lui, n'a pas le padding qu'il fallait annuler — même
+// raisonnement que ClientsViewV2.tsx) ; « Programmé » et « Parti » passent côte à côte plutôt
+// qu'empilés (maquette, écrans 31/32), la place existant pour les deux à la fois. Le reste —
+// les deux interrupteurs, les listes, les feuilles de réglage — ne change pas : `Feuille`
+// (FeuilleV2.tsx) se présente déjà en boîte de dialogue centrée au-delà de 640px, sans rien à
+// faire ici.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -224,6 +236,7 @@ export default function MessagesAutomatiquesV2({
   reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, telephone, slug, rdvs, lectureIncomplete,
 }: MessagesAutomatiquesProps) {
   const router = useRouter()
+  const grandEcran = useGrandEcran()
   // Réglages locaux : mis à jour dès qu'une écriture réussit, sans attendre le
   // rechargement de la page — les listes se recalculent aussitôt.
   const [reglages, setReglages] = useState(reglagesServeur)
@@ -304,7 +317,7 @@ export default function MessagesAutomatiquesV2({
 
   return (
     <div
-      className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      className={`${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3'} pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -381,7 +394,9 @@ export default function MessagesAutomatiquesV2({
           plutôt qu’incomplètes. Vos réglages, eux, fonctionnent. Rechargez la page dans un instant.
         </p>
       ) : (
-        <>
+        // Côte à côte en grand écran (maquette, écrans 31/32 : la place existe pour les deux
+        // sans scroll) ; empilées sinon, comme avant cette passe.
+        <div className={grandEcran ? 'grid grid-cols-2 items-start gap-6' : undefined}>
           <Section titre="Programmé" nombre={programmes.length}>
             <ListeMessages
               lignes={programmes}
@@ -402,7 +417,7 @@ export default function MessagesAutomatiquesV2({
               </p>
             )}
           </Section>
-        </>
+        </div>
       )}
 
       {feuille?.quoi === 'avis' && (

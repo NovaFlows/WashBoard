@@ -53,6 +53,7 @@ export default async function PublicitesPage() {
 
   return coque(
     <Publicites
+      betaRefonte={washer.beta_refonte}
       campagnes={campagnes}
       baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`}
       indisponible={indisponible}

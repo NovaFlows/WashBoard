@@ -28,7 +28,7 @@ export default async function BilanPublicitesPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <BilanPublicites campagnes={campagnes} />
+      <BilanPublicites betaRefonte={washer.beta_refonte} campagnes={campagnes} />
     </DashboardShell>
   )
 }

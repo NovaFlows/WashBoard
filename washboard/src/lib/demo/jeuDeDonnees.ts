@@ -26,6 +26,9 @@ import type { EntrepriseListItem } from '@/lib/entrepriseProfile'
 import type { AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
 import type { RdvAccueil } from '@/components/dashboard/AccueilV2'
 import type { ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
+import type { MessagesAutomatiquesProps } from '@/components/dashboard/MessagesAutomatiquesV2'
+import type { RdvMessage } from '@/lib/messagesAutomatiques'
+import { bilanCampagne, resteHorsCreations, type BilanCreation, type CampagneAffichee, type Creation } from '@/lib/campagne'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
 import type { Plan } from '@/lib/plan'
@@ -380,8 +383,11 @@ export function jeuDeDonneesDemo(): {
       followup_delay_days: 90,
       followup_message: reglagesMessages.followup_message,
     },
+    // Deux campagnes, une en cours — mêmes dates que `jeuDeDonneesPublicitesDemo()` plus bas
+    // (écrans 33/34) : cette ligne-résumé et l'écran détaillé doivent raconter la même chose.
     campagnes: [
-      { debut: jourCivilILYA(18), fin: null, budget_maj_le: ilYA(2, 9, 0) },
+      { debut: jourCivilILYA(40), fin: null, budget_maj_le: ilYA(22, 9, 0) },
+      { debut: jourCivilILYA(60), fin: jourCivilILYA(45), budget_maj_le: jourCivilILYA(45) },
     ],
     publicitesAutorisees: true,
     libellePlanPublicites: 'Pro',
@@ -792,4 +798,102 @@ export function jeuDeDonneesAgendaDemo(): {
     masquees: [],
     offreDeblocage: 'Pro',
   }
+}
+
+// ── Jeu de données pour « Messages automatiques » (passe bureau, écrans 31/32) ───────────────
+//
+// Réutilise le MÊME fichier client et les MÊMES réglages que `jeuDeDonneesDemo()`
+// (`automatismes.messages`) plutôt qu'une seconde fiction : « Automatismes » (dans Clients) et
+// « Messages automatiques » (l'écran que sa ligne ouvre) doivent raconter la même chose.
+// `MessagesAutomatiquesV2` attend des rendez-vous sous la forme `RdvMessage`, pas des
+// réservations de fichier client (`ClientBooking`) — simple adaptation de type, aucun recalcul,
+// qui reprend la même correspondance que `versRdvMessage` dans `ClientsViewV2.tsx` (dupliquée
+// ici, pas importée : ce fichier reste un module de données pur, sans dépendre d'un composant
+// `use client`).
+export function jeuDeDonneesMessagesDemo(): MessagesAutomatiquesProps {
+  const { bookings, automatismes, nomLaveur } = jeuDeDonneesDemo()
+  const rdvs: RdvMessage[] = bookings.map(b => ({
+    id: b.id,
+    client_name: b.client_name,
+    client_email: b.client_email || null,
+    client_phone: b.client_phone,
+    scheduled_at: b.scheduled_at,
+    created_at: b.created_at ?? b.scheduled_at,
+    status: b.status,
+    is_professional: b.is_professional,
+    company_name: b.company_name,
+    services: b.services,
+    followup_sent_at: b.followup_sent_at,
+  }))
+  return {
+    reglages: automatismes.messages,
+    smsAutorise: automatismes.smsAutorise,
+    avisAutorise: automatismes.avisAutorise,
+    libellePlanAvis: automatismes.libellePlanAvis,
+    relanceAutorisee: automatismes.relanceAutorisee,
+    libellePlanRelance: automatismes.libellePlanRelance,
+    nomLaveur,
+    expediteurSms: 'ECLATMOBILE',
+    telephone: '0681001122',
+    slug: 'demo-eclat-mobile',
+    rdvs,
+    lectureIncomplete: false,
+  }
+}
+
+// ── Jeu de données pour « Publicités » et son « Bilan » (passe bureau, écrans 33/34) ─────────
+//
+// Reprend les chiffres de la maquette (`project/Publicites.dc.html`, `project/
+// ChiffresAcquisition.dc.html`-like écrans 33/34) : deux campagnes, « Pub Rentrée » (Meta, en
+// cours depuis 40 jours, budget saisi il y a 22 jours — au-delà des 14 jours de
+// `BUDGET_A_VERIFIER_JOURS`, pour montrer l'avertissement ambre) et « Promo Flotte Garages »
+// (Google, terminée). `bilanCampagne()`/`resteHorsCreations()` calculent les ratios — rien
+// n'est tapé à la main, comme le ferait vraiment `lib/campagnesServeur.ts` à partir de la base.
+export function jeuDeDonneesPublicitesDemo(): { campagnes: CampagneAffichee[] } {
+  const videoClio: Creation = {
+    id: 'demo-crea-clio', campagne_id: 'demo-camp-rentree', nom: 'Avant/après Clio',
+    format: 'video', cle: 'avant-apres-clio', budget: null,
+  }
+  const videoInterieur: Creation = {
+    id: 'demo-crea-interieur', campagne_id: 'demo-camp-rentree', nom: 'Intérieur poussiéreux',
+    format: 'video', cle: 'interieur-poussiereux', budget: null,
+  }
+  const videoCoffre: Creation = {
+    id: 'demo-crea-coffre', campagne_id: 'demo-camp-rentree', nom: 'Coffre utilitaire',
+    format: 'image', cle: 'coffre-utilitaire', budget: null,
+  }
+  // Les deux premières vidéos totalisent 10 clients, le même nombre que la campagne : la
+  // troisième n'a encore aucune visite identifiée (déclarée après coup, cas courant).
+  const bilanClio: BilanCreation = {
+    ...bilanCampagne({ budget: null, visites: 52, reservations: 7, chiffreAffaires: 410 }),
+    creation: videoClio, partReservations: 70, fiable: true,
+  }
+  const bilanInterieur: BilanCreation = {
+    ...bilanCampagne({ budget: null, visites: 34, reservations: 3, chiffreAffaires: 180 }),
+    creation: videoInterieur, partReservations: 30, fiable: true,
+  }
+  const bilanCoffre: BilanCreation = {
+    ...bilanCampagne({ budget: null, visites: 0, reservations: 0, chiffreAffaires: 0 }),
+    creation: videoCoffre, partReservations: 0, fiable: false,
+  }
+  const creationsRentree = [bilanClio, bilanInterieur, bilanCoffre]
+  const bilanRentree = bilanCampagne({ budget: 120, visites: 86, reservations: 10, chiffreAffaires: 590 })
+  const bilanFlotte = bilanCampagne({ budget: 80, visites: 34, reservations: 3, chiffreAffaires: 210 })
+
+  const rentree: CampagneAffichee = {
+    id: 'demo-camp-rentree', nom: 'Pub Rentrée', plateforme: 'meta', budget: 120,
+    cle: 'pub-rentree', debut: jourCivilILYA(40), fin: null, budget_maj_le: ilYA(22, 9, 0),
+    bilan: bilanRentree,
+    creations: creationsRentree,
+    reste: resteHorsCreations(bilanRentree, creationsRentree),
+  }
+  const flotte: CampagneAffichee = {
+    id: 'demo-camp-flotte', nom: 'Promo Flotte Garages', plateforme: 'google', budget: 80,
+    cle: 'promo-flotte-garages', debut: jourCivilILYA(60), fin: jourCivilILYA(45), budget_maj_le: jourCivilILYA(45),
+    bilan: bilanFlotte,
+    creations: [],
+    reste: resteHorsCreations(bilanFlotte, []),
+  }
+
+  return { campagnes: [rentree, flotte] }
 }

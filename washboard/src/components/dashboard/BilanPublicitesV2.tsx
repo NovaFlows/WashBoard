@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { formatEuros } from '@/lib/plan'
 import {
   labelPlateforme, synthese, toutesLesCreations, parPlateforme, estFiable,
@@ -23,6 +24,14 @@ import {
 // précédent. Cette page-ci ne fait que lire : rien n'y est modifiable, et
 // c'est volontaire. Un écran de bilan où l'on peut agir devient un second
 // écran de gestion, et les deux divergent.
+//
+// PASSE BUREAU (2026-10-06) : sert aussi le site en grand écran (voir BilanPublicites.tsx).
+// Chaque carte reste identique — même JSX, construit une seule fois en variables plus bas — et
+// seule la mise en page change : une colonne empilée sur téléphone, une colonne fixe de 260px
+// (« Tout additionné ») à côté du reste en grand écran (maquette, écran 34). Sans cette
+// seconde forme, le plafond mobile (`max-w-3xl`) aurait centré un bloc étroit au milieu d'un
+// très grand espace vide — le défaut de panneau à moitié vide déjà corrigé ailleurs sur cette
+// branche.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -107,6 +116,7 @@ function LigneRang({ rang, titre: intitule, sousTitre, valeur, aide, couleur }: 
 export type BilanPublicitesProps = { campagnes: CampagneAffichee[] }
 
 export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
+  const grandEcran = useGrandEcran()
   const totaux = useMemo(
     () => synthese(campagnes.map(c => c.bilan), campagnes.map(c => c.budget)),
     [campagnes],
@@ -128,9 +138,121 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
   const couleur = couleurRetour(totaux.retour, totaux.reservations)
   const tauxGlobal = totaux.visites > 0 ? (totaux.reservations / totaux.visites) * 100 : null
 
+  // Chaque carte construite UNE fois, en variable : la grille bureau et la colonne mobile
+  // affichent exactement le même JSX, seule la façon de les ranger change plus bas.
+  const carteTotaux = (
+    <Carte titre="Tout additionné">
+      <Mesure label="Dépensé" valeur={`${formatEuros(totaux.budget)} €`} />
+      <Mesure label="Encaissé" valeur={`${formatEuros(totaux.chiffreAffaires)} €`} />
+      <Mesure
+        label="Retour"
+        valeur={totaux.reservations > 0 ? multiple(totaux.retour) : '—'}
+        couleur={couleur}
+      />
+      <Mesure label="Visites" valeur={String(totaux.visites)} />
+      <Mesure
+        label="Clients"
+        valeur={String(totaux.reservations)}
+        aide={totaux.coutParReservation === null
+          ? undefined
+          : `${formatEuros(Math.round(totaux.coutParReservation * 100) / 100)} € chacun`}
+      />
+      {/* Le taux global suit la même règle que partout : sous le seuil il
+          ne veut rien dire, et le montrer ferait tirer des conclusions
+          d'une poignée de clics. */}
+      <Mesure
+        label="Transformation"
+        valeur={estFiable(totaux.visites) ? pourcent(tauxGlobal) : 'Peu de données'}
+        pale={!estFiable(totaux.visites)}
+      />
+
+      {totaux.reservations > 0 && totaux.retour !== null && (
+        <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>
+          Pour 1 € de publicité, vous avez encaissé{' '}
+          <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
+            {formatEuros(Math.round(totaux.retour * 100) / 100)} €
+          </span>{' '}
+          de lavages.
+        </p>
+      )}
+    </Carte>
+  )
+
+  // Toutes les vidéos ensemble : c'est la seule vue qui permet de voir que la
+  // meilleure vidéo d'une petite campagne bat celle d'une grosse.
+  const carteVideos = videos.length > 0 ? (
+    <Carte titre="Vos vidéos, toutes campagnes confondues">
+      <ul>
+        {videos.slice(0, 10).map((v, i) => (
+          <LigneRang
+            key={v.creation.id}
+            rang={i + 1}
+            titre={v.creation.nom}
+            sousTitre={`${v.campagne} · ${v.visites} visite${v.visites > 1 ? 's' : ''}`}
+            valeur={`${v.reservations} client${v.reservations > 1 ? 's' : ''}`}
+            aide={v.chiffreAffaires > 0 ? `${formatEuros(v.chiffreAffaires)} €` : undefined}
+          />
+        ))}
+      </ul>
+      {videos.length > 10 && (
+        <p className={`mt-3 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          Les 10 premières sur {videos.length}.
+        </p>
+      )}
+    </Carte>
+  ) : null
+
+  // Deux plateformes ou plus seulement : « 100 % sur Meta » n'apprend rien à
+  // qui n'a jamais lancé ailleurs.
+  const cartePlateformes = plateformes.length > 1 ? (
+    <Carte titre="Par plateforme">
+      <ul>
+        {plateformes.map((p, i) => (
+          <LigneRang
+            key={p.plateforme}
+            rang={i + 1}
+            titre={labelPlateforme(p.plateforme)}
+            sousTitre={`${formatEuros(p.budget)} € dépensés · ${p.campagnes} campagne${p.campagnes > 1 ? 's' : ''}`}
+            valeur={p.reservations > 0 ? multiple(p.retour) : '—'}
+            aide={`${formatEuros(p.chiffreAffaires)} €`}
+            couleur={couleurRetour(p.retour, p.reservations)}
+          />
+        ))}
+      </ul>
+    </Carte>
+  ) : null
+
+  const carteCampagnes = (
+    <Carte titre="Vos campagnes">
+      <ul>
+        {classement.map((c, i) => (
+          <LigneRang
+            key={c.id}
+            rang={i + 1}
+            titre={c.nom}
+            sousTitre={`${labelPlateforme(c.plateforme)} · ${formatEuros(c.budget)} € dépensés`}
+            valeur={c.bilan.reservations > 0 ? multiple(c.bilan.retour) : '—'}
+            aide={`${formatEuros(c.bilan.chiffreAffaires)} €`}
+            couleur={couleurRetour(c.bilan.retour, c.bilan.reservations)}
+          />
+        ))}
+      </ul>
+    </Carte>
+  )
+
+  // Dire d'où viennent ces chiffres, une fois, en bas. Le budget est déclaré
+  // à la main : quelqu'un qui compare ce bilan à ce que Meta lui facture doit
+  // savoir pourquoi les deux peuvent différer.
+  const note = (
+    <p className={`px-1 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
+      Les montants dépensés sont ceux que vous avez saisis. Les visites et les clients sont
+      comptés par WashBoard, à partir des liens de vos campagnes.
+    </p>
+  )
+
   return (
     <div
-      className={`mx-auto -mx-3 -mt-6 max-w-3xl bg-[color:var(--v2-color-fond)] px-3 pb-24 pt-3 text-[color:var(--v2-color-encre)] sm:-mx-4 sm:px-4 ${police}`}
+      className={`${grandEcran ? '' : 'mx-auto -mx-3 -mt-6 max-w-3xl px-3 pt-3 sm:-mx-4 sm:px-4'} bg-[color:var(--v2-color-fond)] pb-24 text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -148,112 +270,28 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
         </div>
       </div>
 
-      <div className="space-y-3">
-        <Carte titre="Tout additionné">
-          <Mesure label="Dépensé" valeur={`${formatEuros(totaux.budget)} €`} />
-          <Mesure label="Encaissé" valeur={`${formatEuros(totaux.chiffreAffaires)} €`} />
-          <Mesure
-            label="Retour"
-            valeur={totaux.reservations > 0 ? multiple(totaux.retour) : '—'}
-            couleur={couleur}
-          />
-          <Mesure label="Visites" valeur={String(totaux.visites)} />
-          <Mesure
-            label="Clients"
-            valeur={String(totaux.reservations)}
-            aide={totaux.coutParReservation === null
-              ? undefined
-              : `${formatEuros(Math.round(totaux.coutParReservation * 100) / 100)} € chacun`}
-          />
-          {/* Le taux global suit la même règle que partout : sous le seuil il
-              ne veut rien dire, et le montrer ferait tirer des conclusions
-              d'une poignée de clics. */}
-          <Mesure
-            label="Transformation"
-            valeur={estFiable(totaux.visites) ? pourcent(tauxGlobal) : 'Peu de données'}
-            pale={!estFiable(totaux.visites)}
-          />
-
-          {totaux.reservations > 0 && totaux.retour !== null && (
-            <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>
-              Pour 1 € de publicité, vous avez encaissé{' '}
-              <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
-                {formatEuros(Math.round(totaux.retour * 100) / 100)} €
-              </span>{' '}
-              de lavages.
-            </p>
-          )}
-        </Carte>
-
-        {/* Toutes les vidéos ensemble : c'est la seule vue qui permet de voir
-            que la meilleure vidéo d'une petite campagne bat celle d'une
-            grosse. */}
-        {videos.length > 0 && (
-          <Carte titre="Vos vidéos, toutes campagnes confondues">
-            <ul>
-              {videos.slice(0, 10).map((v, i) => (
-                <LigneRang
-                  key={v.creation.id}
-                  rang={i + 1}
-                  titre={v.creation.nom}
-                  sousTitre={`${v.campagne} · ${v.visites} visite${v.visites > 1 ? 's' : ''}`}
-                  valeur={`${v.reservations} client${v.reservations > 1 ? 's' : ''}`}
-                  aide={v.chiffreAffaires > 0 ? `${formatEuros(v.chiffreAffaires)} €` : undefined}
-                />
-              ))}
-            </ul>
-            {videos.length > 10 && (
-              <p className={`mt-3 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                Les 10 premières sur {videos.length}.
-              </p>
-            )}
-          </Carte>
-        )}
-
-        {/* Deux plateformes ou plus seulement : « 100 % sur Meta » n'apprend
-            rien à qui n'a jamais lancé ailleurs. */}
-        {plateformes.length > 1 && (
-          <Carte titre="Par plateforme">
-            <ul>
-              {plateformes.map((p, i) => (
-                <LigneRang
-                  key={p.plateforme}
-                  rang={i + 1}
-                  titre={labelPlateforme(p.plateforme)}
-                  sousTitre={`${formatEuros(p.budget)} € dépensés · ${p.campagnes} campagne${p.campagnes > 1 ? 's' : ''}`}
-                  valeur={p.reservations > 0 ? multiple(p.retour) : '—'}
-                  aide={`${formatEuros(p.chiffreAffaires)} €`}
-                  couleur={couleurRetour(p.retour, p.reservations)}
-                />
-              ))}
-            </ul>
-          </Carte>
-        )}
-
-        <Carte titre="Vos campagnes">
-          <ul>
-            {classement.map((c, i) => (
-              <LigneRang
-                key={c.id}
-                rang={i + 1}
-                titre={c.nom}
-                sousTitre={`${labelPlateforme(c.plateforme)} · ${formatEuros(c.budget)} € dépensés`}
-                valeur={c.bilan.reservations > 0 ? multiple(c.bilan.retour) : '—'}
-                aide={`${formatEuros(c.bilan.chiffreAffaires)} €`}
-                couleur={couleurRetour(c.bilan.retour, c.bilan.reservations)}
-              />
-            ))}
-          </ul>
-        </Carte>
-
-        {/* Dire d'où viennent ces chiffres, une fois, en bas. Le budget est
-            déclaré à la main : quelqu'un qui compare ce bilan à ce que Meta
-            lui facture doit savoir pourquoi les deux peuvent différer. */}
-        <p className={`px-1 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-          Les montants dépensés sont ceux que vous avez saisis. Les visites et les clients sont
-          comptés par WashBoard, à partir des liens de vos campagnes.
-        </p>
-      </div>
+      {grandEcran ? (
+        // Colonne fixe (260px, maquette écran 34) pour « Tout additionné » — c'est le seul
+        // chiffre qu'on vient chercher d'un coup d'œil sans défiler — et le reste à côté,
+        // plutôt qu'une seule colonne étroite perdue au milieu d'un écran large.
+        <div className="grid grid-cols-[260px_1fr] items-start gap-6">
+          {carteTotaux}
+          <div className="space-y-3">
+            {carteVideos}
+            {cartePlateformes}
+            {carteCampagnes}
+            {note}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {carteTotaux}
+          {carteVideos}
+          {cartePlateformes}
+          {carteCampagnes}
+          {note}
+        </div>
+      )}
     </div>
   )
 }
