@@ -43,6 +43,7 @@ export default async function DocumentsPage() {
         <Documents
           prestations={(prestations ?? []).map(p => ({ id: p.id, name: p.name, price: Number(p.price) }))}
           nomLaveur={washer.name}
+          betaRefonte={washer.beta_refonte}
         />
       </Suspense>
     </DashboardShell>

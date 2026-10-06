@@ -17,22 +17,20 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 // chaque écran (Chiffres, Plus) sait déjà lui-même ce que son offre ne couvre pas
 // (`OffreContext`), le rail n'a pas à le deviner en double.
 //
-// « Documents » n'existe qu'à l'intérieur de la PWA installée (voir Documents.tsx, un
-// garde-fou qui renvoie le site vers l'ancien écran le plus proche — refonte.md, passe 5). Un
-// laveur sur le SITE en mode bureau (le drapeau, pas la PWA) qui cliquerait cette entrée
-// rebondirait donc aussitôt vers `/dashboard/factures` : pour éviter ce flash de redirection
-// inutile, le rail y pointe DIRECTEMENT quand `isPwa` est faux — même destination finale, sans
-// l'aller-retour.
-//
-// « Chiffres », lui, ne porte plus cette distinction depuis la passe « Chiffres bureau »
-// (2026-10-06) : son garde-fou (Chiffres.tsx) montre désormais ce même écran au site sur grand
-// écran avec `washer.beta_refonte` actif, exactement la condition qui affiche CE rail
-// (`showRailBureau` dans DashboardShell.tsx = `useDashboardV2() && useEcranRail()`). Autrement
-// dit, chaque fois que ce composant est monté, `/dashboard/chiffres` montre déjà la v2, qu'on
-// soit dans la PWA ou sur le site — plus besoin de distinguer les deux cas pour cette seule
-// entrée. Ce n'est pas vrai des trois autres (Aujourd'hui, Agenda, Clients, Plus) : mêmes
-// adresses depuis toujours, leur contenu bascule déjà v1/v2 à l'intérieur de la page (ou reste
-// v1 pour Aujourd'hui/Agenda/Plus, pas encore migrés — voir le rapport de la passe).
+// « Documents », comme « Chiffres » depuis la passe « Chiffres bureau » (2026-10-06), ne porte
+// plus de distinction PWA/site depuis la passe « Documents bureau » (2026-10-07) : son
+// garde-fou (Documents.tsx) montre désormais ce même écran au site sur grand écran avec
+// `washer.beta_refonte` actif — exactement la condition qui affiche CE rail (`showRailBureau`
+// dans DashboardShell.tsx = `useDashboardV2() && useEcranRail()`). Autrement dit, chaque fois
+// que ce composant est monté, `/dashboard/chiffres/documents` montre déjà la v2, qu'on soit
+// dans la PWA ou sur le site — plus besoin de distinguer les deux cas pour cette entrée non
+// plus : avant cette passe, le rail pointait encore vers `/dashboard/factures` pour un laveur
+// sur le site, ce qui aurait renvoyé vers l'écran v1 un laveur que `Documents.tsx` sait
+// désormais accueillir en v2 (six pages orphelines inversé : une page JOIGNABLE mais dont le
+// lien pointait ailleurs). Ce n'est pas vrai des trois autres (Aujourd'hui, Agenda, Clients,
+// Plus) : mêmes adresses depuis toujours, leur contenu bascule déjà v1/v2 à l'intérieur de la
+// page (ou reste v1 pour Aujourd'hui/Agenda/Plus, pas encore migrés — voir le rapport de la
+// passe).
 const police = '[font-family:var(--font-archivo)]'
 const nom = `${police} [font-weight:var(--v2-type-nom-poids)] [font-stretch:var(--v2-type-nom-largeur)]`
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -115,16 +113,21 @@ function destinations(): Destination[] {
   ]
 }
 
-function destinationDocuments(isPwa: boolean): Destination {
+function destinationDocuments(): Destination {
   return {
-    href: isPwa ? '/dashboard/chiffres/documents' : '/dashboard/factures',
+    // Toujours `/dashboard/chiffres/documents` : voir le commentaire plus haut — ce rail n'est
+    // jamais monté sans que `Documents.tsx` sache déjà montrer la v2 à cette adresse, PWA ou
+    // site.
+    href: '/dashboard/chiffres/documents',
     label: 'Documents',
     actif: p => p.startsWith('/dashboard/chiffres/documents') || p.startsWith('/dashboard/factures'),
     icone: ICONE_DOCUMENT,
   }
 }
 
-const NOUVEAU_HREF_PWA = '/dashboard/chiffres/documents?nouveau=1'
+// Même raisonnement que `destinationDocuments()` ci-dessus : une seule adresse, qui marche
+// aussi bien pour la PWA que pour le site en mode bureau.
+const NOUVEAU_HREF = '/dashboard/chiffres/documents?nouveau=1'
 
 function LigneRail({ item, actif }: { item: Destination; actif: boolean }) {
   return (
@@ -162,8 +165,8 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
   const pathname = usePathname() ?? ''
   const router = useRouter()
   const items = destinations()
-  const docs = destinationDocuments(isPwa)
-  const nouveauHref = isPwa ? NOUVEAU_HREF_PWA : '/dashboard/factures'
+  const docs = destinationDocuments()
+  const nouveauHref = NOUVEAU_HREF
 
   return (
     <nav
@@ -191,7 +194,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
       <Link
         href={nouveauHref}
         onClick={e => {
-          if (isPwa && pathname.startsWith('/dashboard/chiffres/documents')) {
+          if (pathname.startsWith('/dashboard/chiffres/documents')) {
             e.preventDefault()
             router.replace(nouveauHref, { scroll: false })
           }

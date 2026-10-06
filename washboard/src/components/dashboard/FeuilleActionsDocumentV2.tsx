@@ -21,6 +21,19 @@ const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR
 const jourCourt = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 
+/** Le pictogramme WhatsApp, exporté pour que le panneau bureau de `DocumentsV2.tsx`
+ *  (`FicheDocumentBureauV2`) puisse réutiliser exactement le même trait plutôt que de le
+ *  recopier une seconde fois — le reste du bouton (partage natif, repli `wa.me`) n'a pas
+ *  besoin d'être partagé, lui, puisque les deux présentations appellent le même callback
+ *  `onEnvoyerWhatsapp` posé par l'appelant (`DocumentsV2.tsx`). */
+export function IconeWhatsapp({ taille = 17 }: { taille?: number }) {
+  return (
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.3 4.7 4.84-1.27A9.9 9.9 0 1 0 12.04 2m0 1.8a8.1 8.1 0 1 1-4.1 15.09l-.29-.17-2.87.75.77-2.8-.19-.3A8.1 8.1 0 0 1 12.04 3.8m-3.2 4c-.15 0-.4.06-.61.29-.21.23-.8.79-.8 1.92s.82 2.23.94 2.38c.11.15 1.6 2.55 3.94 3.47 1.95.77 2.35.62 2.77.58.42-.04 1.36-.55 1.55-1.09.19-.54.19-1 .14-1.1-.06-.09-.21-.15-.44-.27-.23-.11-1.36-.67-1.57-.75-.21-.08-.36-.11-.51.12-.15.23-.59.74-.72.9-.13.15-.26.17-.49.06-.23-.12-.97-.36-1.85-1.14-.68-.61-1.15-1.36-1.28-1.59-.13-.23-.01-.35.1-.47.1-.1.23-.27.34-.4.11-.14.15-.23.23-.38.08-.16.04-.29-.02-.4-.06-.12-.51-1.25-.71-1.71-.17-.41-.35-.41-.5-.42z" />
+    </svg>
+  )
+}
+
 export default function FeuilleActionsDocumentV2({
   document: d, nomLaveur, occupe, onEnvoyer, onRepondre, onFacturer, onPayer, onSupprimer, onClose,
 }: {
@@ -91,9 +104,7 @@ export default function FeuilleActionsDocumentV2({
             className={`${secondaire} gap-2`}
             style={PRESSION}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.3 4.7 4.84-1.27A9.9 9.9 0 1 0 12.04 2m0 1.8a8.1 8.1 0 1 1-4.1 15.09l-.29-.17-2.87.75.77-2.8-.19-.3A8.1 8.1 0 0 1 12.04 3.8m-3.2 4c-.15 0-.4.06-.61.29-.21.23-.8.79-.8 1.92s.82 2.23.94 2.38c.11.15 1.6 2.55 3.94 3.47 1.95.77 2.35.62 2.77.58.42-.04 1.36-.55 1.55-1.09.19-.54.19-1 .14-1.1-.06-.09-.21-.15-.44-.27-.23-.11-1.36-.67-1.57-.75-.21-.08-.36-.11-.51.12-.15.23-.59.74-.72.9-.13.15-.26.17-.49.06-.23-.12-.97-.36-1.85-1.14-.68-.61-1.15-1.36-1.28-1.59-.13-.23-.01-.35.1-.47.1-.1.23-.27.34-.4.11-.14.15-.23.23-.38.08-.16.04-.29-.02-.4-.06-.12-.51-1.25-.71-1.71-.17-.41-.35-.41-.5-.42z" />
-            </svg>
+            <IconeWhatsapp />
             Envoyer le PDF (WhatsApp…)
           </button>
         )}

@@ -42,6 +42,8 @@ import type { PropsAbonnement } from '@/components/dashboard/Abonnement'
 import type { SupportThread } from '@/lib/support'
 import { computeSetupProgress, type SetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 import { semaineAccueil, type JourSemaine, type RdvPourSemaine } from '@/lib/semaineAccueil'
+import { totalLignes, type Document, type GenreDocument, type StatutDocument } from '@/lib/documents'
+import { totauxFacture, type LigneFacture } from '@/lib/facture'
 
 // ── Prestations et prix (cohérents avec la grille réelle d'Éclat Mobile) ───────────────────
 const SERVICE_EXPRESS = { name: 'Extérieur express', price: 35, duration_minutes: 25 }
@@ -1224,4 +1226,228 @@ export function jeuDeDonneesPlusDemo(): {
     abonnement,
     assistanceThreads,
   }
+}
+
+// ── Jeu de données pour « Documents » (passe « Documents bureau », 2026-10-07) ───────────────
+//
+// `DocumentsV2` attend des `Document[]` COMPLETS (`lib/documents.ts`) — vendeur, lignes, totaux,
+// pas seulement les quelques champs que `ClientDocument` porte pour la fiche client. Les CINQ
+// documents déjà fabriqués plus haut pour `jeuDeDonneesDemo()` (D-00041 Thomas Girard, D-00043
+// Maxime Dupuis, F-00037 Chloé Lefebvre, F-00038 Sophie Marchand, F-00039 Karim Benali) sont
+// repris ICI avec les mêmes numéros, clients et montants — plutôt que d'inventer un second jeu
+// qui raconterait autre chose sur le même numéro, ce qui aurait rendu le fichier client et
+// l'écran Documents incohérents entre eux dès qu'on passe de l'un à l'autre dans `/demo`. Neuf
+// documents de plus couvrent les statuts que ces cinq-là ne montrent pas encore (devis à
+// envoyer, accepté, refusé, expiré ; facture impayée) — mêmes clients que les réservations de
+// `jeuDeDonneesDemo()` quand c'est plausible, pour la même raison de cohérence.
+const VENDEUR_DOCUMENTS_DEMO = {
+  nomLegal: 'Julien Roussel',
+  nomCommercial: 'Éclat Mobile',
+  siret: '12345678900012',
+  adresse: '12 Rue Fondaudège, 33000 Bordeaux',
+  telephone: '0612345678',
+  regimeTva: 'franchise' as const,
+  tauxTva: 0,
+  numeroTva: null,
+  statut: 'ei' as const,
+  formeJuridique: null,
+  capital: null,
+  immatriculation: null,
+  logoUrl: null,
+  couleur: '#1456D1',
+}
+
+function ligneDocumentDemo(designation: string, prixUnitaireTtc: number, quantite = 1): LigneFacture {
+  return { designation, quantite, prixUnitaireTtc, totalTtc: Math.round(quantite * prixUnitaireTtc * 100) / 100 }
+}
+
+/** Construit un `Document` complet à partir de ce qu'un cas de démo a besoin de préciser — le
+ *  reste (vendeur, régime de TVA, totaux) est calculé par les mêmes fonctions pures que la
+ *  vraie construction d'un document (`totauxFacture`, `lib/facture.ts`), jamais recopié à la
+ *  main : un montant qui ne retomberait pas juste se verrait tout de suite sur la fiche
+ *  (section « Lignes » contre « Total »). */
+function documentDemo(args: {
+  id: string
+  numero: string
+  genre: GenreDocument
+  statut: StatutDocument
+  emisLe: string
+  clientNom: string
+  clientEmail: string
+  clientTelephone?: string | null
+  professionnel?: boolean
+  entreprise?: string | null
+  adresse: string
+  vehicule?: string | null
+  lignes: LigneFacture[]
+  envoyeLe?: string | null
+  renponduLe?: string | null
+  valableJusquau?: string | null
+  payeLe?: string | null
+  factureId?: string | null
+  devisId?: string | null
+  datePrestation?: string | null
+  lieu?: string
+  note?: string | null
+}): Document {
+  const brut = totalLignes(args.lignes)
+  return {
+    id: args.id,
+    genre: args.genre,
+    statut: args.statut,
+    numero: args.numero,
+    emis_le: args.emisLe,
+    envoye_le: args.envoyeLe ?? null,
+    valable_jusquau: args.genre === 'devis' ? (args.valableJusquau ?? null) : null,
+    repondu_le: args.renponduLe ?? null,
+    paye_le: args.genre === 'facture' ? (args.payeLe ?? null) : null,
+    facture_id: args.factureId ?? null,
+    devis_id: args.devisId ?? null,
+    created_at: args.emisLe,
+    contenu: {
+      version: 1,
+      genre: args.genre,
+      vendeur: VENDEUR_DOCUMENTS_DEMO,
+      client: {
+        nom: args.clientNom,
+        email: args.clientEmail,
+        telephone: args.clientTelephone ?? null,
+        professionnel: args.professionnel ?? false,
+        entreprise: args.professionnel ? (args.entreprise ?? null) : null,
+        siren: null,
+        adresseFacturation: args.adresse,
+        vehicule: args.vehicule ?? null,
+      },
+      prestation: { date: args.datePrestation ?? null, lieu: args.lieu ?? args.adresse, nature: 'Prestation de services' },
+      lignes: args.lignes,
+      remiseTtc: 0,
+      totaux: totauxFacture(brut, 'franchise', 0),
+      valableJusquau: args.genre === 'devis' ? (args.valableJusquau ?? null) : null,
+      note: args.note ?? null,
+    },
+  }
+}
+
+export function jeuDeDonneesDocumentsDemo(): {
+  documents: Document[]
+  prestations: { id: string; name: string; price: number }[]
+} {
+  const documents: Document[] = [
+    // — Les cinq déjà connus de la fiche client (mêmes numéros, clients, montants) —
+    documentDemo({
+      id: 'demo-doc-d41', numero: 'D-00041', genre: 'devis', statut: 'envoye', emisLe: ilYA(4, 9, 0),
+      envoyeLe: ilYA(4, 9, 5),
+      clientNom: 'Thomas Girard', clientEmail: 'thomas.girard@gmail.com', clientTelephone: '0623987654',
+      adresse: '11 Rue du Hâ, 33000 Bordeaux', vehicule: 'Renault Clio',
+      lignes: [ligneDocumentDemo(SERVICE_SIEGES.name, 120)],
+      valableJusquau: jourCivilDansNJours(26),
+    }),
+    documentDemo({
+      id: 'demo-doc-d43', numero: 'D-00043', genre: 'devis', statut: 'envoye', emisLe: ilYA(6, 14, 0),
+      envoyeLe: ilYA(6, 14, 5),
+      clientNom: 'Maxime Dupuis', clientEmail: 'maxime.dupuis@gmail.com', clientTelephone: '0656123498',
+      adresse: '17 Rue Boudet, 33000 Bordeaux', vehicule: 'Citroën C4',
+      lignes: [ligneDocumentDemo(SERVICE_COMPLET.name, 59)],
+      valableJusquau: jourCivilDansNJours(24),
+    }),
+    documentDemo({
+      id: 'demo-doc-f37', numero: 'F-00037', genre: 'facture', statut: 'emis', emisLe: ilYA(22, 10, 0),
+      envoyeLe: ilYA(22, 10, 5), payeLe: ilYA(18, 9, 0),
+      clientNom: 'Chloé Lefebvre', clientEmail: 'chloe.lefebvre@gmail.com', clientTelephone: '0667891234',
+      adresse: '4 Rue des Faussets, 33000 Bordeaux', vehicule: 'Fiat 500',
+      lignes: [ligneDocumentDemo(SERVICE_COMPLET.name, 59)], datePrestation: jourCivilILYA(22),
+    }),
+    documentDemo({
+      id: 'demo-doc-f38', numero: 'F-00038', genre: 'facture', statut: 'emis', emisLe: ilYA(40, 10, 0),
+      envoyeLe: ilYA(40, 10, 5), payeLe: ilYA(33, 9, 0),
+      clientNom: 'Sophie Marchand', clientEmail: 'sophie.marchand@flotte-bordeaux.fr', clientTelephone: '0610000002',
+      professionnel: true, entreprise: 'Flotte Déplacement Bordeaux',
+      adresse: '8 Avenue des Transports, 33700 Mérignac',
+      lignes: [ligneDocumentDemo(SERVICE_EXPRESS.name, 35)], datePrestation: jourCivilILYA(40),
+    }),
+    documentDemo({
+      id: 'demo-doc-f39', numero: 'F-00039', genre: 'facture', statut: 'emis', emisLe: ilYA(60, 10, 0),
+      envoyeLe: ilYA(60, 10, 5), payeLe: ilYA(52, 9, 0),
+      clientNom: 'Karim Benali', clientEmail: 'karim.benali@flotte-bordeaux.fr', clientTelephone: '0610000001',
+      professionnel: true, entreprise: 'Flotte Déplacement Bordeaux',
+      adresse: '12 Rue du Hangar, 33300 Bordeaux',
+      lignes: [ligneDocumentDemo('Forfait flotte · 3 véhicules', 70, 3)], datePrestation: jourCivilILYA(60),
+    }),
+
+    // — Neuf de plus, pour que chaque filtre (type, état, période, client, montant) trouve
+    // vraiment quelque chose à montrer ou à exclure —
+    documentDemo({
+      id: 'demo-doc-d44', numero: 'D-00044', genre: 'devis', statut: 'accepte', emisLe: ilYA(10, 9, 0),
+      envoyeLe: ilYA(10, 9, 5), renponduLe: ilYA(8, 11, 0),
+      clientNom: 'Camille Lambert', clientEmail: 'camille.lambert@gmail.com', clientTelephone: '0690123456',
+      adresse: '14 Rue Lecocq, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo('Rénovation sièges tissu', 150)],
+      valableJusquau: jourCivilDansNJours(20),
+    }),
+    documentDemo({
+      id: 'demo-doc-d45', numero: 'D-00045', genre: 'devis', statut: 'refuse', emisLe: ilYA(25, 9, 0),
+      envoyeLe: ilYA(25, 9, 5), renponduLe: ilYA(22, 10, 0),
+      clientNom: 'Marc Lefevre', clientEmail: 'marc.lefevre@orange.fr', clientTelephone: '0623456789',
+      adresse: '15 Rue Judaïque, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo('Polish carrosserie', 80)],
+      valableJusquau: jourCivilDansNJours(5),
+    }),
+    documentDemo({
+      id: 'demo-doc-d46', numero: 'D-00046', genre: 'devis', statut: 'emis', emisLe: ilYA(1, 9, 0),
+      clientNom: 'Nathalie Robert', clientEmail: 'nathalie.robert@yahoo.fr', clientTelephone: '0645678901',
+      adresse: '9 Rue Fondaudège, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo('Shampouinage sièges', 45)],
+      valableJusquau: jourCivilDansNJours(29),
+    }),
+    documentDemo({
+      id: 'demo-doc-d56', numero: 'D-00056', genre: 'devis', statut: 'envoye', emisLe: ilYA(40, 9, 0),
+      envoyeLe: ilYA(40, 9, 5),
+      clientNom: 'Antoine Michel', clientEmail: 'antoine.michel@gmail.com', clientTelephone: '0689012345',
+      adresse: '30 Rue Sainte-Croix, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo('Rénovation plastiques', 95)],
+      // Déjà périmé (date de validité dans le passé) : se lit « Expiré », pas « En attente de
+      // réponse » (voir `devisExpire()`, `lib/documents.ts`) — un cas que les cinq documents
+      // existants ne couvraient pas.
+      valableJusquau: jourCivilILYA(5),
+    }),
+    documentDemo({
+      id: 'demo-doc-f40', numero: 'F-00040', genre: 'facture', statut: 'emis', emisLe: ilYA(5, 9, 0),
+      envoyeLe: ilYA(5, 9, 5),
+      clientNom: 'Léa Mercier', clientEmail: 'lea.mercier@gmail.com', clientTelephone: '0612309876',
+      adresse: '6 Rue des Trois Conils, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo(SERVICE_COMPLET.name, 59)], datePrestation: jourCivilILYA(5),
+      // `payeLe` absent : impayée — c'est elle qui doit faire monter le total « dont … impayés ».
+    }),
+    documentDemo({
+      id: 'demo-doc-f42', numero: 'F-00042', genre: 'facture', statut: 'emis', emisLe: ilYA(70, 9, 0),
+      envoyeLe: ilYA(70, 9, 5),
+      clientNom: 'David Rousseau', clientEmail: 'david.rousseau@rousseau-immo.fr', clientTelephone: '0699998888',
+      professionnel: true, entreprise: 'Rousseau Immobilier',
+      adresse: '20 Cours de l’Intendance, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo(SERVICE_COMPLET.name, 59)], datePrestation: jourCivilILYA(70),
+    }),
+    documentDemo({
+      id: 'demo-doc-f47', numero: 'F-00047', genre: 'facture', statut: 'emis', emisLe: ilYA(2, 9, 0),
+      envoyeLe: ilYA(2, 9, 5), payeLe: ilYA(1, 10, 0),
+      clientNom: 'Pierre Moreau', clientEmail: 'pierre.moreau@moreauautodetail.fr', clientTelephone: '0611112222',
+      professionnel: true, entreprise: 'Moreau Auto Détailing',
+      adresse: '5 Rue des Artisans, 33000 Bordeaux', vehicule: 'Porsche Cayenne',
+      lignes: [ligneDocumentDemo(SERVICE_SIEGES.name, 120)], datePrestation: jourCivilILYA(2),
+    }),
+    documentDemo({
+      id: 'demo-doc-f50', numero: 'F-00050', genre: 'facture', statut: 'emis', emisLe: ilYA(40, 9, 0),
+      envoyeLe: ilYA(40, 9, 5), payeLe: ilYA(36, 10, 0),
+      clientNom: 'Hugo Garnier', clientEmail: 'hugo.garnier@gmail.com', clientTelephone: '0645123789',
+      adresse: '33 Rue Saint-James, 33000 Bordeaux',
+      lignes: [ligneDocumentDemo(SERVICE_COMPLET.name, 59)], datePrestation: jourCivilILYA(40),
+    }),
+  ]
+
+  const prestations = [
+    { id: 'demo-doc-prestation-express', name: SERVICE_EXPRESS.name, price: SERVICE_EXPRESS.price },
+    { id: 'demo-doc-prestation-complet', name: SERVICE_COMPLET.name, price: SERVICE_COMPLET.price },
+    { id: 'demo-doc-prestation-sieges', name: SERVICE_SIEGES.name, price: SERVICE_SIEGES.price },
+  ]
+
+  return { documents, prestations }
 }

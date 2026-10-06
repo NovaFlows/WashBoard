@@ -11,6 +11,7 @@ import PublicitesV2 from '@/components/dashboard/PublicitesV2'
 import BilanPublicitesV2 from '@/components/dashboard/BilanPublicitesV2'
 import ChiffresV2 from '@/components/dashboard/ChiffresV2'
 import DepensesV2 from '@/components/dashboard/DepensesV2'
+import DocumentsV2 from '@/components/dashboard/DocumentsV2'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import ParametresFormV2 from '@/components/dashboard/ParametresFormV2'
 import ApparenceV2 from '@/components/dashboard/ApparenceV2'
@@ -26,9 +27,11 @@ import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
 import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import type { SupportThread } from '@/lib/support'
+import type { Document as DocumentDonnees } from '@/lib/documents'
 import type {
   jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo,
-  jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo, AccueilDemo,
+  jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo, jeuDeDonneesDocumentsDemo,
+  AccueilDemo,
 } from '@/lib/demo/jeuDeDonnees'
 
 type Donnees = ReturnType<typeof jeuDeDonneesDemo>
@@ -38,6 +41,7 @@ type PublicitesDonnees = ReturnType<typeof jeuDeDonneesPublicitesDemo>
 type ChiffresDonnees = ReturnType<typeof jeuDeDonneesChiffresDemo>
 type DepensesDonnees = ReturnType<typeof jeuDeDonneesDepensesDemo>
 type PlusDonnees = ReturnType<typeof jeuDeDonneesPlusDemo>
+type DocumentsDonnees = ReturnType<typeof jeuDeDonneesDocumentsDemo>
 type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota: AccueilDemo }
 
 // Huit écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
@@ -102,7 +106,7 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // prop `liste` (sauf « Mon profil », qui la dérive de la fiche laveur complète qu'il reçoit
 // déjà — voir ProfilV2.tsx) : réduire la fenêtre sous 1024px y montre, à l'intérieur de
 // l'écran, sa disposition à une seule colonne (`useGrandEcran()`, lu par chacun en interne).
-type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan' | 'chiffres' | 'depenses' | 'plus'
+type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan' | 'chiffres' | 'depenses' | 'documents' | 'plus'
 type EtatAujourdhui = 'normal' | 'premierJour' | 'quota'
 // 'reglages'/'abonnement'/'guide'/'assistance'/'verrouille' : passe « Plus bureau, second lot »
 // (2026-10-06) — écrans 61 à 65 de la maquette bureau. Le 66 (« réservation verrouillée ») n'a
@@ -157,6 +161,7 @@ function SelecteurDemo({
           <PilulePilote actif={ecran === 'bilan'} onClick={() => onEcran('bilan')}>Bilan publicités</PilulePilote>
           <PilulePilote actif={ecran === 'chiffres'} onClick={() => onEcran('chiffres')}>Chiffres</PilulePilote>
           <PilulePilote actif={ecran === 'depenses'} onClick={() => onEcran('depenses')}>Dépenses</PilulePilote>
+          <PilulePilote actif={ecran === 'documents'} onClick={() => onEcran('documents')}>Documents</PilulePilote>
           <PilulePilote actif={ecran === 'plus'} onClick={() => onEcran('plus')}>Plus</PilulePilote>
         </div>
         <span className={`text-[12px] ${corps}`} style={{ color: 'var(--v2-color-gris)' }}>
@@ -283,6 +288,35 @@ function useDonneesDepensesDemo(depenses: Depense[], recurrents: DepenseRecurren
   }, [depenses, recurrents])
 }
 
+/** `DocumentsV2` (écran « Documents bureau ») lit elle-même `/api/documents` au montage
+ *  (`lireDocuments()`, `lib/documentsApi.ts`) — contrairement au reste de cette page, ses
+ *  documents ne sont pas reçus en props. Cette route exige une session, que `/demo` ne fournit
+ *  jamais (401 sans elle) : sans ce détour, l'écran afficherait sa liste vide. Même schéma que
+ *  `useDonneesDepensesDemo`/`useDonneesAssistanceDemo` : seule cette lecture GET est déviée,
+ *  jamais `/api/documents/[id]/pdf` (le téléchargement du PDF reste un lien direct, pas un
+ *  `fetch` — il échouera comme n'importe quelle autre route authentifiée de cette page, voir le
+ *  rapport de la passe) ni les écritures (POST/PATCH/DELETE), déjà bloquées par
+ *  `useVerrouEcriture`. */
+function useDonneesDocumentsDemo(documents: DocumentDonnees[]) {
+  useEffect(() => {
+    const origine = window.fetch
+    window.fetch = async (entree, init) => {
+      const url = typeof entree === 'string'
+        ? entree
+        : (typeof Request !== 'undefined' && entree instanceof Request ? entree.url : String(entree))
+      const methode = (init?.method
+        ?? (typeof Request !== 'undefined' && entree instanceof Request ? entree.method : 'GET')).toUpperCase()
+      const chemin = url.startsWith('http') ? new URL(url).pathname : url
+
+      if (methode === 'GET' && chemin === '/api/documents') {
+        return new Response(JSON.stringify({ documents }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      return origine(entree, init)
+    }
+    return () => { window.fetch = origine }
+  }, [documents])
+}
+
 /** `AssistanceV2` (écran 64) lit elle-même `/api/support/questions` (via `useSupportThreads`)
  *  et `AccesSupportV2` lit `/api/support/grant` (via `useAccesSupport`) — ni l'une ni l'autre ne
  *  reçoit ses données en props, contrairement au reste de cette page. Ces routes exigent une
@@ -322,7 +356,7 @@ function useDonneesAssistanceDemo(threads: SupportThread[]) {
  *  (`ClientsViewV2`, `Accueil`/`AccueilV2`), nourris des jeux de données fabriqués côté serveur
  *  (`jeuDeDonneesDemo()`/`jeuDeDonneesAccueilDemo()`, appelés une fois par `page.tsx` pour que
  *  les dates relatives (« cette semaine », « demain ») restent cohérentes sur toute la page). */
-export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites, chiffres, depenses, plus }: {
+export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites, chiffres, depenses, plus, documents }: {
   donnees: Donnees
   accueil: AccueilTroisEtats
   agenda: AgendaDonnees
@@ -331,10 +365,12 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
   chiffres: ChiffresDonnees
   depenses: DepensesDonnees
   plus: PlusDonnees
+  documents: DocumentsDonnees
 }) {
   useVerrouEcriture()
   useDonneesDepensesDemo(depenses.depenses, depenses.recurrents)
   useDonneesAssistanceDemo(plus.assistanceThreads)
+  useDonneesDocumentsDemo(documents.documents)
   const [ecran, setEcran] = useState<Ecran>('aujourdhui')
   const [etat, setEtat] = useState<EtatAujourdhui>('normal')
   const [ecranPlus, setEcranPlus] = useState<EcranPlus>('liste')
@@ -410,6 +446,8 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
         />
       ) : ecran === 'depenses' ? (
         <DepensesV2 />
+      ) : ecran === 'documents' ? (
+        <DocumentsV2 prestations={documents.prestations} nomLaveur={donnees.nomLaveur} />
       ) : ecran === 'plus' ? (
         ecranPlus === 'liste' ? (
           <ParametresFormV2
