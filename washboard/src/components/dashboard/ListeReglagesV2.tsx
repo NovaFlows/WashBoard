@@ -31,7 +31,16 @@ import Link from 'next/link'
 // n'a pas déjà cette donnée (ex. « Mes liens » n'a jamais lu les prestations) — la ligne
 // s'affiche alors sans son annotation plutôt qu'avec un chiffre ou un badge inventé, même
 // règle que `ParametresFormV2` avant cette passe.
-export type ClePlus = 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence' | null
+//
+// `'reglages'` et `'abonnement'` (passe « Plus bureau, second lot », 2026-10-06) : les quatre
+// écrans qu'ouvre la section « Mon compte » (Réglages, Abonnement, et — un niveau plus bas,
+// depuis Réglages — Guide et Assistance) marquent tous la MÊME ligne sélectionnée que celle
+// qu'on a cliquée pour y arriver. Guide et Assistance n'ont pas leur propre ligne ICI (elles
+// vivent dans la liste « De l'aide » de `ReglagesV2`, pas dans celle-ci) : leur pane affiche
+// donc `selection="reglages"` ET son propre fil d'Ariane « ‹ Réglages », exactement comme la
+// maquette (écrans 63/64 : la ligne surlignée à gauche reste « Réglages », un petit lien
+// « ‹ Réglages » apparaît en haut du panneau).
+export type ClePlus = 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence' | 'reglages' | 'abonnement' | null
 
 export type ReglagesListeProps = {
   nom: string
@@ -156,13 +165,14 @@ export default function ListeReglagesV2({
       <div>
         <TitreSection>Mon compte</TitreSection>
         <CarteListe>
-          <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" />
+          <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" selected={selection === 'abonnement'} />
           <Ligne
             label="Réglages"
             signal={notifications.ton === 'ambre' || unreadSupportCount
               ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
               : undefined}
             href="/dashboard/parametres/reglages"
+            selected={selection === 'reglages'}
           />
           <form action="/api/auth/logout" method="POST" className="flex items-center min-h-[46px] py-1.5">
             <button type="submit" className={`text-[15px] ${corps} text-left`} style={{ color: 'var(--v2-color-rouge)' }}>

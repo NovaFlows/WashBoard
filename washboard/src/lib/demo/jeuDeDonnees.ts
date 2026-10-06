@@ -35,9 +35,11 @@ import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import { bilanCampagne, resteHorsCreations, type BilanCreation, type CampagneAffichee, type Creation } from '@/lib/campagne'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { Availability, Service, ServiceCategory, Unavailability as UnavailabilityReelle, Washer, ZoneConfig } from '@/types'
-import type { Plan } from '@/lib/plan'
+import { quotaReservations, quotaPrestations, libelleRemiseAZero, type Plan } from '@/lib/plan'
 import type { ReglagesApparence } from '@/hooks/useApparenceV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import type { PropsAbonnement } from '@/components/dashboard/Abonnement'
+import type { SupportThread } from '@/lib/support'
 import { computeSetupProgress, type SetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 import { semaineAccueil, type JourSemaine, type RdvPourSemaine } from '@/lib/semaineAccueil'
 
@@ -98,6 +100,12 @@ export function jeuDeDonneesDemo(): {
   entreprises: EntrepriseListItem[]
   nomLaveur: string
   automatismes: AutomatismesClients
+  /** Réservations venues au-delà du quota de l'offre — écran 66 de la maquette bureau
+   *  (« Réservation verrouillée »). Même forme que `ReservationMasquee` (nom, téléphone, email,
+   *  adresse et heure jamais chargés, voir `ReservationVerrouilleeV2.tsx`) : passées à
+   *  `ClientsViewV2` sous `bloques`, en tête de la liste « Tous ». */
+  bloques: ReservationMasquee[]
+  offreDeblocage: string
 } {
   const bookings: ClientBooking[] = [
     // — Cette semaine —
@@ -411,7 +419,19 @@ export function jeuDeDonneesDemo(): {
     ],
   }
 
-  return { bookings, documents, reglages, reglagesMessages, entreprises, nomLaveur: 'Julien Roussel', automatismes }
+  // Trois réservations qui existent (un vrai client a réservé) mais que l'offre Starter ne
+  // montre pas — même convention que `jeuDeDonneesAccueilDemo()` (état « Quota atteint »,
+  // plus bas) pour les mêmes trois jours récents.
+  const bloques: ReservationMasquee[] = [
+    { id: 'demo-bloque-1', scheduled_at: ilYA(1, 9, 0) },
+    { id: 'demo-bloque-2', scheduled_at: ilYA(2, 14, 30) },
+    { id: 'demo-bloque-3', scheduled_at: ilYA(3, 11, 0) },
+  ]
+
+  return {
+    bookings, documents, reglages, reglagesMessages, entreprises, nomLaveur: 'Julien Roussel', automatismes,
+    bloques, offreDeblocage: 'Starter',
+  }
 }
 
 // ── Jeu de données pour « Aujourd'hui » (AccueilV2), passe bureau ─────────────────────────────
@@ -1047,6 +1067,15 @@ export function jeuDeDonneesPlusDemo(): {
   }
   profil: { washer: Washer; email: string; peutEquipe: boolean }
   slug: string
+  /** Écran 62 (« Abonnement ») — convention de la maquette bureau (`README.md` : les écrans qui
+   *  montrent justement une limite repassent Éclat Mobile en Starter, chiffres réels). Pro
+   *  partout ailleurs sur cette page, Starter ICI seulement, pour que la jauge « 12 / 15 » et
+   *  les boutons « Passer à Pro »/« Passer à Business » aient un sens — un Pro n'a aucun plafond
+   *  (`lib/plan.ts`), l'écran serait vide de la moitié de ce qu'il doit montrer. */
+  abonnement: Omit<PropsAbonnement, 'liste' | 'betaRefonte'>
+  /** Écran 64 (« Aide et assistance ») : trois conversations, une ouverte avec deux messages
+   *  (celle que la maquette montre sélectionnée), une résolue, une en attente de réponse. */
+  assistanceThreads: SupportThread[]
 } {
   const nom = 'Éclat Mobile'
   const slug = 'demo-eclat-mobile'
@@ -1119,6 +1148,64 @@ export function jeuDeDonneesPlusDemo(): {
     facture_prochain_numero: 64, beta_refonte: true,
   }
 
+  // Washer Starter, pour l'écran « Abonnement » seulement (voir le commentaire du type
+  // ci-dessus) — mêmes fonctions pures que la vraie page (`lib/plan.ts`), aucun chiffre écrit
+  // à la main : la jauge et le bouton « Passer à » resteraient corrects même si `BOOKING_QUOTA`
+  // changeait demain.
+  const washerStarter = { plan: 'starter' as const, grandfathered: false, created_at: versISO(-70, 9) }
+  const abonnement: Omit<PropsAbonnement, 'liste' | 'betaRefonte'> = {
+    subscriptionStatus: 'active',
+    trialEndsAt: null,
+    subscriptionEndsAt: null,
+    plan: 'starter',
+    grandfathered: false,
+    doitChoisir: false,
+    plafondReservations: quotaReservations(washerStarter),
+    reservationsCeMois: 12,
+    plafondPrestations: quotaPrestations(washerStarter),
+    prestationsAuCatalogue: services.length,
+    remiseAZero: libelleRemiseAZero(washerStarter.created_at),
+  }
+
+  const assistanceThreads: SupportThread[] = [
+    {
+      id: 'demo-fil-siret',
+      title: 'Changer mon SIRET sur mes factures',
+      status: 'ouverte',
+      vuParEquipe: true,
+      nonLuesCount: 0,
+      messages: [
+        { id: 'demo-msg-1', from: 'laveur', text: 'Bonjour, je viens de passer en EURL, comment je mets à jour mon SIRET sur mes factures ?', createdAt: versISO(-5, 18, 40) },
+        { id: 'demo-msg-2', from: 'equipe', text: 'Bonjour Julien ! Rendez-vous dans Mon profil → Facturation, vous pouvez modifier votre SIRET et votre forme juridique directement. Les factures déjà émises ne changent pas.', createdAt: versISO(-5, 19, 5) },
+        { id: 'demo-msg-3', from: 'laveur', text: 'Parfait, et le numéro de TVA si je deviens assujetti plus tard ?', createdAt: versISO(-5, 19, 7) },
+        { id: 'demo-msg-4', from: 'equipe', text: 'Même endroit, un champ apparaît dès que vous passez sur « Je facture la TVA ». On reste dispo si besoin !', createdAt: versISO(-4, 9, 12) },
+      ],
+    },
+    {
+      id: 'demo-fil-instagram',
+      title: 'Mon lien ne s’affiche pas sur Instagram',
+      status: 'resolue',
+      vuParEquipe: true,
+      nonLuesCount: 0,
+      messages: [
+        { id: 'demo-msg-5', from: 'laveur', text: 'Mon lien de réservation ne s’ouvre pas quand je le mets en story.', createdAt: versISO(-12, 10, 0) },
+        { id: 'demo-msg-6', from: 'equipe', text: 'Essayez de recopier le lien plutôt que « coller » depuis l’app Instagram, elle raccourcit parfois l’adresse. Dites-nous si ça persiste !', createdAt: versISO(-12, 11, 30) },
+      ],
+    },
+    {
+      id: 'demo-fil-tva',
+      title: 'Ajouter mon numéro de TVA',
+      status: 'resolue',
+      vuParEquipe: true,
+      nonLuesCount: 0,
+      messages: [
+        { id: 'demo-msg-7', from: 'laveur', text: 'Où est-ce que j’ajoute mon numéro de TVA ?', createdAt: versISO(-20, 8, 0) },
+        { id: 'demo-msg-8', from: 'equipe', text: 'Dans Mon profil → Facturation, une fois « Je facture la TVA » activé.', createdAt: versISO(-20, 9, 0) },
+        { id: 'demo-msg-9', from: 'laveur', text: 'Merci, c’est noté !', createdAt: versISO(-20, 9, 5) },
+      ],
+    },
+  ]
+
   return {
     listeBase,
     apparence: {
@@ -1134,5 +1221,7 @@ export function jeuDeDonneesPlusDemo(): {
     },
     profil: { washer: profilWasher, email: 'julien@eclatmobile.fr', peutEquipe: true },
     slug,
+    abonnement,
+    assistanceThreads,
   }
 }

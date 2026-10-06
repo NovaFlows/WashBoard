@@ -8,6 +8,8 @@ import {
   freeMonthsLabel, formatEuros, lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT,
   LIBELLE_RDV_BUSINESS, yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
 import type { PropsAbonnement } from '@/components/dashboard/Abonnement'
 
 // « Mon offre », présentation v2 — réservée à la PWA installée (voir
@@ -88,8 +90,9 @@ function JaugeV2({ titre: intitule, utilise, plafond, unite }: {
 export default function AbonnementV2({
   subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered,
   plafondReservations, reservationsCeMois, plafondPrestations, prestationsAuCatalogue,
-  remiseAZero, doitChoisir,
+  remiseAZero, doitChoisir, liste,
 }: PropsAbonnement) {
+  const grandEcran = useGrandEcran()
   const [maintenant] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
   const [facturation, setFacturation] = useState<BillingCycle>('yearly')
@@ -122,12 +125,14 @@ export default function AbonnementV2({
           ? { texte: 'Essai gratuit', ton: 'accent' as const }
           : { texte: 'Abonnement expiré', ton: 'rouge' as const }
 
-  return (
+  const contenu = (
     <div
-      className={`max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      className={grandEcran
+        ? `space-y-5 text-[color:var(--v2-color-encre)] ${police}`
+        : `max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div>
-        <h1 className={`text-[21px] ${titre}`}>Mon offre</h1>
+        <h1 className={grandEcran ? `text-[20px] ${titre}` : `text-[21px] ${titre}`}>Mon offre</h1>
         <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
           Ce que vous payez, ce qu’il vous reste, ce que vous pourriez prendre
         </p>
@@ -397,6 +402,17 @@ export default function AbonnementV2({
           Écrire à l’équipe
         </Link>
       </p>
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <ListeReglagesV2 {...liste} selection="abonnement" />
+      </div>
+      <div className="min-w-0 max-w-[720px] flex-1">{contenu}</div>
     </div>
   )
 }

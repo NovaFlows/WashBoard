@@ -4,6 +4,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Abonnement, { EnteteAbonnement } from '@/components/dashboard/Abonnement'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutPeriodeQuota, debutSoumisAuPlafond, libelleRemiseAZero } from '@/lib/plan'
+import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 
 export default async function AbonnementPage() {
@@ -52,7 +53,7 @@ export default async function AbonnementPage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
-      <EnteteAbonnement />
+      <EnteteAbonnement betaRefonte={washer.beta_refonte} />
       <Abonnement
         subscriptionStatus={washer.subscription_status ?? 'trial'}
         trialEndsAt={washer.trial_ends_at ?? null}
@@ -65,6 +66,18 @@ export default async function AbonnementPage() {
         plafondPrestations={plafondPrestations}
         prestationsAuCatalogue={prestations?.error ? null : prestations?.count ?? null}
         remiseAZero={libelleRemiseAZero(washer.created_at)}
+        // Liste « Plus », pour la colonne de gauche sur grand écran (voir Abonnement.tsx) :
+        // `washerDuUtilisateur` lit déjà toutes les colonnes ('*', voir son défaut) sur cette
+        // page, donc `brandColor` et `facturationIncomplete` ne coûtent aucune lecture de plus.
+        liste={{
+          nom: washer.name,
+          slug: washer.slug,
+          brandColor: washer.brand_color,
+          plan: washer.plan,
+          grandfathered: washer.grandfathered,
+          facturationIncomplete: infosFacturationManquantes(washer).length > 0,
+        }}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

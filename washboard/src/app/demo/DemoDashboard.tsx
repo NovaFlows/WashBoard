@@ -18,7 +18,14 @@ import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import HorairesV2 from '@/components/dashboard/HorairesV2'
 import ProfilV2 from '@/components/dashboard/ProfilV2'
 import MesLiensV2 from '@/components/dashboard/MesLiensV2'
+import ReglagesV2 from '@/components/dashboard/ReglagesV2'
+import AbonnementV2 from '@/components/dashboard/AbonnementV2'
+import GuideV2 from '@/components/dashboard/GuideV2'
+import AssistanceV2 from '@/components/dashboard/AssistanceV2'
+import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
+import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import type { Depense, DepenseRecurrente } from '@/lib/depenses'
+import type { SupportThread } from '@/lib/support'
 import type {
   jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo,
   jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo, AccueilDemo,
@@ -97,7 +104,11 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // l'écran, sa disposition à une seule colonne (`useGrandEcran()`, lu par chacun en interne).
 type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan' | 'chiffres' | 'depenses' | 'plus'
 type EtatAujourdhui = 'normal' | 'premierJour' | 'quota'
-type EcranPlus = 'liste' | 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence'
+// 'reglages'/'abonnement'/'guide'/'assistance'/'verrouille' : passe « Plus bureau, second lot »
+// (2026-10-06) — écrans 61 à 65 de la maquette bureau. Le 66 (« réservation verrouillée ») n'a
+// pas sa propre entrée ici : il se voit déjà dans le pilule « Clients » existante, en tête de la
+// liste « Tous » (voir `jeuDeDonneesDemo()`, `bloques`) — inutile de le dupliquer.
+type EcranPlus = 'liste' | 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence' | 'reglages' | 'abonnement' | 'guide' | 'assistance' | 'verrouille'
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -175,6 +186,11 @@ function SelecteurDemo({
           <PilulePilote actif={ecranPlus === 'prestations'} onClick={() => onEcranPlus('prestations')}>Prestations et prix</PilulePilote>
           <PilulePilote actif={ecranPlus === 'horaires'} onClick={() => onEcranPlus('horaires')}>Horaires</PilulePilote>
           <PilulePilote actif={ecranPlus === 'apparence'} onClick={() => onEcranPlus('apparence')}>Apparence de ma page</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'reglages'} onClick={() => onEcranPlus('reglages')}>Réglages</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'abonnement'} onClick={() => onEcranPlus('abonnement')}>Abonnement</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'guide'} onClick={() => onEcranPlus('guide')}>Guide</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'assistance'} onClick={() => onEcranPlus('assistance')}>Assistance</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'verrouille'} onClick={() => onEcranPlus('verrouille')}>Offre verrouillée</PilulePilote>
         </div>
       )}
     </div>
@@ -267,6 +283,41 @@ function useDonneesDepensesDemo(depenses: Depense[], recurrents: DepenseRecurren
   }, [depenses, recurrents])
 }
 
+/** `AssistanceV2` (écran 64) lit elle-même `/api/support/questions` (via `useSupportThreads`)
+ *  et `AccesSupportV2` lit `/api/support/grant` (via `useAccesSupport`) — ni l'une ni l'autre ne
+ *  reçoit ses données en props, contrairement au reste de cette page. Ces routes exigent une
+ *  session, que `/demo` ne fournit jamais (401) : sans ce détour, l'écran afficherait sa liste
+ *  vide et un message d'erreur rouge sous « Aide à la configuration » à chaque ouverture. Même
+ *  schéma que `useDonneesDepensesDemo` ci-dessus : seules ces deux lectures GET sont déviées,
+ *  rien d'autre. Envoyer une question reste possible dans l'écran (il croit avoir réussi,
+ *  l'optimisme de `useSupportThreads` l'affiche tout de suite) mais n'est jamais confirmé par
+ *  le serveur — bloqué par `useVerrouEcriture`, comme les autres écritures de cette page. */
+function useDonneesAssistanceDemo(threads: SupportThread[]) {
+  useEffect(() => {
+    const origine = window.fetch
+    window.fetch = async (entree, init) => {
+      const url = typeof entree === 'string'
+        ? entree
+        : (typeof Request !== 'undefined' && entree instanceof Request ? entree.url : String(entree))
+      const methode = (init?.method
+        ?? (typeof Request !== 'undefined' && entree instanceof Request ? entree.method : 'GET')).toUpperCase()
+      const chemin = url.startsWith('http') ? new URL(url).pathname : url
+
+      if (methode === 'GET' && chemin.startsWith('/api/support/questions')) {
+        return new Response(JSON.stringify({ threads }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      if (methode === 'GET' && chemin.startsWith('/api/support/grant')) {
+        return new Response(
+          JSON.stringify({ active: false, minutesLeft: 0, lastUsedAt: null }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        )
+      }
+      return origine(entree, init)
+    }
+    return () => { window.fetch = origine }
+  }, [threads])
+}
+
 /** Rendu client de `/demo` : le vrai châssis (`DashboardShell`) et les vrais écrans
  *  (`ClientsViewV2`, `Accueil`/`AccueilV2`), nourris des jeux de données fabriqués côté serveur
  *  (`jeuDeDonneesDemo()`/`jeuDeDonneesAccueilDemo()`, appelés une fois par `page.tsx` pour que
@@ -283,6 +334,7 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
 }) {
   useVerrouEcriture()
   useDonneesDepensesDemo(depenses.depenses, depenses.recurrents)
+  useDonneesAssistanceDemo(plus.assistanceThreads)
   const [ecran, setEcran] = useState<Ecran>('aujourdhui')
   const [etat, setEtat] = useState<EtatAujourdhui>('normal')
   const [ecranPlus, setEcranPlus] = useState<EcranPlus>('liste')
@@ -391,8 +443,40 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
             lectureIncomplete={false}
             liste={plus.listeBase}
           />
-        ) : (
+        ) : ecranPlus === 'apparence' ? (
           <ApparenceV2 nom={plus.listeBase.nom} slug={plus.slug} initial={plus.apparence} liste={plus.listeBase} />
+        ) : ecranPlus === 'reglages' ? (
+          <ReglagesV2 liste={plus.listeBase} />
+        ) : ecranPlus === 'abonnement' ? (
+          // Sidebar accordée à Starter elle aussi, comme l'écran 62 de la maquette (le laveur
+          // fictif entier y est repassé en Starter, pas seulement le panneau de droite — voir
+          // `jeuDeDonneesPlusDemo()`, commentaire de `abonnement`) : sans ça, la ligne
+          // « Abonnement » de la liste aurait affiché « Pro » à côté d'un panneau qui montre
+          // « Starter », une incohérence que la maquette n'a pas.
+          <AbonnementV2 {...plus.abonnement} liste={{ ...plus.listeBase, plan: 'starter' }} />
+        ) : ecranPlus === 'guide' ? (
+          <GuideV2 liste={plus.listeBase} />
+        ) : ecranPlus === 'assistance' ? (
+          <AssistanceV2 liste={plus.listeBase} />
+        ) : (
+          // « Offre verrouillée » (écran 65) : la carte générique `OffreVerrouilleeV2`, posée
+          // dans le même châssis « Plus » que les autres écrans de cette passe (liste à
+          // gauche, fil d'Ariane « ‹ Devis et factures » dans le panneau) — pour juger SA
+          // présentation à elle, sans construire ici tout l'écran réel qui la contient
+          // (`/dashboard/chiffres/documents`, `DocumentsV2.tsx`, qui n'a pas encore sa passe
+          // grand écran — voir le rapport). Même feature que son vrai appel dans `DocumentsV2`.
+          <div className="flex items-start gap-5 [font-family:var(--font-archivo)]">
+            <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+              <ListeReglagesV2 {...plus.listeBase} selection={null} />
+            </div>
+            <div className="mx-auto w-full max-w-[440px]">
+              <OffreVerrouilleeV2
+                titre="Éditez des devis et des factures conformes"
+                description="Mentions légales, SIRET, TVA, numérotation continue : des documents que votre comptable accepte."
+                feature="facturation"
+              />
+            </div>
+          </div>
         )
       ) : (
         <ClientsViewV2
@@ -403,6 +487,8 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
           entreprises={donnees.entreprises}
           nomLaveur={donnees.nomLaveur}
           automatismes={donnees.automatismes}
+          bloques={donnees.bloques}
+          offreDeblocage={donnees.offreDeblocage}
         />
       )}
     </DashboardShell>

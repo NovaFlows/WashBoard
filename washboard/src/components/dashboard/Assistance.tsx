@@ -2,9 +2,10 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import AssistanceContent from '@/components/dashboard/AssistanceContent'
 import AssistanceV2 from '@/components/dashboard/AssistanceV2'
+import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // Point de branchement v1 / v2 de « Aide et assistance » (refonte 2026, même schéma que
 // `CalendrierDashboard.tsx`). La v2 — l'écran redessiné, avec la carte « Aide à la
@@ -12,12 +13,21 @@ import AssistanceV2 from '@/components/dashboard/AssistanceV2'
 // compte n'est pas en bêta (elle garde l'en-tête et le menu de la v1), gardent l'écran d'avant,
 // à l'identique. Même adresse (`/dashboard/assistance`), donc les liens `?fil=` des
 // notifications continuent d'arriver au bon endroit dans les deux cas.
-export default function Assistance() {
-  const isPwa = usePwaStandalone()
+//
+// RÉOUVERT le 2026-10-06 (passe « Plus bureau, second lot ») pour le SITE sur grand écran,
+// comme `ParametresForm.tsx` : `usePwaStandalone()` nu est remplacé par
+// `useDashboardV2(betaRefonte)`.
+export default function Assistance({ liste, betaRefonte }: {
+  /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
+  liste: ReglagesListeProps
+  /** `washer.beta_refonte` — garde-fou temporaire du cas « site, grand écran ». */
+  betaRefonte?: boolean | null
+}) {
+  const estV2 = useDashboardV2(betaRefonte)
 
-  if (isPwa) {
+  if (estV2) {
     // useSearchParams (lecture de ?fil=) exige une limite Suspense.
-    return <Suspense fallback={null}><AssistanceV2 /></Suspense>
+    return <Suspense fallback={null}><AssistanceV2 liste={liste} /></Suspense>
   }
 
   return (

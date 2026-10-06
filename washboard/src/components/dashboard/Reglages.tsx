@@ -3,26 +3,42 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { estEcranRail } from '@/lib/grandEcran'
+import { bureauForceEnDev } from '@/hooks/useDashboardV2'
 import ReglagesV2 from '@/components/dashboard/ReglagesV2'
+import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // Point d'entrée de « Réglages » — destination NEUVE de la refonte 2026 (même schéma que
-// `Depenses.tsx`). Côté site, ces réglages vivent dans l'ancien formulaire complet : le
-// navigateur classique y est renvoyé.
-type Statut = 'verification' | 'pwa' | 'site'
+// `Horaires.tsx`/`Prestations.tsx`). Côté site, ces réglages vivent dans l'ancien formulaire
+// complet : le navigateur classique y est renvoyé.
+//
+// RÉOUVERT le 2026-10-06 (passe « Plus bureau, second lot ») pour le cas SITE + grand écran,
+// comme `Apparence.tsx`/`Horaires.tsx` : voir leur en-tête pour le raisonnement complet
+// (décidé une seule fois, au montage — jamais de flash de contenu v2 côté site).
+type Statut = 'verification' | 'v2' | 'v1'
 
-export default function Reglages() {
+type Props = {
+  /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
+  liste: ReglagesListeProps
+  /** `washer.beta_refonte` — garde-fou temporaire du cas « site, grand écran ». */
+  betaRefonte?: boolean | null
+}
+
+export default function Reglages({ liste, betaRefonte }: Props) {
   const router = useRouter()
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
-  }, [])
+    const pwa = isPwaStandalone()
+    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    setStatut(pwa || bureau ? 'v2' : 'v1')
+  }, [betaRefonte])
 
   useEffect(() => {
-    if (statut === 'site') router.replace('/dashboard/parametres/tout')
+    if (statut === 'v1') router.replace('/dashboard/parametres/tout')
   }, [statut, router])
 
-  if (statut !== 'pwa') return null
+  if (statut !== 'v2') return null
 
-  return <ReglagesV2 />
+  return <ReglagesV2 liste={liste} />
 }

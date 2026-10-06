@@ -34,7 +34,16 @@ export default async function AssistancePage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
-      <Assistance />
+      <Assistance
+        liste={{
+          nom: washer.name,
+          slug: washer.slug,
+          brandColor: washer.brand_color,
+          plan: washer.plan,
+          grandfathered: washer.grandfathered,
+        }}
+        betaRefonte={washer.beta_refonte}
+      />
     </DashboardShell>
   )
 }

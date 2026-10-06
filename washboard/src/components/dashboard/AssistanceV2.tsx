@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, MessageCircle, Plus, Trash2 } from 'lucide-react'
 import { useSupportThreads } from '@/lib/useSupportThreads'
 import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
 import { BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
-import { CarteListe, Chevron } from '@/components/dashboard/ParametresFormV2'
-import { ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
-import { FeuilleFilV2, FeuilleNouvelleQuestionV2 } from '@/components/dashboard/FeuillesAssistanceV2'
+import { CarteListe, Chevron, FilAriane } from '@/components/dashboard/ParametresFormV2'
+import { ConfirmationSuppression, Constat, nom } from '@/components/dashboard/PrestationsUiV2'
+import { BullesConversationV2, ComposerReponseV2, FeuilleFilV2, FeuilleNouvelleQuestionV2 } from '@/components/dashboard/FeuillesAssistanceV2'
 import AccesSupportV2 from '@/components/dashboard/AccesSupportV2'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import type { SupportThread } from '@/lib/support'
 
 // « Aide et assistance » — refonte 2026 (PWA en bêta seulement ; le site garde
@@ -22,6 +24,26 @@ import type { SupportThread } from '@/lib/support'
 // l'équipe au compte (« Aide à la configuration »). Toute la logique (envoi optimiste, lu /
 // non lu, suppression d'une conversation de sa liste) vient de `useSupportThreads`, la même
 // que l'écran du site.
+//
+// PASSE « PLUS BUREAU, SECOND LOT » (2026-10-06) : sur grand écran, la feuille devient un
+// panneau à côté — même geste que Clients (liste à gauche, fiche à droite en permanence) —
+// mais ici la liste des RÉGLAGES (`ListeReglagesV2`) et la liste des CONVERSATIONS doivent
+// cohabiter. Vérifié sur l'artboard (`Assistance.dc.html`, écran 64) avant d'écrire une ligne :
+// la maquette les empile côte à côte plutôt que de choisir — `ListeReglagesV2` à gauche de
+// tout (sélection « Réglages », puisque Guide et Assistance n'ont pas leur propre ligne, voir
+// `ListeReglagesV2.tsx`), puis DANS le panneau de droite, une seconde colonne plus étroite
+// (300px, questions) et la conversation ouverte. Pas de conflit à arbitrer : deux listes à deux
+// niveaux différents, pas deux listes qui se disputent la même colonne.
+//
+// `SupportConversation.tsx` (la version « site », utilisée par `AssistanceContent` et le
+// panneau du Guide) n'a PAS été réutilisée ici : elle écrit ses propres couleurs en dur
+// (`#1651E8`, `bg-slate-*`) plutôt que les jetons `--v2-*`, exactement ce que `CONTRAT.md`
+// interdit côté v2 — la poser telle quelle aurait fait une pièce rapportée, comme la carte
+// d'offre verrouillée d'avant `OffreVerrouilleeV2` (voir son en-tête). La présentation du fil
+// ouvert est donc reconstruite ici à partir des mêmes briques déjà en jetons v2 que la feuille
+// mobile (`BullesConversationV2`, `ComposerReponseV2`, extraites de `FeuilleFilV2` pour cette
+// passe) : aucune logique dupliquée, seul l'emballage change (feuille qui monte vs colonne
+// toujours visible).
 
 type Feuille = { quoi: 'nouvelle' } | { quoi: 'fil'; id: string } | null
 
@@ -36,7 +58,7 @@ function apercu(fil: SupportThread): string {
 }
 
 function LigneFil({
-  fil, ouverte, onOuvrirLigne, onFermerLigne, onOuvrir, onSupprimer,
+  fil, ouverte, onOuvrirLigne, onFermerLigne, onOuvrir, onSupprimer, selectionnee = false,
 }: {
   fil: SupportThread
   ouverte: boolean
@@ -44,6 +66,10 @@ function LigneFil({
   onFermerLigne: () => void
   onOuvrir: () => void
   onSupprimer: () => void
+  /** Grand écran uniquement : cette conversation est celle affichée dans le panneau de droite
+   *  en ce moment (fond `--v2-filet`, comme `.client-row.selected` dans la maquette). Toujours
+   *  `false` sur téléphone, où ouvrir une conversation couvre la liste. */
+  selectionnee?: boolean
 }) {
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({ ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne })
   const nonLues = fil.nonLuesCount ?? 0
@@ -63,7 +89,7 @@ function LigneFil({
         <Trash2 size={20} strokeWidth={2} aria-hidden />
         Supprimer
       </button>
-      <div {...poignee} style={styleContenu} className="bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none">
+      <div {...poignee} style={styleContenu} className={`motion-reduce:!transition-none ${selectionnee ? 'bg-[color:var(--v2-filet)]' : 'bg-[color:var(--v2-color-surface)]'}`}>
         <button
           type="button"
           onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
@@ -97,7 +123,107 @@ function LigneFil({
   )
 }
 
-export default function AssistanceV2() {
+/** Panneau de droite, grand écran : la conversation ouverte, le formulaire de nouvelle
+ *  question, ou une invitation quand rien n'est sélectionné. Même silhouette que
+ *  `.pane.surface` de la maquette (écran 64) : un en-tête, le corps qui défile, le composer
+ *  fixé en bas. Construit à partir des briques déjà en jetons v2 (`BullesConversationV2`,
+ *  `ComposerReponseV2`) — voir l'en-tête du fichier pour pourquoi `SupportConversation.tsx`
+ *  n'a pas été repris tel quel. */
+function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, onEnvoyerNouvelle, onEnvoyerFil }: {
+  feuille: Feuille
+  filOuvert: SupportThread | undefined
+  erreurNouvelle: { message: string; texte: string } | null
+  erreurFil: { message: string; texte: string } | null
+  onEnvoyerNouvelle: (texte: string) => void
+  onEnvoyerFil: (texte: string) => void
+}) {
+  const fin = useRef<HTMLDivElement>(null)
+  const [texteFil, setTexteFil] = useState('')
+  const [texteNouvelle, setTexteNouvelle] = useState('')
+
+  useEffect(() => { if (erreurFil) setTexteFil(erreurFil.texte) }, [erreurFil])
+  useEffect(() => { if (erreurNouvelle) setTexteNouvelle(erreurNouvelle.texte) }, [erreurNouvelle])
+  useEffect(() => { fin.current?.scrollIntoView({ block: 'end' }) }, [filOuvert?.messages.length])
+  // Une question envoyée fait basculer `feuille` sur son fil, dont le composer repart vide.
+  useEffect(() => { if (feuille?.quoi === 'fil') setTexteFil('') }, [feuille])
+
+  if (feuille?.quoi === 'fil' && filOuvert) {
+    return (
+      <div className="flex h-full min-h-[420px] flex-col">
+        <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3.5">
+          <p className={`text-[14.5px] ${corpsFort}`}>{filOuvert.title}</p>
+          <p className={`mt-0.5 text-[11px] ${corpsFort}`} style={{ color: filOuvert.status === 'resolue' ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}>
+            {filOuvert.status === 'resolue' ? 'Résolue' : 'Ouverte'}
+          </p>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <BullesConversationV2 fil={filOuvert} erreur={erreurFil} finRef={fin} />
+        </div>
+        <div className="shrink-0 border-t border-[color:var(--v2-filet)] p-4">
+          <ComposerReponseV2
+            texte={texteFil}
+            onChange={setTexteFil}
+            onEnvoyer={() => {
+              const t = texteFil.trim()
+              if (!t) return
+              onEnvoyerFil(t)
+              setTexteFil('')
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  if (feuille?.quoi === 'nouvelle') {
+    return (
+      <div className="flex h-full min-h-[420px] flex-col">
+        <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3.5">
+          <p className={`text-[14.5px] ${corpsFort}`}>Nouvelle question</p>
+          <p className={`mt-0.5 text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            Une personne de l’équipe vous répond en moins de 24 h.
+          </p>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+          <MessageCircle size={28} className="text-[color:var(--v2-color-gris)]" aria-hidden />
+          <p className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+            Décrivez votre souci en quelques mots, on vous répond directement ici.
+          </p>
+        </div>
+        <div className="shrink-0 border-t border-[color:var(--v2-filet)] p-4">
+          <ComposerReponseV2
+            texte={texteNouvelle}
+            onChange={setTexteNouvelle}
+            onEnvoyer={() => {
+              const t = texteNouvelle.trim()
+              if (!t) return
+              onEnvoyerNouvelle(t)
+              setTexteNouvelle('')
+            }}
+          />
+          {erreurNouvelle && <div className="mt-2.5"><Constat ton="rouge" role="alert">{erreurNouvelle.message}</Constat></div>}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 p-6 text-center">
+      <MessageCircle size={28} className="text-[color:var(--v2-color-gris)]" aria-hidden />
+      <p className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+        Choisissez une conversation à gauche, ou posez-en une nouvelle.
+      </p>
+    </div>
+  )
+}
+
+type Props = {
+  /** Liste « Plus », affichée tout à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
+  liste: ReglagesListeProps
+}
+
+export default function AssistanceV2({ liste }: Props) {
+  const grandEcran = useGrandEcran()
   const searchParams = useSearchParams()
   const filParam = searchParams.get('fil')
   const { threads, loaded, sendError, envoyerQuestion, ouvrirFil, dismissSendError, masquerFil } = useSupportThreads()
@@ -162,35 +288,20 @@ export default function AssistanceV2() {
     else setASupprimer(null)
   }
 
-  return (
-    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
-      <div className="flex items-center gap-1 pb-2">
-        <Link
-          href="/dashboard/parametres"
-          aria-label="Retour à Plus"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
+  // Carte « Guide » + section « Vos questions » : IDENTIQUE sur téléphone et sur grand écran
+  // (seule la colonne qui l'entoure change de largeur) — `selectionnee` reste `false` partout
+  // sauf dans la colonne étroite du panneau grand écran, juste en dessous.
+  const colonneQuestions = (grandEcranSelection: boolean) => (
+    <>
+      <CarteListe>
+        <Link href="/dashboard/guide" className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left">
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className={`text-[15.5px] ${nom}`}>Guide d’utilisation</span>
+            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chercher une réponse par vous-même</span>
+          </span>
+          <Chevron />
         </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Aide et assistance</h1>
-          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Une personne de l’équipe vous répond en moins de 24 h.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-2">
-        <CarteListe>
-          <Link href="/dashboard/guide" className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left">
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className={`text-[15.5px] ${nom}`}>Guide d’utilisation</span>
-              <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chercher une réponse par vous-même</span>
-            </span>
-            <Chevron />
-          </Link>
-        </CarteListe>
-      </div>
+      </CarteListe>
 
       <section className="mt-[26px]" aria-label="Vos questions">
         <div className="flex items-center justify-between gap-3 pb-1.5">
@@ -232,6 +343,7 @@ export default function AssistanceV2() {
                   onFermerLigne={() => setLigneOuverte(cur => (cur === f.id ? null : cur))}
                   onOuvrir={() => ouvrir(f)}
                   onSupprimer={() => { setLigneOuverte(null); setSuppressionErreur(null); setASupprimer(f) }}
+                  selectionnee={grandEcranSelection && feuille?.quoi === 'fil' && feuille.id === f.id}
                 />
               ))}
             </ul>
@@ -242,6 +354,72 @@ export default function AssistanceV2() {
       <div className="mt-[26px]">
         <AccesSupportV2 />
       </div>
+    </>
+  )
+
+  const confirmationSuppression = aSupprimer && (
+    <ConfirmationSuppression
+      titre={`Supprimer « ${aSupprimer.title} » ?`}
+      texte="Elle disparaît de votre liste. L’équipe garde l’échange, et la conversation revient si elle vous répond."
+      enCours={suppressionEnCours}
+      erreur={suppressionErreur}
+      onConfirmer={confirmerSuppression}
+      onClose={() => setASupprimer(null)}
+    />
+  )
+
+  if (grandEcran) {
+    return (
+      <div className="flex items-start gap-5 [font-family:var(--font-archivo)]">
+        <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+          <ListeReglagesV2 {...liste} selection="reglages" />
+        </div>
+        <div className="min-w-0 flex-1 text-[color:var(--v2-color-encre)]">
+          <FilAriane label="Réglages" href="/dashboard/parametres/reglages" />
+          <h1 className={`text-[20px] leading-none ${titre}`}>Aide et assistance</h1>
+          <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            Une personne de l’équipe vous répond en moins de 24 h.
+          </p>
+
+          <div className="mt-5 grid items-start gap-5" style={{ gridTemplateColumns: '300px 1fr' }}>
+            <div className="min-w-0">{colonneQuestions(true)}</div>
+            <div className="min-w-0 overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
+              <PanneauConversationV2
+                feuille={feuille}
+                filOuvert={filOuvert}
+                erreurNouvelle={erreurNouvelle ? { message: erreurNouvelle.message, texte: erreurNouvelle.texte } : null}
+                erreurFil={erreurFil ? { message: erreurFil.message, texte: erreurFil.texte } : null}
+                onEnvoyerNouvelle={envoyerNouvelle}
+                onEnvoyerFil={texte => filOuvert && envoyerQuestion(texte, filOuvert.id)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {confirmationSuppression}
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
+      <div className="flex items-center gap-1 pb-2">
+        <Link
+          href="/dashboard/parametres"
+          aria-label="Retour à Plus"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+        >
+          <ChevronLeft size={22} strokeWidth={2} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <h1 className={`text-[24px] leading-none ${titre}`}>Aide et assistance</h1>
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            Une personne de l’équipe vous répond en moins de 24 h.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-2">{colonneQuestions(false)}</div>
 
       {feuille?.quoi === 'nouvelle' && (
         <FeuilleNouvelleQuestionV2
@@ -259,16 +437,7 @@ export default function AssistanceV2() {
           onClose={aSupprimer ? () => {} : fermerFeuille}
         />
       )}
-      {aSupprimer && (
-        <ConfirmationSuppression
-          titre={`Supprimer « ${aSupprimer.title} » ?`}
-          texte="Elle disparaît de votre liste. L’équipe garde l’échange, et la conversation revient si elle vous répond."
-          enCours={suppressionEnCours}
-          erreur={suppressionErreur}
-          onConfirmer={confirmerSuppression}
-          onClose={() => setASupprimer(null)}
-        />
-      )}
+      {confirmationSuppression}
     </div>
   )
 }

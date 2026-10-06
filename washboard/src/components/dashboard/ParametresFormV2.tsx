@@ -148,6 +148,25 @@ export function TitreSection({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Fil d'Ariane du panneau de droite, grand écran UNIQUEMENT (planche Système, écrans 63/64 de
+// la maquette bureau) : Guide et Assistance n'ont pas leur propre ligne dans `ListeReglagesV2`
+// (elles s'ouvrent depuis la liste « De l'aide » de `ReglagesV2`, un niveau plus bas) — la
+// ligne surlignée à gauche reste donc « Réglages », et c'est CE petit lien qui dit où l'on est
+// vraiment. Absent sur téléphone : le chevron de retour de l'en-tête mobile joue déjà ce rôle.
+export function FilAriane({ label, href }: { label: string; href: string }) {
+  return (
+    <Link
+      href={href}
+      className={`mb-1.5 inline-flex items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]`}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="m14.5 5.5-6.5 6.5 6.5 6.5" />
+      </svg>
+      {label}
+    </Link>
+  )
+}
+
 type Props = {
   washer: Washer
   /** Nombre de prestations, déjà compté côté serveur pour la barre

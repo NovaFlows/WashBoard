@@ -28,7 +28,16 @@ export default async function GuidePage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
-      <Guide v1={
+      <Guide
+        betaRefonte={washer.beta_refonte}
+        liste={{
+          nom: washer.name,
+          slug: washer.slug,
+          brandColor: washer.brand_color,
+          plan: washer.plan,
+          grandfathered: washer.grandfathered,
+        }}
+        v1={
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Guide de démarrage</h1>

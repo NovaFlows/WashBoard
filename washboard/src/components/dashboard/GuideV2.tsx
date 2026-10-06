@@ -6,6 +6,9 @@ import { ChevronLeft, Search } from 'lucide-react'
 import { CHAMP, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { searchGuide, type GuideEntry } from '@/lib/guide'
 import { lienV2 } from '@/lib/lienV2'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import { FilAriane } from '@/components/dashboard/ParametresFormV2'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // « Guide d'utilisation » — refonte 2026 (Alexandre, 2026-09-27 : « c'est la même qu'avant la
 // refonte PWA »). Même contenu que le site, à la virgule près : `lib/guide.ts` reste la seule
@@ -81,7 +84,13 @@ function Question({ entree, ouverte, onBasculer }: {
   )
 }
 
-export default function GuideV2() {
+type Props = {
+  /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
+  liste: ReglagesListeProps
+}
+
+export default function GuideV2({ liste }: Props) {
+  const grandEcran = useGrandEcran()
   const [recherche, setRecherche] = useState('')
   const [ouvertes, setOuvertes] = useState<string[]>([])
 
@@ -106,23 +115,33 @@ export default function GuideV2() {
   const basculer = (id: string) =>
     setOuvertes(l => (l.includes(id) ? l.filter(x => x !== id) : [...l, id]))
 
-  return (
-    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
-      <div className="flex items-center gap-1 pb-2">
-        <Link
-          href="/dashboard/parametres"
-          aria-label="Retour à Plus"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Guide d’utilisation</h1>
-          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+  const contenu = (
+    <div className={grandEcran ? '[font-family:var(--font-archivo)]' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}>
+      {grandEcran ? (
+        <div className="pb-3">
+          <FilAriane label="Réglages" href="/dashboard/parametres/reglages" />
+          <h1 className={`text-[20px] leading-none ${titre}`}>Guide d’utilisation</h1>
+          <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
             Comment marche WashBoard, question par question
           </p>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-1 pb-2">
+          <Link
+            href="/dashboard/parametres"
+            aria-label="Retour à Plus"
+            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+          >
+            <ChevronLeft size={22} strokeWidth={2} />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <h1 className={`text-[24px] leading-none ${titre}`}>Guide d’utilisation</h1>
+            <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              Comment marche WashBoard, question par question
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="relative mt-1">
         <Search
@@ -210,6 +229,17 @@ export default function GuideV2() {
           Poser une question à l’équipe
         </Link>
       )}
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <ListeReglagesV2 {...liste} selection="reglages" />
+      </div>
+      <div className="min-w-0 max-w-[680px] flex-1">{contenu}</div>
     </div>
   )
 }
