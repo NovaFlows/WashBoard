@@ -22,6 +22,9 @@ import {
   resumeTelephone,
   validerNomEntreprise, validerTelephone,
 } from '@/lib/profil'
+import { infosFacturationManquantes } from '@/lib/facture'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
 import type { Washer } from '@/types'
 
 // « Mon profil » — refonte 2026, destination NEUVE de « Plus » (Alexandre, 2026-09-26 : la
@@ -48,6 +51,7 @@ type Feuille =
 
 export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer; email: string; peutEquipe: boolean }) {
   const router = useRouter()
+  const grandEcran = useGrandEcran()
   const { peut } = useOffre()
   const [maintenant] = useState(() => Date.now())
   // Copie locale : la ligne change tout de suite après un enregistrement réussi, sans attendre
@@ -102,8 +106,11 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
     router.refresh()
   }
 
-  return (
-    <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
+  const contenu = (
+    <div className={grandEcran
+      ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+      : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
+    >
       <div className="flex items-center gap-1 pb-2">
         <Link
           href="/dashboard/parametres"
@@ -245,6 +252,29 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
       )}
       {feuille === 'email' && <FeuilleEmailV2 email={email} onClose={fermer} />}
       {feuille === 'motDePasse' && <FeuilleMotDePasseV2 email={email} onClose={fermer} />}
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  // Pas de prop `liste` ici, contrairement aux 4 autres écrans : `ProfilV2` reçoit déjà la
+  // fiche laveur ENTIÈRE (`washer`), colonnes de facturation comprises — la dériver depuis
+  // `fiche` directement évite de faire remonter encore une fois les mêmes champs par un bundle
+  // séparé (voir le rapport de la passe).
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <ListeReglagesV2
+          nom={fiche.name}
+          slug={fiche.slug}
+          brandColor={fiche.brand_color}
+          plan={fiche.plan}
+          grandfathered={fiche.grandfathered}
+          facturationIncomplete={infosFacturationManquantes(fiche).length > 0}
+          selection="profil"
+        />
+      </div>
+      <div className="min-w-0 flex-1">{contenu}</div>
     </div>
   )
 }

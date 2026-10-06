@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
-import { resumeNotifications } from '@/components/dashboard/FeuilleNotificationsV2'
-import { useNotificationsPush } from '@/hooks/useNotificationsPush'
-import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
-import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 import Link from 'next/link'
 import type { Washer } from '@/types'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
+import ApercuPageV2 from '@/components/dashboard/ApercuPageV2'
 import { PLAN_LABELS } from '@/lib/plan'
-import { useTheme } from '@/components/ui/ThemeProvider'
-import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { infosFacturationManquantes } from '@/lib/facture'
 
 // « Plus » — refonte 2026, passe 6. Présentation v2 de l'écran de réglages,
@@ -52,17 +48,6 @@ import { infosFacturationManquantes } from '@/lib/facture'
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
 const corpsFort = `${police} [font-weight:var(--v2-type-corps-fort-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
-const nom = `${police} [font-weight:var(--v2-type-nom-poids)] [font-stretch:var(--v2-type-nom-largeur)]`
-
-// Initiales d'avatar : même algorithme que ClientsViewV2.tsx (`initiales`),
-// dupliqué ici à l'identique — fonction pure de deux lignes, non exportée par
-// ce fichier, pas de raison d'en faire un module partagé pour si peu.
-function initiales(texte: string): string {
-  const mots = texte.trim().split(/\s+/).filter(Boolean)
-  if (mots.length === 0) return '?'
-  if (mots.length === 1) return mots[0].slice(0, 2).toUpperCase()
-  return (mots[0][0] + mots[mots.length - 1][0]).toUpperCase()
-}
 
 export function Chevron() {
   return (
@@ -96,6 +81,20 @@ type LigneProps = {
   href?: string
   onClick?: () => void
   chevron?: boolean
+  /** Passe bureau (2026-10-06) : la destination que cette ligne ouvre est celle affichée à
+   *  droite en ce moment (voir `ListeReglagesV2.tsx`) — fond `--v2-filet`, comme
+   *  `.compte-row.selected` dans la maquette. Toujours `false` ailleurs (défaut), où `Ligne`
+   *  n'a jamais porté de notion de sélection avant cette passe.
+   *
+   *  Essayé puis abandonné : un débordement par marge négative (`-mx-4 px-4`) jusqu'aux bords
+   *  de la carte — repéré en capturant cette passe, il changeait la largeur réellement
+   *  disponible pour `sousLabel` (le navigateur recalcule `margin-right` quand les deux marges
+   *  négatives sur-contraignent l'équation de boîte, voir CSS 2.1 §10.3.3), et tronquait « Mon
+   *  profil » en un seul caractère sur l'écran Profil alors que la même ligne, non
+   *  sélectionnée, affichait « Entr… » sur l'écran de repos. La teinte reste donc INSET des
+   *  16px de padding de `CarteListe`, pas de bord à bord — compromis visuel mineur, largeur
+   *  garantie identique à l'état non sélectionné. */
+  selected?: boolean
 }
 
 // Une ligne du menu. `href` → lien (navigation), `onClick` sans `href` →
@@ -104,7 +103,7 @@ type LigneProps = {
 // dernière bascule sur place plutôt que de naviguer vers un écran qui
 // n'existe pas encore, déviation assumée par rapport à la maquette qui
 // pointe vers l'artboard de référence `Sombre.dc.html`).
-export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true }: LigneProps) {
+export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true, selected = false }: LigneProps) {
   const contenu = (
     <>
       {/* La valeur peut être longue (le résumé des horaires) : c'est elle qui rétrécit et se
@@ -118,7 +117,7 @@ export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron
       {chevron && <Chevron />}
     </>
   )
-  const classe = 'flex items-center gap-2.5 min-h-[46px] py-1.5 w-full text-left'
+  const classe = `flex items-center gap-2.5 min-h-[46px] py-1.5 w-full text-left ${selected ? 'bg-[color:var(--v2-filet)]' : ''}`
   if (href) {
     return <Link href={href} className={classe}>{contenu}</Link>
   }
@@ -163,167 +162,82 @@ type Props = {
   resumeHoraires?: string
 }
 
+// Passe bureau (2026-10-06) : la liste elle-même a été extraite dans `ListeReglagesV2.tsx`
+// (voir son en-tête) pour pouvoir être réutilisée à côté de chacune des 5 destinations
+// qu'elle ouvre. Ce composant reste le point d'entrée de l'écran `/dashboard/parametres`
+// lui-même : sur téléphone (PWA), il rend la liste SEULE, inchangé pixel pour pixel ; sur
+// grand écran (`useGrandEcran`, ≥1024px — site en bêta ou PWA sur ordinateur), il l'affiche
+// à gauche, en permanence, et montre à droite la page de réservation telle qu'elle est
+// aujourd'hui (écran 60 de la maquette, état de repos — aucune ligne n'est sélectionnée ici,
+// contrairement aux 5 écrans qui ouvrent VRAIMENT un réglage).
 export default function ParametresFormV2({ washer, servicesCount, resumeHoraires }: Props) {
-  const { theme, setTheme } = useTheme()
-  // Signaux du canal d'assistance, interrogés une fois par DashboardShell (voir
-  // SupportBadgesContext) — ce sont eux que portait le menu latéral et le
-  // bouton ☰, disparus de la PWA en bêta.
-  const { estEquipeSupport, unreadSupportCount, unreadTeamCount } = useSupportBadges()
-  // Les notifications n'avaient aucune entrée dans l'app : elles ne vivaient que sur l'ancien
-  // formulaire complet (Alexandre, 2026-09-26).
-  const { etat: etatNotifications } = useNotificationsPush()
-  // La carte « Configuration de votre compte » se met de côté depuis elle-même ; c'est ici
-  // qu'on la retrouve, sinon elle serait perdue (Alexandre, 2026-09-27).
-  const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
-  const notifications = resumeNotifications(etatNotifications)
+  const grandEcran = useGrandEcran()
+  const facturationIncomplete = infosFacturationManquantes(washer).length > 0
 
-  const planLabel = washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]
+  const liste = (
+    <ListeReglagesV2
+      nom={washer.name}
+      slug={washer.slug}
+      brandColor={washer.brand_color}
+      plan={washer.plan}
+      grandfathered={washer.grandfathered}
+      servicesCount={servicesCount}
+      resumeHoraires={resumeHoraires}
+      facturationIncomplete={facturationIncomplete}
+      selection={null}
+    />
+  )
+
+  if (!grandEcran) {
+    return (
+      <div className={`max-w-3xl mx-auto space-y-6 ${police}`}>
+        {liste}
+        <DiagnosticPwa />
+      </div>
+    )
+  }
 
   return (
-    <div className={`max-w-3xl mx-auto space-y-6 ${police}`}>
-      {/* Carte du haut : page de réservation, mêmes données que l'ancien
-          onglet « Page client » (ClientTab de ParametresFormV1), présentées
-          en résumé. L'édition du lien et les liens par réseau restent dans
-          ParametresFormV1 (id="lien-reservation") — pas dupliqués ici. */}
-      <CarteListe>
-        <div className="flex items-center gap-3 py-3.5">
-          <span
-            className={`w-[42px] h-[42px] shrink-0 rounded-[12px] bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] flex items-center justify-center text-[16px] ${corpsFort} tracking-tight`}
-            aria-hidden
-          >
-            {initiales(washer.name)}
-          </span>
-          <span className="flex-1 min-w-0 flex flex-col gap-px">
-            <span className={`text-[16px] ${nom} truncate`}>{washer.name}</span>
-            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Votre page de réservation</span>
-          </span>
-          <a
-            href={`/book/${washer.slug}`}
-            className={`text-[13px] ${corpsFort} shrink-0`}
-            style={{ color: 'var(--v2-color-accent)' }}
-          >
-            Voir
-          </a>
+    <div className={`space-y-6 ${police}`}>
+      <div className="flex items-start gap-5">
+        {/* `sticky` plutôt qu'un second panneau à hauteur fixe (voir ClientsViewV2.tsx) :
+            cette liste est courte et de hauteur à peu près constante — ce qu'il lui faut,
+            c'est rester visible pendant qu'on fait défiler un réglage plus long à droite
+            (Prestations, en particulier), pas un deuxième défilement indépendant. */}
+        <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+          {liste}
         </div>
-
-      </CarteListe>
-
-      {/* L'argent. Nouvelle section du 2026-09-27 : « Chiffres » a quitté la barre du bas
-          (sa place y revient au bouton « + », qui ouvre la saisie d'un devis ou d'une
-          facture) et atterrit ici, avec la liste des documents écrits à la main. */}
-      <div>
-        <TitreSection>L’argent</TitreSection>
-        <CarteListe>
-          <Ligne label="Chiffres" sousLabel="Argent, acquisition, clients" href="/dashboard/chiffres" />
-          <Ligne label="Devis et factures" sousLabel="Écrits à la main" href="/dashboard/chiffres/documents" />
-        </CarteListe>
-      </div>
-
-      {/* De temps en temps */}
-      <div>
-        <TitreSection>De temps en temps</TitreSection>
-        <CarteListe>
-          {/* « Messages automatiques » et « Créneaux intelligents » ont quitté « Plus » le
-              2026-09-30 (Alexandre) : ils vivent dans « Clients », section « Automatismes ». */}
-          {/* « Modèles de messages » de la maquette (7) n'a pas d'équivalent
-              dans le code : un seul message d'avis (codé en dur, voir
-              refonte.md) et un seul message de relance personnalisable,
-              aucune notion de modèles multiples. Pas construite plutôt
-              qu'approximée — voir TODO.md. */}
-          {/* « Mon profil » (2026-09-26, demande d'Alexandre) : remplace la ligne « Équipe »,
-              qui ne menait qu'au nombre de laveurs de l'ancien formulaire. On y renseigne
-              désormais l'entreprise, le statut porté sur les factures et les identifiants —
-              le nombre de laveurs y est resté. */}
-          <Ligne
-            label="Mon profil"
-            sousLabel="Entreprise, factures"
-            valeur={infosFacturationManquantes(washer).length > 0 ? 'À compléter' : undefined}
-            href="/dashboard/parametres/profil"
-          />
-          {/* « Mes liens » : le lien de réservation et un lien par réseau, dans le
-              design de l'app (2026-09-25, demande d'Alexandre). Remplace la ligne
-              « Export et liens par réseau », qui menait à l'ancien écran CRM
-              (`/dashboard/crm`, toujours en v1 sur le site). L'export Excel des
-              réservations n'a plus d'entrée dans la PWA : voir TODO.md. */}
-          <Ligne label="Mes liens" sousLabel="Réservation, réseaux" href="/dashboard/parametres/liens" />
-        </CarteListe>
-      </div>
-
-      {/* Une fois */}
-      <div>
-        <TitreSection>Une fois</TitreSection>
-        <CarteListe>
-          {/* « Zone » : l'écran « Prestations et prix » porte aussi la zone d'intervention
-              (depuis le 2026-09-25). Les créneaux intelligents, eux, sont dans « Clients »
-              depuis le 2026-09-30. */}
-          <Ligne
-            label="Prestations et prix"
-            sousLabel="Zone d’intervention"
-            valeur={typeof servicesCount === 'number' ? String(servicesCount) : undefined}
-            href="/dashboard/parametres/prestations"
-          />
-          <Ligne label="Horaires" valeur={resumeHoraires} href="/dashboard/parametres/horaires" />
-          <Link href="/dashboard/parametres/apparence" className="flex items-center gap-2.5 min-h-[46px] py-1.5 w-full">
-            <span className={`flex-1 text-[15px] ${corps}`}>Apparence de ma page</span>
-            {washer.brand_color && (
-              <span
-                className="w-3.5 h-3.5 rounded-full shrink-0 border border-[color:var(--v2-filet-fort)]"
-                style={{ backgroundColor: washer.brand_color }}
-                aria-hidden
-              />
-            )}
-            <Chevron />
-          </Link>
-          {/* « Importer mes clients » de la maquette n'a aucune logique
-              derrière : la table `clients` et son import (étape 1 du plan
-              CRM, refonte.md) ne sont pas construits. Pas de ligne plutôt
-              qu'un lien mort — voir TODO.md. */}
-        </CarteListe>
-      </div>
-
-      {/* Mon compte */}
-      <div>
-        <TitreSection>Mon compte</TitreSection>
-        <CarteListe>
-          <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" />
-          {/* Une seule ligne, et tout ce qui règle l'application derrière (Alexandre,
-              2026-09-27) : apparence, notifications, barre de configuration, guide, aide,
-              et l'ancien formulaire complet. */}
-          <Ligne
-            label="Réglages"
-            signal={notifications.ton === 'ambre' || unreadSupportCount
-              ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
-              : undefined}
-            href="/dashboard/parametres/reglages"
-          />
-          <form action="/api/auth/logout" method="POST" className="flex items-center min-h-[46px] py-1.5">
-            <button type="submit" className={`text-[15px] ${corps} text-left`} style={{ color: 'var(--v2-color-rouge)' }}>
-              Déconnexion
-            </button>
-          </form>
-        </CarteListe>
-      </div>
-
-      {/* Réservé à l'équipe, jamais deviné côté client (voir
-          useEstEquipeSupport : la valeur vient du serveur). Séparé de « Mon
-          compte » comme l'était « Outil interne » dans le menu latéral — on
-          doit comprendre d'un coup d'œil que ce n'est pas une fonction du
-          produit. Le compteur est celui des laveurs qui attendent une réponse,
-          distinct de celui d'« Aide et assistance » au-dessus. */}
-      {estEquipeSupport && (
-        <div>
-          <TitreSection>Outil interne</TitreSection>
-          <CarteListe>
-            <Ligne
-              label="Support (équipe)"
-              href="/dashboard/support"
-              signal={<NonLus count={unreadTeamCount} />}
+        <div className="min-w-0 flex-1 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-7 py-6">
+          <TitreSection>Votre page de réservation</TitreSection>
+          <div className="mx-auto max-w-[380px]">
+            <ApercuPageV2
+              nom={washer.name}
+              logoUrl={washer.logo_url ?? null}
+              message={washer.welcome_message ?? null}
+              couleur={washer.brand_color ?? null}
+              fond={washer.background_theme ?? null}
             />
-          </CarteListe>
+          </div>
+          <p className={`mx-auto mt-4 max-w-[380px] text-center text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            C’est ce que voient vos clients quand ils réservent. Le logo, les couleurs et le
+            message se règlent dans « Apparence de ma page ».
+          </p>
+          <div className="mx-auto mt-5 max-w-[380px]">
+            <CarteListe>
+              <div className="flex items-center justify-between gap-3 py-3">
+                <span className={`text-[13px] ${corps}`}>Lien</span>
+                <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>/book/{washer.slug}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 py-3">
+                <span className={`text-[13px] ${corps}`}>Offre actuelle</span>
+                <span className={`text-[13px] ${corpsFort}`}>
+                  {washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]}
+                </span>
+              </div>
+            </CarteListe>
+          </div>
         </div>
-      )}
-
-
+      </div>
 
       <DiagnosticPwa />
     </div>

@@ -62,6 +62,7 @@ export default async function ParametresPage() {
         email={user.email ?? ''}
         servicesCount={services.error ? undefined : (services.count ?? 0)}
         resumeHoraires={availabilities.error ? undefined : resumeHorairesCourt(availabilities.data ?? [])}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

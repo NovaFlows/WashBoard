@@ -12,10 +12,16 @@ import BilanPublicitesV2 from '@/components/dashboard/BilanPublicitesV2'
 import ChiffresV2 from '@/components/dashboard/ChiffresV2'
 import DepensesV2 from '@/components/dashboard/DepensesV2'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
+import ParametresFormV2 from '@/components/dashboard/ParametresFormV2'
+import ApparenceV2 from '@/components/dashboard/ApparenceV2'
+import PrestationsV2 from '@/components/dashboard/PrestationsV2'
+import HorairesV2 from '@/components/dashboard/HorairesV2'
+import ProfilV2 from '@/components/dashboard/ProfilV2'
+import MesLiensV2 from '@/components/dashboard/MesLiensV2'
 import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import type {
   jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo,
-  jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, AccueilDemo,
+  jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo, AccueilDemo,
 } from '@/lib/demo/jeuDeDonnees'
 
 type Donnees = ReturnType<typeof jeuDeDonneesDemo>
@@ -24,6 +30,7 @@ type MessagesDonnees = ReturnType<typeof jeuDeDonneesMessagesDemo>
 type PublicitesDonnees = ReturnType<typeof jeuDeDonneesPublicitesDemo>
 type ChiffresDonnees = ReturnType<typeof jeuDeDonneesChiffresDemo>
 type DepensesDonnees = ReturnType<typeof jeuDeDonneesDepensesDemo>
+type PlusDonnees = ReturnType<typeof jeuDeDonneesPlusDemo>
 type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota: AccueilDemo }
 
 // Huit écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
@@ -79,8 +86,18 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // `CalendrierDashboardV2` lit lui-même `useGrandEcran()` en interne, donc réduire la fenêtre
 // sous 1024px y montre aussi, à l'intérieur de l'écran, sa disposition à une seule colonne.
 
-type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan' | 'chiffres' | 'depenses'
+// Passe « Plus bureau » (2026-10-06) : six écrans de plus, derrière un sous-sélecteur (même
+// geste que les trois états d'« Aujourd'hui ») — la liste elle-même (`ParametresFormV2`, état
+// de repos) et les cinq réglages qu'elle ouvre. Branchés directement sur les composants V2
+// (pas sur `ParametresForm.tsx`/`Apparence.tsx`/etc., les garde-fous v1/v2/bureau) : même
+// raison que pour Agenda et Chiffres plus haut — cette page juge la présentation, le
+// branchement v1/v2/bureau est déjà prouvé par « Aujourd'hui ». Chacun reçoit sa propre
+// prop `liste` (sauf « Mon profil », qui la dérive de la fiche laveur complète qu'il reçoit
+// déjà — voir ProfilV2.tsx) : réduire la fenêtre sous 1024px y montre, à l'intérieur de
+// l'écran, sa disposition à une seule colonne (`useGrandEcran()`, lu par chacun en interne).
+type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan' | 'chiffres' | 'depenses' | 'plus'
 type EtatAujourdhui = 'normal' | 'premierJour' | 'quota'
+type EcranPlus = 'liste' | 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence'
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -103,12 +120,14 @@ function PilulePilote({ actif, onClick, children }: { actif: boolean; onClick: (
 }
 
 function SelecteurDemo({
-  ecran, onEcran, etat, onEtat,
+  ecran, onEcran, etat, onEtat, ecranPlus, onEcranPlus,
 }: {
   ecran: Ecran
   onEcran: (e: Ecran) => void
   etat: EtatAujourdhui
   onEtat: (e: EtatAujourdhui) => void
+  ecranPlus: EcranPlus
+  onEcranPlus: (e: EcranPlus) => void
 }) {
   return (
     <div className="mb-4 flex flex-col gap-2.5">
@@ -116,9 +135,8 @@ function SelecteurDemo({
         <span className={`rounded-full px-3 py-1 text-[11px] ${corpsFort}`} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }}>
           Démo
         </span>
-        {/* `flex-wrap` : six pilules ne tiennent plus sur une ligne à 390px depuis que cette
-            passe en ajoute trois — sans lui, la ligne déborde et fait défiler toute la page
-            horizontalement (constaté en capturant cette passe). */}
+        {/* `flex-wrap` : neuf pilules ne tiennent plus sur une ligne à 390px — sans lui, la
+            ligne déborde et fait défiler toute la page horizontalement. */}
         <div className="flex flex-wrap gap-1.5">
           <PilulePilote actif={ecran === 'aujourdhui'} onClick={() => onEcran('aujourdhui')}>Aujourd’hui</PilulePilote>
           <PilulePilote actif={ecran === 'clients'} onClick={() => onEcran('clients')}>Clients</PilulePilote>
@@ -128,6 +146,7 @@ function SelecteurDemo({
           <PilulePilote actif={ecran === 'bilan'} onClick={() => onEcran('bilan')}>Bilan publicités</PilulePilote>
           <PilulePilote actif={ecran === 'chiffres'} onClick={() => onEcran('chiffres')}>Chiffres</PilulePilote>
           <PilulePilote actif={ecran === 'depenses'} onClick={() => onEcran('depenses')}>Dépenses</PilulePilote>
+          <PilulePilote actif={ecran === 'plus'} onClick={() => onEcran('plus')}>Plus</PilulePilote>
         </div>
         <span className={`text-[12px] ${corps}`} style={{ color: 'var(--v2-color-gris)' }}>
           Jeu de données fabriqué en mémoire — rien n’est lu ni écrit dans la base.
@@ -143,6 +162,19 @@ function SelecteurDemo({
           <PilulePilote actif={etat === 'normal'} onClick={() => onEtat('normal')}>Journée normale</PilulePilote>
           <PilulePilote actif={etat === 'premierJour'} onClick={() => onEtat('premierJour')}>Premier jour</PilulePilote>
           <PilulePilote actif={etat === 'quota'} onClick={() => onEtat('quota')}>Quota atteint</PilulePilote>
+        </div>
+      )}
+
+      {/* « Plus » : la liste (écran de repos, écran 60) et les cinq réglages qu'elle ouvre. */}
+      {ecran === 'plus' && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`text-[11.5px] ${corps}`} style={{ color: 'var(--v2-color-gris)' }}>Écran :</span>
+          <PilulePilote actif={ecranPlus === 'liste'} onClick={() => onEcranPlus('liste')}>Liste (repos)</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'profil'} onClick={() => onEcranPlus('profil')}>Mon profil</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'liens'} onClick={() => onEcranPlus('liens')}>Mes liens</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'prestations'} onClick={() => onEcranPlus('prestations')}>Prestations et prix</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'horaires'} onClick={() => onEcranPlus('horaires')}>Horaires</PilulePilote>
+          <PilulePilote actif={ecranPlus === 'apparence'} onClick={() => onEcranPlus('apparence')}>Apparence de ma page</PilulePilote>
         </div>
       )}
     </div>
@@ -239,7 +271,7 @@ function useDonneesDepensesDemo(depenses: Depense[], recurrents: DepenseRecurren
  *  (`ClientsViewV2`, `Accueil`/`AccueilV2`), nourris des jeux de données fabriqués côté serveur
  *  (`jeuDeDonneesDemo()`/`jeuDeDonneesAccueilDemo()`, appelés une fois par `page.tsx` pour que
  *  les dates relatives (« cette semaine », « demain ») restent cohérentes sur toute la page). */
-export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites, chiffres, depenses }: {
+export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites, chiffres, depenses, plus }: {
   donnees: Donnees
   accueil: AccueilTroisEtats
   agenda: AgendaDonnees
@@ -247,11 +279,13 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
   publicites: PublicitesDonnees
   chiffres: ChiffresDonnees
   depenses: DepensesDonnees
+  plus: PlusDonnees
 }) {
   useVerrouEcriture()
   useDonneesDepensesDemo(depenses.depenses, depenses.recurrents)
   const [ecran, setEcran] = useState<Ecran>('aujourdhui')
   const [etat, setEtat] = useState<EtatAujourdhui>('normal')
+  const [ecranPlus, setEcranPlus] = useState<EcranPlus>('liste')
   const donneesAccueil = accueil[etat]
 
   return (
@@ -264,7 +298,7 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
       slug="demo-eclat-mobile"
       betaRefonte
     >
-      <SelecteurDemo ecran={ecran} onEcran={setEcran} etat={etat} onEtat={setEtat} />
+      <SelecteurDemo ecran={ecran} onEcran={setEcran} etat={etat} onEtat={setEtat} ecranPlus={ecranPlus} onEcranPlus={setEcranPlus} />
       {ecran === 'aujourdhui' ? (
         <Accueil
           v1={<V1Placeholder />}
@@ -324,6 +358,42 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
         />
       ) : ecran === 'depenses' ? (
         <DepensesV2 />
+      ) : ecran === 'plus' ? (
+        ecranPlus === 'liste' ? (
+          <ParametresFormV2
+            washer={plus.profil.washer}
+            servicesCount={plus.prestations.services.length}
+            resumeHoraires="Lun.–ven. 8h–18h · sam. 9h–13h"
+          />
+        ) : ecranPlus === 'profil' ? (
+          <ProfilV2 washer={plus.profil.washer} email={plus.profil.email} peutEquipe={plus.profil.peutEquipe} />
+        ) : ecranPlus === 'liens' ? (
+          <MesLiensV2 slug={plus.slug} liste={plus.listeBase} />
+        ) : ecranPlus === 'prestations' ? (
+          <PrestationsV2
+            services={plus.prestations.services}
+            categories={plus.prestations.categories}
+            availabilities={plus.prestations.availabilities}
+            lectureIncomplete={false}
+            zone={plus.prestations.zone}
+            adresseDeBase={plus.prestations.adresseDeBase}
+            plafond={plus.prestations.plafond}
+            offre={plus.prestations.offre}
+            liste={plus.listeBase}
+          />
+        ) : ecranPlus === 'horaires' ? (
+          <HorairesV2
+            availabilities={plus.horaires.availabilities}
+            unavailabilities={plus.horaires.unavailabilities}
+            teamSize={plus.horaires.teamSize}
+            jourMemeAutorise={plus.horaires.jourMemeAutorise}
+            adresseDepart={plus.horaires.adresseDepart}
+            lectureIncomplete={false}
+            liste={plus.listeBase}
+          />
+        ) : (
+          <ApparenceV2 nom={plus.listeBase.nom} slug={plus.slug} initial={plus.apparence} liste={plus.listeBase} />
+        )
       ) : (
         <ClientsViewV2
           bookings={donnees.bookings}

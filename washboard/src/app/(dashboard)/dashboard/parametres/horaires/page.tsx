@@ -51,6 +51,18 @@ export default async function HorairesPage() {
         jourMemeAutorise={!!washer.reservation_jour_meme}
         adresseDepart={!!washer.base_address?.trim()}
         lectureIncomplete={!!errDispos || !!errConges}
+        // Liste « Plus », pour la colonne de gauche sur grand écran : `nom`/`slug`/`plan`/
+        // `grandfathered`/`brandColor` viennent du `select('*')` déjà fait par
+        // `washerDuUtilisateur` ci-dessus ; `resumeHoraires` est recalculé dans HorairesV2.tsx
+        // lui-même, depuis les horaires affichés (voir son en-tête) — aucune requête de plus.
+        liste={{
+          nom: washer.name,
+          slug: washer.slug,
+          brandColor: washer.brand_color,
+          plan: washer.plan,
+          grandfathered: washer.grandfathered,
+        }}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

@@ -11,6 +11,8 @@ import FeuilleLienV2 from '@/components/dashboard/FeuilleLienV2'
 import { enregistrerSlug } from '@/lib/lienReservation'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { TRAFFIC_SOURCES, buildTrackedBookingLink } from '@/lib/trafficSources'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // « Mes liens » — refonte 2026, destination NEUVE de « Plus » (demande d'Alexandre,
 // 2026-09-25 : « change l'intérieur de mes exports et liens pour que ce soit dans le
@@ -33,8 +35,9 @@ const DUREE_COPIE_MS = 1800
 
 type Copie = { cle: string; ok: boolean } | null
 
-export default function MesLiensV2({ slug: slugServeur }: { slug: string }) {
+export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string; liste: ReglagesListeProps }) {
   const router = useRouter()
+  const grandEcran = useGrandEcran()
   // Le lien suit tout de suite un changement réussi, sans attendre le rechargement.
   const [slug, setSlug] = useState(slugServeur)
   const [feuille, setFeuille] = useState(false)
@@ -88,9 +91,11 @@ export default function MesLiensV2({ slug: slugServeur }: { slug: string }) {
     ? (copie.ok ? 'Lien copié.' : 'Copie impossible : maintenez le doigt sur le lien pour le copier.')
     : ''
 
-  return (
+  const contenu = (
     <div
-      className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]"
+      className={grandEcran
+        ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+        : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -219,6 +224,20 @@ export default function MesLiensV2({ slug: slugServeur }: { slug: string }) {
           {messageCopie}
         </p>
       )}
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        {/* `slug` suit le changement local (voir plus haut) plutôt que `liste.slug`, figé au
+            chargement de la page : sans ça, le lien « Voir » de la liste resterait sur
+            l'ancien lien juste après un changement réussi. */}
+        <ListeReglagesV2 {...liste} slug={slug} selection="liens" />
+      </div>
+      <div className="min-w-0 flex-1">{contenu}</div>
     </div>
   )
 }

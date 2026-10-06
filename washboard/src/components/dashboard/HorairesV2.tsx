@@ -18,6 +18,8 @@ import { enregistrerProfil } from '@/lib/profilApi'
 import {
   FERME, JOURS_AFFICHES, NOMS_JOURS, congesAVenir, libelleJour, libellePlage, phraseEchecAjout, resumeHoraires,
 } from '@/lib/horaires'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // « Horaires » — refonte 2026, destination NEUVE de « Plus » (la maquette n'a
 // aucun écran pour gérer les horaires ; Alexandre, 2026-09-24 : « avec le même
@@ -56,10 +58,13 @@ type Props = {
    *  vide (le laveur le prendrait pour son état réel et referait sa semaine, ou
    *  croirait ses congés levés). */
   lectureIncomplete: boolean
+  /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
+  liste: ReglagesListeProps
 }
 
-export default function HorairesV2({ availabilities, unavailabilities, teamSize, jourMemeAutorise, adresseDepart, lectureIncomplete }: Props) {
+export default function HorairesV2({ availabilities, unavailabilities, teamSize, jourMemeAutorise, adresseDepart, lectureIncomplete, liste }: Props) {
   const h = useHorairesV2(availabilities)
+  const grandEcran = useGrandEcran()
   const { plages } = h
   const {
     unavails, addModal, setAddModal, delModal, setDelModal, uSaving,
@@ -132,9 +137,11 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
     setRetrait(null)
   }
 
-  return (
+  const contenu = (
     <div
-      className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]`}
+      className={grandEcran
+        ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+        : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -324,6 +331,19 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
           onClose={() => setDelModal(null)}
         />
       )}
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  const resumeHorairesActuel = vide ? undefined : resumeHoraires(plages)
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <ListeReglagesV2 {...liste} resumeHoraires={resumeHorairesActuel} selection="horaires" />
+      </div>
+      <div className="min-w-0 flex-1">{contenu}</div>
     </div>
   )
 }

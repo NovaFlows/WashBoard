@@ -15,6 +15,8 @@ import FeuilleFondV2 from '@/components/dashboard/FeuilleFondV2'
 import FeuilleMessageV2 from '@/components/dashboard/FeuilleMessageV2'
 import FeuilleSiteV2 from '@/components/dashboard/FeuilleSiteV2'
 import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/apparence'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // « Apparence de ma page » — refonte 2026, destination NEUVE de « Plus » (la maquette
 // n'a aucun écran pour ça ; Alexandre, 2026-09-24 : « avec le même design que les
@@ -36,6 +38,12 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/appar
 // rien. Les écritures : logo, couleur, fond au geste ; message et site par le bouton
 // Enregistrer de leur feuille.
 
+// Passe bureau (2026-10-06) : sur grand écran (`useGrandEcran`, ≥1024px — site en bêta ou PWA
+// sur ordinateur), la liste « Plus » reste visible à gauche, en permanence, pendant que ce
+// réglage s'affiche à droite (voir `ListeReglagesV2.tsx` et le rapport de la passe). Même
+// raisonnement que `ChiffresV2.tsx`/`ClientsViewV2.tsx` : ce composant « respire » lui-même au
+// lieu d'un troisième fichier — la présentation mobile/PWA, elle, ne change pas d'une ligne.
+
 type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | null
 type Retrait = 'logo' | 'photo' | null
 
@@ -43,10 +51,13 @@ type Props = {
   nom: string
   slug: string
   initial: ReglagesApparence
+  /** Liste « Plus », affichée à gauche sur grand écran — voir le commentaire plus haut. */
+  liste: ReglagesListeProps
 }
 
-export default function ApparenceV2({ nom, slug, initial }: Props) {
+export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
   const h = useApparenceV2(initial)
+  const grandEcran = useGrandEcran()
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [retrait, setRetrait] = useState<Retrait>(null)
   const [retraitEnCours, setRetraitEnCours] = useState(false)
@@ -94,9 +105,11 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
   const valeurLogo = aLogo ? 'Ajouté' : 'Pas encore : votre initiale s’affiche'
   const valeurMessage = h.message ?? `Pas encore : « ${MESSAGE_PAR_DEFAUT} » s’affiche`
 
-  return (
+  const contenu = (
     <div
-      className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]"
+      className={grandEcran
+        ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+        : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
     >
       <div className="flex items-center gap-1 pb-3">
         <Link
@@ -244,6 +257,17 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
           onClose={() => setRetrait(null)}
         />
       )}
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <ListeReglagesV2 {...liste} selection="apparence" />
+      </div>
+      <div className="min-w-0 flex-1">{contenu}</div>
     </div>
   )
 }

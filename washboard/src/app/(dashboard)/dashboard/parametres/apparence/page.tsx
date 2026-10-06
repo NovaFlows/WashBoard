@@ -49,6 +49,18 @@ export default async function ApparencePage() {
           message: washer.welcome_message ?? null,
           site: washer.website_url ?? null,
         }}
+        // Liste « Plus », pour la colonne de gauche sur grand écran (voir Apparence.tsx) :
+        // tout est déjà dans COLONNES ci-dessus, aucune lecture de plus. `servicesCount` et
+        // `resumeHoraires` restent absents : cet écran n'a jamais lu les prestations ni les
+        // horaires, et les deviner ici inventerait un chiffre (voir ListeReglagesV2.tsx).
+        liste={{
+          nom: washer.name,
+          slug: washer.slug,
+          brandColor: washer.brand_color,
+          plan: washer.plan,
+          grandfathered: washer.grandfathered,
+        }}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

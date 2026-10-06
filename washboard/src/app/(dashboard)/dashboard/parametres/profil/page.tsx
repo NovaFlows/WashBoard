@@ -18,8 +18,12 @@ import type { Washer } from '@/types'
 // par Supabase Auth depuis le navigateur (e-mail, mot de passe). Les colonnes sont ÉNUMÉRÉES
 // (jamais `*`) : tout ce qui franchit la frontière serveur → navigateur est sérialisé dans la
 // page, et la fiche laveur porte des jetons Google et des identifiants Stripe.
+// `slug`/`brand_color` : ajoutés passe bureau (2026-10-06), pour la liste « Plus » affichée à
+// gauche sur grand écran (`ProfilV2.tsx` la construit depuis cette même fiche) — même requête,
+// deux colonnes de plus. `slug` manquait déjà à `DashboardShell` (`slug={washer.slug}` plus
+// bas, silencieusement `undefined` jusqu'ici).
 const COLONNES =
-  'id, name, phone, base_address, team_size, travel_fee_tiers, travel_fee_mode, account_status, deletion_scheduled_at, ' +
+  'id, name, slug, brand_color, phone, base_address, team_size, travel_fee_tiers, travel_fee_mode, account_status, deletion_scheduled_at, ' +
   'facture_statut, facture_nom_legal, facture_siret, facture_adresse, facture_forme_juridique, ' +
   'facture_capital, facture_immatriculation, facture_regime_tva, facture_taux_tva, facture_numero_tva, ' +
   'facture_prochain_numero, ' +
@@ -39,6 +43,7 @@ export default async function ProfilPage() {
         email={user.email ?? ''}
         // Décidé côté serveur : le plan ne doit pas se deviner dans le navigateur.
         peutEquipe={hasFeature(washer, 'multi_laveurs')}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

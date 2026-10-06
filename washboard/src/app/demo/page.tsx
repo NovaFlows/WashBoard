@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import {
   jeuDeDonneesDemo, jeuDeDonneesAccueilDemo, jeuDeDonneesAgendaDemo,
   jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo, jeuDeDonneesChiffresDemo,
-  jeuDeDonneesDepensesDemo,
+  jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo,
 } from '@/lib/demo/jeuDeDonnees'
 import DemoDashboard from './DemoDashboard'
 
@@ -43,6 +43,7 @@ export default function DemoPage() {
       publicites={jeuDeDonneesPublicitesDemo()}
       chiffres={jeuDeDonneesChiffresDemo()}
       depenses={jeuDeDonneesDepensesDemo()}
+      plus={jeuDeDonneesPlusDemo()}
     />
   )
 }

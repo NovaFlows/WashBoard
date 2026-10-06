@@ -23,6 +23,8 @@ import {
 import { formatDureeFr } from '@/lib/pricing'
 import { resumeZone } from '@/lib/zoneForm'
 import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // « Prestations et prix » — refonte 2026, destination NEUVE de « Plus » (la
 // maquette n'a aucun écran pour gérer les prestations ; Alexandre, 2026-09-24 :
@@ -85,6 +87,10 @@ type Props = {
   plafond: number | null
   /** Offre en cours, pour la nommer plutôt que dire « votre offre ». */
   offre: Plan
+  /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`) — le
+   *  compte de prestations qu'elle porte est ici RECALCULÉ depuis `services` (voir plus bas),
+   *  pour rester juste si une prestation est ajoutée ou supprimée sans recharger la page. */
+  liste: ReglagesListeProps
 }
 
 /** Où en est le catalogue face au plafond de l'offre : le compte de ce que la
@@ -253,9 +259,10 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, plafond, offre,
+  zone: zoneServeur, adresseDeBase, plafond, offre, liste,
 }: Props) {
   const router = useRouter()
+  const grandEcran = useGrandEcran()
   const p = usePrestationsV2(servicesServeur, categoriesServeur)
   const { services, categories } = p
   // Zone et créneaux : l'état local suit la base dès qu'une écriture réussit, sans
@@ -449,9 +456,11 @@ export default function PrestationsV2({
     </div>
   )
 
-  return (
+  const contenu = (
     <div
-      className={`max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]`}
+      className={grandEcran
+        ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+        : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
     >
       {vueListe ? enteteListe : enteteAccueil}
 
@@ -623,6 +632,17 @@ export default function PrestationsV2({
           onClose={() => setSuppression(null)}
         />
       )}
+    </div>
+  )
+
+  if (!grandEcran) return contenu
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <ListeReglagesV2 {...liste} servicesCount={services.length} selection="prestations" />
+      </div>
+      <div className="min-w-0 flex-1">{contenu}</div>
     </div>
   )
 }

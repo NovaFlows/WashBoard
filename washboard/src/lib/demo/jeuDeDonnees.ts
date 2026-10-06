@@ -34,8 +34,10 @@ import type { Device } from '@/lib/funnelTracking'
 import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import { bilanCampagne, resteHorsCreations, type BilanCreation, type CampagneAffichee, type Creation } from '@/lib/campagne'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
-import type { ZoneConfig } from '@/types'
+import type { Availability, Service, ServiceCategory, Unavailability as UnavailabilityReelle, Washer, ZoneConfig } from '@/types'
 import type { Plan } from '@/lib/plan'
+import type { ReglagesApparence } from '@/hooks/useApparenceV2'
+import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { computeSetupProgress, type SetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 import { semaineAccueil, type JourSemaine, type RdvPourSemaine } from '@/lib/semaineAccueil'
 
@@ -1007,5 +1009,130 @@ export function jeuDeDonneesChiffresDemo(): {
     hasCrm: true,
     hasCa: true,
     hasCompta: true,
+  }
+}
+
+// ── Jeu de données pour « Plus » (passe bureau, 2026-10-06) ────────────────────────────────
+//
+// Nourrit les six écrans de la destination « Plus » : la liste elle-même (`ParametresFormV2`,
+// écran de repos) et les cinq réglages qu'elle ouvre — Mon profil, Mes liens, Prestations et
+// prix, Horaires, Apparence de ma page. Même laveur fictif que le reste de `/demo` (Julien
+// Roussel / Éclat Mobile, Bordeaux, offre Pro, `README.md` de la maquette bureau) : `nom` porte
+// le nom de l'ENTREPRISE (« Éclat Mobile », ce que montre la page de réservation), distinct du
+// nom PERSONNEL (« Julien Roussel », porté par `DashboardShell` — voir `RailBureauV2.tsx` pour
+// la même distinction).
+//
+// Les prestations/catégories sont fabriquées dans la forme RÉELLE (`Service`/`ServiceCategory`,
+// `types/index.ts`), pas la forme simplifiée de `jeuDeDonneesAgendaDemo()` (`ServiceFull`,
+// pensée pour `CalendrierDashboardV1` seulement) : `PrestationsV2` lit `washer_id`,
+// `description`, `addons`, que cette dernière ne porte pas.
+export function jeuDeDonneesPlusDemo(): {
+  listeBase: ReglagesListeProps
+  apparence: ReglagesApparence
+  prestations: {
+    services: Service[]
+    categories: ServiceCategory[]
+    availabilities: Availability[]
+    zone: ZoneConfig
+    adresseDeBase: string | null
+    plafond: number | null
+    offre: Plan
+  }
+  horaires: {
+    availabilities: Availability[]
+    unavailabilities: UnavailabilityReelle[]
+    teamSize: number
+    jourMemeAutorise: boolean
+    adresseDepart: boolean
+  }
+  profil: { washer: Washer; email: string; peutEquipe: boolean }
+  slug: string
+} {
+  const nom = 'Éclat Mobile'
+  const slug = 'demo-eclat-mobile'
+  const brandColor = '#1456D1'
+  const plan: Plan = 'pro'
+
+  const categories: ServiceCategory[] = [
+    {
+      id: 'demo-plus-cat-voiture', washer_id: 'demo-washer-plus', name: 'Voiture', display_order: 0,
+      types: [{ id: 'citadine', name: 'Citadine' }, { id: 'berline', name: 'Berline' }, { id: 'suv', name: 'SUV' }],
+    },
+  ]
+  const services: Service[] = [
+    {
+      id: 'demo-plus-s-express', washer_id: 'demo-washer-plus', category_id: 'demo-plus-cat-voiture',
+      name: SERVICE_EXPRESS.name, description: null, price: SERVICE_EXPRESS.price, duration_minutes: SERVICE_EXPRESS.duration_minutes,
+      vehicle_types: ['citadine', 'berline', 'suv'], vehicle_price_overrides: {}, addons: [],
+    },
+    {
+      id: 'demo-plus-s-complet', washer_id: 'demo-washer-plus', category_id: 'demo-plus-cat-voiture',
+      name: SERVICE_COMPLET.name, description: null, price: SERVICE_COMPLET.price, duration_minutes: SERVICE_COMPLET.duration_minutes,
+      vehicle_types: ['citadine', 'berline', 'suv'], vehicle_price_overrides: {}, addons: [],
+    },
+    {
+      id: 'demo-plus-s-sieges', washer_id: 'demo-washer-plus', category_id: 'demo-plus-cat-voiture',
+      name: SERVICE_SIEGES.name, description: null, price: SERVICE_SIEGES.price, duration_minutes: SERVICE_SIEGES.duration_minutes,
+      vehicle_types: ['berline', 'suv'], vehicle_price_overrides: {}, addons: [],
+    },
+    {
+      id: 'demo-plus-s-flotte', washer_id: 'demo-washer-plus', category_id: 'demo-plus-cat-voiture',
+      name: 'Forfait flotte', description: null, price: 70, duration_minutes: 90,
+      vehicle_types: ['utilitaire'], vehicle_price_overrides: {}, addons: [],
+    },
+  ]
+
+  // Lundi (1) → vendredi (5) 8h–18h, samedi (6) 9h–13h — dimanche (0) fermé, comme le reste de
+  // `/demo` (voir `jeuDeDonneesAgendaDemo`, même semaine de référence).
+  const availabilities: Availability[] = [1, 2, 3, 4, 5].map(jour => ({
+    id: `demo-plus-dispo-${jour}`, washer_id: 'demo-washer-plus', day_of_week: jour, start_time: '08:00', end_time: '18:00',
+  })).concat([
+    { id: 'demo-plus-dispo-6', washer_id: 'demo-washer-plus', day_of_week: 6, start_time: '09:00', end_time: '13:00' },
+  ])
+  const unavailabilities: UnavailabilityReelle[] = [
+    {
+      id: 'demo-plus-conge', washer_id: 'demo-washer-plus', start_date: jourCivilDansNJours(18), end_date: jourCivilDansNJours(21),
+      label: 'Vacances', team_members_off: 2, created_at: versISO(-30, 9),
+    },
+  ]
+
+  const listeBase: ReglagesListeProps = {
+    nom, slug, brandColor, plan, grandfathered: false,
+  }
+
+  const profilWasher: Washer = {
+    id: 'demo-washer-plus', user_id: 'demo-user-plus', name: nom, slug, phone: '06 12 34 56 78',
+    logo_url: null, welcome_message: 'Bienvenue chez Éclat Mobile !', brand_color: brandColor,
+    zone_config: { enabled: true, type: 'road', center_address: 'Bordeaux, France', radius_km: 15 },
+    google_refresh_token: null, team_size: 2,
+    smart_slot_enabled: true, smart_slot_radius_minutes: 20, smart_slot_discount_type: 'percent', smart_slot_discount_value: 10,
+    reservation_jour_meme: true, travel_fee_tiers: [], base_address: '12 Rue Fondaudège, Bordeaux',
+    travel_fee_mode: 'base', background_theme: null, website_url: 'https://eclatmobile.fr',
+    account_status: 'active', deletion_scheduled_at: null, plan, grandfathered: false,
+    review_enabled: true, review_delay_hours: 3, google_review_url: 'https://g.page/r/demo', review_channel: 'sms',
+    sms_sender: 'EclatMobile', followup_enabled: true, followup_delay_days: 90, followup_message: null,
+    created_at: versISO(-400, 9),
+    cgv_acceptees_le: versISO(-400, 9), cgv_acceptees_ip: null,
+    facture_statut: 'ei', facture_nom_legal: 'Julien Roussel', facture_siret: '123 456 789 00012',
+    facture_adresse: '12 Rue Fondaudège, 33000 Bordeaux', facture_forme_juridique: null, facture_capital: null,
+    facture_immatriculation: null, facture_regime_tva: 'franchise', facture_taux_tva: 0, facture_numero_tva: null,
+    facture_prochain_numero: 64, beta_refonte: true,
+  }
+
+  return {
+    listeBase,
+    apparence: {
+      logoUrl: null, couleur: brandColor, fond: null,
+      message: 'Bienvenue chez Éclat Mobile !', site: 'https://eclatmobile.fr',
+    },
+    prestations: {
+      services, categories, availabilities,
+      zone: profilWasher.zone_config, adresseDeBase: profilWasher.base_address, plafond: null, offre: plan,
+    },
+    horaires: {
+      availabilities, unavailabilities, teamSize: 2, jourMemeAutorise: true, adresseDepart: true,
+    },
+    profil: { washer: profilWasher, email: 'julien@eclatmobile.fr', peutEquipe: true },
+    slug,
   }
 }
