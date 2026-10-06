@@ -9,27 +9,49 @@ import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
 import MessagesAutomatiquesV2 from '@/components/dashboard/MessagesAutomatiquesV2'
 import PublicitesV2 from '@/components/dashboard/PublicitesV2'
 import BilanPublicitesV2 from '@/components/dashboard/BilanPublicitesV2'
+import ChiffresV2 from '@/components/dashboard/ChiffresV2'
+import DepensesV2 from '@/components/dashboard/DepensesV2'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
+import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import type {
   jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo,
-  AccueilDemo,
+  jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, AccueilDemo,
 } from '@/lib/demo/jeuDeDonnees'
 
 type Donnees = ReturnType<typeof jeuDeDonneesDemo>
 type AgendaDonnees = ReturnType<typeof jeuDeDonneesAgendaDemo>
 type MessagesDonnees = ReturnType<typeof jeuDeDonneesMessagesDemo>
 type PublicitesDonnees = ReturnType<typeof jeuDeDonneesPublicitesDemo>
+type ChiffresDonnees = ReturnType<typeof jeuDeDonneesChiffresDemo>
+type DepensesDonnees = ReturnType<typeof jeuDeDonneesDepensesDemo>
 type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota: AccueilDemo }
 
-// Six écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
-// « bureau »), « Agenda » (passe « bureau », agenda), et trois écrans de la passe « bureau,
-// Clients — suite » (2026-10-06) : « Messages automatiques » (écrans 31/32 — le réglage d'un
+// Huit écrans sont branchés ici : « Clients » (passe pilote), « Aujourd'hui » (passe
+// « bureau »), « Agenda » (passe « bureau », agenda), trois écrans de la passe « bureau,
+// Clients — suite » (2026-10-06) — « Messages automatiques » (écrans 31/32 — le réglage d'un
 // automatisme s'ouvre EN CLIQUANT une ligne, pas par un onglet séparé, exactement comme sur le
 // vrai écran), « Publicités » (écran 33) et son « Bilan » (écran 34, tab séparée plutôt que le
 // lien de l'écran Publicités : ce lien navigue vers une vraie route `/dashboard/...` qui
-// exigerait une session, ce que `/demo` ne fournit jamais). Tous sont les seuls réellement
-// migrés en v2 dont les requêtes/actions se résument à des fonctions pures, ou à des appels
-// réseau sans conséquence sur la vraie base.
+// exigerait une session, ce que `/demo` ne fournit jamais) — et deux écrans de la passe
+// « Chiffres bureau » (2026-10-06) : « Chiffres » (ses trois onglets, écrans 7/8/40) et
+// « Dépenses » (écran 41, avec ses deux feuilles d'ajout, écrans 42/47, déjà centrées en modale
+// par `Feuille`/FeuilleV2.tsx au-delà de 640px — rien à coder en plus pour elles ici). Tous sont
+// les seuls réellement migrés en v2 dont les requêtes/actions se résument à des fonctions
+// pures, ou à des appels réseau sans conséquence sur la vraie base.
+//
+// « Chiffres » et « Dépenses » sont branchés directement sur `ChiffresV2`/`DepensesV2` (pas sur
+// `Chiffres.tsx`/`Depenses.tsx`, les garde-fous v1/v2) : même raison que pour « Agenda », cette
+// page sert à juger la présentation, pas à redémontrer un branchement déjà prouvé par
+// « Aujourd'hui ». `DepensesV2` (et la section « Dépenses » de l'onglet Argent) lisent
+// eux-mêmes `/api/expenses`/`/api/expenses/recurring` au montage — contrairement aux autres
+// écrans de cette page, leur état n'est pas reçu en props. Ces routes exigent une session que
+// `/demo` ne fournit jamais (401) : sans rien de plus, l'onglet Argent entier ET l'écran
+// Dépenses afficheraient une erreur de chargement (constaté en écrivant cette passe — l'erreur
+// de la section « Dépenses » remonte jusqu'au bloc héros de l'onglet Argent, voir
+// ChiffresArgent.tsx). `useDonneesDepensesDemo`, plus bas, dévie donc CES DEUX LECTURES SEULES
+// vers `jeuDeDonneesDepensesDemo()` — jamais une écriture, `useVerrouEcriture` les bloque déjà
+// toutes. Différent de `/api/trajet` pour l'Agenda (voir plus bas), laissé en échec assumé : là,
+// une seule ligne secondaire (le temps de route) en dépend, pas l'écran entier.
 //
 // `ClientsViewV2` porte deux actions d'écriture (glisser pour « Supprimer » un client, « Ne
 // plus relancer ») : elles restent câblées vers les vraies routes `/api/clients/[cle]`, parce
@@ -57,7 +79,7 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // `CalendrierDashboardV2` lit lui-même `useGrandEcran()` en interne, donc réduire la fenêtre
 // sous 1024px y montre aussi, à l'intérieur de l'écran, sa disposition à une seule colonne.
 
-type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan'
+type Ecran = 'clients' | 'aujourdhui' | 'agenda' | 'messages' | 'publicites' | 'bilan' | 'chiffres' | 'depenses'
 type EtatAujourdhui = 'normal' | 'premierJour' | 'quota'
 
 const police = '[font-family:var(--font-archivo)]'
@@ -104,6 +126,8 @@ function SelecteurDemo({
           <PilulePilote actif={ecran === 'messages'} onClick={() => onEcran('messages')}>Messages automatiques</PilulePilote>
           <PilulePilote actif={ecran === 'publicites'} onClick={() => onEcran('publicites')}>Publicités</PilulePilote>
           <PilulePilote actif={ecran === 'bilan'} onClick={() => onEcran('bilan')}>Bilan publicités</PilulePilote>
+          <PilulePilote actif={ecran === 'chiffres'} onClick={() => onEcran('chiffres')}>Chiffres</PilulePilote>
+          <PilulePilote actif={ecran === 'depenses'} onClick={() => onEcran('depenses')}>Dépenses</PilulePilote>
         </div>
         <span className={`text-[12px] ${corps}`} style={{ color: 'var(--v2-color-gris)' }}>
           Jeu de données fabriqué en mémoire — rien n’est lu ni écrit dans la base.
@@ -177,18 +201,55 @@ function useVerrouEcriture() {
   }, [])
 }
 
+/** `DepensesV2` (et la section « Dépenses » de `ChiffresArgent`) ne reçoivent pas leurs frais
+ *  en props, contrairement au reste de cette page : ils lisent eux-mêmes `/api/expenses` et
+ *  `/api/expenses/recurring` au montage. Ces routes exigent une session, que `/demo` ne fournit
+ *  jamais (401) — sans ce deuxième filtre, les deux écrans n'afficheraient qu'une erreur de
+ *  chargement. Il s'empile sur `useVerrouEcriture` (qui bloque déjà toute écriture) : seules les
+ *  deux lectures GET ci-dessous sont déviées vers `jeuDeDonneesDepensesDemo()` ; tout le reste
+ *  continue vers le réseau comme avant. */
+function useDonneesDepensesDemo(depenses: Depense[], recurrents: DepenseRecurrente[]) {
+  useEffect(() => {
+    const origine = window.fetch
+    window.fetch = async (entree, init) => {
+      const url = typeof entree === 'string'
+        ? entree
+        : (typeof Request !== 'undefined' && entree instanceof Request ? entree.url : String(entree))
+      const methode = (init?.method
+        ?? (typeof Request !== 'undefined' && entree instanceof Request ? entree.method : 'GET')).toUpperCase()
+      const chemin = url.startsWith('http') ? new URL(url).pathname + new URL(url).search : url
+
+      if (methode === 'GET' && chemin.startsWith('/api/expenses/recurring')) {
+        return new Response(JSON.stringify({ recurring: recurrents }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      if (methode === 'GET' && chemin.startsWith('/api/expenses')) {
+        const params = new URL(url, 'http://localhost').searchParams
+        const start = params.get('start') ?? ''
+        const end = params.get('end') ?? ''
+        const dansLaPeriode = depenses.filter(d => (!start || d.date >= start) && (!end || d.date <= end))
+        return new Response(JSON.stringify({ expenses: dansLaPeriode }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      return origine(entree, init)
+    }
+    return () => { window.fetch = origine }
+  }, [depenses, recurrents])
+}
+
 /** Rendu client de `/demo` : le vrai châssis (`DashboardShell`) et les vrais écrans
  *  (`ClientsViewV2`, `Accueil`/`AccueilV2`), nourris des jeux de données fabriqués côté serveur
  *  (`jeuDeDonneesDemo()`/`jeuDeDonneesAccueilDemo()`, appelés une fois par `page.tsx` pour que
  *  les dates relatives (« cette semaine », « demain ») restent cohérentes sur toute la page). */
-export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites }: {
+export default function DemoDashboard({ donnees, accueil, agenda, messages, publicites, chiffres, depenses }: {
   donnees: Donnees
   accueil: AccueilTroisEtats
   agenda: AgendaDonnees
   messages: MessagesDonnees
   publicites: PublicitesDonnees
+  chiffres: ChiffresDonnees
+  depenses: DepensesDonnees
 }) {
   useVerrouEcriture()
+  useDonneesDepensesDemo(depenses.depenses, depenses.recurrents)
   const [ecran, setEcran] = useState<Ecran>('aujourdhui')
   const [etat, setEtat] = useState<EtatAujourdhui>('normal')
   const donneesAccueil = accueil[etat]
@@ -248,6 +309,21 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
         <PublicitesV2 campagnes={publicites.campagnes} baseUrl="https://app.washboard.fr/book/demo-eclat-mobile" />
       ) : ecran === 'bilan' ? (
         <BilanPublicitesV2 campagnes={publicites.campagnes} />
+      ) : ecran === 'chiffres' ? (
+        <ChiffresV2
+          bookings={donnees.bookings}
+          facturesManuelles={chiffres.facturesManuelles}
+          events={chiffres.events}
+          websiteHost={chiffres.websiteHost}
+          hasCrm={chiffres.hasCrm}
+          hasCa={chiffres.hasCa}
+          hasCompta={chiffres.hasCompta}
+          facturesCount={chiffres.facturesCount}
+          facturesImpayees={chiffres.facturesImpayees}
+          evenementsDepuis={chiffres.evenementsDepuis}
+        />
+      ) : ecran === 'depenses' ? (
+        <DepensesV2 />
       ) : (
         <ClientsViewV2
           bookings={donnees.bookings}

@@ -28,6 +28,10 @@ import type { RdvAccueil } from '@/components/dashboard/AccueilV2'
 import type { ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
 import type { MessagesAutomatiquesProps } from '@/components/dashboard/MessagesAutomatiquesV2'
 import type { RdvMessage } from '@/lib/messagesAutomatiques'
+import type { ChiffresEvent } from '@/components/dashboard/ChiffresV2'
+import type { FactureManuelle } from '@/lib/chiffresArgent'
+import type { Device } from '@/lib/funnelTracking'
+import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import { bilanCampagne, resteHorsCreations, type BilanCreation, type CampagneAffichee, type Creation } from '@/lib/campagne'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
@@ -896,4 +900,112 @@ export function jeuDeDonneesPublicitesDemo(): { campagnes: CampagneAffichee[] } 
   }
 
   return { campagnes: [rentree, flotte] }
+}
+
+// ── Jeu de données pour « Chiffres » et « Dépenses » (passe bureau, écrans 7/8/40/41) ────────
+//
+// `bookings` n'a pas besoin d'être refabriqué ici : `jeuDeDonneesDemo().bookings` (plus haut)
+// satisfait déjà exactement le type attendu par `ChiffresV2` (`ChiffresBooking` = `ClientBooking`
+// + deux champs optionnels que `ClientBooking` ne porte pas) — `DemoDashboard.tsx` le lui passe
+// directement. Seules les visites (aucun équivalent ailleurs dans la démo) sont fabriquées
+// ici, par un petit générateur déterministe plutôt qu'un historique écrit à la main : pas de
+// `Math.random()`, pour que deux captures du même jour se ressemblent.
+//
+// Volontairement laissé à Pro (`hasCrm`/`hasCa`/`hasCompta` tous vrais) : cohérent avec le
+// reste de `/demo` (`plan="pro"` dans DashboardShell) et avec le README de la maquette bureau
+// (Julien Roussel est en Pro sur la plupart des écrans).
+function genererEvenementsDemo(): ChiffresEvent[] {
+  const events: ChiffresEvent[] = []
+  // `undefined` → « direct » (voir `funnelStats.ts`, `buildReferrerBreakdown`).
+  const referrers: (string | undefined)[] = ['google.com', 'instagram.com', undefined, 'facebook.com', 'google.com']
+  const devices: Device[] = ['mobile', 'mobile', 'desktop', 'mobile', 'tablet']
+  const joursEcoules = new Date().getDate() // jour du mois en cours, 1..31 : la période par défaut de Chiffres est « mois »
+  let n = 0
+  for (let offset = 0; offset < joursEcoules; offset++) {
+    const jour = new Date()
+    jour.setDate(jour.getDate() - offset)
+    const dimanche = jour.getDay() === 0
+    const sessionsDuJour = dimanche ? 1 : 2 + (offset % 3) // 1 le dimanche, 2 à 4 les autres jours
+    for (let i = 0; i < sessionsDuJour; i++) {
+      const idx = n
+      n += 1
+      const sessionId = `demo-visite-${idx}`
+      const heure = 8 + (idx % 11) // étalé de 8 h à 18 h
+      const createdAt = versISO(-offset, heure, (idx * 7) % 60)
+      const referrer = referrers[idx % referrers.length]
+      const device = devices[idx % devices.length]
+      // Entonnoir déterministe, proche des proportions de la maquette (écran 8) : ~68 %
+      // atteignent « Créneau », ~48 % « Coordonnées », ~15 % « Confirmation ».
+      const marche = idx % 10
+      events.push({ step: 'prestation', session_id: sessionId, created_at: createdAt, referrer_host: referrer, device })
+      if (marche < 7) {
+        events.push({ step: 'creneau', session_id: sessionId, created_at: createdAt, referrer_host: referrer, device })
+        if (marche < 5) {
+          events.push({ step: 'coordonnees', session_id: sessionId, created_at: createdAt, referrer_host: referrer, device })
+          if (marche < 2) {
+            events.push({ step: 'confirmation', session_id: sessionId, created_at: createdAt, referrer_host: referrer, device })
+          }
+        }
+      }
+    }
+  }
+  return events
+}
+
+// ── Jeu de données pour « Dépenses » (écran 41, et la section « Dépenses » de l'onglet
+// Argent) ─────────────────────────────────────────────────────────────────────────────────
+//
+// Contrairement au reste de `/demo`, `DepensesV2` (et la section « Dépenses » de
+// `ChiffresArgent`) ne reçoit pas ses données en props : il appelle lui-même
+// `/api/expenses`/`/api/expenses/recurring`, des routes qui exigent une session que `/demo` ne
+// fournit jamais (401 sans elle). Sans rien de plus, les deux écrans afficheraient une erreur de
+// chargement plutôt que du contenu — voir `DemoDashboard.tsx`, qui intercepte ces deux lectures
+// (jamais les écritures) pour leur répondre avec ce jeu de données au lieu d'atteindre le réseau.
+export function jeuDeDonneesDepensesDemo(): { depenses: Depense[]; recurrents: DepenseRecurrente[] } {
+  const recurrents: DepenseRecurrente[] = [
+    { id: 'demo-rec-assurance', category: 'abonnement', label: 'Assurance véhicule', amount: 180, day_of_month: 1, active: true },
+    { id: 'demo-rec-utilitaire', category: 'abonnement', label: 'Location utilitaire', amount: 240, day_of_month: 5, active: true },
+  ]
+  const depenses: Depense[] = [
+    { id: 'demo-dep-buse', date: jourCivilILYA(2), category: 'equipement', label: 'Buse haute pression', amount: 95 },
+    { id: 'demo-dep-plein1', date: jourCivilILYA(2), category: 'carburant', label: 'Plein, trajet Mérignac', amount: 65 },
+    { id: 'demo-dep-produits', date: jourCivilILYA(3), category: 'produits', label: 'Produits de lavage', amount: 95 },
+    { id: 'demo-dep-microfibres', date: jourCivilILYA(3), category: 'produits', label: 'Microfibres ×10', amount: 45 },
+    {
+      id: 'demo-dep-assurance', date: jourCivilILYA(4), category: 'abonnement', label: 'Assurance véhicule', amount: 180,
+      recurring_expense_id: 'demo-rec-assurance',
+    },
+    { id: 'demo-dep-plein2', date: jourCivilILYA(4), category: 'carburant', label: 'Plein Total Bordeaux', amount: 120 },
+    { id: 'demo-dep-housses', date: jourCivilILYA(5), category: 'equipement', label: 'Pare-soleil & housses', amount: 70 },
+  ]
+  return { depenses, recurrents }
+}
+
+export function jeuDeDonneesChiffresDemo(): {
+  events: ChiffresEvent[]
+  facturesManuelles: FactureManuelle[]
+  facturesCount: number
+  facturesImpayees: number
+  websiteHost: string
+  evenementsDepuis: string
+  hasCrm: boolean
+  hasCa: boolean
+  hasCompta: boolean
+} {
+  return {
+    events: genererEvenementsDemo(),
+    // Aucune facture écrite à la main dans ce jeu de données : `encaissementsDesFactures([])`
+    // reste un no-op, l'« Encaissé » ne dépend que des réservations déjà fabriquées pour
+    // ClientsViewV2 — un seul jeu de vérité plutôt que deux listes à faire concorder à la main.
+    facturesManuelles: [],
+    facturesCount: 24,
+    // Une facture impayée : fait apparaître la ligne en ambre dans la colonne de gauche de
+    // l'onglet Argent (écran 7), sans quoi cet état ne se verrait jamais sur cette page.
+    facturesImpayees: 1,
+    websiteHost: 'eclatmobile.fr',
+    evenementsDepuis: versISO(-365, 0),
+    hasCrm: true,
+    hasCa: true,
+    hasCompta: true,
+  }
 }

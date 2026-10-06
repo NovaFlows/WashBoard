@@ -52,7 +52,9 @@ function titreVisites(type: PeriodType): string {
   }
 }
 
-export default function ChiffresAcquisition({ events, websiteHost, periode, maintenant, evenementsDepuis, evenementsIncomplets }: {
+export default function ChiffresAcquisition({
+  events, websiteHost, periode, maintenant, evenementsDepuis, evenementsIncomplets, grandEcran,
+}: {
   events: ChiffresEvent[]
   websiteHost?: string
   periode: PeriodeChiffres
@@ -60,6 +62,10 @@ export default function ChiffresAcquisition({ events, websiteHost, periode, main
   /** Début (ISO) de la fenêtre de visites chargée par la page. */
   evenementsDepuis?: string | null
   evenementsIncomplets?: boolean
+  /** `useGrandEcran()`, lu une seule fois par ChiffresV2 et partagé entre les trois onglets.
+   *  Bascule entre la pile mobile (inchangée) et les deux colonnes de l'écran 8 de la
+   *  maquette (260px héros + détail à gauche, graphique + entonnoir + sources à droite). */
+  grandEcran?: boolean
 }) {
   const couverture = couvertureEvenements(periode, evenementsDepuis ?? null)
   const plage = plageDe(periode)
@@ -126,6 +132,107 @@ export default function ChiffresAcquisition({ events, websiteHost, periode, main
   const aucune = couverture.etat === 'aucune'
   const pct = stats.visitorChange.pct
 
+  // Blocs partagés par les deux dispositions — seule leur RÉPARTITION change entre mobile
+  // (empilés, inchangé) et grand écran (écran 8 de la maquette : héros + détail à gauche,
+  // graphique + entonnoir + sources à droite).
+
+  const blocHero = (
+    <div className="flex flex-col gap-[3px]">
+      <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Visiteurs sur votre page</span>
+      <span className={`${grandEcran ? 'text-[50px]' : 'text-[44px] sm:text-[52px]'} leading-none ${hero}`}>{aucune ? '—' : nombre.format(stats.visitorCount)}</span>
+      {aucune ? (
+        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          Pas de données avant le {formaterJour(couverture.depuisJour!)}.
+        </span>
+      ) : stats.visitorCount === 0 ? (
+        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune visite sur cette période</span>
+      ) : (
+        <>
+          {stats.comparable && pct !== null && (
+            <span className={`text-[13.5px] ${corps}`} style={{ color: pct >= 0 ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}>
+              {pct >= 0 ? '+' : ''}{pct} % {libelleComparaison(periode.type)}
+            </span>
+          )}
+          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            {nombre.format(stats.conversionCount)} réservation{stats.conversionCount > 1 ? 's' : ''}, soit {formatConversionRate(stats.conversionCount, stats.visitorCount)} des visiteurs
+          </span>
+        </>
+      )}
+      {couverture.etat === 'partielle' && (
+        <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)] mt-1`}>
+          Les visites avant le {formaterJour(couverture.depuisJour!)} ne sont pas comptées.
+        </span>
+      )}
+    </div>
+  )
+
+  // Grand écran : rejoint le héros, dans la colonne de gauche (écran 8). Mobile : reste tout en
+  // bas de l'écran, après les sources — inchangé.
+  const blocAppareilsHoraires = stats.visitorCount > 0 && (
+    <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed ${grandEcran ? 'mt-1' : 'px-1'}`}>
+      {stats.deviceBreakdown.map(d => `${LABEL_APPAREIL[d.device] ?? d.device} ${d.pct} %`).join(' · ')}
+      {stats.visitTiming.topSlot && ` · les visites montent surtout en ${stats.visitTiming.topSlot.toLowerCase()}`}
+    </p>
+  )
+
+  const blocGraphe = stats.visitorCount > 0 && (
+    <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-3.5">
+      <GraphiqueBarres
+        key={`${periode.type}|${periode.ref}`}
+        points={points}
+        formaterValeur={v => `${nombre.format(v)} visiteur${v > 1 ? 's' : ''}`}
+        resume={resume}
+        titreParDefaut={`${titreVisites(periode.type)} · touchez une barre pour lire sa valeur`}
+        hauteur={grandEcran ? 140 : undefined}
+      />
+    </div>
+  )
+
+  const blocFunnelArret = stats.visitorCount > 0 && (
+    <div>
+      <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>Où ils s’arrêtent</p>
+      <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 pt-2 pb-3">
+        {stats.funnelStats.map((s, i) => (
+          <div key={s.step} className="flex items-center gap-[11px] py-[7px]">
+            <span className={`w-[92px] shrink-0 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{ETAPE_COURTE[s.step]}</span>
+            <span className="flex-1 h-3 rounded-md bg-[color:var(--v2-filet-fort)] flex overflow-hidden">
+              <span
+                className="rounded-md"
+                style={{ width: `${Math.max(s.pctOfFirst, 2)}%`, backgroundColor: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-encre-pale)' }}
+              />
+            </span>
+            <span className={`w-10 shrink-0 text-right text-[13.5px] ${corpsFort} tabular-nums`}>{nombre.format(s.sessions)}</span>
+          </div>
+        ))}
+        {stats.pire && stats.pireAvant && stats.pire.pctDropFromPrevious > 0 && (
+          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>
+            Le plus gros décrochage est entre {ETAPE_COURTE[stats.pireAvant.step].toLowerCase()} et {ETAPE_COURTE[stats.pire.step].toLowerCase()} :{' '}
+            {stats.pire.pctDropFromPrevious} % des visiteurs abandonnent là.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+
+  const blocFunnelSources = stats.visitorCount > 0 && stats.referrerBreakdown.length > 0 && (
+    <div>
+      <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>D’où ils viennent</p>
+      <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-2.5">
+        {stats.referrerBreakdown.slice(0, 6).map((r, i) => (
+          <div key={r.host} className="flex items-center gap-3 py-[9px]">
+            <span className={`w-[78px] shrink-0 truncate text-[13.5px] ${i === 0 ? corpsFort : corps}`} style={{ color: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-gris)' }}>
+              {r.host === websiteHost ? 'Votre site' : r.host === 'direct' ? 'Direct' : r.host}
+            </span>
+            <span className="flex-1 h-1.5 rounded bg-[color:var(--v2-filet-fort)] flex overflow-hidden">
+              <span className="rounded" style={{ width: `${Math.max((r.sessions / maxReferrer) * 100, 3)}%`, backgroundColor: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-encre-pale)' }} />
+            </span>
+            <span className={`w-[46px] shrink-0 text-right text-[13.5px] ${corpsFort} tabular-nums`}>{nombre.format(r.sessions)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
   return (
     <div className="space-y-5">
       {evenementsIncomplets && (
@@ -134,95 +241,27 @@ export default function ChiffresAcquisition({ events, websiteHost, periode, main
         </p>
       )}
 
-      <div className="flex flex-col gap-[3px]">
-        <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Visiteurs sur votre page</span>
-        <span className={`text-[44px] sm:text-[52px] leading-none ${hero}`}>{aucune ? '—' : nombre.format(stats.visitorCount)}</span>
-        {aucune ? (
-          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Pas de données avant le {formaterJour(couverture.depuisJour!)}.
-          </span>
-        ) : stats.visitorCount === 0 ? (
-          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune visite sur cette période</span>
-        ) : (
-          <>
-            {stats.comparable && pct !== null && (
-              <span className={`text-[13.5px] ${corps}`} style={{ color: pct >= 0 ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}>
-                {pct >= 0 ? '+' : ''}{pct} % {libelleComparaison(periode.type)}
-              </span>
-            )}
-            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {nombre.format(stats.conversionCount)} réservation{stats.conversionCount > 1 ? 's' : ''}, soit {formatConversionRate(stats.conversionCount, stats.visitorCount)} des visiteurs
-            </span>
-          </>
-        )}
-        {couverture.etat === 'partielle' && (
-          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)] mt-1`}>
-            Les visites avant le {formaterJour(couverture.depuisJour!)} ne sont pas comptées.
-          </span>
-        )}
-      </div>
-
-      {stats.visitorCount > 0 && (
-        <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-3.5">
-          <GraphiqueBarres
-            key={`${periode.type}|${periode.ref}`}
-            points={points}
-            formaterValeur={v => `${nombre.format(v)} visiteur${v > 1 ? 's' : ''}`}
-            resume={resume}
-            titreParDefaut={`${titreVisites(periode.type)} · touchez une barre pour lire sa valeur`}
-          />
-        </div>
-      )}
-
-      {stats.visitorCount > 0 && (
-        <>
-          <div>
-            <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>Où ils s’arrêtent</p>
-            <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 pt-2 pb-3">
-              {stats.funnelStats.map((s, i) => (
-                <div key={s.step} className="flex items-center gap-[11px] py-[7px]">
-                  <span className={`w-[92px] shrink-0 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{ETAPE_COURTE[s.step]}</span>
-                  <span className="flex-1 h-3 rounded-md bg-[color:var(--v2-filet-fort)] flex overflow-hidden">
-                    <span
-                      className="rounded-md"
-                      style={{ width: `${Math.max(s.pctOfFirst, 2)}%`, backgroundColor: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-encre-pale)' }}
-                    />
-                  </span>
-                  <span className={`w-10 shrink-0 text-right text-[13.5px] ${corpsFort} tabular-nums`}>{nombre.format(s.sessions)}</span>
-                </div>
-              ))}
-              {stats.pire && stats.pireAvant && stats.pire.pctDropFromPrevious > 0 && (
-                <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>
-                  Le plus gros décrochage est entre {ETAPE_COURTE[stats.pireAvant.step].toLowerCase()} et {ETAPE_COURTE[stats.pire.step].toLowerCase()} :{' '}
-                  {stats.pire.pctDropFromPrevious} % des visiteurs abandonnent là.
-                </p>
-              )}
-            </div>
+      {grandEcran ? (
+        // Grand écran (écran 8 de la maquette) : héros + appareils/horaires dans la colonne
+        // étroite, graphique + deux entonnoirs dans la matière large.
+        <div className="grid gap-[26px]" style={{ gridTemplateColumns: '260px 1fr' }}>
+          <div className="flex flex-col gap-[18px]">
+            {blocHero}
+            {blocAppareilsHoraires}
           </div>
-
-          {stats.referrerBreakdown.length > 0 && (
-            <div>
-              <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>D’où ils viennent</p>
-              <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-2.5">
-                {stats.referrerBreakdown.slice(0, 6).map((r, i) => (
-                  <div key={r.host} className="flex items-center gap-3 py-[9px]">
-                    <span className={`w-[78px] shrink-0 truncate text-[13.5px] ${i === 0 ? corpsFort : corps}`} style={{ color: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-gris)' }}>
-                      {r.host === websiteHost ? 'Votre site' : r.host === 'direct' ? 'Direct' : r.host}
-                    </span>
-                    <span className="flex-1 h-1.5 rounded bg-[color:var(--v2-filet-fort)] flex overflow-hidden">
-                      <span className="rounded" style={{ width: `${Math.max((r.sessions / maxReferrer) * 100, 3)}%`, backgroundColor: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-encre-pale)' }} />
-                    </span>
-                    <span className={`w-[46px] shrink-0 text-right text-[13.5px] ${corpsFort} tabular-nums`}>{nombre.format(r.sessions)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
-            {stats.deviceBreakdown.map(d => `${LABEL_APPAREIL[d.device] ?? d.device} ${d.pct} %`).join(' · ')}
-            {stats.visitTiming.topSlot && ` · les visites montent surtout en ${stats.visitTiming.topSlot.toLowerCase()}`}
-          </p>
+          <div className="space-y-5">
+            {blocGraphe}
+            {blocFunnelArret}
+            {blocFunnelSources}
+          </div>
+        </div>
+      ) : (
+        <>
+          {blocHero}
+          {blocGraphe}
+          {blocFunnelArret}
+          {blocFunnelSources}
+          {blocAppareilsHoraires}
         </>
       )}
     </div>

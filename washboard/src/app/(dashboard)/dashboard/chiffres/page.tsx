@@ -97,6 +97,21 @@ export default async function ChiffresPage() {
     .not('facture_numero', 'is', null)
   if (facturesError) logger.warn('chiffres.factures_count.fetch_failed', { washerId: washer.id }, facturesError)
 
+  // Compte léger, pour la ligne « Factures impayées » de la colonne de gauche (bureau,
+  // écran 7 de la maquette) — même définition que `estPayee()` (`lib/documents.ts`) : une
+  // facture écrite à la main, pas encore marquée payée. Les devis n'entrent jamais dans ce
+  // compte (`estPayee` exige `genre === 'facture'`). Même raison que `facturesCount` juste
+  // au-dessus de ne pas recharger la liste entière pour un seul nombre.
+  const { count: facturesImpayeesCount, error: facturesImpayeesError } = await supabase
+    .from('documents')
+    .select('id', { count: 'exact', head: true })
+    .eq('washer_id', washer.id)
+    .eq('genre', 'facture')
+    .is('paye_le', null)
+  if (facturesImpayeesError) {
+    logger.warn('chiffres.factures_impayees.fetch_failed', { washerId: washer.id }, facturesImpayeesError)
+  }
+
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
   return (
@@ -110,9 +125,11 @@ export default async function ChiffresPage() {
         hasCa={hasFeature(washer, 'ca_simple')}
         hasCompta={hasFeature(washer, 'compta')}
         facturesCount={facturesCount ?? 0}
+        facturesImpayees={facturesImpayeesCount ?? 0}
         evenementsDepuis={since.toISOString()}
         reservationsIncompletes={!!bookingsError}
         evenementsIncomplets={!!funnelError}
+        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

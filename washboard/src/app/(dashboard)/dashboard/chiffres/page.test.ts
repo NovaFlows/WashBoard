@@ -12,7 +12,7 @@ const fauxSupabase = {
     const b: Record<string, unknown> = {}
     const self = () => b
     Object.assign(b, {
-      select: self, eq: self, not: self, gte: self, order: self, range: self, limit: self,
+      select: self, eq: self, not: self, is: self, gte: self, order: self, range: self, limit: self,
       single: () => Promise.resolve({ data: { id: 'washer-1', plan: 'starter', name: 'Kooki Clean' }, error: null }),
       then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
         Promise.resolve(table === 'bookings' ? { data: bookings, error: null, count: 0 } : { data: [], error: null })

@@ -22,8 +22,12 @@ import { useEcranRail } from '@/hooks/useEcranRail'
 /** `NEXT_PUBLIC_DEV_BUREAU=1` — fait comme si `washers.beta_refonte` etait actif, pour
  *  pouvoir essayer la v2 bureau en local sans toucher a la vraie base (ce depot n'a pas de
  *  base de test separee, voir e2e/helpers.ts). Jamais en production, meme sur une
- *  previsualisation Vercel : meme motif que `NEXT_PUBLIC_DEV_OFFRE` (lib/plan.ts). */
-function bureauForceEnDev(): boolean {
+ *  previsualisation Vercel : meme motif que `NEXT_PUBLIC_DEV_OFFRE` (lib/plan.ts).
+ *
+ *  Exportée (passe Chiffres bureau, 2026-10-06) : les garde-fous des destinations neuves
+ *  (`Chiffres.tsx`, `Depenses.tsx`) décident une seule fois, au montage, hors du hook — voir
+ *  leur en-tête — et ont donc besoin de ce même interrupteur sans passer par `useDashboardV2`. */
+export function bureauForceEnDev(): boolean {
   if (process.env.NODE_ENV === 'production') return false
   return process.env.NEXT_PUBLIC_DEV_BUREAU === '1'
 }
