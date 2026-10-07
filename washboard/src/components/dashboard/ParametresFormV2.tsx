@@ -223,7 +223,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
             cette liste est courte et de hauteur à peu près constante — ce qu'il lui faut,
             c'est rester visible pendant qu'on fait défiler un réglage plus long à droite
             (Prestations, en particulier), pas un deuxième défilement indépendant. */}
-        <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
           {liste}
         </div>
         <div className="min-w-0 flex-1 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-7 py-6">

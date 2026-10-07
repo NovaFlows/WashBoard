@@ -371,7 +371,7 @@ export default function AssistanceV2({ liste }: Props) {
   if (grandEcran) {
     return (
       <div className="flex items-start gap-5 [font-family:var(--font-archivo)]">
-        <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
           <ListeReglagesV2 {...liste} selection="reglages" />
         </div>
         <div className="min-w-0 flex-1 text-[color:var(--v2-color-encre)]">

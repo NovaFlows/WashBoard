@@ -335,7 +335,10 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
                   // lisibilité empêche de remplir toute la largeur disponible).
                   width: agrandir ? LARGEUR_REFERENCE_PAGE_PX : '100%',
                   margin: agrandir ? '0 auto' : undefined,
-                  height: hauteurNaturelle ?? HAUTEUR_MAX_CADRE,
+                  // La hauteur VALIDÉE, pas la brute : une mesure invraisemblable donnait
+                  // une scène de quelques pixels dans un cadre de 520, donc un cadre presque
+                  // vide. Avec la hauteur par défaut, la page remplit le cadre elle-même.
+                  height: hauteurMesuree ?? HAUTEUR_MAX_CADRE,
                   transform: `scale(${escala})`,
                   transformOrigin: 'top center',
                 }

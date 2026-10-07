@@ -263,7 +263,7 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
   // séparé (voir le rapport de la passe).
   return (
     <div className="flex items-start gap-5">
-      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+      <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
         <ListeReglagesV2
           nom={fiche.name}
           slug={fiche.slug}

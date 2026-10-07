@@ -639,7 +639,7 @@ export default function PrestationsV2({
 
   return (
     <div className="flex items-start gap-5">
-      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+      <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
         <ListeReglagesV2 {...liste} servicesCount={services.length} selection="prestations" />
       </div>
       <div className="min-w-0 flex-1">{contenu}</div>

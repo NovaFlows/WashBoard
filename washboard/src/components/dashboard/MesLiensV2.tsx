@@ -231,7 +231,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
 
   return (
     <div className="flex items-start gap-5">
-      <div className="sticky top-0 w-[260px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+      <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
         {/* `slug` suit le changement local (voir plus haut) plutôt que `liste.slug`, figé au
             chargement de la page : sans ça, le lien « Voir » de la liste resterait sur
             l'ancien lien juste après un changement réussi. */}
