@@ -163,6 +163,18 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   }, [cible, pathname, isPwa])
 
   const suivante = etape === null ? null : etapeSuivante(etape, etapes.length)
+  const routeSuivante = suivante === null ? undefined : etapes[suivante].route
+
+  // Préchargée dès que l'arrêt s'affiche, pas au clic sur « Suivant » :
+  // `router.push` seul, sans ce `prefetch`, va chercher la page au moment du
+  // clic — un aller-retour complet (rendu serveur + hydratation) pendant
+  // lequel la carte glisse déjà, visiblement saccadé sur un téléphone pas
+  // très puissant (mesuré : jusqu'à 530 ms de blocage sur une image, contre
+  // ~110 ms une fois préchargée — Ryan, 2026-10-08). `router.prefetch`
+  // n'est qu'un indice pour Next ; rien à défaire si l'arrêt change avant.
+  useEffect(() => {
+    if (routeSuivante) router.prefetch(routeSuivante)
+  }, [routeSuivante, router])
 
   function avancer() {
     if (suivante === null) { terminerVisite(); return }
