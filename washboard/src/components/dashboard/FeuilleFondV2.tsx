@@ -31,6 +31,9 @@ type Props = {
   onPhoto: () => void
   onRetirerPhoto: () => void
   onClose: () => void
+  /** Passe bureau (2026-10-07) : posée en panneau à côté de l'aperçu plutôt qu'en fenêtre
+   *  centrée — voir `Feuille` (FeuilleV2.tsx) et `ApparenceV2.tsx`. */
+  panneau?: boolean
 }
 
 /** Une vignette : le visuel, et son NOM dessous. Sans `onClick`, c'est un simple
@@ -71,7 +74,7 @@ const visuelPreset = (t: BgThemePreset): React.CSSProperties =>
       }
     : { background: t.gradient }
 
-export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisir, onPhoto, onRetirerPhoto, onClose }: Props) {
+export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisir, onPhoto, onRetirerPhoto, onClose, panneau }: Props) {
   const courant = enAttente === undefined ? fond : enAttente
   // Un identifiant que `getBgStyle` ne reconnaît pas n'habille pas la page : c'est « Original ».
   const original = getBgStyle(courant) === null
@@ -86,6 +89,7 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
       verrou="page_personnalisee"
       sousTitre="Un fond retire le bouton clair/sombre chez vos clients."
       onClose={onClose}
+      panneau={panneau}
     >
       <div className="space-y-5 pb-2">
         <button

@@ -23,9 +23,12 @@ type Props = {
   /** `null` si enregistré, sinon la phrase d'erreur. */
   onEnregistrer: (texte: string) => Promise<string | null>
   onClose: () => void
+  /** Passe bureau (2026-10-07) : posée en panneau à côté de l'aperçu plutôt qu'en fenêtre
+   *  centrée — voir `Feuille` (FeuilleV2.tsx) et `ApparenceV2.tsx`. */
+  panneau?: boolean
 }
 
-export default function FeuilleMessageV2({ message, onEnregistrer, onClose }: Props) {
+export default function FeuilleMessageV2({ message, onEnregistrer, onClose, panneau }: Props) {
   const [texte, setTexte] = useState(message ?? '')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -52,6 +55,7 @@ export default function FeuilleMessageV2({ message, onEnregistrer, onClose }: Pr
       sousTitre="Affiché sous votre nom, en haut de votre page."
       onClose={onClose}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="apparence-message" />}
+      panneau={panneau}
     >
       <form id="apparence-message" onSubmit={valider} noValidate>
         <Bloc titre="Votre message" aide={`${longueur} / ${MESSAGE_LONGUEUR_CONSEILLEE}`}>

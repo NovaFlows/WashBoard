@@ -65,6 +65,7 @@ export function Feuille({
   children,
   pied,
   verrou,
+  panneau = false,
 }: {
   titre: ReactNode
   sousTitre?: string
@@ -79,37 +80,54 @@ export function Feuille({
    *  serveur refuse de toute façon (403) : ceci évite seulement de faire
    *  travailler quelqu'un avant de lui dire non. */
   verrou?: Feature
+  /** Passe bureau (2026-10-07, Apparence de ma page — `ApparenceV2.tsx`, `useApparenceCoteACote`) :
+   *  posée à la place de la liste de réglages, dans la colonne de gauche, plutôt qu'en fenêtre
+   *  qui recouvre l'écran (et l'aperçu à droite). Même raisonnement que `panneau` sur
+   *  `ClientProfileModalV2` (à regarder avant d'inventer autre chose) : pas de fond assombri, pas
+   *  de centrage, pas de blocage du défilement de la PAGE (elle n'est plus recouverte), pas de
+   *  vol de focus ni de piège de tabulation (l'aperçu et le reste de l'écran doivent rester
+   *  atteignables à la tabulation), pas d'animation d'entrée. Seule différence avec ce
+   *  précédent : Échap et le bouton Fermer continuent de fonctionner ICI aussi — Alexandre,
+   *  2026-10-07 : « la touche Échap et la fermeture doivent continuer de marcher quelle que soit
+   *  la forme du réglage » — donc un seul comportement pour les deux formes, pas désactivé en
+   *  panneau comme sur la fiche client. */
+  panneau?: boolean
 }) {
   const { peut } = useOffre()
   const ferme = !!verrou && !peut(verrou)
-  const [visible, setVisible] = useState(false)
+  const [visible, setVisible] = useState(panneau)
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
-  useBloquerDefilement()
+  useBloquerDefilement(!panneau)
   const glisser = useGlisserPourFermer(onClose)
   const focusPrecedent = useRef<HTMLElement | null>(null)
   const idTitre = useId()
 
   useEffect(() => {
+    if (panneau) return
     const id = requestAnimationFrame(() => setVisible(true))
     return () => cancelAnimationFrame(id)
-  }, [])
+  }, [panneau])
 
   useEffect(() => {
+    if (panneau) return
     focusPrecedent.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     closeRef.current?.focus()
     return () => { if (focusPrecedent.current?.isConnected) focusPrecedent.current.focus() }
-  }, [])
+  }, [panneau])
 
   useEffect(() => {
+    if (panneau) return
     document.body.classList.add('wb-hide-fab')
     return () => document.body.classList.remove('wb-hide-fab')
-  }, [])
+  }, [panneau])
 
+  // Échap ferme la feuille quelle que soit sa forme (panneau compris, voir plus haut) : seul
+  // le piège de tabulation ne s'applique qu'à la fenêtre qui recouvre l'écran.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return }
-      if (e.key !== 'Tab' || !feuilleRef.current) return
+      if (panneau || e.key !== 'Tab' || !feuilleRef.current) return
       const items = feuilleRef.current.querySelectorAll<HTMLElement>(SELECTEUR_FOCUSABLE)
       if (items.length === 0) return
       const premier = items[0]
@@ -119,34 +137,46 @@ export function Feuille({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, panneau])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby={idTitre}>
-      <button
-        aria-hidden
-        tabIndex={-1}
-        onClick={onClose}
-        className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${visible ? 'opacity-100' : 'opacity-0'}`}
-        style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', cursor: 'default' }}
-      />
+    <div
+      className={panneau ? 'relative flex w-full flex-col' : 'fixed inset-0 z-50 flex items-end justify-center sm:items-center'}
+      role={panneau ? 'region' : 'dialog'}
+      aria-modal={panneau ? undefined : true}
+      aria-labelledby={idTitre}
+    >
+      {!panneau && (
+        <button
+          aria-hidden
+          tabIndex={-1}
+          onClick={onClose}
+          className={`absolute inset-0 touch-none bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${visible ? 'opacity-100' : 'opacity-0'}`}
+          style={{ transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', cursor: 'default' }}
+        />
+      )}
       <div
         ref={feuilleRef}
-        className={`relative flex w-full max-h-[92dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
-          visible ? 'translate-y-0 sm:scale-100 sm:opacity-100' : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
-        }`}
+        className={panneau
+          ? `relative flex w-full flex-col overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police}`
+          : `relative flex w-full max-h-[92dvh] flex-col overflow-hidden bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} rounded-t-[var(--v2-radius-feuille)] transition-transform motion-reduce:transition-none sm:max-w-md sm:rounded-[var(--v2-radius-surface)] sm:transition-[transform,opacity] ${
+              visible ? 'translate-y-0 sm:scale-100 sm:opacity-100' : 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0'
+            }`}
         // `pan-y` : dans une feuille, le doigt ne fait que défiler vers le haut ou le bas.
         // Ni pincement pour zoomer, ni glissement latéral — une fiche zoomée puis décalée sur
         // le côté est désagréable et donne l'impression que l'application est cassée (signalé
         // par Alexandre, 2026-09-26). Le reste de l'application garde le zoom : on ne prive
-        // personne d'agrandir son planning.
-        style={{ touchAction: 'pan-y', transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
+        // personne d'agrandir son planning. Absent en panneau : rien à tirer, pas de doigt.
+        style={panneau ? undefined : { touchAction: 'pan-y', transitionDuration: 'var(--v2-duration-sheet)', transitionTimingFunction: 'var(--v2-ease-sheet)', ...glisser.styleFeuille }}
       >
-        {/* Bande du haut (poignée + titre) : zone de tirage pour fermer la feuille. */}
-        <div className="shrink-0" {...glisser.poignee}>
-<div className="flex justify-center pt-2.5 pb-3 sm:hidden" aria-hidden>
-          <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
-        </div>
+        {/* Bande du haut (poignée + titre) : zone de tirage pour fermer la feuille — absente
+            du panneau bureau, qui ne se ferme pas d'un geste. */}
+        <div className="shrink-0" {...(panneau ? {} : glisser.poignee)}>
+        {!panneau && (
+          <div className="flex justify-center pt-2.5 pb-3 sm:hidden" aria-hidden>
+            <span className="h-1 w-9 rounded-full bg-[color:var(--v2-filet-fort)]" />
+          </div>
+        )}
 
         <div className="flex items-start gap-3 px-5 pt-1 sm:pt-5">
           <div className="min-w-0 flex-1 pt-2">
@@ -169,9 +199,13 @@ export function Feuille({
 
         <div
           // `overflow-x-hidden` : sans lui, un seul champ trop large (un `select` au contenu
-          // long sur iPhone) rendrait toute la feuille déplaçable latéralement.
-          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pt-4 [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full"
-          style={{ paddingBottom: pied || ferme ? 16 : 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          // long sur iPhone) rendrait toute la feuille déplaçable latéralement. Absent en
+          // panneau : pas de défilement interne propre, la colonne (donc la page) défile —
+          // il n'y a ni geste tactile ni hauteur figée à faire tenir dans cette forme-là.
+          className={panneau
+            ? 'px-5 pt-4 [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full'
+            : 'flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pt-4 [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full'}
+          style={{ paddingBottom: pied || ferme ? 16 : panneau ? 20 : 'calc(env(safe-area-inset-bottom) + 20px)' }}
         >
           {ferme && verrou ? (
             <div className="relative">
@@ -194,7 +228,7 @@ export function Feuille({
         {(pied || ferme) && (
           <div
             className="border-t border-[color:var(--v2-filet)] px-5 pt-3"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+            style={{ paddingBottom: panneau ? 16 : 'calc(env(safe-area-inset-bottom) + 16px)' }}
           >
             {ferme ? (
               <Link

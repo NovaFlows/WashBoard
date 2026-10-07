@@ -26,9 +26,12 @@ type Props = {
   /** `null` si enregistré, sinon la phrase d'erreur. */
   onEnregistrer: (valeur: string | null) => Promise<string | null>
   onClose: () => void
+  /** Passe bureau (2026-10-07) : posée en panneau à côté de l'aperçu plutôt qu'en fenêtre
+   *  centrée — voir `Feuille` (FeuilleV2.tsx) et `ApparenceV2.tsx`. */
+  panneau?: boolean
 }
 
-export default function FeuilleSiteV2({ site, onEnregistrer, onClose }: Props) {
+export default function FeuilleSiteV2({ site, onEnregistrer, onClose, panneau }: Props) {
   const [saisie, setSaisie] = useState(site ?? '')
   const [enCours, setEnCours] = useState(false)
   const [erreurChamp, setErreurChamp] = useState<string | null>(null)
@@ -64,6 +67,7 @@ export default function FeuilleSiteV2({ site, onEnregistrer, onClose }: Props) {
       sousTitre="Facultatif."
       onClose={onClose}
       pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="apparence-site" />}
+      panneau={panneau}
     >
       <form id="apparence-site" onSubmit={valider} noValidate>
         <Bloc titre="Adresse de votre site">

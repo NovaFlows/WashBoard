@@ -70,12 +70,18 @@ type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | null
 type Retrait = 'logo' | 'photo' | null
 
 /** Largeur fixe de la colonne de réglages côte à côte avec l'aperçu — voir le commentaire
- *  d'en-tête du fichier. */
-const LARGEUR_REGLAGES_PX = 300
-/** Plafond de la colonne d'aperçu : un peu plus que la largeur naturelle de la page publique
- *  (512px + ses 2×16px de marge intérieure) pour qu'elle ne réduise presque jamais, sans
- *  jamais manger la place des réglages à côté. */
-const LARGEUR_APERCU_MAX_PX = 560
+ *  d'en-tête du fichier. Réduite le 2026-10-07 (Alexandre : « il reste de la place », après les
+ *  pastilles de couleur rétrécies — voir `FeuilleCouleurV2.tsx` — qui n'ont plus besoin de
+ *  300px) : 260px, mesuré suffisant pour les lignes de la liste ET pour le nuancier à 8
+ *  colonnes, et cède d'autant plus de largeur à l'aperçu à côté. */
+const LARGEUR_REGLAGES_PX = 260
+/** Plafond de la colonne d'aperçu — relevé le 2026-10-07 avec l'agrandissement de la page
+ *  publique dans `ApercuPageIframeV2` (voir son en-tête) : `LARGEUR_REFERENCE_PAGE_PX` (544) ×
+ *  `FACTEUR_AGRANDISSEMENT_MAX` (1.25) = 680px, la limite de lisibilité qu'Alexandre a lui-même
+ *  située entre 650 et 700px. Au-delà de cette largeur de colonne, l'aperçu n'agrandit plus la
+ *  page — il centre le surplus plutôt que de le remplir (même raisonnement qu'avant cette
+ *  passe : un cadre plus large qu'il n'en faut recrée les bandes vides qu'on a supprimées). */
+const LARGEUR_APERCU_MAX_PX = 680
 
 type Props = {
   nom: string
@@ -189,6 +195,54 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
   const versionApercu = [h.logoUrl, h.couleur, h.fond, h.message, h.site].join("|")
   const blocApercu = <ApercuPageIframeV2 slug={slug} version={versionApercu} />
 
+  // Retouche du 2026-10-07 (Alexandre : « je voudrais qu'il reste [...] pas qu'il s'affiche
+  // au milieu de l'écran — comme ça ils peuvent modifier et voir ce que ça donne ») : assez de
+  // place pour le côte-à-côte (`coteACote`) → le réglage ouvert prend la PLACE de la liste dans
+  // la colonne de gauche (prop `panneau` de `Feuille`, FeuilleV2.tsx — même principe que
+  // `ClientProfileModalV2`), l'aperçu reste visible à droite pendant qu'on choisit. En dessous du
+  // seuil (téléphone, ou fenêtre entre 1024 et 1280px) : fenêtre centrée / feuille qui monte du
+  // bas, par-dessus l'écran, comme avant cette passe — `feuilleOuverte` est le même élément dans
+  // les deux cas, seule sa prop `panneau` et son EMPLACEMENT dans ce JSX changent.
+  const panneauActif = coteACote && feuille !== null
+  const feuilleOuverte = feuille === 'logo' ? (
+    <FeuilleLogoV2
+      nom={nom}
+      logoUrl={h.logoUrl}
+      etat={h.logo}
+      onChoisir={() => inputLogo.current?.click()}
+      onRetirer={() => demanderRetrait('logo')}
+      // Sous une confirmation, Échap et la poignée ne ferment que la confirmation.
+      onClose={retrait ? () => {} : fermer}
+      panneau={panneauActif}
+    />
+  ) : feuille === 'couleur' ? (
+    <FeuilleCouleurV2
+      couleur={h.couleur}
+      enAttente={h.couleurEnAttente}
+      erreur={h.couleurErreur}
+      faite={h.couleurFaite}
+      onChoisir={h.choisirCouleur}
+      onClose={fermer}
+      panneau={panneauActif}
+    />
+  ) : feuille === 'fond' ? (
+    <FeuilleFondV2
+      fond={h.fond}
+      enAttente={h.fondEnAttente}
+      erreur={h.fondErreur}
+      photo={h.fondPhoto}
+      onChoisir={h.choisirFond}
+      onPhoto={() => inputPhoto.current?.click()}
+      onRetirerPhoto={() => demanderRetrait('photo')}
+      onClose={retrait ? () => {} : fermer}
+      panneau={panneauActif}
+    />
+  ) : feuille === 'message' ? (
+    <FeuilleMessageV2 message={h.message} onEnregistrer={h.enregistrerMessage} onClose={fermer} panneau={panneauActif} />
+  ) : feuille === 'site' ? (
+    <FeuilleSiteV2 site={h.site} onEnregistrer={h.enregistrerSite} onClose={fermer} panneau={panneauActif} />
+  ) : null
+
   const contenu = (
     <div
       className={grandEcran
@@ -213,12 +267,17 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
 
       {coteACote ? (
         <div className="flex items-start gap-8">
-          <div className="shrink-0" style={{ width: LARGEUR_REGLAGES_PX }}>{blocReglages}</div>
+          <div className="shrink-0" style={{ width: LARGEUR_REGLAGES_PX }}>
+            {panneauActif ? feuilleOuverte : blocReglages}
+          </div>
           <div className="min-w-0 flex-1" style={{ maxWidth: LARGEUR_APERCU_MAX_PX }}>{blocApercu}</div>
         </div>
       ) : (
         <>
-          {blocApercu}
+          {/* Même plafond que ci-dessus, pour la fenêtre stackée entre 1024 et 1280px (le site
+              étroit et le téléphone restent de toute façon bien en dessous) — sans lui, l'aperçu
+              s'étirait sur toute la colonne dans cette plage et recréait des bandes vides. */}
+          <div style={{ maxWidth: LARGEUR_APERCU_MAX_PX }}>{blocApercu}</div>
           {blocReglages}
         </>
       )}
@@ -242,45 +301,9 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
         onChange={e => choisi(e, h.changerPhotoFond)}
       />
 
-      {feuille === 'logo' && (
-        <FeuilleLogoV2
-          nom={nom}
-          logoUrl={h.logoUrl}
-          etat={h.logo}
-          onChoisir={() => inputLogo.current?.click()}
-          onRetirer={() => demanderRetrait('logo')}
-          // Sous une confirmation, Échap et la poignée ne ferment que la confirmation.
-          onClose={retrait ? () => {} : fermer}
-        />
-      )}
-      {feuille === 'couleur' && (
-        <FeuilleCouleurV2
-          couleur={h.couleur}
-          enAttente={h.couleurEnAttente}
-          erreur={h.couleurErreur}
-          faite={h.couleurFaite}
-          onChoisir={h.choisirCouleur}
-          onClose={fermer}
-        />
-      )}
-      {feuille === 'fond' && (
-        <FeuilleFondV2
-          fond={h.fond}
-          enAttente={h.fondEnAttente}
-          erreur={h.fondErreur}
-          photo={h.fondPhoto}
-          onChoisir={h.choisirFond}
-          onPhoto={() => inputPhoto.current?.click()}
-          onRetirerPhoto={() => demanderRetrait('photo')}
-          onClose={retrait ? () => {} : fermer}
-        />
-      )}
-      {feuille === 'message' && (
-        <FeuilleMessageV2 message={h.message} onEnregistrer={h.enregistrerMessage} onClose={fermer} />
-      )}
-      {feuille === 'site' && (
-        <FeuilleSiteV2 site={h.site} onEnregistrer={h.enregistrerSite} onClose={fermer} />
-      )}
+      {/* En panneau (`panneauActif`), ce même élément est déjà posé dans la colonne de gauche,
+          ci-dessus — ne pas le monter une seconde fois ici en fenêtre par-dessus l'écran. */}
+      {!panneauActif && feuilleOuverte}
 
       {retrait === 'logo' && (
         <ConfirmationSuppression

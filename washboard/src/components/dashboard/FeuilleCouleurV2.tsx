@@ -30,11 +30,25 @@ type Props = {
   faite: boolean
   onChoisir: (hex: string) => void
   onClose: () => void
+  /** Passe bureau (2026-10-07) : posée en panneau à côté de l'aperçu plutôt qu'en fenêtre
+   *  centrée — voir `Feuille` (FeuilleV2.tsx) et `ApparenceV2.tsx`. */
+  panneau?: boolean
 }
 
-export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, onChoisir, onClose }: Props) {
+export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, onChoisir, onClose, panneau }: Props) {
   const affichee = enAttente ?? couleur ?? COULEUR_PAR_DEFAUT
   const tuiles = couleur && estHorsNuancier(couleur) ? [...PALETTE, couleur] : PALETTE
+
+  // Retouche du 2026-10-07 (Alexandre, après le passage en panneau : « réduis les points » —
+  // les 24 pastilles à 44px sur 6 colonnes débordaient presque de la colonne de réglages, 300px
+  // de large moins le padding de la feuille (`px-5`, 2×20px) = 260px de large, soit ~43px par
+  // colonne pour un cercle de 44px). Réservé au PANNEAU (souris, bureau) : sur la feuille qui
+  // monte du bas (téléphone, doigt), la cible tactile reste 44px — aucune cible de ce fichier
+  // n'est réduite pour le doigt (voir le socle mobile, `.claude/agents/refonte.md`). 8 colonnes
+  // de 28px tiennent sur 3 rangées au lieu de 4 : moins de hauteur ET moins de largeur.
+  const taille = panneau ? 'h-7 w-7' : 'h-11 w-11'
+  const colonnes = panneau ? 'grid-cols-8' : 'grid-cols-6'
+  const espacement = panneau ? 'gap-x-2 gap-y-2' : 'gap-y-3'
 
   return (
     <Feuille
@@ -42,8 +56,9 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
       verrou="page_personnalisee"
       sousTitre="Elle colore les boutons et les choix sur votre page."
       onClose={onClose}
+      panneau={panneau}
     >
-      <div role="group" aria-label="Couleurs proposées" className="grid grid-cols-6 justify-items-center gap-y-3 pb-1">
+      <div role="group" aria-label="Couleurs proposées" className={`grid ${colonnes} justify-items-center ${espacement} pb-1`}>
         {tuiles.map(hex => {
           const choisie = hex.toLowerCase() === affichee.toLowerCase()
           return (
@@ -53,7 +68,7 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
               aria-pressed={choisie}
               aria-label={`Couleur ${hex}`}
               onClick={() => onChoisir(hex)}
-              className="h-11 w-11 rounded-full transition-shadow motion-reduce:transition-none active:scale-[.94]"
+              className={`${taille} rounded-full transition-shadow motion-reduce:transition-none active:scale-[.94]`}
               style={{
                 background: hex,
                 boxShadow: choisie ? ANNEAU_CHOIX : 'inset 0 0 0 1px var(--v2-filet-fort)',

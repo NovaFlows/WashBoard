@@ -90,6 +90,43 @@ function sAbonnerFullscreen(callback: () => void) {
 //    résolution et interactive, comme avant ce correctif.
 const HAUTEUR_MAX_CADRE = 520
 
+// Retouche du 2026-10-07 (Alexandre, après le passage en panneau : « agrandis le téléphone sur
+// le côté, il reste de la place » — le cadre d'aperçu, une fois la colonne de réglages
+// rétrécie, laissait de la place à droite). Piège explicite, qu'il a nommé lui-même : élargir
+// le CADRE ne sert à rien, la page publique plafonne à `max-w-lg` + son `px-4`
+// (`(public)/book/[slug]/page.tsx`) = 512+2×16 = 544px — un cadre plus large que ça ne fait que
+// recréer les bandes vides qu'on vient de supprimer (la page reste centrée à 544px, le reste du
+// cadre est vide). Ce qu'il veut, c'est la page elle-même plus GRANDE : un agrandissement
+// (`scale` > 1), pas une largeur de cadre plus grande avec du vide autour.
+//
+// `LARGEUR_REFERENCE_PAGE_PX` (544) est donc la largeur à laquelle l'iframe est TOUJOURS
+// navigué quand il y a de la place pour agrandir (`agrandir`, plus bas) — jamais la largeur du
+// cadre lui-même : c'est elle qui est ensuite grossie via `transform: scale()`, exactement comme
+// le rétrécissement vertical déjà en place agrandit ou réduit la MÊME scène. En dessous de cette
+// largeur de cadre (téléphone, fenêtre stackée étroite), rien ne change : l'iframe garde sa
+// largeur à 100 % du cadre, et affiche donc la vraie mise en page responsive de la page
+// publique à CETTE largeur (son propre point de rupture mobile) — jamais la désactiver, voir
+// le commentaire de `agrandir` plus bas.
+//
+// Limite de lisibilité : mesurée en lisant `/book/kookiclean-1f09` (lecture seule) à 544px —
+// c'est du texte vectoriel (pas une image), qui reste net à l'agrandissement ; ce qui souffre
+// d'un zoom, ce sont les images bitmap posées par le laveur (logo, fond — compressées à une
+// résolution fixe par `compressImage`, voir `useApparenceV2.ts`). Alexandre : « 650-700px reste
+// net, au-delà ça devient grossier ». 544 × 1.25 = 680px, dans cette fourchette — la limite est
+// donc posée sur le FACTEUR de zoom, pas sur une largeur de cadre absolue.
+const LARGEUR_REFERENCE_PAGE_PX = 544
+const FACTEUR_AGRANDISSEMENT_MAX = 1.25
+// Plafond de hauteur quand on agrandit : `HAUTEUR_MAX_CADRE` (520) existe pour éviter qu'une
+// page WASHBOARD anormalement longue (beaucoup de prestations) ne pousse le cadre à une hauteur
+// déraisonnable — mais appliqué TEL QUEL à l'agrandissement, il annule l'agrandissement pour
+// toute page réelle : mesuré sur `/book/kookiclean-1f09` (lecture seule), la première étape du
+// parcours fait à elle seule ~837px de haut à 544px de large, largement au-dessus de 520 — avec
+// le plafond d'origine, le facteur largeur (jusqu'à 1.25) ne servirait jamais, écrasé par
+// `520/837 ≈ 0.62`. Un plafond spécifique, généreux (3× l'original, choisi à l'oeil, pas mesuré
+// comme le reste), laisse la page réelle s'agrandir sans pour autant laisser une page
+// extrêmement longue (beaucoup de catégories de prestations) pousser le cadre à l'infini.
+const HAUTEUR_MAX_CADRE_AGRANDI = HAUTEUR_MAX_CADRE * 3
+
 /** `version` : une empreinte des reglages affiches par la page publique. Quand elle
  *  change — le laveur vient d enregistrer une couleur, un message — le cadre se remonte
  *  et montre le resultat sans qu on ait a cliquer « Rafraichir ». C est la promesse de la
@@ -98,12 +135,25 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
   const [cle, setCle] = useState(0)
   const [charge, setCharge] = useState(false)
   const [hauteurNaturelle, setHauteurNaturelle] = useState<number | null>(null)
+  // Largeur RÉELLE du cadre (pas celle de l'iframe, fixée à `LARGEUR_REFERENCE_PAGE_PX` une fois
+  // `agrandir` actif) — lue par un `ResizeObserver` ordinaire, posé sur notre propre page, pas
+  // sur celle de l'iframe (contrairement à `mesurer()`, plus bas).
+  const [largeurCadre, setLargeurCadre] = useState<number | null>(null)
   const conteneurRef = useRef<HTMLDivElement>(null)
+  const cadreRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const scenaRef = useRef<HTMLDivElement>(null)
   // L'observateur interne vit le temps d'UN chargement de `doc.documentElement` (voir
   // `demarrerObservationInterne`) : une ref, pas un state, il n'a jamais à provoquer de rendu.
   const observateurInterneRef = useRef<ResizeObserver | null>(null)
+
+  useEffect(() => {
+    const el = cadreRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entrees => setLargeurCadre(entrees[0].contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const pleinEcranDisponible = useSyncExternalStore(sAbonnerRien, pleinEcranDisponibleSnapshot, () => false)
   const estPleinEcran = useCallback(
@@ -192,8 +242,22 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
     }
   }, [])
 
-  const escala = hauteurNaturelle ? Math.min(1, HAUTEUR_MAX_CADRE / hauteurNaturelle) : 1
-  const hauteurAffichee = hauteurNaturelle ? Math.min(hauteurNaturelle, HAUTEUR_MAX_CADRE) : HAUTEUR_MAX_CADRE
+  // `agrandir` : le cadre a plus de place que la page publique n'en a besoin — on grossit la
+  // page au lieu de laisser le cadre vide autour d'elle (voir le commentaire de
+  // `LARGEUR_REFERENCE_PAGE_PX`). En dessous de cette largeur (téléphone, fenêtre stackée
+  // étroite), rien ne change : ni l'échelle, ni la largeur de l'iframe — c'est exactement le
+  // calcul d'avant cette passe.
+  const agrandir = !pleinEcran && largeurCadre !== null && largeurCadre > LARGEUR_REFERENCE_PAGE_PX
+  const plafondHauteur = agrandir ? HAUTEUR_MAX_CADRE_AGRANDI : HAUTEUR_MAX_CADRE
+  const echelleHauteur = hauteurNaturelle ? plafondHauteur / hauteurNaturelle : 1
+  const echelleLargeur = agrandir && largeurCadre ? largeurCadre / LARGEUR_REFERENCE_PAGE_PX : 1
+  const escala = agrandir
+    // Le plus petit des trois : on ne dépasse ni la largeur disponible, ni le plafond de
+    // lisibilité, ni le plafond de hauteur (une page très longue reste raisonnable).
+    ? Math.min(echelleLargeur, FACTEUR_AGRANDISSEMENT_MAX, echelleHauteur)
+    // Comportement d'origine, inchangé : on ne réduit que si trop haut, jamais n'agrandit.
+    : (hauteurNaturelle ? Math.min(1, echelleHauteur) : 1)
+  const hauteurAffichee = hauteurNaturelle ? hauteurNaturelle * escala : HAUTEUR_MAX_CADRE
 
   return (
     <div
@@ -231,6 +295,7 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
       </div>
 
       <div
+        ref={cadreRef}
         className={`relative overflow-hidden bg-[color:var(--v2-color-fond)] ${pleinEcran ? 'flex-1' : ''}`}
         style={pleinEcran ? undefined : { height: hauteurAffichee }}
       >
@@ -246,7 +311,13 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
             pleinEcran
               ? undefined
               : {
-                  width: '100%',
+                  // En agrandissement, l'iframe garde une largeur FIXE (la largeur de référence
+                  // de la page publique) qu'on grossit ensuite par `scale` — jamais la largeur du
+                  // cadre lui-même (voir le commentaire de `LARGEUR_REFERENCE_PAGE_PX`).
+                  // `margin: 0 auto` centre l'éventuel reste (quand le plafond de hauteur ou de
+                  // lisibilité empêche de remplir toute la largeur disponible).
+                  width: agrandir ? LARGEUR_REFERENCE_PAGE_PX : '100%',
+                  margin: agrandir ? '0 auto' : undefined,
                   height: hauteurNaturelle ?? HAUTEUR_MAX_CADRE,
                   transform: `scale(${escala})`,
                   transformOrigin: 'top center',

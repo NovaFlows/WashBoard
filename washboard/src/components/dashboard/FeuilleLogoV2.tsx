@@ -18,9 +18,12 @@ type Props = {
   onChoisir: () => void
   onRetirer: () => void
   onClose: () => void
+  /** Passe bureau (2026-10-07) : posée en panneau à côté de l'aperçu plutôt qu'en fenêtre
+   *  centrée — voir `Feuille` (FeuilleV2.tsx) et `ApparenceV2.tsx`. */
+  panneau?: boolean
 }
 
-export default function FeuilleLogoV2({ nom, logoUrl, etat, onChoisir, onRetirer, onClose }: Props) {
+export default function FeuilleLogoV2({ nom, logoUrl, etat, onChoisir, onRetirer, onClose, panneau }: Props) {
   const occupe = enCoursEnvoi(etat)
 
   return (
@@ -29,6 +32,7 @@ export default function FeuilleLogoV2({ nom, logoUrl, etat, onChoisir, onRetirer
       verrou="page_personnalisee"
       sousTitre="Il s’affiche en haut de votre page de réservation."
       onClose={onClose}
+      panneau={panneau}
       pied={
         <div className="space-y-1">
           <button
