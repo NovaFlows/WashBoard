@@ -7,6 +7,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { logger } from '@/lib/logger'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { visiteAFaire } from '@/lib/visiteGuidee'
+import { tutoAFaire } from '@/lib/tutoPwa'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
@@ -450,7 +451,7 @@ export default async function DashboardPage() {
   )
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte} visiteGuidee={visiteAFaire(washer)}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte} visiteGuidee={visiteAFaire(washer)} tutoPwa={tutoAFaire(washer)}>
       {/* Passe 8 de la refonte 2026 : dans la PWA installée, l'accueil devient
           « Aujourd'hui » (héros du prochain rendez-vous, la journée, à
           confirmer, puis les widgets du laveur en lignes). Sur le site, rien ne

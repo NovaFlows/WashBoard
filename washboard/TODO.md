@@ -920,21 +920,53 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 
 ### 📖 Guide / tuto
 
-- [ ] **Tuto PWA à l'installation, avec animation d'assombrissement façon
-      vraie application** — demande de Ryan, 2026-10-05, vient compléter
-      l'item déjà existant plus bas (« Tuto PWA à la première installation de
-      l'application », section Refonte 2026) : même besoin produit, mais avec
-      une exigence visuelle précise en plus — un overlay qui assombrit l'écran
-      autour de l'élément mis en avant (spotlight), comme les tutoriels des
-      applications natives (Instagram, etc.), pas une simple bulle/tooltip.
-      **Plus lent à faire que les deux items landing ci-dessus** : ce motif
-      visuel n'existe PAS encore dans le code (vérifié : `VisiteGuidee.tsx`,
-      la visite guidée du tableau de bord, n'a ni fondu ni overlay assombri —
-      juste une carte/bulle classique) — il faudrait le construire de zéro,
-      PUIS définir le contenu exact (barre de nav du bas, bouton central,
-      geste retour, menu « Plus ») qui est lui-même encore « à préciser avec
-      Alexandre avant de lancer » selon l'item original. Deux chantiers
-      empilés (le motif visuel + le contenu), ni l'un ni l'autre commencé.
+- [x] 2026-10-07 — **CODÉ, VÉRIFIÉ VISUELLEMENT (Playwright), PAS ENCORE POUSSÉ —
+      Tuto PWA à l'installation, avec animation d'assombrissement façon vraie
+      application.** Demande de Ryan, 2026-10-05, complète l'item déjà existant
+      plus bas (« Tuto PWA à la première installation de l'application »,
+      section Refonte 2026) : même besoin produit, avec l'exigence visuelle en
+      plus (overlay qui assombrit l'écran autour de l'élément mis en avant,
+      comme les tutoriels des applications natives — jamais construit avant,
+      `VisiteGuidee.tsx` n'a qu'une carte/bulle classique).
+      Sur la branche `feat/tuto-pwa` (pas `master` — feature jugée assez
+      risquée/visible pour passer par une preview Vercel avant fusion, décision
+      de Ryan). **Téléphone uniquement** (`useEcranTelephone`, seuil `sm`
+      640px comme le reste du dashboard) : la version ordinateur de la barre du
+      bas n'existe pas encore.
+      - 4 arrêts : la barre du bas en entier → le bouton [+] central → le
+        geste retour (pas de cible, assombrissement simple) → l'onglet
+        « Plus ». Contenu arbitré avec Ryan dans la conversation du
+        2026-10-06/07, pas re-vérifié avec Alexandre séparément.
+      - Découpe lumineuse en CSS pur (`box-shadow` à 9999px d'écart autour
+        d'un rectangle transparent posé sur la cible via
+        `getBoundingClientRect()`), jamais de SVG/masque — plus simple et
+        s'adapte sans calcul à n'importe quelle taille d'écran. Cibles posées
+        via `data-tuto-pwa-cible` sur `BarreBasV2.tsx` (même mécanique que
+        `data-visite-cible` pour la visite guidée).
+      - Se déclenche seulement une fois la visite guidée du dashboard
+        terminée (`dashboard_tour_complete_at` non nul) : sans cette
+        condition, un compte flambant neuf qui installerait l'app avant
+        d'avoir ouvert le site verrait les deux tutos se chevaucher.
+      - Nouveaux fichiers : `lib/tutoPwa.ts` (logique, même mécanique que
+        `visiteGuidee.ts`), `hooks/useEcranTelephone.ts`,
+        `components/dashboard/TutoPwaV2.tsx`,
+        `api/washer/tuto-pwa/route.ts`. `marquerUneFois` étendu avec la
+        colonne `pwa_tour_complete_at`.
+      - **SQL à exécuter avant de fusionner/déployer** (aucun backfill,
+        contrairement à `dashboard_tour_complete_at` : personne n'a jamais vu
+        cette explication, donc tous les comptes — anciens compris — doivent
+        la voir une fois) :
+        ```sql
+        alter table public.washers add column if not exists pwa_tour_complete_at timestamptz;
+        ```
+      - Vérifié visuellement avec une page de prévisualisation temporaire
+        (supprimée après coup, voir `.claude/agents/designer.md`) : capture
+        des 4 étapes + de « Passer » + de l'absence totale sur largeur
+        ordinateur, zéro erreur console. `tsc`/`eslint`/`vitest run`
+        (2482 tests, 24 nouveaux) et `next build` revérifiés.
+      - **Reste à faire** : pousser la branche, vérifier la preview Vercel
+        avec Ryan, lui demander d'exécuter le SQL ci-dessus, puis
+        fusionner sur `master`.
 
 ## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
 
