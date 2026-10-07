@@ -131,7 +131,7 @@ export function Interrupteur({
  *  `ton` met un point plein devant l'état — réservé à une configuration cassée,
  *  jamais à un réglage simplement vide (ce serait transformer une option en reproche). */
 export function LigneDeuxNiveaux({
-  label, valeur, ton, pastille, tronquer, onClick,
+  label, valeur, ton, pastille, tronquer, onClick, cibleVisite,
 }: {
   label: string
   valeur?: string
@@ -139,9 +139,13 @@ export function LigneDeuxNiveaux({
   pastille?: string
   tronquer?: boolean
   onClick: () => void
+  /** Repère de la visite guidée (`VisiteGuidee.tsx`), quand cette ligne mène à
+   *  un écran que le tuto présente plus loin — ex. « Prestations » sur
+   *  l'accueil de Prestations et prix, avant d'y entrer pour de vrai. */
+  cibleVisite?: string
 }) {
   return (
-    <li>
+    <li data-visite-cible={cibleVisite}>
       <button type="button" onClick={onClick} className="flex min-h-[56px] w-full items-center gap-3 py-2.5 text-left">
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className={`text-[15.5px] ${nom}`}>{label}</span>

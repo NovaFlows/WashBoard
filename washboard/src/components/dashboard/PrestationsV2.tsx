@@ -436,6 +436,7 @@ export default function PrestationsV2({
             label="Prestations"
             valeur={resumePrestations}
             ton={lectureIncomplete ? 'ambre' : undefined}
+            cibleVisite="prestations"
             onClick={() => router.push('/dashboard/parametres/prestations?vue=prestations')}
           />
           <LigneDeuxNiveaux

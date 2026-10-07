@@ -645,3 +645,26 @@ html.wb-pwa [data-visite-active] { --wb-visite: var(--v2-color-accent); }
 @media (prefers-reduced-motion: reduce) {
   [data-visite-active] { animation: none; }
 }
+
+/* ── Visite guidée, application installée : fond assombri + découpe lumineuse
+   (2026-10-07, demande de Ryan — un vrai tuto d'application, pas une simple
+   bulle). Le fond entre en fondu à l'ouverture ; la découpe glisse en douceur
+   d'un élément à l'autre (positions en ligne dans VisiteGuidee.tsx, seule la
+   transition vit ici) ; le texte de chaque arrêt se glisse légèrement au
+   changement, pour que ça ne saute jamais d'un bloc à l'autre. */
+.wb-visite-fond { animation: wb-visite-fondu .35s var(--v2-ease-out, ease-out) both; }
+.wb-visite-decoupe {
+  transition: top .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
+              left .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
+              width .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
+              height .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
+              box-shadow .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1));
+}
+.wb-visite-carte { animation: wb-visite-entree .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)) both; }
+.wb-visite-texte { animation: wb-visite-texte-entree .35s var(--v2-ease-out, ease-out) both; }
+@keyframes wb-visite-fondu { from { opacity: 0; } }
+@keyframes wb-visite-entree { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes wb-visite-texte-entree { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .wb-visite-fond, .wb-visite-decoupe, .wb-visite-carte, .wb-visite-texte { animation: none; transition: none; }
+}

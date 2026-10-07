@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft, Search } from 'lucide-react'
 import { CHAMP, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import { searchGuide, type GuideEntry } from '@/lib/guide'
 import { lienV2 } from '@/lib/lienV2'
+import { redemarrerVisite } from '@/lib/visiteGuidee'
 
 // « Guide d'utilisation » — refonte 2026 (Alexandre, 2026-09-27 : « c'est la même qu'avant la
 // refonte PWA »). Même contenu que le site, à la virgule près : `lib/guide.ts` reste la seule
@@ -82,8 +84,18 @@ function Question({ entree, ouverte, onBasculer }: {
 }
 
 export default function GuideV2() {
+  const router = useRouter()
   const [recherche, setRecherche] = useState('')
   const [ouvertes, setOuvertes] = useState<string[]>([])
+
+  // « Revoir le tuto » : repart du tout premier arrêt même si déjà terminé —
+  // demande de Ryan, 2026-10-07 (« reprendre depuis le début même si déjà fini
+  // une fois »). `/dashboard` : la barre du bas y est visible, premier arrêt
+  // logique quelle que soit la page d'où on relance.
+  function relancerLeTuto() {
+    redemarrerVisite()
+    router.push('/dashboard')
+  }
 
   const sections = useMemo(() => searchGuide(recherche), [recherche])
   const total = sections.reduce((n, s) => n + s.entries.length, 0)
@@ -153,6 +165,20 @@ export default function GuideV2() {
             style={{ aspectRatio: '16/9', background: '#09111E' }}
           />
         </div>
+      )}
+
+      {!cherche && (
+        <button
+          type="button"
+          onClick={relancerLeTuto}
+          className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] px-4 text-[15px] ${corpsFort}`}
+          style={PRESSION}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 12a9 9 0 1 0 2.64-6.36M3 4v5h5" />
+          </svg>
+          Revoir le tuto de l’application
+        </button>
       )}
 
       {cherche && (

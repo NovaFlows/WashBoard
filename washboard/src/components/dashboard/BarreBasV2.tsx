@@ -39,6 +39,9 @@ const DESTINATIONS = [
     colonne: 0,
     href: '/dashboard',
     label: 'Aujourd’hui',
+    // Repère de la visite guidée (VisiteGuidee.tsx) : un arrêt par destination,
+    // pour l'enchaînement « regarde cet onglet » → navigation → « voilà la page ».
+    cibleVisite: 'barre-bas-aujourdhui',
     actif: (p: string) => p === '/dashboard',
     icone: (actif: boolean) => (
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actif ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -50,6 +53,7 @@ const DESTINATIONS = [
     colonne: 1,
     href: '/dashboard/calendrier',
     label: 'Agenda',
+    cibleVisite: 'barre-bas-agenda',
     actif: (p: string) => p.startsWith('/dashboard/calendrier'),
     icone: (actif: boolean) => (
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actif ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -62,6 +66,7 @@ const DESTINATIONS = [
     colonne: 3,
     href: '/dashboard/clients',
     label: 'Clients',
+    cibleVisite: 'barre-bas-clients',
     actif: (p: string) => p.startsWith('/dashboard/clients'),
     icone: (actif: boolean) => (
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actif ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -76,8 +81,7 @@ const DESTINATIONS = [
     colonne: 4,
     href: '/dashboard/parametres',
     label: 'Plus',
-    // Repère du tuto PWA (TutoPwaV2.tsx) : seul onglet qu'il doit pouvoir désigner.
-    cibleTuto: 'barre-bas-plus',
+    cibleVisite: 'barre-bas-plus',
     // Chiffres vit maintenant dans Plus : la barre l'y allume aussi, sinon la pastille
     // disparaîtrait pendant qu'on consulte ses chiffres.
     actif: (p: string) => p.startsWith('/dashboard/parametres') || p.startsWith('/dashboard/chiffres'),
@@ -323,7 +327,7 @@ export function BarreBasV2() {
     <nav
       ref={navRef}
       aria-label="Navigation"
-      data-tuto-pwa-cible="barre-bas"
+      data-visite-cible="barre-bas"
       // Position fixe, pas absolue : DashboardShell n'est pas un cadre de
       // taille fixe comme dans la maquette (390×844), c'est le châssis réel
       // du dashboard. `z-[15]` : sous l'overlay et le tiroir du menu latéral
@@ -359,7 +363,7 @@ export function BarreBasV2() {
             key={dest.href}
             href={dest.href}
             aria-current={actif ? 'page' : undefined}
-            data-tuto-pwa-cible={'cibleTuto' in dest ? dest.cibleTuto : undefined}
+            data-visite-cible={dest.cibleVisite}
             onClick={() => { if (!dest.actif(pathname ?? '')) setAttente({ href: dest.href, depuis: pathname ?? '' }) }}
             // Colonne explicite : le bouton du milieu occupe la 3e, les onglets se rangent
             // autour de lui sans dépendre de leur ordre d'écriture.
@@ -384,7 +388,7 @@ export function BarreBasV2() {
       <Link
         href={CENTRE_HREF}
         aria-label="Nouveau devis ou facture"
-        data-tuto-pwa-cible="barre-bas-nouveau"
+        data-visite-cible="barre-bas-nouveau"
         // Déjà sur l'écran : la feuille s'ouvre sur place, il n'y a pas de page à attendre.
         // Allumer le contour de chargement ferait tourner un trait pour rien.
         onClick={e => {

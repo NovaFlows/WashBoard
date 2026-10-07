@@ -96,6 +96,10 @@ type LigneProps = {
   href?: string
   onClick?: () => void
   chevron?: boolean
+  /** Repère de la visite guidée (`VisiteGuidee.tsx`), quand cette ligne mène à
+   *  un écran que le tuto présente — ex. « Mes liens », qui porte le lien de
+   *  réservation (onglet « Page client » côté site). */
+  cibleVisite?: string
 }
 
 // Une ligne du menu. `href` → lien (navigation), `onClick` sans `href` →
@@ -104,7 +108,7 @@ type LigneProps = {
 // dernière bascule sur place plutôt que de naviguer vers un écran qui
 // n'existe pas encore, déviation assumée par rapport à la maquette qui
 // pointe vers l'artboard de référence `Sombre.dc.html`).
-export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true }: LigneProps) {
+export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron = true, cibleVisite }: LigneProps) {
   const contenu = (
     <>
       {/* La valeur peut être longue (le résumé des horaires) : c'est elle qui rétrécit et se
@@ -120,10 +124,10 @@ export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron
   )
   const classe = 'flex items-center gap-2.5 min-h-[46px] py-1.5 w-full text-left'
   if (href) {
-    return <Link href={href} className={classe}>{contenu}</Link>
+    return <Link href={href} data-visite-cible={cibleVisite} className={classe}>{contenu}</Link>
   }
   return (
-    <button type="button" onClick={onClick} className={classe}>
+    <button type="button" data-visite-cible={cibleVisite} onClick={onClick} className={classe}>
       {contenu}
     </button>
   )
@@ -245,7 +249,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
               « Export et liens par réseau », qui menait à l'ancien écran CRM
               (`/dashboard/crm`, toujours en v1 sur le site). L'export Excel des
               réservations n'a plus d'entrée dans la PWA : voir TODO.md. */}
-          <Ligne label="Mes liens" sousLabel="Réservation, réseaux" href="/dashboard/parametres/liens" />
+          <Ligne label="Mes liens" sousLabel="Réservation, réseaux" href="/dashboard/parametres/liens" cibleVisite="lien" />
         </CarteListe>
       </div>
 

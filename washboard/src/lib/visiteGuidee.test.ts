@@ -34,10 +34,10 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('ETAPES_VISITE', () => {
-  it('onze arrêts, dans l’ordre et le texte validés', async () => {
-    const { ETAPES_VISITE } = await charger()
-    expect(ETAPES_VISITE.map(e => e.route)).toEqual([
+describe('etapesPour', () => {
+  it('site : exactement les onze arrêts « page » d’avant, dans le même ordre', async () => {
+    const { etapesPour } = await charger()
+    expect(etapesPour(false).map(e => e.route)).toEqual([
       '/dashboard',
       '/dashboard/parametres#lien-reservation',
       '/dashboard/parametres/prestations',
@@ -50,7 +50,7 @@ describe('ETAPES_VISITE', () => {
       '/dashboard/abonnement',
       '/dashboard/guide',
     ])
-    expect(ETAPES_VISITE.map(e => e.texte)).toEqual([
+    expect(etapesPour(false).map(e => e.texte)).toEqual([
       "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil.",
       "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.",
       "Ce que tu vends : nom, prix, durée. Ta page reste vide tant que tu n'en as pas créé une.",
@@ -65,45 +65,69 @@ describe('ETAPES_VISITE', () => {
     ])
   })
 
-  it('chaque arrêt pointe vers une page qui existe', async () => {
-    const { ETAPES_VISITE } = await charger()
-    for (const { route } of ETAPES_VISITE) {
+  it('aucun arrêt « pwaSeulement » ne fuite dans la liste du site', async () => {
+    const { etapesPour } = await charger()
+    expect(etapesPour(false).some(e => e.pwaSeulement)).toBe(false)
+  })
+
+  it('application installée : les arrêts PWA s’intercalent, sans déplacer les arrêts du site', async () => {
+    const { etapesPour } = await charger()
+    const pwa = etapesPour(true)
+    const site = etapesPour(false)
+    // Les arrêts « page » (avec route) se retrouvent dans le même ordre relatif.
+    expect(pwa.filter(e => e.route).map(e => e.route)).toEqual(site.map(e => e.route))
+    // Strictement plus d'arrêts côté PWA : les repères de la barre du bas en plus.
+    expect(pwa.length).toBeGreaterThan(site.length)
+  })
+
+  it('chaque arrêt PWA sans route vise un élément de la barre du bas ou n’a aucune cible', async () => {
+    const { etapesPour } = await charger()
+    const pwaSansRoute = etapesPour(true).filter(e => e.pwaSeulement && !e.route)
+    expect(pwaSansRoute.length).toBeGreaterThan(0)
+    for (const e of pwaSansRoute) {
+      if (e.cible) expect(e.cible).toMatch(/^barre-bas/)
+    }
+  })
+
+  it('chaque arrêt « page » pointe vers une page qui existe', async () => {
+    const { etapesPour } = await charger()
+    for (const { route } of etapesPour(true)) {
+      if (!route) continue
       const chemin = route.split('#')[0]
       expect(existsSync(join(__dirname, '..', 'app', '(dashboard)', chemin, 'page.tsx')), route).toBe(true)
     }
   })
 
-  it('seuls Prestations, Horaires et Lien mettent un élément en évidence', async () => {
-    const { ETAPES_VISITE } = await charger()
-    expect(ETAPES_VISITE.flatMap((e, i) => (e.cible ? [[i + 1, e.cible]] : []))).toEqual([
-      [2, 'lien'], [3, 'prestations'], [4, 'horaires'],
-    ])
+  it('seuls Prestations, Horaires et Lien mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
+    const { etapesPour } = await charger()
+    const ciblesDePage = etapesPour(false).flatMap(e => (e.cible ? [e.cible] : []))
+    expect(ciblesDePage).toEqual(['lien', 'prestations', 'horaires'])
   })
 })
 
 describe('lireEtat / serialiserEtat', () => {
   it('relit ce qu’il a écrit', async () => {
-    const { lireEtat, serialiserEtat } = await charger()
+    const { lireEtat, serialiserEtat, ETAPES_VISITE } = await charger()
     for (const etat of [{ statut: 'finie' }, { statut: 'en_cours', etape: 0 }, { statut: 'en_cours', etape: 10 }] as const) {
-      expect(lireEtat(serialiserEtat(etat))).toEqual(etat)
+      expect(lireEtat(serialiserEtat(etat), ETAPES_VISITE.length)).toEqual(etat)
     }
     expect(serialiserEtat({ statut: 'absente' })).toBeNull()
   })
 
   it('une valeur abîmée ou hors bornes vaut « absente », jamais un arrêt inventé', async () => {
     const { lireEtat } = await charger()
-    for (const brut of [null, '', '11', '-1', '1.5', 'abc', ' 3', 'FINIE']) {
-      expect(lireEtat(brut), String(brut)).toEqual({ statut: 'absente' })
+    for (const brut of [null, '', '18', '-1', '1.5', 'abc', ' 3', 'FINIE']) {
+      expect(lireEtat(brut, 11), String(brut)).toEqual({ statut: 'absente' })
     }
   })
 })
 
 describe('etapeSuivante', () => {
-  it('avance d’un arrêt, et s’arrête au onzième', async () => {
+  it('avance d’un arrêt, et s’arrête au dernier d’une liste donnée', async () => {
     const { etapeSuivante } = await charger()
-    expect(etapeSuivante(0)).toBe(1)
-    expect(etapeSuivante(9)).toBe(10)
-    expect(etapeSuivante(10)).toBeNull()
+    expect(etapeSuivante(0, 11)).toBe(1)
+    expect(etapeSuivante(9, 11)).toBe(10)
+    expect(etapeSuivante(10, 11)).toBeNull()
   })
 })
 
@@ -158,7 +182,8 @@ describe('mémoire de l’onglet', () => {
     expect(session.donnees.get('wb_visite_guidee')).toBe('6')
 
     const apres = await charger()
-    expect(apres.lireEtat(apres.lireVisite())).toEqual({ statut: 'en_cours', etape: 6 })
+    const { ETAPES_VISITE } = apres
+    expect(apres.lireEtat(apres.lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 6 })
   })
 
   it('« absente » efface la clé', async () => {
@@ -192,13 +217,23 @@ describe('mémoire de l’onglet', () => {
   })
 })
 
+describe('fermerPourLInstant', () => {
+  it('ferme sans marquer terminé : ni « finie », ni appel réseau', async () => {
+    const { fermerPourLInstant, ecrireVisite, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
+    ecrireVisite({ statut: 'en_cours', etape: 3 })
+    fermerPourLInstant()
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
 describe('terminerVisite', () => {
   it('finie tout de suite, une seule requête même sur double clic', async () => {
-    const { terminerVisite, lireEtat, lireVisite, ecrireVisite } = await charger()
+    const { terminerVisite, lireEtat, lireVisite, ecrireVisite, ETAPES_VISITE } = await charger()
     ecrireVisite({ statut: 'en_cours', etape: 3 })
     terminerVisite()
     terminerVisite()
-    expect(lireEtat(lireVisite())).toEqual({ statut: 'finie' })
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'finie' })
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
   })
@@ -222,9 +257,35 @@ describe('terminerVisite', () => {
   it('requête qui n’arrive pas : erreur tracée, la visite reste fermée à l’écran', async () => {
     const panne = new TypeError('Failed to fetch')
     vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
-    const { terminerVisite, logger, lireEtat, lireVisite } = await charger()
+    const { terminerVisite, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
     terminerVisite()
     await vi.waitFor(() => expect(logger.error).toHaveBeenCalledWith('visite_guidee.terminer.reseau', {}, panne))
-    expect(lireEtat(lireVisite())).toEqual({ statut: 'finie' })
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'finie' })
+  })
+})
+
+describe('redemarrerVisite', () => {
+  it('repart au premier arrêt tout de suite, et efface la date en base', async () => {
+    const { redemarrerVisite, ecrireVisite, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
+    ecrireVisite({ statut: 'finie' })
+    redemarrerVisite()
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
+    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'DELETE', keepalive: true })
+  })
+
+  it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
+    const { redemarrerVisite, logger } = await charger()
+    redemarrerVisite()
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledWith('visite_guidee.redemarrer.session_expiree', {}))
+  })
+
+  it('requête qui n’arrive pas : erreur tracée, la reprise reste affichée à l’écran', async () => {
+    const panne = new TypeError('Failed to fetch')
+    vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
+    const { redemarrerVisite, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
+    redemarrerVisite()
+    await vi.waitFor(() => expect(logger.error).toHaveBeenCalledWith('visite_guidee.redemarrer.reseau', {}, panne))
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
   })
 })
