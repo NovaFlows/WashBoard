@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import type { Availability } from '@/types'
 import { ajouterPlages, retirerPlage } from '@/lib/horairesApi'
 import { unSeulALaFois, type ResultatJour } from '@/lib/horaires'
+import { signalerAvancement } from '@/lib/visiteGuidee'
 
 // État de l'écran « Horaires » de la PWA (`HorairesV2`) : les plages affichées et
 // leurs deux écritures. La liste locale ne change QU'APRÈS un succès du serveur :
@@ -25,7 +26,7 @@ export function useHorairesV2(plagesInitiales: Availability[]) {
     () => unSeulALaFois(async (jours: number[], debut: string, fin: string): Promise<ResultatJour[]> => {
       const resultats = await ajouterPlages(jours, debut, fin)
       const creees = resultats.flatMap(r => (r.ok ? [r.plage] : []))
-      if (creees.length > 0) setPlages(p => [...p, ...creees])
+      if (creees.length > 0) { setPlages(p => [...p, ...creees]); signalerAvancement('availabilities') }
       return resultats
     }),
     [],

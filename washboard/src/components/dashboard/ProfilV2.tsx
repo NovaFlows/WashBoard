@@ -17,6 +17,7 @@ import { requiredPlanLabel } from '@/lib/plan'
 import FeuilleFacturationV2 from '@/components/dashboard/FeuilleFacturationV2'
 import { FeuilleEmailV2, FeuilleMotDePasseV2 } from '@/components/dashboard/FeuillesConnexionV2'
 import { actionCompte, enregistrerProfil, type ChampsProfil } from '@/lib/profilApi'
+import { signalerAvancement } from '@/lib/visiteGuidee'
 import {
   resumeAdresseDepart, resumeEmail, resumeEquipe, resumeFacturation, resumeFraisDeplacement, resumeNomEntreprise,
   resumeTelephone,
@@ -68,6 +69,7 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
     const r = await enregistrerProfil(champs)
     if (!r.ok) return r.message
     setFiche(f => ({ ...f, ...champs }) as Washer)
+    if (typeof champs.base_address === 'string' && champs.base_address.trim()) signalerAvancement('baseAddress')
     router.refresh()
     return null
   }
@@ -134,7 +136,7 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
           <ul className="divide-y divide-[color:var(--v2-filet)]">
             <Ligne label="Nom de l’entreprise" valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
             <Ligne label="Téléphone" valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
-            <Ligne label="Adresse de départ" valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
+            <Ligne label="Adresse de départ" valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} cibleVisite="adresse-depart" />
             <Ligne label="Frais de déplacement" valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
             <Ligne
               label="Nombre de laveurs"

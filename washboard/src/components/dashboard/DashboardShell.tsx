@@ -46,6 +46,11 @@ type Props = {
   subscriptionEndsAt?: string | null
   /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche la visite guidée. */
   visiteGuidee?: boolean
+  /** Signaux des arrêts `interactif` de la visite (voir visiteGuidee.ts) : seules
+   *  Prestations, Horaires et Mon profil le renseignent — chacune avec son seul
+   *  chiffre, les deux autres `undefined`. Sert à avancer la visite toute seule
+   *  quand le laveur vient de faire l'action réelle, pas à son arrivée sur la page. */
+  avancementVisite?: { servicesCount?: number; availabilitiesCount?: number; baseAddressRempli?: boolean }
 }
 
 function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
@@ -537,7 +542,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -802,7 +807,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </SupportBadgesContext.Provider>
       </main>
 
-      <VisiteGuidee aFaire={visiteGuidee} />
+      <VisiteGuidee aFaire={visiteGuidee} avancement={avancementVisite} />
 
       {/* Retiré dans la PWA en bêta : posé sous la barre du bas, il allongeait la page de
           plus d'un écran de vide et passait sous la barre (2026-09-25). */}

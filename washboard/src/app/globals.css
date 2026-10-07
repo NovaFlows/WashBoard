@@ -633,38 +633,79 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 /* ── Visite guidée (VisiteGuidee.tsx) : l'élément clé de l'arrêt en cours ────
    L'attribut est posé hors de React, qui ne le connaît pas et ne l'efface donc
    pas en re-rendant l'élément (une classe, si). Contour plutôt que bordure ou
-   ombre : il ne déplace rien et ne remplace pas le style de l'élément. */
+   ombre : il ne déplace rien et ne remplace pas le style de l'élément.
+   Site UNIQUEMENT (`contourSite` dans VisiteGuidee.tsx) : l'application a ses
+   propres repères, la découpe (arrêts « regarde ») ou le halo (`interactif`),
+   jamais les deux à la fois sur le même élément. */
 [data-visite-active] {
   outline: 3px solid var(--wb-visite, #1651E8);
   outline-offset: 4px;
   animation: wb-visite-pouls 1.6s ease-in-out infinite;
 }
 .dark [data-visite-active] { --wb-visite: #00C4D4; }
-html.wb-pwa [data-visite-active] { --wb-visite: var(--v2-color-accent); }
 @keyframes wb-visite-pouls { 50% { outline-offset: 7px; } }
 @media (prefers-reduced-motion: reduce) {
   [data-visite-active] { animation: none; }
 }
 
-/* ── Visite guidée, application installée : fond assombri + découpe lumineuse
-   (2026-10-07, demande de Ryan — un vrai tuto d'application, pas une simple
-   bulle). Le fond entre en fondu à l'ouverture ; la découpe glisse en douceur
-   d'un élément à l'autre (positions en ligne dans VisiteGuidee.tsx, seule la
-   transition vit ici) ; le texte de chaque arrêt se glisse légèrement au
-   changement, pour que ça ne saute jamais d'un bloc à l'autre. */
-.wb-visite-fond { animation: wb-visite-fondu .35s var(--v2-ease-out, ease-out) both; }
+/* ── Visite guidée, application installée, arrêt « regarde » : fond assombri +
+   découpe lumineuse (2026-10-07, demande de Ryan — un vrai tuto d'application,
+   pas une simple bulle). Le fond entre en fondu à l'ouverture ; la découpe
+   glisse d'un élément à l'autre avec un léger rebond (positions en ligne dans
+   VisiteGuidee.tsx, seule la transition vit ici) ; le texte de chaque arrêt se
+   glisse légèrement au changement, pour que ça ne saute jamais d'un bloc à
+   l'autre. Rebond (`cubic-bezier(.34,1.56,.64,1)`, léger dépassement puis
+   retour) plutôt qu'un simple ease-out, jugé trop plat (Ryan, 2026-10-07 :
+   « l'animation elle est nulle »). */
+.wb-visite-fond { animation: wb-visite-fondu .35s ease-out both; }
 .wb-visite-decoupe {
-  transition: top .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
-              left .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
-              width .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
-              height .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)),
-              box-shadow .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1));
+  transition: top .5s cubic-bezier(.34,1.56,.64,1),
+              left .5s cubic-bezier(.34,1.56,.64,1),
+              width .5s cubic-bezier(.34,1.56,.64,1),
+              height .5s cubic-bezier(.34,1.56,.64,1),
+              box-shadow .4s ease-out;
+  animation: wb-visite-respire 2.6s ease-in-out .5s infinite;
 }
-.wb-visite-carte { animation: wb-visite-entree .4s var(--v2-ease-out, cubic-bezier(.22,1,.36,1)) both; }
-.wb-visite-texte { animation: wb-visite-texte-entree .35s var(--v2-ease-out, ease-out) both; }
+.wb-visite-carte { animation: wb-visite-entree .45s cubic-bezier(.34,1.56,.64,1) both; }
+.wb-visite-texte { animation: wb-visite-texte-entree .35s ease-out both; }
 @keyframes wb-visite-fondu { from { opacity: 0; } }
-@keyframes wb-visite-entree { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes wb-visite-entree { from { opacity: 0; transform: translateY(18px) scale(.96); } }
 @keyframes wb-visite-texte-entree { from { opacity: 0; transform: translateY(6px); } }
+/* La découpe elle-même ne peut pas s'agrandir (son ombre EST le fond assombri :
+   grandir la ferait déborder sur la cible) — l'anneau coloré qui la borde
+   respire à sa place, posé par un pseudo-élément qui, lui, peut grandir sans
+   rien assombrir. */
+.wb-visite-decoupe::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--v2-color-accent);
+  animation: wb-visite-anneau 2.6s ease-in-out .5s infinite;
+}
+@keyframes wb-visite-respire { 50% { filter: brightness(1.04); } }
+@keyframes wb-visite-anneau { 0%, 100% { opacity: .55; inset: 0; } 50% { opacity: 1; inset: -3px; } }
 @media (prefers-reduced-motion: reduce) {
-  .wb-visite-fond, .wb-visite-decoupe, .wb-visite-carte, .wb-visite-texte { animation: none; transition: none; }
+  .wb-visite-fond, .wb-visite-decoupe, .wb-visite-decoupe::after, .wb-visite-carte, .wb-visite-texte {
+    animation: none; transition: none;
+  }
+}
+
+/* ── Visite guidée, arrêt `interactif` (Prestations, Horaires, Adresse de
+   départ, 2026-10-07) : pas de fond sombre, l'écran réel reste cliquable —
+   juste un halo qui respire autour de la cible ; la carte garde la même
+   place qu'un arrêt « regarde » (en bas, espace déjà réservé par
+   DashboardShell). `wb-visite-halo-ok` prend le relais un court instant
+   quand l'action vient d'être détectée, avant que la visite n'avance toute
+   seule (VisiteGuidee.tsx). */
+.wb-visite-halo {
+  box-shadow: 0 0 0 3px var(--v2-color-accent), 0 0 0 9999px rgba(10,10,12,.08);
+  transition: top .5s cubic-bezier(.34,1.56,.64,1), left .5s cubic-bezier(.34,1.56,.64,1),
+              width .5s cubic-bezier(.34,1.56,.64,1), height .5s cubic-bezier(.34,1.56,.64,1);
+  animation: wb-visite-halo-pouls 1.8s ease-in-out infinite;
+}
+.wb-visite-halo-ok {
+  box-shadow: 0 0 0 3px #22c55e, 0 0 0 9999px rgba(10,10,12,.08);
+  animation: none;
+}
+@keyframes wb-visite-halo-pouls { 50% { box-shadow: 0 0 0 6px var(--v2-color-accent), 0 0 0 9999px rgba(10,10,12,.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .wb-visite-halo, .wb-visite-halo-ok { animation: none; transition: none; }
 }

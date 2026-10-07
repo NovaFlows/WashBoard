@@ -35,13 +35,14 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('etapesPour', () => {
-  it('site : exactement les onze arrêts « page » d’avant, dans le même ordre', async () => {
+  it('site : les douze arrêts « page », dans l’ordre (Adresse de départ ajouté le 2026-10-07)', async () => {
     const { etapesPour } = await charger()
     expect(etapesPour(false).map(e => e.route)).toEqual([
       '/dashboard',
       '/dashboard/parametres#lien-reservation',
       '/dashboard/parametres/prestations',
       '/dashboard/parametres/horaires',
+      '/dashboard/parametres/profil',
       '/dashboard/calendrier',
       '/dashboard/clients',
       '/dashboard/crm',
@@ -53,8 +54,9 @@ describe('etapesPour', () => {
     expect(etapesPour(false).map(e => e.texte)).toEqual([
       "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil.",
       "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.",
-      "Ce que tu vends : nom, prix, durée. Ta page reste vide tant que tu n'en as pas créé une.",
-      'Tes dispos et tes congés : ça décide des créneaux que voient tes clients.',
+      "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.",
+      'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.',
+      "Ton point de départ : sert à calculer les trajets, et à ne pas proposer un créneau hors de ta zone.",
       'Toute ton activité en vue mois/semaine/jour.',
       "Chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
       `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.`,
@@ -98,10 +100,18 @@ describe('etapesPour', () => {
     }
   })
 
-  it('seuls Prestations, Horaires et Lien mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
+  it('seuls Lien, Prestations, Horaires et Adresse de départ mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
     const { etapesPour } = await charger()
     const ciblesDePage = etapesPour(false).flatMap(e => (e.cible ? [e.cible] : []))
-    expect(ciblesDePage).toEqual(['lien', 'prestations', 'horaires'])
+    expect(ciblesDePage).toEqual(['lien', 'prestations', 'horaires', 'adresse-depart'])
+  })
+
+  it('les trois essentiels bloquants (services, availabilities, baseAddress) sont interactifs, et eux seuls', async () => {
+    const { etapesPour } = await charger()
+    const interactifs = etapesPour(false).filter(e => e.interactif)
+    expect(interactifs.map(e => e.interactif)).toEqual(['services', 'availabilities', 'baseAddress'])
+    // Chaque arrêt interactif porte une cible : sans elle, rien à mettre en valeur.
+    for (const e of interactifs) expect(e.cible).toBeTruthy()
   })
 })
 

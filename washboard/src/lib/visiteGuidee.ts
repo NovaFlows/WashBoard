@@ -1,13 +1,21 @@
 // Visite guidée du tableau de bord : montrée une seule fois, au premier passage
 // sur `/dashboard` — et rejouable à volonté depuis le Guide (voir `redemarrerVisite`).
 //
-// Sur le SITE, onze arrêts sur de vraies pages (comme avant). Dans l'APPLICATION
-// installée, des arrêts supplémentaires s'intercalent pour présenter la barre du
-// bas au fil de l'eau — « regarde cet onglet » (assombrissement + découpe, sans
-// changer de page) juste avant d'y naviguer pour de vrai, plutôt qu'un bloc à part
-// à la fin. `pwaSeulement` marque ces arrêts : invisibles sur le site, où la barre
+// Sur le SITE, douze arrêts sur de vraies pages (comme avant, plus « Adresse de
+// départ » ajouté le 2026-10-07 — troisième essentiel bloquant de
+// `computeSetupProgress`, qui manquait). Dans l'APPLICATION installée, des
+// arrêts supplémentaires s'intercalent pour présenter la barre du bas au fil de
+// l'eau — « regarde cet onglet » (assombrissement + découpe, sans changer de
+// page) juste avant d'y naviguer pour de vrai, plutôt qu'un bloc à part à la
+// fin. `pwaSeulement` marque ces arrêts : invisibles sur le site, où la barre
 // du bas n'existe pas (demande de Ryan, 2026-10-07 : « tu peux présenter un onglet
 // de la barre puis rentrer dedans et présenter etc. »).
+//
+// Prestations, Horaires et Adresse de départ sont en plus `interactif` : la
+// visite s'efface au profit d'un simple repère, laisse l'écran réel cliquable,
+// et avance toute seule dès que le laveur a vraiment fait l'action — pas de
+// « Suivant » à cliquer dans le vide (Ryan, 2026-10-07 : « j'ai pas vu la partie
+// réglages où on accompagne le laveur à remplir ses informations »).
 //
 // `washers.dashboard_tour_complete_at` dit si elle reste à faire. Les comptes
 // antérieurs à sa mise en place ont été remplis à leur date de création : seul un
@@ -35,6 +43,13 @@ export type EtapeVisite = {
   /** N'apparaît que dans l'application installée (barre du bas, geste retour :
    *  rien de tout ça n'existe sur le site). */
   pwaSeulement?: boolean
+  /** Arrêt « fais-le maintenant », pas « regarde » : la carte s'efface au
+   *  profit d'un simple repère lumineux, laisse l'écran réel cliquable, et
+   *  avance toute seule dès que `avancement` (VisiteGuidee.tsx) dit que
+   *  c'est fait — ajouter une prestation, un horaire, une adresse. Clé de
+   *  `SetupInput`/`computeSetupProgress` (setupProgress.ts) : mêmes trois
+   *  essentiels bloquants, mêmes signaux. */
+  interactif?: 'services' | 'availabilities' | 'baseAddress'
 }
 
 // Les arrêts « page » visent les écrans de l'application installée : sur le site,
@@ -63,8 +78,9 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
   { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
   { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
-  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations` },
-  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités` },
+  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, interactif: 'services' },
+  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, interactif: 'availabilities' },
+  { route: '/dashboard/parametres/profil', cible: 'adresse-depart', texte: "Ton point de départ : sert à calculer les trajets, et à ne pas proposer un créneau hors de ta zone.", chemin: `${CHEMIN_CONFIGURER} → Mon profil`, interactif: 'baseAddress' },
   { pwaSeulement: true, cible: 'barre-bas-agenda', texte: 'Et sur Agenda :' },
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
@@ -203,4 +219,29 @@ export function redemarrerVisite(): void {
       if (res.status === 401) logger.warn('visite_guidee.redemarrer.session_expiree', {})
     })
     .catch(e => logger.error('visite_guidee.redemarrer.reseau', {}, e))
+}
+
+// ── Signal des arrêts `interactif` ──────────────────────────────────────────
+//
+// Les écrans de réglages (PrestationsV2, HorairesV2, ProfilV2) gardent leur
+// propre état local après une écriture — `usePrestationsV2`/`useHorairesV2` ne
+// rappellent PAS le serveur (affichage optimiste assumé, voir leurs
+// commentaires), donc les props que chaque page sert à `DashboardShell` à son
+// premier rendu restent figées : une prestation ajoutée pendant la visite ne
+// s'y reflète jamais. Plutôt que de forcer un `router.refresh()` que ces
+// écrans évitent exprès, chacun signale son écriture ici, et VisiteGuidee
+// n'écoute que l'arrêt affiché — même mécanisme que `abonnerVisite` ci-dessus.
+export type CleAvancement = 'services' | 'availabilities' | 'baseAddress'
+
+const abonnesAvancement = new Set<(cle: CleAvancement) => void>()
+
+/** Appelé juste après une écriture réussie — jamais avant, jamais en optimiste :
+ *  un signal doit dire « c'est fait », pas « ça va peut-être marcher ». */
+export function signalerAvancement(cle: CleAvancement): void {
+  abonnesAvancement.forEach(f => f(cle))
+}
+
+export function abonnerAvancement(f: (cle: CleAvancement) => void): () => void {
+  abonnesAvancement.add(f)
+  return () => { abonnesAvancement.delete(f) }
 }
