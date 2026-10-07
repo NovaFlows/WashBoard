@@ -920,53 +920,68 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 
 ### 📖 Guide / tuto
 
-- [x] 2026-10-07 — **CODÉ, VÉRIFIÉ VISUELLEMENT (Playwright), PAS ENCORE POUSSÉ —
-      Tuto PWA à l'installation, avec animation d'assombrissement façon vraie
-      application.** Demande de Ryan, 2026-10-05, complète l'item déjà existant
-      plus bas (« Tuto PWA à la première installation de l'application »,
-      section Refonte 2026) : même besoin produit, avec l'exigence visuelle en
-      plus (overlay qui assombrit l'écran autour de l'élément mis en avant,
-      comme les tutoriels des applications natives — jamais construit avant,
-      `VisiteGuidee.tsx` n'a qu'une carte/bulle classique).
-      Sur la branche `feat/tuto-pwa` (pas `master` — feature jugée assez
-      risquée/visible pour passer par une preview Vercel avant fusion, décision
-      de Ryan). **Téléphone uniquement** (`useEcranTelephone`, seuil `sm`
-      640px comme le reste du dashboard) : la version ordinateur de la barre du
-      bas n'existe pas encore.
-      - 4 arrêts : la barre du bas en entier → le bouton [+] central → le
-        geste retour (pas de cible, assombrissement simple) → l'onglet
-        « Plus ». Contenu arbitré avec Ryan dans la conversation du
-        2026-10-06/07, pas re-vérifié avec Alexandre séparément.
-      - Découpe lumineuse en CSS pur (`box-shadow` à 9999px d'écart autour
-        d'un rectangle transparent posé sur la cible via
-        `getBoundingClientRect()`), jamais de SVG/masque — plus simple et
-        s'adapte sans calcul à n'importe quelle taille d'écran. Cibles posées
-        via `data-tuto-pwa-cible` sur `BarreBasV2.tsx` (même mécanique que
-        `data-visite-cible` pour la visite guidée).
-      - Se déclenche seulement une fois la visite guidée du dashboard
-        terminée (`dashboard_tour_complete_at` non nul) : sans cette
-        condition, un compte flambant neuf qui installerait l'app avant
-        d'avoir ouvert le site verrait les deux tutos se chevaucher.
-      - Nouveaux fichiers : `lib/tutoPwa.ts` (logique, même mécanique que
-        `visiteGuidee.ts`), `hooks/useEcranTelephone.ts`,
-        `components/dashboard/TutoPwaV2.tsx`,
-        `api/washer/tuto-pwa/route.ts`. `marquerUneFois` étendu avec la
-        colonne `pwa_tour_complete_at`.
-      - **SQL à exécuter avant de fusionner/déployer** (aucun backfill,
-        contrairement à `dashboard_tour_complete_at` : personne n'a jamais vu
-        cette explication, donc tous les comptes — anciens compris — doivent
-        la voir une fois) :
-        ```sql
-        alter table public.washers add column if not exists pwa_tour_complete_at timestamptz;
-        ```
-      - Vérifié visuellement avec une page de prévisualisation temporaire
-        (supprimée après coup, voir `.claude/agents/designer.md`) : capture
-        des 4 étapes + de « Passer » + de l'absence totale sur largeur
-        ordinateur, zéro erreur console. `tsc`/`eslint`/`vitest run`
-        (2482 tests, 24 nouveaux) et `next build` revérifiés.
-      - **Reste à faire** : pousser la branche, vérifier la preview Vercel
-        avec Ryan, lui demander d'exécuter le SQL ci-dessus, puis
-        fusionner sur `master`.
+- [ ] 2026-10-08 — **Tuto PWA, FUSIONNÉ dans la visite guidée du tableau de
+      bord — sur `feat/tuto-pwa`, poussée, preview Vercel vérifiée, PAS ENCORE
+      MERGÉE sur `master`.** Demande de Ryan, 2026-10-05, puis très largement
+      recadrée en cours de route (2026-10-07/08) : la première version
+      (4 arrêts, composant `TutoPwaV2` à part, colonne `pwa_tour_complete_at`
+      dédiée) a été jetée une fois que Ryan a précisé ce qu'il voulait vraiment
+      — un seul tuto qui accompagne la création du compte de bout en bout,
+      pas deux tutos séparés qui se chevaucheraient. **Remplace entièrement
+      `VisiteGuidee.tsx` : rien à faire côté SQL, aucune nouvelle colonne,
+      réutilise `dashboard_tour_complete_at` qui existait déjà.**
+      - `lib/visiteGuidee.ts` : `ETAPES_VISITE` passe à 18 arrêts côté PWA
+        (12 sur le site, inchangés dans l'ordre/contenu — décision de Ryan du
+        2026-10-02 préservée). Les arrêts `pwaSeulement` (barre du bas,
+        bouton [+], geste retour) s'intercalent entre les arrêts « page »
+        existants plutôt que d'être un bloc à part : on présente un onglet,
+        puis on y entre pour de vrai.
+      - **Trois arrêts `interactif`** (Prestations, Horaires, Adresse de
+        départ — ce dernier nouveau, c'était le 3ᵉ essentiel bloquant de
+        `computeSetupProgress` et il manquait au tuto) : pas de fond sombre
+        bloquant, l'écran réel reste cliquable, et la visite avance TOUTE
+        SEULE dès que le laveur fait vraiment l'action (ajoute une
+        prestation, un horaire, une adresse) — détecté via
+        `signalerAvancement`/`abonnerAvancement` (`visiteGuidee.ts`), posé
+        juste après chaque écriture réussie dans `usePrestationsV2.ts`,
+        `useHorairesV2.ts` et `ProfilV2.tsx` (ces écrans gardent leur état
+        local après écriture sans rappeler le serveur, donc les props de la
+        page ne suffisaient pas).
+      - Découpe lumineuse en CSS pur (`box-shadow` à 9999px autour d'un
+        rectangle posé sur la cible via `getBoundingClientRect()`), comme
+        prévu initialement — mais le suivi de position est passé d'une
+        boucle `requestAnimationFrame` à 60 img/s (saccadait tout le reste
+        sur un vrai téléphone, voir plus bas) à de l'événementiel
+        (`ResizeObserver` + écouteurs scroll/resize + quelques mesures
+        bornées pour rattraper un bandeau qui charge après coup).
+      - **Trois tournées de retouches après test réel par Ryan sur preview
+        Vercel** (pas que de la vérification Playwright cette fois) :
+        1. Double contour (le contour pulsé du site restait posé en plus de
+           la découpe PWA, désaligné) — corrigé, l'app n'a plus qu'un seul
+           repère à la fois.
+        2. Jank réel sur téléphone (« aucune fluidité, mode saccadé ») —
+           cause : la boucle `requestAnimationFrame` perpétuelle ci-dessus,
+           combinée à des animations CSS qui repeignaient aussi en boucle
+           (`box-shadow`/`filter` animés en continu). Remplacées par de
+           l'`opacity` pure (compositeur, aucun repeint) ; navigation entre
+           arrêts préchargée (`router.prefetch`) plutôt que chargée au clic.
+           Mesuré sous ralentissement CPU 6x sur un build de production :
+           533 ms de blocage sur une image avant correctif, ~210 ms après.
+        3. Saut silencieux « étape 3 à étape 10 » — un arrêt `interactif`
+           déjà satisfait en arrivant (compte déjà configuré) avançait
+           instantanément sans rien montrer ; enchaîné sur les 3 arrêts
+           interactifs d'affilée, ça ressemblait à un bug. Montre maintenant
+           le même palier « Fait ✓ » visible que lorsque l'action vient
+           d'être faite.
+      - Vérifié à chaque étape par des comptes Supabase jetables + Playwright
+        (jamais commités) : tour complet 18 arrêts, double-contour absent,
+        ajout réel d'une prestation → avance automatique confirmée,
+        recentrage derrière la carte, redémarrage depuis le Guide. `tsc`,
+        `eslint` (0 erreur), `vitest run` (2469 tests) et `next build`
+        propres à chaque commit.
+      - **Reste à faire** : accord final de Ryan sur le rendu après cette
+        dernière tournée (il doit se reconnecter sur le téléphone — même lien
+        de preview, pas besoin de réinstaller), puis fusion sur `master`.
 
 ## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
 
@@ -974,18 +989,16 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 > d'Alexandre reprenne sans redécouvrir. **Passes 0 à 3 faites, la 4 est la
 > suivante.** Le plan de vol complet est dans `.claude/agents/refonte.md`.
 
-- [ ] **Tuto PWA à la première installation de l'application** (demande
-      d'Alexandre, 2026-10-07). Distinct de la visite guidée du tableau de bord
-      (`VisiteGuidee.tsx`/`visiteGuidee.ts`, onze arrêts, déclenchée au premier
-      passage sur `/dashboard`, quel que soit le support) : ici, le
-      déclencheur est l'INSTALLATION de l'app elle-même (`usePwaStandalone()`
-      détecte le mode standalone), pour un laveur qui utilisait déjà le site
-      depuis un moment et installe l'app plus tard — il a donc déjà fait la
-      visite guidée, mais découvre une forme différente (barre du bas,
-      gestes, écrans v2) sans qu'on la lui présente. Contenu à définir : au
-      minimum la barre de navigation du bas et son bouton central, le geste
-      retour (`RetourGesteV2`), où retrouver ce qui a disparu (menu latéral →
-      « Plus »). Sujet à préciser avec Alexandre avant de lancer.
+- [x] **Tuto PWA à la première installation de l'application** (demande
+      d'Alexandre, 2026-10-07) — **résolu différemment de ce qui était prévu
+      ici : pas un second tuto séparé.** Ryan a tranché le 2026-10-07 que
+      cette présentation (barre du bas, bouton central, geste retour) devait
+      s'intercaler DANS la visite guidée existante plutôt que se déclencher à
+      part à l'installation — un laveur qui installe l'app après coup la
+      verra simplement en rejouant la visite depuis le Guide
+      (`redemarrerVisite()`). Voir l'entrée « Tuto PWA, FUSIONNÉ dans la
+      visite guidée » plus haut (section Guide/tuto) pour le détail de ce qui
+      a été construit.
 - [ ] **CHANGEMENT D'ARCHITECTURE (2026-09-22, pas encore commité) — v2
       seulement dans la PWA installée, jamais sur le site.** Alexandre : « moi
       je veux que la PWA ressemble a une app mais que le site web que ce soit
