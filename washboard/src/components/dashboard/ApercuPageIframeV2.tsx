@@ -125,7 +125,19 @@ const FACTEUR_AGRANDISSEMENT_MAX = 1.25
 // `520/837 ≈ 0.62`. Un plafond spécifique, généreux (3× l'original, choisi à l'oeil, pas mesuré
 // comme le reste), laisse la page réelle s'agrandir sans pour autant laisser une page
 // extrêmement longue (beaucoup de catégories de prestations) pousser le cadre à l'infini.
-const HAUTEUR_MAX_CADRE_AGRANDI = HAUTEUR_MAX_CADRE * 3
+// Plus bas qu’une page mesurée ici, c’est que la mesure a échoué : une page qui tire sa
+// hauteur de `100vh` (page d’erreur, écran d’attente) ne « fait » plus que la taille de son
+// texte une fois la scène réduite à 1 px pour la mesurer. On refuse alors de la croire et on
+// garde la hauteur par défaut, plutôt que d’écraser le cadre à quelques pixels.
+const HAUTEUR_PLAUSIBLE_MIN = 200
+// Plafond en mode agrandi : lié à la place réellement disponible à l’écran, pas à un multiple
+// arbitraire. Un multiple fixe (3×) donnait un cadre de plus de 1000 px sur une page longue,
+// qui débordait de la fenêtre — défaut constaté par Alexandre en vrai.
+const PART_HAUTEUR_FENETRE = 0.6
+function plafondAgrandi(): number {
+  if (typeof window === 'undefined') return HAUTEUR_MAX_CADRE
+  return Math.max(HAUTEUR_MAX_CADRE, Math.round(window.innerHeight * PART_HAUTEUR_FENETRE))
+}
 
 /** `version` : une empreinte des reglages affiches par la page publique. Quand elle
  *  change — le laveur vient d enregistrer une couleur, un message — le cadre se remonte
@@ -248,16 +260,21 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
   // étroite), rien ne change : ni l'échelle, ni la largeur de l'iframe — c'est exactement le
   // calcul d'avant cette passe.
   const agrandir = !pleinEcran && largeurCadre !== null && largeurCadre > LARGEUR_REFERENCE_PAGE_PX
-  const plafondHauteur = agrandir ? HAUTEUR_MAX_CADRE_AGRANDI : HAUTEUR_MAX_CADRE
-  const echelleHauteur = hauteurNaturelle ? plafondHauteur / hauteurNaturelle : 1
+  // Une hauteur sous le seuil de plausibilité est une mesure ratée, pas une page courte :
+  // on la jette plutôt que d’écraser le cadre (voir HAUTEUR_PLAUSIBLE_MIN).
+  const hauteurMesuree = hauteurNaturelle && hauteurNaturelle >= HAUTEUR_PLAUSIBLE_MIN ? hauteurNaturelle : null
+  const plafondHauteur = agrandir ? plafondAgrandi() : HAUTEUR_MAX_CADRE
+  const echelleHauteur = hauteurMesuree ? plafondHauteur / hauteurMesuree : 1
   const echelleLargeur = agrandir && largeurCadre ? largeurCadre / LARGEUR_REFERENCE_PAGE_PX : 1
   const escala = agrandir
     // Le plus petit des trois : on ne dépasse ni la largeur disponible, ni le plafond de
     // lisibilité, ni le plafond de hauteur (une page très longue reste raisonnable).
     ? Math.min(echelleLargeur, FACTEUR_AGRANDISSEMENT_MAX, echelleHauteur)
     // Comportement d'origine, inchangé : on ne réduit que si trop haut, jamais n'agrandit.
-    : (hauteurNaturelle ? Math.min(1, echelleHauteur) : 1)
-  const hauteurAffichee = hauteurNaturelle ? hauteurNaturelle * escala : HAUTEUR_MAX_CADRE
+    : (hauteurMesuree ? Math.min(1, echelleHauteur) : 1)
+  // Et jamais plus haut que le plafond, même si le calcul dérape : c’est la dernière barrière
+  // avant qu’un cadre ne déborde de l’écran.
+  const hauteurAffichee = hauteurMesuree ? Math.min(hauteurMesuree * escala, plafondHauteur) : HAUTEUR_MAX_CADRE
 
   return (
     <div
