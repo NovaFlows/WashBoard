@@ -16,6 +16,7 @@ import FeuilleMessageV2 from '@/components/dashboard/FeuilleMessageV2'
 import FeuilleSiteV2 from '@/components/dashboard/FeuilleSiteV2'
 import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/apparence'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
+import { useApparenceCoteACote } from '@/hooks/useApparenceCoteACote'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // « Apparence de ma page » — refonte 2026, destination NEUVE de « Plus » (la maquette
@@ -43,9 +44,38 @@ import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard
 // réglage s'affiche à droite (voir `ListeReglagesV2.tsx` et le rapport de la passe). Même
 // raisonnement que `ChiffresV2.tsx`/`ClientsViewV2.tsx` : ce composant « respire » lui-même au
 // lieu d'un troisième fichier — la présentation mobile/PWA, elle, ne change pas d'une ligne.
+//
+// Retouche du 2026-10-07 (Alexandre, après l'arrivée de l'aperçu en iframe pleine page : « ça
+// fait moche [...] peut-être ajouter le segment de modification » à côté) : réglages ET aperçu
+// côte à côte sur grand écran, comme l'écran 10 de la maquette (`bureau-2026/index.html`,
+// colonne de gauche 252px + aperçu à droite). Avant cette passe, l'aperçu prenait toute la
+// largeur de la colonne de droite (jusqu'à ~826px à 1440px de fenêtre) pour une page publique
+// qui ne fait que 512px de large (`max-w-lg`, `(public)/book/[slug]/page.tsx`) : deux bandes
+// vides de ~150px de chaque côté, et les réglages repoussés sous un aperçu déjà plus haut que
+// l'écran. Deux changements : (1) une colonne de réglages à largeur FIXE (`LARGEUR_REGLAGES_PX`,
+// proche de celle de la maquette) plutôt que `flex-1` — des lignes de liste n'ont aucune raison
+// de s'étirer sur 800px ; (2) l'aperçu plafonné à `LARGEUR_APERCU_MAX_PX` (560px, un peu plus
+// que les 512px de la page + sa marge intérieure de 16px de chaque côté) au lieu de `flex-1` :
+// il prend toute la largeur dont il a besoin pour ne (quasi) plus réduire, jamais plus.
+//
+// Triple empilement mesuré (rail 252px + colonne « Plus » 260px + ces deux colonnes) : en
+// dessous de 1280px de fenêtre (donc entre le seuil `useGrandEcran`, 1024px, et 1280px), la
+// colonne de réglages tomberait sous 230px de large — illisible, mesuré en capturant cette
+// passe. D'où `useApparenceCoteACote()` (`lib/grandEcran.ts`, même famille que
+// `SEUIL_RAIL_PX`/`useEcranRail`) : le côte-à-côte attend une largeur de FENÊTRE réelle
+// (≥1280px), pas seulement `useGrandEcran()` ; entre 1024 et 1280px, réglages et aperçu restent
+// empilés (aperçu d'abord, réglages ensuite, comme avant cette passe) — jamais la rangée serrée.
 
 type FeuilleOuverte = 'logo' | 'couleur' | 'fond' | 'message' | 'site' | null
 type Retrait = 'logo' | 'photo' | null
+
+/** Largeur fixe de la colonne de réglages côte à côte avec l'aperçu — voir le commentaire
+ *  d'en-tête du fichier. */
+const LARGEUR_REGLAGES_PX = 300
+/** Plafond de la colonne d'aperçu : un peu plus que la largeur naturelle de la page publique
+ *  (512px + ses 2×16px de marge intérieure) pour qu'elle ne réduise presque jamais, sans
+ *  jamais manger la place des réglages à côté. */
+const LARGEUR_APERCU_MAX_PX = 560
 
 type Props = {
   nom: string
@@ -58,6 +88,7 @@ type Props = {
 export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
   const h = useApparenceV2(initial)
   const grandEcran = useGrandEcran()
+  const coteACote = useApparenceCoteACote()
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [retrait, setRetrait] = useState<Retrait>(null)
   const [retraitEnCours, setRetraitEnCours] = useState(false)
@@ -105,30 +136,12 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
   const valeurLogo = aLogo ? 'Ajouté' : 'Pas encore : votre initiale s’affiche'
   const valeurMessage = h.message ?? `Pas encore : « ${MESSAGE_PAR_DEFAUT} » s’affiche`
 
-  const contenu = (
-    <div
-      className={grandEcran
-        ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
-        : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
-    >
-      <div className="flex items-center gap-1 pb-3">
-        <Link
-          href="/dashboard/parametres"
-          aria-label="Retour à Plus"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Apparence de ma page</h1>
-          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Ce que vos clients voient en ouvrant votre lien
-          </p>
-        </div>
-      </div>
-
-      <ApercuPageIframeV2 slug={slug} />
-
+  // Bloc des réglages (boutons + liste de 5 lignes) et bloc de l'aperçu : deux fragments
+  // qu'on arrange soit empilés (téléphone, ou fenêtre entre 1024 et 1280px — voir
+  // `useApparenceCoteACote`), soit côte à côte (≥1280px) — voir le commentaire d'en-tête du
+  // fichier pour la mesure qui a fixé ce seuil.
+  const blocReglages = (
+    <>
       <div className={etatLogoVisible ? 'mt-4' : ''} aria-live="polite">
         {etatLogoVisible && <EtatEnvoi etat={h.logo} />}
       </div>
@@ -168,6 +181,47 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
           </ul>
         </CarteListe>
       </section>
+    </>
+  )
+
+  // L empreinte des reglages : des que l un d eux change (apres enregistrement), le cadre
+  // se remonte tout seul. Sans ca, le laveur regle a gauche et ne voit rien bouger a droite.
+  const versionApercu = [h.logoUrl, h.couleur, h.fond, h.message, h.site].join("|")
+  const blocApercu = <ApercuPageIframeV2 slug={slug} version={versionApercu} />
+
+  const contenu = (
+    <div
+      className={grandEcran
+        ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+        : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
+    >
+      <div className="flex items-center gap-1 pb-3">
+        <Link
+          href="/dashboard/parametres"
+          aria-label="Retour à Plus"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
+        >
+          <ChevronLeft size={22} strokeWidth={2} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <h1 className={`text-[21px] leading-none ${titre}`}>Apparence de ma page</h1>
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            Ce que vos clients voient en ouvrant votre lien
+          </p>
+        </div>
+      </div>
+
+      {coteACote ? (
+        <div className="flex items-start gap-8">
+          <div className="shrink-0" style={{ width: LARGEUR_REGLAGES_PX }}>{blocReglages}</div>
+          <div className="min-w-0 flex-1" style={{ maxWidth: LARGEUR_APERCU_MAX_PX }}>{blocApercu}</div>
+        </div>
+      ) : (
+        <>
+          {blocApercu}
+          {blocReglages}
+        </>
+      )}
 
       <input
         ref={inputLogo}

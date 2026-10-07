@@ -90,7 +90,11 @@ function sAbonnerFullscreen(callback: () => void) {
 //    résolution et interactive, comme avant ce correctif.
 const HAUTEUR_MAX_CADRE = 520
 
-export default function ApercuPageIframeV2({ slug }: { slug: string }) {
+/** `version` : une empreinte des reglages affiches par la page publique. Quand elle
+ *  change — le laveur vient d enregistrer une couleur, un message — le cadre se remonte
+ *  et montre le resultat sans qu on ait a cliquer « Rafraichir ». C est la promesse de la
+ *  maquette : « Reglez a gauche, le resultat change tout de suite a droite ». */
+export default function ApercuPageIframeV2({ slug, version }: { slug: string; version?: string }) {
   const [cle, setCle] = useState(0)
   const [charge, setCharge] = useState(false)
   const [hauteurNaturelle, setHauteurNaturelle] = useState<number | null>(null)
@@ -250,7 +254,7 @@ export default function ApercuPageIframeV2({ slug }: { slug: string }) {
           }
         >
           <iframe
-            key={cle}
+            key={`${cle}-${version ?? ''}`}
             ref={iframeRef}
             src={`/book/${slug}`}
             title="Aperçu de votre page de réservation"
