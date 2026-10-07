@@ -72,8 +72,7 @@ const CHEMIN_CONFIGURER = `${CHEMIN_PAGE_CLIENT} → « Configurer ma page clien
 // PWA s'intercalent juste avant l'arrêt qu'ils annoncent, sans jamais déplacer
 // les arrêts existants les uns par rapport aux autres.
 export const ETAPES_VISITE: readonly EtapeVisite[] = [
-  { pwaSeulement: true, cible: 'barre-bas', texte: 'Nouveau : ta navigation passe maintenant par cette barre, toujours sous le pouce.' },
-  { pwaSeulement: true, cible: 'barre-bas-aujourdhui', texte: 'On commence par Aujourd’hui.' },
+  { pwaSeulement: true, cible: 'barre-bas', texte: 'Nouveau : ta navigation passe maintenant par cette barre, toujours sous le pouce — on commence par Aujourd’hui.' },
   { route: '/dashboard', texte: "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil." },
   { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
   { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },

@@ -31,30 +31,33 @@ import {
 // l'emporte. Ex. PrestationsV2 : le « + » d'en-tête, et à défaut (aucune
 // catégorie encore) « + Ajouter une catégorie ».
 //
-// Le rectangle est repris image par image (requestAnimationFrame) tant que
-// l'étape reste affichée, pas seulement sur scroll/resize : des bandeaux
-// (nouveautés, bêta) ou une donnée chargée plus haut sur la page poussent
-// souvent la cible sans qu'aucun des deux ne se déclenche — repéré sur
-// l'étape « lien », poussée de ~240px par les bandeaux une fois la carte
-// déjà affichée, qui laissait la découpe figée sur une position obsolète.
+// ÉVÉNEMENTIEL, jamais de sondage en boucle (`requestAnimationFrame` à 60
+// img/s a d'abord semblé la solution la plus simple pour suivre une cible
+// qui bouge après coup — bandeaux chargés plus tard, carte qui finit par la
+// recouvrir — mais c'est exactement ce qui saccadait tout le reste sur un
+// vrai téléphone : `getBoundingClientRect()` en continu, pour toujours, sur
+// TOUTE la durée d'un arrêt, entrait en concurrence avec les animations CSS
+// et le thread principal n'en ressortait jamais tout à fait libre — Ryan,
+// 2026-10-08 : « aucune fluidité, mode saccadé »). À la place : un
+// `ResizeObserver` sur l'ÉLÉMENT (se déclenche s'il change de taille), un
+// écouteur de défilement/redimensionnement (se déclenche si la page bouge),
+// et une poignée de mesures espacées (200 ms à 3 s) pour rattraper un
+// décalage de mise en page qui ne change NI la taille de la cible NI le
+// défilement — un bandeau qui charge au-dessus, par exemple (repéré sur
+// l'étape « lien », poussée de ~240px sans qu'aucun des deux ne bouge).
 //
 // Même logique pour l'élément lui-même : sur un arrêt `interactif`, l'écran
 // réel reste cliquable, et PrestationsV2 bascule du menu (« Prestations »)
 // à l'éditeur (le « + ») SANS changer de route (juste `?vue=` en plus,
 // `pathname` ne bouge pas) — l'élément d'origine quitte le DOM, il faut en
-// retrouver un nouveau portant la même cible plutôt que de rester figé sur
-// une position fantôme. `assurer()` revérifie ça à chaque image.
-//
-// Même chose quand c'est la carte (en bas de l'écran, arrêt « regarde ») qui
-// finit par recouvrir la cible après ce genre de poussée : un recentrage
-// silencieux, borné dans le temps pour ne jamais fighter avec un défilement
-// manuel une fois la page stabilisée.
+// retrouver un nouveau portant la même cible. L'observateur de mutations,
+// lui, reste branché toute la durée de l'arrêt (pas seulement le temps de
+// la première apparition) pour couvrir ce cas — événementiel aussi : son
+// coût est nul tant que rien ne change.
 function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | null) => void): () => void {
   let element: Element | null = null
-  let minuteurArrivee: ReturnType<typeof setTimeout> | undefined
-  let cadre: number | undefined
+  let observateurTaille: ResizeObserver | undefined
   let dernierRect: DOMRect | null = null
-  let trouveA = 0
   let dernierRecentrage = 0
 
   const identiques = (a: DOMRect | null, b: DOMRect | null) =>
@@ -65,56 +68,55 @@ function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | n
     return !!carte && r.bottom > carte.getBoundingClientRect().top && r.top < carte.getBoundingClientRect().bottom
   }
 
+  const rapporter = () => {
+    const r = element ? element.getBoundingClientRect() : null
+    if (!identiques(r, dernierRect)) { dernierRect = r; surRect(r) }
+    // Au plus un recentrage par demi-seconde : une correction ponctuelle,
+    // jamais un bras de fer avec un défilement manuel.
+    const maintenant = performance.now()
+    if (r && element && maintenant - dernierRecentrage > 500 && recouvreLaCarte(r)) {
+      dernierRecentrage = maintenant
+      element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }
+
   // `contourSite` : uniquement le site (`!isPwa`, voir l'appel plus bas).
   // L'application a ses propres repères (découpe ou halo) — poser EN PLUS
   // le contour pulsé du site les désalignait (marge de la découpe contre
   // bord exact de l'élément, remarqué par Ryan le 2026-10-07).
-  const assurer = (): boolean => {
+  const essayer = (): boolean => {
     if (element && document.contains(element)) return true
     const trouve = document.querySelector(`[data-visite-cible="${cible}"]`)
     if (!trouve) { element = null; return false }
+    observateurTaille?.disconnect()
     element = trouve
     if (contourSite) element.setAttribute('data-visite-active', '')
+    observateurTaille = new ResizeObserver(rapporter)
+    observateurTaille.observe(element)
     const sobre = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     element.scrollIntoView({ block: 'center', behavior: sobre ? 'auto' : 'smooth' })
-    trouveA = performance.now()
+    rapporter()
     return true
   }
 
-  const suivre = () => {
-    assurer()
-    const r = element ? element.getBoundingClientRect() : null
-    if (!identiques(r, dernierRect)) { dernierRect = r; surRect(r) }
-    const maintenant = performance.now()
-    // 400 ms de battement : laisse le scroll initial (smooth) se terminer
-    // avant de juger qu'il faut recentrer, et au plus un recentrage par
-    // demi-seconde ensuite — une correction ponctuelle, pas un bras de fer.
-    if (r && element && maintenant - trouveA > 400 && maintenant - dernierRecentrage > 500 && recouvreLaCarte(r)) {
-      dernierRecentrage = maintenant
-      element.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    }
-    cadre = requestAnimationFrame(suivre)
-  }
+  // Couvre à la fois « l'élément arrive après coup » (écran v2 qui attend de
+  // savoir s'il est dans l'application, offre sans cet écran…) et « l'élément
+  // est remplacé par un autre portant la même cible » (PrestationsV2,
+  // menu → éditeur). Reste branché toute la durée de l'arrêt.
+  const observateurDom = new MutationObserver(essayer)
+  observateurDom.observe(document.body, { childList: true, subtree: true })
+  essayer()
 
-  // L'élément arrive souvent après la carte : écran v2 qui attend de savoir s'il
-  // est dans l'application, onglet choisi après montage, renvoi du site vers son
-  // écran v1. Introuvable au bout de 5 s (offre sans cet écran, catalogue
-  // plein…) : la carte seule suffit.
-  const observateurArrivee = new MutationObserver(() => {
-    if (assurer()) { observateurArrivee.disconnect(); clearTimeout(minuteurArrivee) }
-  })
-  if (assurer()) {
-    cadre = requestAnimationFrame(suivre)
-  } else {
-    observateurArrivee.observe(document.body, { childList: true, subtree: true })
-    minuteurArrivee = setTimeout(() => observateurArrivee.disconnect(), 5000)
-    cadre = requestAnimationFrame(suivre)
-  }
+  const minuteurs = [200, 500, 1000, 1800, 3000].map(delai => setTimeout(rapporter, delai))
+  window.addEventListener('scroll', rapporter, true)
+  window.addEventListener('resize', rapporter)
 
   return () => {
-    observateurArrivee.disconnect()
-    clearTimeout(minuteurArrivee)
-    if (cadre !== undefined) cancelAnimationFrame(cadre)
+    observateurDom.disconnect()
+    observateurTaille?.disconnect()
+    minuteurs.forEach(clearTimeout)
+    window.removeEventListener('scroll', rapporter, true)
+    window.removeEventListener('resize', rapporter)
     element?.removeAttribute('data-visite-active')
     surRect(null)
   }
@@ -190,12 +192,21 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   const dejaSatisfait = valeurInteractif(etapeActuelle, avancement) === true
   const [vientDeReussir, setVientDeReussir] = useState(false)
   useEffect(() => {
-    setVientDeReussir(false)
     const cle = etapeActuelle?.interactif
-    if (!cle) return
+    if (!cle) { setVientDeReussir(false); return }
     // Déjà fait avant même d'arriver (ex. « Revoir le tuto » sur un compte
-    // configuré) : rien à montrer, rien à attendre.
-    if (dejaSatisfait) { avancerRef.current(); return }
+    // configuré) : le MÊME état « Fait ✓ » que lorsque ça vient de se
+    // produire, jamais un saut silencieux à l'arrêt suivant — un arrêt qui
+    // disparaît sans rien montrer se lit comme un bug, pas comme un pas de
+    // plus (vu chez Ryan le 2026-10-08 : « passé de l'étape 3 à l'étape 10 »,
+    // trois arrêts déjà satisfaits avalés d'un coup, sans un seul rendu entre
+    // les deux pour le montrer).
+    if (dejaSatisfait) {
+      setVientDeReussir(true)
+      const t = setTimeout(() => avancerRef.current(), 900)
+      return () => clearTimeout(t)
+    }
+    setVientDeReussir(false)
     return abonnerAvancement((c) => {
       if (c !== cle) return
       setVientDeReussir(true)

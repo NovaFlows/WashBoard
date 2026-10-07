@@ -654,9 +654,15 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
    glisse d'un élément à l'autre avec un léger rebond (positions en ligne dans
    VisiteGuidee.tsx, seule la transition vit ici) ; le texte de chaque arrêt se
    glisse légèrement au changement, pour que ça ne saute jamais d'un bloc à
-   l'autre. Rebond (`cubic-bezier(.34,1.56,.64,1)`, léger dépassement puis
-   retour) plutôt qu'un simple ease-out, jugé trop plat (Ryan, 2026-10-07 :
-   « l'animation elle est nulle »). */
+   l'autre.
+   RIEN D'INFINI ici qui touche `box-shadow`/`filter` : une première version
+   faisait respirer la découpe et son anneau avec ces propriétés-là, animées
+   en boucle pendant toute la durée de l'arrêt — repeint du quasi-plein-écran
+   à chaque image, en plus du thread JS qui suivait la cible en continu
+   (voir VisiteGuidee.tsx). Sur un vrai téléphone, combiné, ça saccadait tout
+   le reste (Ryan, 2026-10-08 : « aucune fluidité, mode saccadé »). L'anneau
+   respire maintenant en `opacity` pure (compositeur, pas de repeint), seule
+   chose encore animée en boucle. */
 .wb-visite-fond { animation: wb-visite-fondu .35s ease-out both; }
 .wb-visite-decoupe {
   transition: top .5s cubic-bezier(.34,1.56,.64,1),
@@ -664,24 +670,20 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
               width .5s cubic-bezier(.34,1.56,.64,1),
               height .5s cubic-bezier(.34,1.56,.64,1),
               box-shadow .4s ease-out;
-  animation: wb-visite-respire 2.6s ease-in-out .5s infinite;
 }
 .wb-visite-carte { animation: wb-visite-entree .45s cubic-bezier(.34,1.56,.64,1) both; }
 .wb-visite-texte { animation: wb-visite-texte-entree .35s ease-out both; }
 @keyframes wb-visite-fondu { from { opacity: 0; } }
 @keyframes wb-visite-entree { from { opacity: 0; transform: translateY(18px) scale(.96); } }
 @keyframes wb-visite-texte-entree { from { opacity: 0; transform: translateY(6px); } }
-/* La découpe elle-même ne peut pas s'agrandir (son ombre EST le fond assombri :
-   grandir la ferait déborder sur la cible) — l'anneau coloré qui la borde
-   respire à sa place, posé par un pseudo-élément qui, lui, peut grandir sans
-   rien assombrir. */
+/* Anneau coloré autour de la découpe, posé par un pseudo-élément à taille
+   fixe (jamais redimensionné : seule son opacité bouge). */
 .wb-visite-decoupe::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  content: ''; position: absolute; inset: -3px; border-radius: inherit;
   box-shadow: 0 0 0 2px var(--v2-color-accent);
   animation: wb-visite-anneau 2.6s ease-in-out .5s infinite;
 }
-@keyframes wb-visite-respire { 50% { filter: brightness(1.04); } }
-@keyframes wb-visite-anneau { 0%, 100% { opacity: .55; inset: 0; } 50% { opacity: 1; inset: -3px; } }
+@keyframes wb-visite-anneau { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .wb-visite-fond, .wb-visite-decoupe, .wb-visite-decoupe::after, .wb-visite-carte, .wb-visite-texte {
     animation: none; transition: none;
@@ -693,19 +695,26 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
    juste un halo qui respire autour de la cible ; la carte garde la même
    place qu'un arrêt « regarde » (en bas, espace déjà réservé par
    DashboardShell). `wb-visite-halo-ok` prend le relais un court instant
-   quand l'action vient d'être détectée, avant que la visite n'avance toute
-   seule (VisiteGuidee.tsx). */
+   quand l'action vient d'être détectée (ou l'était déjà en arrivant), avant
+   que la visite n'avance toute seule (VisiteGuidee.tsx) — jamais de saut
+   silencieux à l'arrêt suivant sans ce palier visible.
+   Même raison qu'au-dessus : le halo respire en `opacity`, jamais en
+   `box-shadow` animé (c'était le cas ici aussi, corrigé le 2026-10-08). */
 .wb-visite-halo {
+  position: relative;
   box-shadow: 0 0 0 3px var(--v2-color-accent), 0 0 0 9999px rgba(10,10,12,.08);
   transition: top .5s cubic-bezier(.34,1.56,.64,1), left .5s cubic-bezier(.34,1.56,.64,1),
               width .5s cubic-bezier(.34,1.56,.64,1), height .5s cubic-bezier(.34,1.56,.64,1);
-  animation: wb-visite-halo-pouls 1.8s ease-in-out infinite;
+}
+.wb-visite-halo::after {
+  content: ''; position: absolute; inset: -3px; border-radius: inherit;
+  box-shadow: 0 0 0 3px var(--v2-color-accent);
+  animation: wb-visite-anneau 1.8s ease-in-out infinite;
 }
 .wb-visite-halo-ok {
   box-shadow: 0 0 0 3px #22c55e, 0 0 0 9999px rgba(10,10,12,.08);
-  animation: none;
 }
-@keyframes wb-visite-halo-pouls { 50% { box-shadow: 0 0 0 6px var(--v2-color-accent), 0 0 0 9999px rgba(10,10,12,.08); } }
+.wb-visite-halo-ok::after { animation: none; opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .wb-visite-halo, .wb-visite-halo-ok { animation: none; transition: none; }
+  .wb-visite-halo, .wb-visite-halo-ok, .wb-visite-halo::after { animation: none; transition: none; }
 }
