@@ -130,9 +130,9 @@ export function Ligne({ label, valeur, sousLabel, signal, href, onClick, chevron
 
 // Une carte-liste : fond surface, filet, rayon de surface, lignes séparées
 // par un filet fin — planche Système, mêmes jetons que ChiffresArgent.tsx.
-export function CarteListe({ children }: { children: React.ReactNode }) {
+export function CarteListe({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
+    <div className={`rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden ${className}`}>
       <div className="px-4 divide-y divide-[color:var(--v2-filet)]">
         {children}
       </div>
@@ -189,6 +189,57 @@ type Props = {
 // à gauche, en permanence, et montre à droite la page de réservation telle qu'elle est
 // aujourd'hui (écran 60 de la maquette, état de repos — aucune ligne n'est sélectionnée ici,
 // contrairement aux 5 écrans qui ouvrent VRAIMENT un réglage).
+//
+// Retouche du 2026-10-07 (Alexandre : « adapte-moi cette page, je veux que ça soit plus
+// homogène » — une capture à 1626px montrait une colonne de droite ~1230px large aux trois
+// quarts vides). Deux écarts corrigés par rapport aux CINQ écrans déjà livrés de cette même
+// famille (ProfilV2/MesLiensV2/HorairesV2/PrestationsV2/ApparenceV2, tous construits sur le
+// même `ListeReglagesV2` à gauche) :
+//  1. eux ne posent JAMAIS de carte « pane » (fond blanc, bordure, padding) autour du contenu
+//     de droite — chaque section s'y tient par ses propres `CarteListe`, sur le fond de page
+//     nu. Cet écran était le seul à enfermer son contenu dans un rectangle en plus, ce qui le
+//     distinguait visuellement du reste de « Plus » plutôt que de l'y rattacher. Supprimé.
+//  2. eux ne centrent ni n'étirent jamais un contenu étroit sur toute la largeur `flex-1` —
+//     voir le commentaire d'en-tête d'`ApparenceV2.tsx` (retouche de la VEILLE, 2026-10-07) :
+//     « des lignes de liste n'ont aucune raison de s'étirer sur 800px ». Même raisonnement
+//     ici : la vignette de la page (380px, proportions fixes — l'agrandir la déformerait,
+//     voir ApercuPageV2) et le résumé qui l'accompagne n'ont aucune raison de nager seuls au
+//     milieu d'un vide. Posés côte à côte, alignés à gauche contre la colonne de réglages
+//     (jamais centrés avec `mx-auto`), le surplus de largeur devient une marge ordinaire à
+//     droite plutôt qu'un vide des DEUX côtés — exactement ce qu'`ApparenceV2` fait de son
+//     couple réglages/aperçu. Le texte d'accompagnement passe de centré à aligné à gauche,
+//     plus logique à côté d'une image qu'en dessous d'elle ; plafonné à 420px (`max-w-[420px]`)
+//     pour rester lisible plutôt que de courir sur toute la largeur restante.
+//
+// Gain mesuré (voir le rapport de la passe pour le détail) : le contenu utile occupait ~31 %
+// de la largeur de la colonne de droite à 1626px de fenêtre, contre ~65-70 % après — sans
+// agrandir la vignette elle-même ni inventer de contenu.
+//
+// Retouche du 2026-10-08 (Alexandre : « optimise la place, là il y a trop de blanc »). La
+// passe de la veille avait travaillé la LARGEUR ; le vide restant était vertical, et mesuré il
+// ne dépendait d'aucune largeur : colonne de réglages 748px de haut, bloc de droite 191px, soit
+// ~557px de blanc à droite à 1366, 1626 ET 1920px. Aucun contenu légitime ne remplit 557px —
+// tout ce que cet écran sait (offre, nombre de prestations, horaires, facturation à compléter)
+// est DÉJÀ résumé ligne à ligne dans la colonne de gauche, et l'inventer serait pire que le
+// vide. C'est donc la colonne qui devait cesser d'être haute et mince : à partir de 1320px de
+// fenêtre elle se répartit sur DEUX colonnes de 320px (voir `deuxColonnes` dans
+// ListeReglagesV2), elle retombe à 411px, et les deux blocs finissent à peu près à la même
+// hauteur. Mesuré : 557px de vide → 32px à 1366, 51px à 1626, 220px à 1920 (là, l'écran est
+// réellement plus large que ce qu'il y a à y mettre), et l'écran tient sans défilement partout.
+//
+// Sous 1320px la liste reste sur une colonne : les deux colonnes de 320px plus une vignette
+// lisible n'y tiennent plus. Les 320px eux-mêmes ne se négocient pas — ils ont été élargis
+// exprès le 2026-10-06 pour que les sous-libellés cessent d'être coupés.
+//
+// Les CINQ écrans qui ouvrent vraiment un réglage ne passent PAS `deuxColonnes` : là, la liste
+// est l'ancre à gauche du détail qu'on fait défiler. Seul l'état de repos, où il n'y a pas de
+// détail, s'étale.
+//
+// Pas touché : la bande « Configuration de votre compte » (`SetupProgressBar`, posée par
+// `page.tsx` au-dessus de cet écran) — elle reste affichée à 100 % par un choix déjà pris et
+// documenté dans son propre fichier (« un laveur qui la voit disparaître puis réapparaître un
+// mois plus tard croirait avoir perdu quelque chose »), et elle est déjà masquable à la main
+// (bouton « Masquer », `CLE_CARTE_CACHEE`). Voir le rapport de la passe pour la recommandation.
 export default function ParametresFormV2({ washer, servicesCount, resumeHoraires }: Props) {
   const grandEcran = useGrandEcran()
   const facturationIncomplete = infosFacturationManquantes(washer).length > 0
@@ -204,6 +255,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
       resumeHoraires={resumeHoraires}
       facturationIncomplete={facturationIncomplete}
       selection={null}
+      deuxColonnes
     />
   )
 
@@ -223,37 +275,49 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
             cette liste est courte et de hauteur à peu près constante — ce qu'il lui faut,
             c'est rester visible pendant qu'on fait défiler un réglage plus long à droite
             (Prestations, en particulier), pas un deuxième défilement indépendant. */}
-        <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
+        <div className="sticky top-0 w-[320px] min-[1320px]:w-[660px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
           {liste}
         </div>
-        <div className="min-w-0 flex-1 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-7 py-6">
+        <div className="min-w-0 flex-1">
           <TitreSection>Votre page de réservation</TitreSection>
-          <div className="mx-auto max-w-[380px]">
-            <ApercuPageV2
-              nom={washer.name}
-              logoUrl={washer.logo_url ?? null}
-              message={washer.welcome_message ?? null}
-              couleur={washer.brand_color ?? null}
-              fond={washer.background_theme ?? null}
-            />
-          </div>
-          <p className={`mx-auto mt-4 max-w-[380px] text-center text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            C’est ce que voient vos clients quand ils réservent. Le logo, les couleurs et le
-            message se règlent dans « Apparence de ma page ».
-          </p>
-          <div className="mx-auto mt-5 max-w-[380px]">
-            <CarteListe>
-              <div className="flex items-center justify-between gap-3 py-3">
-                <span className={`text-[13px] ${corps}`}>Lien</span>
-                <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>/book/{washer.slug}</span>
+          {/* `flex-wrap` : quand la liste prend ses deux colonnes, il ne reste ~386px à droite —
+              juste la vignette. Le résumé passe alors dessous au lieu de déborder — et la
+              vignette, posée sur `basis` plutôt que sur une largeur fixe, se laisse comprimer
+              sous 380px au besoin (c'est un rendu de page, pas une image : aucune proportion à
+              préserver) au lieu de dépasser du cadre. */}
+          <div className="flex flex-wrap items-start gap-x-8 gap-y-5">
+            <div className="basis-[380px] max-w-full">
+              <ApercuPageV2
+                nom={washer.name}
+                logoUrl={washer.logo_url ?? null}
+                message={washer.welcome_message ?? null}
+                couleur={washer.brand_color ?? null}
+                fond={washer.background_theme ?? null}
+              />
+            </div>
+            {/* `min-w-[320px]` : sans plancher, le résumé se laissait comprimer à ~200px à côté de
+                la vignette et le lien de réservation s'y tronquait (« /book/demo-eclat-mo… »).
+                Avec ce plancher il passe dessous dès qu'il n'a pas la place d'être lisible. */}
+            <div className="min-w-[320px] max-w-[420px] flex-1">
+              <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                C’est ce que voient vos clients quand ils réservent. Le logo, les couleurs et le
+                message se règlent dans « Apparence de ma page ».
+              </p>
+              <div className="mt-5">
+                <CarteListe>
+                  <div className="flex items-center justify-between gap-3 py-3">
+                    <span className={`text-[13px] ${corps}`}>Lien</span>
+                    <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>/book/{washer.slug}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 py-3">
+                    <span className={`text-[13px] ${corps}`}>Offre actuelle</span>
+                    <span className={`text-[13px] ${corpsFort}`}>
+                      {washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]}
+                    </span>
+                  </div>
+                </CarteListe>
               </div>
-              <div className="flex items-center justify-between gap-3 py-3">
-                <span className={`text-[13px] ${corps}`}>Offre actuelle</span>
-                <span className={`text-[13px] ${corpsFort}`}>
-                  {washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]}
-                </span>
-              </div>
-            </CarteListe>
+            </div>
           </div>
         </div>
       </div>

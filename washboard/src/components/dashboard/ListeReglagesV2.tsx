@@ -67,10 +67,20 @@ function initiales(texte: string): string {
   return (mots[0][0] + mots[mots.length - 1][0]).toUpperCase()
 }
 
-type Props = ReglagesListeProps & { selection: ClePlus }
+// `deuxColonnes` : seul l'écran de repos de « Plus » (ParametresFormV2) s'en sert. Les cinq
+// écrans qui ouvrent un réglage gardent la colonne unique de 320px à gauche du détail — c'est
+// elle qui reste l'ancre pendant qu'on fait défiler le détail. Au repos il n'y a pas de détail :
+// la même liste en une colonne fait 748px de haut (mesuré) à côté d'un bloc de 191px, soit
+// ~557px de vide à droite à TOUTES les largeurs. Sur deux colonnes elle retombe vers ~430px et
+// l'écran tient sans défilement. Le basculement est purement CSS (`min-[1320px]`, soit la
+// largeur minimale où les deux colonnes de 320px tiennent en laissant de quoi afficher la
+// vignette à droite — 1366px, le portable le plus courant, en fait partie) : pas de
+// sixième mécanisme de décision en JavaScript à côté des quatre déjà en place.
+type Props = ReglagesListeProps & { selection: ClePlus; deuxColonnes?: boolean }
 
 export default function ListeReglagesV2({
   nom, slug, brandColor, plan, grandfathered, servicesCount, resumeHoraires, facturationIncomplete, selection,
+  deuxColonnes = false,
 }: Props) {
   const { estEquipeSupport, unreadSupportCount, unreadTeamCount } = useSupportBadges()
   const { etat: etatNotifications } = useNotificationsPush()
@@ -80,9 +90,15 @@ export default function ListeReglagesV2({
   const notifications = resumeNotifications(etatNotifications)
   const planLabel = grandfathered ? 'Accès complet' : PLAN_LABELS[plan]
 
+  // `grid-cols-1` + `gap-y-6` se comporte exactement comme le `space-y-6` d'avant : c'est le
+  // même rythme vertical, mais on peut y ajouter une seconde colonne sans toucher aux sections.
   return (
-    <div className={`space-y-6 ${police}`}>
-      <CarteListe>
+    <div
+      className={`grid grid-cols-1 items-start gap-x-5 gap-y-6 ${deuxColonnes ? 'min-[1320px]:grid-cols-2' : ''} ${police}`}
+    >
+      {/* La carte d'identité reste en tête, sur toute la largeur : c'est l'en-tête de la liste,
+          pas une section parmi les autres. */}
+      <CarteListe className="col-span-full">
         <div className="flex items-center gap-3 py-3.5">
           <span
             className={`w-[42px] h-[42px] shrink-0 rounded-[12px] bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] flex items-center justify-center text-[16px] ${corpsFort} tracking-tight`}
