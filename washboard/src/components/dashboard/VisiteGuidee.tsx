@@ -294,7 +294,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
 
   if (etape === null || !etapeActuelle) return null
 
-  if (isPwa && estInteractif) {
+  if (estInteractif) {
     return (
       <div className="fixed inset-0 z-[70] pointer-events-none" role="status" aria-label="Visite guidée">
         {rect && (

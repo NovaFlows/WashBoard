@@ -973,12 +973,38 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
            interactifs d'affilée, ça ressemblait à un bug. Montre maintenant
            le même palier « Fait ✓ » visible que lorsque l'action vient
            d'être faite.
+      - **4ᵉ tournée (2026-10-08/09, nuit) — Ryan pas satisfait du rendu
+        malgré les trois correctifs ci-dessus : « j'ai pas essayé de faire
+        des innovations ou des déplacements fluides et magnifiques »,
+        « carte blanche », autonomie totale accordée pour reprendre à zéro
+        si besoin.** Plutôt qu'ajuster encore le `transition` CSS, remplacé
+        le mécanisme de déplacement lui-même par la **View Transition
+        native du navigateur** (`document.startViewTransition`) — prévue
+        exactement pour ça : le navigateur capture l'état avant/après et
+        morphe lui-même position ET apparence (découpe sombre ↔ halo clair),
+        plutôt qu'un simple glissement de `top`/`left`/`width`/`height`.
+        - `view-transition-name: wb-visite-spot` sur la découpe/le halo,
+          timing personnalisé (rebond, cohérent avec le reste) via
+          `::view-transition-group/old/new`. La carte a son propre nom pour
+          s'isoler du fondu-enchaîné racine (sinon ancien et nouveau texte
+          restaient visibles, superposés — vu en capturant des écrans
+          Playwright à 30/80/150/280/450 ms pendant la transition, pas
+          seulement en relisant le CSS).
+        - Le callback attend la fin RÉELLE de la navigation Next.js
+          (asynchrone) via `navigation` (`useTransition`), avec un filet de
+          1,5 s pour ne jamais bloquer la page.
+        - Même traitement pour « Passer »/« Terminé » (fondu plutôt que
+          disparition sèche), petit retour haptique (`navigator.vibrate`,
+          Android uniquement) quand une action réelle vient d'être détectée.
+        - `prefers-reduced-motion` respecté ; Safari < 18 (pas de support) :
+          retombe sur la transition CSS déjà en place, aucune régression.
       - Vérifié à chaque étape par des comptes Supabase jetables + Playwright
         (jamais commités) : tour complet 18 arrêts, double-contour absent,
         ajout réel d'une prestation → avance automatique confirmée,
-        recentrage derrière la carte, redémarrage depuis le Guide. `tsc`,
-        `eslint` (0 erreur), `vitest run` (2469 tests) et `next build`
-        propres à chaque commit.
+        recentrage derrière la carte, redémarrage depuis le Guide, fondu
+        d'ouverture/fermeture avec et sans support des View Transitions.
+        `tsc`, `eslint` (0 erreur), `vitest run` (2469 tests) et
+        `next build` propres à chaque commit.
       - **Reste à faire** : accord final de Ryan sur le rendu après cette
         dernière tournée (il doit se reconnecter sur le téléphone — même lien
         de preview, pas besoin de réinstaller), puis fusion sur `master`.
