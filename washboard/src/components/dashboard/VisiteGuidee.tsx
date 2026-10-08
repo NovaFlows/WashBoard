@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react'
+import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import { Spinner } from '@/components/ui/Spinner'
@@ -176,19 +177,77 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
     if (routeSuivante) router.prefetch(routeSuivante)
   }, [routeSuivante, router])
 
+  // « Un beau déplacement » : la View Transition native du navigateur anime
+  // elle-même le passage d'une découpe à l'autre — position ET apparence
+  // (dark-découpe ↔ halo clair) comprises — plutôt que le simple `transition`
+  // CSS précédent qui ne savait que glisser top/left/width/height (Ryan,
+  // 2026-10-09 : « fais-moi des beaux déplacements, fluides » après un
+  // premier passage jugé trop timide). `view-transition-name: wb-visite-spot`
+  // (globals.css) marque la cible comme un seul élément continu d'un arrêt à
+  // l'autre ; le navigateur se charge de la morpher. Non supporté (Safari
+  // < 18) : la fonction retombe sur `naviguer()` seule, et la transition CSS
+  // déjà en place (surligner()/.wb-visite-decoupe) prend le relais comme
+  // avant — aucune régression, juste moins de magie.
+  //
+  // Le callback de `startViewTransition` doit durer jusqu'à ce que le NOUVEL
+  // état soit vraiment peint, pas juste déclenché : une navigation Next.js
+  // est asynchrone (aller chercher le rendu serveur), donc on ne résout que
+  // lorsque `navigation` (l'indicateur de `useTransition`) redevient faux —
+  // avec un filet de 1,5 s pour ne jamais bloquer la page si ça traîne.
+  const resoudreTransitionRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    if (!navigation && resoudreTransitionRef.current) {
+      const resoudre = resoudreTransitionRef.current
+      resoudreTransitionRef.current = null
+      resoudre()
+    }
+  }, [navigation])
+
+  // Enveloppe une mise à jour SYNCHRONE (pas de navigation à attendre) dans
+  // la View Transition native : `flushSync` la fait aboutir avant que le
+  // navigateur ne prenne son instantané « après » (le contrat de
+  // `startViewTransition`). Sert à « Passer » et « Terminé » autant qu'aux
+  // arrêts sans route — fermer le tuto mérite le même soin qu'avancer dedans,
+  // pas une disparition sèche.
+  function synchroVue(fn: () => void) {
+    const sobre = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (sobre || typeof document === 'undefined' || !document.startViewTransition) { fn(); return }
+    document.startViewTransition(() => flushSync(fn))
+  }
+
+  function fermer() {
+    synchroVue(fermerPourLInstant)
+  }
+
   function avancer() {
-    if (suivante === null) { terminerVisite(); return }
+    if (suivante === null) { synchroVue(terminerVisite); return }
+    const route = etapes[suivante].route
     // Écrit tout de suite, jamais après coup : `DashboardShell` est rendu par
     // chaque page séparément (pas un layout partagé), donc cette instance ne
     // survit pas à la navigation — un état « en attente » gardé dans le
     // composant se perdrait avec lui, et la carte resterait bloquée sur
     // l'arrêt de départ. Le flottement visuel pendant le chargement se traite
     // à l'affichage (bouton en chargement ci-dessous), pas en retardant l'écriture.
-    ecrireVisite({ statut: 'en_cours', etape: suivante })
-    const route = etapes[suivante].route
-    // Arrêt sans route (ex. « regarde cet onglet ») : on reste sur la page,
-    // rien à attendre — naviguer vers `undefined` n'aurait aucun sens.
-    if (route) naviguer(() => router.push(route))
+    const appliquer = () => {
+      ecrireVisite({ statut: 'en_cours', etape: suivante })
+      // Arrêt sans route (ex. « regarde cet onglet ») : on reste sur la page,
+      // rien à attendre — naviguer vers `undefined` n'aurait aucun sens.
+      if (route) naviguer(() => router.push(route))
+    }
+    if (!route) { synchroVue(appliquer); return }
+
+    const sobre = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (sobre || typeof document === 'undefined' || !document.startViewTransition) { appliquer(); return }
+    document.startViewTransition(
+      () =>
+        new Promise<void>(resoudre => {
+          resoudreTransitionRef.current = resoudre
+          appliquer()
+          setTimeout(() => {
+            if (resoudreTransitionRef.current === resoudre) { resoudreTransitionRef.current = null; resoudre() }
+          }, 1500)
+        }),
+    )
   }
 
   // Avance toute seule quand le laveur fait l'action réelle. `avancement` (les
@@ -222,6 +281,12 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
     return abonnerAvancement((c) => {
       if (c !== cle) return
       setVientDeReussir(true)
+      // Un petit coup, pas une sonnerie : confirme l'action sans la fêter.
+      // Seulement ici (l'action vient vraiment d'arriver), jamais pour
+      // `dejaSatisfait` — vibrer pour quelque chose déjà fait avant d'arriver
+      // n'aurait rien à confirmer. Android/Chrome uniquement (PWA installée) ;
+      // `navigator.vibrate` n'existe simplement pas ailleurs, no-op silencieux.
+      navigator.vibrate?.(15)
       setTimeout(() => avancerRef.current(), 900)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `etapeActuelle` est dérivée de `etape` (même tableau `etapes`) : le réécouter à chaque rendu resouscrirait sans raison.
@@ -252,7 +317,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
             </p>
             <button
               type="button"
-              onClick={fermerPourLInstant}
+              onClick={fermer}
               className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
             >
               Passer
@@ -308,7 +373,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
             </p>
             <button
               type="button"
-              onClick={fermerPourLInstant}
+              onClick={fermer}
               className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
             >
               Passer

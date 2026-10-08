@@ -671,7 +671,25 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
               height .5s cubic-bezier(.34,1.56,.64,1),
               box-shadow .4s ease-out;
 }
-.wb-visite-carte { animation: wb-visite-entree .45s cubic-bezier(.34,1.56,.64,1) both; }
+/* Nommé pour la View Transition native (VisiteGuidee.tsx, `avancer()`) :
+   quand le navigateur la supporte (pas Safari < 18), c'est LUI qui anime le
+   déplacement d'un arrêt à l'autre — position ET apparence, découpe sombre
+   ↔ halo clair comprises — au lieu du `transition` CSS ci-dessus, qui ne
+   sait glisser QUE top/left/width/height. Sans support : rien ne change,
+   cette transition CSS reste le filet. Seule une découpe/halo existe à la
+   fois (branches React mutuellement exclusives) : le nom ne se dispute
+   jamais entre deux éléments vivants en même temps. */
+.wb-visite-decoupe, .wb-visite-halo { view-transition-name: wb-visite-spot; }
+.wb-visite-carte { animation: wb-visite-entree .45s cubic-bezier(.34,1.56,.64,1) both; view-transition-name: wb-visite-carte; }
+/* Isole la carte du fondu-enchaîné racine (tout élément SANS nom tombe dans
+   un seul instantané plein-écran avant/après qui se fond en fondu — deux
+   étapes de texte superposées, lisibles en même temps, le temps du fondu :
+   repéré à l'oeil en testant la View Transition ci-dessus). Avec son propre
+   nom, échange net plutôt que fondu : son entrée (`wb-visite-entree`) reste
+   le seul mouvement qu'on voit, comme avant. */
+::view-transition-old(wb-visite-carte), ::view-transition-new(wb-visite-carte) { animation: none; }
+::view-transition-old(wb-visite-carte) { opacity: 0; }
+::view-transition-new(wb-visite-carte) { opacity: 1; }
 .wb-visite-texte { animation: wb-visite-texte-entree .35s ease-out both; }
 @keyframes wb-visite-fondu { from { opacity: 0; } }
 @keyframes wb-visite-entree { from { opacity: 0; transform: translateY(18px) scale(.96); } }
@@ -717,4 +735,31 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .wb-visite-halo-ok::after { animation: none; opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
   .wb-visite-halo, .wb-visite-halo-ok, .wb-visite-halo::after { animation: none; transition: none; }
+}
+
+/* ── View Transition native de `wb-visite-spot` (déclaré plus haut sur
+   `.wb-visite-decoupe`/`.wb-visite-halo`) : le navigateur fournit par défaut
+   un fondu-enchaîné + redimensionnement linéaire de 250 ms — remplacé par le
+   même rebond que le reste du tuto, pour que ce soit cohérent avec la carte
+   et visiblement plus vivant qu'un simple fondu plat (Ryan, 2026-10-09).
+   `::view-transition-group` contrôle le déplacement/redimensionnement du
+   cadre ; `::view-transition-old/new` le fondu-enchaîné entre les deux
+   apparences (utile quand on passe d'une découpe sombre à un halo clair,
+   ou vice-versa). Sans effet dans un navigateur qui ne supporte pas les View
+   Transitions : ces pseudo-éléments n'existent simplement pas. */
+::view-transition-group(wb-visite-spot) {
+  animation-duration: .5s;
+  animation-timing-function: cubic-bezier(.34, 1.56, .64, 1);
+}
+::view-transition-old(wb-visite-spot),
+::view-transition-new(wb-visite-spot) {
+  animation-duration: .3s;
+  animation-timing-function: ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(wb-visite-spot),
+  ::view-transition-old(wb-visite-spot),
+  ::view-transition-new(wb-visite-spot) {
+    animation-duration: 1ms;
+  }
 }
