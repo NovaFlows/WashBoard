@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { useEcranRail } from '@/hooks/useEcranRail'
 
 // Décide si le TABLEAU DE BORD (une page entière, pas un composant isolé — pour ça voir
@@ -33,7 +33,7 @@ export function bureauForceEnDev(): boolean {
 }
 
 export function useDashboardV2(betaRefonte?: boolean | null): boolean {
-  const pwa = usePwaStandalone()
+  const pwa = useDesignMobile()
   const ecranRail = useEcranRail()
   return pwa || (ecranRail && (!!betaRefonte || bureauForceEnDev()))
 }

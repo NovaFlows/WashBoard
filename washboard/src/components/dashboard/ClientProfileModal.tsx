@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import type { ClientProfile } from '@/lib/clientProfile'
 import type { Doublon } from '@/lib/doublons'
 import ClientProfileModalV1 from '@/components/dashboard/ClientProfileModalV1'
@@ -58,7 +58,7 @@ export default function ClientProfileModal({
    *  cas PWA (qui reste une feuille/carte superposée, inchangé). */
   panneau?: boolean
 }) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const estV2 = v2 ?? isPwa
   return estV2
     ? (

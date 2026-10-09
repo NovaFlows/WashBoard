@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
 import { bureauForceEnDev } from '@/hooks/useDashboardV2'
 import ApparenceV2 from '@/components/dashboard/ApparenceV2'
@@ -45,7 +45,7 @@ export default function Apparence({ betaRefonte, ...props }: Props) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    const pwa = isPwaStandalone()
+    const pwa = isDesignMobile()
     const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])

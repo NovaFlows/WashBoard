@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
 import { bureauForceEnDev } from '@/hooks/useDashboardV2'
 import DocumentsV2 from '@/components/dashboard/DocumentsV2'
@@ -35,7 +35,7 @@ export default function Documents({ prestations, nomLaveur, betaRefonte }: {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    const pwa = isPwaStandalone()
+    const pwa = isDesignMobile()
     const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
     setStatut(pwa || bureau ? 'pwa-ou-bureau' : 'site')
   }, [betaRefonte])
