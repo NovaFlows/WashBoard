@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
@@ -125,16 +125,55 @@ function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | n
 
 const MARGE_DECOUPE = 8
 
-/** Signaux des trois arrêts `interactif` — voir `EtapeVisite.interactif`. */
-type Avancement = { servicesCount?: number; availabilitiesCount?: number; baseAddressRempli?: boolean }
+/** Signaux des cinq arrêts `interactif` — voir `EtapeVisite.interactif`. */
+type Avancement = {
+  servicesCount?: number
+  availabilitiesCount?: number
+  baseAddressRempli?: boolean
+  phoneRempli?: boolean
+  logoRempli?: boolean
+}
 
 function valeurInteractif(etape: EtapeVisite | undefined, avancement: Avancement | undefined): boolean | undefined {
   switch (etape?.interactif) {
     case 'services': return (avancement?.servicesCount ?? 0) > 0
     case 'availabilities': return (avancement?.availabilitiesCount ?? 0) > 0
     case 'baseAddress': return !!avancement?.baseAddressRempli
+    case 'phone': return !!avancement?.phoneRempli
+    case 'logo': return !!avancement?.logoRempli
     default: return undefined
   }
+}
+
+/** Position horizontale du pointeur triangulaire (`.wb-visite-fleche`), en
+ *  pourcentage de la largeur de la carte, centré sur la cible et resserré
+ *  pour ne jamais sortir de la carte (marge de 20px de chaque bord — la
+ *  pointe du triangle fait 14px). `null` : pas de cible, pas de flèche. */
+function positionFleche(rect: DOMRect | null, carte: HTMLElement | null): number | null {
+  if (!rect || !carte) return null
+  const carteRect = carte.getBoundingClientRect()
+  if (carteRect.width === 0) return null
+  const centreCible = rect.left + rect.width / 2
+  const xDansLaCarte = centreCible - carteRect.left
+  const borne = Math.min(Math.max(xDansLaCarte, 20), carteRect.width - 20)
+  return (borne / carteRect.width) * 100
+}
+
+/** Barre « Stories » : un segment par arrêt, rempli pour tout arrêt déjà
+ *  passé (index < etape) ou en cours (index === etape) — jamais pour les
+ *  arrêts à venir. Remplace la barre continue unique : reste lisible même
+ *  avec beaucoup d'arrêts (Ryan a cité ce style dès la toute première
+ *  demande de ce tuto). */
+function BarreProgres({ etape, total }: { etape: number; total: number }) {
+  return (
+    <div className="wb-visite-progres mt-2" aria-hidden>
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className={`wb-visite-segment ${i <= etape ? 'wb-visite-segment--fait' : ''}`}>
+          <span />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean; avancement?: Avancement }) {
@@ -260,30 +299,41 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   // réussie dans ces deux hooks et dans `ProfilV2`.
   const avancerRef = useRef(avancer)
   useEffect(() => { avancerRef.current = avancer })
+
+  // Position horizontale de la flèche, recalculée à chaque changement de
+  // cible/rect (pas en continu : `rect` ne change que sur un vrai
+  // déplacement, voir `surligner()`).
+  const carteRef = useRef<HTMLDivElement>(null)
+  const [flecheX, setFlecheX] = useState<number | null>(null)
+  useEffect(() => {
+    setFlecheX(positionFleche(rect, carteRef.current))
+  }, [rect])
+  const styleCarte: CSSProperties = { bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' }
+  if (flecheX !== null) (styleCarte as Record<string, string>)['--wb-fleche-x'] = `${flecheX}%`
+
+  // Trois états, pas un booléen : « déjà fait en arrivant » (compte déjà
+  // configuré, ex. en rejouant le tuto depuis le Guide) et « vient d'être
+  // fait PENDANT cette visite » se ressemblaient avant le 2026-10-09 — même
+  // minuterie de 900ms, même texte éclair « Fait ✓ ». Ryan, en testant sur
+  // un compte déjà configuré : « ça va très vite... on a l'impression que ça
+  // bug ». Séparés maintenant : le premier montre l'explication COMPLÈTE,
+  // sans avancer tout seul (comme n'importe quel arrêt « regarde ») ; le
+  // second garde la confirmation éclair + l'avance automatique, le seul cas
+  // où aller vite communique quelque chose (« je viens de voir ce que tu as
+  // fait »).
   const dejaSatisfait = valeurInteractif(etapeActuelle, avancement) === true
-  const [vientDeReussir, setVientDeReussir] = useState(false)
+  const [etatInteractif, setEtatInteractif] = useState<'attente' | 'deja_fait' | 'vient_de_reussir'>('attente')
   useEffect(() => {
     const cle = etapeActuelle?.interactif
-    if (!cle) { setVientDeReussir(false); return }
-    // Déjà fait avant même d'arriver (ex. « Revoir le tuto » sur un compte
-    // configuré) : le MÊME état « Fait ✓ » que lorsque ça vient de se
-    // produire, jamais un saut silencieux à l'arrêt suivant — un arrêt qui
-    // disparaît sans rien montrer se lit comme un bug, pas comme un pas de
-    // plus (vu chez Ryan le 2026-10-08 : « passé de l'étape 3 à l'étape 10 »,
-    // trois arrêts déjà satisfaits avalés d'un coup, sans un seul rendu entre
-    // les deux pour le montrer).
-    if (dejaSatisfait) {
-      setVientDeReussir(true)
-      const t = setTimeout(() => avancerRef.current(), 900)
-      return () => clearTimeout(t)
-    }
-    setVientDeReussir(false)
+    if (!cle) { setEtatInteractif('attente'); return }
+    if (dejaSatisfait) { setEtatInteractif('deja_fait'); return }
+    setEtatInteractif('attente')
     return abonnerAvancement((c) => {
       if (c !== cle) return
-      setVientDeReussir(true)
+      setEtatInteractif('vient_de_reussir')
       // Un petit coup, pas une sonnerie : confirme l'action sans la fêter.
       // Seulement ici (l'action vient vraiment d'arriver), jamais pour
-      // `dejaSatisfait` — vibrer pour quelque chose déjà fait avant d'arriver
+      // « déjà fait » — vibrer pour quelque chose déjà fait avant d'arriver
       // n'aurait rien à confirmer. Android/Chrome uniquement (PWA installée) ;
       // `navigator.vibrate` n'existe simplement pas ailleurs, no-op silencieux.
       navigator.vibrate?.(15)
@@ -295,6 +345,8 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   if (etape === null || !etapeActuelle) return null
 
   if (estInteractif) {
+    const vientDeReussir = etatInteractif === 'vient_de_reussir'
+    const dejaFaitAffiche = etatInteractif === 'deja_fait'
     return (
       <div className="fixed inset-0 z-[70] pointer-events-none" role="status" aria-label="Visite guidée">
         {rect && (
@@ -308,13 +360,18 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           />
         )}
         <div
-          className="wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] shadow-[0_12px_32px_rgba(0,0,0,.35)] p-4"
-          style={{ bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' }}
+          ref={carteRef}
+          className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
+          style={styleCarte}
         >
+          {flecheX !== null && <div className="wb-visite-fleche" aria-hidden />}
           <div className="flex items-center justify-between gap-3">
-            <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-              Étape {etape + 1}/{etapes.length}
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
+                Étape {etape + 1}/{etapes.length}
+              </p>
+              {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>✓ Déjà fait</span>}
+            </div>
             <button
               type="button"
               onClick={fermer}
@@ -328,7 +385,11 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           </p>
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              {vientDeReussir ? 'On continue…' : "L'écran reste à toi — la visite avance dès que c'est fait."}
+              {vientDeReussir
+                ? 'On continue…'
+                : dejaFaitAffiche
+                  ? 'Déjà configuré — tu peux continuer.'
+                  : "L'écran reste à toi — la visite avance dès que c'est fait."}
             </p>
             <button
               type="button"
@@ -336,7 +397,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
               disabled={navigation || vientDeReussir}
               className={`h-9 shrink-0 px-4 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)] border border-[color:var(--v2-filet-fort)] disabled:opacity-50 transition-opacity`}
             >
-              {navigation ? <Spinner /> : 'Plus tard'}
+              {navigation ? <Spinner /> : dejaFaitAffiche ? 'Suivant' : 'Plus tard'}
             </button>
           </div>
         </div>
@@ -356,17 +417,19 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
               left: rect.left - MARGE_DECOUPE,
               width: rect.width + MARGE_DECOUPE * 2,
               height: rect.height + MARGE_DECOUPE * 2,
-              boxShadow: '0 0 0 9999px rgba(10,10,12,.78)',
+              boxShadow: '0 0 0 9999px rgba(10,10,12,.35)',
             }}
           />
         ) : (
-          <div aria-hidden className="wb-visite-fond absolute inset-0" style={{ background: 'rgba(10,10,12,.78)' }} />
+          <div aria-hidden className="wb-visite-fond absolute inset-0" style={{ background: 'rgba(10,10,12,.35)' }} />
         )}
 
         <div
-          className="wb-visite-carte absolute left-3 right-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] shadow-[0_12px_32px_rgba(0,0,0,.35)] p-4"
-          style={{ bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' }}
+          ref={carteRef}
+          className="wb-visite-verre wb-visite-carte absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
+          style={styleCarte}
         >
+          {flecheX !== null && <div className="wb-visite-fleche" aria-hidden />}
           <div className="flex items-center justify-between gap-3">
             <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
               Étape {etape + 1}/{etapes.length}
@@ -379,12 +442,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
               Passer
             </button>
           </div>
-          <div className="mt-2 h-1 rounded-full overflow-hidden bg-[color:var(--v2-filet)]" aria-hidden>
-            <div
-              className="h-full rounded-full bg-[color:var(--v2-color-accent)] transition-[width] duration-300 motion-reduce:transition-none"
-              style={{ width: `${((etape + 1) / etapes.length) * 100}%` }}
-            />
-          </div>
+          <BarreProgres etape={etape} total={etapes.length} />
           <p key={etape} aria-live="polite" className={`wb-visite-texte mt-3 text-[15px] leading-snug ${corps}`}>
             {etapeActuelle.texte}
           </p>

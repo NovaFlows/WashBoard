@@ -46,10 +46,13 @@ export type EtapeVisite = {
   /** Arrêt « fais-le maintenant », pas « regarde » : la carte s'efface au
    *  profit d'un simple repère lumineux, laisse l'écran réel cliquable, et
    *  avance toute seule dès que `avancement` (VisiteGuidee.tsx) dit que
-   *  c'est fait — ajouter une prestation, un horaire, une adresse. Clé de
-   *  `SetupInput`/`computeSetupProgress` (setupProgress.ts) : mêmes trois
-   *  essentiels bloquants, mêmes signaux. */
-  interactif?: 'services' | 'availabilities' | 'baseAddress'
+   *  c'est fait — ajouter une prestation, un horaire, une adresse, un
+   *  téléphone, un logo. Clé de `SetupInput`/`computeSetupProgress`
+   *  (setupProgress.ts) : les cinq essentiels (les trois bloquants, plus
+   *  téléphone et logo qui ne l'étaient pas mais restaient sans aucun arrêt
+   *  — Ryan, 2026-10-09 : « accompagner le laveur à remplir ses
+   *  informations », pas seulement 3 des 5). */
+  interactif?: 'services' | 'availabilities' | 'baseAddress' | 'phone' | 'logo'
 }
 
 // Les arrêts « page » visent les écrans de l'application installée : sur le site,
@@ -80,6 +83,8 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, interactif: 'services' },
   { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, interactif: 'availabilities' },
   { route: '/dashboard/parametres/profil', cible: 'adresse-depart', texte: "Ton point de départ : sert à calculer les trajets, et à ne pas proposer un créneau hors de ta zone.", chemin: `${CHEMIN_CONFIGURER} → Mon profil`, interactif: 'baseAddress' },
+  { cible: 'telephone', texte: "Ton téléphone : le numéro que voient tes clients pour te joindre.", chemin: `${CHEMIN_CONFIGURER} → Mon profil`, interactif: 'phone' },
+  { route: '/dashboard/parametres/apparence', cible: 'logo', texte: "Ton logo : il habille ta page de réservation, pour que tes clients te reconnaissent du premier coup d'œil.", chemin: CHEMIN_CONFIGURER, interactif: 'logo' },
   { pwaSeulement: true, cible: 'barre-bas-agenda', texte: 'Et sur Agenda :' },
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
@@ -230,7 +235,7 @@ export function redemarrerVisite(): void {
 // s'y reflète jamais. Plutôt que de forcer un `router.refresh()` que ces
 // écrans évitent exprès, chacun signale son écriture ici, et VisiteGuidee
 // n'écoute que l'arrêt affiché — même mécanisme que `abonnerVisite` ci-dessus.
-export type CleAvancement = 'services' | 'availabilities' | 'baseAddress'
+export type CleAvancement = 'services' | 'availabilities' | 'baseAddress' | 'phone' | 'logo'
 
 const abonnesAvancement = new Set<(cle: CleAvancement) => void>()
 

@@ -47,10 +47,17 @@ type Props = {
   /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche la visite guidée. */
   visiteGuidee?: boolean
   /** Signaux des arrêts `interactif` de la visite (voir visiteGuidee.ts) : seules
-   *  Prestations, Horaires et Mon profil le renseignent — chacune avec son seul
-   *  chiffre, les deux autres `undefined`. Sert à avancer la visite toute seule
-   *  quand le laveur vient de faire l'action réelle, pas à son arrivée sur la page. */
-  avancementVisite?: { servicesCount?: number; availabilitiesCount?: number; baseAddressRempli?: boolean }
+   *  Prestations, Horaires, Mon profil et Apparence le renseignent — chacune
+   *  avec son seul champ, les autres `undefined`. Sert à avancer la visite
+   *  toute seule quand le laveur vient de faire l'action réelle, pas à son
+   *  arrivée sur la page. */
+  avancementVisite?: {
+    servicesCount?: number
+    availabilitiesCount?: number
+    baseAddressRempli?: boolean
+    phoneRempli?: boolean
+    logoRempli?: boolean
+  }
 }
 
 function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {

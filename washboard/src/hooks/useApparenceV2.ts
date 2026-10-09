@@ -7,6 +7,7 @@ import { enregistrerApparence, envoyerImage, type ChampsApparence } from '@/lib/
 import { DELAI_ATTENTE_LONGUE_MS, estImageAcceptee, messageNormalise, type PhaseImage } from '@/lib/apparence'
 import { logger } from '@/lib/logger'
 import { retirerLeFond } from '@/hooks/retirerLeFond'
+import { signalerAvancement } from '@/lib/visiteGuidee'
 
 // État de l'écran « Apparence de ma page » de la PWA (`ApparenceV2`) : les six
 // réglages, leurs écritures et l'état des envois d'image. `avisGoogle` (ID de
@@ -109,6 +110,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
       // le navigateur réafficherait l'ancien logo. Local à l'écran, jamais enregistré.
       setLogoUrl(`${r.data}?t=${Date.now()}`)
       setLogo({ phase: 'fait', attenteLongue: false, erreur: null })
+      signalerAvancement('logo')
       rafraichir()
     } finally {
       if (minuteur.current) clearTimeout(minuteur.current)

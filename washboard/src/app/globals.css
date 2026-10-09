@@ -655,6 +655,11 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
    VisiteGuidee.tsx, seule la transition vit ici) ; le texte de chaque arrêt se
    glisse légèrement au changement, pour que ça ne saute jamais d'un bloc à
    l'autre.
+   Assombrissement allégé le 2026-10-09 (0.78 → 0.35, valeur posée en ligne
+   dans VisiteGuidee.tsx) : un fond quasi noir cachait toute la page derrière
+   la découpe — Ryan : « tu dois montrer des choses sur l'écran dans le
+   background, mettre en évidence des choses par rapport aux explications »,
+   pas l'effacer.
    RIEN D'INFINI ici qui touche `box-shadow`/`filter` : une première version
    faisait respirer la découpe et son anneau avec ces propriétés-là, animées
    en boucle pendant toute la durée de l'arrêt — repeint du quasi-plein-écran
@@ -680,6 +685,19 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
    fois (branches React mutuellement exclusives) : le nom ne se dispute
    jamais entre deux éléments vivants en même temps. */
 .wb-visite-decoupe, .wb-visite-halo { view-transition-name: wb-visite-spot; }
+
+/* Carte en verre — même matière que la barre du bas installée
+   (`--v2-verre-*`, voir `.wb-barre-bas-verre` plus haut) plutôt qu'un blanc
+   plat : la refonte du 2026-10-09 (« vingt fois mieux, surtout au niveau du
+   visuel ») réutilise la matière déjà établie par le design system plutôt
+   que d'en inventer une nouvelle. */
+.wb-visite-verre {
+  background: linear-gradient(180deg, var(--v2-verre-haut), var(--v2-verre-bas));
+  backdrop-filter: var(--v2-verre-flou);
+  -webkit-backdrop-filter: var(--v2-verre-flou);
+  border: 1px solid var(--v2-verre-bordure);
+  box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
+}
 .wb-visite-carte { animation: wb-visite-entree .45s cubic-bezier(.34,1.56,.64,1) both; view-transition-name: wb-visite-carte; }
 /* Isole la carte du fondu-enchaîné racine (tout élément SANS nom tombe dans
    un seul instantané plein-écran avant/après qui se fond en fondu — deux
@@ -694,33 +712,82 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 @keyframes wb-visite-fondu { from { opacity: 0; } }
 @keyframes wb-visite-entree { from { opacity: 0; transform: translateY(18px) scale(.96); } }
 @keyframes wb-visite-texte-entree { from { opacity: 0; transform: translateY(6px); } }
-/* Anneau coloré autour de la découpe, posé par un pseudo-élément à taille
+/* Anneau lumineux : un liseré net PLUS une lueur large (`color-mix`, pas de
+   second calque à part) — se lit comme un vrai spotlight, pas un simple
+   contour de validation de formulaire. Posé par un pseudo-élément à taille
    fixe (jamais redimensionné : seule son opacité bouge). */
 .wb-visite-decoupe::after {
   content: ''; position: absolute; inset: -3px; border-radius: inherit;
-  box-shadow: 0 0 0 2px var(--v2-color-accent);
+  box-shadow: 0 0 0 2px var(--v2-color-accent), 0 0 28px 6px color-mix(in srgb, var(--v2-color-accent) 55%, transparent);
   animation: wb-visite-anneau 2.6s ease-in-out .5s infinite;
 }
-@keyframes wb-visite-anneau { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes wb-visite-anneau { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+
+/* Pointeur triangulaire de la carte vers la cible — la « flèche » qui
+   manquait (Ryan, 2026-10-09 : « des bulles avec des flèches pointant vers
+   les bons éléments »). Toujours sur le bord HAUT de la carte (la carte est
+   toujours en bas de l'écran) ; sa position horizontale suit la cible via
+   `--wb-fleche-x`, posée en ligne depuis VisiteGuidee.tsx. Masqué (voir
+   VisiteGuidee.tsx) quand l'arrêt n'a pas de cible — rien à pointer. */
+.wb-visite-fleche {
+  position: absolute; top: -7px; left: var(--wb-fleche-x, 50%);
+  width: 14px; height: 14px; transform: translateX(-50%) rotate(45deg);
+  background: var(--v2-verre-haut);
+  border-left: 1px solid var(--v2-verre-bordure); border-top: 1px solid var(--v2-verre-bordure);
+  border-radius: 3px 0 0 0;
+  transition: left .5s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* Barre de progression segmentée façon « Stories » — un trait rempli par
+   arrêt déjà passé plutôt qu'une seule barre continue, pour rester lisible
+   même avec beaucoup d'arrêts (Ryan avait cité ce style dès la toute
+   première demande de ce tuto). */
+.wb-visite-progres { display: flex; gap: 3px; }
+.wb-visite-segment {
+  flex: 1; min-width: 3px; height: 3px; border-radius: 999px;
+  background: var(--v2-filet-fort); overflow: hidden;
+}
+.wb-visite-segment > span {
+  display: block; height: 100%; width: 0%; border-radius: inherit;
+  background: var(--v2-color-accent);
+  transition: width .3s ease-out;
+}
+.wb-visite-segment--fait > span { width: 100%; }
+
+/* Badge « déjà fait » : confirme sans fêter — l'action n'a pas eu lieu
+   PENDANT cette visite (Ryan, 2026-10-09 : montrer l'explication complète
+   même si c'est déjà configuré, ne pas se précipiter, mais pas non plus en
+   faire un évènement). */
+.wb-visite-badge-fait {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  background: color-mix(in srgb, var(--v2-color-accent) 14%, transparent);
+  color: var(--v2-color-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .wb-visite-fond, .wb-visite-decoupe, .wb-visite-decoupe::after, .wb-visite-carte, .wb-visite-texte {
+  .wb-visite-fond, .wb-visite-decoupe, .wb-visite-decoupe::after, .wb-visite-carte, .wb-visite-texte,
+  .wb-visite-fleche, .wb-visite-segment > span {
     animation: none; transition: none;
   }
 }
 
 /* ── Visite guidée, arrêt `interactif` (Prestations, Horaires, Adresse de
-   départ, 2026-10-07) : pas de fond sombre, l'écran réel reste cliquable —
-   juste un halo qui respire autour de la cible ; la carte garde la même
-   place qu'un arrêt « regarde » (en bas, espace déjà réservé par
+   départ, Téléphone, Logo) : pas de fond sombre, l'écran réel reste
+   cliquable — juste un halo qui respire autour de la cible ; la carte garde
+   la même place qu'un arrêt « regarde » (en bas, espace déjà réservé par
    DashboardShell). `wb-visite-halo-ok` prend le relais un court instant
-   quand l'action vient d'être détectée (ou l'était déjà en arrivant), avant
-   que la visite n'avance toute seule (VisiteGuidee.tsx) — jamais de saut
-   silencieux à l'arrêt suivant sans ce palier visible.
+   quand l'action vient d'être détectée, avant que la visite n'avance toute
+   seule (VisiteGuidee.tsx) — jamais pour un arrêt déjà satisfait EN ARRIVANT
+   (changé le 2026-10-09 : ce cas affiche l'explication complète et attend un
+   clic, comme un arrêt « regarde » — se précipiter donnait l'impression d'un
+   bug, Ryan : « ça va très vite... on a l'impression que ça bug »).
    Même raison qu'au-dessus : le halo respire en `opacity`, jamais en
-   `box-shadow` animé (c'était le cas ici aussi, corrigé le 2026-10-08). */
+   `box-shadow` animé, et porte la même lueur large que la découpe. */
 .wb-visite-halo {
   position: relative;
-  box-shadow: 0 0 0 3px var(--v2-color-accent), 0 0 0 9999px rgba(10,10,12,.08);
+  box-shadow: 0 0 0 3px var(--v2-color-accent), 0 0 0 9999px rgba(10,10,12,.08),
+              0 0 28px 6px color-mix(in srgb, var(--v2-color-accent) 45%, transparent);
   transition: top .5s cubic-bezier(.34,1.56,.64,1), left .5s cubic-bezier(.34,1.56,.64,1),
               width .5s cubic-bezier(.34,1.56,.64,1), height .5s cubic-bezier(.34,1.56,.64,1);
 }
@@ -730,7 +797,8 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
   animation: wb-visite-anneau 1.8s ease-in-out infinite;
 }
 .wb-visite-halo-ok {
-  box-shadow: 0 0 0 3px #22c55e, 0 0 0 9999px rgba(10,10,12,.08);
+  box-shadow: 0 0 0 3px #22c55e, 0 0 0 9999px rgba(10,10,12,.08),
+              0 0 28px 6px color-mix(in srgb, #22c55e 45%, transparent);
 }
 .wb-visite-halo-ok::after { animation: none; opacity: 0; }
 @media (prefers-reduced-motion: reduce) {

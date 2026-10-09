@@ -35,14 +35,16 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('etapesPour', () => {
-  it('site : les douze arrêts « page », dans l’ordre (Adresse de départ ajouté le 2026-10-07)', async () => {
+  it('site : les quatorze arrêts « page », dans l’ordre (Téléphone et Logo ajoutés le 2026-10-09)', async () => {
     const { etapesPour } = await charger()
-    expect(etapesPour(false).map(e => e.route)).toEqual([
+    expect(etapesPour(false).map(e => e.route ?? null)).toEqual([
       '/dashboard',
       '/dashboard/parametres#lien-reservation',
       '/dashboard/parametres/prestations',
       '/dashboard/parametres/horaires',
       '/dashboard/parametres/profil',
+      null, // Téléphone : même page que l'arrêt précédent (Adresse de départ), pas de route à part.
+      '/dashboard/parametres/apparence',
       '/dashboard/calendrier',
       '/dashboard/clients',
       '/dashboard/crm',
@@ -57,6 +59,8 @@ describe('etapesPour', () => {
       "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.",
       'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.',
       "Ton point de départ : sert à calculer les trajets, et à ne pas proposer un créneau hors de ta zone.",
+      'Ton téléphone : le numéro que voient tes clients pour te joindre.',
+      "Ton logo : il habille ta page de réservation, pour que tes clients te reconnaissent du premier coup d'œil.",
       'Toute ton activité en vue mois/semaine/jour.',
       "Chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
       `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.`,
@@ -77,7 +81,9 @@ describe('etapesPour', () => {
     const pwa = etapesPour(true)
     const site = etapesPour(false)
     // Les arrêts « page » (avec route) se retrouvent dans le même ordre relatif.
-    expect(pwa.filter(e => e.route).map(e => e.route)).toEqual(site.map(e => e.route))
+    // Filtré des deux côtés : un arrêt du site peut lui aussi n'avoir aucune
+    // route (Téléphone, même page que l'arrêt précédent).
+    expect(pwa.filter(e => e.route).map(e => e.route)).toEqual(site.filter(e => e.route).map(e => e.route))
     // Strictement plus d'arrêts côté PWA : les repères de la barre du bas en plus.
     expect(pwa.length).toBeGreaterThan(site.length)
   })
@@ -100,16 +106,16 @@ describe('etapesPour', () => {
     }
   })
 
-  it('seuls Lien, Prestations, Horaires et Adresse de départ mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
+  it('seuls Lien, Prestations, Horaires, Adresse de départ, Téléphone et Logo mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
     const { etapesPour } = await charger()
     const ciblesDePage = etapesPour(false).flatMap(e => (e.cible ? [e.cible] : []))
-    expect(ciblesDePage).toEqual(['lien', 'prestations', 'horaires', 'adresse-depart'])
+    expect(ciblesDePage).toEqual(['lien', 'prestations', 'horaires', 'adresse-depart', 'telephone', 'logo'])
   })
 
-  it('les trois essentiels bloquants (services, availabilities, baseAddress) sont interactifs, et eux seuls', async () => {
+  it('les cinq essentiels (services, availabilities, baseAddress, phone, logo) sont interactifs, et eux seuls', async () => {
     const { etapesPour } = await charger()
     const interactifs = etapesPour(false).filter(e => e.interactif)
-    expect(interactifs.map(e => e.interactif)).toEqual(['services', 'availabilities', 'baseAddress'])
+    expect(interactifs.map(e => e.interactif)).toEqual(['services', 'availabilities', 'baseAddress', 'phone', 'logo'])
     // Chaque arrêt interactif porte une cible : sans elle, rien à mettre en valeur.
     for (const e of interactifs) expect(e.cible).toBeTruthy()
   })

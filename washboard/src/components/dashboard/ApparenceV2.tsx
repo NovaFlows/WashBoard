@@ -139,6 +139,7 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
           <button
             type="button"
             onClick={() => setFeuille('logo')}
+            data-visite-cible="logo"
             className={`${BOUTON} w-full text-white`}
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
@@ -161,7 +162,7 @@ export default function ApparenceV2({ nom, slug, initial }: Props) {
                 page — la nouvelle page les utilise aussi. Fond et message
                 d'accueil ne lui servent encore à rien, ils restent réservés
                 à la page classique. */}
-            <Ligne label="Logo" valeur={valeurLogo} onClick={() => setFeuille('logo')} />
+            <Ligne label="Logo" valeur={valeurLogo} onClick={() => setFeuille('logo')} cibleVisite="logo" />
             <Ligne
               label="Couleur de ma marque"
               pastille={h.couleur ?? COULEUR_PAR_DEFAUT}
