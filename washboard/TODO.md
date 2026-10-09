@@ -1005,6 +1005,37 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
         d'ouverture/fermeture avec et sans support des View Transitions.
         `tsc`, `eslint` (0 erreur), `vitest run` (2469 tests) et
         `next build` propres à chaque commit.
+      - **5ᵉ tournée (2026-10-09, même nuit) — toujours pas satisfait : « j'ai
+        pas essayé de faire des innovations... carte blanche », « vingt fois
+        mieux, surtout au niveau du visuel ». Plan écrit et validé avant de
+        recoder (voir `.claude/agents/tuto-pwa.md`, nouveau fichier de
+        décisions persistantes, même rôle que `refonte.md`).**
+        - **Phase A étendue à 5 essentiels** (`computeSetupProgress` en a 5,
+          le tuto n'en couvrait que 3) : téléphone et logo rejoignent
+          prestations/horaires/adresse comme arrêts `interactif`.
+        - **Palier « déjà fait »** séparé du palier « vient de réussir »
+          (3 états au lieu d'un booléen) : un arrêt déjà satisfait en
+          arrivant montre l'explication complète et attend un clic, il
+          n'avance plus tout seul en 900ms — ça se lisait comme un bug.
+        - **Refonte visuelle** : assombrissement allégé (.78 → .35), carte
+          en verre (même matière que la barre du bas, `--v2-verre-*`),
+          flèche entre la carte et la cible, barre de progression segmentée
+          façon Stories, anneau lumineux à deux couches.
+        - **Phase B** : `ETAPES_VISITE` étendue de 18 à 24 arrêts PWA
+          (12 à 18 côté site) pour couvrir le catalogue réel de pages —
+          Clients/Messages automatiques/Publicités, Chiffres (3 onglets),
+          Devis-factures, Dépenses, Réglages, Assistance. Les 3 arrêts
+          morts vers d'anciens écrans v1 sans lien depuis aucun écran v2
+          (`/dashboard/crm`, `/dashboard/compta`, `/dashboard/factures`)
+          retirés, remplacés par `/dashboard/chiffres` et
+          `/dashboard/chiffres/documents`.
+        - Vérifié par comptes Supabase jetables + Playwright : tour complet
+          24 arrêts (compte Business, tout déverrouillé), flux
+          téléphone→logo avec vraie écriture, 18 arrêts côté site, aucune
+          régression. `tsc`, `eslint` (0 erreur), `vitest run` (2469 tests)
+          et `next build` propres.
+        - **Pas fait, noté dans `tuto-pwa.md`** : arrêts narratifs pour les
+          6 réglages « confort », cibles multiples dans un même arrêt.
       - **Reste à faire** : accord final de Ryan sur le rendu après cette
         dernière tournée (il doit se reconnecter sur le téléphone — même lien
         de preview, pas besoin de réinstaller), puis fusion sur `master`.

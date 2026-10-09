@@ -1,9 +1,14 @@
 // Visite guidée du tableau de bord : montrée une seule fois, au premier passage
 // sur `/dashboard` — et rejouable à volonté depuis le Guide (voir `redemarrerVisite`).
 //
-// Sur le SITE, douze arrêts sur de vraies pages (comme avant, plus « Adresse de
-// départ » ajouté le 2026-10-07 — troisième essentiel bloquant de
-// `computeSetupProgress`, qui manquait). Dans l'APPLICATION installée, des
+// Sur le SITE, dix-huit arrêts sur de vraies pages — couvre désormais tout le
+// catalogue réel de la PWA (audit du 2026-10-09 : barre du bas, sous-menu Plus,
+// Clients et ses automatismes/publicités, Chiffres et ses trois sous-écrans,
+// Réglages, Assistance). Les trois anciens arrêts CRM/Compta/Factures
+// (`/dashboard/crm`, `/dashboard/compta`, `/dashboard/factures`) ont été
+// retirés le même jour : ce sont d'anciens écrans v1 qu'aucun écran v2 ne lie
+// plus depuis que `/dashboard/chiffres` a absorbé leur contenu — des
+// impasses pour un laveur qui les suivrait. Dans l'APPLICATION installée, des
 // arrêts supplémentaires s'intercalent pour présenter la barre du bas au fil de
 // l'eau — « regarde cet onglet » (assombrissement + découpe, sans changer de
 // page) juste avant d'y naviguer pour de vrai, plutôt qu'un bloc à part à la
@@ -11,11 +16,13 @@
 // du bas n'existe pas (demande de Ryan, 2026-10-07 : « tu peux présenter un onglet
 // de la barre puis rentrer dedans et présenter etc. »).
 //
-// Prestations, Horaires et Adresse de départ sont en plus `interactif` : la
-// visite s'efface au profit d'un simple repère, laisse l'écran réel cliquable,
-// et avance toute seule dès que le laveur a vraiment fait l'action — pas de
-// « Suivant » à cliquer dans le vide (Ryan, 2026-10-07 : « j'ai pas vu la partie
-// réglages où on accompagne le laveur à remplir ses informations »).
+// Prestations, Horaires, Adresse de départ, Téléphone et Logo (les cinq
+// essentiels de `computeSetupProgress`, setupProgress.ts) sont en plus
+// `interactif` : la visite s'efface au profit d'un simple repère, laisse
+// l'écran réel cliquable, et avance toute seule dès que le laveur a vraiment
+// fait l'action — pas de « Suivant » à cliquer dans le vide (Ryan,
+// 2026-10-07 puis 2026-10-09 : « accompagner le laveur à remplir ses
+// informations », pour les cinq, pas seulement les trois bloquants).
 //
 // `washers.dashboard_tour_complete_at` dit si elle reste à faire. Les comptes
 // antérieurs à sa mise en place ont été remplis à leur date de création : seul un
@@ -89,12 +96,16 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
   { route: '/dashboard/clients', texte: "Chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
-  { route: '/dashboard/crm', texte: `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.` },
-  { route: '/dashboard/compta', texte: `Ton chiffre d'affaires et tes dépenses, par jour, semaine, mois ou année — en formule ${requiredPlanLabel('compta')}.` },
-  { route: '/dashboard/factures', texte: `Facture conforme générée et envoyée automatiquement à chaque prestation terminée — en formule ${requiredPlanLabel('facturation')}.` },
+  { route: '/dashboard/clients/messages', texte: `Avis Google et relances automatiques après chaque prestation — en formule ${requiredPlanLabel('followup')}.` },
+  { route: '/dashboard/clients/publicites', texte: `Le retour sur chaque campagne publicitaire, visites et réservations comptées — en formule ${requiredPlanLabel('campagnes')}.` },
+  { route: '/dashboard/chiffres', texte: `D'où viennent tes visiteurs et combien réservent vraiment, à côté de ton chiffre d'affaires — en formule ${requiredPlanLabel('crm')}.` },
+  { route: '/dashboard/chiffres/documents', texte: 'Un devis ou une facture sans rendez-vous derrière — le même écran que le bouton [+] de la barre.' },
+  { route: '/dashboard/chiffres/depenses', texte: "Tes dépenses, pour un chiffre d'affaires net plus juste." },
   { route: '/dashboard/abonnement', texte: "Ici tu changes d'offre quand tu en as besoin." },
+  { route: '/dashboard/parametres/reglages', texte: 'Thème, notifications — et deux raccourcis vers ce qui vient juste après.' },
+  { route: '/dashboard/assistance', texte: "Une question sans réponse dans le Guide ? Écris directement à l'équipe." },
   { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
-  { route: '/dashboard/guide', texte: "Si tu bloques un jour : le Guide répond seul, l'Assistance contacte l'équipe." },
+  { route: '/dashboard/guide', texte: 'Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse.' },
 ]
 
 /** La liste réellement montrée : tous les arrêts sur le site, les arrêts PWA en

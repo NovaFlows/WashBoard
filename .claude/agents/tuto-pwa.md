@@ -105,21 +105,38 @@ Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) u
 même gabarit que le texte actuel : `` `en formule ${requiredPlanLabel('...')}` `` —
 jamais caché, jamais présenté comme accessible.
 
-## Ce qui reste à faire (Phase B, pas commencée au 2026-10-09)
+## Phase B — faite le 2026-10-09
 
-- Étendre `ETAPES_VISITE` pour couvrir le catalogue réel de pages (audit complet fait :
-  barre du bas, sous-menu Plus, Réglages, Clients/automatismes, Chiffres 3 onglets,
-  Dépenses, Devis-factures, Apparence, Guide, Assistance).
-- Retirer les 3 arrêts morts qui pointent vers d'anciens écrans v1 sans lien depuis aucun
-  écran v2 (`/dashboard/crm`, `/dashboard/compta`, `/dashboard/factures`) — remplacés par
-  `/dashboard/chiffres` (3 onglets) et `/dashboard/chiffres/documents`.
-  **Ne les réintroduis jamais sans vérifier qu'un écran v2 y mène à nouveau.**
-  À l'origine du retrait : `/dashboard/chiffres` a absorbé leur contenu sans que la visite
-  n'ait suivi.
-- Les 6 réglages « confort » de `computeSetupProgress` (zone, avis, relances, agenda
-  Google, créneaux intelligents, message d'accueil) deviennent des arrêts narratifs
-  (jamais `interactif`, jamais bloquants), groupés par écran plutôt qu'un arrêt par
-  réglage — pour ne pas faire gonfler le nombre total d'arrêts.
-- Cibles multiples dans un même arrêt (`cibles?: string[]`, pas encore ajouté au type) :
-  enchaînement séquentiel de la boucle de surlignage existante, PAS une mécanique de
-  découpe simultanée multi-trous (jugée trop risquée pour le gain, décision du 2026-10-09).
+`ETAPES_VISITE` couvre maintenant le catalogue réel de pages : barre du bas, sous-menu
+Plus, Clients (+ Messages automatiques + Publicités), Chiffres (+ Devis-factures +
+Dépenses), Réglages, Assistance — en plus de tout ce que la Phase A couvrait déjà.
+Dix-huit arrêts « page » côté site (douze avant), vingt-quatre au total en PWA.
+
+Les 3 arrêts morts vers d'anciens écrans v1 sans lien depuis aucun écran v2
+(`/dashboard/crm`, `/dashboard/compta`, `/dashboard/factures`) ont été retirés, remplacés
+par `/dashboard/chiffres` (3 onglets : Argent/Acquisition/Clients) et
+`/dashboard/chiffres/documents`. **Ne les réintroduis jamais sans vérifier qu'un écran v2
+y mène à nouveau** — à l'origine du retrait : `/dashboard/chiffres` avait absorbé leur
+contenu sans que la visite n'ait suivi.
+
+Les nouveaux arrêts gagnés sur une fonctionnalité verrouillée (Messages automatiques,
+Publicités, Chiffres) utilisent `requiredPlanLabel(...)`, jamais cachés ni présentés
+comme accessibles — même convention que l'existant.
+
+Vérifié de bout en bout (compte Business, toutes fonctionnalités déverrouillées) :
+24 arrêts PWA, 18 arrêts site, chaque route atteinte dans le bon ordre, aucune régression
+sur le contour double/jank déjà corrigés.
+
+## Ce qui reste à faire
+
+- **Les 6 réglages « confort »** de `computeSetupProgress` (zone, avis, relances, agenda
+  Google, créneaux intelligents, message d'accueil) n'ont PAS d'arrêt dédié — ils sont
+  seulement mentionnés en passant dans les textes de Prestations (zone) et Messages
+  automatiques (avis/relances). À l'origine, prévu comme des arrêts narratifs groupés par
+  écran ; pas fait faute de temps le 2026-10-09, pas d'urgence (aucun n'est bloquant).
+- **Cibles multiples dans un même arrêt** (`cibles?: string[]`, pas encore ajouté au
+  type) : enchaînement séquentiel de la boucle de surlignage existante, PAS une mécanique
+  de découpe simultanée multi-trous (jugée trop risquée pour le gain). Candidat naturel :
+  l'arrêt Chiffres pourrait cycler sur ses 3 onglets plutôt que rester sur un seul repère
+  — demanderait d'abord de poser `data-visite-cible` sur les boutons d'onglet de
+  `ChiffresV2.tsx` (pas fait).

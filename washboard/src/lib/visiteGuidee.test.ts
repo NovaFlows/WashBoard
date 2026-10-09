@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('etapesPour', () => {
-  it('site : les quatorze arrêts « page », dans l’ordre (Téléphone et Logo ajoutés le 2026-10-09)', async () => {
+  it('site : les dix-huit arrêts « page », dans l’ordre (catalogue complet, CRM/Compta/Factures retirés le 2026-10-09)', async () => {
     const { etapesPour } = await charger()
     expect(etapesPour(false).map(e => e.route ?? null)).toEqual([
       '/dashboard',
@@ -47,10 +47,14 @@ describe('etapesPour', () => {
       '/dashboard/parametres/apparence',
       '/dashboard/calendrier',
       '/dashboard/clients',
-      '/dashboard/crm',
-      '/dashboard/compta',
-      '/dashboard/factures',
+      '/dashboard/clients/messages',
+      '/dashboard/clients/publicites',
+      '/dashboard/chiffres',
+      '/dashboard/chiffres/documents',
+      '/dashboard/chiffres/depenses',
       '/dashboard/abonnement',
+      '/dashboard/parametres/reglages',
+      '/dashboard/assistance',
       '/dashboard/guide',
     ])
     expect(etapesPour(false).map(e => e.texte)).toEqual([
@@ -63,11 +67,15 @@ describe('etapesPour', () => {
       "Ton logo : il habille ta page de réservation, pour que tes clients te reconnaissent du premier coup d'œil.",
       'Toute ton activité en vue mois/semaine/jour.',
       "Chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
-      `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.`,
-      `Ton chiffre d'affaires et tes dépenses, par jour, semaine, mois ou année — en formule ${requiredPlanLabel('compta')}.`,
-      `Facture conforme générée et envoyée automatiquement à chaque prestation terminée — en formule ${requiredPlanLabel('facturation')}.`,
+      `Avis Google et relances automatiques après chaque prestation — en formule ${requiredPlanLabel('followup')}.`,
+      `Le retour sur chaque campagne publicitaire, visites et réservations comptées — en formule ${requiredPlanLabel('campagnes')}.`,
+      `D'où viennent tes visiteurs et combien réservent vraiment, à côté de ton chiffre d'affaires — en formule ${requiredPlanLabel('crm')}.`,
+      'Un devis ou une facture sans rendez-vous derrière — le même écran que le bouton [+] de la barre.',
+      "Tes dépenses, pour un chiffre d'affaires net plus juste.",
       "Ici tu changes d'offre quand tu en as besoin.",
-      "Si tu bloques un jour : le Guide répond seul, l'Assistance contacte l'équipe.",
+      'Thème, notifications — et deux raccourcis vers ce qui vient juste après.',
+      "Une question sans réponse dans le Guide ? Écris directement à l'équipe.",
+      'Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse.',
     ])
   })
 
