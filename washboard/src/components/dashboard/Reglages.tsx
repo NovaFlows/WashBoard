@@ -7,6 +7,7 @@ import { estEcranRail } from '@/lib/grandEcran'
 import { bureauForceEnDev } from '@/hooks/useDashboardV2'
 import ReglagesV2 from '@/components/dashboard/ReglagesV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import type { SetupProgress } from '@/lib/setupProgress'
 
 // Point d'entrée de « Réglages » — destination NEUVE de la refonte 2026 (même schéma que
 // `Horaires.tsx`/`Prestations.tsx`). Côté site, ces réglages vivent dans l'ancien formulaire
@@ -22,9 +23,11 @@ type Props = {
   liste: ReglagesListeProps
   /** `washer.beta_refonte` — garde-fou temporaire du cas « site, grand écran ». */
   betaRefonte?: boolean | null
+  /** Carte « Configuration de votre compte » (voir `ReglagesV2.tsx`). */
+  progress: SetupProgress
 }
 
-export default function Reglages({ liste, betaRefonte }: Props) {
+export default function Reglages({ liste, betaRefonte, progress }: Props) {
   const router = useRouter()
   const [statut, setStatut] = useState<Statut>('verification')
 
@@ -40,5 +43,5 @@ export default function Reglages({ liste, betaRefonte }: Props) {
 
   if (statut !== 'v2') return null
 
-  return <ReglagesV2 liste={liste} />
+  return <ReglagesV2 liste={liste} progress={progress} />
 }

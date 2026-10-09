@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Une réservation verrouillée (au-delà du quota de l'offre) ne doit pas pouvoir être modifiée
@@ -14,28 +14,45 @@ type Plan = {
 }
 let plan: Plan
 const miseAJour = vi.fn()
+let ecritures: { valeurs: Record<string, unknown>; filtres: Record<string, unknown> }[] = []
+let tablesDeLaSession: string[] = []
+let clientDesSeuils: unknown
 
-const fauxSupabase = {
-  auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
-  from: (table: string) => {
-    const b: Record<string, unknown> = {}
-    const self = () => b
-    Object.assign(b, {
-      select: self,
-      eq: self,
-      update: (valeurs: Record<string, unknown>) => { miseAJour(table, valeurs); return b },
-      single: () => Promise.resolve(
-        table === 'washers'
-          ? { data: plan.washer, error: null }
-          : { data: plan.updated ?? plan.booking, error: null },
-      ),
-    })
-    return b
-  },
+// La session sert à savoir QUI écrit, rien d'autre : `authenticated` n'a plus de droit direct
+// sur `bookings` (un laveur y écrivait `saisie_par_laveur` pour déverrouiller une réservation).
+// Son faux refuse donc `bookings` comme Postgres ; seul le faux admin la sert.
+const REFUS = { data: null, error: { code: '42501', message: 'permission denied for table bookings' } }
+function faux(role: 'session' | 'admin') {
+  return {
+    auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
+    from: (table: string) => {
+      if (role === 'session') tablesDeLaSession.push(table)
+      const filtres: Record<string, unknown> = {}
+      const b: Record<string, unknown> = {}
+      const self = () => b
+      Object.assign(b, {
+        select: self,
+        eq: (colonne: string, valeur: unknown) => { filtres[colonne] = valeur; return b },
+        update: (valeurs: Record<string, unknown>) => {
+          miseAJour(table, valeurs)
+          ecritures.push({ valeurs, filtres })
+          return b
+        },
+        single: () => Promise.resolve(
+          table === 'washers' ? { data: plan.washer, error: null }
+            : role === 'session' ? REFUS
+              : { data: plan.updated ?? plan.booking, error: null },
+        ),
+      })
+      return b
+    },
+  }
 }
+const fauxSupabase = faux('session')
+const fauxAdmin = faux('admin')
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => fauxSupabase }))
-vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxSupabase }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxAdmin }))
 vi.mock('@/lib/google-calendar', () => ({
   createCalendarEvent: vi.fn(), patchCalendarEvent: vi.fn(), deleteCalendarEvent: vi.fn(),
 }))
@@ -45,15 +62,19 @@ vi.mock('@/lib/emettreFacture', () => ({ emettreFacture: vi.fn(async () => ({ ok
 // Le seuil de la période est fixé ici ; le masque lui-même (estVerrouillee) reste le vrai.
 vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/reservationsVerrouillees')>()),
-  seuilsVerrouillage: async () => [{
-    debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z',
-  }],
+  seuilsVerrouillage: async (client: unknown) => {
+    clientDesSeuils = client
+    return [{
+      debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z',
+    }]
+  },
 }))
 
 const { PATCH } = await import('./route')
 const { createCalendarEvent, patchCalendarEvent, deleteCalendarEvent } = await import('@/lib/google-calendar')
 const { sendBookingConfirmation, sendFacture } = await import('@/lib/email')
 const { emettreFacture } = await import('@/lib/emettreFacture')
+const { jetonValide } = await import('@/lib/bookingToken')
 
 function requete(body: Record<string, unknown>) {
   return new NextRequest('https://www.washboard.fr/api/bookings/c', {
@@ -68,6 +89,9 @@ const WASHER = { id: 'washer-1', plan: 'decouverte', created_at: '2026-01-01T00:
 beforeEach(() => {
   miseAJour.mockClear()
   vi.clearAllMocks()
+  ecritures = []
+  tablesDeLaSession = []
+  clientDesSeuils = undefined
   vi.spyOn(console, 'error').mockImplementation(() => {})
   plan = {
     washer: WASHER,
@@ -127,5 +151,88 @@ describe('PATCH /api/bookings/[id] — réservation dans le quota', () => {
     const res = await PATCH(requete({ notes: 'Prévenir avant d’arriver' }), { params })
     expect(res.status).toBe(200)
     expect(miseAJour).toHaveBeenCalledWith('bookings', { notes: 'Prévenir avant d’arriver' })
+  })
+})
+
+describe('PATCH /api/bookings/[id] — réservation annulée', () => {
+  beforeEach(() => {
+    // Dans le quota : seul le statut `cancelled` doit bloquer, pas le verrouillage.
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', status: 'cancelled' }
+  })
+
+  it('refuse de la repasser à un autre statut, sans écrire ni renvoyer la ligne', async () => {
+    const res = await PATCH(requete({ status: 'pending' }), { params })
+    expect(res.status).toBe(409)
+    expect(JSON.stringify(await res.json())).not.toContain('Nadia')
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+
+  it('refuse même de la confirmer', async () => {
+    const res = await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(res.status).toBe(409)
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+
+  it('laisse passer une ré-annulation (statut inchangé)', async () => {
+    plan.updated = { ...plan.booking, status: 'cancelled' }
+    const res = await PATCH(requete({ status: 'cancelled' }), { params })
+    expect(res.status).toBe(200)
+  })
+})
+
+describe('PATCH /api/bookings/[id] — jeton du PDF dans les emails au client', () => {
+  beforeEach(() => {
+    vi.stubEnv('BOOKING_LINK_SECRET', 'cle-de-test-pas-un-vrai-secret')
+    plan.booking = {
+      ...plan.booking, created_at: '2026-09-24T12:00:00.000Z',
+      client_email: 'nadia@example.com', is_professional: true,
+    }
+  })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('l’email de confirmation reçoit le jeton de cette réservation', async () => {
+    vi.mocked(sendBookingConfirmation).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'confirmed' }), { params })
+    const { bookingId, jeton } = vi.mocked(sendBookingConfirmation).mock.calls[0][0]
+    expect(jetonValide(bookingId, jeton)).toBe(true)
+  })
+
+  it('l’email de facture reçoit le jeton de cette réservation', async () => {
+    vi.mocked(emettreFacture).mockResolvedValueOnce({ ok: true, numero: 'F-2026-0007', nouvelle: true })
+    vi.mocked(sendFacture).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'done' }), { params })
+    const { bookingId, jeton } = vi.mocked(sendFacture).mock.calls[0][0]
+    expect(jetonValide(bookingId, jeton)).toBe(true)
+  })
+})
+
+describe('PATCH /api/bookings/[id] — client de lecture et d’écriture', () => {
+  beforeEach(() => {
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', client_email: 'nadia@example.com' }
+  })
+
+  it('ne touche jamais `bookings` par la session, qui n’y a plus droit', async () => {
+    const res = await PATCH(requete({ notes: 'x' }), { params })
+    expect(res.status).toBe(200)
+    expect(tablesDeLaSession).not.toContain('bookings')
+    expect(clientDesSeuils).toBe(fauxAdmin)
+  })
+
+  // L'admin ignore la RLS : sans `washer_id` dans la requête, un id d'un autre laveur passerait.
+  it('filtre chaque écriture sur le laveur, y compris l’id de l’événement Google Agenda', async () => {
+    plan.washer = { ...WASHER, google_refresh_token: 'rt' }
+    vi.mocked(createCalendarEvent).mockResolvedValueOnce('evt-1')
+    vi.mocked(sendBookingConfirmation).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(ecritures.map(e => e.valeurs)).toEqual([{ status: 'confirmed' }, { google_calendar_event_id: 'evt-1' }])
+    for (const e of ecritures) expect(e.filtres).toMatchObject({ id: 'c', washer_id: 'washer-1' })
+  })
+
+  it('filtre aussi la programmation de la demande d’avis', async () => {
+    plan.washer = { ...WASHER, review_enabled: true, google_review_url: 'https://g.page/r/x', review_delay_hours: 3 }
+    await PATCH(requete({ status: 'done' }), { params })
+    expect(ecritures).toHaveLength(2)
+    expect(ecritures[1].valeurs).toHaveProperty('review_request_at')
+    for (const e of ecritures) expect(e.filtres).toMatchObject({ id: 'c', washer_id: 'washer-1' })
   })
 })

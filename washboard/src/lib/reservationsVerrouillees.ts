@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   debutPeriodeQuota, finPeriodeQuota, debutSoumisAuPlafond, PLAFOND_RESERVATIONS_APPLIQUE_DES,
 } from '@/lib/plan'
+import { logger } from '@/lib/logger'
 
 // Réservations au-delà du quota mensuel : le client réserve, le laveur ne voit
 // rien.
@@ -26,7 +27,7 @@ import {
  *  `saisie_par_laveur` : posée quand le laveur a lui-même saisi le rendez-vous dans son agenda
  *  (un client trouvé de son côté). Ce client n'est pas venu par WashBoard : il n'y a rien à
  *  débloquer, donc jamais masqué et jamais compté dans le quota. */
-type Datee = { created_at?: string | null; saisie_par_laveur?: boolean | null }
+type Datee = { created_at?: string | null; saisie_par_laveur?: boolean | null; facture_numero?: string | null }
 
 /** Une période de quota, et l'instant après lequel tout y est verrouillé.
  *
@@ -78,6 +79,15 @@ export function estVerrouillee(
 ): boolean {
   if (!periodes || periodes.length === 0 || !r?.created_at) return false
   if (r.saisie_par_laveur) return false
+  // Décision `legal` du 2026-10-04 : une facture déjà émise garantit un accès
+  // intégral, partout — pas seulement sur la route PDF (voir son exception
+  // dédiée). Un laveur qui redescend d'offre voit son plafond, plus bas,
+  // s'appliquer rétroactivement sur 12 périodes passées ; sans cette sortie,
+  // une réservation déjà facturée (donc potentiellement déjà réglée par le
+  // client) se retrouvait re-masquée après coup, au mépris de l'obligation
+  // de conservation des factures du laveur et sans justification commerciale
+  // (le masquage n'a de sens qu'AVANT facturation, pour inciter à upgrader).
+  if (r.facture_numero) return false
 
   // Le plafond ne vaut que pour l'avenir. Les clients que le laveur avait
   // AVANT restent à lui : il les a lavés, appelés, facturés. Deuxième garde-fou
@@ -106,8 +116,10 @@ export function estVerrouillee(
  *  Le masquage ne vaut que s'il ne laisse rien qui identifie la personne.
  *
  *  Ce qui part encore : le téléphone, l'email, l'adresse, le montant, le
- *  détail des véhicules, et L'HEURE. L'heure parce qu'elle suffit à honorer le
- *  rendez-vous sans rien payer — il suffirait d'attendre sur place.
+ *  détail des véhicules, et L'HEURE (début ET fin). L'heure parce qu'elle
+ *  suffit à honorer le rendez-vous sans rien payer — il suffirait d'attendre
+ *  sur place. La position GPS et les frais de déplacement partent aussi :
+ *  tous deux trahiraient l'adresse déjà masquée, en clair ou par recoupement.
  *
  *  Le masquage se fait ICI, au sortir de la base, et jamais dans les écrans :
  *  un composant qui oublierait la règle afficherait le vrai numéro. À cet
@@ -124,6 +136,15 @@ const MASQUE = {
   company_name: null,
   siret: null,
   billing_address: null,
+  // Trois oublis trouvés le 2026-10-02 (vérification Playwright en conditions réelles) :
+  // `ends_at` combinée à la durée de la prestation (déjà visible) permet de recalculer l'heure
+  // de début malgré le masquage de `scheduled_at` dans les écrans qui le tronquent ; `lat`/`lng`
+  // sont l'équivalent exact de l'adresse déjà masquée ; `travel_fee` donne une idée de la
+  // distance au client, donc indirectement d'où il habite.
+  ends_at: null,
+  lat: null,
+  lng: null,
+  travel_fee: null,
 } as const
 
 /** Le jour d'un rendez-vous, sans son heure, à l'heure de Paris.
@@ -203,9 +224,13 @@ export function bornesPeriodes(
  *  Liste vide quand l'offre n'a pas de plafond : il n'y a alors rien à masquer,
  *  et aucune requête n'est faite. */
 export async function seuilsVerrouillage(
+  // Client ADMIN, jamais celui de la session : le rôle `authenticated` ne doit
+  // plus lire `bookings` (un laveur l'interrogeait en direct, masque compris).
+  // Avec une session, cette lecture échouerait — et un échec ne masque rien :
+  // tout partirait en clair sur l'écran appelant.
   // Le client Supabase n'est pas typé dans ce projet (voir washerCourant).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any, any, any>,
+  admin: SupabaseClient<any, any, any>,
   laveur: LaveurPeriode,
   quota: number | null,
   now: Date = new Date(),
@@ -221,7 +246,7 @@ export async function seuilsVerrouillage(
   // premier client d'après se retrouverait caché sans raison.
   const depart = debutSoumisAuPlafond(new Date(bornes[0].debut))
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('bookings')
     .select('created_at')
     .eq('washer_id', laveur.id)
@@ -233,8 +258,12 @@ export async function seuilsVerrouillage(
 
   // Sans certitude, on ne masque rien : cacher les coordonnées d'un client à un
   // laveur qui y a droit lui ferait rater un vrai rendez-vous. Le sens du
-  // doute va toujours vers le laveur.
-  if (error || !data) return []
+  // doute va toujours vers le laveur. Mais ce repli lève le masquage de tout
+  // l'écran : il ne doit jamais passer inaperçu.
+  if (error || !data) {
+    logger.error('verrouillage.seuils.read_failed', { washerId: laveur.id }, error)
+    return []
+  }
 
   return seuilsDepuisDates(data.map((l: { created_at: string }) => l.created_at), quota, bornes)
 }
@@ -281,12 +310,13 @@ export function seuilsDepuisDates(
  *  `null` en cas d'erreur, et jamais zéro : un zéro inventé ferait proposer la
  *  plus petite offre à quelqu'un qui en déborde. */
 export async function compterReservationsDeLaPeriode(
+  // Client admin, pour la même raison que `seuilsVerrouillage`.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any, any, any>,
+  admin: SupabaseClient<any, any, any>,
   laveur: LaveurPeriode,
   now: Date = new Date(),
 ): Promise<number | null> {
-  const { count, error } = await supabase
+  const { count, error } = await admin
     .from('bookings')
     .select('id', { count: 'exact', head: true })
     .eq('washer_id', laveur.id)
@@ -294,7 +324,10 @@ export async function compterReservationsDeLaPeriode(
     .eq('saisie_par_laveur', false)
     .gte('created_at', debutSoumisAuPlafond(debutPeriodeQuota(laveur.created_at, now)).toISOString())
 
-  if (error || count === null || count === undefined) return null
+  if (error || count === null || count === undefined) {
+    logger.warn('verrouillage.compte_periode.read_failed', { washerId: laveur.id }, error)
+    return null
+  }
   return count
 }
 

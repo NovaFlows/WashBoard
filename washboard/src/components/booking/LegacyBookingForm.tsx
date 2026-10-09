@@ -1,0 +1,460 @@
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
+import { dureeTotale } from '@/lib/pricing'
+import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
+import { evenementPixel } from '@/lib/metaPixel'
+import StepService from './StepService'
+import StepOptions from './StepOptions'
+import StepSlot from './LegacyStepSlot'
+import StepContact from './StepContact'
+import StepConfirmation from './LegacyStepConfirmation'
+
+// Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
+// (voir migration 003 booking_funnel_events).
+const FUNNEL_STEP_NAMES: Record<number, FunnelStep> = {
+  1: 'prestation',
+  2: 'options',
+  3: 'creneau',
+  4: 'coordonnees',
+  5: 'confirmation',
+}
+
+type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; selected_addons?: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }
+type Unavailability  = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
+
+type Props = {
+  // Volontairement PAS le `Washer` complet.
+  //
+  // Next.js sérialise dans le HTML toutes les props qui franchissent la
+  // frontière serveur→client, utilisées ou non. Passer l'objet entier publiait
+  // donc `google_refresh_token`, `stripe_customer_id` et `user_id` dans le
+  // code source de chaque page de réservation — lisible par un simple
+  // « Afficher le code source » (constaté le 2026-09-05 : le
+  // `stripe_customer_id` y était en clair).
+  //
+  // Ce type liste ce dont le formulaire a réellement besoin, et rien d'autre.
+  // Y ajouter un champ doit rester un geste conscient.
+  washer: WasherPublic
+  services: Service[]
+  categories: ServiceCategory[]
+  availabilities: Availability[]
+  /** Disponibilités fournies directement, au lieu d'être chargées depuis la
+   *  base : réservé aux démonstrations et aux captures, qui tournent sur un
+   *  laveur fictif absent de la base. En production, on ne les passe pas. */
+  disponibilites?: Disponibilites
+  accent?: string
+}
+
+/** Rendez-vous à venir et congés, chargés à la demande.
+ *
+ *  Ils arrivaient autrefois en props, lus par la page à chaque visite. Comme
+ *  ils ne servent qu'à l'étape des créneaux et que la plupart des visiteurs
+ *  n'y arrivent jamais, ils sont désormais demandés au premier geste du
+ *  visiteur — donc bien avant qu'il en ait besoin, et jamais pour quelqu'un
+ *  qui ne fait que passer. */
+type Disponibilites = { bookings: ExistingBooking[]; unavailabilities: Unavailability[] }
+
+/** Les seuls champs du laveur qui ont le droit d'atteindre le navigateur. */
+export type WasherPublic = {
+  id: string
+  name: string
+  base_address: string | null
+  team_size: number | null
+  travel_fee_mode: 'base' | 'previous'
+  travel_fee_tiers: { max_minutes: number; fee: number }[] | null
+  /** Le laveur accepte-t-il qu'on réserve pour aujourd'hui ? Sans ce champ,
+   *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
+   *  « oui » par erreur. */
+  reservation_jour_meme?: boolean
+  /** Page « proposition » : construite pour un laveur qui n'a pas encore de
+   *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
+   *  entièrement mais ne prend aucune réservation — publier un lien réservable
+   *  au nom de quelqu'un qui n'a rien demandé l'engagerait sur des rendez-vous
+   *  qu'il n'a jamais acceptés. */
+  is_preview?: boolean
+  /** Informations de facturation complètes : un booléen, jamais le SIRET ni
+   *  l'adresse eux-mêmes, qui n'ont rien à faire dans la page publique. */
+  facturation_prete?: boolean
+  /** Le laveur peut recevoir des clients PROFESSIONNELS : fiche société,
+   *  facture, suivi. L'offre gratuite ne l'a pas, l'onglet ne s'affiche donc
+   *  pas — plutôt que de le montrer barré, ce qui ferait porter au CLIENT le
+   *  refus d'une limite qui n'est pas la sienne. */
+  clients_pro?: boolean
+  // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
+}
+
+export type FormState = Partial<BookingFormData>
+
+// step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
+export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb' }: Props) {
+  const [step, setStep] = useState(1)
+  const [form, setForm] = useState<FormState>({})
+  const [bookingId, setBookingId] = useState<string | null>(null)
+  const [jeton, setJeton] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
+  const [disposEnEchec, setDisposEnEchec] = useState(false)
+  const disposDemandees = useRef(!!disponibilites)
+
+  /** Une seule fois par page, sauf après un échec où l'on autorise un nouvel
+   *  essai. Ne jamais retomber sur des listes vides : le formulaire afficherait
+   *  tous les créneaux libres et ignorerait les congés. */
+  const chargerDispos = useCallback(() => {
+    if (disposDemandees.current) return
+    disposDemandees.current = true
+    setDisposEnEchec(false)
+    fetch(`/api/booking-availability?washer_id=${washer.id}`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
+      .then((d: Partial<Disponibilites>) => setDispos({
+        bookings: d.bookings ?? [],
+        unavailabilities: d.unavailabilities ?? [],
+      }))
+      .catch(() => { disposDemandees.current = false; setDisposEnEchec(true) })
+  }, [washer.id])
+
+  // Filet : si le visiteur arrive à l'étape des créneaux sans avoir déclenché
+  // le chargement (clavier, lecteur d'écran, navigation inattendue), on le
+  // lance ici plutôt que de le laisser devant un écran qui n'avance pas.
+  useEffect(() => { if (step >= 2) chargerDispos() }, [step, chargerDispos])
+
+  const selectedService = services.find(s => s.id === form.service_id)
+  const hasAddons = (selectedService?.addons ?? []).length > 0
+
+  // Un événement par étape franchie, y compris à l'arrivée sur la page
+  // (step === 1 dès le montage). Ne bloque jamais le parcours si ça échoue.
+  useEffect(() => {
+    trackFunnelStep(washer.id, FUNNEL_STEP_NAMES[step])
+  }, [step, washer.id])
+
+  // ── Pixel Meta : « réservation commencée » ────────────────────────────────
+  //
+  // À la DEUXIÈME étape, pas à l'arrivée sur la page. Arriver n'est pas
+  // commencer : le PageView couvre déjà la visite, et envoyer
+  // InitiateCheckout dès le montage rendrait les deux événements identiques —
+  // Meta optimiserait alors pour des gens qui ouvrent la page et repartent.
+  //
+  // `evenementPixel` ne fait rien s'il n'y a pas de Pixel chargé, c'est-à-dire
+  // si le laveur n'en a pas déclaré ou si le visiteur a refusé. Ce composant
+  // n'a donc rien à vérifier.
+  const checkoutEnvoye = useRef(false)
+  useEffect(() => {
+    if (step < 2 || checkoutEnvoye.current) return
+    checkoutEnvoye.current = true
+    evenementPixel('InitiateCheckout')
+  }, [step])
+
+  // Stepper : 4 étapes si options dispo, 3 sinon
+  const STEPS = hasAddons
+    ? ['Prestation', 'Options', 'Créneau', 'Coordonnées']
+    : ['Prestation', 'Créneau', 'Coordonnées']
+
+  // Mappe le step réel sur la position dans le stepper
+  function stepperPos(s: number): number {
+    if (hasAddons) return s
+    if (s === 1) return 1
+    if (s === 3) return 2
+    if (s === 4) return 3
+    return s
+  }
+
+  const sp = stepperPos(step)
+
+  /** L'inverse de `stepperPos` : d'une position affichée vers l'étape réelle.
+   *  Sert aux libellés cliquables de la barre d'étapes. */
+  function stepDepuisPos(pos: number): number {
+    if (hasAddons) return pos
+    if (pos === 2) return 3
+    if (pos === 3) return 4
+    return pos
+  }
+
+  function updateForm(data: Partial<BookingFormData>) {
+    setForm(prev => ({ ...prev, ...data }))
+  }
+
+  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string }) {
+    setLoading(true)
+    setError(null)
+    if (contactData.notes) updateForm({ notes: contactData.notes })
+    const payload = {
+      ...form,
+      ...contactData,
+      washer_id:      washer.id,
+      is_smart_slot:  form.is_smart_slot ?? false,
+      smart_discount: form.smart_discount ?? 0,
+      // L'origine est figée ICI, au moment de la réservation, et jamais
+      // recalculée ensuite. C'est ce qui permet de dire plus tard combien
+      // d'argent une campagne a rapporté — les événements de visite, eux, ne
+      // portent aucun prix et sont purgés à treize mois.
+      utm_campaign:   resolveCampagne(typeof window === 'undefined' ? '' : window.location.search),
+      utm_content:    resolveCreation(typeof window === 'undefined' ? '' : window.location.search),
+    }
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
+      setBookingId(json.data.id)
+      setJeton(json.data.jeton ?? null)
+      setStep(5)
+
+      // ── Pixel Meta : « réservation confirmée » ──────────────────────────
+      //
+      // Le montant vient de la RÉPONSE du serveur, jamais du formulaire : le
+      // prix envoyé par le client est délibérément ignoré à l'enregistrement
+      // (voir api/bookings), et remonter à Meta un montant que WashBoard n'a
+      // pas retenu fausserait l'optimisation du laveur sur toutes ses
+      // campagnes.
+      //
+      // Appelé APRÈS l'affichage de la confirmation : un échec de mesure ne
+      // doit jamais retarder ce que le client attend.
+      const montant = Number(json.data?.booked_price)
+      evenementPixel('Purchase', {
+        currency: 'EUR',
+        value: Number.isFinite(montant) && montant > 0 ? montant : undefined,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Une erreur est survenue')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const estProposition = washer.is_preview === true
+
+  return (
+    <div
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+      // Au premier geste sur le formulaire — bien avant l'étape des créneaux,
+      // qui demande encore de choisir une prestation. Le temps que le visiteur
+      // clique, les disponibilités sont là : il ne voit aucune attente. Celui
+      // qui ne touche à rien (la grande majorité) ne déclenche aucune lecture.
+      onPointerDown={chargerDispos}
+      onKeyDown={chargerDispos}
+    >
+      {/* Annoncé d'emblée, et pas seulement à la dernière étape : un visiteur
+          qui parcourt trois écrans en croyant réserver, puis découvre que non,
+          est un client perdu pour le laveur. */}
+      {estProposition && (
+        <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 px-4 sm:px-6 py-3 text-sm">
+          <p className="font-bold">Aperçu — cette page n&apos;est pas encore active</p>
+          <p className="text-xs mt-0.5 leading-relaxed">
+            Elle montre à quoi ressemblerait la page de réservation de {washer.name}.
+            Aucune réservation ne peut être enregistrée pour l&apos;instant.
+          </p>
+        </div>
+      )}
+      {step < 5 && (
+        <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-start w-full">
+            {STEPS.map((label, i) => {
+              const n = i + 1
+              const done = sp > n
+              const active = sp === n
+              return (
+                <div key={n} className={`flex items-start ${n < STEPS.length ? 'flex-1' : ''}`}>
+                  {/* Une étape déjà franchie ramène directement à sa section.
+                      Les suivantes restent inertes : on ne saute pas une étape
+                      qu'on n'a pas remplie. */}
+                  <button
+                    type="button"
+                    onClick={() => { if (done) setStep(stepDepuisPos(n)) }}
+                    disabled={!done}
+                    aria-current={active ? 'step' : undefined}
+                    aria-label={done ? `Revenir à l'étape ${label}` : label}
+                    className={`flex flex-col items-center gap-1 shrink-0 rounded-lg px-1 py-0.5 transition-opacity ${
+                      done ? 'cursor-pointer hover:opacity-70' : 'cursor-default'
+                    }`}
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        done ? 'bg-emerald-500 text-white' :
+                        active ? 'text-white' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                      }`}
+                      style={active ? { backgroundColor: accent } : undefined}
+                    >
+                      {done ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7"/>
+                        </svg>
+                      ) : n}
+                    </div>
+                    <span className={`text-[11px] font-medium text-center leading-tight ${
+                      active ? 'text-slate-900 dark:text-slate-100' :
+                      done ? 'text-emerald-600 dark:text-emerald-400' :
+                      'text-slate-400 dark:text-slate-500'
+                    }`}>{label}</span>
+                  </button>
+                  {n < STEPS.length && (
+                    <div className={`flex-1 h-px mt-3.5 mx-1 transition-colors ${done ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="p-6">
+        {step === 1 && (
+          <StepService
+            services={services}
+            categories={categories}
+            factureApresPrestation={washer.facturation_prete === true}
+            clientsProAutorises={washer.clients_pro !== false}
+            selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
+            onNext={(data) => {
+              // Changer de prestation invalide les options de la précédente :
+              // les garder fausserait le prix et la durée, d'autant qu'on peut
+              // maintenant revenir ici d'un clic sur la barre d'étapes.
+              const changeDePrestation = data.service_id !== form.service_id
+              updateForm(changeDePrestation ? { ...data, selected_addons: [] } : data)
+              const svc = services.find(s => s.id === data.service_id)
+              setStep((svc?.addons ?? []).length > 0 ? 2 : 3)
+            }}
+            accent={accent}
+          />
+        )}
+        {step === 2 && selectedService && (
+          <StepOptions
+            service={selectedService}
+            vehicules={form.vehicles_detail ?? []}
+            basePrice={form.booked_price ?? selectedService.price}
+            baseDuration={selectedService.duration_minutes}
+            onNext={(data) => { updateForm(data); setStep(3) }}
+            onBack={() => setStep(1)}
+            accent={accent}
+          />
+        )}
+        {/* Tant que les disponibilités ne sont pas là, StepSlot n'est pas monté
+            du tout : avec des listes vides il montrerait tous les créneaux
+            libres et les congés comme travaillés. Mieux vaut une seconde
+            d'attente qu'une double réservation. En pratique l'attente est
+            invisible, le chargement ayant démarré au premier geste. */}
+        {step === 3 && !dispos && (
+          <div className="py-10 text-center">
+            {disposEnEchec ? (
+              <>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Impossible d&apos;afficher les disponibilités
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-5">
+                  Vérifiez votre connexion : nous préférons ne rien proposer plutôt
+                  qu&apos;un horaire déjà pris.
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(hasAddons ? 2 : 1)}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={chargerDispos}
+                    className="px-4 py-2 rounded-lg text-sm font-bold text-white"
+                    style={{ backgroundColor: accent }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
+                Recherche des créneaux disponibles…
+              </p>
+            )}
+          </div>
+        )}
+        {step === 3 && dispos && (
+          <StepSlot
+            availabilities={availabilities}
+            existingBookings={dispos.bookings}
+            unavailabilities={dispos.unavailabilities}
+            teamSize={washer.team_size ?? 1}
+            // Règle unique, qui sait lire les deux formes : options rattachées
+            // à chaque véhicule, ou liste commune des anciennes réservations.
+            serviceDuration={dureeTotale(
+              services.find(s => s.id === form.service_id)?.duration_minutes ?? 60,
+              form.vehicles_detail,
+              form.selected_addons,
+              form.vehicle_count,
+            )}
+            servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
+            washerId={washer.id}
+            hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
+            travelFeeMode={washer.travel_fee_mode ?? 'base'}
+            reservationJourMeme={washer.reservation_jour_meme === true}
+            onNext={(data) => { updateForm(data); setStep(4) }}
+            onBack={() => setStep(hasAddons ? 2 : 1)}
+            accent={accent}
+          />
+        )}
+        {/* Sur une proposition, on s'arrête AVANT le formulaire de contact.
+            Le visiteur a vu les prestations, les tarifs et les créneaux —
+            c'est tout l'intérêt de la démonstration. Lui demander ensuite son
+            nom, son téléphone et son adresse collecterait des données
+            personnelles pour un laveur qui n'a rien accepté, et pour un
+            rendez-vous qui n'existera jamais. */}
+        {step === 4 && estProposition && (
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+              Voilà à quoi ressemblerait votre page
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
+              Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la
+              pour que vos clients puissent réserver et que les rendez-vous
+              tombent dans votre agenda.
+            </p>
+            <a
+              href="/signup"
+              className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
+              style={{ backgroundColor: accent }}
+            >
+              Activer ma page — 1 mois offert
+            </a>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Sans carte bancaire</p>
+            <button
+              onClick={() => setStep(3)}
+              className="block mx-auto mt-5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              ← Revenir aux créneaux
+            </button>
+          </div>
+        )}
+        {step === 4 && !estProposition && (
+          <StepContact
+            isProfessional={form.is_professional ?? false}
+            loading={loading}
+            error={error}
+            onSubmit={submitBooking}
+            onBack={() => setStep(3)}
+            accent={accent}
+          />
+        )}
+        {step === 5 && (
+          <StepConfirmation
+            washerName={washer.name}
+            bookingId={bookingId!}
+            jeton={jeton}
+            form={form}
+            services={services}
+          />
+        )}
+      </div>
+    </div>
+  )
+}

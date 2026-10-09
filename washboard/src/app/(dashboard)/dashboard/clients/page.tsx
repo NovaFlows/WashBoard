@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ClientsView from '@/components/dashboard/ClientsView'
@@ -12,6 +13,7 @@ import { quotaReservations, planEffectif, offreQuiCouvre, hasFeature, requiredPl
 import { minVehiclePrice } from '@/lib/pricing'
 import { DELAI_AVIS_DEFAUT_HEURES, DELAI_RELANCE_DEFAUT_JOURS } from '@/lib/messagesAutomatiques'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode, montantVerrouille } from '@/lib/reservationsVerrouillees'
+import { FUSEAU } from '@/lib/dateUtils'
 
 // Fichier clients : tiré des réservations, un client par email (voir
 // lib/listeClients.ts). Seules les colonnes utiles à la liste et à la fiche
@@ -24,7 +26,7 @@ import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode
 // (`StepService.tsx`), repris dans la fiche plutôt que redemandé au laveur (`clientProfile.ts`,
 // `vehiculesReserves`). `created_at` sert AUSSI au verrouillage des réservations hors quota :
 // sans lui, la règle ne peut rien trancher et l'annuaire les afficherait toutes.
-const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, saisie_par_laveur, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, vehicles_detail, services(name, price, duration_minutes)'
+const COLONNES = 'id, client_name, client_email, client_phone, address, scheduled_at, created_at, saisie_par_laveur, facture_numero, status, closed_late, booked_price, is_professional, company_name, followup_sent_at, review_request_sent_at, vehicles_detail, source_decouverte, services(name, price, duration_minutes)'
 
 export default async function ClientsPage() {
   const supabase = await createClient()
@@ -32,10 +34,14 @@ export default async function ClientsPage() {
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'clients')
+  // `bookings` via l'admin : `authenticated` ne la lit plus (le laveur y
+  // contournait le masque en direct). Le filtre `washer_id` est la seule
+  // barrière entre laveurs.
+  const admin = createAdminClient()
 
   // Page par page : l'API coupe à 1 000 lignes sans erreur (voir `toutesLesLignes`).
   const { data: bookings, error } = await toutesLesLignes(
-    (debut, fin) => supabase
+    (debut, fin) => admin
       .from('bookings')
       .select(COLONNES)
       .eq('washer_id', washer.id)
@@ -50,20 +56,26 @@ export default async function ClientsPage() {
   // regroupe par email, et ces réservations n'en ont pas — elles se fondraient
   // toutes en une seule fiche fantôme. Elles ont donc leur propre carte,
   // au-dessus, avec le jour seul — le nom est masqué comme le reste.
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const montantBloque = montantVerrouille(bookings, seuils)
   const marquees = masquerVerrouillees(bookings, seuils)
   const visibles = marquees.filter(b => !b.verrouillee)
   const bloquees = marquees
     .filter(b => b.verrouillee)
-    .map(b => ({ id: b.id as string, scheduled_at: b.scheduled_at as string }))
+    // Midi UTC du jour de Paris : le jour quitte le serveur, jamais l'heure (même règle que
+    // dashboard/page.tsx — oubliée ici, l'heure exacte se lisait au Ctrl+U malgré l'écran qui
+    // ne l'affiche pas, trouvé le 2026-10-02).
+    .map(b => ({
+      id: b.id as string,
+      scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z`,
+    }))
 
   // L'offre proposée dépend du VOLUME du mois, pas du simple fait d'être
   // bloqué : à sept réservations sur une offre plafonnée à cinq, le Starter
   // suffit et coûte trente euros de moins que le Pro. Le comptage n'a lieu que
   // s'il y a quelque chose à débloquer — sinon c'est une requête pour rien sur
   // chaque affichage de la page.
-  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDeLaPeriode(supabase, washer)
+  const volumeDuMois = bloquees.length === 0 ? null : await compterReservationsDeLaPeriode(admin, washer)
   const offreProposee = offreQuiCouvre(planEffectif(washer), volumeDuMois)
 
   // Les devis et factures écrits à la main font naître des clients qui n'ont jamais réservé

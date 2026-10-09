@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   estVerrouillee, masquerVerrouillees, jourSeul, seuilsDepuisDates,
-  bornesPeriodes, montantVerrouille, type Periode,
+  bornesPeriodes, montantVerrouille, seuilsVerrouillage, compterReservationsDeLaPeriode, type Periode,
 } from './reservationsVerrouillees'
+import { logger } from './logger'
 import { PLAFOND_RESERVATIONS_APPLIQUE_DES, debutPeriodeQuota, finPeriodeQuota } from './plan'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,6 +96,33 @@ describe('un rendez-vous saisi par le laveur n’est jamais verrouillé', () => 
     )
     expect(r.verrouillee).toBe(false)
     expect(r.client_phone).toBe('0612345678')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Décision `legal` du 2026-10-04 : une réservation déjà FACTURÉE reste
+// toujours lisible, même re-classée au-delà du quota après une rétrogradation
+// d'offre (le plafond, plus bas, s'applique rétroactivement sur 12 périodes
+// passées). Le laveur a une obligation de conservation de ses factures, et le
+// masquage n'a de sens commercial qu'AVANT facturation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('un rendez-vous déjà facturé n’est jamais verrouillé', () => {
+  it('reste lisible même arrivé après l’épuisement du quota', () => {
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.001Z', facture_numero: 'F-2026-0012' }, PERIODES)).toBe(false)
+  })
+
+  it('reste lisible dans la liste masquée, avec ses coordonnées', () => {
+    const [r] = masquerVerrouillees(
+      [{ created_at: '2026-09-25T10:00:00.001Z', facture_numero: 'F-2026-0012', client_phone: '0612345678' }],
+      PERIODES,
+    )
+    expect(r.verrouillee).toBe(false)
+    expect(r.client_phone).toBe('0612345678')
+  })
+
+  it('reste verrouillé tant qu’aucune facture n’a été émise', () => {
+    expect(estVerrouillee({ created_at: '2026-09-25T10:00:00.001Z', facture_numero: null }, PERIODES)).toBe(true)
   })
 })
 
@@ -204,6 +232,22 @@ describe('masquerVerrouillees', () => {
     expect(c.client_name).toBeNull()
     expect(c.client_phone).toBeNull()
     expect(c.address).toBeNull()
+  })
+
+  // Trois oublis trouvés le 2026-10-02 (vérification Playwright en conditions réelles) :
+  // `ends_at` + la durée (déjà visible) recalcule l'heure de début malgré le masquage ailleurs ;
+  // `lat`/`lng` sont l'équivalent exact de l'adresse déjà masquée ; `travel_fee` trahit la
+  // distance, donc indirectement où habite le client.
+  it('efface aussi l’heure de fin, la position GPS et les frais de déplacement', () => {
+    const [c] = masquerVerrouillees(
+      [{ ...liste[2], ends_at: '2026-10-03T10:30:00.000Z', lat: 48.8566, lng: 2.3522, travel_fee: 12 }],
+      PERIODES,
+    )
+    expect(c.verrouillee).toBe(true)
+    expect(c.ends_at).toBeNull()
+    expect(c.lat).toBeNull()
+    expect(c.lng).toBeNull()
+    expect(c.travel_fee).toBeNull()
   })
   it('garde la date brute, que les écrans réduisent au jour', () => {
     // `scheduled_at` n'est pas écrasé : il sert encore à trier et au calcul
@@ -334,5 +378,82 @@ describe('montantVerrouille', () => {
       { created_at: '2026-10-23T08:00:00.000Z', booked_price: 100 },  // période neuve
     ]
     expect(montantVerrouille(liste, PERIODES)).toBe(65)
+  })
+})
+
+// ── Lecture en base ─────────────────────────────────────────────────────────
+//
+// Un échec de lecture ne masque rien (le doute profite au laveur) : c'est donc
+// tout l'écran qui part en clair. Ce repli ne doit jamais être silencieux — le
+// jour où un appelant passe la session au lieu de l'admin, c'est ici qu'on le voit.
+
+type Reponse = { data?: unknown; count?: number | null; error: unknown }
+
+function fauxClient(reponse: Reponse) {
+  const filtres: Record<string, unknown> = {}
+  const tables: string[] = []
+  const client = {
+    from: (table: string) => {
+      tables.push(table)
+      const b: Record<string, unknown> = {}
+      const self = () => b
+      Object.assign(b, {
+        select: self, neq: self, gte: self, order: self, limit: self,
+        eq: (colonne: string, valeur: unknown) => { filtres[colonne] = valeur; return b },
+        then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) => Promise.resolve(reponse).then(ok, ko),
+      })
+      return b
+    },
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { client: client as any, filtres, tables }
+}
+
+const LAVEUR = { id: 'washer-1', created_at: '2026-01-22T00:00:00.000Z' }
+const MAINTENANT = new Date('2026-10-01T12:00:00.000Z')
+
+afterEach(() => vi.restoreAllMocks())
+
+describe('seuilsVerrouillage', () => {
+  it('ne lit rien quand l’offre n’a pas de plafond', async () => {
+    const { client, tables } = fauxClient({ data: [], error: null })
+    expect(await seuilsVerrouillage(client, LAVEUR, null, MAINTENANT)).toEqual([])
+    expect(tables).toEqual([])
+  })
+
+  it('filtre sur le laveur et pose le seuil sur la N-ième réservation de la période', async () => {
+    const { client, filtres } = fauxClient({
+      data: [
+        { created_at: '2026-09-24T10:00:00.000Z' },
+        { created_at: '2026-09-25T10:00:00.000Z' },
+        { created_at: '2026-09-26T10:00:00.000Z' },
+      ],
+      error: null,
+    })
+    const seuils = await seuilsVerrouillage(client, LAVEUR, 2, MAINTENANT)
+    expect(filtres).toMatchObject({ washer_id: 'washer-1', saisie_par_laveur: false })
+    expect(seuils.at(-1)?.seuil).toBe('2026-09-25T10:00:00.000Z')
+  })
+
+  it('ne masque rien sur une lecture en échec, mais le trace', async () => {
+    const trace = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    const { client } = fauxClient({ data: null, error: { code: '42501', message: 'permission denied' } })
+    expect(await seuilsVerrouillage(client, LAVEUR, 2, MAINTENANT)).toEqual([])
+    expect(trace).toHaveBeenCalledWith('verrouillage.seuils.read_failed', { washerId: 'washer-1' }, expect.anything())
+  })
+})
+
+describe('compterReservationsDeLaPeriode', () => {
+  it('rend le compte de la période, filtré sur le laveur', async () => {
+    const { client, filtres } = fauxClient({ count: 7, error: null })
+    expect(await compterReservationsDeLaPeriode(client, LAVEUR, MAINTENANT)).toBe(7)
+    expect(filtres).toMatchObject({ washer_id: 'washer-1', saisie_par_laveur: false })
+  })
+
+  it('rend null, jamais zéro, sur une lecture en échec — et le trace', async () => {
+    const trace = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    const { client } = fauxClient({ count: null, error: { code: '42501', message: 'permission denied' } })
+    expect(await compterReservationsDeLaPeriode(client, LAVEUR, MAINTENANT)).toBeNull()
+    expect(trace).toHaveBeenCalledWith('verrouillage.compte_periode.read_failed', { washerId: 'washer-1' }, expect.anything())
   })
 })

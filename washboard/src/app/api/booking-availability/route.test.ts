@@ -12,17 +12,19 @@ type Reponse = { data?: unknown; error?: unknown }
 let plan: {
   bookings: Reponse
   unavailabilities: Reponse
+  washer: Reponse
 }
 
 /** Le builder répond à la chaîne d'appels de PostgREST ; seule la table
  *  interrogée change la réponse. */
 function nouveauBuilder(table: string) {
-  const reponse = () => table === 'bookings' ? plan.bookings : plan.unavailabilities
+  const reponse = () => table === 'bookings' ? plan.bookings : table === 'washers' ? plan.washer : plan.unavailabilities
   const b: Record<string, unknown> = {}
   const chaine = () => b
   Object.assign(b, {
     select: chaine, eq: chaine, neq: chaine, gte: chaine, order: chaine,
     range: () => Promise.resolve(reponse()),
+    single: () => Promise.resolve(reponse()),
     then: (ok: (v: unknown) => unknown) => Promise.resolve(reponse()).then(ok),
   })
   return b
@@ -32,16 +34,27 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({ from: (table: string) => nouveauBuilder(table) }),
 }))
 
+// Le seuil de la période est fixé ici ; le masque lui-même (estVerrouillee) reste le vrai.
+vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/reservationsVerrouillees')>()),
+  seuilsVerrouillage: async () => [{
+    debut: '2026-09-22T00:00:00.000Z', fin: '2026-10-22T00:00:00.000Z', seuil: '2026-09-25T10:00:00.000Z',
+  }],
+}))
+
 const { GET } = await import('./route')
 
 function appel(query: string) {
   return GET(new Request(`https://www.washboard.fr/api/booking-availability${query}`) as never)
 }
 
+const WASHER = { id: '11111111-2222-3333-4444-555555555555', plan: 'decouverte', created_at: '2026-01-01T00:00:00.000Z' }
+
 beforeEach(() => {
   plan = {
     bookings: { data: [], error: null },
     unavailabilities: { data: [], error: null },
+    washer: { data: WASHER, error: null },
   }
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -89,5 +102,91 @@ describe('GET /api/booking-availability', () => {
     const res = await appel(`?washer_id=${ID}`)
     expect(res.status).toBeGreaterThanOrEqual(500)
     expect(await res.json()).not.toHaveProperty('unavailabilities')
+  })
+
+  it('échoue plutôt que de rendre une liste en clair si le laveur est illisible', async () => {
+    // Sans l'offre, impossible de savoir quel rendez-vous est verrouillé : tout
+    // partirait en clair plutôt que de bloquer une journée entière.
+    plan.washer = { data: null, error: { message: 'introuvable' } }
+    const res = await appel(`?washer_id=${ID}`)
+    expect(res.status).toBeGreaterThanOrEqual(500)
+    expect(await res.json()).not.toHaveProperty('bookings')
+  })
+})
+
+describe('GET /api/booking-availability — rendez-vous verrouillé par le quota', () => {
+  it('cache l’heure réelle derrière un blocage de toute la journée (Europe/Paris)', async () => {
+    // Créé après le seuil de la période (voir le mock de seuilsVerrouillage) : verrouillé.
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-10-03T14:30:00.000Z', vehicle_count: 2, selected_addons: [{ duration_minutes: 20 }],
+        services: { duration_minutes: 60 }, created_at: '2026-09-26T08:00:00.000Z', saisie_par_laveur: false,
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(bookings).toHaveLength(1)
+    const [b] = bookings
+    // Minuit à Paris le 3 octobre (heure d'été, UTC+2) → 22h UTC la veille.
+    expect(b.scheduled_at).toBe('2026-10-02T22:00:00.000Z')
+    expect(b.vehicle_count).toBe(1)
+    expect(b.selected_addons).toEqual([])
+    expect(b.services.duration_minutes).toBe(24 * 60)
+    expect(JSON.stringify(b)).not.toContain('14:30')
+  })
+
+  it('laisse intact un rendez-vous dans le quota', async () => {
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-09-23T09:00:00.000Z', vehicle_count: 1, selected_addons: [],
+        services: { duration_minutes: 60 }, created_at: '2026-09-23T08:00:00.000Z', saisie_par_laveur: false,
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(bookings[0].scheduled_at).toBe('2026-09-23T09:00:00.000Z')
+  })
+
+  it('ne verrouille jamais un rendez-vous saisi par le laveur lui-même', async () => {
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-10-03T14:30:00.000Z', vehicle_count: 1, selected_addons: [],
+        services: { duration_minutes: 60 }, created_at: '2026-09-26T08:00:00.000Z', saisie_par_laveur: true,
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(bookings[0].scheduled_at).toBe('2026-10-03T14:30:00.000Z')
+  })
+
+  it('ne verrouille jamais un rendez-vous déjà facturé (décision legal, 2026-10-04)', async () => {
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-10-03T14:30:00.000Z', vehicle_count: 1, selected_addons: [],
+        services: { duration_minutes: 60 }, created_at: '2026-09-26T08:00:00.000Z', saisie_par_laveur: false,
+        facture_numero: 'F-2026-0012',
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(bookings[0].scheduled_at).toBe('2026-10-03T14:30:00.000Z')
+  })
+
+  it('ne renvoie jamais created_at, saisie_par_laveur ou facture_numero, verrouillé ou pas', async () => {
+    plan.bookings = {
+      data: [{
+        scheduled_at: '2026-10-03T14:30:00.000Z', vehicle_count: 1, selected_addons: [],
+        services: { duration_minutes: 60 }, created_at: '2026-09-26T08:00:00.000Z', saisie_par_laveur: false,
+        facture_numero: 'F-2026-0012',
+      }],
+      error: null,
+    }
+    const res = await appel(`?washer_id=${ID}`)
+    const { bookings } = await res.json()
+    expect(Object.keys(bookings[0]).sort()).toEqual(['scheduled_at', 'selected_addons', 'services', 'vehicle_count'])
   })
 })

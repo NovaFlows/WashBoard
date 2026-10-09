@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { sendSms, expediteurPour } from '@/lib/sms'
 import { hasFeature } from '@/lib/plan'
 
 import { logger } from '@/lib/logger'
@@ -12,7 +12,7 @@ export async function POST() {
 
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('name, phone, sms_sender, plan, grandfathered, google_review_url')
+    .select('name, phone, sms_sender, sms_sender_statut, plan, grandfathered, google_review_url')
     .eq('user_id', user.id)
     .single()
 
@@ -28,7 +28,7 @@ export async function POST() {
 
   // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
   // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-  const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
+  const sender = expediteurPour(washer)
   const reviewLink = washer.google_review_url ?? 'https://g.page/r/votre-lien-avis'
 
   try {

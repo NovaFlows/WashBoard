@@ -6,23 +6,33 @@ import type { ReactElement } from 'react'
 
 let bookings: Record<string, unknown>[]
 
-const fauxSupabase = {
-  auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
-  from: (table: string) => {
-    const b: Record<string, unknown> = {}
-    const self = () => b
-    Object.assign(b, {
-      select: self, eq: self, not: self, is: self, gte: self, order: self, range: self, limit: self,
-      single: () => Promise.resolve({ data: { id: 'washer-1', plan: 'starter', name: 'Kooki Clean' }, error: null }),
-      then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
-        Promise.resolve(table === 'bookings' ? { data: bookings, error: null, count: 0 } : { data: [], error: null })
-          .then(ok, ko),
-    })
-    return b
-  },
+// La session n'a plus aucun droit sur `bookings` (le laveur y lisait en direct ce que le masque
+// cache) : son faux refuse comme Postgres. Seul le faux admin sert les réservations.
+const REFUS = { data: null, error: { code: '42501', message: 'permission denied for table bookings' }, count: null }
+function faux(role: 'session' | 'admin') {
+  return {
+    auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
+    from: (table: string) => {
+      const b: Record<string, unknown> = {}
+      const self = () => b
+      Object.assign(b, {
+        select: self, eq: self, not: self, is: self, gte: self, order: self, range: self, limit: self,
+        single: () => Promise.resolve({ data: { id: 'washer-1', plan: 'starter', name: 'Kooki Clean' }, error: null }),
+        then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
+          Promise.resolve(
+            table !== 'bookings' ? { data: [], error: null }
+              : role === 'admin' ? { data: bookings, error: null, count: 0 } : REFUS,
+          ).then(ok, ko),
+      })
+      return b
+    },
+  }
 }
+const fauxSupabase = faux('session')
+const fauxAdmin = faux('admin')
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => fauxSupabase }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxAdmin }))
 vi.mock('next/navigation', () => ({ redirect: () => { throw new Error('NEXT_REDIRECT') } }))
 vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/reservationsVerrouillees')>()),

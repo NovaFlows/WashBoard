@@ -3,7 +3,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresForm from '@/components/dashboard/ParametresForm'
-import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
+import { SetupProgressBarPlus } from '@/components/dashboard/SetupProgressBarPlus'
 import { EnteteParametres } from '@/components/dashboard/EnteteParametres'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { resumeHorairesCourt } from '@/lib/horaires'
@@ -50,7 +50,7 @@ export default async function ParametresPage() {
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <EnteteParametres />
       <div className="mb-4">
-        <SetupProgressBar progress={progress} />
+        <SetupProgressBarPlus progress={progress} />
       </div>
       {/* servicesCount : réutilise le comptage déjà fait juste au-dessus pour
           la barre d'avancement — aucune requête ajoutée. `undefined` si la

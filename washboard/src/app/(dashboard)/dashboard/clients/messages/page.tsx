@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import MessagesAutomatiques from '@/components/dashboard/MessagesAutomatiques'
@@ -27,7 +28,7 @@ import {
 // `saisie_par_laveur` ne s'affiche pas : sans lui, `estVerrouillee` masquerait aussi les
 // rendez-vous que le laveur a saisis lui-même.
 const COLONNES =
-  'id, client_name, client_email, client_phone, scheduled_at, created_at, saisie_par_laveur, status, is_professional, company_name, '
+  'id, client_name, client_email, client_phone, scheduled_at, created_at, saisie_par_laveur, facture_numero, status, is_professional, company_name, '
   + 'review_request_at, review_request_sent_at, review_sms_sent_at, followup_sent_at, services(name)'
 
 type RdvLu = RdvMessage & { saisie_par_laveur?: boolean | null }
@@ -38,13 +39,17 @@ export default async function MessagesAutomatiquesPage() {
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'messages-automatiques')
+  // `bookings` via l'admin : `authenticated` ne la lit plus (le laveur y
+  // contournait le masque en direct). Le filtre `washer_id` est la seule
+  // barrière entre laveurs.
+  const admin = createAdminClient()
 
   // Tous les rendez-vous du laveur, page par page (l'API plafonne à 1 000
   // lignes sans erreur). Les colonnes d'horodatage d'envoi sont celles que lisent
   // les crons ; si l'une manquait en base la lecture échouerait — l'écran le
   // dit (`lectureIncomplete`) au lieu d'afficher des listes fausses.
   const { data: lus, error, tronque } = await toutesLesLignes<RdvLu>(
-    (debut, fin) => supabase
+    (debut, fin) => admin
       .from('bookings')
       .select(COLONNES)
       .eq('washer_id', washer.id)
@@ -56,7 +61,7 @@ export default async function MessagesAutomatiquesPage() {
 
   // Écartées plutôt que masquées, comme sur /dashboard/crm : sans nom ni email elles ne
   // donneraient ici que des lignes anonymes, et leur heure partirait quand même au navigateur.
-  const seuilsVerrou = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuilsVerrou = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const rdvs = masquerVerrouillees(lus, seuilsVerrou).filter(b => !b.verrouillee)
 
   // Seuls les réglages utiles passent au navigateur : la fiche laveur porte
@@ -81,6 +86,7 @@ export default async function MessagesAutomatiquesPage() {
         libellePlanRelance={requiredPlanLabel('followup')}
         nomLaveur={washer.name}
         expediteurSms={washer.sms_sender ?? ''}
+        expediteurStatut={washer.sms_sender_statut ?? null}
         telephone={washer.phone ?? ''}
         slug={washer.slug}
         rdvs={rdvs}

@@ -8,6 +8,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // compte Essentiel activait les relances automatiques et le multi-laveurs par
 // un simple appel — et consommait des SMS facturés à WashBoard.
 
+vi.mock('@/lib/push', () => ({ notifierEquipe: vi.fn(async () => {}) }))
+
 type Reponse = { data?: unknown; error?: unknown }
 
 let plan: {
@@ -360,6 +362,35 @@ describe('PATCH /api/washer — téléphone', () => {
     const { res } = await patch({ phone: '' })
     expect(res.status).toBe(200)
     expect(updates[0].phone).toBeNull()
+  })
+})
+
+describe('PATCH /api/washer — identifiant de fiche Google', () => {
+  // Vu en pratique le 2026-10-04 : un laveur colle le LIEN Google Maps complet
+  // à la place de l'identifiant court qu'il contient. Google refuse l'appel
+  // sans un mot (INVALID_REQUEST) — la note disparaît silencieusement.
+  it('refuse un lien Google Maps collé à la place de l’identifiant', async () => {
+    const { res, body } = await patch({ google_place_id: 'https://www.google.com/maps/place/Kookii+Clean/@48.68,2.5' })
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/lien Google Maps/)
+    expect(updates).toHaveLength(0)
+  })
+
+  it('refuse une valeur contenant un espace', async () => {
+    const { res } = await patch({ google_place_id: 'ChIJ abc def' })
+    expect(res.status).toBe(400)
+    expect(updates).toHaveLength(0)
+  })
+
+  it('accepte un identifiant valide', async () => {
+    await patch({ google_place_id: 'ChIJ3ZJDzvYZ2EURMjh3k2Dj7jQ' })
+    expect(updates[0].google_place_id).toBe('ChIJ3ZJDzvYZ2EURMjh3k2Dj7jQ')
+  })
+
+  it('accepte une valeur vidée (retire la fiche)', async () => {
+    const { res } = await patch({ google_place_id: '' })
+    expect(res.status).toBe(200)
+    expect(updates[0].google_place_id).toBeNull()
   })
 })
 

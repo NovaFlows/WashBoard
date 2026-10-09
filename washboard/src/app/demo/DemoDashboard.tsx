@@ -24,6 +24,7 @@ import AbonnementV2 from '@/components/dashboard/AbonnementV2'
 import GuideV2 from '@/components/dashboard/GuideV2'
 import AssistanceV2 from '@/components/dashboard/AssistanceV2'
 import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
+import { computeSetupProgress } from '@/lib/setupProgress'
 import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import type { SupportThread } from '@/lib/support'
@@ -33,6 +34,14 @@ import type {
   jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo, jeuDeDonneesDocumentsDemo,
   AccueilDemo,
 } from '@/lib/demo/jeuDeDonnees'
+
+// Compte de démo entièrement configuré : la carte « Configuration de votre compte » de
+// Réglages s'affiche à 100 %, comme chez un laveur installé depuis longtemps.
+const PROGRESSION_DEMO = computeSetupProgress({
+  servicesCount: 1, availabilitiesCount: 1, baseAddress: 'Bordeaux', phone: '0681001122',
+  logoUrl: 'demo', googleCalendarConnected: true, reviewsEnabled: true, followupEnabled: true,
+  zoneEnabled: true, smartSlotEnabled: true, welcomeMessage: 'Bienvenue chez Éclat Mobile !',
+})
 
 type Donnees = ReturnType<typeof jeuDeDonneesDemo>
 type AgendaDonnees = ReturnType<typeof jeuDeDonneesAgendaDemo>
@@ -484,7 +493,7 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
         ) : ecranPlus === 'apparence' ? (
           <ApparenceV2 nom={plus.listeBase.nom} slug={plus.slug} initial={plus.apparence} liste={plus.listeBase} />
         ) : ecranPlus === 'reglages' ? (
-          <ReglagesV2 liste={plus.listeBase} />
+          <ReglagesV2 liste={plus.listeBase} progress={PROGRESSION_DEMO} />
         ) : ecranPlus === 'abonnement' ? (
           // Sidebar accordée à Starter elle aussi, comme l'écran 62 de la maquette (le laveur
           // fictif entier y est repassé en Starter, pas seulement le panneau de droite — voir

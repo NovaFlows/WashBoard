@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { materializeRecurring } from '@/lib/materializeRecurring'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
@@ -18,10 +19,13 @@ export async function GET(req: NextRequest) {
 
   await materializeRecurring(supabase, washer.id, `${year}-01-01`, `${year}-12-31`)
 
+  // Client admin pour `bookings` seulement : `authenticated` ne la lit plus.
+  // Le filtre `washer_id` est la seule barrière entre laveurs.
+  const admin = createAdminClient()
   const [bookingsRes, expensesRes] = await Promise.all([
     // Lues page par page : au-delà de 1 000 rendez-vous terminés dans l'année,
     // l'API aurait coupé sans erreur et le bilan aurait été faux.
-    toutesLesLignes((debut, fin) => supabase
+    toutesLesLignes((debut, fin) => admin
       .from('bookings')
       .select('scheduled_at, booked_price, smart_discount, is_smart_slot')
       .eq('washer_id', washer.id)

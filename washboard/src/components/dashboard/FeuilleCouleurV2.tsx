@@ -8,8 +8,8 @@ import { PALETTE } from '@/lib/themes'
 import { COULEUR_PAR_DEFAUT, contrasteInsuffisant, estHorsNuancier } from '@/lib/apparence'
 
 // Couleur de la marque — feuille du bas de l'écran « Apparence de ma page » (PWA).
-// Les 24 couleurs de l'ancien écran, enregistrées au tap (comme lui). Pas de
-// saisie libre : le serveur ne valide pas `brand_color`.
+// Les couleurs du nuancier (`lib/themes.ts`), enregistrées au tap (comme
+// l'ancien écran). Pas de saisie libre : le serveur ne valide pas `brand_color`.
 //
 // Les couleurs sont des DONNÉES du laveur, pas des jetons de l'application : c'est
 // la seule exception à « aucune couleur en dur ». L'anneau de sélection est

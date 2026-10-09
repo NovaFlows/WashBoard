@@ -84,7 +84,15 @@ export async function materializeRecurring(supabase: SupabaseClient, washerId: s
           amount:               template.amount,
           recurring_expense_id: template.id,
         })
-        if (errInsert) logger.error('compta.recurring.insert_failed', { washerId, templateId: template.id, date }, errInsert)
+        if (errInsert) {
+          // 23503 sur CETTE clé précisément : le modèle lu en tête de fonction a été
+          // supprimé entre-temps (un laveur qui matérialise plusieurs mois d'affilée
+          // peut croiser sa propre suppression de la dépense récurrente, faite dans un
+          // autre onglet ou juste avant). Rien à matérialiser pour un modèle qui n'existe
+          // plus : pas une panne, on continue simplement avec le mois suivant.
+          if (errInsert.code === '23503' && errInsert.message.includes('recurring_expense_id')) continue
+          logger.error('compta.recurring.insert_failed', { washerId, templateId: template.id, date }, errInsert)
+        }
       }
     }
   }

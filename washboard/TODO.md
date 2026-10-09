@@ -7,8 +7,10 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-09-21 (audit post-lancement : vitesse, contraste, image de
-> partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
+> Dernière mise à jour : 2026-10-04 (sécurité `bookings` : bascule client admin faite par Ryan
+> et fusionnée sur master, REVOKE RLS toujours en attente ; nouvelle faille trouvée sur
+> `fusionner_clients`/`anonymiser_client`). Avant : 2026-09-21 (audit post-lancement : vitesse,
+> contraste, image de partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
 > facturation électronique ; légal et Stripe live repoussés vers mi-novembre ; landing
 > livrée ; et plus tôt : compte d'essai EssaiAuto à supprimer, blog SEO, centre d'aide,
 > fiche client, forfaits annuels)
@@ -186,83 +188,320 @@
 
 ## 🔴 Priorité haute
 
-- [ ] **🔒 SÉCURITÉ — la policy RLS de `bookings` laisse un laveur lire/écrire TOUTES les colonnes
-      de ses propres réservations en interrogeant Supabase directement, sans passer par le site.**
-      Trouvé le 2026-10-02 par un audit `cyber` pendant le chantier de masquage des réservations
-      verrouillées (voir les 2 entrées ci-dessous). Ce n'est pas du piratage au sens classique :
-      un laveur CONNECTÉ possède déjà tout ce qu'il faut (l'adresse du projet Supabase et la clé
-      publique "anon" sont visibles dans le code source du site pour n'importe qui ; son propre
-      jeton de connexion prouve son identité à Supabase). Avec les outils développeur du
-      navigateur (F12), il peut appeler Supabase directement et récupérer nom/téléphone/adresse/
-      prix en clair sur une réservation que le site, lui, masque correctement — ou pire, écrire
-      `saisie_par_laveur: true` sur une réservation pour la déverrouiller pour de bon, en dehors
-      du quota.
-      **Tant que ce n'est pas corrigé, tout le reste du masquage (ci-dessous) reste cosmétique**
-      pour quiconque sait ouvrir les outils développeur.
-      Correctif proposé par `cyber`, à valider puis donner à `dev` (migration sur la base de prod
-      partagée, donc personne n'y a touché cette nuit) :
-      - Écriture : `REVOKE UPDATE` sur `bookings` pour `authenticated`, puis `GRANT UPDATE` limité
-        aux seules colonnes que le navigateur du laveur écrit réellement (`status`, `notes`,
-        `closed_late`, `scheduled_at`, `google_calendar_event_id`, `review_request_at`…) —
-        `dev` doit d'abord en faire l'inventaire exact.
-      - Lecture : retirer le SELECT des colonnes personnelles à `authenticated`, et servir le
-        dashboard soit via le service-role après masquage (comme le reste du site), soit par une
-        vue/RPC qui masque directement en SQL.
-      À vérifier d'abord en lecture seule (pas lancé) :
-      ```sql
-      select grantee, privilege_type, column_name from information_schema.column_privileges where table_name='bookings' and grantee in ('anon','authenticated');
-      select policyname, cmd, qual, with_check from pg_policies where tablename='bookings';
-      ```
-- [ ] **🔒 Jeton d'accès séparé pour `GET /api/bookings/[id]/pdf`.** Route publique sans session :
+- [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
+      lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
+      directement, sans passer par le site.** Trouvé le 2026-10-02 par un audit `cyber` pendant
+      le chantier de masquage des réservations verrouillées. Ce n'était pas du piratage au sens
+      classique : un laveur CONNECTÉ possédait déjà tout ce qu'il fallait (l'adresse du projet
+      Supabase et la clé publique "anon" sont visibles dans le code source du site pour n'importe
+      qui ; son propre jeton de connexion prouve son identité à Supabase). Avec les outils
+      développeur du navigateur (F12), il pouvait appeler Supabase directement et récupérer
+      nom/téléphone/adresse/prix en clair sur une réservation que le site, lui, masque
+      correctement — ou pire, écrire `saisie_par_laveur: true` pour se déverrouiller pour de bon.
+      **Corrigé en 2 temps, vérifié en conditions réelles :**
+      1. Audit complet (28 fichiers) : toute lecture/écriture serveur de `bookings` qui passait
+         par la session (`authenticated`) bascule vers le client admin, avec filtre `washer_id`
+         explicite partout (l'admin ignore la RLS, ce filtre devient la seule barrière entre
+         laveurs). Nouveau garde-fou automatique `lib/supabase/accesBookings.test.ts` qui scanne
+         le code et fait échouer les tests si `bookings` est un jour relu par la session.
+      2. SQL exécuté en prod le 2026-10-04 :
+         ```sql
+         revoke all on public.bookings from anon, authenticated;
+         grant all on public.bookings to service_role;
+         ```
+      Revérifié après coup : une requête directe à l'API Supabase avec la clé publique renvoie
+      bien `42501 permission denied for table bookings` ; le dashboard (accueil, Clients,
+      Calendrier) continue de fonctionner normalement avec une vraie session.
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — `POST /bookings/[id]/facture` facturait une
+      réservation verrouillée après coup.** `PATCH /bookings/[id]` (qui émet la facture
+      automatiquement au passage en « Terminé ») bloquait déjà une réservation verrouillée ;
+      cette route séparée (facturation manuelle, pour un rendez-vous déjà « Terminé » sans
+      facture) avait été oubliée — pas une nouvelle règle, un simple alignement sur le
+      garde-fou déjà décidé ailleurs. Risque réel : émettre la facture donne au PDF un accès
+      permanent (exception légale « facture déjà émise »), donc contournait le masquage sans
+      même avoir besoin du jeton. Même garde-fou ajouté (`estVerrouillee`/`seuilsVerrouillage`,
+      403 si verrouillée), 3 tests ajoutés (`route.test.ts`), `tsc`/`eslint`/`vitest run`
+      (2426 tests) et `next build` revérifiés.
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — `GET /api/booking-availability` (public, sans
+      session) exposait l'heure exacte de TOUS les créneaux du laveur, y compris ceux
+      verrouillés par le masquage.** Un laveur connaissant son propre id pouvait interroger
+      cette route pour voir l'heure d'un rendez-vous que son dashboard lui cache. **Décision
+      de Ryan** : le masquage doit vraiment frustrer le contournement, pas seulement
+      brouiller le dashboard. Impossible de simplement retirer l'heure comme ailleurs (cette
+      route sert aussi à empêcher un double rendez-vous sur le même créneau) : un rendez-vous
+      verrouillé est maintenant remplacé par un blocage de toute la journée (minuit à minuit,
+      heure de Paris), un seul véhicule, sans options — jamais moins prudent qu'avant,
+      parfois plus (la journée entière devient indisponible au lieu du seul créneau réel).
+      `src/app/api/booking-availability/route.ts` calcule désormais `seuilsVerrouillage` (une
+      lecture `washers` en plus, échoue plutôt que d'exposer en clair si illisible). 4 tests
+      ajoutés (`route.test.ts`), `tsc`/`eslint`/`vitest run` (2430 tests) et `next build`
+      revérifiés.
+      (`create_booking_atomic` : voir plus bas, vérifié sans faille. `api/debug/reviews` et
+      `e2e/cleanup` : déjà fermés en production, voir section Polish/Audit du site.)
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ, POUSSÉ EN PROD — Jeton d'accès séparé pour
+      `GET /api/bookings/[id]/pdf`.** `BOOKING_LINK_SECRET` ajouté sur Vercel (production +
+      preview) et vérifié en prod par Ryan. **Trouvé en testant manuellement en prod** : le fil
+      du jeton n'avait été posé que dans `BookingForm.tsx`/`StepConfirmation.tsx` (la nouvelle
+      page) — `LegacyBookingForm.tsx`/`LegacyStepConfirmation.tsx` (la page personnalisée,
+      utilisée par les 24 comptes laveurs existants, remis sur ce mode par la refonte) n'avaient
+      reçu AUCUN de ces deux fichiers lors de la fusion puisqu'ils ont été créés par la refonte
+      après mon correctif initial. Pas de faille : la route bloquait déjà correctement côté
+      serveur (verrouillée + pas de jeton → 404) quel que soit le composant d'affichage ; seul
+      l'AVANTAGE du jeton (lien qui survit à un verrouillage ultérieur) manquait pour tous les
+      laveurs réels. Même correctif ajouté dans les deux fichiers Legacy, revérifié `tsc`/`eslint`/
+      `vitest run` (2423 tests) et `next build`. Implémenté selon le plan
+      ci-dessous (les 8 étapes), avec deux écarts mineurs documentés dans le diff : jeton en
+      base64url plutôt qu'hex, et un rendez-vous saisi par le laveur lui-même (`isOwner`) ne
+      reçoit jamais de jeton (il n'est de toute façon jamais verrouillé). Revérifié en conditions
+      réelles avec un compte jetable (créé puis supprimé) : id seul sur une réservation
+      verrouillée → 404 ; bon jeton → 200 ; jeton d'une AUTRE réservation → 404 ; réservation
+      dans le quota sans jeton → 200 (les liens déjà envoyés avant ce correctif continuent de
+      marcher) ; facture déjà émise → servie sans bloquer, jeton ou pas.
+      Route publique sans session :
       l'id de réservation sert de clé d'accès pour le VRAI client (confirmation/facture sans
       compte), mais le même id est visible du laveur dans son propre dashboard pour une
       réservation verrouillée — il peut donc récupérer le PDF complet (nom, téléphone, adresse,
       heure, prix) en contournant le masquage. Trouvé par `cyber` le 2026-10-02, en même temps
-      que la policy RLS ci-dessus. Plus délicat qu'un simple garde-fait : la route n'a pas de
-      session, donc impossible de distinguer "le vrai client qui retélécharge son PDF" du
-      "laveur qui contourne le verrouillage" par la seule authentification.
-      Option recommandée par `cyber` : un jeton HMAC (`HMAC-SHA256(secret, id)`), distinct de
-      l'id, envoyé au client UNIQUEMENT (réponse du POST de réservation + les 2 emails client),
-      jamais exposé au laveur. Sans jeton valide, la route refuse si la réservation est
-      verrouillée. Compromis : une nouvelle variable d'env Vercel, et les liens déjà envoyés
-      avant ce correctif casseraient si la réservation est re-verrouillée plus tard par un
-      changement d'offre (à traiter par une exception "facture déjà émise = jamais re-verrouillée
-      côté PDF"). **En attente de décision — rien d'implémenté.**
-- [ ] **Règle métier : annulation puis restauration contourne le quota de réservations
-      verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un laveur peut donc
-      annuler une réservation DANS son quota, ce qui recule le seuil et déverrouille la suivante
-      en clair (il peut même la confirmer), puis repasser l'annulée en "pending" sans effet de
-      bord. Deux appels suffisent. Trouvé par `cyber` le 2026-10-02. **À trancher avec Ryan** :
-      faut-il compter les annulations (au moins celles faites par le laveur lui-même) dans le
-      quota, ou rendre `cancelled` définitif ? **En attente de décision.**
-- [ ] **⚖️ Question légale, à croiser avec `legal` avant tout correctif.** Un laveur qui redescend
-      d'offre peut voir une réservation déjà FACTURÉE se retrouver re-verrouillée a posteriori
-      (le plafond de l'offre actuelle s'applique rétroactivement sur 12 périodes passées). Bloquer
-      l'accès du laveur à sa propre facture se heurte à l'obligation légale de pouvoir la
-      conserver/consulter. Signalé par `cyber` le 2026-10-02 en auditant `POST
-      /bookings/[id]/facture` et `/dashboard/factures` (qui affiche déjà `client_name` sans
-      masque, au passage). **En attente de décision.**
+      que la policy RLS ci-dessus (déjà corrigée). Plus délicat qu'un simple garde-fou : la route
+      n'a pas de session, donc impossible de distinguer "le vrai client qui retélécharge son PDF"
+      du "laveur qui contourne le verrouillage" par la seule authentification.
+      **Décision retenue** (approche `cyber`) : un jeton HMAC, distinct de l'id, envoyé au client
+      UNIQUEMENT, jamais exposé au laveur. **Étapes 1 à 7 implémentées le 2026-10-04 (non
+      commitées)** — `src/lib/bookingToken.ts`, tests verts. **Reste avant de pousser :**
+      `BOOKING_LINK_SECRET` à ajouter sur Vercel (déjà dans `.env.local`), puis l'étape 8
+      (vérification manuelle). Écarts assumés : sans clé, `genererJetonReservation` renvoie
+      `null` (journalisé `bookings.jeton.secret_missing`) au lieu de planter — la réservation
+      aboutit, le lien part sans jeton, et une réservation verrouillée reste refusée ; le POST
+      ne renvoie pas de jeton au laveur qui saisit son propre rendez-vous. Plan d'origine :
 
-- [ ] **Fuites mineures restantes sur le masquage des réservations verrouillées**, trouvées le
-      2026-10-02 (dont 3 confirmées par une vérification Playwright en conditions réelles),
-      non corrigées (touchent plusieurs écrans à la fois, décision de portée à prendre avant
-      correctif plutôt qu'un rustine isolée) :
-      - Le prix/durée/catégorie de la PRESTATION jointe reste lisible sur une réservation
-        verrouillée (le prix du rendez-vous lui-même, `booked_price`, est bien masqué — pas celui
-        de la prestation liée). Correctif probable : ajouter `services: null` au masque central
-        de `reservationsVerrouillees.ts`, à vérifier contre tous les écrans qui l'utilisent.
-      - `dashboard/clients/page.tsx` → les cartes "bloquées" (déjà sans nom) transmettent encore
-        `scheduled_at` en entier au navigateur : l'heure exacte se lit au Ctrl+U malgré l'écran
-        qui ne l'affiche pas. Correctif d'une ligne (même règle "midi UTC" que partout ailleurs).
-      - **`ends_at`** (heure de fin exacte) part en clair sur `/dashboard` : combinée à la durée
-        de la prestation (déjà visible), elle permet de recalculer l'heure de début malgré le
-        masquage. Absent de `MASQUE` dans `reservationsVerrouillees.ts`.
-      - **`lat`/`lng`** (position GPS du client, 7 décimales) part en clair : l'équivalent exact
-        de l'adresse déjà masquée. Rare aujourd'hui (2 réservations sur 124 testées), mais présent
-        dès qu'un client partage sa position au lieu de taper une adresse.
-      - **`travel_fee`** (frais de déplacement) part en clair : donne une idée de la distance au
-        client. Présent sur 50 réservations sur 124 testées.
-      **En attente de décision.**
+      1. **Nouvelle variable d'env serveur** `BOOKING_LINK_SECRET` (longue chaîne aléatoire,
+         jamais `NEXT_PUBLIC_`) — à ajouter en local ET sur Vercel.
+      2. **Nouveau fichier `src/lib/bookingToken.ts`** : `genererJetonReservation(bookingId)` →
+         `crypto.createHmac('sha256', process.env.BOOKING_LINK_SECRET!).update(bookingId).digest('hex')`
+         (ou base64url pour un lien plus court) ; `jetonValide(bookingId, jeton)` qui recalcule et
+         compare (en temps constant, `crypto.timingSafeEqual`, pas `===`, pour éviter une attaque
+         par mesure de temps). Tests unitaires à côté.
+      3. **`src/app/api/bookings/[id]/pdf/route.ts`** (fichier déjà lu, logique exacte connue) :
+         - Passer la signature de `GET(_req: Request, ...)` à `GET(req: Request, ...)` pour lire
+           `new URL(req.url).searchParams.get('jeton')`.
+         - Lire `washer` (déjà fait dans ce fichier pour construire le PDF) + calculer
+           `estVerrouillee()` comme dans `confirmation/[id]/page.tsx` (même pattern à copier).
+         - Si `booking.facture_numero` est déjà rempli → **toujours servir**, jeton ou pas,
+           verrouillée ou pas (exception légale : une facture déjà émise doit rester accessible
+           au client qui en a le droit, variable `facture` déjà calculée dans ce fichier un peu
+           plus bas, réutiliser la même condition).
+         - Sinon, si réservation verrouillée ET (`jeton` absent OU `jetonValide(id, jeton)` faux)
+           → 404 (même comportement que `confirmation/[id]`).
+         - Sinon → comportement actuel inchangé.
+      4. **`POST /api/bookings`** (`src/app/api/bookings/route.ts`) : ajouter `jeton:
+         genererJetonReservation(id)` dans la réponse JSON (`{ data: { id, booked_price } }`
+         actuellement — regarder la forme exacte avant de modifier, ne pas casser ce qui lit déjà
+         cette réponse côté client).
+      5. **`src/components/booking/StepConfirmation.tsx:92`** : le lien `href` du bouton PDF
+         devient `/api/bookings/${bookingId}/pdf?jeton=${jeton}` (le jeton vient de la réponse du
+         POST, à faire remonter dans le state du composant parent si ce n'est pas déjà le cas).
+      6. **`src/lib/email/index.ts`**, deux endroits précis à corriger (grep `/pdf` fait le
+         2026-10-04, lignes approximatives, à revérifier avant de patcher) :
+         - ligne ~179 (`pdfUrl` de l'email de confirmation)
+         - ligne ~422 (`url` de l'email de facture)
+         Les deux fonctions reçoivent déjà `bookingId` : leur ajouter un paramètre `jeton` (jamais
+         optionnel, pour qu'un oubli d'appel casse à la compilation plutôt qu'en silence) et
+         construire `${url}?jeton=${jeton}`. **Ne pas toucher** à la ligne ~485
+         (`/api/documents/[id]/pdf`, route différente, hors de ce chantier).
+      7. **Tests** à ajouter/adapter : route PDF (jeton valide + verrouillée → 200 ; jeton invalide
+         + verrouillée → 404 ; sans jeton + verrouillée → 404 ; sans jeton + PAS verrouillée → 200,
+         comportement actuel préservé ; facture déjà émise → 200 dans tous les cas) ; génération/
+         vérification du jeton (`bookingToken.test.ts`) ; les deux fonctions email (le jeton
+         apparaît bien dans l'URL envoyée).
+      8. **Vérification manuelle avant de pousser** : créer une réservation de test, vérifier que
+         le bouton PDF de l'écran de confirmation fonctionne, vérifier que les emails contiennent
+         bien `?jeton=`, vérifier qu'un lien SANS jeton sur cette même réservation échoue une fois
+         qu'elle devient verrouillée (compte de test au-delà du quota).
+
+      Compromis déjà acceptés, à ne pas rouvrir : les liens déjà envoyés AVANT ce correctif
+      n'ont pas de jeton — ils cassent si la réservation est re-verrouillée plus tard par un
+      changement d'offre, SAUF si une facture a déjà été émise (couvert par le point 3). C'est
+      un compromis assumé, pas un oubli.
+- [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — `fusionner_clients` et `anonymiser_client`
+      (fonctions RGPD) exécutables par n'importe quel compte connecté, SANS vérifier que le
+      `washer_id` passé en paramètre appartient à l'appelant.** Trouvé par `cyber` en marge de
+      l'audit `bookings` ci-dessus — plus grave que lui, puisque destructeur et inter-laveurs
+      (pas juste de la lecture) : n'importe quel laveur connecté pouvait fusionner ou anonymiser
+      les clients d'un AUTRE laveur, pour peu qu'il connaisse un email/téléphone client (le
+      `washer_id` cible, lui, est public). Corrigé par un garde-fou ajouté au début des deux
+      fonctions (`if not exists (select 1 from washers where id = p_washer_id and user_id =
+      auth.uid()) then raise exception`), plus un `revoke execute ... from public, anon` (ces
+      fonctions héritaient par défaut du droit d'exécution Supabase pour tout le monde, pas
+      seulement `authenticated`). Un vrai bug indépendant trouvé au passage dans
+      `fusionner_clients` et corrigé dans le même SQL : fusionner vers une fiche identifiée par
+      téléphone (sans email) pouvait effacer le contenu JSON de devis/factures du client
+      (`jsonb_set` qui reçoit un `NULL`). SQL complet dans l'historique de conversation du
+      2026-10-04. **Vérifié en conditions réelles** avec deux comptes jetables : un laveur qui
+      cible le `washer_id` d'un autre reçoit `42501 Accès refusé`, les données de la victime ne
+      bougent pas, et l'usage légitime (un laveur sur ses propres clients) continue de marcher.
+- [x] 2026-10-04 — **Vérifié, PAS de faille — `create_booking_atomic`, `emettre_facture`,
+      `emettre_document` n'ont ni `anon_exec` ni `auth_exec`** (requête `pg_proc` lancée par
+      Ryan). L'hypothèse de `cyber` ne se vérifiait pas pour ces trois-là : fausse alerte,
+      rien à corriger.
+- [x] 2026-10-04 — **Hygiène, FAIT — `rls_auto_enable` et `support_messages_touch_question`
+      n'ont plus le droit `EXECUTE` par défaut pour `anon`/`authenticated`.** Confirmées
+      `event_trigger`/`trigger` par la requête `pg_proc` (lecture seule) exécutée par Ryan,
+      puis les deux `revoke` ci-dessous exécutés par Ryan. Étaient trouvées dans la même requête
+      `pg_proc` que ci-dessus, en marge de la vérification de `create_booking_atomic`. Toutes
+      deux `SECURITY DEFINER`, sans paramètre. Analysées par `cyber` le 2026-10-04 : presque
+      certainement sans danger, ce sont des fonctions de DÉCLENCHEUR (`RETURNS trigger` /
+      `event_trigger`), que Postgres refuse d'appeler directement hors d'un trigger réel, donc
+      le droit `EXECUTE` large ne sert à rien à un attaquant.
+      - `support_messages_touch_question` : la nôtre, SQL retrouvé dans l'historique de
+        conversation (commit `717168f`, 17/09) — met à jour `support_questions` à l'insertion
+        d'un message, rattachée au trigger `trg_support_messages_touch_question`.
+      - `rls_auto_enable` : pas écrite par l'équipe — c'est l'aide que Supabase crée tout seul
+        quand on active "RLS automatique sur les nouvelles tables" dans le tableau de bord
+        (déclenchée par l'event trigger `ensure_rls`). À garder, elle protège par défaut toute
+        table oubliée.
+      **Pas urgent, mais à nettoyer par hygiène** (ne casse rien, fait taire le conseiller
+      sécurité de Supabase). Vérifier d'abord en lecture seule que le type de retour est bien
+      `trigger`/`event_trigger` :
+      ```sql
+      select p.proname, pg_get_function_result(p.oid) as returns, p.prosecdef,
+             pg_get_userbyid(p.proowner) as owner, pg_get_functiondef(p.oid) as definition
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname in ('rls_auto_enable', 'support_messages_touch_question');
+      ```
+      Puis, si confirmé :
+      ```sql
+      revoke execute on function public.rls_auto_enable()                 from public, anon, authenticated;
+      revoke execute on function public.support_messages_touch_question() from public, anon, authenticated;
+      ```
+      (le `from public` est nécessaire en plus de `anon`/`authenticated` : le droit vient de
+      `PUBLIC` par défaut, un revoke sans ce mot-clé laisserait les deux rôles en hériter).
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — annulation puis restauration contournait le quota
+      de réservations verrouillées.** Le quota mensuel exclut les réservations `cancelled`. Un
+      laveur pouvait donc annuler une réservation DANS son quota, ce qui reculait le seuil et
+      déverrouillait la suivante en clair (il pouvait même la confirmer), puis repasser l'annulée
+      en "pending" sans effet de bord. Deux appels suffisaient. Trouvé par `cyber` le 2026-10-02.
+      **Décision de Ryan** : rendre `cancelled` définitif plutôt que de compter les annulations
+      dans le quota (qui pénaliserait un laveur pour une annulation faite par son CLIENT). Vérifié
+      au préalable qu'aucun écran du dashboard ne permet de "désannuler" une réservation — la
+      fonctionnalité n'existait nulle part, le correctif ne retire donc rien. `PATCH
+      /bookings/[id]` refuse désormais (409) tout changement de statut une fois `cancelled`. 3
+      tests unitaires ajoutés (`route.test.ts`), plus un test Playwright de bout en bout
+      (`e2e/dashboard-annulation.spec.ts`, réservation créée par le vrai parcours public, id
+      capturé depuis la réponse réseau, contournement reproduit avec la vraie session laveur) —
+      non exécutable dans cet environnement (pas d'identifiants `TEST_WASHER_*`), à lancer côté
+      Ryan. `tsc`/`eslint`/`vitest run` (2433 tests) et `next build` revérifiés.
+- [x] 2026-10-04 — **🔒 CORRIGÉ, VÉRIFIÉ — un laveur qui redescend d'offre pouvait voir une
+      réservation déjà FACTURÉE se retrouver re-verrouillée a posteriori** (le plafond de l'offre
+      actuelle s'applique rétroactivement sur 12 périodes passées). Signalé par `cyber` le
+      2026-10-02 en auditant `POST /bookings/[id]/facture` et `/dashboard/factures` (qui affiche
+      déjà `client_name` sans masque, au passage — une incohérence, pas un trou RGPD).
+      **Analyse `legal`** : le laveur a une obligation de conservation de ses factures (10 ans,
+      Code de commerce art. L123-22 ; 6 ans côté délai de reprise fiscal, LPF art. L102 B) : un
+      accès rompu l'expose à perdre une pièce justificative — risque de service pour WashBoard,
+      pas un problème RGPD direct (le PDF, pas l'écran dashboard, porte les mentions légales de
+      facturation). Masquer le nom ailleurs dans le produit tant que la facture reste accessible
+      n'est pas un souci de conformité, mais n'a plus non plus de justification commerciale une
+      fois la prestation facturée (et potentiellement déjà réglée) — le masquage ne sert qu'à
+      inciter à upgrader AVANT facturation. **Recommandation retenue** : toute réservation
+      déjà facturée (`facture_numero` non nul) est exemptée du verrouillage PARTOUT, pas
+      seulement sur la route PDF — aligne le détail réservation sur le comportement déjà existant
+      de la liste factures, au lieu de l'inverse. Corrigé dans `estVerrouillee()`
+      (`reservationsVerrouillees.ts`), le point central déjà utilisé par tous les écrans ;
+      `facture_numero` ajouté à la liste de colonnes lue par les 4 endroits qui ne
+      sélectionnaient pas déjà `*` (`booking-availability`, `bookings/jour`,
+      `clients/page.tsx`, `clients/messages/page.tsx`). Au passage, fuite corrigée dans
+      `booking-availability` (créée par mon propre correctif du jour) : `created_at` et
+      `saisie_par_laveur`, nécessaires au calcul mais jamais prévus dans la réponse, fuitaient
+      dans le JSON renvoyé au visiteur public — la route ne renvoie plus que les 4 champs
+      documentés, verrouillé ou pas. 6 tests ajoutés (`reservationsVerrouillees.test.ts`,
+      `bookings/jour/route.test.ts`, `booking-availability/route.test.ts`),
+      `tsc`/`eslint`/`vitest run` (2449 tests) et `next build` revérifiés. **Vérifié en
+      conditions réelles** par `e2e/security-facture-exemption.spec.ts` (nouveau projet
+      Playwright `security`) : compte jetable créé et authentifié via le service-role (pas
+      `TEST_WASHER_*`, supprimé après coup), 5 réservations dans le quota + une 6ᵉ au-delà
+      déjà facturée + une 7ᵉ témoin sans facture — exécuté en local, les deux assertions
+      passent (la facturée reste en clair, la témoin reste masquée), nettoyage vérifié (plus
+      aucune trace en base après coup).
+- [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
+      elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
+      ci-dessus. **Analyse `legal` reçue le 2026-10-04, rien codé ni poussé — gros sujet,
+      à reprendre à tête reposée plutôt qu'en fin de session.** Décision de Ryan : on
+      implémente la partie sans ambiguïté, on suspend l'autre (ci-dessous) en attendant un
+      vrai expert-comptable.
+
+      **À effacer, sans ambiguïté (feu vert `legal`, prêt à coder)** :
+      - `bookings` : `lat`, `lng` (position GPS exacte du domicile), `billing_address`,
+        `vehicles_detail` (saisi par le CLIENT à la réservation, pas une note libre du
+        laveur — traité comme nom/email/téléphone, pas comme la limite ci-dessous).
+      - `documents` : `contenu.prestation.lieu` (la même adresse que `adresseFacturation`,
+        qui elle EST déjà effacée — vraie incohérence, pas un choix), `contenu.client.vehicule`.
+      - `client_taches` (pense-bêtes du laveur liés à ce client) : à supprimer EN MÊME TEMPS
+        que la fiche, dans la même fonction, juste avant le `delete from clients`. Contrairement
+        à la limite déjà actée le 2026-09-28 (notes/véhicules en texte libre qui pourraient
+        mentionner un nom — acceptée, pas à rouvrir), ces tâches n'ont AUCUNE autre raison
+        d'exister que ce client précis : plus de base légale de conservation une fois la fiche
+        effacée.
+      - `client_rgpd_journal.cle` (conserve aujourd'hui l'email/téléphone EN CLAIR après
+        l'anonymisation — le journal censé PROUVER l'effacement garde la donnée effacée) :
+        remplacer par un **HMAC-SHA256** avec une clé secrète serveur (même principe que
+        `BOOKING_LINK_SECRET`, voir `lib/bookingToken.ts`), jamais un hash simple (cassable
+        par dictionnaire sur un email). **Calculer le HMAC côté TypeScript** (nouveau
+        `lib/rgpdHash.ts`, nouvelle variable d'env type `RGPD_JOURNAL_HASH_SECRET`) et le
+        passer en paramètre à la fonction SQL plutôt que de gérer un secret dans Postgres —
+        cohérent avec tout le reste du produit. Implique : renommer la colonne `cle` en
+        `cle_hash` dans `client_rgpd_journal`, modifier la signature de `anonymiser_client`
+        pour recevoir `p_cle_hash` en plus de `p_cle`, mettre à jour l'appelant TypeScript
+        (route qui déclenche l'anonymisation).
+      - **Oubli signalé par `legal` à ne pas ignorer** : les lignes DÉJÀ écrites dans
+        `client_rgpd_journal` avant ce correctif contiennent encore l'email/téléphone en
+        clair — une fois le secret HMAC choisi, il faudra aussi migrer ces lignes
+        existantes (recalculer leur hash avec le même secret), pas seulement corriger la
+        fonction pour l'avenir.
+
+      **Suspendu — PAS une décision produit, à trancher avec un expert-comptable
+      (Alexandre)** : `bookings.company_name`/`.siret` et `documents.client.entreprise`/
+      `.siren`. Une facture B2B peut avoir une obligation légale d'identifier l'acheteur
+      professionnel (mentions obligatoires) ; les effacer rétroactivement sur une facture
+      déjà émise pourrait fragiliser sa conformité fiscale. Ne pas toucher à ces 4 champs
+      tant que ce point n'est pas confirmé.
+
+      SQL de départ fourni par `legal` (à affiner, pas une version validée pour la prod) :
+      ```sql
+      -- UPDATE bookings : ajouter à l'UPDATE existant
+      set lat = null,
+          lng = null,
+          billing_address = 'Adresse supprimée',
+          vehicles_detail = '[]'::jsonb
+          -- company_name/siret : SUSPENDU, voir ci-dessus
+
+      -- UPDATE documents : ajouter aux jsonb_set imbriqués existants
+      '{prestation,lieu}'   -> to_jsonb('Adresse supprimée'::text)
+      '{client,vehicule}'   -> 'null'::jsonb
+      -- client.entreprise/client.siren : SUSPENDU, voir ci-dessus
+
+      -- client_taches : avant le "delete from clients"
+      delete from public.client_taches where washer_id = p_washer_id and cle = p_cle;
+
+      -- client_rgpd_journal : cle -> cle_hash (calculé en TypeScript, passé en paramètre)
+      -- + migration des lignes déjà écrites en clair avec le même secret, une fois choisi.
+      ```
+
+- [x] 2026-10-04 — **4 des 5 fuites mineures corrigées, vérifiées.** Trouvées le 2026-10-02
+      (dont 3 confirmées par une vérification Playwright en conditions réelles) :
+      - `dashboard/clients/page.tsx` → les cartes "bloquées" (déjà sans nom) ne transmettent plus
+        `scheduled_at` en entier : tronqué au jour (midi UTC), même règle que `dashboard/page.tsx`.
+      - **`ends_at`**, **`lat`/`lng`** et **`travel_fee`** ajoutés au masque central (`MASQUE`
+        dans `reservationsVerrouillees.ts`) — réparé en un seul endroit pour tous les écrans qui
+        l'utilisent (`dashboard`, `calendrier`, `clients`, `clients/messages`, `crm`, `chiffres`,
+        `/api/bookings/jour`, `/api/bookings/historique`).
+      - Vérifié : tsc, eslint (0 erreur), vitest run (2451 tests, 2 nouveaux), 7 tests Playwright,
+        next build en NODE_ENV=production.
+      **Volontairement pas corrigé maintenant, à la demande d'Alexandre** : le prix/durée/
+      catégorie de la PRESTATION jointe reste lisible sur une réservation verrouillée (le prix du
+      rendez-vous lui-même, `booked_price`, est bien masqué — pas celui de la prestation liée).
+      Correctif probable : ajouter `services: null` au masque central, à vérifier contre tous les
+      écrans qui l'utilisent (certains pourraient mal gérer une relation `services` soudainement
+      nulle). **En attente.**
 
 - [x] 2026-09-27 — **Les factures écrites à la main comptent dans le chiffre d'affaires**, mais
       seulement PAYÉES (choix d'Alexandre : « quand un devis se transforme en facture on met un
@@ -280,21 +519,19 @@
       `facture` (avec leur PDF, `/api/documents/:id/pdf`) pour que la suite se relise d'un bout
       à l'autre. Écran encore v1 : à traiter en même temps que sa refonte.
 
-- [ ] **AVANT LE 5 OCTOBRE 2026 — Quota Supabase dépassé.** Bandeau vu le 2026-09-14 dans
-      le tableau de bord Supabase : « Organization exceeded its quota in the previous billing
-      cycle. Projects will be restricted from 05 Oct, 2026 if your organization remains over
-      quota. » Une restriction couperait les pages de réservation de tous les laveurs.
-  - Mesuré le 2026-09-14 (lecture seule) : base **14 Mo**, fichiers stockés **2,1 Mo**
-    (fonds 1,6 Mo dont un de 510 Ko, logos 0,5 Mo). Loin des limites : le dépassement est
-    très probablement la **bande passante sortante** (egress).
-  - Cause probable : les fonds et logos téléversés sont servis **directement depuis
-    Supabase** (`getBgStyle` met l'URL publique dans un `background-image`), à chaque visite
-    d'une page de réservation, sans cache Vercel. La vidéo TikTok virale du 2026-09-04 a
-    multiplié les visites.
-  - À faire : (1) confirmer le poste en cause sur la page Usage de l'organisation Supabase ;
-    (2) servir fonds et logos via l'optimisation d'images de Next (`/_next/image`, mise en
-    cache par Vercel, ~5× plus légers) ; (3) vérifier que l'organisation n'a pas d'autre
-    projet qui consomme ; (4) si besoin, passer en offre Pro Supabase avant le 5 octobre.
+- [x] 2026-10-04 — **Quota Supabase : désamorcé par le passage en offre Pro.** Alerte vue le
+      2026-09-14 : « Organization exceeded its quota... Projects will be restricted from 05 Oct,
+      2026 if your organization remains over quota. » **Vérifié aujourd'hui dans Billing** :
+      organisation sur **Pro Plan**, facture d'octobre (25 €) **payée le 2026-10-01**, les 7
+      dernières factures affichent toutes « PAID ». Le risque de coupure pure et simple n'existe
+      donc plus. Point qui reste vrai, structurellement, tant que le **spend cap** reste activé
+      (réglage volontaire : jamais facturé en plus du forfait, mais projet qui peut ralentir ou
+      passer en lecture seule en cas de dépassement du quota inclus — pas une coupure pour
+      impayé). Mesuré fin septembre (mémoire projet) : consommation retombée à 6 % du quota —
+      le risque semble loin aujourd'hui, mais pas nul tant que le spend cap reste activé.
+      Les causes probables identifiées le 2026-09-14 restent valables si la consommation
+      remonte : fonds/logos servis directement depuis Supabase (`getBgStyle`, sans passer par
+      l'optimisation d'images Next/cache Vercel), amplifiés par un pic de trafic viral.
 
 - [ ] **Audit post-lancement du 2026-09-21 (liste « 20 points à vérifier » vue sur TikTok).**
       Fait par Ryan, en lecture seule, sur www.washboard.fr et le code à jour. **15 points
@@ -649,6 +886,55 @@
     (🚗 ✅, utiles au laveur dans son agenda), close-buttons ✕/✓ (glyphes monochromes).
   - [x] 2026-06-30 — `pdf/BookingPDF.tsx` : c'était juste un ★ typographique
         (« ★ Créneau optimisé »), pas un emoji couleur → conservé, OK.
+
+## 🧩 Tickets permanents — Guide/tuto & Landing page (ne se ferment jamais)
+
+Deux catégories qui restent ouvertes en continu plutôt que cochées une fois pour
+toutes : chaque nouvelle fonctionnalité du produit peut mériter une ligne sur la
+landing (nouvel argument de vente) ou dans le guide/tuto (nouvelle chose à
+expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
+🔴/🟡 où elles se perdraient une fois cochées.
+
+### 📣 Landing page
+
+- [ ] **Mentionner le suivi des campagnes Meta (Ads)** — demande de Ryan,
+      2026-10-05. La fonctionnalité existe déjà en dashboard
+      (`/dashboard/clients/publicites`, derrière `hasFeature(washer, 'campagnes')`
+      — suivi du pixel Meta, rattachement des réservations à une campagne) mais
+      n'est mentionnée NULLE PART sur `LandingPage.tsx` — aucune occurrence de
+      « Meta », « campagne » ou « publicité » dans tout le fichier. **Rapide à
+      faire** : pas de nouveau composant, juste une ligne d'argument à ajouter
+      dans une liste de features existante (voir par ex. la section « 3 features
+      secondaires » déjà présente, même traitement en colonnes). Reste à écrire
+      le texte exact et choisir où l'insérer (section dédiée, ou glissée parmi
+      les features existantes) — à trancher avec Ryan/Alexandre, pas un choix
+      technique.
+- [x] 2026-10-05 — **« Trou » visuel à côté du +40 rendez-vous/mois** — signalé
+      par Ryan, qui ne savait plus si c'était déjà traité. **Déjà géré** : un
+      correctif précédent a ajouté la grille de 3 colonnes juste sous le calcul
+      (« Tu hésites encore ? » / « Autre effet du +40 » / « Ce qui ne change
+      jamais ») précisément pour combler ce vide (voir le commentaire dans
+      `LandingPage.tsx` : « rangés sous le calcul plutôt que dans une seule
+      carte compagne qui laissait trop de vide »). Rien à faire, confirmé en
+      relisant le code le 2026-10-05.
+
+### 📖 Guide / tuto
+
+- [ ] **Tuto PWA à l'installation, avec animation d'assombrissement façon
+      vraie application** — demande de Ryan, 2026-10-05, vient compléter
+      l'item déjà existant plus bas (« Tuto PWA à la première installation de
+      l'application », section Refonte 2026) : même besoin produit, mais avec
+      une exigence visuelle précise en plus — un overlay qui assombrit l'écran
+      autour de l'élément mis en avant (spotlight), comme les tutoriels des
+      applications natives (Instagram, etc.), pas une simple bulle/tooltip.
+      **Plus lent à faire que les deux items landing ci-dessus** : ce motif
+      visuel n'existe PAS encore dans le code (vérifié : `VisiteGuidee.tsx`,
+      la visite guidée du tableau de bord, n'a ni fondu ni overlay assombri —
+      juste une carte/bulle classique) — il faudrait le construire de zéro,
+      PUIS définir le contenu exact (barre de nav du bas, bouton central,
+      geste retour, menu « Plus ») qui est lui-même encore « à préciser avec
+      Alexandre avant de lancer » selon l'item original. Deux chantiers
+      empilés (le motif visuel + le contenu), ni l'un ni l'autre commencé.
 
 ## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
 

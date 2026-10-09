@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import Publicites from '@/components/dashboard/Publicites'
@@ -49,7 +50,7 @@ export default async function PublicitesPage() {
     )
   }
 
-  const { campagnes, indisponible } = await chargerCampagnes(supabase, washer.id)
+  const { campagnes, indisponible } = await chargerCampagnes(supabase, createAdminClient(), washer.id)
 
   return coque(
     <Publicites

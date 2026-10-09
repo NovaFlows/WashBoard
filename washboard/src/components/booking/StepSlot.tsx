@@ -5,7 +5,8 @@ import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse } from '@/lib/slots'
-import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
+import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
+import BookingAction from './BookingAction'
 import { toDateStr } from '@/lib/dateUtils'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
@@ -35,11 +36,13 @@ type Props = {
    *  demandé. */
   reservationJourMeme?: boolean
   onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
-  onBack: () => void
+  initialAddress?: string
+  active: boolean
+  actionTarget: HTMLElement | null
+  onDraft: (data: { address: string; scheduled_at?: string; travel_fee?: number; is_smart_slot: boolean; smart_discount: number }) => void
   accent?: string
 }
 
-const DAY_NAMES   = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTH_NAMES = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc']
 
 /** En-têtes de la grille, semaine commençant le lundi (usage français). */
@@ -74,11 +77,11 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
-  const [address,           setAddress]           = useState('')
+  const [address,           setAddress]           = useState(initialAddress)
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
   const [zoneAllowed,       setZoneAllowed]       = useState(true)
   const [zoneMessage,       setZoneMessage]       = useState<string | null>(null)
@@ -91,8 +94,10 @@ export default function StepSlot({
   const [smartDiscountType,  setSmartDiscountType]  = useState<'fixed' | 'percent'>('fixed')
   const [smartDiscountValue, setSmartDiscountValue] = useState(0)
   const [fetchingSmarts,     setFetchingSmarts]     = useState(false)
-  const [morningVisible,     setMorningVisible]     = useState(6)
-  const [afternoonVisible,   setAfternoonVisible]   = useState(6)
+  const [visibleSlots, setVisibleSlots] = useState(6)
+  const [fetchingZone, setFetchingZone] = useState(false)
+  const [requestError, setRequestError] = useState<string | null>(null)
+  const [retry, setRetry] = useState(0)
   // Fenêtre réservable : d'aujourd'hui (si le laveur l'a activé) ou de
   // demain, à l'horizon que le serveur accepte.
   const [premierJour] = useState(() => {
@@ -113,7 +118,6 @@ export default function StepSlot({
   // ne doit pas demander sept clics sur la flèche.
   const [choixDateOuvert, setChoixDateOuvert] = useState(false)
 
-  const SLOTS_PER_PAGE = 6
 
   // Debounce address changes (800 ms) to avoid spamming the API
   useEffect(() => {
@@ -121,77 +125,62 @@ export default function StepSlot({
     return () => clearTimeout(t)
   }, [address])
 
-  // Vérification de zone dès que l'adresse change (sans attendre la date)
+  // Ignorer les anciennes réponses : adresse/date modifiées pendant une requête.
   useEffect(() => {
-    if (debouncedAddress.trim().length <= 5) {
-      setZoneAllowed(true)
-      setZoneMessage(null)
-      setTravelFeeEstimate(null)
-      return
-    }
+    if (!active || debouncedAddress.trim().length <= 5) return
+    let stale = false
+    setFetchingZone(true)
+    setZoneAllowed(false)
+    setZoneMessage(null)
     fetch(`/api/zone/check?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}`)
-      .then(r => r.json())
-      .then((data: { allowed: boolean; distance_km?: number; radius_km?: number; department?: string; department_name?: string }) => {
-        setZoneAllowed(data.allowed)
-        if (!data.allowed) {
-          setZoneMessage("Adresse hors zone d'intervention")
-        } else {
-          setZoneMessage(null)
-        }
-      })
-      .catch(() => { setZoneAllowed(true); setZoneMessage(null) })
-  }, [debouncedAddress, washerId])
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(data => { if (!stale) { setZoneAllowed(data.allowed === true); setZoneMessage(data.allowed ? null : 'Adresse hors zone d’intervention') } })
+      .catch(() => { if (!stale) { setZoneAllowed(false); setZoneMessage('Impossible de vérifier cette adresse. Réessayez.') } })
+      .finally(() => { if (!stale) setFetchingZone(false) })
+    return () => { stale = true }
+  }, [debouncedAddress, washerId, active, retry])
 
-  // Calcul des frais de déplacement estimés
-  // Mode 'base'     → dès que l'adresse est saisie
-  // Mode 'previous' → attend que date+heure soient sélectionnées pour trouver le bon RDV précédent
   useEffect(() => {
-    const addressReady = debouncedAddress.trim().length > 5
-    const needsSlot    = travelFeeMode === 'previous'
-    const slotReady    = !!(selectedDate && selectedTime)
-
-    if (!hasTravelFee || !addressReady || (needsSlot && !slotReady)) {
+    if (!active || !hasTravelFee || debouncedAddress.trim().length <= 5 || (travelFeeMode === 'previous' && !(selectedDate && selectedTime))) {
       setTravelFeeEstimate(null)
+      setFetchingTravelFee(false)
       return
     }
-
-    let scheduledAtParam = ''
+    let stale = false
+    let scheduled = ''
     if (selectedDate && selectedTime) {
-      const [h, m] = selectedTime.split(':').map(Number)
       const dt = new Date(selectedDate)
+      const [h, m] = selectedTime.split(':').map(Number)
       dt.setHours(h, m, 0, 0)
-      scheduledAtParam = `&scheduled_at=${encodeURIComponent(dt.toISOString())}`
+      scheduled = '&scheduled_at=' + encodeURIComponent(dt.toISOString())
     }
-
+    setTravelFeeEstimate(null)
     setFetchingTravelFee(true)
-    fetch(`/api/travel-fee?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}${scheduledAtParam}`)
-      .then(r => r.json())
-      .then((data: { fee: number }) => setTravelFeeEstimate(data.fee))
-      .catch(() => setTravelFeeEstimate(null))
-      .finally(() => setFetchingTravelFee(false))
-  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode])
+    fetch(`/api/travel-fee?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}${scheduled}`)
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(data => { if (!stale) setTravelFeeEstimate(typeof data.fee === 'number' ? data.fee : null) })
+      .catch(() => { if (!stale) setTravelFeeEstimate(null) })
+      .finally(() => { if (!stale) setFetchingTravelFee(false) })
+    return () => { stale = true }
+  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, active, retry])
 
   useEffect(() => {
-    if (!selectedDate || debouncedAddress.trim().length <= 5) {
-      setSmartWindows([])
-      setBookingConstraints([])
-      return
-    }
-    // Utiliser la date locale (pas UTC) pour éviter le décalage horaire
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const dateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`
+    if (!active || !selectedDate || debouncedAddress.trim().length <= 5) return
+    let stale = false
     setFetchingSmarts(true)
-    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${dateStr}`)
-      .then(r => r.json())
-      .then(data => {
+    setRequestError(null)
+    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${toDateStr(selectedDate)}`)
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(data => { if (!stale) {
         setSmartWindows(data.smartWindows ?? [])
         setBookingConstraints(data.bookingConstraints ?? [])
         setSmartDiscountType(data.discountType ?? 'fixed')
         setSmartDiscountValue(data.discountValue ?? 0)
-      })
-      .catch(() => { setSmartWindows([]); setBookingConstraints([]) })
-      .finally(() => setFetchingSmarts(false))
-  }, [selectedDate, debouncedAddress, washerId])
+      } })
+      .catch(() => { if (!stale) { setSmartWindows([]); setBookingConstraints([]); setRequestError('Impossible de vérifier les horaires. Réessayez.') } })
+      .finally(() => { if (!stale) setFetchingSmarts(false) })
+    return () => { stale = true }
+  }, [selectedDate, debouncedAddress, washerId, active, retry])
 
   const availableDaysOfWeek = availabilities.map(a => a.day_of_week)
 
@@ -210,24 +199,10 @@ export default function StepSlot({
     return availableDaysOfWeek.includes(d.getDay()) && !isDateUnavailable(d)
   }
 
-  /** Jour réservable suivant (1) ou précédent (-1), en sautant les jours
-   *  fermés : une flèche doit faire avancer, pas tomber sur « aucun créneau ». */
-  function jourVoisin(sens: 1 | -1): Date | null {
-    if (!selectedDate) return null
-    const d = new Date(selectedDate)
-    for (let i = 0; i <= BOOKING_HORIZON_DAYS; i++) {
-      d.setDate(d.getDate() + sens)
-      if (d < premierJour || d > dernierJour) return null
-      if (estReservable(d)) return new Date(d)
-    }
-    return null
-  }
-
   function choisirJour(d: Date) {
     setSelectedDate(d)
     setSelectedTime(null)
-    setMorningVisible(6)
-    setAfternoonVisible(6)
+    setVisibleSlots(6)
     setChoixDateOuvert(false)
   }
 
@@ -235,11 +210,6 @@ export default function StepSlot({
   const moisMax = new Date(dernierJour.getFullYear(), dernierJour.getMonth(), 1)
   const moisPrecedentPossible = moisAffiche > moisMin
   const moisSuivantPossible   = moisAffiche < moisMax
-  const montrerCalendrier = !selectedDate || choixDateOuvert
-  // Calculés une fois : `jourVoisin` parcourt le calendrier jour par jour.
-  const jourPrecedent = montrerCalendrier ? null : jourVoisin(-1)
-  const jourSuivant   = montrerCalendrier ? null : jourVoisin(1)
-
   const effectiveTeamSize = selectedDate ? getEffectiveTeamSize(selectedDate) : teamSize
 
   const overlapBookings = existingBookings.map(b => ({
@@ -268,330 +238,81 @@ export default function StepSlot({
   // Si le créneau sélectionné est devenu infaisable (contraintes de trajet chargées après),
   // on le désélectionne pour éviter qu'un client valide un RDV physiquement impossible.
   useEffect(() => {
-    if (selectedTime && slotsForDay.length > 0 && !slotsForDay.includes(selectedTime)) {
+    if (selectedTime && !fetchingSmarts && !slotsForDay.includes(selectedTime)) {
       setSelectedTime(null)
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
-  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, smartWindows)) : slotsForDay
+  // Montrer les premières heures et jusqu'à deux créneaux avantageux sans
+  // imposer une longue grille ; toutes les autres heures restent accessibles.
+  const shownSlots = [...new Set([...smartSlotsInDay.slice(0, 2), ...slotsForDay])].slice(0, visibleSlots).sort()
+  const addressReady = address.trim().length > 5 && address === debouncedAddress
+  const busy = fetchingZone || fetchingTravelFee || fetchingSmarts || !addressReady
+  const isSmart = !!(selectedDate && selectedTime && isSlotInWindows(selectedTime, selectedDate, smartWindows))
+  const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
+  const fee = hasTravelFee ? travelFeeEstimate ?? undefined : 0
+  const canContinue = !!(selectedDate && selectedTime && slotsForDay.includes(selectedTime) && addressReady && zoneAllowed && !busy && !requestError && fee !== undefined)
+  const scheduledAt = selectedDate && selectedTime ? (() => {
+    const dt = new Date(selectedDate); const [h, m] = selectedTime.split(':').map(Number); dt.setHours(h, m, 0, 0); return dt.toISOString()
+  })() : undefined
+  useEffect(() => {
+    if (active) onDraft({ address, scheduled_at: canContinue ? scheduledAt : undefined, travel_fee: addressReady ? fee : undefined,
+      is_smart_slot: addressReady && isSmart, smart_discount: addressReady ? discount : 0 })
+  }, [active, address, addressReady, scheduledAt, canContinue, fee, isSmart, discount, onDraft])
 
-  const smartPrice = computeSmartPrice(servicePrice, { type: smartDiscountType, value: smartDiscountValue })
-  const smartPriceStr = Number.isInteger(smartPrice) ? String(smartPrice) : smartPrice.toFixed(2)
-
-  const canContinue = selectedDate && selectedTime && address.trim().length > 5 && zoneAllowed
-
-  function handleNext() {
-    if (!selectedDate || !selectedTime || !address) return
-    const [h, m] = selectedTime.split(':').map(Number)
-    const dt = new Date(selectedDate)
-    dt.setHours(h, m, 0, 0)
-    const isSmart = isSlotInWindows(selectedTime, dt, smartWindows)
-    const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
-    onNext({
-      scheduled_at: dt.toISOString(),
-      address,
-      is_smart_slot: isSmart,
-      smart_discount: discount,
-      travel_fee: travelFeeEstimate ?? undefined,
-    })
+  const days: Date[] = []
+  for (let d = new Date(premierJour); d <= dernierJour; d.setDate(d.getDate() + 1)) {
+    if (estReservable(d)) days.push(new Date(d))
   }
-
-  return (
-    <div>
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez un créneau</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Où et quand souhaitez-vous être lavé ?</p>
-
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Adresse du véhicule</label>
-        <AddressAutocomplete
-          value={address}
-          onChange={setAddress}
-          placeholder="12 rue de la Paix, 75001 Paris"
-          className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
-          style={{ '--tw-ring-color': accent } as React.CSSProperties}
-        />
-        {hasTravelFee && address.trim().length > 5 && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            {travelFeeMode === 'previous' && !(selectedDate && selectedTime) ? (
-              <span>Les frais de déplacement seront calculés depuis votre RDV précédent une fois le créneau sélectionné.</span>
-            ) : fetchingTravelFee ? (
-              <span className="animate-pulse">Calcul des frais de déplacement...</span>
-            ) : travelFeeEstimate != null && travelFeeEstimate > 0 ? (
-              <span>Frais de déplacement estimés : <strong className="text-slate-700 dark:text-slate-200">{travelFeeEstimate}€</strong></span>
-            ) : travelFeeEstimate === 0 ? (
-              <span className="text-emerald-600 dark:text-emerald-400">Pas de frais de déplacement pour cette adresse</span>
-            ) : null}
-          </div>
-        )}
-      </div>
-
-      {zoneMessage && (
-        <div className="mb-4 flex items-start gap-2 px-3 py-2.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
-          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-          </svg>
-          <span>{zoneMessage}</span>
+  const hourLabel = (time: string) => time.replace(':00', ' h').replace(':', ' h ')
+  const actionLabel = !addressReady ? 'Indiquez votre adresse' : busy ? 'Vérification en cours…' : !zoneAllowed ? 'Vérifiez votre adresse' : !selectedDate ? 'Choisissez un jour' : !selectedTime ? 'Choisissez une heure' : canContinue ? 'Continuer' : 'Vérifiez le créneau'
+  return <div>
+    <h2 className="wb-booking-title">Où et quand ?</h2>
+    <label htmlFor="booking-address" className="block text-sm font-medium mb-2">Adresse du lavage</label>
+    <AddressAutocomplete id="booking-address" value={address} onChange={value => { setAddress(value); setSelectedTime(null) }}
+      placeholder="Numéro, rue, ville" allowGeolocation
+      className="w-full min-h-12 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-3 bg-white dark:bg-zinc-900 outline-none focus:border-zinc-500" />
+    {!addressReady && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-6 mb-3">Les créneaux et le prix exact s’affichent dès que l’adresse est indiquée : les frais de déplacement en dépendent.</p>}
+    {addressReady && <>
+      {fetchingZone ? <p role="status" className="text-sm text-zinc-500 mt-3">Vérification de votre adresse…</p>
+        : zoneMessage ? <p role="alert" className="text-sm text-red-600 mt-3">{zoneMessage} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p>
+        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">● Dans le secteur du laveur{fee === 0 ? ' : déplacement compris' : fee !== undefined ? ' · déplacement ' + fee + ' €' : ''}</p>}
+      {zoneAllowed && <>
+        <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">Jour</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? 'Fermer le calendrier' : 'Calendrier'}</button></div>
+        <div className="flex gap-2 overflow-x-auto pb-2 snap-x" aria-label="Jours disponibles">
+          {days.map(day => <button key={toDateStr(day)} type="button" aria-label={day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={!!selectedDate && memeJour(day, selectedDate)}
+            onClick={() => choisirJour(day)} className={'shrink-0 snap-start w-[58px] min-h-[64px] rounded-xl border text-center ' + (selectedDate && memeJour(day, selectedDate) ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
+            <span className="block text-xs">{day.toLocaleDateString('fr-FR', { weekday: 'short' })}</span><span className="block text-xl leading-tight font-bold">{day.getDate()}</span><span className="block text-[10px] opacity-60">{MONTH_NAMES[day.getMonth()]}</span>
+          </button>)}
         </div>
-      )}
-
-      {/* Le calendrier occupe toute la largeur tant qu'aucun jour n'est choisi,
-          puis s'efface au profit des horaires — ce sont deux moments distincts,
-          pas deux listes à faire tenir ensemble sur un téléphone. */}
-      {montrerCalendrier ? (
-        <div className="mb-4">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Sélectionnez un jour</p>
-
-          <div className="flex items-center justify-between mb-2">
-            <button
-              type="button"
-              onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-              disabled={!moisPrecedentPossible}
-              aria-label="Mois précédent"
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              {MOIS_LONGS[moisAffiche.getMonth()]} {moisAffiche.getFullYear()}
-            </span>
-            <button
-              type="button"
-              onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-              disabled={!moisSuivantPossible}
-              aria-label="Mois suivant"
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
+        {!days.length && <p className="text-sm text-zinc-500">Aucun jour disponible pour le moment.</p>}
+        {choixDateOuvert && <div className="my-3 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+          <div className="flex justify-between items-center mb-2"><button type="button" aria-label="Mois précédent" disabled={!moisPrecedentPossible} onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="w-11 h-11 disabled:opacity-30">←</button>
+            <span className="text-sm font-semibold">{MOIS_LONGS[moisAffiche.getMonth()]} {moisAffiche.getFullYear()}</span><button type="button" aria-label="Mois suivant" disabled={!moisSuivantPossible} onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="w-11 h-11 disabled:opacity-30">→</button></div>
+          <div className="grid grid-cols-7 gap-1">{ENTETES_SEMAINE.map((d, i) => <span key={i} className="text-center text-xs text-zinc-500">{d}</span>)}
+            {grilleDuMois(moisAffiche).map((d, i) => d ? <button key={i} type="button" disabled={!estReservable(d)} onClick={() => choisirJour(d)} className="aspect-square rounded-lg text-sm disabled:opacity-25 hover:bg-zinc-100 dark:hover:bg-zinc-800">{d.getDate()}</button> : <span key={i} />)}
           </div>
-
-          <div className="grid grid-cols-7 gap-1 mb-1" aria-hidden="true">
-            {ENTETES_SEMAINE.map((jour, i) => (
-              <span key={i} className="text-center text-[11px] font-bold text-slate-400 dark:text-slate-500 py-1">{jour}</span>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1">
-            {grilleDuMois(moisAffiche).map((jour, i) => {
-              if (!jour) return <span key={`vide-${i}`} aria-hidden="true" />
-              const libre  = estReservable(jour)
-              const choisi = !!selectedDate && memeJour(selectedDate, jour)
-              // Un congé se distingue d'un jour de fermeture habituel : le
-              // client voit que le laveur travaille ce jour-là d'ordinaire.
-              const conge  = jour >= premierJour && jour <= dernierJour
-                && availableDaysOfWeek.includes(jour.getDay()) && isDateUnavailable(jour)
-              return (
-                <button
-                  key={jour.toISOString()}
-                  type="button"
-                  onClick={() => choisirJour(jour)}
-                  disabled={!libre}
-                  aria-label={`${jour.getDate()} ${MOIS_LONGS[jour.getMonth()]}${libre ? '' : ' — indisponible'}`}
-                  aria-current={choisi ? 'date' : undefined}
-                  className={`aspect-square flex items-center justify-center rounded-lg text-sm font-semibold border-2 transition-all ${
-                    choisi ? 'text-white shadow-md' :
-                    conge  ? 'border-transparent bg-orange-50/60 dark:bg-orange-950/20 text-orange-300 dark:text-orange-700 cursor-not-allowed' :
-                    libre  ? 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800' :
-                    'border-transparent text-slate-300 dark:text-slate-700 cursor-not-allowed'
-                  }`}
-                  style={choisi ? { backgroundColor: accent, borderColor: accent } : undefined}
-                >
-                  {jour.getDate()}
-                </button>
-              )
-            })}
-          </div>
-
-          {selectedDate && (
-            <button
-              type="button"
-              onClick={() => setChoixDateOuvert(false)}
-              className="mt-3 text-xs font-bold hover:opacity-70 transition-opacity"
-              style={{ color: accent }}
-            >
-              ← Revenir aux horaires du {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
-            </button>
-          )}
-        </div>
-      ) : selectedDate && (
-        /* Date choisie : une barre compacte suffit. Les flèches sautent au jour
-           OUVERT suivant ou précédent — avancer d'un jour fermé ne servirait
-           qu'à afficher « aucun créneau ». Le libellé central rouvre le
-           calendrier, pour changer de semaine sans enchaîner les flèches. */
-        <div className="mb-4 flex items-center gap-1 p-1 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <button
-            type="button"
-            onClick={() => jourPrecedent && choisirJour(jourPrecedent)}
-            disabled={!jourPrecedent}
-            aria-label="Jour disponible précédent"
-            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMoisAffiche(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1))
-              setChoixDateOuvert(true)
-            }}
-            className="flex-1 min-w-0 py-1 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
-          >
-            <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-              {DAY_NAMES[selectedDate.getDay()]} {selectedDate.getDate()} {MOIS_LONGS[selectedDate.getMonth()]}
-            </span>
-            <span className="block text-[11px] font-medium" style={{ color: accent }}>Changer de date</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => jourSuivant && choisirJour(jourSuivant)}
-            disabled={!jourSuivant}
-            aria-label="Jour disponible suivant"
-            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-          </button>
-        </div>
-      )}
-
-      {selectedDate && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2.5">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Heure</p>
-            {fetchingSmarts && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 animate-pulse">Recherche des créneaux optimisés...</span>
-            )}
-          </div>
-
-          {slotsForDay.length === 0 ? (
-            <div className={`flex items-center gap-2 py-3 px-4 rounded-xl ${dureeTropLongue ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-slate-50 dark:bg-slate-800'}`}>
-              <svg className={`w-4 h-4 shrink-0 ${dureeTropLongue ? 'text-amber-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-              </svg>
-              <p className={`text-sm ${dureeTropLongue ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                {dureeTropLongue
-                  ? `Avec les options choisies, la prestation dure ${formatDureeFr(serviceDuration)} et ne rentre dans aucun de vos horaires disponibles ce jour-là.`
-                  : 'Aucun créneau disponible ce jour'}
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Smart slots — shown first */}
-              {smartSlotsInDay.length > 0 && (
-                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">★ Créneaux optimisés pour votre tournée</span>
-                    {smartDiscountValue > 0 && (
-                      <span className="text-[10px] bg-amber-200 dark:bg-amber-800/60 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-bold">
-                        -{smartDiscountType === 'percent' ? `${smartDiscountValue}%` : `${smartDiscountValue}€`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {smartSlotsInDay.map(slot => {
-                      const isSelected = selectedTime === slot
-                      return (
-                        <button
-                          key={slot}
-                          onClick={() => setSelectedTime(slot)}
-                          className={`py-2 rounded-xl border-2 font-semibold transition-all flex flex-col items-center gap-0.5 ${
-                            isSelected
-                              ? 'border-amber-500 bg-amber-500 text-white shadow-sm'
-                              : 'border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 bg-white dark:bg-amber-950/30 hover:border-amber-400'
-                          }`}
-                        >
-                          <span className="text-sm">{slot}</span>
-                          {servicePrice > 0 && smartDiscountValue > 0 && (
-                            <span className={`text-[10px] font-bold ${isSelected ? 'opacity-90' : 'text-amber-600 dark:text-amber-400'}`}>
-                              {smartPriceStr}€
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Regular slots — Matin / Après-midi */}
-              {regularSlots.length > 0 && (() => {
-                const morning   = regularSlots.filter(s => parseInt(s) < 12)
-                const afternoon = regularSlots.filter(s => parseInt(s) >= 12)
-
-                const SlotButton = ({ slot }: { slot: string }) => (
-                  <button
-                    key={slot}
-                    onClick={() => setSelectedTime(slot)}
-                    className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
-                      selectedTime === slot
-                        ? 'text-white shadow-sm'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:border-slate-300'
-                    }`}
-                    style={selectedTime === slot ? { backgroundColor: accent, borderColor: accent } : undefined}
-                  >
-                    {slot}
-                  </button>
-                )
-
-                const Section = ({ label, slots, visible, onMore }: { label: string; slots: string[]; visible: number; onMore: () => void }) => {
-                  if (slots.length === 0) return null
-                  const shown = slots.slice(0, visible)
-                  const hasMore = slots.length > visible
-                  return (
-                    <div className="mb-4">
-                      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{label}</p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {shown.map(slot => <SlotButton key={slot} slot={slot} />)}
-                      </div>
-                      {hasMore && (
-                        <button
-                          onClick={onMore}
-                          className="mt-2.5 w-full py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          Voir plus ({slots.length - visible} créneaux)
-                        </button>
-                      )}
-                    </div>
-                  )
-                }
-
-                return (
-                  <div>
-                    {smartSlotsInDay.length > 0 && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Autres créneaux disponibles</p>
-                    )}
-                    <Section label="Matin" slots={morning} visible={morningVisible} onMore={() => setMorningVisible(v => v + SLOTS_PER_PAGE)} />
-                    <Section label="Après-midi" slots={afternoon} visible={afternoonVisible} onMore={() => setAfternoonVisible(v => v + SLOTS_PER_PAGE)} />
-                  </div>
-                )
-              })()}
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="flex-1 py-3 px-4 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm"
-        >
-          Retour
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!canContinue}
-          className="flex-1 py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
-          style={{ backgroundColor: accent }}
-        >
-          Continuer
-        </button>
-      </div>
-    </div>
-  )
+        </div>}
+        {selectedDate && <div className="mt-5">
+          <h3 className="text-sm font-medium mb-3">Heure d’arrivée</h3>
+          {fetchingSmarts ? <p role="status" className="text-sm text-zinc-500">Recherche des créneaux disponibles…</p> : requestError ? <p role="alert" className="text-sm text-red-600">{requestError} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p> : <>
+            <div className="grid grid-cols-3 gap-2">{shownSlots.map(slot => {
+              const smart = isSlotInWindows(slot, selectedDate, smartWindows)
+              const amount = smart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
+              const chosen = selectedTime === slot
+              return <button key={slot} type="button" aria-pressed={chosen} onClick={() => setSelectedTime(slot)} className={'min-h-[52px] rounded-xl border text-sm font-medium ' + (chosen ? 'bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : amount > 0 ? 'border-emerald-600/60 text-zinc-900 dark:text-zinc-100' : 'border-zinc-300 dark:border-zinc-700')}>
+                <span className="block">{hourLabel(slot)}</span>{amount > 0 && <span className={'block text-[11px] ' + (chosen ? '' : 'text-emerald-700 dark:text-emerald-400')}>−{amount} €</span>}
+              </button>
+            })}</div>
+            {slotsForDay.length > visibleSlots && <button type="button" onClick={() => setVisibleSlots(v => v + 12)} className="w-full text-sm underline min-h-11 mt-2">Voir plus d’horaires</button>}
+            {!slotsForDay.length && <p className="text-sm text-zinc-500">{dureeTropLongue ? 'La prestation de ' + formatDureeFr(serviceDuration) + ' ne tient pas dans les horaires de ce jour. Choisissez une autre date.' : 'Aucun créneau disponible ce jour. Choisissez une autre date.'}</p>}
+            {smartSlotsInDay.length > 0 && smartDiscountValue > 0 && <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400 mt-4"><span className="text-emerald-700 dark:text-emerald-400 font-semibold">−{smartDiscountType === 'percent' ? smartDiscountValue + ' %' : smartDiscountValue + ' €'}</span> : ce jour-là, le laveur a déjà un rendez-vous tout près de chez vous. Moins de route pour lui, moins cher pour vous.</p>}
+            {hasTravelFee && selectedTime && !fetchingTravelFee && fee === undefined && <p role="alert" className="text-sm text-red-600 mt-3">Impossible de calculer le déplacement. <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p>}
+          </>}
+        </div>}
+      </>}
+    </>}
+    <BookingAction target={actionTarget} accent={accent} disabled={!canContinue} onClick={() => { if (canContinue && scheduledAt) onNext({ scheduled_at: scheduledAt, address, is_smart_slot: isSmart, smart_discount: discount, travel_fee: fee }) }}>{actionLabel}</BookingAction>
+  </div>
 }

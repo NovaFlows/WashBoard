@@ -862,6 +862,7 @@ export function jeuDeDonneesMessagesDemo(): MessagesAutomatiquesProps {
     libellePlanRelance: automatismes.libellePlanRelance,
     nomLaveur,
     expediteurSms: 'ECLATMOBILE',
+    expediteurStatut: 'approuve',
     telephone: '0681001122',
     slug: 'demo-eclat-mobile',
     rdvs,
@@ -1212,7 +1213,7 @@ export function jeuDeDonneesPlusDemo(): {
     listeBase,
     apparence: {
       logoUrl: null, couleur: brandColor, fond: null,
-      message: 'Bienvenue chez Éclat Mobile !', site: 'https://eclatmobile.fr',
+      message: 'Bienvenue chez Éclat Mobile !', site: 'https://eclatmobile.fr', avisGoogle: null,
     },
     prestations: {
       services, categories, availabilities,

@@ -13,6 +13,8 @@ import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
+import type { SetupProgress } from '@/lib/setupProgress'
 
 // « Réglages » — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27 :
 // « réglage apparaît dans Mon compte, mais juste Réglages, et quand on clique dessus on voit
@@ -30,13 +32,18 @@ import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard
 // ce composant se contente de RESPIRER au-delà du palier plutôt que de forker un troisième
 // fichier (même raisonnement que `ClientsViewV2.tsx`/`ApparenceV2.tsx`). Le contenu mobile
 // (en-tête avec chevron, les deux cartes) ne change pas d'une ligne.
+//
+// La carte « Configuration de votre compte » (`SetupProgressBar`) vit ici depuis le 2026-10-04,
+// à la demande d'Alexandre : le bouton qui la masque/affiche vivait déjà sur cet écran, elle ne
+// doit plus s'afficher sur « Plus » (voir `SetupProgressBarPlus`, qui l'y cache en PWA).
 
 type Props = {
   /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
   liste: ReglagesListeProps
+  progress: SetupProgress
 }
 
-export default function ReglagesV2({ liste }: Props) {
+export default function ReglagesV2({ liste, progress }: Props) {
   const { theme, setTheme } = useTheme()
   const { etat: etatNotifications } = useNotificationsPush()
   const grandEcran = useGrandEcran()
@@ -105,6 +112,10 @@ export default function ReglagesV2({ liste }: Props) {
           />
         </CarteListe>
       </div>
+
+      {/* Se masque elle-même (lit la même préférence que le bouton ci-dessus,
+          `CLE_CARTE_CACHEE`) : pas de condition à dupliquer ici. */}
+      <SetupProgressBar progress={progress} />
 
       <div>
         <TitreSection>De l’aide</TitreSection>

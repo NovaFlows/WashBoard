@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { sendFollowupEmail } from '@/lib/email'
-import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { sendSms, expediteurPour } from '@/lib/sms'
 import { graceEnded, hasFeature } from '@/lib/plan'
 import { isAuthorizedCron, createAdminClient, parseTestMode } from '@/lib/cronRequest'
 import { logger } from '@/lib/logger'
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   let washerQuery = admin
     .from('washers')
-    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, sms_sender_statut, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
 
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
         if (channel === 'sms' && booking.client_phone) {
           // Le nom du laveur seulement s'il a été approuvé chez Brevo ; sinon
           // l'identifiant commun, qui l'est. Voir EXPEDITEUR_SMS_DEFAUT.
-          const sender = (washer.sms_sender?.trim() || EXPEDITEUR_SMS_DEFAUT).slice(0, 11)
+          const sender = expediteurPour(washer)
           await sendSms({ to: booking.client_phone, sender, content: message })
           smsSent++
         } else {

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { ImportFactures } from '@/components/dashboard/ImportFactures'
@@ -13,6 +14,7 @@ import {
 import { FUSEAU } from '@/lib/dateUtils'
 import { logger } from '@/lib/logger'
 import { hasFeature } from '@/lib/plan'
+import type { FactureContenu } from '@/lib/facture'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { ApercuFactures } from '@/components/dashboard/ApercusVerrouilles'
 
@@ -37,10 +39,19 @@ type FactureImportee = {
   numero: string | null
 }
 
-/** Une ligne de la liste, qu'elle vienne de WashBoard ou d'un import. */
+/** Facture écrite à la main : même compteur de numéros que les factures de réservation. */
+type FactureManuelle = {
+  id: string
+  numero: string | null
+  emis_le: string | null
+  created_at: string
+  contenu: FactureContenu
+}
+
+/** Une ligne de la liste, qu'elle vienne de WashBoard, d'un import ou d'une saisie à la main. */
 type Ligne = {
   cle: string
-  genre: 'emise' | 'importee'
+  genre: 'emise' | 'importee' | 'manuelle'
   id: string
   numero: string | null
   /** Date qui range la facture : émission, ou date de la facture importée. */
@@ -140,9 +151,12 @@ export default async function FacturesPage({
 
   // Lectures paginées : au-delà de 1 000 lignes, une lecture simple serait
   // coupée sans prévenir (voir `toutesLesLignes`).
-  const [emises, importees] = await Promise.all([
+  // Client admin : `authenticated` ne lit plus `bookings`. Le filtre
+  // `washer_id` est la seule barrière entre laveurs.
+  const admin = createAdminClient()
+  const [emises, importees, manuelles] = await Promise.all([
     toutesLesLignes<FactureEmise>((debut, fin) =>
-      supabase
+      admin
         .from('bookings')
         .select('id, facture_numero, facture_emise_le, scheduled_at, client_name, company_name, is_professional, montant:facture_contenu->totaux->>ttc')
         .eq('washer_id', washer.id)
@@ -158,9 +172,20 @@ export default async function FacturesPage({
         .order('date_facture', { ascending: false })
         .order('id')
         .range(debut, fin)),
+    toutesLesLignes<FactureManuelle>((debut, fin) =>
+      supabase
+        .from('documents')
+        .select('id, numero, emis_le, created_at, contenu')
+        .eq('washer_id', washer.id)
+        .eq('genre', 'facture')
+        .not('numero', 'is', null)
+        .order('emis_le', { ascending: false })
+        .order('id')
+        .range(debut, fin)),
   ])
   if (emises.error) logger.error('factures.read_failed', { washerId: washer.id }, emises.error)
   if (importees.error) logger.error('factures_importees.read_failed', { washerId: washer.id }, importees.error)
+  if (manuelles.error) logger.error('documents.factures_manuelles.read_failed', { washerId: washer.id }, manuelles.error)
 
   const toutes: Ligne[] = [
     ...emises.data.map(f => ({
@@ -180,6 +205,17 @@ export default async function FacturesPage({
       montant: nombre(f.montant),
       lien: `/api/factures/importees/${f.id}`,
     })),
+    ...manuelles.data.map(f => {
+      const pro = f.contenu.client.professionnel && f.contenu.client.entreprise
+      return {
+        cle: `m-${f.id}`, genre: 'manuelle' as const, id: f.id, numero: f.numero,
+        facture_emise_le: f.emis_le ?? f.created_at,
+        titre: pro ? f.contenu.client.entreprise! : f.contenu.client.nom,
+        detail: `Émise le ${quand(f.emis_le ?? f.created_at)}`,
+        montant: nombre(f.contenu.totaux.ttc),
+        lien: `/api/documents/${f.id}/pdf`,
+      }
+    }),
   ].sort((a, b) => b.facture_emise_le.localeCompare(a.facture_emise_le))
 
   const factures = filtrerFactures(toutes, filtre)
@@ -313,6 +349,11 @@ export default async function FacturesPage({
                             importée
                           </span>
                         )}
+                        {f.genre === 'manuelle' && (
+                          <span className="ml-2 align-middle px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            écrite à la main
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{f.detail}</p>
                     </div>
@@ -328,7 +369,7 @@ export default async function FacturesPage({
               </ul>
             </section>
           ))}
-          {(emises.tronque || importees.tronque) && (
+          {(emises.tronque || importees.tronque || manuelles.tronque) && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               Une partie de vos factures n&apos;a pas pu être chargée. Rechargez la page pour les voir toutes.
             </p>

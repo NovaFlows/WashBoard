@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireWasher } from '@/lib/requireWasher'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { FUSEAU, minuitParisUTC } from '@/lib/dateUtils'
@@ -16,8 +17,10 @@ import { masquerVerrouillees, seuilsVerrouillage } from '@/lib/reservationsVerro
 // ce qui a déjà été chargé ailleurs sur la page.
 
 // `created_at` et `saisie_par_laveur` ne s'affichent pas : sans eux, `estVerrouillee` ne
-// reconnaît aucune réservation au-delà du quota, et tout partirait en clair.
-const COLONNES = 'id, client_name, scheduled_at, status, created_at, saisie_par_laveur, services(name)'
+// reconnaît aucune réservation au-delà du quota, et tout partirait en clair. `facture_numero`
+// non plus : sans lui, une réservation déjà facturée se re-masquerait après une rétrogradation
+// d'offre (décision `legal`, 2026-10-04).
+const COLONNES = 'id, client_name, scheduled_at, status, created_at, saisie_par_laveur, facture_numero, services(name)'
 
 export async function GET(req: NextRequest) {
   const r = await requireWasher()
@@ -46,7 +49,11 @@ export async function GET(req: NextRequest) {
   // En dehors d'aujourd'hui, un rendez-vous déjà clôturé redevient
   // pertinent : on regarde ce qui s'est passé ce jour-là, pas seulement ce
   // qu'il reste à faire. Seuls les annulés restent écartés.
-  const { data, error } = await supabase
+  // La session prouve QUI demande ; `bookings` se lit par l'admin, que
+  // `authenticated` ne peut plus lire en direct. Le filtre `washer_id` est la
+  // seule barrière entre laveurs.
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('bookings')
     .select(COLONNES)
     .eq('washer_id', washerId)
@@ -72,7 +79,7 @@ export async function GET(req: NextRequest) {
   // que de tout renvoyer en clair.
   if (errWasher || !washer) return errorResponse('bookings.jour.washer.read_failed', errWasher, { washerId })
 
-  const seuils = await seuilsVerrouillage(supabase, washer, quotaReservations(washer))
+  const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const lignes = masquerVerrouillees(data ?? [], seuils).map(b => b.verrouillee
     // Midi UTC du jour de Paris, comme sur l'accueil : le jour quitte le serveur, jamais l'heure.
     ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z` }
