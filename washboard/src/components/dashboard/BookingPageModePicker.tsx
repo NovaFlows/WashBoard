@@ -3,11 +3,16 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { BookingPageMode } from '@/lib/bookingPageMode'
+import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
+import { corps, titre } from '@/components/dashboard/FeuilleV2'
 
-/** Commun au site et à la PWA. Le choix visible change après confirmation du serveur. */
-export default function BookingPageModePicker({ mode, onChange }: {
+/** Commun au site et à la PWA. Le choix visible change après confirmation du serveur.
+ *  `v2` : même logique, habillée aux jetons de la refonte (`ApparenceV2`) — sans ça, le bleu
+ *  vif et les gris du site détonnent dans la v2, surtout en sombre. */
+export default function BookingPageModePicker({ mode, onChange, v2 = false }: {
   mode: BookingPageMode
   onChange: (mode: BookingPageMode) => void
+  v2?: boolean
 }) {
   const router = useRouter()
   const [pending, setPending] = useState<BookingPageMode | null>(null)
@@ -37,6 +42,21 @@ export default function BookingPageModePicker({ mode, onChange }: {
   }
 
   const actif = mode === 'default'
+  const description = mode === 'default' ? 'Décochez pour utiliser votre page personnalisée et ouvrir ses réglages.' : 'Page personnalisée active. Retrouvez vos réglages ci-dessous.'
+
+  if (v2) {
+    return <section aria-labelledby="booking-page-mode-title" className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5">
+      <h2 id="booking-page-mode-title" className={`text-[15px] ${titre} text-[color:var(--v2-color-encre)]`}>Votre page de réservation</h2>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <span className={`text-[14.5px] ${corps} text-[color:var(--v2-color-encre)]`}>Page par défaut</span>
+        <Interrupteur actif={actif} enCours={pending !== null} libelle="Page par défaut" onClick={() => choose(actif ? 'custom' : 'default')} />
+      </div>
+      <p id="booking-page-mode-description" className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{description}</p>
+      {pending !== null && <p role="status" className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Enregistrement…</p>}
+      {error && <p role="alert" className={`mt-2 text-[13px] ${corps} text-[color:var(--v2-color-rouge)]`}>{error}</p>}
+      {saved && <p role="status" className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-vert)]`}>Le choix de votre page est enregistré.</p>}
+    </section>
+  }
 
   return <section aria-labelledby="booking-page-mode-title" className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
     <h2 id="booking-page-mode-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">Votre page de réservation</h2>
@@ -56,7 +76,7 @@ export default function BookingPageModePicker({ mode, onChange }: {
       </button>
     </div>
     <p id="booking-page-mode-description" className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-      {mode === 'default' ? 'Décochez pour utiliser votre page personnalisée et ouvrir ses réglages.' : 'Page personnalisée active. Retrouvez vos réglages ci-dessous.'}
+      {description}
     </p>
     {pending !== null && <p role="status" className="text-xs text-slate-500 mt-3">Enregistrement…</p>}
     {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400 mt-3">{error}</p>}

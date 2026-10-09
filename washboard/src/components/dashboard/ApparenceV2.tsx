@@ -156,7 +156,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
   // fichier pour la mesure qui a fixé ce seuil.
   const blocReglages = (
     <>
-      <BookingPageModePicker mode={pageMode} onChange={setPageMode} />
+      <BookingPageModePicker mode={pageMode} onChange={setPageMode} v2 />
       <div className={etatLogoVisible ? 'mt-4' : ''} aria-live="polite">
         {etatLogoVisible && <EtatEnvoi etat={h.logo} />}
       </div>

@@ -469,14 +469,17 @@ function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBa
 // (demande explicite d'Alexandre, 2026-10-01) : inviter quelqu'un à essayer
 // la nouvelle version alors qu'il s'en sert déjà n'aurait aucun sens, et
 // laisserait croire qu'il manque quelque chose à ce qu'il a sous les yeux.
+// Même raison pour la v2 sur ordinateur (`bureau`, Alexandre, 2026-10-09) : le
+// laveur a déjà la nouvelle version sous les yeux.
 const CLE_FERMEE_ANNONCE_PWA = 'wb_annonce_pwa_2026_fermee'
 
 function AnnoncePwaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
   const isPwa = usePwaStandalone()
+  const masque = isPwa || bureau
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (isPwa) return
+    if (masque) return
     let annule = false
     ;(async () => {
       let fermee = false
@@ -488,13 +491,13 @@ function AnnoncePwaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau
       if (!annule && !fermee) setVisible(true)
     })()
     return () => { annule = true }
-  }, [isPwa])
+  }, [masque])
 
-  // Jamais dans l'application installée (voir l'en-tête du fichier) : on le signale comme
+  // Jamais dans la nouvelle version (voir l'en-tête du fichier) : on le signale comme
   // indisponible plutôt que de laisser le châssis attendre un signal qui ne viendra jamais.
-  useEffect(() => { onDisponibiliteChange(!isPwa && visible) }, [isPwa, visible, onDisponibiliteChange])
+  useEffect(() => { onDisponibiliteChange(!masque && visible) }, [masque, visible, onDisponibiliteChange])
 
-  if (isPwa || !visible || !actif) return null
+  if (masque || !visible || !actif) return null
 
   function fermer() {
     setVisible(false)
