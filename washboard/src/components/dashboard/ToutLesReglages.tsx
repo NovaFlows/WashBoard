@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 
 // « Tous les réglages » n'existe plus dans la PWA installée : chacun de ses blocs a maintenant
 // son écran v2 (Alexandre, 2026-09-30 : « tous les réglages dans la pwa n'a pas été redessiné »).
@@ -32,7 +32,7 @@ export default function ToutLesReglages({ children }: { children: ReactNode }) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { etapeDemarrage, type SetupProgress } from '@/lib/setupProgress'
 
 // Carte d'accueil d'un compte qui ne peut pas encore prendre de réservation.
@@ -24,7 +24,7 @@ const BOUTON: Record<string, string> = {
 export function DemarrageCard({ progress }: { progress: SetupProgress }) {
   // Le même réglage vit à deux endroits : l'ancien écran sur le site, le nouveau dans
   // l'application installée. Sans ce choix, le bouton faisait sortir de la PWA refaite.
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const etape = etapeDemarrage(progress)
   if (!etape) return null
   const indispensables = progress.items.filter(i => i.blocking)

@@ -18,10 +18,15 @@ import MarqueurPret from "@/components/ui/MarqueurPret";
 // initial et le fait tourner avant toute hydratation React, donc sans flash.
 // Même test que `NotificationsToggle.tsx` / `lib/pwaStandalone.ts`, réécrit
 // à la main ici car il tourne hors React.
+// Depuis le 2026-10-09 : aussi un téléphone dans son navigateur, mais seulement dans
+// l'espace laveur (/dashboard) — la landing et les pages publiques gardent leur apparence.
+// Même requête que `REQUETE_ECRAN_MOBILE` (lib/designMobile.ts), à garder identique.
 const PWA_DETECT_SCRIPT = `(function(){try{
   var s = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
-  if (s) document.documentElement.classList.add('wb-pwa');
+  var m = location.pathname.indexOf('/dashboard') === 0
+    && window.matchMedia('(max-width: 767px), (pointer: coarse) and (max-height: 500px)').matches;
+  if (s || m) document.documentElement.classList.add('wb-pwa');
 }catch(e){}})();`;
 
 const geistSans = Geist({

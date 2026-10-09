@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Check, Lock, MapPin, MoreHorizontal, Navigation, Phone, Store } from 'lucide-react'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
@@ -341,8 +341,20 @@ export default function AccueilV2({
   // court. Un écran vide un jour de repos n'aiderait personne à savoir où il
   // va ; la date s'affiche alors dans la carte pour qu'aucune confusion ne
   // soit possible.
-  const prochain = rdvAujourdhui[0] ?? prochainsAVenir[0] ?? null
-  const reste = rdvAujourdhui.slice(1)
+  // « Prochain » tient compte de l'heure : un rendez-vous du jour déjà fini cède la place au
+  // suivant (signalé par Alexandre, 2026-10-09 : le premier de la journée restait affiché
+  // toute la journée). Un rendez-vous en cours reste le héros jusqu'à sa fin. Les rendez-vous
+  // finis mais pas encore clôturés restent visibles dans « La journée ».
+  const [maintenant, setMaintenant] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setMaintenant(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  const finDe = (b: RdvAccueil) =>
+    new Date(b.scheduled_at).getTime() + (b.services?.duration_minutes ?? 60) * 60_000
+  const prochainDuJour = rdvAujourdhui.find(b => finDe(b) > maintenant) ?? null
+  const prochain = prochainDuJour ?? prochainsAVenir[0] ?? null
+  const reste = rdvAujourdhui.filter(b => b !== prochainDuJour)
   const routeDuJour = useMemo(() => minutesDeRoute(rdvAujourdhui), [rdvAujourdhui])
   const totalDuJour = useMemo(() => rdvAujourdhui.reduce((s, b) => s + montant(b), 0), [rdvAujourdhui])
 
