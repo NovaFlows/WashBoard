@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import ReglagesV2 from '@/components/dashboard/ReglagesV2'
 import type { SetupProgress } from '@/lib/setupProgress'
 
@@ -16,7 +16,7 @@ export default function Reglages({ progress }: { progress: SetupProgress }) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

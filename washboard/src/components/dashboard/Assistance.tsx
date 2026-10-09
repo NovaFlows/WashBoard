@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import AssistanceContent from '@/components/dashboard/AssistanceContent'
 import AssistanceV2 from '@/components/dashboard/AssistanceV2'
 
@@ -13,7 +13,7 @@ import AssistanceV2 from '@/components/dashboard/AssistanceV2'
 // à l'identique. Même adresse (`/dashboard/assistance`), donc les liens `?fil=` des
 // notifications continuent d'arriver au bon endroit dans les deux cas.
 export default function Assistance() {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
 
   if (isPwa) {
     // useSearchParams (lecture de ?fil=) exige une limite Suspense.

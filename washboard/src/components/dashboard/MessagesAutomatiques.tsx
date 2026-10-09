@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import MessagesAutomatiquesV2, { type MessagesAutomatiquesProps } from '@/components/dashboard/MessagesAutomatiquesV2'
 
 // Point d'entrée de « Messages automatiques » — destination NEUVE de la
@@ -24,7 +24,7 @@ export default function MessagesAutomatiques(props: MessagesAutomatiquesProps) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

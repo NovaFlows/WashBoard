@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import ProfilV2 from '@/components/dashboard/ProfilV2'
 import type { Washer } from '@/types'
 
@@ -22,7 +22,7 @@ export default function Profil(props: { washer: Washer; email: string; peutEquip
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

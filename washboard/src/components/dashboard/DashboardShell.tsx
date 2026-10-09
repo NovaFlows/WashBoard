@@ -18,6 +18,7 @@ import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -225,7 +226,7 @@ function AppBetaBanner() {
   // On part de « masqué » : ce qui décide de l'affichage n'existe que dans le
   // navigateur, et un rendu serveur différent provoquerait un clignotement.
   const [visible, setVisible] = useState(false)
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
 
   useEffect(() => {
     let annule = false
@@ -315,7 +316,7 @@ function NouvellesOffresBanner() {
   // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
   // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
   const [visible, setVisible] = useState(false)
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
 
   useEffect(() => {
     let annule = false
@@ -381,7 +382,7 @@ function NouvellesOffresBanner() {
 const CLE_FERMEE_ANNONCE_PWA = 'wb_annonce_pwa_2026_fermee'
 
 function AnnoncePwaBanner() {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -428,7 +429,7 @@ function AnnoncePwaBanner() {
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt }: { trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null }) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
 
   /** Rend le bandeau, ou rien s'il a déjà été fermé pour ce repère. */
   const bandeau = (repere: string, contenu: (fermer: () => void) => React.ReactElement) =>
@@ -581,7 +582,10 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // la refonte. Le menu latéral (Sidebar, juste en dessous) n'est JAMAIS conditionné
   // par cette variable : il reste le filet de secours tant que les passes 5 et 6 ne
   // sont pas faites.
-  const isPwa = usePwaStandalone()
+  // Design mobile (téléphone, installé ou dans le navigateur) : décide du châssis.
+  // Installation réelle : décide seulement de la couleur de la barre d'état (cookie plus bas).
+  const isPwa = useDesignMobile()
+  const installee = usePwaStandalone()
   const showBarreBas = isPwa
   // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
   // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
@@ -599,8 +603,13 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     remettre()
     const obs = new MutationObserver(remettre)
     obs.observe(html, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [isPwa, showBarreBas])
+    return () => {
+      obs.disconnect()
+      // Dans le navigateur d'un téléphone, la classe ne vaut que pour l'espace laveur : en
+      // quittant (déconnexion vers la landing), le site public retrouve son apparence.
+      if (!installee) html.classList.remove('wb-pwa')
+    }
+  }, [isPwa, showBarreBas, installee])
   // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
   // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
   // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
@@ -657,7 +666,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Le cookie est RETIRÉ hors de l'application installée : sur Android, le navigateur et
   // l'application partagent leurs cookies, et le site doit garder ses couleurs à lui.
   useEffect(() => {
-    if (!isPwa) {
+    if (!installee) {
       document.cookie = 'wb_pwa_beta=; path=/; max-age=0; samesite=lax'
       return
     }
@@ -665,7 +674,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     // Rien à changer dans la page en cours : Next réécrit ses propres balises `theme-color`
     // (essayé, ça ne tient pas), et de toute façon iOS ne relit la couleur qu'au lancement.
     // Changer de thème en séance se voit donc au lancement suivant, lui aussi.
-  }, [isPwa])
+  }, [installee])
 
   return (
     // PWA en bêta : tout le fond de l'écran est le papier de la refonte (`--v2-color-fond`),

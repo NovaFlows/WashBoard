@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import DepensesV2 from '@/components/dashboard/DepensesV2'
 
 // Point d'entrée de « Dépenses » — destination NEUVE de la refonte 2026 (même schéma que
@@ -20,7 +20,7 @@ export default function Depenses() {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

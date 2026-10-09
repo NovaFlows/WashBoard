@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import AccueilV2 from '@/components/dashboard/AccueilV2'
 import type { RdvAccueil } from '@/components/dashboard/AccueilV2'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
@@ -13,7 +13,7 @@ import type { ReservationMasquee } from '@/components/dashboard/ReservationVerro
 // 2026, même règle que ClientsView.tsx, ParametresForm.tsx ou
 // CalendrierDashboard.tsx : la v2 ne s'applique QU'à la PWA installée en mode
 // standalone, le site reste v1 sans exception (décision d'Alexandre,
-// 2026-09-22). `usePwaStandalone()` plutôt que la classe CSS `wb-pwa` : ce
+// 2026-09-22). `useDesignMobile()` plutôt que la classe CSS `wb-pwa` : ce
 // n'est pas un changement de couleurs, c'est un écran entièrement différent.
 //
 // Une différence de forme avec les passes précédentes, et une seule : il n'y a
@@ -52,6 +52,6 @@ type Props = {
 }
 
 export default function Accueil({ v1, ...v2 }: Props) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   return isPwa ? <AccueilV2 {...v2} /> : <>{v1}</>
 }

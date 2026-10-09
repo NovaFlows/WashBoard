@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { X, Send, CheckCircle2, MessageCircle, ChevronLeft, Plus, AlertCircle, Trash2 } from 'lucide-react'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { useLigneGlissante, LARGEUR_ACTION_PX } from '@/hooks/useLigneGlissante'
 import { ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
 import { formatSupportDate, type SupportThread } from '@/lib/support'
@@ -78,7 +78,7 @@ function ListeFils({ threads, onOuvrir, onNouvelle, onSupprimer }: {
   /** Supprime la conversation de la liste ; rend `null` si c'est fait, sinon la phrase d'échec. */
   onSupprimer?: (id: string) => Promise<string | null>
 }) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const glissable = isPwa && !!onSupprimer
   const [ligneOuverte, setLigneOuverte] = useState<string | null>(null)
   const [aSupprimer, setASupprimer] = useState<SupportThread | null>(null)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import PublicitesV2, { type PublicitesProps } from '@/components/dashboard/PublicitesV2'
 
 // Point d'entrée de « Publicités » — même schéma que MessagesAutomatiques.tsx
@@ -25,7 +25,7 @@ export default function Publicites(props: PublicitesProps) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

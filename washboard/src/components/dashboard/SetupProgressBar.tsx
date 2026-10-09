@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import {
   CLE_CARTE_CACHEE, CLE_MASQUES, ecrireMasques, lireMasques, nettoyerMasques, nombreMasques,
@@ -36,7 +36,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
   // Chaque réglage vit à deux endroits : l'ancien écran sur le site, le nouveau dans
   // l'application installée. Sans ce choix, un tap depuis la PWA faisait sortir le laveur
   // de l'application refaite (Alexandre, 2026-09-27).
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const [brutMasques, setMasques] = usePreferenceLocale(CLE_MASQUES)
   const [cachee, setCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
 

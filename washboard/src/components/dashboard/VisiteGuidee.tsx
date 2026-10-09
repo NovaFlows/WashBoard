@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { Spinner } from '@/components/ui/Spinner'
 import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import {
@@ -56,7 +56,7 @@ function surligner(cible: string): () => void {
 export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const [navigation, naviguer] = useTransition()
   const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null))
 

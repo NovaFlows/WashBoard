@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
 import type { SetupProgress } from '@/lib/setupProgress'
 
@@ -11,7 +11,7 @@ import type { SetupProgress } from '@/lib/setupProgress'
 // plutôt que de rester affichée ailleurs) — ce wrapper évite de la montrer
 // deux fois en la masquant ici quand l'app tourne en PWA.
 export function SetupProgressBarPlus({ progress }: { progress: SetupProgress }) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   if (isPwa) return null
   return <SetupProgressBar progress={progress} />
 }
