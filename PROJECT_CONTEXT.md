@@ -1,6 +1,6 @@
 # Contexte partagé — WashBoard
 
-Dernière mise à jour : 2026-10-04.
+Dernière mise à jour : 2026-10-09.
 
 ## Continuité de travail
 L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
@@ -26,7 +26,14 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
-## Travail actuel — refonte de la réservation
+## Travail actuel — refonte bureau (branche de Yanis `refonte/maquette-bureau`, reprise le 2026-10-09)
+- Worktree : `../WashBoard-bureau` (le dossier principal est utilisé par une autre session). `washboard/node_modules` = jonction vers celui du dossier principal ; lancer avec `NEXT_PUBLIC_DEV_BUREAU=1 npx next dev --webpack -p 3018`, puis `/demo` (données fictives, aucune base).
+- Maquette de référence : `washboard-design/maquettes/bureau-2026/` (README + CONTRAT). Les six destinations sont codées ; la v2 bureau n'est servie sur le site qu'aux comptes `beta_refonte` (garde-fou de `useDashboardV2.ts`).
+- `master` fusionné dans la branche le 2026-10-09 (`db594a4`, non poussé) : 7 conflits réglés en gardant les deux côtés (Apparence = mise en page bureau + case « Page par défaut » + Avis Google ; Réglages = liste « Plus » + carte de configuration). Corrigé : « Cette semaine » de l'accueil lisait `bookings` par la session (refusé en prod depuis le durcissement RLS) → client admin. `tsc` propre, vitest 2481/2481.
+- Captures des 22 écrans de `/demo` en 1440×900, clair et sombre : aucune erreur JS ni débordement. Défauts vus : bouton flottant « Support » qui masque le bas de la colonne droite d'Aujourd'hui ; bandeau « venez essayer la nouvelle version » affiché alors qu'on y est ; sélecteur « Page par défaut » (composant de master) hors palette v2, criard en sombre ; démo Chiffres à −541 € (début de mois) ; lignes verrouillées affichées sur un compte Pro (voulu par la démo, incohérent).
+- À décider avec Alexandre : pousser sur la branche de Yanis ou une branche à soi ; liste des corrections avant ouverture à l'équipe puis à tous.
+
+## Travail précédent — refonte de la réservation
 - Branche : `refonte/page-reservation`, dans le worktree `.claude/worktrees/agent-a47fc20e5d6aa3f99`. Le dossier principal reste sur `master`.
 - Le contexte partagé a été commité et poussé sur `master` dans `0d38490`. Les instructions et la mémoire sont également présentes sur la branche de refonte.
 - Base : commit Claude `c39eaf0` du 2 octobre 2026. L'utilisateur a ensuite fourni huit captures de l'artefact Claude et demandé d'en reproduire le rendu.
