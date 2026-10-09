@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { MutableRefObject, RefObject } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CalendarX2, ChevronLeft, ChevronRight, Mail, Navigation, Phone, Plus, Users2, X } from 'lucide-react'
 import MoisV2 from '@/components/dashboard/MoisV2'
@@ -358,7 +359,10 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
   // Le bandeau de 7 jours est CENTRÉ sur le jour affiché (demande d'Alexandre, 2026-09-26) :
   // le jour choisi est toujours celui du milieu, trois jours avant, trois après. Toucher un
-  // autre jour recentre le bandeau sur lui, avec un glissement (voir plus bas).
+  // autre jour recentre le bandeau sur lui, avec un glissement (voir plus bas). Partagé par le
+  // bandeau mobile ET par celui de l'onglet « Jour » bureau (`BandeauSemaineBureauV2`) depuis le
+  // 2026-10-09 — avant cette date, le bureau recevait `semaineBureau` par erreur (une vraie
+  // semaine lundi → dimanche), ce qui décentrait le jour choisi dès qu'il n'était pas un lundi.
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => { const d = new Date(dayDate); d.setDate(d.getDate() + i - 3); return d }),
     [dayDate],
@@ -376,8 +380,14 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     return Array.from({ length: 7 }, (_, i) => { const d = new Date(lundi); d.setDate(d.getDate() + i); return d })
   }, [dayDate])
   const bandeauRef = useRef<HTMLDivElement>(null)
-  // Décalage (en jours) du jour touché par rapport au milieu, posé au toucher : lu par
-  // l'effet qui suit le changement de jour pour faire glisser le bandeau.
+  // Décalage (en jours) du jour touché par rapport au milieu, posé au clic/toucher : lu par
+  // l'effet qui suit le changement de jour pour faire glisser le bandeau. Partagé par le bandeau
+  // mobile (`bandeauRef` posé sur son conteneur) et celui du bureau (`BandeauSemaineBureauV2`,
+  // qui reçoit la même paire de refs) — jamais les deux montés en même temps (téléphone/bureau
+  // sont deux retours distincts de ce composant), donc une seule paire de refs suffit. Côté
+  // bureau, les flèches ‹ › de l'en-tête posent aussi ce décalage (en jours entiers, ±1 ou ±7)
+  // avant de déplacer `dayDate` : c'est exactement le même geste qu'un clic sur un jour du
+  // bandeau, vu du décalage qu'il produit.
   const decalageBandeau = useRef(0)
   useLayoutEffect(() => {
     const k = decalageBandeau.current
@@ -445,6 +455,20 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     setDayDate(d => { const n = new Date(d); n.setDate(n.getDate() + delta * 7); return n })
   }
 
+  // Flèches ‹ › bureau de l'en-tête (demande d'Alexandre, 2026-10-09) : un pas qui suit l'onglet
+  // actif — un jour en « Jour », une semaine en « Semaine ». Pas de cas « mois » ici : l'onglet
+  // Mois a déjà ses propres flèches, posées directement à côté du nom du mois dans
+  // `MoisBureauV2` (convention d'agenda : on navigue depuis l'en-tête de la grille qu'on regarde,
+  // pas depuis un en-tête général qui n'a plus de rapport avec elle) — en ajouter une seconde
+  // paire ici ferait doublon. `decalageBandeau` est posé pour que le bandeau de l'onglet Jour
+  // glisse visuellement du même nombre de jours que le clic flèche en représente, comme un clic
+  // direct sur un jour du bandeau (voir son commentaire plus haut).
+  function naviguerBureau(delta: number) {
+    const jours = vueBureau === 'semaine' ? delta * 7 : delta
+    decalageBandeau.current = jours
+    setDayDate(d => { const n = new Date(d); n.setDate(n.getDate() + jours); return n })
+  }
+
   const estAujourdhui = dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate()
   const sousTitre = estAujourdhui
     ? `Aujourd’hui · ${dayDate.toLocaleDateString('fr-FR', { day: 'numeric' })}`
@@ -479,6 +503,42 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
             <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{sousTitreBureau}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {/* Flèches ‹ › + « Aujourd'hui » : seulement en Jour/Semaine (l'onglet Mois a les
+                siennes, voir `naviguerBureau`). Dans l'en-tête plutôt qu'autour du bandeau/de la
+                grille : la grille « Semaine » a 7 colonnes qui ont besoin de chaque pixel de
+                largeur, un ‹ › de chaque côté le leur aurait pris. Remplace le lien « Revenir à
+                aujourd'hui » qui vivait sous le bandeau de l'onglet Jour — même action, pas de
+                doublon. */}
+            {vueBureau !== 'mois' && (
+              <div className="flex items-center gap-0.5 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] p-1">
+                <button
+                  type="button"
+                  onClick={() => naviguerBureau(-1)}
+                  aria-label={vueBureau === 'semaine' ? 'Semaine précédente' : 'Jour précédent'}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
+                >
+                  <ChevronLeft size={16} strokeWidth={2} />
+                </button>
+                {!estAujourdhui && (
+                  <button
+                    type="button"
+                    onClick={() => setDayDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()))}
+                    className={`h-9 rounded-[var(--v2-radius-pilule)] px-2.5 text-[12.5px] ${corpsFort}`}
+                    style={{ color: 'var(--v2-color-accent)' }}
+                  >
+                    Aujourd’hui
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => naviguerBureau(1)}
+                  aria-label={vueBureau === 'semaine' ? 'Semaine suivante' : 'Jour suivant'}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
+                >
+                  <ChevronRight size={16} strokeWidth={2} />
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-1 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] p-1">
               {([['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']] as const).map(([v, libelle]) => (
                 <button
@@ -511,18 +571,15 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
         {vueBureau === 'jour' && (
           <>
-            <BandeauSemaineBureauV2 weekDays={semaineBureau} dayDate={dayDate} today={today} getUnavail={getUnavail} onChoisir={setDayDate} />
-
-            {!estAujourdhui && (
-              <button
-                type="button"
-                onClick={() => setDayDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()))}
-                className={`text-[13px] ${corpsFort}`}
-                style={{ color: 'var(--v2-color-accent)' }}
-              >
-                Revenir à aujourd’hui
-              </button>
-            )}
+            <BandeauSemaineBureauV2
+              weekDays={weekDays}
+              dayDate={dayDate}
+              today={today}
+              getUnavail={getUnavail}
+              onChoisir={setDayDate}
+              bandeauRef={bandeauRef}
+              decalageBandeau={decalageBandeau}
+            />
 
             {congeDuJour && (
               <BandeauConge
@@ -1586,21 +1643,29 @@ function DetailRendezVous({
 // ici : seule la présentation diffère.
 
 /** Bandeau de 7 jours du haut de l'onglet « Jour » bureau — même donnée que le bandeau mobile
- *  (`weekDays`, centré sur `dayDate`), sans l'animation de glissement au clic : elle existe côté
- *  mobile pour un geste de doigt sur un bandeau étroit, elle n'a pas de sens à la souris sur une
- *  rangée qui a toute la place. */
+ *  (`weekDays`, centré sur `dayDate`) ET la même animation de glissement au clic (corrigé le
+ *  2026-10-09 : avant cette date il recevait `semaineBureau`, une vraie semaine lundi → dimanche,
+ *  qui ne recentrait pas le jour choisi — voir le commentaire sur `weekDays` plus haut). L'idée
+ *  reçue qui excluait l'animation ici (« pas de sens à la souris, la rangée a toute la place »)
+ *  ne tient plus : puisque le bandeau se recentre à chaque clic, le jour touché change bel et
+ *  bien de position sous le curseur — exactement le cas que l'animation sert à expliquer côté
+ *  mobile. `bandeauRef`/`decalageBandeau` viennent du parent : CE composant et le bandeau mobile
+ *  ne sont jamais montés en même temps (deux retours distincts du même écran), une seule paire de
+ *  refs leur suffit. */
 function BandeauSemaineBureauV2({
-  weekDays, dayDate, today, getUnavail, onChoisir,
+  weekDays, dayDate, today, getUnavail, onChoisir, bandeauRef, decalageBandeau,
 }: {
   weekDays: Date[]
   dayDate: Date
   today: Date
   getUnavail: (d: Date) => Unavailability | null
   onChoisir: (d: Date) => void
+  bandeauRef: RefObject<HTMLDivElement | null>
+  decalageBandeau: MutableRefObject<number>
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-1.5">
-      {weekDays.map(d => {
+    <div ref={bandeauRef} className="flex items-center gap-1.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-1.5">
+      {weekDays.map((d, i) => {
         const actif = isSameDay(d, dayDate)
         const estJourReel = isSameDay(d, today)
         const enConge = getUnavail(d) !== null
@@ -1608,7 +1673,7 @@ function BandeauSemaineBureauV2({
           <button
             key={dayKey(d)}
             type="button"
-            onClick={() => onChoisir(d)}
+            onClick={() => { decalageBandeau.current = i - 3; onChoisir(d) }}
             aria-current={actif ? 'date' : undefined}
             aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
             className={`relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] transition-colors motion-reduce:transition-none ${
