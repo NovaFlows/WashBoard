@@ -30,6 +30,15 @@ beforeEach(() => {
   session = fausseSession()
   vi.stubGlobal('sessionStorage', session)
   vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })))
+  // `logger` est mocké une seule fois pour tout le fichier (`vi.mock` plus
+  // haut) : `vi.resetModules()` dans `charger()` redonne un module
+  // `visiteGuidee` neuf, mais PAS un `logger` neuf — ses `vi.fn()`
+  // accumulent les appels de TOUS les tests précédents sans ce nettoyage.
+  // Repéré le 2026-10-10 : un test de `fermerPourLInstant` qui appelle
+  // vraiment `logger.warn` (nouveau, suite au correctif « Passer » marque
+  // la visite en base) faisait échouer `terminerVisite > succès` plus loin
+  // dans le fichier, qui vérifie que `logger.warn` n'a PAS été appelé.
+  vi.clearAllMocks()
 })
 
 afterEach(() => vi.unstubAllGlobals())
@@ -242,12 +251,39 @@ describe('mémoire de l’onglet', () => {
 })
 
 describe('fermerPourLInstant', () => {
-  it('ferme sans marquer terminé : ni « finie », ni appel réseau', async () => {
+  it('ferme tout de suite ET marque la visite vue en base — sinon elle se redéclenche toute seule en revenant sur /dashboard', async () => {
     const { fermerPourLInstant, ecrireVisite, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
     ecrireVisite({ statut: 'en_cours', etape: 3 })
-    fermerPourLInstant()
+    const promesse = fermerPourLInstant()
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
-    expect(fetch).not.toHaveBeenCalled()
+    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+    // Attend la vraie fin de l'appel réseau (pas un délai deviné) — sinon il
+    // peut se résoudre pendant le test SUIVANT, une fois `beforeEach` reposé
+    // un `fetch` différent pour lui.
+    await promesse
+  })
+
+  it('succès : rien à tracer', async () => {
+    const { fermerPourLInstant, logger } = await charger()
+    await fermerPourLInstant()
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
+    const { fermerPourLInstant, logger } = await charger()
+    await fermerPourLInstant()
+    expect(logger.warn).toHaveBeenCalledWith('visite_guidee.passer.session_expiree', {})
+  })
+
+  it('requête qui n’arrive pas : erreur tracée, la carte reste fermée à l’écran', async () => {
+    const panne = new TypeError('Failed to fetch')
+    vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
+    const { fermerPourLInstant, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
+    await fermerPourLInstant()
+    expect(logger.error).toHaveBeenCalledWith('visite_guidee.passer.reseau', {}, panne)
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
   })
 })
 
@@ -255,18 +291,19 @@ describe('terminerVisite', () => {
   it('finie tout de suite, une seule requête même sur double clic', async () => {
     const { terminerVisite, lireEtat, lireVisite, ecrireVisite, ETAPES_VISITE } = await charger()
     ecrireVisite({ statut: 'en_cours', etape: 3 })
-    terminerVisite()
-    terminerVisite()
+    const premiere = terminerVisite()
+    const seconde = terminerVisite()
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'finie' })
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+    // Attend la vraie fin (pas un délai deviné) — sinon le `.then()` peut se
+    // résoudre pendant le test SUIVANT.
+    await Promise.all([premiere, seconde])
   })
 
   it('succès : rien à tracer', async () => {
     const { terminerVisite, logger } = await charger()
-    terminerVisite()
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalled())
-    await new Promise(r => setTimeout(r, 0))
+    await terminerVisite()
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
   })
@@ -274,16 +311,16 @@ describe('terminerVisite', () => {
   it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
     const { terminerVisite, logger } = await charger()
-    terminerVisite()
-    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledWith('visite_guidee.terminer.session_expiree', {}))
+    await terminerVisite()
+    expect(logger.warn).toHaveBeenCalledWith('visite_guidee.terminer.session_expiree', {})
   })
 
   it('requête qui n’arrive pas : erreur tracée, la visite reste fermée à l’écran', async () => {
     const panne = new TypeError('Failed to fetch')
     vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
     const { terminerVisite, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
-    terminerVisite()
-    await vi.waitFor(() => expect(logger.error).toHaveBeenCalledWith('visite_guidee.terminer.reseau', {}, panne))
+    await terminerVisite()
+    expect(logger.error).toHaveBeenCalledWith('visite_guidee.terminer.reseau', {}, panne)
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'finie' })
   })
 })

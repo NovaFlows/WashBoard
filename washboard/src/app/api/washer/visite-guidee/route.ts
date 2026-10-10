@@ -4,9 +4,11 @@ import { logger } from '@/lib/logger'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { marquerUneFois } from '@/lib/marquerUneFois'
 
-// Fin de la visite guidée du tableau de bord, au dernier arrêt (« Terminé »).
-// Le laveur ne voit pas la réponse — la visite a déjà disparu de son écran :
-// seul compte que l'échec soit tracé.
+// Fin de la visite guidée du tableau de bord — au dernier arrêt (« Terminé »)
+// ou à n'importe quel arrêt (« Passer », depuis le 2026-10-10 : les deux
+// ferment la visite pour de bon, elle ne doit pas se redéclencher toute
+// seule en revenant sur « Aujourd'hui »). Le laveur ne voit pas la réponse —
+// la visite a déjà disparu de son écran : seul compte que l'échec soit tracé.
 export async function POST() {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()

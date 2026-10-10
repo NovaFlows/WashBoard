@@ -29,10 +29,11 @@
 // compte créé depuis peut avoir NULL. La progression, elle, vit dans l'onglet
 // (sessionStorage) : elle survit aux changements de page comme à un rechargement.
 //
-// « Passer » ne marque PLUS la visite comme terminée (changé le 2026-10-07) : elle
-// ferme juste la carte pour cette session d'onglet, et reprend au premier arrêt la
-// prochaine fois que `/dashboard` se charge pour de vrai (tant que la colonne reste
-// NULL). Seul le dernier arrêt, avec « Terminé », marque la fin pour de bon.
+// « Passer » marque la visite comme vue en base, au même titre que « Terminé »
+// (changé le 2026-10-10 — l'inverse avait été tranché le 2026-10-07, mais Ryan a
+// signalé qu'une visite passée se redéclenchait en revenant sur « Aujourd'hui »,
+// qui recharge `/dashboard` depuis zéro : pas le comportement voulu, elle ne doit
+// se relancer que depuis le Guide). Les deux ferment la visite pour de bon.
 
 import { logger } from './logger'
 import { requiredPlanLabel } from './plan'
@@ -198,25 +199,46 @@ export function abonnerVisite(f: () => void): () => void {
   return () => { abonnes.delete(f) }
 }
 
-/** « Passer » : ferme la carte pour cette session d'onglet, SANS marquer la
- *  visite terminée — elle reprend au premier arrêt la prochaine fois que
- *  `/dashboard` se charge pour de vrai (tant que la colonne reste NULL).
- *  Rien à écrire en base : il n'y a rien de définitif à y poser. */
-export function fermerPourLInstant(): void {
+/** « Passer » : ferme la carte tout de suite ET marque la visite comme vue
+ *  en base — même effet que « Terminé » pour ce qui est de ne plus se
+ *  redéclencher tout seul. Changé le 2026-10-10 : avant, « Passer » ne
+ *  touchait pas la base, et la visite reprenait au premier arrêt dès que
+ *  `/dashboard` se rechargeait pour de vrai (tant que la colonne restait
+ *  NULL) — y compris en appuyant simplement sur « Aujourd'hui » dans la
+ *  barre du bas, qui recharge `/dashboard` depuis zéro. Ryan, en testant sur
+ *  un compte réel : passé le premier arrêt une fois, revenu sur
+ *  « Aujourd'hui », la visite s'est redéclenchée — « censée se déclencher
+ *  une fois à la création du compte, ou via Revoir le tuto, jamais toute
+ *  seule après ». Elle ne se relance plus désormais que depuis le Guide
+ *  (`redemarrerVisite`, qui efface la colonne exprès).
+ *
+ *  Renvoie une promesse — purement informatif (un appelant normal n'a rien
+ *  à en faire, c'est un ping au mieux, la carte a déjà disparu) mais permet
+ *  aux tests d'attendre la vraie fin de l'appel réseau plutôt que de deviner
+ *  un délai. */
+export function fermerPourLInstant(): Promise<void> {
   ecrireVisite({ statut: 'absente' })
+
+  return fetch('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+    .then(res => {
+      if (res.status === 401) logger.warn('visite_guidee.passer.session_expiree', {})
+    })
+    .catch(e => logger.error('visite_guidee.passer.reseau', {}, e))
 }
 
 /** « Terminé », au dernier arrêt seulement : la visite disparaît tout de suite,
- *  l'écriture en base suit. Un second appel (double clic) ne renvoie rien.
+ *  l'écriture en base suit (même appel que « Passer » ci-dessus — les deux
+ *  ferment la visite pour de bon). Un second appel (double clic) ne renvoie rien.
  *
  *  Si l'écriture échoue, la visite reviendra à la prochaine session : le serveur
  *  trace déjà ses propres échecs (errorId), on ne trace ici que ce qu'il ne peut
- *  pas voir — la requête qui ne lui parvient pas, ou une session expirée. */
-export function terminerVisite(): void {
-  if (lireEtat(lireVisite(), ETAPES_VISITE.length).statut === 'finie') return
+ *  pas voir — la requête qui ne lui parvient pas, ou une session expirée.
+ *  Renvoie une promesse pour la même raison que `fermerPourLInstant` ci-dessus. */
+export function terminerVisite(): Promise<void> {
+  if (lireEtat(lireVisite(), ETAPES_VISITE.length).statut === 'finie') return Promise.resolve()
   ecrireVisite({ statut: 'finie' })
 
-  fetch('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+  return fetch('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
     .then(res => {
       if (res.status === 401) logger.warn('visite_guidee.terminer.session_expiree', {})
     })

@@ -316,6 +316,43 @@ aucune duplication après le correctif. À confirmer par Ryan sur son compte si 
 si ça persiste malgré ce correctif, ce serait un troisième bug distinct, pas une
 réapparition de celui-ci.
 
+## « Passer » redéclenchait le tuto en revenant sur « Aujourd'hui »
+
+Signalé par Ryan le 2026-10-10, juste après le correctif de « Revoir le tuto » ci-dessus :
+sur un compte fraîchement créé, le tuto s'est lancé tout seul (normal, pas signalé comme un
+problème), il a fait « Passer » au premier arrêt, changé de page, puis en revenant sur
+« Aujourd'hui » (qui recharge `/dashboard` depuis zéro) — le tuto s'est redéclenché, il a dû
+re-passer une deuxième fois. Attendu : « censé se déclencher une fois à la création du
+compte, ou via Revoir le tuto, jamais tout seul après ».
+
+Cause : décision du 2026-10-07 (« Passer » ne marque PLUS la visite terminée en base,
+seulement « absente » pour cette session d'onglet — voir git blame si besoin du contexte
+exact de cette décision). `/dashboard` est un Server Component qui recalcule `aFaire`
+depuis la base à CHAQUE rendu, y compris une navigation interne (pas juste un rechargement
+dur) ; tant que `dashboard_tour_complete_at` reste NULL, `etatAuChargement` relance au
+premier arrêt dès que l'état stocké n'est pas `en_cours`.
+
+**Inversé le 2026-10-10** (feedback plus récent et plus précis l'emporte) : `fermerPourLInstant`
+(« Passer ») marque maintenant `dashboard_tour_complete_at` en base, exactement comme
+`terminerVisite` (« Terminé ») — les deux ferment la visite pour de bon, elle ne se relance
+plus que depuis le Guide (`redemarrerVisite`, qui efface la colonne exprès). Les deux
+fonctions renvoient maintenant une promesse (purement informatif pour l'appelant réel —
+`synchroVue` l'ignore — mais utile aux tests pour attendre la vraie fin de l'appel réseau
+plutôt que deviner un délai).
+
+Vérifié de bout en bout sur un compte jetable fraîchement créé (tuto auto-déclenché, Passer,
+navigation ailleurs, retour sur /dashboard) : plus de redéclenchement, stable sur 3 essais.
+
+**Piège de test rencontré en corrigeant ça** : `logger` est mocké une seule fois pour tout
+`visiteGuidee.test.ts` (`vi.mock` en tête de fichier) — `vi.resetModules()` dans `charger()`
+redonne un module `visiteGuidee` neuf à chaque test, mais PAS un `logger` neuf : ses
+`vi.fn()` accumulaient les appels de TOUS les tests précédents sans nettoyage. Un nouveau
+test de `fermerPourLInstant` qui appelle vraiment `logger.warn` faisait échouer
+`terminerVisite > succès` plus loin dans le fichier (qui vérifie que `logger.warn` n'a PAS
+été appelé) — pas une vraie régression, un trou de longue date dans l'hygiène des mocks que
+ce nouveau test a fini par révéler. Corrigé avec `vi.clearAllMocks()` dans le `beforeEach`
+global du fichier.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le
