@@ -44,7 +44,7 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
     - `DesignV2Context` (fourni par DashboardShell = `useDashboardV2`) remplace `useDesignMobile` dans DemarrageCard, SetupProgressBar(+Plus), EnteteParametres : liens `hrefV2` et habillage v2 sur la v2 ordinateur. VisiteGuidee reçoit `v2` ; ChoixVeilleModal suit `useDashboardV2(beta_refonte)` (layout lit `beta_refonte`).
     - Seuil grand écran = seuil du rail (880px ET pointeur fin, `lib/grandEcran.ts`) ; rail réduit aux icônes sous 1024px (`--bureau-rail-largeur: 76px`). Effet de bord voulu : une tablette sans pointeur fin en PWA garde les mises en page téléphone.
     - Notifications : « navigateur »/« ordinateur » au lieu de « téléphone » hors design mobile.
-    - Restent côté téléphone (non traités) : pas d'Itinéraire dans la fiche RDV de l'agenda ; Documents sans recherche ni filtres.
+    - Côté téléphone (même jour) : bouton Itinéraire dans la fiche RDV de l'agenda (`DetailRendezVous`, `ChoixItineraireV2`) ; Documents avec la recherche commune + pastilles Tous/Devis/Factures/Impayées (`filtreMobile`).
   - Décisions d'Alexandre : « proposer un autre créneau » et « fiche prospect » ne sont pas construits ; bouton Support laissé tel quel.
 
 ## Travail précédent — refonte de la réservation

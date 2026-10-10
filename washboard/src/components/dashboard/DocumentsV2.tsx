@@ -7,7 +7,7 @@ import { ChevronLeft, FileText, MapPin, Phone, Plus, Search } from 'lucide-react
 import { useOffre } from '@/components/dashboard/OffreContext'
 import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
-import { Feuille, BOUTON, PRESSION, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
+import { Feuille, BOUTON, CHAMP, PRESSION, corps, corpsFort, puce, titre } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom } from '@/components/dashboard/PrestationsUiV2'
 import FeuilleDocumentV2 from '@/components/dashboard/FeuilleDocumentV2'
 import FeuilleActionsDocumentV2, { IconeWhatsapp } from '@/components/dashboard/FeuilleActionsDocumentV2'
@@ -565,17 +565,15 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
     setSuppression(null)
   }
 
-  const devis = (documents ?? []).filter(d => d.genre === 'devis')
-  const factures = (documents ?? []).filter(d => d.genre === 'facture')
   // Toujours relu dans la liste : la feuille ne peut pas montrer un état périmé.
   const ouvert = (documents ?? []).find(d => d.id === ouvertId) ?? null
 
   // ── Passe bureau (2026-10-07) : liste + recherche + filtres approfondis + fiche à côté ──────
   //
-  // Réservé au grand écran (voir l'en-tête du fichier) : le téléphone garde EXACTEMENT la
-  // présentation groupée « Devis »/« Factures » ci-dessus, sans recherche ni filtre — c'est la
-  // colonne de gauche du rail bureau (« Documents » épinglé) qui a fait naître cette demande,
-  // elle n'a pas d'équivalent au pouce.
+  // Les filtres détaillés sont réservés au grand écran (voir l'en-tête du fichier). Le téléphone
+  // a reçu le 2026-10-10 (audit mobile/ordinateur) la même recherche, plus quatre pastilles au
+  // pouce (`filtreMobile`) — il gardait jusque-là deux listes fixes, introuvables dès qu'elles
+  // s'allongent.
   const grandEcran = useGrandEcran()
   const [rechercheDoc, setRechercheDoc] = useState('')
   const [filtreType, setFiltreType] = useState<'' | GenreDocument>('')
@@ -584,6 +582,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
   const [filtreClient, setFiltreClient] = useState('')
   const [filtreMontantMin, setFiltreMontantMin] = useState('')
   const [filtreMontantMax, setFiltreMontantMax] = useState('')
+  const [filtreMobile, setFiltreMobile] = useState<'tous' | 'devis' | 'facture' | 'impayees'>('tous')
 
   // Le plus récent en tête — même ordre que la maquette (planche Documents).
   const tousDocuments = useMemo(
@@ -644,6 +643,16 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
   const impayeFiltre = documentsFiltres
     .filter(d => d.genre === 'facture' && !d.paye_le)
     .reduce((s, d) => s + d.contenu.totaux.ttc, 0)
+
+  // Téléphone : la recherche commune, puis la pastille choisie. « Impayées » = factures sans
+  // date de paiement, même règle que le total « impayés » ci-dessus.
+  const documentsMobile = documentsFiltres.filter(d =>
+    filtreMobile === 'tous' ? true
+      : filtreMobile === 'impayees' ? d.genre === 'facture' && !d.paye_le
+        : d.genre === filtreMobile)
+  const devisMobile = documentsMobile.filter(d => d.genre === 'devis')
+  const facturesMobile = documentsMobile.filter(d => d.genre === 'facture')
+  const rechercheMobileActive = rechercheDoc.trim() !== '' || filtreMobile !== 'tous'
 
   // Communes aux deux présentations : la feuille de saisie (centrée par `Feuille` dès 640px de
   // large, sans rien à changer ici), la question du paiement et la confirmation de suppression.
@@ -968,7 +977,46 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
         </div>
       ) : (
         <>
-          {([['Devis', devis], ['Factures', factures]] as const).map(([intitule, liste]) => liste.length === 0 ? null : (
+          <div className="mt-3 space-y-2.5">
+            <div className="relative">
+              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--v2-color-gris)]" aria-hidden />
+              <input
+                type="search"
+                value={rechercheDoc}
+                onChange={e => setRechercheDoc(e.target.value)}
+                placeholder="N°, client ou montant"
+                aria-label="Rechercher un document"
+                className={`${CHAMP} pl-10`}
+              />
+            </div>
+            <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-0.5 sm:-mx-4 sm:px-4" role="radiogroup" aria-label="Afficher">
+              {([['tous', 'Tous'], ['devis', 'Devis'], ['facture', 'Factures'], ['impayees', 'Impayées']] as const).map(([valeur, libelle]) => (
+                <button
+                  key={valeur}
+                  type="button"
+                  role="radio"
+                  aria-checked={filtreMobile === valeur}
+                  onClick={() => setFiltreMobile(valeur)}
+                  className={puce(filtreMobile === valeur)}
+                >
+                  {libelle}
+                </button>
+              ))}
+            </div>
+            {rechercheMobileActive && (
+              <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`} role="status">
+                {documentsMobile.length} document{documentsMobile.length > 1 ? 's' : ''} · {euros.format(documentsMobile.reduce((t, d) => t + d.contenu.totaux.ttc, 0))}
+              </p>
+            )}
+          </div>
+
+          {documentsMobile.length === 0 && (
+            <p className={`mt-6 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              Aucun document ne correspond.
+            </p>
+          )}
+
+          {([['Devis', devisMobile], ['Factures', facturesMobile]] as const).map(([intitule, liste]) => liste.length === 0 ? null : (
             <section key={intitule} aria-label={intitule} className="mt-[26px]">
               <h2 className={`px-0.5 pb-1.5 text-[19px] leading-tight ${titre}`}>{intitule}</h2>
               <div className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">

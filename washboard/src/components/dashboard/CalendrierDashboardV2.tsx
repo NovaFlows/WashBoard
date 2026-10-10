@@ -1325,6 +1325,10 @@ function DetailRendezVous({
   emettreFactureManuelle: (id: string) => void
 }) {
   const [visible, setVisible] = useState(false)
+  // Même choix d'application (Plans, Waze, Google Maps) que le héros d'Aujourd'hui et la fiche
+  // bureau — il manquait ici, sur téléphone, où l'itinéraire sert le plus (audit du 2026-10-10).
+  const [choixItineraire, setChoixItineraire] = useState(false)
+  const adresse = b.address?.trim()
   const closeRef = useRef<HTMLButtonElement>(null)
   const feuilleRef = useRef<HTMLDivElement>(null)
   useBloquerDefilement()
@@ -1497,6 +1501,17 @@ function DetailRendezVous({
           )}
 
           <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{b.address}</p>
+          {adresse && (
+            <button
+              type="button"
+              onClick={() => setChoixItineraire(true)}
+              className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} transition-transform active:scale-[.97]`}
+              style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+            >
+              <Navigation size={16} strokeWidth={2} aria-hidden />
+              Itinéraire
+            </button>
+          )}
 
           <div className="mt-4">
             <label htmlFor="rdv-notes" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -1634,6 +1649,9 @@ function DetailRendezVous({
           )}
         </div>
       </div>
+      {choixItineraire && adresse && (
+        <ChoixItineraireV2 adresse={adresse} onClose={() => setChoixItineraire(false)} />
+      )}
     </div>
   )
 }
