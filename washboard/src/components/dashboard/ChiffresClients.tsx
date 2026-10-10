@@ -7,6 +7,8 @@ import { buildClientProfile } from '@/lib/clientProfile'
 import { formaterJour, type PeriodeChiffres } from '@/lib/chiffresPeriode'
 import { reservationsDeLaPeriode, statsClients, type FiltreClients } from '@/lib/chiffresClients'
 import { repartitionSources } from '@/lib/sourceDecouverte'
+import { statsRelances } from '@/lib/statsRelances'
+import Link from 'next/link'
 import { finitAvant, premierJourDeDonnee } from '@/lib/chiffresArgent'
 import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
 
@@ -37,12 +39,10 @@ import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
 //   vraie nouvelle logique métier, pas une présentation d'une donnée déjà
 //   calculée ailleurs — hors du principe « garde la logique, remplace la
 //   présentation » de cette refonte ;
-// - pas de section « Les relances qui marchent » : rien dans la base
-//   n'enregistre aujourd'hui le canal d'une relance ni si le client est
-//   revenu grâce à elle (voir `.claude/agents/refonte.md`, « Les deux
-//   automatismes de message » — cette liaison fait partie de l'étape 4 du
-//   plan CRM, pas encore construite). Afficher un faux taux de retour aurait
-//   été pire que ne rien afficher.
+// - « Les relances qui marchent » (Alexandre, 2026-10-10) : version simple —
+//   relances parties sur la période et clients revenus ensuite
+//   (`lib/statsRelances.ts`). Pas de comparaison SMS/email : le canal n'est
+//   pas conservé par relance.
 
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -76,6 +76,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
     [bookings, periode, filtre, maintenant],
   )
   const premierJour = useMemo(() => premierJourDeDonnee(bookings), [bookings])
+  const relances = useMemo(() => statsRelances(bookings, periode), [bookings, periode])
   const sources = useMemo(() => {
     const dePeriode = reservationsDeLaPeriode(bookings, periode)
     return { ...repartitionSources(dePeriode), total: dePeriode.length }
@@ -145,11 +146,28 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
   )
 
   const blocRelances = (
-    <div className="rounded-[var(--v2-radius-surface)] border border-dashed border-[color:var(--v2-filet-fort)] px-4 py-3.5">
-      <p className={`text-[13px] ${corpsFort}`}>Les relances qui marchent</p>
-      <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed mt-1`}>
-        Pas encore suivi : WashBoard ne relie pas encore une relance envoyée à son canal et à son résultat. Réglages actuels dans Plus › Messages automatiques.
-      </p>
+    <div>
+      <div className="flex items-baseline justify-between px-0.5 pb-2">
+        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Les relances qui marchent</span>
+        <Link href="/dashboard/clients/messages" className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
+          Réglages
+        </Link>
+      </div>
+      <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-3.5">
+        {relances.envoyees === 0 ? (
+          <p className={`text-[13.5px] ${corps}`}>Aucune relance n’est partie sur cette période.</p>
+        ) : (
+          <>
+            <p className={`text-[14.5px] ${corpsFort}`}>
+              {nombre.format(relances.revenus)} client{relances.revenus > 1 ? 's' : ''} sur {nombre.format(relances.envoyees)} relancé{relances.envoyees > 1 ? 's' : ''} {relances.revenus > 1 ? 'ont' : 'a'} repris rendez-vous
+              <span className="text-[color:var(--v2-color-gris)]"> · {nombre.format(Math.round((relances.revenus / relances.envoyees) * 100))} %</span>
+            </p>
+          </>
+        )}
+        <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed mt-1`}>
+          Relances parties sur la période, et clients revenus depuis. SMS et email sont comptés ensemble.
+        </p>
+      </div>
     </div>
   )
 
