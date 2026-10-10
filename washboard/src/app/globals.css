@@ -725,10 +725,14 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* Pointeur triangulaire de la carte vers la cible — la « flèche » qui
    manquait (Ryan, 2026-10-09 : « des bulles avec des flèches pointant vers
-   les bons éléments »). Toujours sur le bord HAUT de la carte (la carte est
-   toujours en bas de l'écran) ; sa position horizontale suit la cible via
-   `--wb-fleche-x`, posée en ligne depuis VisiteGuidee.tsx. Masqué (voir
-   VisiteGuidee.tsx) quand l'arrêt n'a pas de cible — rien à pointer. */
+   les bons éléments »). Par défaut sur le bord HAUT de la carte (cible
+   au-dessus, cas le plus fréquent) ; sa position horizontale suit la cible
+   via `--wb-fleche-x`, posée en ligne depuis VisiteGuidee.tsx. Masqué (voir
+   VisiteGuidee.tsx) quand l'arrêt n'a pas de cible — rien à pointer.
+   `--bas` (ci-dessous) : variante miroir quand la carte se place AU-DESSUS
+   de la cible (`calculerDisposition`, 2026-10-10 — référence Folyo de Ryan :
+   la carte colle à l'élément au lieu de rester fixe en bas d'écran, donc
+   elle se retrouve parfois au-dessus plutôt qu'en-dessous). */
 .wb-visite-fleche {
   position: absolute; top: -7px; left: var(--wb-fleche-x, 50%);
   width: 14px; height: 14px; transform: translateX(-50%) rotate(45deg);
@@ -736,6 +740,13 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
   border-left: 1px solid var(--v2-verre-bordure); border-top: 1px solid var(--v2-verre-bordure);
   border-radius: 3px 0 0 0;
   transition: left .5s cubic-bezier(.34,1.56,.64,1);
+}
+.wb-visite-fleche--bas {
+  top: auto; bottom: -7px;
+  background: var(--v2-verre-bas);
+  border-left: none; border-top: none;
+  border-right: 1px solid var(--v2-verre-bordure); border-bottom: 1px solid var(--v2-verre-bordure);
+  border-radius: 0 0 3px 0;
 }
 
 /* Barre de progression segmentée façon « Stories » — un trait rempli par

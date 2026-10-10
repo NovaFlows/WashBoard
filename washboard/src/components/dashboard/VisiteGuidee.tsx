@@ -179,6 +179,34 @@ function positionFleche(rect: DOMRect | null, carte: HTMLElement | null): number
   return (borne / carteRect.width) * 100
 }
 
+const MARGE_CARTE = 14
+const RESERVE_HAUT = 14
+/** Pas de cible : centrée verticalement (`top`/`bottom` à 0 + marges auto,
+ *  jamais `transform` — l'animation d'entrée s'en sert déjà, les deux se
+ *  disputeraient la propriété et l'une écraserait l'autre). */
+const CARTE_CENTREE: CSSProperties = { top: 0, bottom: 0, marginTop: 'auto', marginBottom: 'auto' }
+
+/** Où poser la carte : collée sous la cible si la place le permet, sinon
+ *  collée au-dessus — jamais plantée en bas d'écran avec une flèche qui
+ *  traverse tout l'écran pour l'atteindre. Changement du 2026-10-10, sur
+ *  référence concrète de Ryan (captures d'une autre app, « Folyo ») : sa
+ *  carte colle toujours à l'élément, flèche courte, pas une carte fixe en
+ *  bas d'écran. `limiteBasse` mesurée en vrai (le haut de la barre du bas),
+ *  pas recalculée à la main depuis les mêmes constantes CSS deux fois. */
+function calculerDisposition(r: DOMRect | null): { styleCarte: CSSProperties; flecheEnBas: boolean } {
+  if (!r || typeof window === 'undefined') return { styleCarte: CARTE_CENTREE, flecheEnBas: false }
+  const barre = document.querySelector('[data-visite-cible="barre-bas"]')
+  const limiteBasse = barre ? barre.getBoundingClientRect().top : window.innerHeight
+  const espaceBas = limiteBasse - r.bottom - MARGE_CARTE
+  const espaceHaut = r.top - RESERVE_HAUT
+  // Sous la cible si la carte y tient à peu près (170px, une carte à deux
+  // lignes de texte) OU s'il y a simplement plus de place en bas qu'en haut.
+  if (espaceBas >= 170 || espaceBas >= espaceHaut) {
+    return { styleCarte: { top: r.bottom + MARGE_CARTE }, flecheEnBas: false }
+  }
+  return { styleCarte: { bottom: window.innerHeight - r.top + MARGE_CARTE }, flecheEnBas: true }
+}
+
 /** Barre « Stories » : un segment par arrêt, rempli pour tout arrêt déjà
  *  passé (index < etape) ou en cours (index === etape) — jamais pour les
  *  arrêts à venir. Remplace la barre continue unique : reste lisible même
@@ -328,15 +356,21 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   const avancerRef = useRef(avancer)
   useEffect(() => { avancerRef.current = avancer })
 
+  // Où poser la carte (au-dessus ou en-dessous de la cible, centrée si pas de
+  // cible) — calculé directement au rendu, pas via un effet : ne dépend que
+  // de `rect` (déjà en state) et de la barre du bas (déjà montée par
+  // DashboardShell), jamais de la carte elle-même. Voir `calculerDisposition`.
+  const { styleCarte: dispositionCarte, flecheEnBas } = calculerDisposition(rect)
+
   // Position horizontale de la flèche, recalculée à chaque changement de
-  // cible/rect (pas en continu : `rect` ne change que sur un vrai
-  // déplacement, voir `surligner()`).
+  // cible/rect — APRÈS que `dispositionCarte` ait déjà positionné la carte
+  // au commit précédent (sinon on mesurerait l'ancienne position).
   const carteRef = useRef<HTMLDivElement>(null)
   const [flecheX, setFlecheX] = useState<number | null>(null)
   useEffect(() => {
     setFlecheX(positionFleche(rect, carteRef.current))
-  }, [rect])
-  const styleCarte: CSSProperties = { bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' }
+  }, [rect, dispositionCarte])
+  const styleCarte: CSSProperties = { ...dispositionCarte }
   if (flecheX !== null) (styleCarte as Record<string, string>)['--wb-fleche-x'] = `${flecheX}%`
 
   // Trois états, pas un booléen : « déjà fait en arrivant » (compte déjà
@@ -393,7 +427,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
           style={styleCarte}
         >
-          {flecheX !== null && <div className="wb-visite-fleche" aria-hidden />}
+          {flecheX !== null && <div className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`} aria-hidden />}
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
@@ -459,7 +493,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           className="wb-visite-verre wb-visite-carte absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
           style={styleCarte}
         >
-          {flecheX !== null && <div className="wb-visite-fleche" aria-hidden />}
+          {flecheX !== null && <div className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`} aria-hidden />}
           <div className="flex items-center justify-between gap-3">
             <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
               Étape {etape + 1}/{etapes.length}

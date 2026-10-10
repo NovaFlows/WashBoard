@@ -83,11 +83,12 @@ Refonte du 2026-10-09 (« vingt fois mieux, surtout au niveau du visuel ») :
   spécificité peut gagner la cascade selon l'ordre d'injection et casser le positionnement
   en silence (repéré visuellement le 2026-10-09 : la carte flottait en haut de l'écran
   au lieu d'être collée en bas).
-- **Flèche** (`.wb-visite-fleche`) — un triangle fixé au bord HAUT de la carte (toujours
-  en bas de l'écran), position horizontale alignée sur le centre de la cible et bornée
-  pour ne jamais sortir de la carte (`positionFleche()` dans VisiteGuidee.tsx). Vit DANS
-  la carte (qui a son propre `view-transition-name: wb-visite-carte`) — jamais sur
-  `wb-visite-spot` (découpe/halo), pour ne pas lui disputer son nom de transition.
+- **Flèche** (`.wb-visite-fleche`) — un triangle sur le bord de la carte le plus proche de
+  la cible (haut ou bas, voir « Carte collée à la cible » ci-dessous), position
+  horizontale alignée sur le centre de la cible et bornée pour ne jamais sortir de la
+  carte (`positionFleche()` dans VisiteGuidee.tsx). Vit DANS la carte (qui a son propre
+  `view-transition-name: wb-visite-carte`) — jamais sur `wb-visite-spot` (découpe/halo),
+  pour ne pas lui disputer son nom de transition.
 - **Barre de progression segmentée** (`.wb-visite-progres`, style « Stories ») — un trait
   par arrêt plutôt qu'une seule barre continue, pour rester lisible même avec beaucoup
   d'arrêts (Ryan a cité ce style dès la toute première demande, en 2026-10-05).
@@ -115,6 +116,36 @@ Refonte du 2026-10-09 (« vingt fois mieux, surtout au niveau du visuel ») :
   (`react-hooks/refs` le refuse à raison, et React ne garantit pas que la valeur soit à
   jour) — `rect` et l'indicateur « instantané » vivent dans le MÊME `useState`, mis à
   jour ensemble.
+
+## Carte collée à la cible, pas fixe en bas d'écran
+
+Changement du 2026-10-10, sur référence CONCRÈTE de Ryan plutôt que sur description
+verbale : cinq captures de l'onboarding d'une autre app (« Folyo », un porte-folio —
+« c'est pas le même sujet nous ici c'est laveur mais comme ça tu captes »). Dans ces
+captures, la carte colle TOUJOURS à l'élément visé (juste au-dessus ou juste en-dessous,
+selon la place), flèche courte — jamais plantée en bas d'écran avec une flèche qui
+traverse tout l'écran, ce que ce tuto faisait encore juste après la refonte du
+2026-10-09.
+
+`calculerDisposition()` (VisiteGuidee.tsx) décide : sous la cible si ça tient à peu près
+(170px) OU s'il y a plus de place en bas qu'en haut, sinon au-dessus. `limiteBasse` est
+mesurée en vrai sur l'élément réel de la barre du bas (`[data-visite-cible="barre-bas"]`)
+plutôt que recalculée à la main depuis les mêmes constantes CSS que `DashboardShell` une
+deuxième fois. Pas de cible (arrêt narratif pur) : carte centrée verticalement via
+`top:0; bottom:0; margin:auto 0` — **jamais `transform: translateY(-50%)`**, l'animation
+d'entrée (`wb-visite-entree`) utilise déjà `transform` et la dernière valeur de
+l'animation écraserait un positionnement posé par ce biais.
+
+La flèche suit : `.wb-visite-fleche` (par défaut, carte en-dessous → flèche en haut,
+pointe vers le haut) et `.wb-visite-fleche--bas` (carte au-dessus → flèche en bas, pointe
+vers le bas, couleurs de bord/fond inversées pour coller au dégradé `--v2-verre-*` à cet
+endroit précis de la carte).
+
+Vérifié par capture Playwright sur un compte jetable (24 arrêts PWA, cibles à hauteurs
+variées) : les deux directions de flèche apparaissent bien selon la position de la cible,
+aucun chevauchement carte/cible mesuré une fois les rattrapages différés de `surligner()`
+stabilisés (jusqu'à 3s — mesurer plus tôt capture parfois une frame transitoire, à ne pas
+confondre avec un vrai bug de positionnement).
 
 ## Verrouillage par offre
 
