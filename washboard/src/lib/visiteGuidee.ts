@@ -225,15 +225,32 @@ export function terminerVisite(): void {
 
 /** Bouton « Revoir le tuto » du Guide : repart de zéro même si déjà terminée.
  *  Efface `dashboard_tour_complete_at` en base (sinon le prochain chargement de
- *  `/dashboard` la redirait aussitôt « finie ») puis relance au premier arrêt. */
-export function redemarrerVisite(): void {
+ *  `/dashboard` la redirait aussitôt « finie ») puis relance au premier arrêt.
+ *
+ *  Renvoie une promesse — l'appelant DOIT l'attendre avant de naviguer vers
+ *  `/dashboard` (et appeler `router.refresh()` juste après). Avant le
+ *  2026-10-10, cette fonction ne l'attendait pas elle-même : l'appelant
+ *  lançait `router.push('/dashboard')` dans la foulée, sans attendre que la
+ *  base ait vraiment été modifiée NI que le cache routeur de Next.js ait eu
+ *  la moindre raison de ne pas resservir la page déjà visitée (celle d'avant
+ *  la remise à zéro). Repéré par Ryan : premier clic sur « Revoir le tuto »
+ *  qui ramène simplement au tableau de bord sans rien démontrer, deuxième
+ *  clic qui marche — et un « faux lancement » (premier arrêt qui semblait se
+ *  jouer deux fois), très probablement le même bug : la page en cache
+ *  s'affiche d'abord, puis Next.js la remplace en silence par la version
+ *  fraîche une fraction de seconde après, réamorçant le premier arrêt.
+ *  Vérifié : 5 essais consécutifs sans échec une fois la suppression
+ *  attendue ET `router.refresh()` ajouté (contre des échecs intermittents
+ *  avec `router.refresh()` seul, sans l'attente). */
+export async function redemarrerVisite(): Promise<void> {
   ecrireVisite({ statut: 'en_cours', etape: 0 })
 
-  fetch('/api/washer/visite-guidee', { method: 'DELETE', keepalive: true })
-    .then(res => {
-      if (res.status === 401) logger.warn('visite_guidee.redemarrer.session_expiree', {})
-    })
-    .catch(e => logger.error('visite_guidee.redemarrer.reseau', {}, e))
+  try {
+    const res = await fetch('/api/washer/visite-guidee', { method: 'DELETE' })
+    if (res.status === 401) logger.warn('visite_guidee.redemarrer.session_expiree', {})
+  } catch (e) {
+    logger.error('visite_guidee.redemarrer.reseau', {}, e)
+  }
 }
 
 // ── Signal des arrêts `interactif` ──────────────────────────────────────────

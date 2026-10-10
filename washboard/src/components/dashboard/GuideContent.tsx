@@ -58,9 +58,13 @@ export default function GuideContent({ intro }: { intro?: React.ReactNode }) {
 
   // « Revoir la visite guidée » : repart du tout premier arrêt même si déjà
   // terminée — demande de Ryan, 2026-10-07.
-  function relancerLaVisite() {
-    redemarrerVisite()
+  // `await` + `router.refresh()` : voir le commentaire de `redemarrerVisite`
+  // — sans ça, `/dashboard` pouvait resservir sa version en cache d'avant la
+  // remise à zéro (premier clic sans effet visible, Ryan 2026-10-10).
+  async function relancerLaVisite() {
+    await redemarrerVisite()
     router.push('/dashboard')
+    router.refresh()
   }
 
   // Fils réels du laveur (table support_questions/support_messages, conçue

@@ -92,9 +92,13 @@ export default function GuideV2() {
   // demande de Ryan, 2026-10-07 (« reprendre depuis le début même si déjà fini
   // une fois »). `/dashboard` : la barre du bas y est visible, premier arrêt
   // logique quelle que soit la page d'où on relance.
-  function relancerLeTuto() {
-    redemarrerVisite()
+  // `await` + `router.refresh()` : voir le commentaire de `redemarrerVisite`
+  // — sans ça, `/dashboard` pouvait resservir sa version en cache d'avant la
+  // remise à zéro (premier clic sans effet visible, Ryan 2026-10-10).
+  async function relancerLeTuto() {
+    await redemarrerVisite()
     router.push('/dashboard')
+    router.refresh()
   }
 
   const sections = useMemo(() => searchGuide(recherche), [recherche])

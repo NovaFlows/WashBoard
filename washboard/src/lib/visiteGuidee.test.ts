@@ -292,24 +292,31 @@ describe('redemarrerVisite', () => {
   it('repart au premier arrêt tout de suite, et efface la date en base', async () => {
     const { redemarrerVisite, ecrireVisite, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
     ecrireVisite({ statut: 'finie' })
-    redemarrerVisite()
+    // L'état en sessionStorage est écrit tout de suite, avant même que la
+    // promesse se résolve — pas besoin de l'attendre pour le vérifier.
+    const promesse = redemarrerVisite()
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
-    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'DELETE', keepalive: true })
+    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'DELETE' })
+    // Renvoie une promesse — l'appelant (GuideV2/GuideContent) DOIT l'attendre
+    // avant de naviguer, sinon `/dashboard` peut resservir sa version en
+    // cache d'avant la remise à zéro (Ryan, 2026-10-10 : premier clic sans
+    // effet visible).
+    await promesse
   })
 
   it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
     const { redemarrerVisite, logger } = await charger()
-    redemarrerVisite()
-    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledWith('visite_guidee.redemarrer.session_expiree', {}))
+    await redemarrerVisite()
+    expect(logger.warn).toHaveBeenCalledWith('visite_guidee.redemarrer.session_expiree', {})
   })
 
   it('requête qui n’arrive pas : erreur tracée, la reprise reste affichée à l’écran', async () => {
     const panne = new TypeError('Failed to fetch')
     vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
     const { redemarrerVisite, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
-    redemarrerVisite()
-    await vi.waitFor(() => expect(logger.error).toHaveBeenCalledWith('visite_guidee.redemarrer.reseau', {}, panne))
+    await redemarrerVisite()
+    expect(logger.error).toHaveBeenCalledWith('visite_guidee.redemarrer.reseau', {}, panne)
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
   })
 })

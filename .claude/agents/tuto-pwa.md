@@ -287,6 +287,35 @@ arrêts d'affilée après ce correctif (contre un résultat incohérent avant).
 intermittence sans changement de code évident, suspecter une course avec une animation en
 cours (ici `scrollIntoView` smooth) avant de suspecter le cache de build.
 
+## « Revoir le tuto » : premier clic sans effet, deuxième qui marche
+
+Trouvé le 2026-10-10, signalé par Ryan sur son compte test déjà configuré : « quand je vais
+pour revisionner le tuto, la première fois ça me ramène à la page d'accueil, je suis obligé
+d'y retourner une deuxième fois ». Diagnostiqué par capture réseau + lecture directe de la
+base (pas en devinant) : `redemarrerVisite()` lançait son `fetch(DELETE)` vers
+`/api/washer/visite-guidee` SANS l'attendre, puis l'appelant (`GuideV2.tsx`/
+`GuideContent.tsx`) enchaînait `router.push('/dashboard')` tout de suite derrière. Vérifié
+que la base était DÉJÀ à `null` juste après le premier clic — donc pas un retard côté
+serveur/base. La vraie cause : Next.js resservait une version du cache routeur
+(client-side) de `/dashboard` capturée AVANT la remise à zéro (la page visitée juste après
+la connexion) au lieu d'aller relire des données fraîches.
+
+**Corrigé** : `redemarrerVisite()` est maintenant `async` et renvoie une promesse — les deux
+appelants (`GuideV2.tsx`, `GuideContent.tsx`) l'attendent AVANT de naviguer, puis appellent
+`router.refresh()` juste après `router.push('/dashboard')` pour forcer une lecture fraîche
+plutôt que de faire confiance au cache. Vérifié par 6 essais consécutifs sur un compte
+jetable déjà configuré : premier clic suffisant à chaque fois, une seule requête DELETE
+(pas de doublon).
+
+**Le « faux lancement »** (Ryan, même message : « au premier tour... les trucs se font deux
+fois ») n'a pas été reproduit séparément — hypothèse retenue : c'était un symptôme du MÊME
+bug (la page en cache s'affichait d'abord, sans tuto, puis Next.js la remplaçait en silence
+par la version fraîche une fraction de seconde après, réamorçant le premier arrêt). Capture
+fine (texte de la carte échantillonné toutes les 100ms pendant la bascule) ne montre plus
+aucune duplication après le correctif. À confirmer par Ryan sur son compte si ça revient —
+si ça persiste malgré ce correctif, ce serait un troisième bug distinct, pas une
+réapparition de celui-ci.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le
