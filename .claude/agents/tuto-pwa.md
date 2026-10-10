@@ -98,6 +98,23 @@ Refonte du 2026-10-09 (« vingt fois mieux, surtout au niveau du visuel ») :
   `view-transition-name: wb-visite-spot`), posée le 2026-10-09 à la demande explicite de
   Ryan (« fais-moi des beaux déplacements, fluides »). Non supportée (Safari < 18) :
   retombe sur la transition CSS `top/left/width/height`, aucune régression.
+- **Suivi au défilement : jamais la même transition que le déplacement entre arrêts.**
+  Corrigé le 2026-10-10 après que Ryan a décrit un décalage précis : « quand je scrolle,
+  il y a un temps de latence entre le cadre et ce qui surligne... ça fait un peu
+  saccadé » (et le percevait aussi comme « le bandeau en bas peut bouger » sur un arrêt
+  qui vise la barre du bas — même cause). La transition `top/left/width/height` de
+  `.wb-visite-decoupe`/`.wb-visite-halo`, pensée pour le glissement d'un arrêt à l'autre,
+  s'appliquait à TOUTE mise à jour du rectangle — chaque défilement relançait un
+  rattrapage animé de 500ms par-dessus le précédent, jamais terminé. `surligner()`
+  (VisiteGuidee.tsx) distingue maintenant deux origines : une nouvelle cible (changement
+  d'arrêt, ou PrestationsV2 qui bascule de vue) garde l'animation ; un défilement ou un
+  redimensionnement de fenêtre passe en `transition: none` posé en ligne, suivi 1:1,
+  aucun retard. Vérifié par mesure directe (écart cible/découpe) pendant un défilement
+  progressif simulé : 0px d'écart à chaque palier.
+  **Piège à ne pas refaire** : ne jamais lire cet état via un `ref` pendant le rendu
+  (`react-hooks/refs` le refuse à raison, et React ne garantit pas que la valeur soit à
+  jour) — `rect` et l'indicateur « instantané » vivent dans le MÊME `useState`, mis à
+  jour ensemble.
 
 ## Verrouillage par offre
 

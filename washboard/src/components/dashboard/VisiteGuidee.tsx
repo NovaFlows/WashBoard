@@ -55,7 +55,26 @@ import {
 // lui, reste branché toute la durée de l'arrêt (pas seulement le temps de
 // la première apparition) pour couvrir ce cas — événementiel aussi : son
 // coût est nul tant que rien ne change.
-function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | null) => void): () => void {
+// `instantane` : la découpe doit suivre un défilement 1:1, sans la moindre
+// trace de retard — Ryan, 2026-10-10 : « quand je scrolle, il y a un temps
+// de latence entre le cadre et ce qui surligne... ça fait un peu saccadé ».
+// Cause exacte : la transition CSS `top/left/width/height` (.5s, pensée pour
+// le glissement d'un arrêt à l'autre) s'appliquait à TOUTE mise à jour du
+// rectangle, scroll compris — chaque frame de défilement relançait un
+// rattrapage animé de 500ms par-dessus la précédente, jamais terminé, d'où
+// l'impression de décalage permanent. Scroll/redimensionnement (fréquents,
+// continus) passent maintenant en instantané (`transition: none`, posé en
+// ligne dans VisiteGuidee.tsx) ; seule l'arrivée sur une NOUVELLE cible — un
+// vrai changement d'arrêt, ou PrestationsV2 qui bascule du menu à l'éditeur —
+// garde l'animation, et la View Transition native s'en charge déjà pour
+// l'essentiel (voir plus bas). Les mesures de rattrapage différées
+// (200ms–3s, pour un bandeau qui finit de charger) restent animées : rares,
+// pas continues, un petit glissement gracieux n'y gêne personne.
+function surligner(
+  cible: string,
+  contourSite: boolean,
+  surRect: (r: DOMRect | null, instantane: boolean) => void,
+): () => void {
   let element: Element | null = null
   let observateurTaille: ResizeObserver | undefined
   let dernierRect: DOMRect | null = null
@@ -69,9 +88,9 @@ function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | n
     return !!carte && r.bottom > carte.getBoundingClientRect().top && r.top < carte.getBoundingClientRect().bottom
   }
 
-  const rapporter = () => {
+  const rapporter = (instantane: boolean) => {
     const r = element ? element.getBoundingClientRect() : null
-    if (!identiques(r, dernierRect)) { dernierRect = r; surRect(r) }
+    if (!identiques(r, dernierRect)) { dernierRect = r; surRect(r, instantane) }
     // Au plus un recentrage par demi-seconde : une correction ponctuelle,
     // jamais un bras de fer avec un défilement manuel.
     const maintenant = performance.now()
@@ -92,11 +111,11 @@ function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | n
     observateurTaille?.disconnect()
     element = trouve
     if (contourSite) element.setAttribute('data-visite-active', '')
-    observateurTaille = new ResizeObserver(rapporter)
+    observateurTaille = new ResizeObserver(() => rapporter(true))
     observateurTaille.observe(element)
     const sobre = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     element.scrollIntoView({ block: 'center', behavior: sobre ? 'auto' : 'smooth' })
-    rapporter()
+    rapporter(false) // nouvelle cible : glisse jusqu'à elle, ne saute pas dessus
     return true
   }
 
@@ -108,18 +127,19 @@ function surligner(cible: string, contourSite: boolean, surRect: (r: DOMRect | n
   observateurDom.observe(document.body, { childList: true, subtree: true })
   essayer()
 
-  const minuteurs = [200, 500, 1000, 1800, 3000].map(delai => setTimeout(rapporter, delai))
-  window.addEventListener('scroll', rapporter, true)
-  window.addEventListener('resize', rapporter)
+  const minuteurs = [200, 500, 1000, 1800, 3000].map(delai => setTimeout(() => rapporter(false), delai))
+  const suivreEnDirect = () => rapporter(true)
+  window.addEventListener('scroll', suivreEnDirect, true)
+  window.addEventListener('resize', suivreEnDirect)
 
   return () => {
     observateurDom.disconnect()
     observateurTaille?.disconnect()
     minuteurs.forEach(clearTimeout)
-    window.removeEventListener('scroll', rapporter, true)
-    window.removeEventListener('resize', rapporter)
+    window.removeEventListener('scroll', suivreEnDirect, true)
+    window.removeEventListener('resize', suivreEnDirect)
     element?.removeAttribute('data-visite-active')
-    surRect(null)
+    surRect(null, true)
   }
 }
 
@@ -196,11 +216,19 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   const cible = etapeActuelle?.cible
   const estInteractif = isPwa && !!etapeActuelle?.interactif
 
-  const [rect, setRect] = useState<DOMRect | null>(null)
+  // Scroll/redimensionnement : la découpe doit suivre sans transition (voir
+  // le commentaire au-dessus de `surligner()`) — `transition: 'none'` posé en
+  // ligne quand `instantane` vaut `true`, retiré sinon pour laisser la
+  // transition CSS (arrivée sur une nouvelle cible) s'appliquer normalement.
+  // `rect` et `instantane` dans le MÊME state (pas un ref à part lu pendant
+  // le rendu, que la règle `react-hooks/refs` refuse à raison) : une seule
+  // mise à jour, pas un re-rendu de plus qu'avant.
+  const [etatRect, setEtatRect] = useState<{ rect: DOMRect | null; instantane: boolean }>({ rect: null, instantane: false })
   useEffect(() => {
-    if (!cible) { setRect(null); return }
-    return surligner(cible, !isPwa, setRect)
+    if (!cible) { setEtatRect({ rect: null, instantane: true }); return }
+    return surligner(cible, !isPwa, (r, instantane) => setEtatRect({ rect: r, instantane }))
   }, [cible, pathname, isPwa])
+  const { rect, instantane } = etatRect
 
   const suivante = etape === null ? null : etapeSuivante(etape, etapes.length)
   const routeSuivante = suivante === null ? undefined : etapes[suivante].route
@@ -356,6 +384,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
             style={{
               top: rect.top - MARGE_DECOUPE, left: rect.left - MARGE_DECOUPE,
               width: rect.width + MARGE_DECOUPE * 2, height: rect.height + MARGE_DECOUPE * 2,
+              transition: instantane ? 'none' : undefined,
             }}
           />
         )}
@@ -418,6 +447,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
               width: rect.width + MARGE_DECOUPE * 2,
               height: rect.height + MARGE_DECOUPE * 2,
               boxShadow: '0 0 0 9999px rgba(10,10,12,.35)',
+              transition: instantane ? 'none' : undefined,
             }}
           />
         ) : (
