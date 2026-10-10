@@ -167,10 +167,15 @@ describe('relancesPrevues — la décision du cron, sans rien envoyer', () => {
     expect(relancesPrevues([rdv({ status: 'cancelled' })], 30)).toEqual([])
     expect(relancesPrevues([rdv({ scheduled_at: 'n’importe quoi' })], 30)).toEqual([])
   })
-  it('regroupe par email À L’IDENTIQUE, comme le cron', () => {
+  it('regroupe comme le cron : email sans tenir compte des majuscules, à défaut téléphone', () => {
     const a = rdv({ client_email: 'Claire@x.fr', scheduled_at: il(-60) })
     const b = rdv({ client_email: 'claire@x.fr', scheduled_at: il(-50) })
-    expect(relancesPrevues([a, b], 30)).toHaveLength(2)
+    expect(relancesPrevues([a, b], 30).map(p => p.rdv.id)).toEqual([b.id])
+  })
+  it('sans email : relancé seulement si le canal est le SMS', () => {
+    const sansEmail = rdv({ client_email: '', client_phone: '0612345678', scheduled_at: il(-50) })
+    expect(relancesPrevues([sansEmail], 30, 'email')).toEqual([])
+    expect(relancesPrevues([sansEmail], 30, 'sms')).toHaveLength(1)
   })
   it('trie les plus proches d’abord', () => {
     const tard = rdv({ client_email: 'a@x.fr', scheduled_at: il(-10) })

@@ -26,6 +26,7 @@
 
 import { formatHeureCompacte, FUSEAU } from './dateUtils'
 import { aujourdhuiParis } from './chiffresPeriode'
+import { cleClient } from './clientProfile'
 
 export type Canal = 'email' | 'sms'
 
@@ -209,12 +210,16 @@ export type RelancePrevue = {
  *   · n'est pas déjà traité (`followup_sent_at`) ;
  *   · a plus de `delaiJours` d'ancienneté.
  *  Trié : les plus proches d'abord. */
-export function relancesPrevues(rdvs: RdvMessage[], delaiJours: number): RelancePrevue[] {
+export function relancesPrevues(rdvs: RdvMessage[], delaiJours: number, canal: 'email' | 'sms' = 'email'): RelancePrevue[] {
+  // Même règle que le cron (`send-followups`) : un client par email, à défaut par téléphone, et
+  // seulement s'il est joignable par le canal choisi.
   const parClient = new Map<string, RdvMessage>()
   for (const b of rdvs) {
-    if (b.status === 'cancelled' || !nonVide(b.client_email)) continue
-    const courant = parClient.get(b.client_email!)
-    if (!courant || t(b.scheduled_at) > t(courant.scheduled_at)) parClient.set(b.client_email!, b)
+    if (b.status === 'cancelled') continue
+    if (!nonVide(b.client_email) && !(canal === 'sms' && nonVide(b.client_phone))) continue
+    const k = cleClient(b.client_email, b.client_phone)
+    const courant = parClient.get(k)
+    if (!courant || t(b.scheduled_at) > t(courant.scheduled_at)) parClient.set(k, b)
   }
   const prevues: RelancePrevue[] = []
   for (const dernier of parClient.values()) {
@@ -230,11 +235,11 @@ export function relancesPrevues(rdvs: RdvMessage[], delaiJours: number): Relance
 /** Aperçu affiché dans le réglage de la relance, recalculé à chaque changement
  *  de délai : combien de clients seraient relancés au prochain passage, et qui
  *  vient ensuite. */
-export function apercuRelance(rdvs: RdvMessage[], delaiJours: number, maintenant: number): {
+export function apercuRelance(rdvs: RdvMessage[], delaiJours: number, maintenant: number, canal: 'email' | 'sms' = 'email'): {
   concernes: number
   suivant: { nom: string; moment: string } | null
 } {
-  const prevues = relancesPrevues(rdvs, delaiJours)
+  const prevues = relancesPrevues(rdvs, delaiJours, canal)
   const dus = prevues.filter(p => p.instant <= maintenant)
   const prochain = prevues.find(p => p.instant > maintenant)
   return {
@@ -279,10 +284,10 @@ export function messagesProgrammes(
     for (const b of rdvs) {
       const prevu = t(b.review_request_at)
       if (!Number.isFinite(prevu) || b.review_request_sent_at) continue
-      // Mêmes écarts que le cron : annulé, ou sans email (la demande d'avis
-      // l'exige même en SMS) ; en SMS, sans numéro rien ne part.
-      if (b.status === 'cancelled' || !nonVide(b.client_email)) continue
-      if (r.review_channel === 'sms' && !nonVide(b.client_phone)) continue
+      // Mêmes écarts que le cron : annulé ; en email sans adresse, en SMS sans
+      // numéro, rien ne part.
+      if (b.status === 'cancelled') continue
+      if (r.review_channel === 'sms' ? !nonVide(b.client_phone) : !nonVide(b.client_email)) continue
       lignes.push({
         cle: `avis-${b.id}`,
         type: 'avis',
@@ -298,7 +303,7 @@ export function messagesProgrammes(
 
   if (relanceActive(r)) {
     const limite = maintenant + FENETRE_PROGRAMME_JOURS * JOUR
-    for (const p of relancesPrevues(rdvs, r.followup_delay_days)) {
+    for (const p of relancesPrevues(rdvs, r.followup_delay_days, r.review_channel)) {
       if (p.instant > limite) break
       lignes.push({
         cle: `relance-${p.rdv.id}`,

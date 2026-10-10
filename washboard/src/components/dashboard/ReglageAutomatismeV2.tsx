@@ -321,7 +321,7 @@ export function ReglageRelanceV2({
   const veutActiver = activer || reglages.followup_enabled
   const jours = choix === 'autre' ? Number(autre.trim()) : choix
   const delaiValide = Number.isInteger(jours) && jours >= 1 && jours <= DELAI_RELANCE_MAX_JOURS
-  const apercu = !lectureIncomplete && delaiValide ? apercuRelance(rdvs, jours, maintenant) : null
+  const apercu = !lectureIncomplete && delaiValide ? apercuRelance(rdvs, jours, maintenant, canal) : null
 
   function insererNom() {
     const el = zone.current

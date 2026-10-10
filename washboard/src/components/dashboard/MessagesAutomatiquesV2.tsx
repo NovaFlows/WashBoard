@@ -16,6 +16,7 @@ import {
   messagesPartis, messagesProgrammes, messageRelanceSuggere,
   type LigneMessage, type RdvMessage, type ReglagesMessages,
 } from '@/lib/messagesAutomatiques'
+import { cleClient } from '@/lib/clientProfile'
 
 // « Messages automatiques » — refonte 2026, planche `project/ARelancer.dc.html`.
 // Réservé à la PWA installée (voir MessagesAutomatiques.tsx, le garde-fou) ;
@@ -88,6 +89,9 @@ export type MessagesAutomatiquesProps = {
   telephone: string
   slug: string
   rdvs: RdvMessage[]
+  /** Clés (`cleClient`) des clients marqués « ne plus contacter » : les crons ne leur envoient
+   *  rien, ils ne doivent donc pas apparaître dans « Programmé » ni dans l'aperçu. */
+  clesSansContact?: string[]
   /** La lecture des rendez-vous a échoué ou s'est arrêtée en route. */
   lectureIncomplete: boolean
 }
@@ -235,7 +239,7 @@ function ListeMessages({
 }
 
 export default function MessagesAutomatiquesV2({
-  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, expediteurStatut, telephone, slug, rdvs, lectureIncomplete,
+  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, expediteurStatut, telephone, slug, rdvs, clesSansContact, lectureIncomplete,
 }: MessagesAutomatiquesProps) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -256,7 +260,13 @@ export default function MessagesAutomatiquesV2({
   const blocage = reglages.review_enabled ? blocageAvis(reglages, ctx) : null
   const actifs = nombreActifs(reglages, ctx)
 
-  const programmes = useMemo(() => messagesProgrammes(reglages, ctx, rdvs, maintenant), [reglages, ctx, rdvs, maintenant])
+  // Ce qui PEUT encore partir : les clients « ne plus contacter » en sont retirés, comme dans
+  // les crons. « Parti » garde tout l'historique : un message déjà envoyé l'a bien été.
+  const rdvsContactables = useMemo(() => {
+    const refuses = new Set(clesSansContact ?? [])
+    return refuses.size === 0 ? rdvs : rdvs.filter(b => !refuses.has(cleClient(b.client_email, b.client_phone)))
+  }, [rdvs, clesSansContact])
+  const programmes = useMemo(() => messagesProgrammes(reglages, ctx, rdvsContactables, maintenant), [reglages, ctx, rdvsContactables, maintenant])
   const partis = useMemo(() => messagesPartis(reglages, ctx, rdvs, maintenant), [reglages, ctx, rdvs, maintenant])
 
   async function ecrire(champs: Partial<ReglagesMessages>): Promise<string | null> {
@@ -451,7 +461,7 @@ export default function MessagesAutomatiquesV2({
           smsAutorise={smsAutorise}
           activer={feuille.activer}
           messageSuggere={messageRelanceSuggere(lienReservation)}
-          rdvs={rdvs}
+          rdvs={rdvsContactables}
           maintenant={maintenant}
           lectureIncomplete={lectureIncomplete}
           onClose={() => setFeuille(null)}

@@ -64,6 +64,16 @@ export default async function MessagesAutomatiquesPage() {
   const seuilsVerrou = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const rdvs = masquerVerrouillees(lus, seuilsVerrou).filter(b => !b.verrouillee)
 
+  // Clients « ne plus contacter » (table `clients`) : les crons les écartent, l'écran aussi —
+  // sinon « Programmé » annonçait une relance qui ne partira jamais. Même lecture que l'écran
+  // Clients ; en cas d'échec on ne masque rien (la liste reste celle d'avant), mais on le note.
+  const { data: refus, error: errRefus } = await supabase
+    .from('clients')
+    .select('cle')
+    .eq('washer_id', washer.id)
+    .eq('ne_plus_contacter', true)
+  if (errRefus) logger.warn('messages-automatiques.refus.fetch_failed', { washerId: washer.id }, errRefus)
+
   // Seuls les réglages utiles passent au navigateur : la fiche laveur porte
   // aussi des jetons (Google) qui n'ont rien à y faire.
   return (
@@ -90,6 +100,7 @@ export default async function MessagesAutomatiquesPage() {
         telephone={washer.phone ?? ''}
         slug={washer.slug}
         rdvs={rdvs}
+        clesSansContact={(refus ?? []).map(r => r.cle as string)}
         lectureIncomplete={!!error || tronque}
       />
     </DashboardShell>
