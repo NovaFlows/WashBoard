@@ -11,12 +11,13 @@ describe('estGrandEcran', () => {
     else Reflect.deleteProperty(globalThis, 'window')
   })
 
-  function poserFenetre(largeurPx: number) {
+  function poserFenetre(largeurPx: number, pointeurFin = true) {
     Object.defineProperty(globalThis, 'window', {
       configurable: true,
       value: {
         matchMedia: (q: string) => ({
-          matches: q === `(min-width: ${SEUIL_GRAND_ECRAN_PX}px)` && largeurPx >= SEUIL_GRAND_ECRAN_PX,
+          matches: q === `(min-width: ${SEUIL_GRAND_ECRAN_PX}px) and (any-pointer: fine)`
+            && largeurPx >= SEUIL_GRAND_ECRAN_PX && pointeurFin,
         }),
       },
     })
@@ -27,8 +28,13 @@ describe('estGrandEcran', () => {
   })
 
   it('renvoie false sur téléphone (y compris le plus grand, tenu à l’horizontale)', () => {
-    poserFenetre(926) // iPhone Pro Max, paysage
+    poserFenetre(926, false) // iPhone Pro Max, paysage : aucun pointeur fin
     expect(estGrandEcran()).toBe(false)
+  })
+
+  it('renvoie true sur un ordinateur affiché à 150 % (≈910px utiles), comme le rail', () => {
+    poserFenetre(910)
+    expect(estGrandEcran()).toBe(true)
   })
 
   it('renvoie false juste sous le seuil', () => {
@@ -88,10 +94,12 @@ describe('estEcranRail', () => {
     expect(estEcranRail()).toBe(false)           // l’absence de souris tranche
   })
 
-  it('renvoie true sur un ordinateur portable étroit, sous l’ancien seuil de 1024', () => {
+  it('sur un ordinateur portable étroit (sous l’ancien seuil de 1024), rail ET grand écran ensemble', () => {
     poserAppareil({ largeurPx: 910, souris: true })
-    expect(estGrandEcran()).toBe(false)          // pas de panneau à deux colonnes à cette largeur
-    expect(estEcranRail()).toBe(true)            // mais le rail, oui
+    // Plus de zone hybride (2026-10-10) : le rail se réduit à ses icônes, les écrans prennent
+    // leur mise en page ordinateur.
+    expect(estEcranRail()).toBe(true)
+    expect(estGrandEcran()).toBe(true)
   })
 
   it('renvoie false sur un ordinateur dont la fenêtre est trop étroite', () => {

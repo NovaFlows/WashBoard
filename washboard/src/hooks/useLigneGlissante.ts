@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, typ
 // Ligne de liste qu'on glisse vers la gauche pour faire apparaître une action
 // (le bouton rouge « Supprimer » avec sa poubelle), comme sur iPhone. Demande
 // d'Alexandre, 2026-09-25. Doigt et stylet seulement : à la souris, sur
-// ordinateur, l'action reste joignable par la feuille d'édition.
+// ordinateur, chaque ligne pose une poubelle au survol (`BoutonSupprimerSurvol`)
+// qui ouvre la même confirmation.
 //
 // Le glissement ne démarre qu'après 8 px, plus horizontal que vertical, pour que
 // faire défiler la liste au doigt ne déplace jamais une ligne, et qu'un simple

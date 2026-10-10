@@ -22,6 +22,7 @@ import { LigneClientVerrouilleeV2 } from '@/components/dashboard/ReservationVerr
 import AutomatismesClientsV2, { type AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
 import { Ligne, CarteListe, TitreSection } from '@/components/dashboard/ParametresFormV2'
 import type { ClientBloque } from '@/components/dashboard/ClientsViewV1'
+import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
 
 // Fichier clients du laveur, présentation v2 — réservée à la PWA installée en
 // mode standalone (voir ClientsView.tsx, le point de branchement ; décision
@@ -490,6 +491,7 @@ export default function ClientsViewV2({
             onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
             doublon={doublon}
             nomLaveur={nomLaveur}
+            v2
           />
         )}
       </>
@@ -696,6 +698,7 @@ export default function ClientsViewV2({
           onOuvrirEntreprise={id => { setOuvert(null); setEntrepriseOuverteId(id) }}
           doublon={doublon}
           nomLaveur={nomLaveur}
+          v2
         />
       )}
 
@@ -774,7 +777,7 @@ function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, o
       <div
         {...poignee}
         style={styleContenu}
-        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+        className="group relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
       >
         <button
           type="button"
@@ -804,6 +807,7 @@ function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, o
             {pastille.texte}
           </span>
         </button>
+        <BoutonSupprimerSurvol libelle={`Supprimer ${titreClient}`} onClick={onSupprimer} />
       </div>
     </li>
   )
@@ -850,7 +854,7 @@ function LigneARelancerVue({ ligne: l, onOuvrir, selectionnee, ouverte, onOuvrir
       <div
         {...poignee}
         style={styleContenu}
-        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+        className="group relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
       >
         <button
           type="button"
@@ -879,6 +883,7 @@ function LigneARelancerVue({ ligne: l, onOuvrir, selectionnee, ouverte, onOuvrir
             <span className={`text-[11.5px] ${corpsFort} ${couleurStatut(l)}`}>{l.statut}</span>
           </span>
         </button>
+        <BoutonSupprimerSurvol libelle={`Ne plus relancer ${l.nom}`} onClick={onSupprimer} />
       </div>
     </li>
   )
@@ -912,7 +917,7 @@ function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFe
       <div
         {...poignee}
         style={styleContenu}
-        className="relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
+        className="group relative bg-[color:var(--v2-color-surface)] motion-reduce:!transition-none"
       >
         <button
           type="button"
@@ -930,6 +935,7 @@ function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFe
             </span>
           </span>
         </button>
+        <BoutonSupprimerSurvol libelle={`Supprimer ${e.nom}`} onClick={onSupprimer} />
       </div>
     </li>
   )

@@ -14,6 +14,7 @@ import AccesSupportV2 from '@/components/dashboard/AccesSupportV2'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import type { SupportThread } from '@/lib/support'
+import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
 
 // « Aide et assistance » — refonte 2026 (PWA en bêta seulement ; le site garde
 // `AssistanceContent`, inchangé). Demande d'Alexandre, 2026-09-26 : « redesign la partie pour
@@ -89,7 +90,7 @@ function LigneFil({
         <Trash2 size={20} strokeWidth={2} aria-hidden />
         Supprimer
       </button>
-      <div {...poignee} style={styleContenu} className={`motion-reduce:!transition-none ${selectionnee ? 'bg-[color:var(--v2-filet)]' : 'bg-[color:var(--v2-color-surface)]'}`}>
+      <div {...poignee} style={styleContenu} className={`group relative motion-reduce:!transition-none ${selectionnee ? 'bg-[color:var(--v2-filet)]' : 'bg-[color:var(--v2-color-surface)]'}`}>
         <button
           type="button"
           onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
@@ -118,6 +119,7 @@ function LigneFil({
           )}
           <Chevron />
         </button>
+        <BoutonSupprimerSurvol libelle={`Supprimer la conversation ${fil.title}`} onClick={onSupprimer} />
       </div>
     </li>
   )

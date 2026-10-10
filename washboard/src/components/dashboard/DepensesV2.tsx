@@ -18,6 +18,7 @@ import {
   ajouterDepense, ajouterRecurrent, basculerRecurrent, lireDepenses, lireRecurrents,
   supprimerDepense, supprimerRecurrent,
 } from '@/lib/depensesApi'
+import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
 
 // « Dépenses » — refonte 2026, destination NEUVE, ouverte depuis Chiffres › Argent
 // (Alexandre, 2026-09-26 : « quand je clique sur ajouter des frais j'arrive sur l'ancienne page
@@ -78,7 +79,7 @@ function LigneFrais({
       <div
         {...poignee}
         style={styleContenu}
-        className="flex min-h-[58px] items-center gap-3 bg-[color:var(--v2-color-surface)] py-2.5 motion-reduce:!transition-none"
+        className="group relative flex min-h-[58px] items-center gap-3 bg-[color:var(--v2-color-surface)] py-2.5 motion-reduce:!transition-none"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className={`truncate text-[15px] ${nom}`}>{depense.label}</span>
@@ -88,6 +89,7 @@ function LigneFrais({
           </span>
         </span>
         <span className={`shrink-0 text-[15px] ${corpsFort} tabular-nums`}>{euros.format(Number(depense.amount))}</span>
+        <BoutonSupprimerSurvol libelle={`Supprimer le frais ${depense.label}`} onClick={onSupprimer} placement="ligne" />
       </div>
     </li>
   )

@@ -457,6 +457,12 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
   --v2-verre-ombre: 0 10px 34px rgba(22, 22, 26, .14), 0 2px 8px rgba(22, 22, 26, .04);
 }
 
+/* Rail réduit à ses icônes sous 1024px (RailBureauV2.tsx, audit du 2026-10-10) : entre 880 et
+   1023px, les écrans gardent ainsi la place de leur mise en page ordinateur. */
+@media (max-width: 1023px) {
+  :root { --bureau-rail-largeur: 76px; }
+}
+
 .dark {
   /* Couleurs sombres — la planche Système ne montre QUE le thème clair.
      Valeurs [mesurées] par échantillonnage de pixel sur l'écran de

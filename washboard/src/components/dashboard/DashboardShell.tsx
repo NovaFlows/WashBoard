@@ -22,6 +22,7 @@ import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import { useEcranRail } from '@/hooks/useEcranRail'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { DesignV2Context } from '@/components/dashboard/DesignV2Context'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -824,11 +825,13 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Contenu de page, identique quel que soit le châssis — isolé une seule fois pour ne pas
   // dupliquer les deux Providers entre la branche v1/PWA-téléphone et la branche bureau.
   const pageContent = (
-    <SupportBadgesContext.Provider value={supportBadges}>
-      <OffreContext.Provider value={offreCourante}>
-        {children}
-      </OffreContext.Provider>
-    </SupportBadgesContext.Provider>
+    <DesignV2Context.Provider value={estV2}>
+      <SupportBadgesContext.Provider value={supportBadges}>
+        <OffreContext.Provider value={offreCourante}>
+          {children}
+        </OffreContext.Provider>
+      </SupportBadgesContext.Provider>
+    </DesignV2Context.Provider>
   )
 
   // Un seul bandeau visible à la fois, par ordre de priorité (Alexandre, 2026-10-05 : « je veux
@@ -1043,7 +1046,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </>
       )}
 
-      <VisiteGuidee aFaire={visiteGuidee} />
+      <VisiteGuidee aFaire={visiteGuidee} v2={estV2} />
 
       {/* Retiré dans la PWA en bêta et dans le châssis bureau : posé sous la barre du bas, il
           allongeait la page de plus d'un écran de vide et passait sous la barre (2026-09-25) ;

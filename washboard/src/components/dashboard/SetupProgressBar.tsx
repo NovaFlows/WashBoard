@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { useDesignV2 } from '@/components/dashboard/DesignV2Context'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import {
   CLE_CARTE_CACHEE, CLE_MASQUES, ecrireMasques, lireMasques, nettoyerMasques, nombreMasques,
@@ -32,11 +32,41 @@ const MAX_AFFICHES = 4
  *  mots plutôt qu'avec une couleur d'alerte. */
 const SEUIL_BLEU = 75
 
+const POLICE = '[font-family:var(--font-archivo)]'
+const STYLE_V1 = {
+  carte: 'rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5',
+  titre: 'text-sm font-bold text-slate-900 dark:text-white',
+  piste: 'h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden mb-3',
+  jauge: 'bg-[#1651E8]',
+  jaugeAlerte: 'bg-amber-500',
+  jaugeComplete: 'bg-emerald-500',
+  phrase: 'text-sm text-slate-500 dark:text-slate-400',
+  lien: 'group flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors',
+  point: 'bg-slate-300 dark:bg-slate-600',
+  pointBloquant: 'bg-amber-500',
+  discret: 'text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300',
+}
+// Même carte dans la v2 : jetons de la refonte (surface, encre, gris, accent, ambre, vert).
+const STYLE_V2: typeof STYLE_V1 = {
+  carte: `rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-5 text-[color:var(--v2-color-encre)] ${POLICE}`,
+  titre: `text-[14.5px] [font-weight:var(--v2-type-corps-fort-poids)] text-[color:var(--v2-color-encre)]`,
+  piste: 'h-1.5 rounded-full bg-[color:var(--v2-filet)] overflow-hidden mb-3',
+  jauge: 'bg-[color:var(--v2-color-accent)]',
+  jaugeAlerte: 'bg-[color:var(--v2-color-ambre)]',
+  jaugeComplete: 'bg-[color:var(--v2-color-vert)]',
+  phrase: 'text-[13.5px] text-[color:var(--v2-color-gris)]',
+  lien: 'group flex min-h-9 items-center gap-2 text-[14px] text-[color:var(--v2-color-encre)] hover:text-[color:var(--v2-color-accent)] transition-colors',
+  point: 'bg-[color:var(--v2-filet-fort)]',
+  pointBloquant: 'bg-[color:var(--v2-color-ambre)]',
+  discret: 'text-[12.5px] text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]',
+}
+
 export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
-  // Chaque réglage vit à deux endroits : l'ancien écran sur le site, le nouveau dans
-  // l'application installée. Sans ce choix, un tap depuis la PWA faisait sortir le laveur
-  // de l'application refaite (Alexandre, 2026-09-27).
-  const isPwa = useDesignMobile()
+  // Chaque réglage vit à deux endroits : l'ancien écran sur le site, le nouveau dans la v2
+  // (téléphone, ou ordinateur en bêta). Sans ce choix, un tap faisait sortir le laveur de la v2
+  // (Alexandre, 2026-09-27) — encore le cas sur la v2 ordinateur jusqu'au 2026-10-10.
+  const v2 = useDesignV2()
+  const c = v2 ? STYLE_V2 : STYLE_V1
   const [brutMasques, setMasques] = usePreferenceLocale(CLE_MASQUES)
   const [cachee, setCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
 
@@ -57,26 +87,26 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
   if (cachee === '1') return null
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
+    <div className={c.carte}>
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        <h3 className={c.titre}>
           Configuration de votre compte
         </h3>
-        <span className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+        <span className={`${c.titre} tabular-nums`}>
           {progress.percent}&nbsp;%
         </span>
       </div>
 
-      <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden mb-3">
+      <div className={c.piste}>
         <div
           className={`h-full rounded-full transition-[width] duration-500 ${
-            alerte ? 'bg-amber-500' : progress.complete ? 'bg-emerald-500' : 'bg-[#1651E8]'
+            alerte ? c.jaugeAlerte : progress.complete ? c.jaugeComplete : c.jauge
           }`}
           style={{ width: `${Math.max(progress.percent, 3)}%` }}
         />
       </div>
 
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className={c.phrase}>
         {progress.complete
           ? 'Tout est configuré. Vos clients ont toutes les informations pour réserver sereinement.'
           : progress.missing.some(m => m.blocking)
@@ -97,14 +127,14 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           {affiches.map(item => (
             <li key={item.key}>
               <Link
-                href={isPwa ? item.hrefV2 : item.href}
+                href={v2 ? item.hrefV2 : item.href}
                 onClick={() => { if (peutEtreMasque(item)) ecarter(item.key) }}
-                className="group flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors"
+                className={c.lien}
               >
                 <span
                   aria-hidden
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    item.blocking ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
+                    item.blocking ? c.pointBloquant : c.point
                   }`}
                 />
                 {item.label}
@@ -122,7 +152,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
       )}
 
       {reste > 0 && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2.5">
+        <p className={`${c.discret} mt-2.5`}>
           et {reste} autre{reste > 1 ? 's' : ''} réglage{reste > 1 ? 's' : ''} facultatif{reste > 1 ? 's' : ''}
         </p>
       )}
@@ -133,7 +163,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
         <button
           type="button"
           onClick={() => setMasques(null)}
-          className="mt-2.5 text-xs text-slate-400 dark:text-slate-500 underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300"
+          className={`mt-2.5 underline underline-offset-2 ${c.discret}`}
         >
           {phraseMasques(ecartes)} · revoir
         </button>
@@ -143,7 +173,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
         <button
           type="button"
           onClick={() => setCachee('1')}
-          className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+          className={c.discret}
         >
           Masquer
         </button>

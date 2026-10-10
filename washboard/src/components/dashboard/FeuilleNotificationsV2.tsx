@@ -4,17 +4,19 @@ import { BOUTON, PRESSION, corps } from '@/components/dashboard/FeuilleV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { useNotificationsPush, type EtatNotifications } from '@/hooks/useNotificationsPush'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 
 // Notifications sur le téléphone — feuille du bas de « Plus » (PWA). Même autorisation, même
 // abonnement et mêmes routes que l'écran du site (`NotificationsToggle`) : tout vient du hook
 // partagé `useNotificationsPush`. Seule la présentation change.
 
-/** Ce que la ligne de « Plus » affiche sous « Notifications ». */
-export function resumeNotifications(etat: EtatNotifications): { texte: string; ton?: 'ambre' } {
+/** Ce que la ligne de « Plus » affiche sous « Notifications ». `mobile` faux sur ordinateur : ce
+ *  n'est plus le téléphone qui bloque, c'est le navigateur (audit du 2026-10-10). */
+export function resumeNotifications(etat: EtatNotifications, mobile = true): { texte: string; ton?: 'ambre' } {
   switch (etat) {
     case 'actif': return { texte: 'Activées sur cet appareil' }
     case 'inactif': return { texte: 'Désactivées', ton: 'ambre' }
-    case 'refuse': return { texte: 'Bloquées par le téléphone', ton: 'ambre' }
+    case 'refuse': return { texte: mobile ? 'Bloquées par le téléphone' : 'Bloquées par le navigateur', ton: 'ambre' }
     case 'ios-non-installe': return { texte: 'Ajoutez l’app à votre écran d’accueil', ton: 'ambre' }
     case 'non-supporte': return { texte: 'Indisponibles sur cet appareil' }
     default: return { texte: '' }
@@ -24,11 +26,12 @@ export function resumeNotifications(etat: EtatNotifications): { texte: string; t
 export default function FeuilleNotificationsV2({ onClose }: { onClose: () => void }) {
   const { etat, occupe, erreur, activer, desactiver } = useNotificationsPush()
   const actif = etat === 'actif'
+  const mobile = useDesignMobile()
 
   return (
     <Feuille
       titre="Notifications"
-      sousTitre="Être prévenu sur ce téléphone dès qu’un client réserve, sans attendre l’e-mail."
+      sousTitre={`Être prévenu sur ${mobile ? 'ce téléphone' : 'cet ordinateur'} dès qu’un client réserve, sans attendre l’e-mail.`}
       onClose={onClose}
     >
       {etat === 'ios-non-installe' && (
@@ -47,7 +50,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
       {etat === 'refuse' && (
         <Constat ton="ambre" role="status">
           Les notifications ont été refusées pour WashBoard. Pour les rétablir, autorisez-les dans les
-          réglages de votre téléphone, puis revenez ici.
+          réglages de votre {mobile ? 'téléphone' : 'navigateur'}, puis revenez ici.
         </Constat>
       )}
 

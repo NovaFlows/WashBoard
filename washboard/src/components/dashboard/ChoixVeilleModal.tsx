@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PLAN_LABELS, PLAN_PRICES, SERVICE_QUOTA, type Plan } from '@/lib/plan'
-import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { useDashboardV2 } from '@/hooks/useDashboardV2'
 
 type PrestationChoisissable = {
   id: string
@@ -94,12 +94,14 @@ function ApercuPage({ actives, plafond, habit }: {
  *  Et pourquoi le laisser choisir plutôt que d'éteindre les plus récentes : sa
  *  prestation la plus rentable peut être la dernière ajoutée. Choisir au hasard
  *  lui coûterait de l'argent sans qu'il comprenne pourquoi. */
-export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
+export function ChoixVeilleModal({ actives, plafond, aRanger, offre, betaRefonte }: {
   actives: PrestationChoisissable[]
   plafond: number
   aRanger: number
   /** Offre en cours, pour la nommer au lieu de dire « votre offre ». */
   offre: Plan
+  /** `washers.beta_refonte` : la v2 ordinateur prend aussi l'habillage v2 (audit du 2026-10-10). */
+  betaRefonte?: boolean | null
 }) {
   const router = useRouter()
   // Deux habillages, une seule mécanique (voir plus bas, `V`) : dans la PWA la
@@ -107,7 +109,8 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   // papier, les filets et la police v2 ; sur le site elle garde exactement la
   // carte blanche centrée d'avant. Alexandre, 2026-09-29 : une fenêtre du site
   // posée par-dessus l'application « n'a rien à voir » avec le reste.
-  const isPwa = useDesignMobile()
+  // Rendue par le layout, HORS de DashboardShell : elle refait donc le même choix que lui.
+  const isPwa = useDashboardV2(betaRefonte)
   // La fenêtre gère sa propre disparition : le layout la rend sur chaque page,
   // il ne peut pas savoir qu'on vient de la fermer.
   const [ferme, setFerme] = useState(false)

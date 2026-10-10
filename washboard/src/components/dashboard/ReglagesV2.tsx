@@ -15,6 +15,7 @@ import { CLE_CARTE_CACHEE } from '@/lib/reglagesMasques'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
 import type { SetupProgress } from '@/lib/setupProgress'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 
 // « Réglages » — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27 :
 // « réglage apparaît dans Mon compte, mais juste Réglages, et quand on clique dessus on voit
@@ -46,6 +47,7 @@ type Props = {
 export default function ReglagesV2({ liste, progress }: Props) {
   const { theme, setTheme } = useTheme()
   const { etat: etatNotifications } = useNotificationsPush()
+  const mobile = useDesignMobile()
   const grandEcran = useGrandEcran()
   // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office, sinon le
   // laveur atterrit sur un écran de réglages et doit re-chercher la ligne qu'on lui promettait.
@@ -56,7 +58,7 @@ export default function ReglagesV2({ liste, progress }: Props) {
   )
   const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
   const { unreadSupportCount } = useSupportBadges()
-  const notifications = resumeNotifications(etatNotifications)
+  const notifications = resumeNotifications(etatNotifications, mobile)
 
   const contenu = (
     <div className={grandEcran ? 'space-y-6 [font-family:var(--font-archivo)]' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 space-y-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}>

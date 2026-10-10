@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { LogOut } from 'lucide-react'
 
 // Rail de navigation — passe « châssis bureau » (2026-10-05, Alexandre, 2026-10-03). Ce que
 // deviennent, sur grand écran, les 5 destinations de BarreBasV2.tsx + « Documents » épinglé :
@@ -129,19 +130,27 @@ function destinationDocuments(): Destination {
 // aussi bien pour la PWA que pour le site en mode bureau.
 const NOUVEAU_HREF = '/dashboard/chiffres/documents?nouveau=1'
 
+// Rail RÉDUIT sous 1024px (audit du 2026-10-10) : entre 880 et 1023px de fenêtre — un écran de
+// 1366px affiché à 150 % dans Windows n'en donne que ~910 au navigateur — le rail ne garde que ses
+// icônes (`--bureau-rail-largeur` passe à 76px, globals.css) pour laisser aux écrans la place de
+// leur mise en page ordinateur. Les libellés restent lus par les lecteurs d'écran (`sr-only`) et
+// apparaissent au survol (`title`).
+const COMPACT_MASQUE = 'max-[1023px]:sr-only'
+
 function LigneRail({ item, actif }: { item: Destination; actif: boolean }) {
   return (
     <Link
       href={item.href}
+      title={item.label}
       aria-current={actif ? 'page' : undefined}
-      className={`flex h-[42px] items-center gap-[11px] rounded-[var(--v2-radius-bouton)] px-3 text-[13.5px] ${corpsFort} transition-colors ${
+      className={`flex h-[42px] items-center gap-[11px] rounded-[var(--v2-radius-bouton)] px-3 max-[1023px]:justify-center max-[1023px]:px-0 text-[13.5px] ${corpsFort} transition-colors ${
         actif
           ? 'bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] shadow-[0_1px_3px_rgba(22,22,26,.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,.4)]'
           : 'text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]'
       }`}
     >
       <span className="shrink-0 [&>svg]:block [&>svg]:h-[19px] [&>svg]:w-[19px]">{item.icone}</span>
-      {item.label}
+      <span className={COMPACT_MASQUE}>{item.label}</span>
     </Link>
   )
 }
@@ -177,11 +186,11 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
       {/* Marque — remplace ce que montrait l'ancien en-tête (« WashBoard » + le nom de la
           fiche laveur en gris dessous, voir DashboardShell.tsx) : même paire d'informations,
           pas la paire société/personne de la maquette, que le schéma ne porte pas. */}
-      <div className="flex items-center gap-2.5 px-1.5 pb-[18px] pt-1">
+      <div className="flex items-center gap-2.5 px-1.5 pb-[18px] pt-1 max-[1023px]:justify-center max-[1023px]:px-0">
         <span className="block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[9px]">
           <img src="/LogoWashBoard.png" alt="" className="h-full w-full object-cover" />
         </span>
-        <span className="min-w-0 leading-[1.15]">
+        <span className={`min-w-0 leading-[1.15] ${COMPACT_MASQUE}`}>
           <span className={`block truncate text-[13.5px] ${nom} text-[color:var(--v2-color-encre)]`}>WashBoard</span>
           {washerName && (
             <span className={`block truncate text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>{washerName}</span>
@@ -193,6 +202,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
           facture), mêmes règles de remplacement plutôt que d'empilement quand on y est déjà. */}
       <Link
         href={nouveauHref}
+        title="Nouveau devis ou facture"
         onClick={e => {
           if (pathname.startsWith('/dashboard/chiffres/documents')) {
             e.preventDefault()
@@ -205,7 +215,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" aria-hidden>
           <path d="M12 5v14M5 12h14" />
         </svg>
-        Nouveau
+        <span className={COMPACT_MASQUE}>Nouveau</span>
       </Link>
 
       {/* Les 5 destinations */}
@@ -224,16 +234,16 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
       {/* Pied : l'offre du laveur, et — ajout hors maquette — déconnexion/thème côté site. */}
       <div className="mt-2 border-t border-[color:var(--v2-filet)] pt-3">
         {washerName && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 text-[12px]">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 text-[12px] max-[1023px]:justify-center max-[1023px]:px-0" title={`${washerName} · ${offreLabel}`}>
             <span
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[color:var(--v2-color-encre)] text-[11px] ${corpsFort} text-[color:var(--v2-color-surface)]`}
               aria-hidden
             >
               {initiales(washerName)}
             </span>
-            <span className={`truncate ${corpsFort} text-[color:var(--v2-color-encre)]`}>{washerName}</span>
+            <span className={`truncate ${corpsFort} text-[color:var(--v2-color-encre)] ${COMPACT_MASQUE}`}>{washerName}</span>
             <span
-              className={`ml-auto shrink-0 whitespace-nowrap rounded-full border px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.06em] ${corps}`}
+              className={`${COMPACT_MASQUE} ml-auto shrink-0 whitespace-nowrap rounded-full border px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.06em] ${corps}`}
               style={{ borderColor: 'var(--v2-filet-fort)', color: offreCouleur ?? 'var(--v2-color-gris)' }}
             >
               {offreLabel}
@@ -250,10 +260,11 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
             n'aurait plus aucun moyen de se déconnecter nulle part. Masqué côté PWA : redondant,
             Plus l'a déjà. */}
         {!isPwa && (
-          <div className="mt-1 flex items-center justify-between gap-1 px-2.5">
+          <div className="mt-1 flex items-center justify-between gap-1 px-2.5 max-[1023px]:flex-col max-[1023px]:px-0">
             <form action="/api/auth/logout" method="POST">
-              <button type="submit" className={`text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>
-                Déconnexion
+              <button type="submit" title="Déconnexion" aria-label="Déconnexion" className={`flex items-center text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>
+                <LogOut size={17} strokeWidth={2} aria-hidden className="min-[1024px]:hidden" />
+                <span className="max-[1023px]:hidden">Déconnexion</span>
               </button>
             </form>
             <ThemeToggle nav />

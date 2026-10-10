@@ -8,6 +8,7 @@ import { CarteListe, Chevron, Ligne, NonLus, TitreSection } from '@/components/d
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import Link from 'next/link'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 
 // Liste « Plus » — extraite de ParametresFormV2.tsx (passe bureau, 2026-10-06) pour être
 // réutilisable À CÔTÉ du contenu de chacune des 5 destinations qu'elle ouvre (Mon profil, Mes
@@ -84,10 +85,11 @@ export default function ListeReglagesV2({
 }: Props) {
   const { estEquipeSupport, unreadSupportCount, unreadTeamCount } = useSupportBadges()
   const { etat: etatNotifications } = useNotificationsPush()
+  const mobile = useDesignMobile()
   // Conservée telle quelle (voir ParametresFormV2 avant cette passe, 2026-09-27) : la carte
   // « Configuration de votre compte » se met de côté depuis elle-même.
   usePreferenceLocale(CLE_CARTE_CACHEE)
-  const notifications = resumeNotifications(etatNotifications)
+  const notifications = resumeNotifications(etatNotifications, mobile)
   const planLabel = grandfathered ? 'Accès complet' : PLAN_LABELS[plan]
 
   // `grid-cols-1` + `gap-y-6` se comporte exactement comme le `space-y-6` d'avant : c'est le

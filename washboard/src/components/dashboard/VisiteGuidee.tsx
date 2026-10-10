@@ -53,7 +53,9 @@ function surligner(cible: string): () => void {
   }
 }
 
-export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
+/** `v2` : la page est dans la nouvelle version (DashboardShell). Sur téléphone la carte se pose
+ *  au-dessus de la barre du bas ; sur la v2 ordinateur, à droite du rail, avec le même habillage. */
+export default function VisiteGuidee({ aFaire, v2 }: { aFaire?: boolean; v2?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const isPwa = useDesignMobile()
@@ -89,7 +91,9 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
     naviguer(() => router.push(ETAPES_VISITE[suivante].route))
   }
 
-  const s = isPwa
+  const habillageV2 = v2 ?? isPwa
+  const bureauV2 = habillageV2 && !isPwa
+  const s = habillageV2
     ? {
         carte: `rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] shadow-[0_12px_32px_rgba(0,0,0,.16)]`,
         etape: `text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`,
@@ -118,10 +122,17 @@ export default function VisiteGuidee({ aFaire }: { aFaire?: boolean }) {
       <div aria-hidden className="h-44" />
       <section
         aria-label="Visite guidée"
-        className={`fixed z-[15] left-3 right-20 sm:right-auto sm:w-[23rem] p-4 ${
-          isPwa ? '' : 'sm:left-6 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
+        className={`fixed z-[15] p-4 ${
+          bureauV2 ? 'w-[23rem]' : 'left-3 right-20 sm:right-auto sm:w-[23rem]'
+        } ${
+          isPwa || bureauV2 ? '' : 'sm:left-6 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
         } ${s.carte}`}
-        style={isPwa ? { bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' } : undefined}
+        style={isPwa
+          ? { bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' }
+          : bureauV2
+            // Juste à droite du rail (14px de marge + sa largeur + 24px), en bas.
+            ? { left: 'calc(var(--bureau-rail-largeur) + 38px)', bottom: '24px' }
+            : undefined}
       >
         <div className="flex items-center justify-between gap-3">
           <p className={s.etape}>Étape {etape + 1}/{ETAPES_VISITE.length}</p>

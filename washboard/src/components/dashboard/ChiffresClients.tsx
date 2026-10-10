@@ -251,7 +251,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
         </>
       )}
 
-      {fiche && <ClientProfileModal profile={fiche} onClose={() => setOuvert(null)} />}
+      {fiche && <ClientProfileModal profile={fiche} onClose={() => setOuvert(null)} v2 />}
     </div>
   )
 }

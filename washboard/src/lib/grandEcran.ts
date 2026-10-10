@@ -13,9 +13,16 @@
 // au-dessus du plus grand téléphone courant, sans redescendre vers la zone des tablettes en
 // portrait où un panneau fixe à côté de la liste serait de toute façon trop à l'étroit pour un
 // doigt (voir le commentaire plus long dans ClientProfileModalV2.tsx sur ce point).
-export const SEUIL_GRAND_ECRAN_PX = 1024
+//
+// ABAISSÉ le 2026-10-10 (audit mobile/ordinateur) : 1024px laissait une zone 880–1023px où le rail
+// s'affichait mais où chaque écran gardait sa mise en page téléphone (Agenda sans Semaine ni
+// Mois, fiche client par-dessus la liste…) — précisément la largeur d'un écran de 1366px affiché
+// à 150 % dans Windows. Le grand écran prend désormais EXACTEMENT la condition du rail (largeur ET
+// pointeur fin, voir plus bas) : le téléphone tenu à l'horizontale reste exclu par le pointeur,
+// plus par la largeur, et le rail se réduit à ses icônes sous 1024px pour laisser la place.
+export const SEUIL_GRAND_ECRAN_PX = 880
 
-const REQUETE_GRAND_ECRAN = `(min-width: ${SEUIL_GRAND_ECRAN_PX}px)`
+const REQUETE_GRAND_ECRAN = `(min-width: ${SEUIL_GRAND_ECRAN_PX}px) and (any-pointer: fine)`
 
 /** Fonction pure, sans état — même rôle que `isPwaStandalone()` : à consommer via le hook
  *  `useGrandEcran()` (hooks/), jamais appelée directement dans un composant React. */

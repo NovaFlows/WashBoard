@@ -1,6 +1,6 @@
 'use client'
 
-import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { useDesignV2 } from '@/components/dashboard/DesignV2Context'
 
 // En-tête de l'écran des réglages — deux versions, comme le reste.
 //
@@ -11,9 +11,9 @@ import { useDesignMobile } from '@/hooks/useDesignMobile'
 // Rendu ici plutôt que dans ParametresFormV2 : l'en-tête précède la carte de configuration,
 // qui est posée par la page. Le mettre dans le formulaire l'aurait fait passer dessous.
 export function EnteteParametres() {
-  const isPwa = useDesignMobile()
+  const v2 = useDesignV2()
 
-  if (isPwa) {
+  if (v2) {
     return (
       <h1 className="text-[24px] leading-none pb-1 [font-family:var(--font-archivo)] [font-weight:var(--v2-type-titre-poids)] [font-stretch:var(--v2-type-titre-largeur)] tracking-[var(--v2-type-titre-tracking)] text-[color:var(--v2-color-encre)]">
         Plus
