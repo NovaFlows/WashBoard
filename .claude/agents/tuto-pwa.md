@@ -147,6 +147,19 @@ aucun chevauchement carte/cible mesuré une fois les rattrapages différés de `
 stabilisés (jusqu'à 3s — mesurer plus tôt capture parfois une frame transitoire, à ne pas
 confondre avec un vrai bug de positionnement).
 
+**Piège rencontré tout de suite après, en capture de Ryan** : `CARTE_CENTREE` posait
+`top:0; bottom:0; marginTop:'auto'; marginBottom:'auto'` SANS `height` — en pensant que
+« hauteur non précisée = hauteur de contenu, les marges auto centrent ça ». FAUX pour un
+élément en position absolue : quand `top` ET `bottom` sont tous les deux fixés mais que
+`height` reste `auto`, la spec CSS ne centre pas une boîte de la taille de son contenu —
+elle ÉTIRE la boîte pour remplir tout l'espace top→bottom, et les marges `auto` tombent à
+0 (elles ne servent à rien dans ce cas précis). Résultat vu en prod : une carte étirée sur
+quasi tout l'écran, fond flouté géant, texte collé tout en haut — exactement les captures
+que Ryan a envoyées (« plusieurs pages du tuto sont comme celle-là »). Correctif :
+`height: 'fit-content'` en plus — sort du cas « hauteur auto », redonne aux marges leur
+rôle de centrage. Au moindre nouveau centrage absolu top+bottom+marge-auto dans ce
+fichier, vérifier que `height` est bien fixé à autre chose que `auto`.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le

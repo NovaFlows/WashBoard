@@ -183,8 +183,17 @@ const MARGE_CARTE = 14
 const RESERVE_HAUT = 14
 /** Pas de cible : centrée verticalement (`top`/`bottom` à 0 + marges auto,
  *  jamais `transform` — l'animation d'entrée s'en sert déjà, les deux se
- *  disputeraient la propriété et l'une écraserait l'autre). */
-const CARTE_CENTREE: CSSProperties = { top: 0, bottom: 0, marginTop: 'auto', marginBottom: 'auto' }
+ *  disputeraient la propriété et l'une écraserait l'autre).
+ *  `height: 'fit-content'` est OBLIGATOIRE ici : laissé sur `auto` (la valeur
+ *  par défaut), la règle CSS pour un élément en position absolue avec `top`
+ *  ET `bottom` fixés mais SANS hauteur explicite n'est pas « centre une
+ *  boîte de la taille de son contenu » mais « étire la boîte pour remplir
+ *  tout l'espace top→bottom » (les marges auto tombent à 0 dans ce cas
+ *  précis) — exactement le bug que Ryan a repéré en capture le 2026-10-10 :
+ *  une carte étirée sur presque tout l'écran, flou sur tout cet espace,
+ *  texte collé en haut. `fit-content` sort du cas « hauteur auto » et
+ *  redonne aux marges leur rôle de centrage. */
+const CARTE_CENTREE: CSSProperties = { top: 0, bottom: 0, height: 'fit-content', marginTop: 'auto', marginBottom: 'auto' }
 
 /** Où poser la carte : collée sous la cible si la place le permet, sinon
  *  collée au-dessus — jamais plantée en bas d'écran avec une flèche qui
