@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
@@ -293,20 +293,6 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   // déjà en place (surligner()/.wb-visite-decoupe) prend le relais comme
   // avant — aucune régression, juste moins de magie.
   //
-  // Le callback de `startViewTransition` doit durer jusqu'à ce que le NOUVEL
-  // état soit vraiment peint, pas juste déclenché : une navigation Next.js
-  // est asynchrone (aller chercher le rendu serveur), donc on ne résout que
-  // lorsque `navigation` (l'indicateur de `useTransition`) redevient faux —
-  // avec un filet de 1,5 s pour ne jamais bloquer la page si ça traîne.
-  const resoudreTransitionRef = useRef<(() => void) | null>(null)
-  useEffect(() => {
-    if (!navigation && resoudreTransitionRef.current) {
-      const resoudre = resoudreTransitionRef.current
-      resoudreTransitionRef.current = null
-      resoudre()
-    }
-  }, [navigation])
-
   // Enveloppe une mise à jour SYNCHRONE (pas de navigation à attendre) dans
   // la View Transition native : `flushSync` la fait aboutir avant que le
   // navigateur ne prenne son instantané « après » (le contrat de
@@ -326,6 +312,14 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   function avancer() {
     if (suivante === null) { synchroVue(terminerVisite); return }
     const route = etapes[suivante].route
+    // Route IDENTIQUE à la page déjà affichée (ex. l'arrêt d'ouverture, sur
+    // `/dashboard`, suivi d'un arrêt qui reste sur `/dashboard`) : pas une
+    // vraie navigation, traitée comme un arrêt sans route (ci-dessous).
+    // `router.push` vers la page déjà affichée refait quand même tout le
+    // travail d'une vraie navigation (re-rendu du contenu serveur) — gel de
+    // ~150-400ms mesuré par capture de frames, Ryan, 2026-10-10 : « c'est
+    // pas fluide... mode saccadé ».
+    const routeBougera = !!route && route !== pathname
     // Écrit tout de suite, jamais après coup : `DashboardShell` est rendu par
     // chaque page séparément (pas un layout partagé), donc cette instance ne
     // survit pas à la navigation — un état « en attente » gardé dans le
@@ -334,24 +328,28 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
     // à l'affichage (bouton en chargement ci-dessous), pas en retardant l'écriture.
     const appliquer = () => {
       ecrireVisite({ statut: 'en_cours', etape: suivante })
-      // Arrêt sans route (ex. « regarde cet onglet ») : on reste sur la page,
-      // rien à attendre — naviguer vers `undefined` n'aurait aucun sens.
-      if (route) naviguer(() => router.push(route))
+      if (routeBougera) naviguer(() => router.push(route!))
     }
-    if (!route) { synchroVue(appliquer); return }
+    // Pas de vraie navigation à attendre : le chemin synchrone (`synchroVue`,
+    // résolution immédiate) convient, comme pour un arrêt sans route.
+    if (!routeBougera) { synchroVue(appliquer); return }
 
-    const sobre = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (sobre || typeof document === 'undefined' || !document.startViewTransition) { appliquer(); return }
-    document.startViewTransition(
-      () =>
-        new Promise<void>(resoudre => {
-          resoudreTransitionRef.current = resoudre
-          appliquer()
-          setTimeout(() => {
-            if (resoudreTransitionRef.current === resoudre) { resoudreTransitionRef.current = null; resoudre() }
-          }, 1500)
-        }),
-    )
+    // Vraie navigation cross-page : PAS de View Transition ici. Cette
+    // instance de VisiteGuidee ne survit pas à la navigation (DashboardShell
+    // est rendu par chaque page séparément, voir plus haut) — la version
+    // précédente essayait de garder la transition ouverte jusqu'à ce que
+    // `navigation` redevienne faux, mais ce signal part sur CETTE instance,
+    // qui est démontée en cours de route ; la transition ne pouvait donc
+    // jamais se résoudre autrement que par son filet de secours de 1,5s —
+    // SYSTÉMATIQUEMENT, pas occasionnellement. Mesuré par capture de frames
+    // (2026-10-10) : ~1536-1538ms de gel à CHAQUE clic sur Suivant qui change
+    // de page, quelle que soit la vitesse réelle du chargement — exactement
+    // ce que Ryan décrivait (« c'est pas fluide, mode saccadé », en
+    // particulier au clic sur Suivant). Le bouton affiche déjà un spinner
+    // pendant `navigation` (voir plus bas) : ça suffit comme retour pendant
+    // le chargement, pas besoin d'y ajouter un faux effet de fluidité qui
+    // gelait l'écran plus longtemps que la navigation elle-même.
+    appliquer()
   }
 
   // Avance toute seule quand le laveur fait l'action réelle. `avancement` (les
@@ -366,10 +364,17 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   useEffect(() => { avancerRef.current = avancer })
 
   // Où poser la carte (au-dessus ou en-dessous de la cible, centrée si pas de
-  // cible) — calculé directement au rendu, pas via un effet : ne dépend que
-  // de `rect` (déjà en state) et de la barre du bas (déjà montée par
-  // DashboardShell), jamais de la carte elle-même. Voir `calculerDisposition`.
-  const { styleCarte: dispositionCarte, flecheEnBas } = calculerDisposition(rect)
+  // cible) — ne dépend que de `rect` (déjà en state) et de la barre du bas
+  // (déjà montée par DashboardShell), jamais de la carte elle-même. `useMemo`
+  // (pas un simple appel direct) : `calculerDisposition` interroge le DOM
+  // (`querySelector` + `getBoundingClientRect`, une mise en page forcée) —
+  // sans ça, CHAQUE re-rendu de ce composant (il y en a plusieurs par
+  // transition d'arrêt : `useTransition` qui bascule, callback de la View
+  // Transition, montée de la nouvelle page) relançait cette lecture, pile au
+  // moment où Next.js monte une page entière — exactement ce qui saccadait
+  // le passage d'un arrêt à l'autre (Ryan, 2026-10-10 : « c'est pas fluide,
+  // mode saccadé », en particulier sur Suivant / le bandeau d'après).
+  const { styleCarte: dispositionCarte, flecheEnBas } = useMemo(() => calculerDisposition(rect), [rect])
 
   // Position horizontale de la flèche, recalculée à chaque changement de
   // cible/rect — APRÈS que `dispositionCarte` ait déjà positionné la carte

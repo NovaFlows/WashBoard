@@ -160,6 +160,54 @@ que Ryan a envoyées (« plusieurs pages du tuto sont comme celle-là »). Corre
 rôle de centrage. Au moindre nouveau centrage absolu top+bottom+marge-auto dans ce
 fichier, vérifier que `height` est bien fixé à autre chose que `auto`.
 
+## Le gel de 1,5s à chaque navigation — architecture cassée, pas un réglage à ajuster
+
+Trouvé le 2026-10-10 après que Ryan a décrit (deux fois, avec des mots différents) une
+saccade au passage d'un arrêt à l'autre ET au clic sur Suivant : « c'est pas fluide...
+mode saccadé... que ce soit pour passer au bandeau d'après, ou bien quand on a un clic
+sur suivant ». Diagnostiqué par CAPTURE DE FRAMES (`requestAnimationFrame`, position de
+la découpe/carte à chaque frame), pas par `longtask` (`PerformanceObserver` n'a rien vu —
+le gel n'est pas du JS qui bloque, c'est un écran qui refuse de se mettre à jour).
+
+Deux bugs DISTINCTS trouvés, à ne pas confondre si ça revient :
+
+**1. `router.push(route)` vers la page déjà affichée.** L'arrêt d'ouverture (`barre-bas`,
+sans route) suivi d'un arrêt SUR `/dashboard` (sa propre route) déclenchait quand même un
+vrai `router.push('/dashboard')` en étant déjà sur `/dashboard` — refait toute une
+navigation (re-rendu du contenu serveur) pour rien. Gel mesuré : ~150-400ms. Corrigé :
+`avancer()` compare `route !== pathname` (`routeBougera`) avant d'appeler `naviguer()`.
+
+**2. Le vrai bug, plus sérieux : la View Transition d'une navigation cross-page ne se
+résolvait JAMAIS autrement que par son filet de secours de 1,5s — SYSTÉMATIQUEMENT, pas
+occasionnellement.** L'ancien code enveloppait `router.push` dans
+`document.startViewTransition(() => new Promise(résoudre => { ...; setTimeout(résoudre,
+1500) }))`, en attendant qu'un `useEffect` qui observe `navigation` (l'indicateur de
+`useTransition`) redevienne faux pour résoudre la promesse plus tôt. Problème
+architectural : **cette instance de VisiteGuidee ne survit pas à la navigation**
+(`DashboardShell` est rendu par chaque page séparément, pas un layout partagé — déjà noté
+plus haut dans ce fichier). L'instance qui portait la référence vers `résoudre` est donc
+démontée EN COURS de navigation, avant que son propre effet n'ait pu observer
+`navigation` repasser à faux. Résultat : peu importe la vitesse réelle du chargement de
+la page suivante, la transition attendait TOUJOURS le plein 1,5s avant de rendre la main
+— un écran figé une seconde et demie à CHAQUE clic sur Suivant qui change de page.
+Vérifié par mesure : deux navigations différentes, deux gels à 1536ms et 1538ms (bien
+trop proches de 1500 pour être une coïncidence de timing réel).
+
+Corrigé en retirant la View Transition pour les navigations cross-page : `avancer()`
+appelle `appliquer()` directement dans ce cas (pas de `document.startViewTransition` du
+tout). Le spinner déjà affiché sur le bouton pendant `navigation` (useTransition) suffit
+comme retour pendant le chargement réel. La View Transition reste en place UNIQUEMENT
+pour les cas sans navigation (`synchroVue`, résolution synchrone via `flushSync` — fermer
+le tuto, passer, terminer, ou avancer vers un arrêt sans route ou sur la même page) : ces
+cas-là ont été vérifiés fluides par la même méthode (capture de frames, aucun gel mesuré
+sur des dizaines de transitions, écart de frame maximal ~19ms sur tout un parcours de 5
+arrêts y compris une vraie navigation cross-page après correctif).
+
+**Piège à ne pas refaire** : ne JAMAIS faire dépendre la résolution d'une
+`document.startViewTransition` d'un signal porté par une instance de composant qui peut
+être démontée avant que ce signal n'arrive — en particulier ici, tout ce qui traverse une
+navigation Next.js dans une page sans layout partagé.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le
