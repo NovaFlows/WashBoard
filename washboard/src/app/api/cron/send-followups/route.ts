@@ -113,13 +113,20 @@ export async function GET(request: NextRequest) {
         continue
       }
 
+      // Sans email (rendez-vous pris par téléphone) : pas de relance par email possible.
+      if (!clientEmail?.trim() && !(channel === 'sms' && booking.client_phone)) {
+        aClore.push(booking.id)
+        continue
+      }
+
       // Les plus proches d'abord : s'il existe un rendez-vous passé, il est dans
-      // les premiers lus.
+      // les premiers lus. Le client est retrouvé par son email, à défaut par son
+      // téléphone : filtrer sur un email vide mélangerait tous les clients sans email.
       const { data: plusRecents, error: errRecents } = await admin
         .from('bookings')
         .select('status, scheduled_at')
         .eq('washer_id', washer.id)
-        .eq('client_email', clientEmail)
+        .eq(clientEmail?.trim() ? 'client_email' : 'client_phone', clientEmail?.trim() ? clientEmail : booking.client_phone)
         .not('status', 'eq', 'cancelled')
         .gt('scheduled_at', booking.scheduled_at)
         .order('scheduled_at')

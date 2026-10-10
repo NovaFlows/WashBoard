@@ -149,7 +149,8 @@ export function useRendezVousManuel({
     if (!manualModal) return
     setManualErr(null)
     if (!manualModal.client_name.trim()) { setManualErr('Nom du client requis'); return }
-    if (!manualModal.client_email.trim()) { setManualErr('Email du client requis'); return }
+    // Email facultatif : un rendez-vous pris par téléphone n'en a pas toujours. Sans lui, le
+    // client ne reçoit simplement aucun email (confirmation, facture, avis, relance par email).
     if (!manualModal.client_phone.trim()) { setManualErr('Téléphone du client requis'); return }
     if (!manualModal.address.trim()) { setManualErr('Adresse requise'); return }
     if (!manualModal.service_id) { setManualErr('Sélectionnez une prestation'); return }
@@ -267,7 +268,7 @@ export function useRendezVousManuel({
         address:         manualModal.address,
         scheduled_at,
         client_name:     manualModal.client_name,
-        client_email:    manualModal.client_email,
+        client_email:    manualModal.client_email.trim(),
         client_phone:    manualModal.client_phone,
         lat:             manualModal.lat ?? undefined,
         lng:             manualModal.lng ?? undefined,

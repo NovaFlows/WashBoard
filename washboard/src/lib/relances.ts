@@ -6,7 +6,9 @@
 // chaque jour, et ces rendez-vous morts pouvaient occuper le lot de 500 au point
 // que les clients les plus anciens n'étaient jamais atteints.
 
-type Candidat = { id: string; client_email: string }
+import { cleClient } from '@/lib/clientProfile'
+
+type Candidat = { id: string; client_email: string; client_phone?: string | null }
 
 /** Un seul message par client : son rendez-vous le plus récent porte la relance.
  *  Les plus anciens sont clos tout de suite — le plus récent est lui aussi un
@@ -18,8 +20,11 @@ export function repartirParClient<T extends Candidat>(candidats: T[]): { porteur
   const porteurs: T[] = []
   const aClore: string[] = []
   for (const c of candidats) {
-    if (vus.has(c.client_email)) aClore.push(c.id)
-    else { vus.add(c.client_email); porteurs.push(c) }
+    // Email, à défaut téléphone (`cleClient`) : regrouper sur l'email seul ferait un seul
+    // « client » de tous les rendez-vous pris par téléphone sans email.
+    const cle = cleClient(c.client_email, c.client_phone) || `rdv:${c.id}`
+    if (vus.has(cle)) aClore.push(c.id)
+    else { vus.add(cle); porteurs.push(c) }
   }
   return { porteurs, aClore }
 }

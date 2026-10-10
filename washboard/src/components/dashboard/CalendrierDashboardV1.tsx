@@ -928,7 +928,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Email *</label>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Email (facultatif)</label>
                       <input type="email" placeholder="jean@exemple.com" value={manualModal.client_email}
                         onChange={e => updateManual('client_email', e.target.value)}
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -1093,7 +1093,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">{selected.client_name}</h2>
 
             <div className="space-y-2.5 mb-4">
-              <Row icon="mail">{selected.client_email}</Row>
+              {selected.client_email?.trim() && <Row icon="mail">{selected.client_email}</Row>}
               {selected.client_phone && <Row icon="phone">{selected.client_phone}</Row>}
               {selected.services && (
                 <Row icon="bolt">

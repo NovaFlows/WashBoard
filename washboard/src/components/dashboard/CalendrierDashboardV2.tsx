@@ -8,7 +8,7 @@ import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
 import { dayKey, formatHeure, isSameDay } from '@/lib/calendarLayout'
 import { villeDepuisAdresse } from '@/lib/adresse'
-import { doitDemanderConfirmation, statutAffiche, type StatutAffiche } from '@/lib/cloture'
+import { doitDemanderConfirmation, montantPrevu, statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
@@ -1259,7 +1259,7 @@ function DetailRendezVous({
   rescheduleSaving: boolean
   rescheduleErr: string | null
   saveReschedule: () => void
-  updateStatus: (id: string, status: string, closedLate?: boolean) => void
+  updateStatus: (id: string, status: string, closedLate?: boolean, montantEncaisse?: number) => void
   clotureDemandee: boolean
   setClotureDemandee: (v: boolean) => void
   facturationPrete: boolean
@@ -1477,7 +1477,7 @@ function DetailRendezVous({
                   confirmé dans l'app. */}
               <button
                 type="button"
-                onClick={() => doitDemanderConfirmation(b, new Date()) ? setClotureDemandee(true) : updateStatus(b.id, 'done')}
+                onClick={() => setClotureDemandee(true)}
                 disabled={updating}
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
                 style={{ borderColor: 'var(--v2-color-accent)', color: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
@@ -1502,7 +1502,12 @@ function DetailRendezVous({
               quand={`${new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
               professionnel={!!b.is_professional}
               facturationPrete={facturationPrete}
-              onFait={() => { setClotureDemandee(false); updateStatus(b.id, 'done', true) }}
+              montantPrevu={montantPrevu(b)}
+              passe={doitDemanderConfirmation(b, new Date())}
+              onFait={montant => {
+                setClotureDemandee(false)
+                updateStatus(b.id, 'done', doitDemanderConfirmation(b, new Date()) ? true : undefined, montant)
+              }}
               onPasFait={() => { setClotureDemandee(false); updateStatus(b.id, 'cancelled') }}
               onClose={() => setClotureDemandee(false)}
             />
@@ -1543,12 +1548,12 @@ function DetailRendezVous({
             </div>
           )}
 
-          <div className={`mt-5 space-y-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          {b.client_email?.trim() && <div className={`mt-5 space-y-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
             <a href={`mailto:${b.client_email}`} className="flex items-center gap-2 transition-colors hover:text-[color:var(--v2-color-encre)]">
               <Mail size={14} className="shrink-0" aria-hidden />
               <span className="truncate">{b.client_email}</span>
             </a>
-          </div>
+          </div>}
 
           {b.client_phone && (
             <div className="mt-5 flex gap-2.5">
@@ -1709,7 +1714,7 @@ function FicheRdvBureauV2({
   rescheduleSaving: boolean
   rescheduleErr: string | null
   saveReschedule: () => void
-  updateStatus: (id: string, status: string, closedLate?: boolean) => void
+  updateStatus: (id: string, status: string, closedLate?: boolean, montantEncaisse?: number) => void
   clotureDemandee: boolean
   setClotureDemandee: (v: boolean) => void
   facturationPrete: boolean
@@ -1804,8 +1809,8 @@ function FicheRdvBureauV2({
                 onClick={() => {
                   if (!peutCliquer) return
                   if (valeur === 'done') {
-                    if (doitDemanderConfirmation(b, new Date())) setClotureDemandee(true)
-                    else updateStatus(b.id, 'done')
+                    // Toujours par la fenêtre : c'est là que se donne le montant encaissé.
+                    setClotureDemandee(true)
                   } else {
                     updateStatus(b.id, valeur)
                   }
@@ -1891,7 +1896,12 @@ function FicheRdvBureauV2({
               quand={`${new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
               professionnel={!!b.is_professional}
               facturationPrete={facturationPrete}
-              onFait={() => { setClotureDemandee(false); updateStatus(b.id, 'done', true) }}
+              montantPrevu={montantPrevu(b)}
+              passe={doitDemanderConfirmation(b, new Date())}
+              onFait={montant => {
+                setClotureDemandee(false)
+                updateStatus(b.id, 'done', doitDemanderConfirmation(b, new Date()) ? true : undefined, montant)
+              }}
               onPasFait={() => { setClotureDemandee(false); updateStatus(b.id, 'cancelled') }}
               onClose={() => setClotureDemandee(false)}
             />
@@ -1932,7 +1942,7 @@ function FicheRdvBureauV2({
           </div>
         )}
 
-        <p className={`mt-4 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{b.client_email}</p>
+        {b.client_email?.trim() && <p className={`mt-4 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{b.client_email}</p>}
       </div>
     </div>
   )

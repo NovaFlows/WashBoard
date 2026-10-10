@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Passe à `true` si l'envoi de CETTE demande a échoué : elle ne sera alors
     // pas marquée comme traitée, et repassera à l'exécution suivante.
     let echecEnvoi = false
-    if (b.status === 'cancelled' || !b.client_email) {
+    if (b.status === 'cancelled') {
       await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
       continue
     }
@@ -115,6 +115,13 @@ export async function GET(request: NextRequest) {
     }
 
     const channel = washer.review_channel ?? 'email'
+
+    // Rendez-vous pris par téléphone, sans email : la demande part quand même par SMS si
+    // c'est le canal du laveur, sinon il n'y a personne à qui l'envoyer.
+    if (channel === 'email' && !b.client_email?.trim()) {
+      await admin.from('bookings').update({ review_request_sent_at: nowIso }).eq('id', b.id)
+      continue
+    }
 
     if (channel === 'email') {
       try {

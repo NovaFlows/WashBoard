@@ -40,3 +40,17 @@ describe('decisionPlusRecents', () => {
     expect(decisionPlusRecents([{ status: 'pending', scheduled_at: '2026-08-01T10:00:00Z' }], maintenant)).toBe('attendre')
   })
 })
+
+describe('repartirParClient — rendez-vous sans email', () => {
+  it('regroupe par téléphone, sans fusionner tous les clients sans email', () => {
+    const { porteurs, aClore } = repartirParClient([
+      { id: 'a2', client_email: '', client_phone: '06 11 11 11 11' },
+      { id: 'b1', client_email: '', client_phone: '0622222222' },
+      { id: 'a1', client_email: '', client_phone: '0611111111' },
+      { id: 'x1', client_email: '', client_phone: '' },
+      { id: 'y1', client_email: '', client_phone: null },
+    ])
+    expect(porteurs.map(p => p.id)).toEqual(['a2', 'b1', 'x1', 'y1'])
+    expect(aClore).toEqual(['a1'])
+  })
+})

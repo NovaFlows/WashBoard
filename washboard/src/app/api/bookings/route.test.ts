@@ -84,7 +84,7 @@ vi.mock('@/lib/googleMaps', () => ({ getMapsApiKey: () => 'cle-test' }))
 // Recuperes apres les `vi.mock` : ce que le laveur RECOIT est au coeur du
 // verrouillage, un test qui ne lirait que le code HTTP passerait a cote.
 const { notifierLaveur } = vi.mocked(await import('@/lib/push'))
-const { sendWasherNotification, sendWasherBookingLocked } = vi.mocked(await import('@/lib/email'))
+const { sendWasherNotification, sendWasherBookingLocked, sendBookingRequest } = vi.mocked(await import('@/lib/email'))
 
 const { RETOUR_GRATUIT_POUR_COMPTES_CREES_DES } = await import('@/lib/plan')
 const { jetonValide } = await import('@/lib/bookingToken')
@@ -322,6 +322,28 @@ describe('POST /api/bookings — le laveur qui saisit son propre rendez-vous', (
     const { res, body } = await poster({ scheduled_at: '2026-09-11T01:00:00Z', saisie_par_laveur: true })
     expect(res.status).toBe(409)
     expect(body.error).toMatch(/horaires/)
+  })
+})
+
+describe('POST /api/bookings — email du client facultatif pour le laveur seulement', () => {
+  it('la page publique refuse toujours une réservation sans email', async () => {
+    const { res, body } = await poster({ client_email: '' })
+    expect(res.status).toBe(400)
+    expect(body.error).toBe('Email du client requis')
+  })
+
+  it('le laveur peut saisir un rendez-vous pris par téléphone sans email, et rien ne part au client', async () => {
+    plan.utilisateur = null
+    plan.session = { id: 'user-1' }
+    sendBookingRequest.mockClear()
+    const { res } = await poster({ client_email: '', saisie_par_laveur: true })
+    expect(res.status).toBe(201)
+    expect(sendBookingRequest).not.toHaveBeenCalled()
+  })
+
+  it('un email fourni doit rester valide', async () => {
+    const { res } = await poster({ client_email: 'pas-un-email' })
+    expect(res.status).toBe(400)
   })
 })
 

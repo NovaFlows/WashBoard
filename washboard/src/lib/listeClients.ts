@@ -47,7 +47,6 @@ export type ResumeClient = {
   source: SourceDecouverte | null
 }
 
-const cle = (email: string) => email.trim().toLowerCase()
 const court = (b: ClientBooking): RendezVousCourt => ({ service: b.services?.name ?? 'Prestation', date: b.scheduled_at })
 
 /** Un client par email (ou par téléphone à défaut), le plus récemment actif en premier. */
@@ -59,8 +58,10 @@ export function listeClients(
 ): ResumeClient[] {
   const parClient = new Map<string, ClientBooking[]>()
   for (const b of bookings) {
-    if (!b.client_email?.trim()) continue
-    const k = cle(b.client_email)
+    // Email, à défaut téléphone : un rendez-vous pris par téléphone sans email est un client
+    // comme un autre (même règle que la fiche, `cleClient`).
+    const k = cleClient(b.client_email, b.client_phone)
+    if (!k) continue
     const liste = parClient.get(k)
     if (liste) liste.push(b)
     else parClient.set(k, [b])

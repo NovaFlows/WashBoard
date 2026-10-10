@@ -13,8 +13,8 @@ import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@
 // (`src/hooks/useRendezVousManuel.ts`), la même que celle de
 // `CalendrierDashboardV1.tsx` : ce fichier ne contient que de la
 // présentation. Mêmes champs, mêmes libellés d'erreur, mêmes obligations
-// (l'email reste obligatoire : le rendre facultatif est l'étape 3 du plan CRM,
-// un chantier `dev` séparé, pas cette refonte visuelle).
+// (l'email est facultatif depuis le 2026-10-10 : un rendez-vous pris par téléphone
+// n'en a pas toujours).
 //
 // Pas dans la maquette `Agenda.dc.html` : construit avec les conventions v2
 // déjà posées. Les titres de section en capitales espacées de v1 disparaissent
@@ -203,7 +203,7 @@ export default function RendezVousManuelV2({
               className={CHAMP}
             />
           </Champ>
-          <Champ id="rdvm-email" label="Email *">
+          <Champ id="rdvm-email" label="Email (facultatif)">
             <input
               id="rdvm-email"
               type="email"

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { estCreneauPasse, doitDemanderConfirmation, statutAffiche } from './cloture'
+import { estCreneauPasse, doitDemanderConfirmation, statutAffiche, lireMontant, montantPrevu, colonnesMontantEncaisse } from './cloture'
 
 const MAINTENANT = new Date('2026-09-16T12:00:00Z')
 const passe = '2026-09-15T10:00:00Z'
@@ -73,5 +73,32 @@ describe('statutAffiche — ce que la PWA montre', () => {
 
   it('annulé reste annulé', () => {
     expect(statutAffiche(rdv({ status: 'cancelled' }), FIN_PASSEE)).toBe('cancelled')
+  })
+})
+
+describe('montant encaissé', () => {
+  it('lit les écritures courantes, au centime', () => {
+    expect(lireMontant('45')).toBe(45)
+    expect(lireMontant('45,5')).toBe(45.5)
+    expect(lireMontant(' 45.50 € ')).toBe(45.5)
+    expect(lireMontant('1 200')).toBe(1200)
+    expect(lireMontant(0)).toBe(0)
+    expect(lireMontant(59.9)).toBe(59.9)
+  })
+
+  it('refuse ce qui ne peut pas aller sur une facture', () => {
+    for (const v of ['', '  ', '-5', 'abc', '4,555', '100001', null, undefined, {}]) {
+      expect(lireMontant(v)).toBeNull()
+    }
+  })
+
+  it('le prévu est le prix réservé moins la remise du créneau optimisé', () => {
+    expect(montantPrevu({ booked_price: 59, is_smart_slot: true, smart_discount: 5 })).toBe(54)
+    expect(montantPrevu({ booked_price: 59, is_smart_slot: false, smart_discount: 5 })).toBe(59)
+    expect(montantPrevu({ booked_price: null, services: { price: 40 } })).toBe(40)
+  })
+
+  it('un montant différent devient le prix, remise remise à zéro (jamais déduite deux fois)', () => {
+    expect(colonnesMontantEncaisse(65.5)).toEqual({ booked_price: 65.5, smart_discount: 0 })
   })
 })

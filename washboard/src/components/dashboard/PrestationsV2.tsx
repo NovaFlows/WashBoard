@@ -568,7 +568,9 @@ export default function PrestationsV2({
           availabilities={availabilities}
           onEnregistrer={enregistrerPrestation}
           onSupprimer={feuille.service ? () => demanderSuppression({ quoi: 'prestation', service: feuille.service! }) : undefined}
-          veille={feuille.service && plafond !== null ? {
+          // Ouvert à toutes les offres (Alexandre, 2026-10-10) : une prestation déjà réservée ne
+          // se supprime pas, la veille est le seul moyen de la retirer de la page de réservation.
+          veille={feuille.service ? {
             enVeille: estEnVeille(feuille.service),
             enCours: veilleEnCours === feuille.service.id,
             refus: veilleRefus,

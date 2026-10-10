@@ -79,3 +79,44 @@ export function doitDemanderConfirmation(
   if (rdv.status !== 'pending' && rdv.status !== 'confirmed') return false
   return estCreneauPasse(rdv.scheduled_at, maintenant)
 }
+
+// ── Montant encaissé à la clôture ────────────────────────────────────────────
+//
+// Le client ne paie pas toujours le prix prévu (geste commercial, option ajoutée sur place,
+// tapis en plus…). Sans moyen de le dire à la clôture, la facture et les Chiffres gardaient le
+// prix de la réservation : faux, et sans recours (relevé par la maquette bureau, 2026-10-05).
+
+/** Plafond de saisie : bien au-dessus de n'importe quel lavage, assez bas pour arrêter une
+ *  faute de frappe (un zéro de trop) avant qu'elle ne parte sur une facture. */
+export const MONTANT_ENCAISSE_MAX = 100_000
+
+/** Ce que le client devait payer : le prix réservé, moins la remise « créneau optimisé ».
+ *  Même formule que `revenuNet` (lib/pricing.ts), pour une seule réservation. */
+export function montantPrevu(rdv: {
+  booked_price?: number | null
+  is_smart_slot?: boolean | null
+  smart_discount?: number | null
+  services?: { price?: number | null } | null
+}): number {
+  const prix = Number(rdv.booked_price ?? rdv.services?.price ?? 0)
+  const remise = rdv.is_smart_slot ? Number(rdv.smart_discount ?? 0) : 0
+  return Math.round(Math.max(0, prix - remise) * 100) / 100
+}
+
+/** Lit un montant saisi (« 45 », « 45,50 », « 45.5 ») : le nombre arrondi au centime, ou `null`
+ *  s'il n'est pas utilisable (vide, négatif, au-delà du plafond, pas un nombre). */
+export function lireMontant(saisie: unknown): number | null {
+  const texte = typeof saisie === 'number' ? String(saisie) : typeof saisie === 'string' ? saisie : ''
+  const propre = texte.trim().replace(/\s|€/g, '').replace(',', '.')
+  if (!/^\d+(\.\d{1,2})?$/.test(propre)) return null
+  const n = Number(propre)
+  return Number.isFinite(n) && n <= MONTANT_ENCAISSE_MAX ? Math.round(n * 100) / 100 : null
+}
+
+/** Colonnes à écrire quand le montant encaissé diffère du prévu. Le montant devient le prix
+ *  réservé et la remise est remise à zéro : sinon `revenuNet` et la facture la retrancheraient
+ *  une seconde fois d'un montant qui l'inclut déjà. `is_smart_slot` reste, c'est un fait
+ *  historique (le créneau était bien optimisé). */
+export function colonnesMontantEncaisse(montant: number): { booked_price: number; smart_discount: number } {
+  return { booked_price: montant, smart_discount: 0 }
+}

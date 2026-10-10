@@ -124,24 +124,35 @@ export function useRendezVousFiche({
 
   // `closedLate` : clôturé après coup, comme sur l'accueil — le rendez-vous
   // porte alors « Délai dépassé » plutôt que « Terminé ».
-  async function updateStatus(id: string, status: string, closedLate?: boolean) {
+  // `montantEncaisse` : ce que le client a payé, donné à la clôture (ConfirmerClotureV2).
+  async function updateStatus(id: string, status: string, closedLate?: boolean, montantEncaisse?: number) {
     setUpdating(true)
     try {
       const res = await fetch(`/api/bookings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, ...(closedLate !== undefined ? { closed_late: closedLate } : {}) }),
+        body: JSON.stringify({
+          status,
+          ...(closedLate !== undefined ? { closed_late: closedLate } : {}),
+          ...(montantEncaisse !== undefined ? { montant_encaisse: montantEncaisse } : {}),
+        }),
       })
       if (res.ok) {
         // Passer en « Terminé » émet la facture : on récupère son numéro pour
         // proposer le téléchargement sans recharger la page.
-        const maj = await res.json().catch(() => null) as { facture_numero?: string | null } | null
+        const maj = await res.json().catch(() => null) as { facture_numero?: string | null; booked_price?: number | null; smart_discount?: number | null } | null
         const facture = maj?.facture_numero ? { facture_numero: maj.facture_numero } : {}
         // `closed_late` suit le statut en mémoire : sans lui, le badge
         // « Délai dépassé » n'apparaissait qu'après rechargement de la page.
+        // Le serveur a pu réécrire le prix (montant encaissé différent du prévu) : on reprend
+        // ce qu'il renvoie plutôt que de recalculer ici.
+        const prix = maj && typeof (maj as { booked_price?: unknown }).booked_price === 'number'
+          ? { booked_price: (maj as { booked_price: number }).booked_price, smart_discount: (maj as { smart_discount?: number }).smart_discount ?? 0 }
+          : {}
         const champs = {
           status: status as Booking['status'],
           ...facture,
+          ...prix,
           ...(closedLate !== undefined ? { closed_late: closedLate } : {}),
         }
         setBookings(prev => prev.map(b => b.id === id ? { ...b, ...champs } : b))

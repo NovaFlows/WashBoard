@@ -41,8 +41,9 @@ type Props = {
   onEnregistrer: (form: FormulairePrestation) => Promise<string | null>
   /** Ouvre la confirmation de suppression (absent à la création). */
   onSupprimer?: () => void
-  /** Mise en veille (plafond de catalogue des offres 2026) — absent à la
-   *  création et sur une offre sans plafond. Endormir est toujours permis ;
+  /** Mise en veille — absent à la création. Sert au plafond de catalogue des
+   *  offres 2026, et à retirer de la page une prestation déjà réservée (qui ne
+   *  se supprime pas). Endormir est toujours permis ;
    *  rallumer peut être refusé si le catalogue est déjà plein, et `refus` porte
    *  alors la phrase à lire. */
   veille?: {

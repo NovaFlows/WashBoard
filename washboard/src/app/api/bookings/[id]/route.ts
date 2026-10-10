@@ -9,6 +9,7 @@ import { doitEnvoyerFactureAuClient } from '@/lib/facture'
 import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import { genererJetonReservation } from '@/lib/bookingToken'
+import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/cloture'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -29,7 +30,7 @@ export async function PATCH(
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const body = await request.json()
-  const { status, notes, closed_late, scheduled_at } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string }
+  const { status, notes, closed_late, scheduled_at, montant_encaisse } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string; montant_encaisse?: unknown }
 
   if (status && !VALID_STATUSES.includes(status))
     return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
@@ -83,8 +84,20 @@ export async function PATCH(
     )
   }
 
+  // Montant encaissé : seulement au passage en « Terminé » — c'est là que la facture est
+  // émise, et une fois émise elle ne se réécrit plus.
+  let montant: number | null = null
+  if (montant_encaisse !== undefined) {
+    if (status !== 'done' || booking.status === 'done') {
+      return NextResponse.json({ error: 'Le montant encaissé se donne en clôturant le rendez-vous.' }, { status: 400 })
+    }
+    montant = lireMontant(montant_encaisse)
+    if (montant === null) return NextResponse.json({ error: 'Montant encaissé invalide' }, { status: 400 })
+  }
+
   // Mettre à jour le statut / les notes / l'horaire
   const updates: Record<string, unknown> = {}
+  if (montant !== null && montant !== montantPrevu(booking)) Object.assign(updates, colonnesMontantEncaisse(montant))
   if (status       !== undefined) updates.status       = status
   if (notes        !== undefined) updates.notes        = notes
   if (closed_late  !== undefined) updates.closed_late  = closed_late
@@ -155,8 +168,8 @@ export async function PATCH(
         }
       }
 
-      // 2. Email reçu professionnel
-      sendBookingConfirmation({
+      // 2. Email reçu professionnel — sans adresse (rendez-vous pris par téléphone), rien à envoyer.
+      if (booking.client_email?.trim()) sendBookingConfirmation({
         to:            booking.client_email,
         clientName:    booking.client_name,
         clientEmail:   booking.client_email,

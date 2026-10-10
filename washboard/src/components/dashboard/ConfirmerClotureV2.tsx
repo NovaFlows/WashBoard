@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, X } from 'lucide-react'
+import { lireMontant } from '@/lib/cloture'
+import { CHAMP } from '@/components/dashboard/FeuilleV2'
 
 // Même composant que ConfirmerCloture.tsx (mêmes props, même texte, même
 // logique de décision — voir `doitDemanderConfirmation` dans `lib/cloture.ts`,
@@ -11,6 +13,12 @@ import { Check, X } from 'lucide-react'
 // installée », .claude/agents/refonte.md). Dupliqué volontairement — c'est de
 // la présentation, jamais du calcul, la même règle que ClientProfileModalV2
 // vs V1 pour la définition des statuts.
+//
+// 2026-10-10 : la fenêtre porte aussi le MONTANT ENCAISSÉ, prérempli avec le prix prévu
+// (le client ne paie pas toujours ce qui était réservé). Elle s'ouvre donc à chaque clôture
+// depuis l'agenda v2 : pour un créneau à venir (`passe` faux), seule « Oui » est proposée —
+// la question « a-t-il eu lieu ? » n'a de sens que pour un créneau passé.
+const formater = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2)).replace('.', ',')
 const police = '[font-family:var(--font-archivo)]'
 const corps = `${police} [font-weight:var(--v2-type-corps-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
 const corpsFort = `${police} [font-weight:var(--v2-type-corps-fort-poids)] [font-stretch:var(--v2-type-corps-largeur)]`
@@ -21,6 +29,8 @@ export default function ConfirmerClotureV2({
   quand,
   professionnel,
   facturationPrete,
+  montantPrevu,
+  passe = true,
   onFait,
   onPasFait,
   onClose,
@@ -29,11 +39,18 @@ export default function ConfirmerClotureV2({
   quand: string
   professionnel: boolean
   facturationPrete: boolean
-  onFait: () => void
+  /** Ce que le client devait payer (`montantPrevu`, lib/cloture.ts) : la valeur de départ. */
+  montantPrevu: number
+  /** Créneau déjà passé : on demande s'il a eu lieu. À venir : on clôture, sans la question. */
+  passe?: boolean
+  /** `montant` : ce que le client a payé, déjà validé. */
+  onFait: (montant: number) => void
   onPasFait: () => void
   onClose: () => void
 }) {
   const panneauRef = useRef<HTMLDivElement>(null)
+  const [saisie, setSaisie] = useState(() => formater(montantPrevu))
+  const montant = lireMontant(saisie)
 
   useEffect(() => {
     panneauRef.current?.focus()
@@ -69,16 +86,41 @@ export default function ConfirmerClotureV2({
         className={`relative w-full max-w-sm rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} p-5`}
       >
         <h2 id="cloture-titre-v2" className={`text-[17px] ${titre}`}>
-          Avez-vous fait ce rendez-vous ?
+          {passe ? 'Avez-vous fait ce rendez-vous ?' : 'Clôturer ce rendez-vous'}
         </h2>
         <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
           {clientName} · <span className="first-letter:uppercase inline-block">{quand}</span>
         </p>
 
+        <div className="mt-4">
+          <label htmlFor="cloture-montant" className={`block text-[13px] ${corpsFort}`}>Montant encaissé</label>
+          <div className="relative mt-1.5">
+            <input
+              id="cloture-montant"
+              inputMode="decimal"
+              autoComplete="off"
+              value={saisie}
+              onChange={e => setSaisie(e.target.value)}
+              aria-invalid={montant === null}
+              aria-describedby="cloture-montant-aide"
+              className={`${CHAMP} pr-9 tabular-nums`}
+            />
+            <span aria-hidden className={`pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[15px] ${corps} text-[color:var(--v2-color-gris)]`}>€</span>
+          </div>
+          <p id="cloture-montant-aide" className={`mt-1 text-[12px] ${corps}`} style={{ color: montant === null ? 'var(--v2-color-rouge)' : 'var(--v2-color-gris)' }}>
+            {montant === null
+              ? 'Indiquez un montant, par exemple 45 ou 45,50.'
+              : montant === montantPrevu
+                ? 'Le prix prévu. Changez-le si votre client a payé autre chose.'
+                : `Prévu : ${formater(montantPrevu)} €. La facture et vos chiffres prendront ${formater(montant)} €.`}
+          </p>
+        </div>
+
         <div className="mt-4 space-y-2">
           <button
-            onClick={onFait}
-            className="w-full flex items-start gap-3 text-left p-3 rounded-[var(--v2-radius-carte)] border transition-colors"
+            onClick={() => { if (montant !== null) onFait(montant) }}
+            disabled={montant === null}
+            className="w-full flex items-start gap-3 text-left p-3 rounded-[var(--v2-radius-carte)] border transition-colors disabled:opacity-50"
             style={{ borderColor: 'var(--v2-color-vert)', background: 'rgba(18, 122, 75, 0.08)' }}
           >
             <span
@@ -88,12 +130,12 @@ export default function ConfirmerClotureV2({
               <Check size={16} strokeWidth={3} />
             </span>
             <span>
-              <span className={`block text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>Oui, je l’ai fait</span>
+              <span className={`block text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>{passe ? 'Oui, je l’ai fait' : 'Marquer terminé'}</span>
               <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>{suiteFait}</span>
             </span>
           </button>
 
-          <button
+          {passe && <button
             onClick={onPasFait}
             className="w-full flex items-start gap-3 text-left p-3 rounded-[var(--v2-radius-carte)] border transition-colors"
             style={{ borderColor: 'var(--v2-color-rouge)', background: 'rgba(179, 38, 30, 0.08)' }}
@@ -110,7 +152,7 @@ export default function ConfirmerClotureV2({
                 Il est annulé : aucune facture, il ne compte pas dans votre compta, et votre client ne reçoit aucun message.
               </span>
             </span>
-          </button>
+          </button>}
         </div>
 
         <button

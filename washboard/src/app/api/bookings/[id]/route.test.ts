@@ -236,3 +236,48 @@ describe('PATCH /api/bookings/[id] — client de lecture et d’écriture', () =
     for (const e of ecritures) expect(e.filtres).toMatchObject({ id: 'c', washer_id: 'washer-1' })
   })
 })
+
+describe('PATCH /api/bookings/[id] — montant encaissé à la clôture', () => {
+  beforeEach(() => {
+    plan.booking = {
+      ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', status: 'confirmed',
+      booked_price: 59, is_smart_slot: true, smart_discount: 5,
+    }
+  })
+  const ecritureBookings = () => miseAJour.mock.calls.find(([table]) => table === 'bookings')?.[1]
+
+  it('remplace le prix et annule la remise quand le client a payé autre chose', async () => {
+    const res = await PATCH(requete({ status: 'done', montant_encaisse: '65,50' }), { params })
+    expect(res.status).toBe(200)
+    expect(ecritureBookings()).toEqual({ status: 'done', booked_price: 65.5, smart_discount: 0 })
+  })
+
+  it('ne touche pas au prix quand le montant est celui prévu (remise déduite)', async () => {
+    await PATCH(requete({ status: 'done', montant_encaisse: 54 }), { params })
+    expect(ecritureBookings()).toEqual({ status: 'done' })
+  })
+
+  it.each([['-10'], ['abc'], ['200000'], ['']])('refuse un montant invalide (%s) sans rien écrire', async montant => {
+    const res = await PATCH(requete({ status: 'done', montant_encaisse: montant }), { params })
+    expect(res.status).toBe(400)
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+
+  it('refuse un montant hors clôture : une facture émise ne se réécrit pas', async () => {
+    const res = await PATCH(requete({ notes: 'x', montant_encaisse: 10 }), { params })
+    expect(res.status).toBe(400)
+    plan.booking = { ...plan.booking, status: 'done' }
+    const deja = await PATCH(requete({ status: 'done', montant_encaisse: 10 }), { params })
+    expect(deja.status).toBe(400)
+    expect(miseAJour).not.toHaveBeenCalled()
+  })
+})
+
+describe('PATCH /api/bookings/[id] — rendez-vous sans email', () => {
+  it('confirme sans tenter d’envoyer d’email', async () => {
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', client_email: '' }
+    const res = await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(res.status).toBe(200)
+    expect(sendBookingConfirmation).not.toHaveBeenCalled()
+  })
+})

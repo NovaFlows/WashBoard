@@ -152,4 +152,4 @@ export function estRefusCleEtrangere(erreur: unknown): boolean {
  *  la rendre invisible n'est PAS possible (une prestation sans type est
  *  refusée, voir `ERREUR_SANS_TYPE`), donc on ne le propose pas. */
 export const ERREUR_PRESTATION_RESERVEE =
-  'Impossible de supprimer cette prestation : des réservations l’utilisent. Vous pouvez la modifier, mais elle restera sur votre page de réservation.'
+  'Impossible de supprimer cette prestation : des réservations l’utilisent. Mettez-la plutôt en veille : vos clients ne la verront plus, et ses rendez-vous et factures restent.'

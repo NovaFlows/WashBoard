@@ -40,7 +40,9 @@ const BookingSchema = z.object({
   address:         z.string().min(5),
   scheduled_at:    z.string().datetime(),
   client_name:     z.string().min(2),
-  client_email:    z.string().email(),
+  // Vide autorisé, mais seulement pour un rendez-vous saisi par le laveur dans son agenda
+  // (pris par téléphone, le client n'a pas toujours d'email) — voir le contrôle après `isOwner`.
+  client_email:    z.union([z.string().trim().email(), z.literal('')]),
   client_phone:    z.string().min(10),
   notes:           z.string().max(1000).optional(),
   is_smart_slot:   z.boolean().optional().default(false),
@@ -244,6 +246,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // formulaire public (BookingForm), même rempli par un laveur connecté sur
   // sa propre page.
   const isOwner = !!authUser && washer?.user_id === authUser.id && bookingData.saisie_par_laveur === true
+  // La page publique exige toujours un email : c'est par lui que le client reçoit sa demande.
+  if (!bookingData.client_email && !isOwner) {
+    return Response.json({ error: 'Email du client requis' }, { status: 400 })
+  }
   if (!isOwner && washer && washer.subscription_status !== 'active'
     && !suitRetourGratuit(washer)
     && graceEnded(washer.subscription_ends_at, washer.trial_ends_at)) {
@@ -580,7 +586,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
   // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)
   if (washer && service) {
-    const emailJobs: Promise<unknown>[] = [
+    const emailJobs: Promise<unknown>[] = []
+    // Pas d'adresse (rendez-vous pris par téléphone) : rien à envoyer au client.
+    if (bookingData.client_email) emailJobs.push(
       sendBookingRequest({
         to: bookingData.client_email,
         clientName: bookingData.client_name,
@@ -598,7 +606,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         notes: bookingData.notes ?? undefined,
         selectedAddons: selected_addons ?? undefined,
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
-    ]
+    )
 
     // Au-dela du quota, le laveur est PREVENU sans rien apprendre : lui envoyer
     // le nom et le telephone par email viderait le masquage de son sens, il
