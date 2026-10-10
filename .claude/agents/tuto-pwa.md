@@ -208,6 +208,40 @@ arrêts y compris une vraie navigation cross-page après correctif).
 être démontée avant que ce signal n'arrive — en particulier ici, tout ce qui traverse une
 navigation Next.js dans une page sans layout partagé.
 
+## La carte qui bascule de côté en boucle pendant un défilement
+
+Trouvé le 2026-10-10, juste après le correctif du gel de 1,5s — Ryan, content de la
+vitesse retrouvée, a décrit un AUTRE problème : « quand tu scrolles... le bandeau suit le
+défilement... les contours et le bandeau saccadent... c'est pas bien accroché ».
+
+Cause : `calculerDisposition()` (devenu `decidreCote()`, voir « Carte collée à la cible »
+plus haut) DÉCIDAIT dessus/dessous à partir de `rect`, et `rect` se met à jour à CHAQUE
+frame de défilement (voir `surligner()`). Juste au seuil de bascule — la cible à peu près
+à mi-hauteur d'écran — un défilement qui s'attarde près de ce point fait repasser la
+décision d'un côté à l'autre À CHAQUE frame qui franchit le seuil. Pas un ralentissement,
+une carte qui change de côté en boucle pendant qu'on scrolle lentement dessus.
+
+Vérifié par mesure (pas par supposition) : lecture directe de `carte.style.top` /
+`carte.style.bottom` (jamais `getComputedStyle` ici — la valeur CALCULÉE résout toujours
+`top` en pixels même quand seul `bottom` a été posé, l'autre bord se déduisant de la mise
+en page ; `getComputedStyle` aurait donné l'impression que les deux côtés sont identiques
+en permanence, un piège de mesure à ne pas refaire) pendant un défilement qui traverse le
+seuil connu dans les deux sens : **6 bascules** mesurées dans l'ancien code sur un seul
+aller-retour de défilement, **0** après correctif.
+
+Correctif : le côté (dessus/dessous) est maintenant décidé par `decidreCote()` UNE SEULE
+FOIS par cible — seulement quand `instantane` vaut faux dans `surligner()` (une vraie
+NOUVELLE cible, pas un défilement). `coteCarte` (state séparé) reste figé pendant tout
+l'arrêt. Le DÉCALAGE réel (top/bottom en pixels), lui, continue de suivre `rect` en direct
+à chaque frame via `positionnerCarte()` — la carte glisse donc toujours avec la cible
+pendant qu'on scrolle, seul le CÔTÉ ne change plus en boucle.
+
+**Piège à ne pas refaire** : toute logique de positionnement qui CHOISIT entre deux états
+(ici dessus/dessous) à partir d'une valeur qui varie en continu (ici `rect` pendant un
+défilement) doit séparer la DÉCISION (figée, décidée une fois par évènement stable) du
+CALCUL qui en découle (qui, lui, peut suivre la valeur en direct sans problème). Mélanger
+les deux fait resurgir une bascule en boucle pile au seuil.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le

@@ -195,24 +195,39 @@ const RESERVE_HAUT = 14
  *  redonne aux marges leur rôle de centrage. */
 const CARTE_CENTREE: CSSProperties = { top: 0, bottom: 0, height: 'fit-content', marginTop: 'auto', marginBottom: 'auto' }
 
-/** Où poser la carte : collée sous la cible si la place le permet, sinon
- *  collée au-dessus — jamais plantée en bas d'écran avec une flèche qui
- *  traverse tout l'écran pour l'atteindre. Changement du 2026-10-10, sur
- *  référence concrète de Ryan (captures d'une autre app, « Folyo ») : sa
- *  carte colle toujours à l'élément, flèche courte, pas une carte fixe en
- *  bas d'écran. `limiteBasse` mesurée en vrai (le haut de la barre du bas),
- *  pas recalculée à la main depuis les mêmes constantes CSS deux fois. */
-function calculerDisposition(r: DOMRect | null): { styleCarte: CSSProperties; flecheEnBas: boolean } {
-  if (!r || typeof window === 'undefined') return { styleCarte: CARTE_CENTREE, flecheEnBas: false }
+type CoteCarte = 'dessous' | 'dessus' | 'centre'
+
+/** Décide UNE FOIS par cible (pas à chaque frame de défilement) si la carte
+ *  va sous ou au-dessus de l'élément : collée sous la cible si la place le
+ *  permet, sinon collée au-dessus — jamais plantée en bas d'écran avec une
+ *  flèche qui traverse tout l'écran pour l'atteindre (référence Folyo de
+ *  Ryan, 2026-10-10). `limiteBasse` mesurée en vrai (le haut de la barre du
+ *  bas), pas recalculée à la main depuis les mêmes constantes CSS deux fois.
+ *
+ *  Appelée UNIQUEMENT quand une NOUVELLE cible apparaît (`instantane` faux
+ *  dans `surligner()`), jamais sur un défilement — sinon, juste au seuil de
+ *  bascule entre les deux côtés, la carte changerait de côté à chaque pixel
+ *  scrollé : repéré par Ryan, 2026-10-10 : « le bandeau... les contours et
+ *  le bandeau saccadent... c'est pas bien accroché ». Le côté reste figé
+ *  pour toute la durée de l'arrêt ; seul le DÉCALAGE (voir
+ *  `positionnerCarte`) continue de suivre la cible au pixel près. */
+function decidreCote(r: DOMRect): CoteCarte {
   const barre = document.querySelector('[data-visite-cible="barre-bas"]')
   const limiteBasse = barre ? barre.getBoundingClientRect().top : window.innerHeight
   const espaceBas = limiteBasse - r.bottom - MARGE_CARTE
   const espaceHaut = r.top - RESERVE_HAUT
   // Sous la cible si la carte y tient à peu près (170px, une carte à deux
   // lignes de texte) OU s'il y a simplement plus de place en bas qu'en haut.
-  if (espaceBas >= 170 || espaceBas >= espaceHaut) {
-    return { styleCarte: { top: r.bottom + MARGE_CARTE }, flecheEnBas: false }
-  }
+  return espaceBas >= 170 || espaceBas >= espaceHaut ? 'dessous' : 'dessus'
+}
+
+/** Traduit le côté déjà choisi (`decidreCote`, figé pour l'arrêt) + la
+ *  position ACTUELLE de la cible (suivie en direct, y compris pendant un
+ *  défilement) en style CSS. Pure arithmétique, aucune lecture du DOM —
+ *  peut tourner à chaque frame de défilement sans coût. */
+function positionnerCarte(r: DOMRect | null, cote: CoteCarte): { styleCarte: CSSProperties; flecheEnBas: boolean } {
+  if (!r || cote === 'centre' || typeof window === 'undefined') return { styleCarte: CARTE_CENTREE, flecheEnBas: false }
+  if (cote === 'dessous') return { styleCarte: { top: r.bottom + MARGE_CARTE }, flecheEnBas: false }
   return { styleCarte: { bottom: window.innerHeight - r.top + MARGE_CARTE }, flecheEnBas: true }
 }
 
@@ -363,18 +378,27 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   const avancerRef = useRef(avancer)
   useEffect(() => { avancerRef.current = avancer })
 
-  // Où poser la carte (au-dessus ou en-dessous de la cible, centrée si pas de
-  // cible) — ne dépend que de `rect` (déjà en state) et de la barre du bas
-  // (déjà montée par DashboardShell), jamais de la carte elle-même. `useMemo`
-  // (pas un simple appel direct) : `calculerDisposition` interroge le DOM
-  // (`querySelector` + `getBoundingClientRect`, une mise en page forcée) —
-  // sans ça, CHAQUE re-rendu de ce composant (il y en a plusieurs par
-  // transition d'arrêt : `useTransition` qui bascule, callback de la View
-  // Transition, montée de la nouvelle page) relançait cette lecture, pile au
-  // moment où Next.js monte une page entière — exactement ce qui saccadait
-  // le passage d'un arrêt à l'autre (Ryan, 2026-10-10 : « c'est pas fluide,
-  // mode saccadé », en particulier sur Suivant / le bandeau d'après).
-  const { styleCarte: dispositionCarte, flecheEnBas } = useMemo(() => calculerDisposition(rect), [rect])
+  // Côté de la carte (dessus/dessous/centre) : figé par cible, voir
+  // `decidreCote`. Mis à jour UNIQUEMENT sur une nouvelle cible
+  // (`!instantane` — nouvel arrêt, ou PrestationsV2 qui bascule de vue) :
+  // un défilement (`instantane` vrai) ne touche jamais à `coteCarte`, pour
+  // ne pas faire basculer la carte d'un côté à l'autre à chaque pixel
+  // scrollé près du seuil (Ryan, 2026-10-10 : « le bandeau... saccade...
+  // c'est pas bien accroché »).
+  const [coteCarte, setCoteCarte] = useState<CoteCarte>('centre')
+  useEffect(() => {
+    if (!rect) { setCoteCarte('centre'); return }
+    if (!instantane) setCoteCarte(decidreCote(rect))
+  }, [rect, instantane])
+
+  // Décalage réel (top/bottom en pixels) : lui continue de suivre `rect` en
+  // direct à CHAQUE frame (y compris pendant un défilement), seul le côté
+  // est figé. `useMemo` (pas un appel direct) : évite de refaire ce calcul
+  // à chaque re-rendu sans changement de `rect`/`coteCarte` (plusieurs
+  // re-rendus par transition d'arrêt — `useTransition`, callback de la View
+  // Transition — sans ça relançaient ce calcul pour rien, Ryan, 2026-10-10 :
+  // « c'est pas fluide » sur Suivant / le bandeau d'après).
+  const { styleCarte: dispositionCarte, flecheEnBas } = useMemo(() => positionnerCarte(rect, coteCarte), [rect, coteCarte])
 
   // Position horizontale de la flèche, recalculée à chaque changement de
   // cible/rect — APRÈS que `dispositionCarte` ait déjà positionné la carte
