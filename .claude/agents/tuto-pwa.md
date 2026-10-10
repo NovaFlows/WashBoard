@@ -242,6 +242,51 @@ défilement) doit séparer la DÉCISION (figée, décidée une fois par évènem
 CALCUL qui en découle (qui, lui, peut suivre la valeur en direct sans problème). Mélanger
 les deux fait resurgir une bascule en boucle pile au seuil.
 
+## La flèche gardait sa propre transition non protégée
+
+Le correctif du scroll (ci-dessus) gérait `.wb-visite-decoupe`/`.wb-visite-halo`, mais PAS
+`.wb-visite-fleche` : sa `transition: left .5s` restait inconditionnelle. Même classe de
+bug, juste sur l'axe horizontal plutôt que vertical — corrigé le 2026-10-10 en même temps
+qu'un passage systématique des 24 arrêts (demandé par Ryan : « penses-tu que tu peux mieux
+faire ? »). `transition: instantane ? 'none' : undefined` posé en ligne sur le même
+élément, exactement le même traitement que la découpe.
+
+## Passage systématique des 24 arrêts — ce qu'un échantillon ne montre pas
+
+Après le correctif ci-dessus, Ryan a demandé explicitement un VRAI passage des 24 arrêts
+(pas un échantillon) — vérification automatisée (chevauchement carte/cible, carte hors
+écran) + capture d'une image par arrêt sur un compte Business jetable. A trouvé un
+problème que les vérifications ponctuelles précédentes avaient raté : l'arrêt « lien »
+(Mes liens) rognait 24px sous le bas de l'écran.
+
+**Deux correctifs, pas un seul** :
+
+1. **`HAUTEUR_CARTE_ESTIMEE` relevée de 170 à 210px** — `decidreCote()` doit deviner la
+   hauteur de la carte AVANT qu'elle existe dans le DOM ; 170px collait trop juste aux
+   hauteurs réelles mesurées (154-174px pour une carte interactive classique).
+2. **Filet de sécurité par mesure réelle** (nouvel effet, juste après la pose de
+   `carteRef`) : une fois la carte VRAIMENT dans le DOM, mesure sa hauteur réelle et
+   bascule de côté si elle déborde — corrige n'importe quelle estimation fausse, pas
+   seulement celle observée.
+
+**Piège rencontré EN CORRIGEANT le filet de sécurité, à ne jamais refaire** : la toute
+première version mesurait immédiatement après le rendu (`useEffect` sans délai). Un essai
+sur le parcours réel a semblé corriger le débordement ; un second essai IDENTIQUE a montré
+le MÊME débordement non corrigé. La seule différence entre les deux essais : un
+`console.log` de debug qui retardait la mesure de quelques millisecondes. Ce n'était PAS
+un hasard de cache de build (chassé à tort pendant un moment — `rm -rf .next` répété n'a
+rien changé) : la vraie cause est une course avec `scrollIntoView` (dans `surligner()`) —
+mesurer juste après le rendu peut tomber pendant que la cible est encore en train de
+glisser vers sa position finale, et un débordement qui n'apparaît qu'une fois stabilisée
+passe inaperçu. Corrigé avec un `setTimeout(…, 400)` redémarré (cleanup + nouveau minuteur)
+à chaque changement de `rect`/`coteCarte` — un vrai débounce « rien ne bouge depuis 400ms »,
+pas un délai fixe après un seul évènement. Vérifié stable sur 3 passages complets des 24
+arrêts d'affilée après ce correctif (contre un résultat incohérent avant).
+
+**Leçon generale** : si un correctif qui mesure le DOM après un rendu semble marcher par
+intermittence sans changement de code évident, suspecter une course avec une animation en
+cours (ici `scrollIntoView` smooth) avant de suspecter le cache de build.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le

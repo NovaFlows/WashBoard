@@ -211,14 +211,24 @@ type CoteCarte = 'dessous' | 'dessus' | 'centre'
  *  le bandeau saccadent... c'est pas bien accroché ». Le côté reste figé
  *  pour toute la durée de l'arrêt ; seul le DÉCALAGE (voir
  *  `positionnerCarte`) continue de suivre la cible au pixel près. */
+// Décidé AVANT que la carte existe dans le DOM (donc avant de connaître sa
+// vraie hauteur) : une estimation, pas une mesure. Mesurée a posteriori sur
+// les 24 arrêts réels (2026-10-10) : la plupart des cartes interactives
+// (badge + texte + bouton) font 154-174px. Posé à 210px pour une vraie marge
+// de sécurité — 170px semblait correct sur les premiers arrêts testés, mais
+// une carte à 171px s'est fait rogner 24px sous le bas de l'écran (arrêt
+// « lien », repéré lors d'un passage systématique des 24 arrêts, pas visible
+// en testant seulement quelques arrêts au hasard).
+const HAUTEUR_CARTE_ESTIMEE = 210
+
 function decidreCote(r: DOMRect): CoteCarte {
   const barre = document.querySelector('[data-visite-cible="barre-bas"]')
   const limiteBasse = barre ? barre.getBoundingClientRect().top : window.innerHeight
   const espaceBas = limiteBasse - r.bottom - MARGE_CARTE
   const espaceHaut = r.top - RESERVE_HAUT
-  // Sous la cible si la carte y tient à peu près (170px, une carte à deux
-  // lignes de texte) OU s'il y a simplement plus de place en bas qu'en haut.
-  return espaceBas >= 170 || espaceBas >= espaceHaut ? 'dessous' : 'dessus'
+  // Sous la cible si la carte y tient (marge généreuse, voir ci-dessus) OU
+  // s'il y a simplement plus de place en bas qu'en haut.
+  return espaceBas >= HAUTEUR_CARTE_ESTIMEE || espaceBas >= espaceHaut ? 'dessous' : 'dessus'
 }
 
 /** Traduit le côté déjà choisi (`decidreCote`, figé pour l'arrêt) + la
@@ -386,9 +396,12 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   // scrollé près du seuil (Ryan, 2026-10-10 : « le bandeau... saccade...
   // c'est pas bien accroché »).
   const [coteCarte, setCoteCarte] = useState<CoteCarte>('centre')
+  // Une correction par cible au maximum (jamais de va-et-vient) : voir
+  // l'effet juste en dessous, qui s'en sert.
+  const coteDejaVerifieRef = useRef(false)
   useEffect(() => {
-    if (!rect) { setCoteCarte('centre'); return }
-    if (!instantane) setCoteCarte(decidreCote(rect))
+    if (!rect) { setCoteCarte('centre'); coteDejaVerifieRef.current = false; return }
+    if (!instantane) { setCoteCarte(decidreCote(rect)); coteDejaVerifieRef.current = false }
   }, [rect, instantane])
 
   // Décalage réel (top/bottom en pixels) : lui continue de suivre `rect` en
@@ -410,6 +423,46 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   }, [rect, dispositionCarte])
   const styleCarte: CSSProperties = { ...dispositionCarte }
   if (flecheX !== null) (styleCarte as Record<string, string>)['--wb-fleche-x'] = `${flecheX}%`
+
+  // Filet de sécurité : `decidreCote` estime la hauteur de la carte AVANT
+  // qu'elle existe dans le DOM (`HAUTEUR_CARTE_ESTIMEE`, une estimation, pas
+  // une mesure) — une fois la carte VRAIMENT posée dans le DOM, on mesure sa
+  // hauteur réelle et on bascule de côté si elle déborde.
+  //
+  // `setTimeout` (débattu — pas une mesure immédiate) : repéré le 2026-10-10
+  // qu'une mesure prise JUSTE après le rendu peut tomber pendant que
+  // `scrollIntoView` (dans `surligner()`) est encore en train d'amener la
+  // cible à sa position finale — mesurer à ce moment-là peut manquer un
+  // débordement qui n'apparaît qu'une fois la cible stabilisée. Un essai sur
+  // le parcours réel des 24 arrêts a semblé corriger un débordement, puis UN
+  // AUTRE essai identique a montré le MÊME débordement non corrigé — la
+  // seule différence entre les deux essais était un `console.log` ajouté
+  // pour déboguer, qui retardait la mesure de quelques millisecondes à
+  // peine. Ce n'était pas un hasard de cache : la mesure immédiate est
+  // intrinsèquement sujette à ce genre de course. `setTimeout(…, 400)`
+  // redémarré (nettoyage + nouveau minuteur) à chaque changement de
+  // `rect`/`coteCarte` attend que plus rien ne bouge pendant 400ms avant de
+  // mesurer — un vrai « se stabilise avant de juger », pas un délai fixe
+  // après un évènement qui peut encore être suivi d'autres mises à jour.
+  // `coteDejaVerifieRef` n'est posé à `true` que QUAND le minuteur se
+  // déclenche réellement (jamais avant) : une seule correction par cible,
+  // jamais de bascule en boucle (le correctif du 2026-10-10 contre le
+  // scroll reste intact — ceci ne touche jamais `coteCarte` PENDANT un
+  // défilement, seulement une fois que tout s'est arrêté de bouger).
+  useEffect(() => {
+    if (!rect || coteCarte === 'centre' || coteDejaVerifieRef.current) return
+    const minuteur = setTimeout(() => {
+      const carte = carteRef.current
+      if (!carte) return
+      const r = carte.getBoundingClientRect()
+      const barre = document.querySelector('[data-visite-cible="barre-bas"]')
+      const limiteBasse = barre ? barre.getBoundingClientRect().top : window.innerHeight
+      coteDejaVerifieRef.current = true
+      if (coteCarte === 'dessous' && r.bottom > limiteBasse) setCoteCarte('dessus')
+      else if (coteCarte === 'dessus' && r.top < RESERVE_HAUT) setCoteCarte('dessous')
+    }, 400)
+    return () => clearTimeout(minuteur)
+  }, [rect, coteCarte])
 
   // Trois états, pas un booléen : « déjà fait en arrivant » (compte déjà
   // configuré, ex. en rejouant le tuto depuis le Guide) et « vient d'être
@@ -465,7 +518,13 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
           style={styleCarte}
         >
-          {flecheX !== null && <div className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`} aria-hidden />}
+          {flecheX !== null && (
+            <div
+              className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
+              style={{ transition: instantane ? 'none' : undefined }}
+              aria-hidden
+            />
+          )}
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
@@ -531,7 +590,13 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           className="wb-visite-verre wb-visite-carte absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
           style={styleCarte}
         >
-          {flecheX !== null && <div className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`} aria-hidden />}
+          {flecheX !== null && (
+            <div
+              className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
+              style={{ transition: instantane ? 'none' : undefined }}
+              aria-hidden
+            />
+          )}
           <div className="flex items-center justify-between gap-3">
             <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
               Étape {etape + 1}/{etapes.length}
