@@ -19,6 +19,7 @@ export type ReservationRelance = {
   scheduled_at: string
   created_at?: string | null
   followup_sent_at?: string | null
+  relance_annulee_le?: string | null
   client_email?: string | null
   client_phone?: string | null
 }
@@ -53,6 +54,8 @@ export function statsRelances(bookings: ReservationRelance[], p: PeriodeChiffres
     for (const b of siens) {
       const relance = temps(b.followup_sent_at)
       if (relance === null || relance < debut.getTime() || relance >= fin.getTime()) continue
+      // Annulée par le laveur : traitée, mais jamais partie.
+      if (b.relance_annulee_le) continue
       const rdv = temps(b.scheduled_at) ?? 0
 
       const autres = siens.filter(o => o.id !== b.id && o.status !== 'cancelled')

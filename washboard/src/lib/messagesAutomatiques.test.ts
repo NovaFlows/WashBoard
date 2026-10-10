@@ -3,6 +3,7 @@ import {
   libelleCanal, libelleDelaiAvis, libelleDelaiRelance, blocageAvis, avisActif, relanceActive, nombreActifs,
   lienAvisValide, jourRelatif, momentAvis, momentRelance, nomAffiche, relancesPrevues, apercuRelance,
   messagesProgrammes, messagesPartis, relanceEstPartie, aReserveDepuis, messageRelanceSuggere, texteSmsAvis,
+  nouvelleEcheance,
   type ReglagesMessages, type RdvMessage, type ContexteMessages,
 } from './messagesAutomatiques'
 
@@ -345,5 +346,31 @@ describe('textes', () => {
   })
   it('le texte du SMS d’avis est décrit', () => {
     expect(texteSmsAvis()).toContain('avis')
+  })
+})
+
+describe('décaler ou annuler un message programmé', () => {
+  it('une relance décalée part à la date choisie, pas avant', () => {
+    const r = rdv({ scheduled_at: il(-50), relance_reportee_au: il(10) })
+    expect(relancesPrevues([r], 30)[0].instant).toBe(Date.parse(il(10)))
+  })
+  it('un report antérieur à la date normale ne l’avance pas', () => {
+    const r = rdv({ scheduled_at: il(-10), relance_reportee_au: il(-5) })
+    expect(relancesPrevues([r], 30)[0].instant).toBe(Date.parse(il(20)))
+  })
+  it('une relance annulée n’est jamais comptée comme partie', () => {
+    const r = rdv({ scheduled_at: il(-50), followup_sent_at: il(-1), relance_annulee_le: il(-1) })
+    expect(relanceEstPartie(r, [r])).toBe(false)
+  })
+  it('décaler part de la date prévue, ou de maintenant si le message était déjà dû', () => {
+    expect(nouvelleEcheance(MAINTENANT + 2 * JOUR, MAINTENANT, 7)).toBe(MAINTENANT + 9 * JOUR)
+    expect(nouvelleEcheance(MAINTENANT - 5 * JOUR, MAINTENANT, 7)).toBe(MAINTENANT + 7 * JOUR)
+  })
+  it('les lignes programmées portent le rendez-vous à modifier', () => {
+    const r = rdv({ scheduled_at: il(-29) })
+    const reglages = { review_enabled: false, review_delay_hours: 0, google_review_url: null, review_channel: 'email' as const,
+      followup_enabled: true, followup_delay_days: 30, followup_message: 'Coucou {{nom}}' }
+    const [ligne] = messagesProgrammes(reglages, { smsAutorise: true }, [r], MAINTENANT)
+    expect(ligne.rdvId).toBe(r.id)
   })
 })

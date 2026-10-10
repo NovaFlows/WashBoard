@@ -17,6 +17,7 @@ import {
   type LigneMessage, type RdvMessage, type ReglagesMessages,
 } from '@/lib/messagesAutomatiques'
 import { cleClient } from '@/lib/clientProfile'
+import FeuilleMessageProgrammeV2, { type ResultatMessage } from '@/components/dashboard/FeuilleMessageProgrammeV2'
 
 // « Messages automatiques » — refonte 2026, planche `project/ARelancer.dc.html`.
 // Réservé à la PWA installée (voir MessagesAutomatiques.tsx, le garde-fou) ;
@@ -178,11 +179,11 @@ function Point({ type }: { type: LigneMessage['type'] }) {
   )
 }
 
-function LigneMessageV2({ ligne, avecType }: { ligne: LigneMessage; avecType: boolean }) {
+function LigneMessageV2({ ligne, avecType, onOuvrir }: { ligne: LigneMessage; avecType: boolean; onOuvrir?: (l: LigneMessage) => void }) {
   const couleur =
     ligne.ton === 'ok' ? 'var(--v2-color-vert)' : ligne.ton === 'neutre' ? 'var(--v2-color-encre)' : 'var(--v2-color-gris)'
-  return (
-    <li className="flex items-center gap-3 py-[11px]">
+  const contenu = (
+    <>
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-filet)] text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
         aria-hidden
@@ -202,13 +203,25 @@ function LigneMessageV2({ ligne, avecType }: { ligne: LigneMessage; avecType: bo
       <span className={`max-w-[36%] shrink-0 text-right leading-[1.3] text-[12.5px] ${corpsFort}`} style={{ color: couleur }}>
         {ligne.droite}
       </span>
-    </li>
+      {onOuvrir && <ChevronRight size={16} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />}
+    </>
   )
+  // Cliquable dans « Programmé » seulement : un message parti ne se décale plus.
+  if (onOuvrir && ligne.rdvId) {
+    return (
+      <li className="list-none">
+        <button type="button" onClick={() => onOuvrir(ligne)} className="flex w-full items-center gap-3 py-[11px] text-left">
+          {contenu}
+        </button>
+      </li>
+    )
+  }
+  return <li className="flex items-center gap-3 py-[11px]">{contenu}</li>
 }
 
 function ListeMessages({
-  lignes, avecType, vide,
-}: { lignes: LigneMessage[]; avecType: boolean; vide: string }) {
+  lignes, avecType, vide, onOuvrir,
+}: { lignes: LigneMessage[]; avecType: boolean; vide: string; onOuvrir?: (l: LigneMessage) => void }) {
   const [toutes, setToutes] = useState(false)
   if (lignes.length === 0) {
     return (
@@ -221,7 +234,7 @@ function ListeMessages({
   const reste = lignes.length - NB_LIGNES
   return (
     <Carte liste>
-      {visibles.map(l => <LigneMessageV2 key={l.cle} ligne={l} avecType={avecType} />)}
+      {visibles.map(l => <LigneMessageV2 key={l.cle} ligne={l} avecType={avecType} onOuvrir={onOuvrir} />)}
       {reste > 0 && (
         <li className="list-none">
           <button
@@ -239,13 +252,34 @@ function ListeMessages({
 }
 
 export default function MessagesAutomatiquesV2({
-  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, expediteurStatut, telephone, slug, rdvs, clesSansContact, lectureIncomplete,
+  reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, expediteurStatut, telephone, slug, rdvs: rdvsServeur, clesSansContact, lectureIncomplete,
 }: MessagesAutomatiquesProps) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
   // Réglages locaux : mis à jour dès qu'une écriture réussit, sans attendre le
   // rechargement de la page — les listes se recalculent aussitôt.
   const [reglages, setReglages] = useState(reglagesServeur)
+  // Rendez-vous locaux : un message décalé ou annulé change de place aussitôt.
+  const [rdvs, setRdvs] = useState(rdvsServeur)
+  const [messageOuvert, setMessageOuvert] = useState<LigneMessage | null>(null)
+
+  async function agirSurMessage(ligne: LigneMessage, action: 'decaler' | 'annuler', jours?: number): Promise<ResultatMessage> {
+    try {
+      const res = await fetch(`/api/bookings/${ligne.rdvId}/message`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: ligne.type, action, jours }),
+      })
+      const json = await res.json().catch(() => ({})) as { error?: string; champs?: Record<string, string | null> }
+      if (!res.ok) return { ok: false, erreur: json.error ?? 'L’enregistrement a échoué. Réessayez.' }
+      const champs = json.champs ?? {}
+      setRdvs(prev => prev.map(b => (b.id === ligne.rdvId ? { ...b, ...champs } : b)))
+      router.refresh()
+      return { ok: true, champs }
+    } catch {
+      return { ok: false, erreur: 'Enregistrement impossible. Vérifiez votre connexion et réessayez.' }
+    }
+  }
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
   const [enCours, setEnCours] = useState<'avis' | 'relance' | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -414,6 +448,7 @@ export default function MessagesAutomatiquesV2({
           <Section titre="Programmé" nombre={programmes.length}>
             <ListeMessages
               lignes={programmes}
+              onOuvrir={setMessageOuvert}
               avecType
               vide={actifs === 0
                 ? 'Rien n’est programmé : aucun message automatique n’est actif.'
@@ -466,6 +501,13 @@ export default function MessagesAutomatiquesV2({
           lectureIncomplete={lectureIncomplete}
           onClose={() => setFeuille(null)}
           enregistrer={enregistrerDepuisFeuille}
+        />
+      )}
+      {messageOuvert && (
+        <FeuilleMessageProgrammeV2
+          ligne={messageOuvert}
+          onAgir={(action, jours) => agirSurMessage(messageOuvert, action, jours)}
+          onClose={() => setMessageOuvert(null)}
         />
       )}
     </div>

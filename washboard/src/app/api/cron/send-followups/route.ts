@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     const { data: candidates, error: errCandidates } = await admin
       .from('bookings')
-      .select('id, client_name, client_email, client_phone, scheduled_at')
+      .select('id, client_name, client_email, client_phone, scheduled_at, relance_reportee_au')
       .eq('washer_id', washer.id)
       .in('status', ['confirmed', 'done'])
       .is('followup_sent_at', null)
@@ -105,6 +105,10 @@ export async function GET(request: NextRequest) {
 
     for (const booking of porteurs) {
       const clientEmail = booking.client_email
+
+      // Décalée à la main par le laveur (Messages automatiques › Programmé) : pas avant la date
+      // choisie. Rien n'est marqué, elle reste candidate pour les passages suivants.
+      if (booking.relance_reportee_au && Date.parse(booking.relance_reportee_au) > Date.now()) continue
 
       // Une relance TRAITÉE, comme n'importe quel rendez-vous devenu inutile — sinon ce
       // candidat resterait éligible pour toujours et reviendrait charger le lot chaque jour.

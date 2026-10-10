@@ -57,6 +57,11 @@ export type RdvMessage = {
   review_request_sent_at?: string | null
   review_sms_sent_at?: string | null
   followup_sent_at?: string | null
+  /** Relance décalée à la main par le laveur : elle ne part pas avant cet instant. */
+  relance_reportee_au?: string | null
+  /** Relance annulée à la main (« Ne pas envoyer ») : `followup_sent_at` est posé en même temps
+   *  pour que le cron l'ignore, cette marque dit qu'elle n'est PAS partie. */
+  relance_annulee_le?: string | null
 }
 
 /** Ce que le plan du laveur autorise — le cron d'avis refuse le SMS sans
@@ -227,7 +232,9 @@ export function relancesPrevues(rdvs: RdvMessage[], delaiJours: number, canal: '
     if (dernier.followup_sent_at) continue
     const base = t(dernier.scheduled_at)
     if (!Number.isFinite(base)) continue
-    prevues.push({ rdv: dernier, instant: base + delaiJours * JOUR })
+    const reportee = t(dernier.relance_reportee_au)
+    const instant = base + delaiJours * JOUR
+    prevues.push({ rdv: dernier, instant: Number.isFinite(reportee) ? Math.max(instant, reportee) : instant })
   }
   return prevues.sort((a, b) => a.instant - b.instant)
 }
@@ -263,6 +270,25 @@ export type LigneMessage = {
   /** Vrai quand la ligne est DÉDUITE et non lue — voir l'en-tête du fichier. */
   deduit: boolean
   instant: number
+  /** Rendez-vous qui porte le message — pour le décaler ou l'annuler depuis « Programmé ». */
+  rdvId?: string
+}
+
+// ── Décaler ou annuler un message programmé ─────────────────────────────────
+
+/** Choix proposés pour décaler, en jours : un avis se décale de peu (le client vient d'être
+ *  lavé), une relance de beaucoup (elle arrive des semaines après le dernier passage). */
+export const DECALAGES_JOURS: Record<'avis' | 'relance', readonly number[]> = {
+  avis: [1, 3, 7],
+  relance: [7, 30, 90],
+}
+export const DECALAGE_MAX_JOURS = 365
+
+/** Nouvelle date d'envoi : la date prévue plus le décalage — ou maintenant plus le décalage si
+ *  le message était déjà dû (« au prochain envoi ») : décaler d'une semaine veut dire dans une
+ *  semaine, pas une semaine après une date déjà passée. */
+export function nouvelleEcheance(prevuMs: number, maintenant: number, jours: number): number {
+  return Math.max(prevuMs, maintenant) + jours * JOUR
 }
 
 function detailRelance(rdv: RdvMessage, maintenant: number): string {
@@ -290,6 +316,7 @@ export function messagesProgrammes(
       if (r.review_channel === 'sms' ? !nonVide(b.client_phone) : !nonVide(b.client_email)) continue
       lignes.push({
         cle: `avis-${b.id}`,
+        rdvId: b.id,
         type: 'avis',
         nom: nomAffiche(b),
         detail: `${b.services?.name ?? 'Prestation'} · ${jourRelatif(t(b.scheduled_at), maintenant)}`,
@@ -307,6 +334,7 @@ export function messagesProgrammes(
       if (p.instant > limite) break
       lignes.push({
         cle: `relance-${p.rdv.id}`,
+        rdvId: p.rdv.id,
         type: 'relance',
         nom: nomAffiche(p.rdv),
         detail: detailRelance(p.rdv, maintenant),
@@ -331,7 +359,7 @@ export function messagesProgrammes(
  *  client qui est revenu — le cas qu'on veut justement montrer.) */
 export function relanceEstPartie(rdv: RdvMessage, tous: RdvMessage[]): boolean {
   const marque = t(rdv.followup_sent_at)
-  if (!Number.isFinite(marque)) return false
+  if (!Number.isFinite(marque) || rdv.relance_annulee_le) return false
   const debut = t(rdv.scheduled_at)
   return !tous.some(o =>
     o.id !== rdv.id

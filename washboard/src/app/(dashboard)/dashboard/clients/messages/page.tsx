@@ -29,7 +29,7 @@ import {
 // rendez-vous que le laveur a saisis lui-même.
 const COLONNES =
   'id, client_name, client_email, client_phone, scheduled_at, created_at, saisie_par_laveur, facture_numero, status, is_professional, company_name, '
-  + 'review_request_at, review_request_sent_at, review_sms_sent_at, followup_sent_at, services(name)'
+  + 'review_request_at, review_request_sent_at, review_sms_sent_at, followup_sent_at, relance_reportee_au, relance_annulee_le, services(name)'
 
 type RdvLu = RdvMessage & { saisie_par_laveur?: boolean | null }
 
