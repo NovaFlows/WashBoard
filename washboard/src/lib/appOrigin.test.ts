@@ -78,4 +78,27 @@ describe('isTrustedOrigin', () => {
     vi.stubEnv('NODE_ENV', 'production')
     expect(isTrustedOrigin('http://localhost:3000', PROD)).toBe(false)
   })
+
+  it('accepte l\'origine d\'un déploiement Vercel (preview ou production), posée par Vercel lui-même', () => {
+    // Sans ça, tester sur la preview d'une branche échoue avec « Requête
+    // refusée » sur toute route protégée par isTrustedOrigin (cas vécu par
+    // Ryan le 2026-10-11, confirmation d'inscription par code).
+    vi.stubEnv('VERCEL_BRANCH_URL', 'wash-board-git-feat-tuto-pwa-novaflows1.vercel.app')
+    expect(isTrustedOrigin('https://wash-board-git-feat-tuto-pwa-novaflows1.vercel.app', PROD)).toBe(true)
+    expect(isTrustedOrigin('https://wash-board-git-une-autre-branche-novaflows1.vercel.app', PROD)).toBe(false)
+  })
+
+  it('accepte aussi l\'URL unique du déploiement (VERCEL_URL)', () => {
+    vi.stubEnv('VERCEL_URL', 'wash-board-abc123.vercel.app')
+    expect(isTrustedOrigin('https://wash-board-abc123.vercel.app', PROD)).toBe(true)
+  })
+
+  it('n\'invente jamais ces origines sans que Vercel les ait posées', () => {
+    // Sur le CI Vercel lui-même, ces deux variables SONT posées (par ce
+    // déploiement) : les vider explicitement est ce qui rend ce test
+    // significatif, plutôt que de dépendre de l'environnement ambiant.
+    vi.stubEnv('VERCEL_URL', '')
+    vi.stubEnv('VERCEL_BRANCH_URL', '')
+    expect(isTrustedOrigin('https://wash-board-git-feat-tuto-pwa-novaflows1.vercel.app', PROD)).toBe(false)
+  })
 })

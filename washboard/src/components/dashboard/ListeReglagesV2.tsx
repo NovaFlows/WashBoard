@@ -113,7 +113,7 @@ export default function ListeReglagesV2({
             <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Votre page de réservation</span>
           </span>
           {slug && (
-            <a href={`/book/${slug}`} className={`text-[13px] ${corpsFort} shrink-0`} style={{ color: 'var(--v2-color-accent)' }}>
+            <a href={`/book/${slug}`} data-visite-cible="voir-page" className={`text-[13px] ${corpsFort} shrink-0`} style={{ color: 'var(--v2-color-accent)' }}>
               Voir
             </a>
           )}
@@ -143,6 +143,7 @@ export default function ListeReglagesV2({
             sousLabel="Réservation, réseaux"
             href="/dashboard/parametres/liens"
             selected={selection === 'liens'}
+            cibleVisite="lien"
           />
         </CarteListe>
       </div>

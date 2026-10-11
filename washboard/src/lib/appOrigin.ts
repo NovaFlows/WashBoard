@@ -39,6 +39,18 @@ function originesAutorisees(envUrl: string | undefined): string[] {
     // que de tout rejeter, la comparaison stricte fera le tri.
   }
 
+  // Déploiements Vercel (preview d'une branche, ou production) : ces deux
+  // variables sont posées par Vercel lui-même au moment du déploiement,
+  // jamais par l'appelant d'une requête — les ajouter ne rouvre donc pas la
+  // faille du 2026-09-05 (origine CHOISIE PAR L'APPELANT). Sans elles,
+  // tester un changement sur sa propre branche avant la mise en ligne
+  // (preview Vercel, ex. wash-board-git-feat-tuto-pwa-novaflows1.vercel.app)
+  // échouait sur CHAQUE route qui s'appuie sur `isTrustedOrigin` — ici la
+  // confirmation d'inscription par code — avec « Requête refusée », sans
+  // rapport avec ce qui était testé (Ryan, 2026-10-11).
+  if (process.env.VERCEL_URL) liste.push(normaliser(`https://${process.env.VERCEL_URL}`))
+  if (process.env.VERCEL_BRANCH_URL) liste.push(normaliser(`https://${process.env.VERCEL_BRANCH_URL}`))
+
   if (process.env.NODE_ENV !== 'production') {
     liste.push('http://localhost:3000', 'http://127.0.0.1:3000')
   }

@@ -4,7 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type ColonneUneFois = 'onboarding_complete_at' | 'dashboard_tour_complete_at'
+export type ColonneUneFois = 'onboarding_complete_at' | 'tuto_mobile_vu_le' | 'tuto_ordinateur_vu_le'
 
 export type ResultatMarquage =
   | { ok: true }

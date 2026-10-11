@@ -47,6 +47,13 @@ const ENTETES_DASHBOARD = [
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Teste `next dev` depuis un téléphone sur le même Wi-Fi (ex. le vrai
+  // mode PWA via /dev/pwa) : sans ça, Next refuse en silence les requêtes
+  // de navigation venues d'un autre hôte que localhost (protection contre
+  // le DNS rebinding), donc la page reste blanche — le routeur essaie
+  // mais la requête RSC qui en sort est rejetée côté serveur. L'IP de la
+  // box change rarement ; à ajuster si besoin. Sans effet en production.
+  allowedDevOrigins: ['192.168.1.54'],
   // Numéro de version visible en bas de l'écran « Plus » de la PWA (voir
   // DiagnosticPwa.tsx) : permet de savoir en un coup d'œil si un téléphone
   // affiche le dernier déploiement. Vercel fournit l'empreinte du commit au

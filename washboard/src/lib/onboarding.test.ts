@@ -54,26 +54,26 @@ describe('etatOnboarding', () => {
     return { db, appels }
   }
 
-  it('nouveau compte : /onboarding avec son lien actuel', async () => {
-    const { db, appels } = base({ data: { slug: 'kooki-clean-1f09', onboarding_complete_at: null }, error: null })
-    expect(await etatOnboarding(db, 'u-1')).toEqual({ destination: '/onboarding', slug: 'kooki-clean-1f09' })
+  it('nouveau compte : /onboarding avec son lien actuel et son nom', async () => {
+    const { db, appels } = base({ data: { slug: 'kooki-clean-1f09', name: 'Kooki Clean', onboarding_complete_at: null }, error: null })
+    expect(await etatOnboarding(db, 'u-1')).toEqual({ destination: '/onboarding', slug: 'kooki-clean-1f09', name: 'Kooki Clean' })
     expect(appels).toContainEqual(['from', 'washers'])
     expect(appels).toContainEqual(['eq', 'user_id', 'u-1'])
   })
 
   it('onboarding terminé : /dashboard', async () => {
-    const { db } = base({ data: { slug: 'kooki', onboarding_complete_at: '2026-01-01T00:00:00Z' }, error: null })
+    const { db } = base({ data: { slug: 'kooki', name: 'Kooki', onboarding_complete_at: '2026-01-01T00:00:00Z' }, error: null })
     expect((await etatOnboarding(db, 'u-1')).destination).toBe('/dashboard')
   })
 
-  it('aucune fiche : /dashboard, sans lien', async () => {
+  it('aucune fiche : /dashboard, sans lien ni nom', async () => {
     const { db } = base({ data: null, error: null })
-    expect(await etatOnboarding(db, 'u-1')).toEqual({ destination: '/dashboard', slug: null })
+    expect(await etatOnboarding(db, 'u-1')).toEqual({ destination: '/dashboard', slug: null, name: null })
   })
 
   it('colonne pas encore créée (SQL non exécuté) : /dashboard, averti sans alerte', async () => {
     const { db } = base({ data: null, error: { code: '42703', message: 'column washers.onboarding_complete_at does not exist' } })
-    expect(await etatOnboarding(db, 'u-1')).toEqual({ destination: '/dashboard', slug: null })
+    expect(await etatOnboarding(db, 'u-1')).toEqual({ destination: '/dashboard', slug: null, name: null })
     expect(logger.warn).toHaveBeenCalledWith('onboarding.gate.migration_en_attente', { userId: 'u-1' })
     expect(logger.error).not.toHaveBeenCalled()
   })

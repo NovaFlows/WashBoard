@@ -3,16 +3,22 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmailConfirmation } from '@/lib/email'
 import { logger } from '@/lib/logger'
 
-/** Génère un lien de confirmation pour un compte existant non confirmé et
- *  l'envoie par Resend. Renvoie `false` (après avoir tracé la cause) si l'une
- *  des deux étapes échoue ; ne lève jamais.
+/** Génère un code de confirmation à 6 chiffres pour un compte existant non
+ *  confirmé et l'envoie par Resend. Renvoie `false` (après avoir tracé la
+ *  cause) si l'une des deux étapes échoue ; ne lève jamais.
  *
- *  Le lien pointe vers NOTRE route `/auth/confirm`, qui valide le jeton côté
- *  serveur (`verifyOtp`) — pas vers le lien `action_link` de Supabase, qui
- *  déposerait la session dans le hash d'une URL que le serveur ne voit pas. */
-export async function envoyerLienConfirmation(
+ *  Le code se vérifie avec `supabase.auth.verifyOtp({ email, token, type:
+ *  'signup' })` (`app/api/auth/confirm-code/route.ts`), sans jamais quitter
+ *  l'app qui l'a demandé — contrairement à un lien, qui sur iPhone ouvre
+ *  Safari plutôt que la PWA installée (un lien ouvert depuis l'app Mail
+ *  n'atterrit jamais dans une PWA, et Safari a son propre tiroir de cookies,
+ *  séparé de celui de l'app : la confirmation s'y ferait, mais dans un
+ *  contexte que la PWA ne voit jamais). Décidé par Ryan le 2026-10-11 après
+ *  avoir buté sur exactement ce problème en testant l'inscription depuis
+ *  l'app installée sur son iPhone. */
+export async function envoyerCodeConfirmation(
   admin: SupabaseClient,
-  { userId, email, washerName, origin }: { userId: string; email: string; washerName: string | null; origin: string },
+  { userId, email, washerName }: { userId: string; email: string; washerName: string | null },
 ): Promise<boolean> {
   // Le typage exige un mot de passe, que Supabase ignore pour un compte qui
   // existe déjà (internal/api/mail.go). Valeur jetable, jamais conservée.
@@ -23,18 +29,17 @@ export async function envoyerLienConfirmation(
     email,
     password: randomBytes(32).toString('base64url'),
   })
-  const tokenHash = data?.properties?.hashed_token
-  if (error || !tokenHash) {
+  const code = data?.properties?.email_otp
+  if (error || !code) {
     logger.error('auth.confirmation.generate_link_failed', { userId }, error)
     return false
   }
 
-  const confirmUrl = `${origin}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=signup`
   try {
     // Resend signale un refus (domaine, quota, adresse rejetée) dans `error`
     // sans lever d'exception : ne regarder que le `catch` laisserait croire
     // que l'email est parti.
-    const { error: envoiErreur } = await sendEmailConfirmation({ to: email, washerName, confirmUrl })
+    const { error: envoiErreur } = await sendEmailConfirmation({ to: email, washerName, code })
     if (envoiErreur) {
       logger.error('auth.confirmation.send_failed', { userId }, envoiErreur)
       return false

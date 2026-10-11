@@ -1,119 +1,710 @@
 'use client'
 
-import { useEffect, useSyncExternalStore, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition, type CSSProperties } from 'react'
+import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { Spinner } from '@/components/ui/Spinner'
 import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import {
-  ETAPES_VISITE, abonnerVisite, ecrireVisite, etapeSuivante, etatAuChargement,
-  lireEtat, lireVisite, serialiserEtat, terminerVisite,
+  etapesPour, abonnerVisite, abonnerAvancement, ecrireVisite, etapeSuivante, etatAuChargement,
+  fermerPourLInstant, lireEtat, lireVisite, serialiserEtat, terminerVisite,
+  type Appareil, type EtapeVisite, type VisitesAFaire,
 } from '@/lib/visiteGuidee'
 
 // Carte de la visite guidée, montée par DashboardShell sur toutes les pages du
-// tableau de bord (voir lib/visiteGuidee.ts pour la logique).
+// tableau de bord (voir lib/visiteGuidee.ts pour la logique et la liste des arrêts).
 //
-// Placement : en bas, au-dessus de la bulle WhatsApp sur téléphone (site) ou de
-// la barre du bas (application installée), à gauche sur grand écran — jamais
-// sur le coin de la bulle. z-[15] : sous le menu latéral (z-20/30) et les
-// fenêtres (z-50), qui restent prioritaires quand le laveur les ouvre.
+// Trois présentations, pas des variantes de couleurs de plus :
+//  - Site : carte posée en bas de l'écran, contour pulsé sur l'élément visé
+//    (comme avant). `data-visite-cible`/`data-visite-active`, voir globals.css.
+//  - Application installée, arrêt « regarde » : fond assombri + découpe
+//    lumineuse autour de l'élément, carte en bas — bloquant, l'écran réel
+//    n'est pas cliquable en dessous (rien à y faire pendant qu'on explique).
+//  - Application installée, arrêt `interactif` (Prestations, Horaires,
+//    Adresse de départ) : pas de fond sombre, juste un halo qui respire
+//    autour de l'élément, carte en bas (comme l'arrêt « regarde » : l'espace y
+//    est déjà réservé, DashboardShell), et l'écran réel reste cliquable —
+//    le laveur agit pour de vrai, la visite avance toute seule quand c'est
+//    fait (voir l'effet « avancement » plus bas).
 
 // Plusieurs éléments peuvent porter la même cible : le premier de la page
 // l'emporte. Ex. PrestationsV2 : le « + » d'en-tête, et à défaut (aucune
 // catégorie encore) « + Ajouter une catégorie ».
-function surligner(cible: string): () => void {
+//
+// ÉVÉNEMENTIEL, jamais de sondage en boucle (`requestAnimationFrame` à 60
+// img/s a d'abord semblé la solution la plus simple pour suivre une cible
+// qui bouge après coup — bandeaux chargés plus tard, carte qui finit par la
+// recouvrir — mais c'est exactement ce qui saccadait tout le reste sur un
+// vrai téléphone : `getBoundingClientRect()` en continu, pour toujours, sur
+// TOUTE la durée d'un arrêt, entrait en concurrence avec les animations CSS
+// et le thread principal n'en ressortait jamais tout à fait libre — Ryan,
+// 2026-10-08 : « aucune fluidité, mode saccadé »). À la place : un
+// `ResizeObserver` sur l'ÉLÉMENT (se déclenche s'il change de taille), un
+// écouteur de défilement/redimensionnement (se déclenche si la page bouge),
+// et une poignée de mesures espacées (200 ms à 3 s) pour rattraper un
+// décalage de mise en page qui ne change NI la taille de la cible NI le
+// défilement — un bandeau qui charge au-dessus, par exemple (repéré sur
+// l'étape « lien », poussée de ~240px sans qu'aucun des deux ne bouge).
+//
+// Même logique pour l'élément lui-même : sur un arrêt `interactif`, l'écran
+// réel reste cliquable, et PrestationsV2 bascule du menu (« Prestations »)
+// à l'éditeur (le « + ») SANS changer de route (juste `?vue=` en plus,
+// `pathname` ne bouge pas) — l'élément d'origine quitte le DOM, il faut en
+// retrouver un nouveau portant la même cible. L'observateur de mutations,
+// lui, reste branché toute la durée de l'arrêt (pas seulement le temps de
+// la première apparition) pour couvrir ce cas — événementiel aussi : son
+// coût est nul tant que rien ne change.
+// `instantane` : la découpe doit suivre un défilement 1:1, sans la moindre
+// trace de retard — Ryan, 2026-10-10 : « quand je scrolle, il y a un temps
+// de latence entre le cadre et ce qui surligne... ça fait un peu saccadé ».
+// Cause exacte : la transition CSS `top/left/width/height` (.5s, pensée pour
+// le glissement d'un arrêt à l'autre) s'appliquait à TOUTE mise à jour du
+// rectangle, scroll compris — chaque frame de défilement relançait un
+// rattrapage animé de 500ms par-dessus la précédente, jamais terminé, d'où
+// l'impression de décalage permanent. Scroll/redimensionnement (fréquents,
+// continus) passent maintenant en instantané (`transition: none`, posé en
+// ligne dans VisiteGuidee.tsx) ; seule l'arrivée sur une NOUVELLE cible — un
+// vrai changement d'arrêt, ou PrestationsV2 qui bascule du menu à l'éditeur —
+// garde l'animation, et la View Transition native s'en charge déjà pour
+// l'essentiel (voir plus bas). Les mesures de rattrapage différées
+// (200ms–3s, pour un bandeau qui finit de charger) restent animées : rares,
+// pas continues, un petit glissement gracieux n'y gêne personne.
+function surligner(
+  cible: string,
+  contourSite: boolean,
+  surRect: (r: DOMRect | null, instantane: boolean) => void,
+): () => void {
   let element: Element | null = null
-  let minuteur: ReturnType<typeof setTimeout> | undefined
+  let observateurTaille: ResizeObserver | undefined
+  let dernierRect: DOMRect | null = null
+  let dernierRecentrage = 0
 
-  const trouver = () => {
-    element = document.querySelector(`[data-visite-cible="${cible}"]`)
-    if (!element) return false
-    element.setAttribute('data-visite-active', '')
+  const identiques = (a: DOMRect | null, b: DOMRect | null) =>
+    a === b || (!!a && !!b && a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height)
+
+  const recouvreLaCarte = (r: DOMRect) => {
+    const carte = document.querySelector('.wb-visite-carte')
+    return !!carte && r.bottom > carte.getBoundingClientRect().top && r.top < carte.getBoundingClientRect().bottom
+  }
+
+  const rapporter = (instantane: boolean) => {
+    const r = element ? element.getBoundingClientRect() : null
+    if (!identiques(r, dernierRect)) { dernierRect = r; surRect(r, instantane) }
+    // Au plus un recentrage par demi-seconde : une correction ponctuelle,
+    // jamais un bras de fer avec un défilement manuel.
+    const maintenant = performance.now()
+    if (r && element && maintenant - dernierRecentrage > 500 && recouvreLaCarte(r)) {
+      dernierRecentrage = maintenant
+      element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }
+
+  // `contourSite` : uniquement le site (`!isPwa`, voir l'appel plus bas).
+  // L'application a ses propres repères (découpe ou halo) — poser EN PLUS
+  // le contour pulsé du site les désalignait (marge de la découpe contre
+  // bord exact de l'élément, remarqué par Ryan le 2026-10-07).
+  const essayer = (): boolean => {
+    if (element && document.contains(element)) return true
+    const trouve = document.querySelector(`[data-visite-cible="${cible}"]`)
+    if (!trouve) { element = null; return false }
+    observateurTaille?.disconnect()
+    element = trouve
+    if (contourSite) element.setAttribute('data-visite-active', '')
+    observateurTaille = new ResizeObserver(() => rapporter(true))
+    observateurTaille.observe(element)
     const sobre = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     element.scrollIntoView({ block: 'center', behavior: sobre ? 'auto' : 'smooth' })
+    rapporter(false) // nouvelle cible : glisse jusqu'à elle, ne saute pas dessus
     return true
   }
 
-  // L'élément arrive souvent après la carte : écran v2 qui attend de savoir s'il
-  // est dans l'application, onglet d'AdminTabs choisi après montage, renvoi du
-  // site vers son écran v1. Introuvable au bout de 5 s (offre sans cet écran,
-  // catalogue plein…) : la carte seule suffit.
-  const observateur = new MutationObserver(() => {
-    if (trouver()) { observateur.disconnect(); clearTimeout(minuteur) }
-  })
-  if (!trouver()) {
-    observateur.observe(document.body, { childList: true, subtree: true })
-    minuteur = setTimeout(() => observateur.disconnect(), 5000)
-  }
+  // Couvre à la fois « l'élément arrive après coup » (écran v2 qui attend de
+  // savoir s'il est dans l'application, offre sans cet écran…) et « l'élément
+  // est remplacé par un autre portant la même cible » (PrestationsV2,
+  // menu → éditeur). Reste branché toute la durée de l'arrêt.
+  const observateurDom = new MutationObserver(essayer)
+  observateurDom.observe(document.body, { childList: true, subtree: true })
+  essayer()
+
+  const minuteurs = [200, 500, 1000, 1800, 3000].map(delai => setTimeout(() => rapporter(false), delai))
+  const suivreEnDirect = () => rapporter(true)
+  window.addEventListener('scroll', suivreEnDirect, true)
+  window.addEventListener('resize', suivreEnDirect)
 
   return () => {
-    observateur.disconnect()
-    clearTimeout(minuteur)
+    observateurDom.disconnect()
+    observateurTaille?.disconnect()
+    minuteurs.forEach(clearTimeout)
+    window.removeEventListener('scroll', suivreEnDirect, true)
+    window.removeEventListener('resize', suivreEnDirect)
     element?.removeAttribute('data-visite-active')
+    surRect(null, true)
   }
 }
 
-/** `v2` : la page est dans la nouvelle version (DashboardShell). Sur téléphone la carte se pose
- *  au-dessus de la barre du bas ; sur la v2 ordinateur, à droite du rail, avec le même habillage. */
-export default function VisiteGuidee({ aFaire, v2 }: { aFaire?: boolean; v2?: boolean }) {
+const MARGE_DECOUPE = 8
+
+/** Signaux des arrêts `interactif` — voir `EtapeVisite.interactif`. Trois clés
+ *  sont parties le 2026-10-11 (`baseAddressRempli`/`phoneRempli`/`logoRempli`)
+ *  avec les arrêts correspondants, déplacés vers l'onboarding. */
+type Avancement = {
+  servicesCount?: number
+  availabilitiesCount?: number
+}
+
+function valeurInteractif(etape: EtapeVisite | undefined, avancement: Avancement | undefined): boolean | undefined {
+  switch (etape?.interactif) {
+    case 'services': return (avancement?.servicesCount ?? 0) > 0
+    case 'availabilities': return (avancement?.availabilitiesCount ?? 0) > 0
+    default: return undefined
+  }
+}
+
+/** Position horizontale du pointeur triangulaire (`.wb-visite-fleche`), en
+ *  pourcentage de la largeur de la carte, centré sur la cible et resserré
+ *  pour ne jamais sortir de la carte (marge de 20px de chaque bord — la
+ *  pointe du triangle fait 14px). `null` : pas de cible, pas de flèche. */
+function positionFleche(rect: DOMRect | null, carte: HTMLElement | null): number | null {
+  if (!rect || !carte) return null
+  const carteRect = carte.getBoundingClientRect()
+  if (carteRect.width === 0) return null
+  const centreCible = rect.left + rect.width / 2
+  const xDansLaCarte = centreCible - carteRect.left
+  const borne = Math.min(Math.max(xDansLaCarte, 20), carteRect.width - 20)
+  return (borne / carteRect.width) * 100
+}
+
+const MARGE_CARTE = 14
+const RESERVE_HAUT = 14
+/** Pas de cible : centrée verticalement (`top`/`bottom` à 0 + marges auto,
+ *  jamais `transform` — l'animation d'entrée s'en sert déjà, les deux se
+ *  disputeraient la propriété et l'une écraserait l'autre).
+ *  `height: 'fit-content'` est OBLIGATOIRE ici : laissé sur `auto` (la valeur
+ *  par défaut), la règle CSS pour un élément en position absolue avec `top`
+ *  ET `bottom` fixés mais SANS hauteur explicite n'est pas « centre une
+ *  boîte de la taille de son contenu » mais « étire la boîte pour remplir
+ *  tout l'espace top→bottom » (les marges auto tombent à 0 dans ce cas
+ *  précis) — exactement le bug que Ryan a repéré en capture le 2026-10-10 :
+ *  une carte étirée sur presque tout l'écran, flou sur tout cet espace,
+ *  texte collé en haut. `fit-content` sort du cas « hauteur auto » et
+ *  redonne aux marges leur rôle de centrage. */
+const CARTE_CENTREE: CSSProperties = { top: 0, bottom: 0, height: 'fit-content', marginTop: 'auto', marginBottom: 'auto' }
+
+type CoteCarte = 'dessous' | 'dessus' | 'centre'
+
+/** Décide UNE FOIS par cible (pas à chaque frame de défilement) si la carte
+ *  va sous ou au-dessus de l'élément : collée sous la cible si la place le
+ *  permet, sinon collée au-dessus — jamais plantée en bas d'écran avec une
+ *  flèche qui traverse tout l'écran pour l'atteindre (référence Folyo de
+ *  Ryan, 2026-10-10). `limiteBasse` mesurée en vrai (le haut de la barre du
+ *  bas), pas recalculée à la main depuis les mêmes constantes CSS deux fois.
+ *
+ *  Appelée UNIQUEMENT quand une NOUVELLE cible apparaît (`instantane` faux
+ *  dans `surligner()`), jamais sur un défilement — sinon, juste au seuil de
+ *  bascule entre les deux côtés, la carte changerait de côté à chaque pixel
+ *  scrollé : repéré par Ryan, 2026-10-10 : « le bandeau... les contours et
+ *  le bandeau saccadent... c'est pas bien accroché ». Le côté reste figé
+ *  pour toute la durée de l'arrêt ; seul le DÉCALAGE (voir
+ *  `positionnerCarte`) continue de suivre la cible au pixel près. */
+// Décidé AVANT que la carte existe dans le DOM (donc avant de connaître sa
+// vraie hauteur) : une estimation, pas une mesure. Mesurée a posteriori sur
+// les 24 arrêts réels (2026-10-10) : la plupart des cartes interactives
+// (badge + texte + bouton) font 154-174px. Posé à 210px pour une vraie marge
+// de sécurité — 170px semblait correct sur les premiers arrêts testés, mais
+// une carte à 171px s'est fait rogner 24px sous le bas de l'écran (arrêt
+// « lien », repéré lors d'un passage systématique des 24 arrêts, pas visible
+// en testant seulement quelques arrêts au hasard).
+const HAUTEUR_CARTE_ESTIMEE = 210
+
+function decidreCote(r: DOMRect): CoteCarte {
+  const barre = document.querySelector('[data-visite-cible="barre-bas"]')
+  const limiteBasse = barre ? barre.getBoundingClientRect().top : window.innerHeight
+  const espaceBas = limiteBasse - r.bottom - MARGE_CARTE
+  const espaceHaut = r.top - RESERVE_HAUT
+  // Sous la cible si la carte y tient (marge généreuse, voir ci-dessus) OU
+  // s'il y a simplement plus de place en bas qu'en haut.
+  return espaceBas >= HAUTEUR_CARTE_ESTIMEE || espaceBas >= espaceHaut ? 'dessous' : 'dessus'
+}
+
+/** Traduit le côté déjà choisi (`decidreCote`, figé pour l'arrêt) + la
+ *  position ACTUELLE de la cible (suivie en direct, y compris pendant un
+ *  défilement) en style CSS. Pure arithmétique, aucune lecture du DOM —
+ *  peut tourner à chaque frame de défilement sans coût. */
+function positionnerCarte(r: DOMRect | null, cote: CoteCarte): { styleCarte: CSSProperties; flecheEnBas: boolean } {
+  if (!r || cote === 'centre' || typeof window === 'undefined') return { styleCarte: CARTE_CENTREE, flecheEnBas: false }
+  if (cote === 'dessous') return { styleCarte: { top: r.bottom + MARGE_CARTE }, flecheEnBas: false }
+  return { styleCarte: { bottom: window.innerHeight - r.top + MARGE_CARTE }, flecheEnBas: true }
+}
+
+/** Barre « Stories » : un segment par arrêt, rempli pour tout arrêt déjà
+ *  passé (index < etape) ou en cours (index === etape) — jamais pour les
+ *  arrêts à venir. Remplace la barre continue unique : reste lisible même
+ *  avec beaucoup d'arrêts (Ryan a cité ce style dès la toute première
+ *  demande de ce tuto). */
+function BarreProgres({ etape, total }: { etape: number; total: number }) {
+  return (
+    <div className="wb-visite-progres mt-2" aria-hidden>
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className={`wb-visite-segment ${i <= etape ? 'wb-visite-segment--fait' : ''}`}>
+          <span />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: { aFaire?: VisitesAFaire; avancement?: Avancement }) {
   const router = useRouter()
   const pathname = usePathname()
   const isPwa = useDesignMobile()
+  // Un tuto par design : celui de l'écran affiché, l'autre attend la première visite sur ce design.
+  const appareil: Appareil = isPwa ? 'mobile' : 'ordinateur'
+  const aFaire = aFaireParAppareil?.[appareil]
   const [navigation, naviguer] = useTransition()
-  const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null))
+  const etapes = etapesPour(isPwa)
+  const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null), etapes.length)
 
   useEffect(() => {
-    const stocke = lireEtat(lireVisite())
+    const stocke = lireEtat(lireVisite(), etapes.length)
     const suivant = etatAuChargement(stocke, aFaire)
     if (serialiserEtat(suivant) !== serialiserEtat(stocke)) ecrireVisite(suivant)
-  }, [aFaire])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `etapes` change seulement avec `isPwa`, pas à chaque rendu
+  }, [aFaire, appareil])
 
   const etape = etat.statut === 'en_cours' ? etat.etape : null
-  const cible = etape === null ? undefined : ETAPES_VISITE[etape].cible
+  const etapeActuelle = etape === null ? undefined : etapes[etape]
+  const cible = etapeActuelle?.cible
+  const estInteractif = isPwa && !!etapeActuelle?.interactif
 
+  // Scroll/redimensionnement : la découpe doit suivre sans transition (voir
+  // le commentaire au-dessus de `surligner()`) — `transition: 'none'` posé en
+  // ligne quand `instantane` vaut `true`, retiré sinon pour laisser la
+  // transition CSS (arrivée sur une nouvelle cible) s'appliquer normalement.
+  // `rect` et `instantane` dans le MÊME state (pas un ref à part lu pendant
+  // le rendu, que la règle `react-hooks/refs` refuse à raison) : une seule
+  // mise à jour, pas un re-rendu de plus qu'avant.
+  const [etatRect, setEtatRect] = useState<{ rect: DOMRect | null; instantane: boolean }>({ rect: null, instantane: false })
   useEffect(() => {
-    if (cible) return surligner(cible)
-  }, [cible, pathname])
+    if (!cible) { setEtatRect({ rect: null, instantane: true }); return }
+    return surligner(cible, !isPwa, (r, instantane) => setEtatRect({ rect: r, instantane }))
+  }, [cible, pathname, isPwa])
+  const { rect, instantane } = etatRect
 
-  if (etape === null) return null
+  const suivante = etape === null ? null : etapeSuivante(etape, etapes.length)
+  const routeSuivante = suivante === null ? undefined : etapes[suivante].route
 
-  const suivante = etapeSuivante(etape)
+  // Préchargée dès que l'arrêt s'affiche, pas au clic sur « Suivant » :
+  // `router.push` seul, sans ce `prefetch`, va chercher la page au moment du
+  // clic — un aller-retour complet (rendu serveur + hydratation) pendant
+  // lequel la carte glisse déjà, visiblement saccadé sur un téléphone pas
+  // très puissant (mesuré : jusqu'à 530 ms de blocage sur une image, contre
+  // ~110 ms une fois préchargée — Ryan, 2026-10-08). `router.prefetch`
+  // n'est qu'un indice pour Next ; rien à défaire si l'arrêt change avant.
+  useEffect(() => {
+    if (routeSuivante) router.prefetch(routeSuivante)
+  }, [routeSuivante, router])
+
+  // « Un beau déplacement » : la View Transition native du navigateur anime
+  // elle-même le passage d'une découpe à l'autre — position ET apparence
+  // (dark-découpe ↔ halo clair) comprises — plutôt que le simple `transition`
+  // CSS précédent qui ne savait que glisser top/left/width/height (Ryan,
+  // 2026-10-09 : « fais-moi des beaux déplacements, fluides » après un
+  // premier passage jugé trop timide). `view-transition-name: wb-visite-spot`
+  // (globals.css) marque la cible comme un seul élément continu d'un arrêt à
+  // l'autre ; le navigateur se charge de la morpher. Non supporté (Safari
+  // < 18) : la fonction retombe sur `naviguer()` seule, et la transition CSS
+  // déjà en place (surligner()/.wb-visite-decoupe) prend le relais comme
+  // avant — aucune régression, juste moins de magie.
+  //
+  // Enveloppe une mise à jour SYNCHRONE (pas de navigation à attendre) dans
+  // la View Transition native : `flushSync` la fait aboutir avant que le
+  // navigateur ne prenne son instantané « après » (le contrat de
+  // `startViewTransition`). Sert à « Passer » et « Terminé » autant qu'aux
+  // arrêts sans route — fermer le tuto mérite le même soin qu'avancer dedans,
+  // pas une disparition sèche.
+  function synchroVue(fn: () => void) {
+    const sobre = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (sobre || typeof document === 'undefined' || !document.startViewTransition) { fn(); return }
+    document.startViewTransition(() => flushSync(fn))
+  }
+
+  function fermer() {
+    synchroVue(() => fermerPourLInstant(appareil))
+  }
 
   function avancer() {
-    if (suivante === null) { terminerVisite(); return }
+    if (suivante === null) { synchroVue(() => terminerVisite(appareil)); return }
+    const route = etapes[suivante].route
+    // Route IDENTIQUE à la page déjà affichée (ex. l'arrêt d'ouverture, sur
+    // `/dashboard`, suivi d'un arrêt qui reste sur `/dashboard`) : pas une
+    // vraie navigation, traitée comme un arrêt sans route (ci-dessous).
+    // `router.push` vers la page déjà affichée refait quand même tout le
+    // travail d'une vraie navigation (re-rendu du contenu serveur) — gel de
+    // ~150-400ms mesuré par capture de frames, Ryan, 2026-10-10 : « c'est
+    // pas fluide... mode saccadé ».
+    const routeBougera = !!route && route !== pathname
     // Écrit tout de suite, jamais après coup : `DashboardShell` est rendu par
     // chaque page séparément (pas un layout partagé), donc cette instance ne
     // survit pas à la navigation — un état « en attente » gardé dans le
     // composant se perdrait avec lui, et la carte resterait bloquée sur
     // l'arrêt de départ. Le flottement visuel pendant le chargement se traite
     // à l'affichage (bouton en chargement ci-dessous), pas en retardant l'écriture.
-    ecrireVisite({ statut: 'en_cours', etape: suivante })
-    naviguer(() => router.push(ETAPES_VISITE[suivante].route))
+    const appliquer = () => {
+      ecrireVisite({ statut: 'en_cours', etape: suivante })
+      if (routeBougera) naviguer(() => router.push(route!))
+    }
+    // Pas de vraie navigation à attendre : le chemin synchrone (`synchroVue`,
+    // résolution immédiate) convient, comme pour un arrêt sans route.
+    if (!routeBougera) { synchroVue(appliquer); return }
+
+    // Vraie navigation cross-page : PAS de View Transition ici. Cette
+    // instance de VisiteGuidee ne survit pas à la navigation (DashboardShell
+    // est rendu par chaque page séparément, voir plus haut) — la version
+    // précédente essayait de garder la transition ouverte jusqu'à ce que
+    // `navigation` redevienne faux, mais ce signal part sur CETTE instance,
+    // qui est démontée en cours de route ; la transition ne pouvait donc
+    // jamais se résoudre autrement que par son filet de secours de 1,5s —
+    // SYSTÉMATIQUEMENT, pas occasionnellement. Mesuré par capture de frames
+    // (2026-10-10) : ~1536-1538ms de gel à CHAQUE clic sur Suivant qui change
+    // de page, quelle que soit la vitesse réelle du chargement — exactement
+    // ce que Ryan décrivait (« c'est pas fluide, mode saccadé », en
+    // particulier au clic sur Suivant). Le bouton affiche déjà un spinner
+    // pendant `navigation` (voir plus bas) : ça suffit comme retour pendant
+    // le chargement, pas besoin d'y ajouter un faux effet de fluidité qui
+    // gelait l'écran plus longtemps que la navigation elle-même.
+    appliquer()
   }
 
-  const habillageV2 = v2 ?? isPwa
-  const bureauV2 = habillageV2 && !isPwa
-  const s = habillageV2
-    ? {
-        carte: `rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] shadow-[0_12px_32px_rgba(0,0,0,.16)]`,
-        etape: `text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`,
-        texte: `text-[15px] leading-snug ${corps}`,
-        passer: `text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`,
-        chemin: `text-[12.5px] leading-snug text-[color:var(--v2-color-gris)]`,
-        suivant: `rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-[color:var(--v2-color-sur-accent)] bg-[color:var(--v2-color-accent)]`,
-        piste: 'bg-[color:var(--v2-filet)]',
-        jauge: 'bg-[color:var(--v2-color-accent)]',
-      }
-    : {
-        carte: 'rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-lg shadow-slate-900/10',
-        etape: 'text-xs font-black uppercase tracking-[0.18em] text-[#1651E8] dark:text-[#00C4D4]',
-        texte: 'text-sm leading-snug',
-        passer: 'text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300',
-        chemin: 'text-xs leading-snug text-slate-400 dark:text-slate-500',
-        suivant: 'rounded-xl text-sm font-semibold text-white bg-[#1651E8] hover:bg-[#0F4ACC] shadow-lg shadow-[#1651E8]/20',
-        piste: 'bg-slate-100 dark:bg-slate-800',
-        jauge: 'bg-[#1651E8] dark:bg-[#00C4D4]',
-      }
+  // Avance toute seule quand le laveur fait l'action réelle. `avancement` (les
+  // props servies par la page au premier rendu) dit seulement si c'était DÉJÀ
+  // fait en arrivant — PrestationsV2/HorairesV2 gardent leur propre état local
+  // après une écriture sans rappeler le serveur (`usePrestationsV2`,
+  // `useHorairesV2` : affichage optimiste assumé), donc cette prop ne bouge
+  // plus ensuite. Une écriture EN COURS de visite arrive par
+  // `signalerAvancement` (visiteGuidee.ts), posé juste après chaque écriture
+  // réussie dans ces deux hooks et dans `ProfilV2`.
+  const avancerRef = useRef(avancer)
+  useEffect(() => { avancerRef.current = avancer })
+
+  // Côté de la carte (dessus/dessous/centre) : figé par cible, voir
+  // `decidreCote`. Mis à jour UNIQUEMENT sur une nouvelle cible
+  // (`!instantane` — nouvel arrêt, ou PrestationsV2 qui bascule de vue) :
+  // un défilement (`instantane` vrai) ne touche jamais à `coteCarte`, pour
+  // ne pas faire basculer la carte d'un côté à l'autre à chaque pixel
+  // scrollé près du seuil (Ryan, 2026-10-10 : « le bandeau... saccade...
+  // c'est pas bien accroché »).
+  const [coteCarte, setCoteCarte] = useState<CoteCarte>('centre')
+  // Une correction par cible au maximum (jamais de va-et-vient) : voir
+  // l'effet juste en dessous, qui s'en sert.
+  const coteDejaVerifieRef = useRef(false)
+  useEffect(() => {
+    if (!rect) { setCoteCarte('centre'); coteDejaVerifieRef.current = false; return }
+    if (!instantane) { setCoteCarte(decidreCote(rect)); coteDejaVerifieRef.current = false }
+  }, [rect, instantane])
+
+  // Décalage réel (top/bottom en pixels) : lui continue de suivre `rect` en
+  // direct à CHAQUE frame (y compris pendant un défilement), seul le côté
+  // est figé. `useMemo` (pas un appel direct) : évite de refaire ce calcul
+  // à chaque re-rendu sans changement de `rect`/`coteCarte` (plusieurs
+  // re-rendus par transition d'arrêt — `useTransition`, callback de la View
+  // Transition — sans ça relançaient ce calcul pour rien, Ryan, 2026-10-10 :
+  // « c'est pas fluide » sur Suivant / le bandeau d'après).
+  const { styleCarte: dispositionCarte, flecheEnBas } = useMemo(() => positionnerCarte(rect, coteCarte), [rect, coteCarte])
+
+  // Position horizontale de la flèche, recalculée à chaque changement de
+  // cible/rect — APRÈS que `dispositionCarte` ait déjà positionné la carte
+  // au commit précédent (sinon on mesurerait l'ancienne position).
+  const carteRef = useRef<HTMLDivElement>(null)
+
+  // Pendant le tuto (application, arrêt d'explication), l'arrière-plan ne défile plus à la main
+  // (Alexandre, 2026-10-11) : seuls Suivant et Passer comptent. Les gestes (doigt, molette) sont
+  // annulés hors de la carte ; le défilement automatique du tuto (`scrollIntoView`) reste possible.
+  const bloquerFond = isPwa && etape !== null && !estInteractif
+  useEffect(() => {
+    if (!bloquerFond) return
+    const annuler = (e: Event) => {
+      if (carteRef.current?.contains(e.target as Node)) return
+      e.preventDefault()
+    }
+    document.addEventListener('touchmove', annuler, { passive: false })
+    document.addEventListener('wheel', annuler, { passive: false })
+    const html = document.documentElement
+    const avant = html.style.overscrollBehavior
+    html.style.overscrollBehavior = 'none'
+    return () => {
+      document.removeEventListener('touchmove', annuler)
+      document.removeEventListener('wheel', annuler)
+      html.style.overscrollBehavior = avant
+    }
+  }, [bloquerFond])
+
+  const [flecheX, setFlecheX] = useState<number | null>(null)
+  useEffect(() => {
+    setFlecheX(positionFleche(rect, carteRef.current))
+  }, [rect, dispositionCarte])
+  const styleCarte: CSSProperties = { ...dispositionCarte }
+  if (flecheX !== null) (styleCarte as Record<string, string>)['--wb-fleche-x'] = `${flecheX}%`
+
+  // Filet de sécurité : `decidreCote` estime la hauteur de la carte AVANT
+  // qu'elle existe dans le DOM (`HAUTEUR_CARTE_ESTIMEE`, une estimation, pas
+  // une mesure) — une fois la carte VRAIMENT posée dans le DOM, on mesure sa
+  // hauteur réelle et on bascule de côté si elle déborde.
+  //
+  // `setTimeout` (débattu — pas une mesure immédiate) : repéré le 2026-10-10
+  // qu'une mesure prise JUSTE après le rendu peut tomber pendant que
+  // `scrollIntoView` (dans `surligner()`) est encore en train d'amener la
+  // cible à sa position finale — mesurer à ce moment-là peut manquer un
+  // débordement qui n'apparaît qu'une fois la cible stabilisée. Un essai sur
+  // le parcours réel des 24 arrêts a semblé corriger un débordement, puis UN
+  // AUTRE essai identique a montré le MÊME débordement non corrigé — la
+  // seule différence entre les deux essais était un `console.log` ajouté
+  // pour déboguer, qui retardait la mesure de quelques millisecondes à
+  // peine. Ce n'était pas un hasard de cache : la mesure immédiate est
+  // intrinsèquement sujette à ce genre de course. `setTimeout(…, 400)`
+  // redémarré (nettoyage + nouveau minuteur) à chaque changement de
+  // `rect`/`coteCarte` attend que plus rien ne bouge pendant 400ms avant de
+  // mesurer — un vrai « se stabilise avant de juger », pas un délai fixe
+  // après un évènement qui peut encore être suivi d'autres mises à jour.
+  // `coteDejaVerifieRef` n'est posé à `true` que QUAND le minuteur se
+  // déclenche réellement (jamais avant) : une seule correction par cible,
+  // jamais de bascule en boucle (le correctif du 2026-10-10 contre le
+  // scroll reste intact — ceci ne touche jamais `coteCarte` PENDANT un
+  // défilement, seulement une fois que tout s'est arrêté de bouger).
+  useEffect(() => {
+    if (!rect || coteCarte === 'centre' || coteDejaVerifieRef.current) return
+    const minuteur = setTimeout(() => {
+      const carte = carteRef.current
+      if (!carte) return
+      const r = carte.getBoundingClientRect()
+      const barre = document.querySelector('[data-visite-cible="barre-bas"]')
+      const limiteBasse = barre ? barre.getBoundingClientRect().top : window.innerHeight
+      coteDejaVerifieRef.current = true
+      if (coteCarte === 'dessous' && r.bottom > limiteBasse) setCoteCarte('dessus')
+      else if (coteCarte === 'dessus' && r.top < RESERVE_HAUT) setCoteCarte('dessous')
+    }, 400)
+    return () => clearTimeout(minuteur)
+  }, [rect, coteCarte])
+
+  // Trois états, pas un booléen : « déjà fait en arrivant » (compte déjà
+  // configuré, ex. en rejouant le tuto depuis le Guide) et « vient d'être
+  // fait PENDANT cette visite » se ressemblaient avant le 2026-10-09 — même
+  // minuterie de 900ms, même texte éclair « Fait ✓ ». Ryan, en testant sur
+  // un compte déjà configuré : « ça va très vite... on a l'impression que ça
+  // bug ». Séparés maintenant : le premier montre l'explication COMPLÈTE,
+  // sans avancer tout seul (comme n'importe quel arrêt « regarde ») ; le
+  // second garde la confirmation éclair + l'avance automatique, le seul cas
+  // où aller vite communique quelque chose (« je viens de voir ce que tu as
+  // fait »).
+  const dejaSatisfait = valeurInteractif(etapeActuelle, avancement) === true
+  const [etatInteractif, setEtatInteractif] = useState<'attente' | 'deja_fait' | 'vient_de_reussir'>('attente')
+  useEffect(() => {
+    const cle = etapeActuelle?.interactif
+    if (!cle) { setEtatInteractif('attente'); return }
+    if (dejaSatisfait) { setEtatInteractif('deja_fait'); return }
+    setEtatInteractif('attente')
+    return abonnerAvancement((c) => {
+      if (c !== cle) return
+      setEtatInteractif('vient_de_reussir')
+      // Un petit coup, pas une sonnerie : confirme l'action sans la fêter.
+      // Seulement ici (l'action vient vraiment d'arriver), jamais pour
+      // « déjà fait » — vibrer pour quelque chose déjà fait avant d'arriver
+      // n'aurait rien à confirmer. Android/Chrome uniquement (PWA installée) ;
+      // `navigator.vibrate` n'existe simplement pas ailleurs, no-op silencieux.
+      navigator.vibrate?.(15)
+      setTimeout(() => avancerRef.current(), 900)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `etapeActuelle` est dérivée de `etape` (même tableau `etapes`) : le réécouter à chaque rendu resouscrirait sans raison.
+  }, [etape, dejaSatisfait])
+
+  // Réduction manuelle d'un arrêt `interactif` : sur un écran chargé (une
+  // feuille comme « Nouvelle prestation »), la carte posée sous la cible peut
+  // recouvrir des champs plus bas dans la même feuille (les types de
+  // véhicule, le bouton Enregistrer — capture de Ryan, 2026-10-11, sur
+  // l'arrêt Prestations). Repliée, elle laisse l'écran ENTIÈREMENT libre : le
+  // halo autour de la cible disparaît aussi (une première version le gardait
+  // affiché « comme rappel discret » — Ryan, capture à l'appui : un cadre
+  // bleu qui reste allumé sans la carte pour l'expliquer n'a plus rien de
+  // discret, exactement ce que la réduction était censée éviter).
+  //
+  // Se redéplie TOUTE SEULE dès que l'action réelle arrive
+  // (`vient_de_reussir`) : Ryan — « une fois qu'il valide [...], on lui
+  // repropose de continuer s'il veut ». Pas besoin d'un second geste pour
+  // voir la confirmation « Fait ✓ » avant l'avance automatique (ci-dessus).
+  const [reduite, setReduite] = useState(false)
+  useEffect(() => { setReduite(false) }, [etape])
+  useEffect(() => {
+    if (etatInteractif === 'vient_de_reussir') setReduite(false)
+  }, [etatInteractif])
+
+  if (etape === null || !etapeActuelle) return null
+
+  if (estInteractif) {
+    const vientDeReussir = etatInteractif === 'vient_de_reussir'
+    const dejaFaitAffiche = etatInteractif === 'deja_fait'
+    return (
+      <div className="fixed inset-0 z-[70] pointer-events-none" role="status" aria-label="Visite guidée">
+        {rect && !reduite && (
+          <div
+            aria-hidden
+            className={`wb-visite-halo absolute rounded-2xl ${vientDeReussir ? 'wb-visite-halo-ok' : ''}`}
+            style={{
+              top: rect.top - MARGE_DECOUPE, left: rect.left - MARGE_DECOUPE,
+              width: rect.width + MARGE_DECOUPE * 2, height: rect.height + MARGE_DECOUPE * 2,
+              transition: instantane ? 'none' : undefined,
+            }}
+          />
+        )}
+        {reduite ? (
+          <button
+            type="button"
+            onClick={() => setReduite(false)}
+            aria-label={`Reprendre la visite guidée — étape ${etape + 1} sur ${etapes.length}`}
+            className={`wb-visite-verre pointer-events-auto absolute right-3 h-11 px-3.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
+            style={styleCarte}
+          >
+            Visite {etape + 1}/{etapes.length} ‹
+          </button>
+        ) : (
+          <div
+            ref={carteRef}
+            className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
+            style={styleCarte}
+          >
+            {flecheX !== null && (
+              <div
+                className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
+                style={{ transition: instantane ? 'none' : undefined }}
+                aria-hidden
+              />
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
+                  Étape {etape + 1}/{etapes.length}
+                </p>
+                {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>✓ Déjà fait</span>}
+              </div>
+              <div className="flex items-center -my-2 -mr-2">
+                {!vientDeReussir && (
+                  <button
+                    type="button"
+                    onClick={() => setReduite(true)}
+                    aria-label="Réduire la visite guidée sur le côté, pour libérer l'écran"
+                    className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                  >
+                    Réduire
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={fermer}
+                  className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                >
+                  Passer
+                </button>
+              </div>
+            </div>
+            <p key={etape} aria-live="polite" className={`wb-visite-texte mt-2.5 text-[15px] leading-snug ${corps}`}>
+              {vientDeReussir ? 'Fait ✓' : etapeActuelle.texte}
+            </p>
+            {!vientDeReussir && etapeActuelle.cheminPwa && (
+              <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                « {etapeActuelle.cheminPwa} »
+              </p>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                {vientDeReussir
+                  ? 'On continue…'
+                  : dejaFaitAffiche
+                    ? 'Déjà configuré — tu peux continuer.'
+                    : "L'écran reste à toi — la visite avance dès que c'est fait."}
+              </p>
+              <button
+                type="button"
+                onClick={avancer}
+                disabled={navigation || vientDeReussir}
+                className={`h-9 shrink-0 px-4 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)] border border-[color:var(--v2-filet-fort)] disabled:opacity-50 transition-opacity`}
+              >
+                {navigation ? <Spinner /> : dejaFaitAffiche ? 'Suivant' : 'Plus tard'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (isPwa) {
+    return (
+      <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Visite guidée">
+        {rect ? (
+          <div
+            aria-hidden
+            className="wb-visite-decoupe absolute rounded-2xl"
+            style={{
+              top: rect.top - MARGE_DECOUPE,
+              left: rect.left - MARGE_DECOUPE,
+              width: rect.width + MARGE_DECOUPE * 2,
+              height: rect.height + MARGE_DECOUPE * 2,
+              boxShadow: '0 0 0 9999px rgba(10,10,12,.35)',
+              transition: instantane ? 'none' : undefined,
+            }}
+          />
+        ) : (
+          <div aria-hidden className="wb-visite-fond absolute inset-0" style={{ background: 'rgba(10,10,12,.35)' }} />
+        )}
+
+        <div
+          ref={carteRef}
+          className="wb-visite-verre wb-visite-carte absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
+          style={styleCarte}
+        >
+          {flecheX !== null && (
+            <div
+              className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
+              style={{ transition: instantane ? 'none' : undefined }}
+              aria-hidden
+            />
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
+              Étape {etape + 1}/{etapes.length}
+            </p>
+            <button
+              type="button"
+              onClick={fermer}
+              className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+            >
+              Passer
+            </button>
+          </div>
+          <BarreProgres etape={etape} total={etapes.length} />
+          <p key={etape} aria-live="polite" className={`wb-visite-texte mt-3 text-[15px] leading-snug ${corps}`}>
+            {etapeActuelle.texte}
+          </p>
+          {etapeActuelle.cheminPwa && (
+            <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              « {etapeActuelle.cheminPwa} »
+            </p>
+          )}
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={avancer}
+              disabled={navigation}
+              className={`h-10 px-5 rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white bg-[color:var(--v2-color-accent)] disabled:opacity-50 transition-opacity`}
+            >
+              {navigation ? (
+                <span className="flex items-center justify-center gap-2"><Spinner />Chargement…</span>
+              ) : suivante === null ? 'Terminé' : 'Suivant'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -122,40 +713,34 @@ export default function VisiteGuidee({ aFaire, v2 }: { aFaire?: boolean; v2?: bo
       <div aria-hidden className="h-44" />
       <section
         aria-label="Visite guidée"
-        className={`fixed z-[15] p-4 ${
-          bureauV2 ? 'w-[23rem]' : 'left-3 right-20 sm:right-auto sm:w-[23rem]'
-        } ${
-          isPwa || bureauV2 ? '' : 'sm:left-6 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
-        } ${s.carte}`}
-        style={isPwa
-          ? { bottom: 'calc(14px + 66px + 10px + env(safe-area-inset-bottom, 0px))' }
-          : bureauV2
-            // Juste à droite du rail (14px de marge + sa largeur + 24px), en bas.
-            ? { left: 'calc(var(--bureau-rail-largeur) + 38px)', bottom: '24px' }
-            : undefined}
+        className="fixed z-[15] left-3 right-20 sm:right-auto sm:w-[23rem] p-4 sm:left-6 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-lg shadow-slate-900/10"
       >
         <div className="flex items-center justify-between gap-3">
-          <p className={s.etape}>Étape {etape + 1}/{ETAPES_VISITE.length}</p>
-          <button type="button" onClick={terminerVisite} className={`-my-2 -mr-2 px-2 py-2 transition-colors ${s.passer}`}>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1651E8] dark:text-[#00C4D4]">Étape {etape + 1}/{etapes.length}</p>
+          <button
+            type="button"
+            onClick={() => fermerPourLInstant(appareil)}
+            className="-my-2 -mr-2 px-2 py-2 transition-colors text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+          >
             Passer
           </button>
         </div>
-        <div className={`mt-2 h-1 rounded-full overflow-hidden ${s.piste}`} aria-hidden>
+        <div className="mt-2 h-1 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800" aria-hidden>
           <div
-            className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${s.jauge}`}
-            style={{ width: `${((etape + 1) / ETAPES_VISITE.length) * 100}%` }}
+            className="h-full rounded-full bg-[#1651E8] dark:bg-[#00C4D4] transition-[width] duration-300 motion-reduce:transition-none"
+            style={{ width: `${((etape + 1) / etapes.length) * 100}%` }}
           />
         </div>
-        <p aria-live="polite" className={`mt-3 ${s.texte}`}>{ETAPES_VISITE[etape].texte}</p>
-        {ETAPES_VISITE[etape].chemin && (
-          <p className={`mt-1.5 ${s.chemin}`}>{ETAPES_VISITE[etape].chemin}</p>
+        <p aria-live="polite" className="mt-3 text-sm leading-snug">{etapeActuelle.texte}</p>
+        {etapeActuelle.chemin && (
+          <p className="mt-1.5 text-xs leading-snug text-slate-400 dark:text-slate-500">{etapeActuelle.chemin}</p>
         )}
         <div className="mt-3 flex justify-end">
           <button
             type="button"
             onClick={avancer}
             disabled={navigation}
-            className={`h-10 px-5 transition-colors disabled:opacity-50 ${s.suivant}`}
+            className="h-10 px-5 transition-colors disabled:opacity-50 rounded-xl text-sm font-semibold text-white bg-[#1651E8] hover:bg-[#0F4ACC] shadow-lg shadow-[#1651E8]/20"
           >
             {navigation ? (
               <span className="flex items-center justify-center gap-2"><Spinner />Chargement…</span>

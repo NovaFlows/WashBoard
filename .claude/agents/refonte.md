@@ -156,15 +156,29 @@ une barre en verre, **le contenu doit passer dessous**.
 Jetons (écran clair) :
 
 ```
-Fond      #F6F5F3   papier, chaud — jamais gris-bleu « tech »
-Surface   #FFFFFF   tout le contenu
-Encre     #16161A   texte, états actifs
-Gris      #6B6B76 / #9A9AA4
-Filets    rgba(22,22,26,.10) et .06
-Accent    #2B59FF   action principale UNIQUEMENT, et rarement
-Vert      #127A4B   Ambre #9A5B00   Rouge #B3261E
-Sombre    fond #0E0E11  surface #17171B  encre #F3F3F5  filets blanc .10
+Fond        #F6F5F3   papier, chaud — jamais gris-bleu « tech »
+Surface     #FFFFFF   tout le contenu
+Encre       #16161A   texte, états actifs
+Gris        #6B6B76 / #9A9AA4
+Filets      rgba(22,22,26,.10) et .06
+Accent      #306090   action principale UNIQUEMENT, et rarement
+Sur-accent  #FFFFFF   texte posé sur un aplat d'accent (bouton plein, pastille pleine)
+Vert        #127A4B   Ambre #9A5B00   Rouge #B3261E
+Sombre      fond #0E0E11  surface #17171B  encre #F3F3F5  filets blanc .10
+            accent #6E9FD0  sur-accent #0E1A26
 ```
+
+**Accent corrigé à la passe « bureau » (2026-10-05, Alexandre/designer)** : l'ancien
+`#2B59FF` était une estimation ; `#306090` est mesuré sur les pixels du logo
+(`washboard/public/LogoWashBoard.png`, teinte dominante — voir
+`washboard-design/maquettes/bureau-2026/README.md`). **Jeton PARTAGÉ avec la PWA** :
+s'applique au téléphone comme à l'ordinateur, pas réservé à la passe bureau. En sombre,
+l'accent s'éclaircit en `#6E9FD0` (le `#306090` n'y fait que 2,7:1) — jamais de blanc en
+dur sur un aplat d'accent, utilise `--v2-color-sur-accent` (qui bascule en encre foncée
+`#0E1A26` à ce moment-là, le blanc y retombant à 2,8:1). Au 2026-10-06, cette correction
+vit sur `refonte/maquette-bureau` (pas encore mergée) : si tu codes du v2 sur `master`
+avant qu'elle n'arrive, vérifie quelle valeur `globals.css` porte réellement plutôt que
+de faire confiance à ce fichier seul.
 
 Verre de châssis : voile blanc en dégradé 50 % → 26 %, `blur(34px) saturate(220%)`, bordure
 blanche 70 %, **arête spéculaire interne en haut** (`inset 0 1px 0 rgba(255,255,255,.92)`) —

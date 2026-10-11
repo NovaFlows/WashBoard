@@ -1,25 +1,106 @@
-// Visite guidée du tableau de bord : onze arrêts sur de vraies pages, montrée une
-// seule fois, au premier passage sur `/dashboard`.
+// Visite guidée du tableau de bord : montrée une seule fois, au premier passage
+// sur `/dashboard` — et rejouable à volonté depuis le Guide (voir `redemarrerVisite`).
 //
-// `washers.dashboard_tour_complete_at` dit si elle reste à faire. Les comptes
-// antérieurs à sa mise en place ont été remplis à leur date de création : seul un
-// compte créé depuis peut avoir NULL. La progression, elle, vit dans l'onglet
-// (sessionStorage) : elle survit aux changements de page comme à un rechargement.
+// RÉDUITE DE 21 À 13 ARRÊTS LE 2026-10-11 (Ryan, après avoir demandé mon avis
+// honnête : « je suis d'accord que 21 étapes c'est trop, que faire alors ? »),
+// PUIS REMONTÉE À 14 LE MÊME JOUR (un seul ajout délibéré, pas un retour en
+// arrière — voir « voir-page » plus bas), PUIS REDESCENDUE À 13 (l'ancien
+// premier arrêt, « ta navigation passe maintenant par cette barre », retiré
+// — Ryan : « ça paraît évident que c'est une barre de navigation », pas
+// besoin de l'expliquer), PUIS À 11 (Agenda et Clients avaient chacun DEUX
+// arrêts — « regarde ce bouton » puis « voilà la page » une fois dessus ;
+// Ryan a repéré la redondance et demandé de fusionner les deux en un seul,
+// même raisonnement que pour la barre elle-même : le bouton se voit tout
+// seul une fois sur place, pas besoin de l'annoncer avant). Jusque-là le
+// tuto visait
+// l'EXHAUSTIVITÉ (tout le catalogue de pages, audité le 2026-10-09) — mais un
+// tuto n'est pas une liste de fonctionnalités, c'est « comment on s'en sert
+// tous les jours » + « ce qu'il faut faire pour encaisser une première
+// réservation ». Retirés : Messages automatiques, Publicités, Chiffres (trois
+// réglages verrouillés par l'offre — montrer un mur payant à un compte en
+// essai gratuit qui n'a même pas encore créé sa première prestation
+// ressemble plus à un argumentaire commercial qu'à de l'aide),
+// Chiffres/Documents (doublon exact du bouton [+], déjà expliqué à l'arrêt
+// juste avant), Chiffres/Dépenses, Abonnement, Réglages, et Assistance
+// (fusionnée dans le message de clôture avec Guide — les deux sont de toute
+// façon à un clic l'un de l'autre). Rien de tout ça n'est perdu : ça se
+// découvre tout seul en se baladant dans « Plus », avec le Guide comme filet
+// de sécurité.
+//
+// Dans l'APPLICATION installée, des arrêts supplémentaires s'intercalent pour
+// présenter la barre du bas au fil de l'eau — « regarde cet onglet »
+// (assombrissement + découpe, sans changer de page) juste avant d'y naviguer
+// pour de vrai, plutôt qu'un bloc à part à la fin. `pwaSeulement` marque ces
+// arrêts : invisibles sur le site, où la barre du bas n'existe pas (demande
+// de Ryan, 2026-10-07 : « tu peux présenter un onglet de la barre puis
+// rentrer dedans et présenter etc. »).
+//
+// Prestations et Horaires (deux des cinq essentiels de `computeSetupProgress`,
+// setupProgress.ts — les deux seuls qui restent à découvrir ici) sont en plus
+// `interactif` : la visite s'efface au profit d'un simple repère, laisse
+// l'écran réel cliquable, et avance toute seule dès que le laveur a vraiment
+// fait l'action — pas de « Suivant » à cliquer dans le vide (Ryan,
+// 2026-10-07 puis 2026-10-09 : « accompagner le laveur à remplir ses
+// informations »).
+//
+// Adresse de départ, logo et téléphone — les trois autres essentiels — ne
+// sont PLUS des arrêts du tuto depuis le 2026-10-11 : adresse et logo sont
+// maintenant des étapes de l'onboarding (`(public)/onboarding/Onboarding.tsx`,
+// juste après l'inscription, avant d'arriver sur `/dashboard`), le téléphone
+// était déjà posé à l'inscription elle-même. Les redécouvrir dans le tuto
+// aurait montré un champ que le laveur vient littéralement de remplir.
+// Prestations et horaires restent ici : pas un simple champ, un vrai travail
+// (catalogue, planning) — les imposer avant que le laveur ait vu l'app
+// risquerait de faire fuir quelqu'un pas encore prêt à s'engager sur ces
+// détails (décision confirmée avec Ryan avant de les en sortir aussi).
+//
+// Deux tutos, un par design (Alexandre, 2026-10-11) : `washers.tuto_mobile_vu_le` et
+// `washers.tuto_ordinateur_vu_le`. NULL = à faire. Chacun se lance une fois, la première
+// fois que le laveur arrive sur ce design : avoir vu le tuto ordinateur n'empêche pas le
+// tuto mobile, et inversement. Les comptes qui avaient déjà vu l'ancien tuto unique
+// (`dashboard_tour_complete_at`) ont été marqués « vus » sur les deux.
+// La progression, elle, vit dans l'onglet (sessionStorage) : elle survit aux changements de page comme à un rechargement.
+//
+// « Passer » marque la visite comme vue en base, au même titre que « Terminé »
+// (changé le 2026-10-10 — l'inverse avait été tranché le 2026-10-07, mais Ryan a
+// signalé qu'une visite passée se redéclenchait en revenant sur « Aujourd'hui »,
+// qui recharge `/dashboard` depuis zéro : pas le comportement voulu, elle ne doit
+// se relancer que depuis le Guide). Les deux ferment la visite pour de bon.
 
 import { logger } from './logger'
-import { requiredPlanLabel } from './plan'
 
 export type EtapeVisite = {
-  route: string
+  /** Absente : l'arrêt reste sur la page déjà affichée (ex. un onglet de la barre
+   *  du bas, montré avant d'y naviguer). Présente : navigue vers cette route. */
+  route?: string
   texte: string
   /** Valeur de l'attribut `data-visite-cible` de l'élément à mettre en évidence. */
   cible?: string
   /** Où retrouver cet écran par le menu, sur le SITE actuel (pas la PWA). À revoir
    *  à la refonte, quand cette navigation changera — voir TODO.md. */
   chemin?: string
+  /** Même idée que `chemin`, mais pour la navigation RÉELLE de la PWA installée
+   *  (barre du bas → Plus → …) — affiché entre guillemets, en petit, sous le
+   *  texte de l'arrêt (VisiteGuidee.tsx). Posé UNIQUEMENT quand la page visée
+   *  demande au moins 2 taps pour y arriver (Ryan, 2026-10-11 : « évidemment
+   *  pas ceux qui se font en un clic »). Jamais deviné : chaque valeur vient
+   *  d'une lecture du composant qui porte le vrai lien (`ParametresFormV2.tsx`
+   *  pour tout ce qui part de « Plus », `ReglagesV2.tsx` pour Guide). */
+  cheminPwa?: string
+  /** N'apparaît que dans l'application installée (barre du bas, geste retour :
+   *  rien de tout ça n'existe sur le site). */
+  pwaSeulement?: boolean
+  /** Arrêt « fais-le maintenant », pas « regarde » : la carte s'efface au
+   *  profit d'un simple repère lumineux, laisse l'écran réel cliquable, et
+   *  avance toute seule dès que `avancement` (VisiteGuidee.tsx) dit que
+   *  c'est fait — ajouter une prestation ou un horaire. Les trois autres clés
+   *  qui existaient ici (`baseAddress`, `phone`, `logo`) sont parties le
+   *  2026-10-11 avec les arrêts correspondants, déplacés vers l'onboarding
+   *  (voir le commentaire d'en-tête de `ETAPES_VISITE`). */
+  interactif?: 'services' | 'availabilities'
 }
 
-// Les arrêts 2 à 4 visent les écrans de l'application installée : sur le site,
+// Les arrêts « page » visent les écrans de l'application installée : sur le site,
 // leur garde-fou renvoie vers l'équivalent v1 (`/dashboard/admin#…`,
 // `/dashboard/crm`). Viser directement l'ancre v1 casserait l'enchaînement
 // prestations → disponibilités : `admin#prestations` → `admin#disponibilites`
@@ -34,19 +115,35 @@ export type EtapeVisite = {
 const CHEMIN_PAGE_CLIENT = 'Paramètres → onglet « Page client »'
 const CHEMIN_CONFIGURER = `${CHEMIN_PAGE_CLIENT} → « Configurer ma page client »`
 
+// Ordre des arrêts « page » INCHANGÉ par rapport à avant (demande testée et
+// tranchée par Ryan le 2026-10-02 pour Lien/Prestations/Horaires) : les arrêts
+// PWA s'intercalent juste avant l'arrêt qu'ils annoncent, sans jamais déplacer
+// les arrêts existants les uns par rapport aux autres.
 export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard', texte: "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil." },
+  { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
+  { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
   { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
-  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations` },
-  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités` },
-  { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
-  { route: '/dashboard/clients', texte: "Chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
-  { route: '/dashboard/crm', texte: `D'où viennent tes visiteurs et combien réservent vraiment — en formule ${requiredPlanLabel('crm')}.` },
-  { route: '/dashboard/compta', texte: `Ton chiffre d'affaires et tes dépenses, par jour, semaine, mois ou année — en formule ${requiredPlanLabel('compta')}.` },
-  { route: '/dashboard/factures', texte: `Facture conforme générée et envoyée automatiquement à chaque prestation terminée — en formule ${requiredPlanLabel('facturation')}.` },
-  { route: '/dashboard/abonnement', texte: "Ici tu changes d'offre quand tu en as besoin." },
-  { route: '/dashboard/guide', texte: "Si tu bloques un jour : le Guide répond seul, l'Assistance contacte l'équipe." },
+  // Juste après le lien, pas ailleurs (Ryan, 2026-10-11 : « important d'avoir
+  // la page de réservation juste après les liens, comme ça il voit ce que
+  // les clients voient ») — reste sur la même page (pas de `route` : la
+  // carte « Votre page de réservation » en haut de Plus porte déjà le lien
+  // « Voir », pas besoin de naviguer pour la montrer).
+  { cible: 'voir-page', texte: "Et voilà à quoi elle ressemble pour de vrai — ouvre-la, c'est exactement ce que voient tes clients." },
+  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, cheminPwa: 'Plus → Prestations et prix' },
+  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires' },
+  { route: '/dashboard/calendrier', texte: 'Sur Agenda : toute ton activité en vue mois/semaine/jour.' },
+  { route: '/dashboard/clients', texte: "Sur Clients : chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
+  { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
+  { route: '/dashboard/guide', texte: "Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement à l'équipe depuis cette page.", cheminPwa: 'Plus → Réglages → Guide d’utilisation' },
 ]
+
+/** La liste réellement montrée : tous les arrêts sur le site, les arrêts PWA en
+ *  plus dans l'application installée. Tout le reste (numérotation, navigation,
+ *  stockage) travaille sur CETTE liste, jamais sur `ETAPES_VISITE` brute. */
+export function etapesPour(isPwa: boolean): readonly EtapeVisite[] {
+  return isPwa ? ETAPES_VISITE : ETAPES_VISITE.filter(e => !e.pwaSeulement)
+}
 
 export type EtatVisite =
   | { statut: 'absente' }
@@ -55,9 +152,9 @@ export type EtatVisite =
 
 const FINIE = 'finie'
 
-export function lireEtat(brut: string | null): EtatVisite {
+export function lireEtat(brut: string | null, nombreEtapes: number): EtatVisite {
   if (brut === FINIE) return { statut: 'finie' }
-  if (brut !== null && /^\d+$/.test(brut) && Number(brut) < ETAPES_VISITE.length) {
+  if (brut !== null && /^\d+$/.test(brut) && Number(brut) < nombreEtapes) {
     return { statut: 'en_cours', etape: Number(brut) }
   }
   return { statut: 'absente' }
@@ -70,16 +167,36 @@ export function serialiserEtat(etat: EtatVisite): string | null {
 }
 
 /** `null` au dernier arrêt : c'est « Terminé », pas « Suivant ». */
-export function etapeSuivante(etape: number): number | null {
-  return etape + 1 < ETAPES_VISITE.length ? etape + 1 : null
+export function etapeSuivante(etape: number, nombreEtapes: number): number | null {
+  return etape + 1 < nombreEtapes ? etape + 1 : null
 }
 
 /** Strictement `null` : tant que le SQL n'a pas tourné, la colonne manque dans
  *  la fiche (lue en `*`) et vaut `undefined` — la visite ne doit alors surtout
  *  pas apparaître chez tous les comptes existants. */
-export function visiteAFaire(fiche: { dashboard_tour_complete_at?: string | null } | null): boolean {
-  return fiche?.dashboard_tour_complete_at === null
+export type Appareil = 'mobile' | 'ordinateur'
+
+export const COLONNE_TUTO = {
+  mobile: 'tuto_mobile_vu_le',
+  ordinateur: 'tuto_ordinateur_vu_le',
+} as const satisfies Record<Appareil, string>
+
+export function estAppareil(v: unknown): v is Appareil {
+  return v === 'mobile' || v === 'ordinateur'
 }
+
+export type VisitesAFaire = Record<Appareil, boolean>
+
+export function visitesAFaire(
+  fiche: { tuto_mobile_vu_le?: string | null; tuto_ordinateur_vu_le?: string | null } | null,
+): VisitesAFaire {
+  return {
+    mobile: fiche?.tuto_mobile_vu_le === null,
+    ordinateur: fiche?.tuto_ordinateur_vu_le === null,
+  }
+}
+
+const route = (appareil: Appareil) => `/api/washer/visite-guidee?appareil=${appareil}`
 
 /** Ce qu'il faut afficher en arrivant sur une page.
  *
@@ -131,19 +248,125 @@ export function abonnerVisite(f: () => void): () => void {
   return () => { abonnes.delete(f) }
 }
 
-/** « Passer » ou « Terminé » : la visite disparaît tout de suite, l'écriture en
- *  base suit. Un second appel (double clic) ne renvoie rien.
+/** À appeler juste après une AUTHENTIFICATION réussie (connexion, confirmation
+ *  d'inscription par code) — jamais après un simple rechargement de page.
+ *
+ *  `sessionStorage` retient l'état de l'ONGLET pour qu'un retour arrière ne
+ *  relance pas une visite déjà vue (voir `etatAuChargement`), mais rien n'y
+ *  associe un COMPTE : supprimer un compte de test et s'en recréer un dans
+ *  le même onglet (habitude de Ryan en ce moment, pour retester un correctif)
+ *  laisse la visite « finie » du compte précédent en mémoire — elle bloque
+ *  alors celle du nouveau compte, qui ne se lance jamais. Symptôme exact
+ *  signalé le 2026-10-11 : « je viens de créer mon compte et le tuto ne sait
+ *  pas lancer ». Effacer ici, à CHAQUE connexion réelle, rend la base
+ *  (`tuto_mobile_vu_le`/`tuto_ordinateur_vu_le`, lues par `aFaire`) de nouveau seule maîtresse
+ *  dès qu'une session change de compte — sans rien changer pour le cas normal
+ *  (un seul compte, toute la session) : `etatAuChargement` recalcule alors
+ *  simplement à partir de `aFaire`, exactement ce qu'il aurait donné sans
+ *  cette valeur en cache. */
+export function oublierVisite(): void {
+  ecrireVisite({ statut: 'absente' })
+}
+
+/** « Passer » : ferme la carte tout de suite ET marque la visite comme vue
+ *  en base — même effet que « Terminé » pour ce qui est de ne plus se
+ *  redéclencher tout seul. Changé le 2026-10-10 : avant, « Passer » ne
+ *  touchait pas la base, et la visite reprenait au premier arrêt dès que
+ *  `/dashboard` se rechargeait pour de vrai (tant que la colonne restait
+ *  NULL) — y compris en appuyant simplement sur « Aujourd'hui » dans la
+ *  barre du bas, qui recharge `/dashboard` depuis zéro. Ryan, en testant sur
+ *  un compte réel : passé le premier arrêt une fois, revenu sur
+ *  « Aujourd'hui », la visite s'est redéclenchée — « censée se déclencher
+ *  une fois à la création du compte, ou via Revoir le tuto, jamais toute
+ *  seule après ». Elle ne se relance plus désormais que depuis le Guide
+ *  (`redemarrerVisite`, qui efface la colonne exprès).
+ *
+ *  Renvoie une promesse — purement informatif (un appelant normal n'a rien
+ *  à en faire, c'est un ping au mieux, la carte a déjà disparu) mais permet
+ *  aux tests d'attendre la vraie fin de l'appel réseau plutôt que de deviner
+ *  un délai. */
+export function fermerPourLInstant(appareil: Appareil): Promise<void> {
+  ecrireVisite({ statut: 'absente' })
+
+  return fetch(route(appareil), { method: 'POST', keepalive: true })
+    .then(res => {
+      if (res.status === 401) logger.warn('visite_guidee.passer.session_expiree', {})
+    })
+    .catch(e => logger.error('visite_guidee.passer.reseau', {}, e))
+}
+
+/** « Terminé », au dernier arrêt seulement : la visite disparaît tout de suite,
+ *  l'écriture en base suit (même appel que « Passer » ci-dessus — les deux
+ *  ferment la visite pour de bon). Un second appel (double clic) ne renvoie rien.
  *
  *  Si l'écriture échoue, la visite reviendra à la prochaine session : le serveur
  *  trace déjà ses propres échecs (errorId), on ne trace ici que ce qu'il ne peut
- *  pas voir — la requête qui ne lui parvient pas, ou une session expirée. */
-export function terminerVisite(): void {
-  if (lireEtat(lireVisite()).statut === 'finie') return
+ *  pas voir — la requête qui ne lui parvient pas, ou une session expirée.
+ *  Renvoie une promesse pour la même raison que `fermerPourLInstant` ci-dessus. */
+export function terminerVisite(appareil: Appareil): Promise<void> {
+  if (lireEtat(lireVisite(), ETAPES_VISITE.length).statut === 'finie') return Promise.resolve()
   ecrireVisite({ statut: 'finie' })
 
-  fetch('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+  return fetch(route(appareil), { method: 'POST', keepalive: true })
     .then(res => {
       if (res.status === 401) logger.warn('visite_guidee.terminer.session_expiree', {})
     })
     .catch(e => logger.error('visite_guidee.terminer.reseau', {}, e))
+}
+
+/** Bouton « Revoir le tuto » du Guide : repart de zéro même si déjà terminée.
+ *  Efface la colonne du tuto de cet appareil en base (sinon le prochain chargement de
+ *  `/dashboard` la redirait aussitôt « finie ») puis relance au premier arrêt.
+ *
+ *  Renvoie une promesse — l'appelant DOIT l'attendre avant de naviguer vers
+ *  `/dashboard` (et appeler `router.refresh()` juste après). Avant le
+ *  2026-10-10, cette fonction ne l'attendait pas elle-même : l'appelant
+ *  lançait `router.push('/dashboard')` dans la foulée, sans attendre que la
+ *  base ait vraiment été modifiée NI que le cache routeur de Next.js ait eu
+ *  la moindre raison de ne pas resservir la page déjà visitée (celle d'avant
+ *  la remise à zéro). Repéré par Ryan : premier clic sur « Revoir le tuto »
+ *  qui ramène simplement au tableau de bord sans rien démontrer, deuxième
+ *  clic qui marche — et un « faux lancement » (premier arrêt qui semblait se
+ *  jouer deux fois), très probablement le même bug : la page en cache
+ *  s'affiche d'abord, puis Next.js la remplace en silence par la version
+ *  fraîche une fraction de seconde après, réamorçant le premier arrêt.
+ *  Vérifié : 5 essais consécutifs sans échec une fois la suppression
+ *  attendue ET `router.refresh()` ajouté (contre des échecs intermittents
+ *  avec `router.refresh()` seul, sans l'attente). */
+export async function redemarrerVisite(appareil: Appareil): Promise<void> {
+  ecrireVisite({ statut: 'en_cours', etape: 0 })
+
+  try {
+    const res = await fetch(route(appareil), { method: 'DELETE' })
+    if (res.status === 401) logger.warn('visite_guidee.redemarrer.session_expiree', {})
+  } catch (e) {
+    logger.error('visite_guidee.redemarrer.reseau', {}, e)
+  }
+}
+
+// ── Signal des arrêts `interactif` ──────────────────────────────────────────
+//
+// Les écrans de réglages (PrestationsV2, HorairesV2) gardent leur propre état
+// local après une écriture — `usePrestationsV2`/`useHorairesV2` ne rappellent
+// PAS le serveur (affichage optimiste assumé, voir leurs commentaires), donc
+// les props que chaque page sert à `DashboardShell` à son premier rendu
+// restent figées : une prestation ajoutée pendant la visite ne s'y reflète
+// jamais. Plutôt que de forcer un `router.refresh()` que ces écrans évitent
+// exprès, chacun signale son écriture ici, et VisiteGuidee n'écoute que
+// l'arrêt affiché — même mécanisme que `abonnerVisite` ci-dessus.
+// (`baseAddress`/`phone`/`logo` sont partis le 2026-10-11 avec les arrêts
+// correspondants — ProfilV2/useApparenceV2 ne les signalent plus.)
+export type CleAvancement = 'services' | 'availabilities'
+
+const abonnesAvancement = new Set<(cle: CleAvancement) => void>()
+
+/** Appelé juste après une écriture réussie — jamais avant, jamais en optimiste :
+ *  un signal doit dire « c'est fait », pas « ça va peut-être marcher ». */
+export function signalerAvancement(cle: CleAvancement): void {
+  abonnesAvancement.forEach(f => f(cle))
+}
+
+export function abonnerAvancement(f: (cle: CleAvancement) => void): () => void {
+  abonnesAvancement.add(f)
+  return () => { abonnesAvancement.delete(f) }
 }

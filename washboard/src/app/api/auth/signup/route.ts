@@ -4,8 +4,7 @@ import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { trustedOrigin } from '@/lib/appOrigin'
-import { envoyerLienConfirmation } from '@/lib/confirmationEmail'
+import { envoyerCodeConfirmation } from '@/lib/confirmationEmail'
 import { PLAN_ESSAI } from '@/lib/plan'
 import { generateSlug } from '@/lib/slug'
 
@@ -205,12 +204,11 @@ export async function POST(request: NextRequest) {
   // page déjà reprise partirait avec lui.
   //
   // Un envoi raté ne fait pas échouer l'inscription : le compte existe, et
-  // /verifier-email propose de renvoyer le lien.
-  await envoyerLienConfirmation(supabase, {
+  // /verifier-email propose de renvoyer le code.
+  await envoyerCodeConfirmation(supabase, {
     userId: authData.user.id,
     email: email.trim(),
     washerName: name.trim(),
-    origin: trustedOrigin(request.headers.get('origin')),
   })
 
   return NextResponse.json({ success: true })

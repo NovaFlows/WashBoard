@@ -6,8 +6,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
+import { oublierVisite } from '@/lib/visiteGuidee'
 
 type Message = { type: 'ok' | 'erreur'; texte: string } | null
+
+// Mesurée via `generateLink` (`lib/confirmationEmail.ts`), pas documentée
+// ailleurs : la longueur de l'OTP email est un réglage du tableau de bord
+// Supabase, pas du code.
+const LONGUEUR_CODE = 8
 
 async function appeler(url: string, corps: Record<string, string>): Promise<{ ok: boolean; erreur: string | null }> {
   try {
@@ -65,6 +71,8 @@ export default function VerifierEmail({ email, lienInvalide }: {
   lienInvalide: boolean
 }) {
   const router = useRouter()
+  const [code, setCode] = useState('')
+  const [verification, setVerification] = useState(false)
   const [envoi, setEnvoi] = useState(false)
   const [message, setMessage] = useState<Message>(null)
   const [confirmerRecommencer, setConfirmerRecommencer] = useState(false)
@@ -72,13 +80,39 @@ export default function VerifierEmail({ email, lienInvalide }: {
   const [motDePasse, setMotDePasse] = useState('')
   const etat = email ? 'attente' : 'sans-inscription'
 
+  async function confirmer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email || code.length !== LONGUEUR_CODE) return
+    setVerification(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/auth/confirm-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      })
+      const json = await res.json().catch(() => null)
+      if (res.ok && json?.destination) {
+        oublierVisite()
+        router.push(json.destination)
+        router.refresh()
+        return
+      }
+      setMessage({ type: 'erreur', texte: json?.error ?? 'Une erreur est survenue. Réessaie dans un instant.' })
+    } catch {
+      setMessage({ type: 'erreur', texte: 'Connexion impossible. Vérifie ta connexion internet et réessaie.' })
+    }
+    setVerification(false)
+  }
+
   async function renvoyer() {
     if (!email) return
     setEnvoi(true)
     setMessage(null)
+    setCode('')
     const { ok, erreur } = await appeler('/api/auth/resend-confirmation', { email })
     setMessage(ok
-      ? { type: 'ok', texte: 'Email renvoyé. Il peut mettre une minute à arriver.' }
+      ? { type: 'ok', texte: 'Code renvoyé. Il peut mettre une minute à arriver.' }
       : { type: 'erreur', texte: erreur! })
     setEnvoi(false)
   }
@@ -139,9 +173,9 @@ export default function VerifierEmail({ email, lienInvalide }: {
                   </div>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-white/70 leading-relaxed text-center">
-                  Un email de confirmation a été envoyé à{' '}
+                  Un code de confirmation a été envoyé à{' '}
                   <strong className="text-slate-900 dark:text-white break-all">{email}</strong>.
-                  Clique sur le lien qu&apos;il contient pour activer ton compte.
+                  Entre-le ci-dessous pour activer ton compte.
                 </p>
                 <p className="text-xs text-slate-400 dark:text-white/40 text-center">
                   Rien reçu ? Regarde dans tes courriers indésirables avant de le renvoyer.
@@ -149,28 +183,59 @@ export default function VerifierEmail({ email, lienInvalide }: {
 
                 {message && <Alerte message={message} />}
 
-                <button
-                  type="button"
-                  onClick={renvoyer}
-                  disabled={envoi || suppression}
-                  className="w-full py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-lg shadow-[#1651E8]/20"
-                >
-                  {envoi ? (
-                    <span className="flex items-center justify-center gap-2"><Spinner />Envoi…</span>
-                  ) : 'Renvoyer l\'email'}
-                </button>
+                <form onSubmit={confirmer} noValidate className="space-y-3">
+                  <div>
+                    <label htmlFor="code-confirmation" className="wb-label">
+                      Code de confirmation
+                    </label>
+                    <input
+                      id="code-confirmation"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      maxLength={LONGUEUR_CODE}
+                      value={code}
+                      onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, LONGUEUR_CODE))}
+                      required
+                      placeholder={'0'.repeat(LONGUEUR_CODE)}
+                      disabled={verification}
+                      className="wb-input text-center text-2xl font-bold tracking-[0.2em]"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={verification || code.length !== LONGUEUR_CODE}
+                    className="w-full py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-lg shadow-[#1651E8]/20"
+                  >
+                    {verification ? (
+                      <span className="flex items-center justify-center gap-2"><Spinner />Vérification…</span>
+                    ) : 'Confirmer'}
+                  </button>
+                </form>
+
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={renvoyer}
+                    disabled={envoi || verification || suppression}
+                    className="text-xs text-slate-400 dark:text-white/35 hover:text-slate-600 dark:hover:text-white/60 underline-offset-2 hover:underline transition-colors disabled:opacity-40"
+                  >
+                    {envoi ? 'Envoi…' : 'Renvoyer le code'}
+                  </button>
+                </div>
 
                 {!confirmerRecommencer ? (
-                  // Volontairement discret : contrairement à « Renvoyer l'email »,
-                  // cette action supprime le compte. Petit texte centré, sans le
-                  // bleu de marque (qui appelle au clic) et sans pleine largeur,
-                  // pour qu'il ne se lise pas comme une deuxième option au même
-                  // niveau que le bouton principal.
+                  // Volontairement discret : contrairement à « Confirmer » et
+                  // « Renvoyer le code », cette action supprime le compte. Petit
+                  // texte centré, sans le bleu de marque (qui appelle au clic) et
+                  // sans pleine largeur, pour qu'il ne se lise pas comme une
+                  // deuxième option au même niveau que le bouton principal.
                   <div className="pt-1 text-center">
                     <button
                       type="button"
                       onClick={() => { setConfirmerRecommencer(true); setMessage(null) }}
-                      disabled={envoi || suppression}
+                      disabled={envoi || verification || suppression}
                       className="text-xs text-slate-400 dark:text-white/35 hover:text-slate-600 dark:hover:text-white/60 underline-offset-2 hover:underline transition-colors disabled:opacity-40"
                     >
                       Mauvaise adresse ? Recommence l&apos;inscription
