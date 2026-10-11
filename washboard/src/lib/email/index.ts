@@ -1047,12 +1047,19 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
 // Le nom de l'entreprise est saisi par l'inscrit lui-même : il est échappé,
 // sinon n'importe qui pourrait glisser un lien de sa composition dans un email
 // parti de noreply@washboard.fr vers l'adresse qu'il a tapée.
-export async function sendEmailConfirmation({ to, washerName, confirmUrl }: {
-  to: string; washerName: string | null; confirmUrl: string
+//
+// Un CODE à recopier, pas un lien à cliquer : décidé par Ryan le 2026-10-11
+// après avoir buté sur l'app Mail de l'iPhone qui ouvre tout lien dans Safari,
+// jamais dans la PWA installée — avec un tiroir de cookies séparé de celui de
+// l'app, la confirmation se faisait dans un contexte que la PWA ne voit
+// jamais. Le code reste dans l'app qui l'a demandé, sur n'importe quel
+// appareil.
+export async function sendEmailConfirmation({ to, washerName, code }: {
+  to: string; washerName: string | null; code: string
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const salutation = washerName ? `Bonjour <strong>${escapeHtml(washerName)}</strong>,` : 'Bonjour,'
-  const lien = escapeHtml(confirmUrl)
+  const codeEchappe = escapeHtml(code)
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
@@ -1071,16 +1078,13 @@ export async function sendEmailConfirmation({ to, washerName, confirmUrl }: {
     <div style="padding:32px 40px;">
       <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">${salutation}</p>
       <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-        Ton compte WashBoard est créé. Pour l&apos;activer, confirme que cette adresse est bien la tienne.
+        Ton compte WashBoard est créé. Pour l&apos;activer, entre ce code dans l&apos;application :
       </p>
-      <div style="text-align:center;">
-        <a href="${lien}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Confirmer mon email
-        </a>
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 28px;">
+          <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#2563eb;font-family:'SF Mono',Consolas,monospace;">${codeEchappe}</span>
+        </div>
       </div>
-      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;line-height:1.6;word-break:break-all;">
-        Le bouton ne fonctionne pas ? Copie ce lien dans ton navigateur :<br>${lien}
-      </p>
       <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
         Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.
       </p>

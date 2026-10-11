@@ -920,21 +920,125 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 
 ### 📖 Guide / tuto
 
-- [ ] **Tuto PWA à l'installation, avec animation d'assombrissement façon
-      vraie application** — demande de Ryan, 2026-10-05, vient compléter
-      l'item déjà existant plus bas (« Tuto PWA à la première installation de
-      l'application », section Refonte 2026) : même besoin produit, mais avec
-      une exigence visuelle précise en plus — un overlay qui assombrit l'écran
-      autour de l'élément mis en avant (spotlight), comme les tutoriels des
-      applications natives (Instagram, etc.), pas une simple bulle/tooltip.
-      **Plus lent à faire que les deux items landing ci-dessus** : ce motif
-      visuel n'existe PAS encore dans le code (vérifié : `VisiteGuidee.tsx`,
-      la visite guidée du tableau de bord, n'a ni fondu ni overlay assombri —
-      juste une carte/bulle classique) — il faudrait le construire de zéro,
-      PUIS définir le contenu exact (barre de nav du bas, bouton central,
-      geste retour, menu « Plus ») qui est lui-même encore « à préciser avec
-      Alexandre avant de lancer » selon l'item original. Deux chantiers
-      empilés (le motif visuel + le contenu), ni l'un ni l'autre commencé.
+- [ ] 2026-10-08 — **Tuto PWA, FUSIONNÉ dans la visite guidée du tableau de
+      bord — sur `feat/tuto-pwa`, poussée, preview Vercel vérifiée, PAS ENCORE
+      MERGÉE sur `master`.** Demande de Ryan, 2026-10-05, puis très largement
+      recadrée en cours de route (2026-10-07/08) : la première version
+      (4 arrêts, composant `TutoPwaV2` à part, colonne `pwa_tour_complete_at`
+      dédiée) a été jetée une fois que Ryan a précisé ce qu'il voulait vraiment
+      — un seul tuto qui accompagne la création du compte de bout en bout,
+      pas deux tutos séparés qui se chevaucheraient. **Remplace entièrement
+      `VisiteGuidee.tsx` : rien à faire côté SQL, aucune nouvelle colonne,
+      réutilise `dashboard_tour_complete_at` qui existait déjà.**
+      - `lib/visiteGuidee.ts` : `ETAPES_VISITE` passe à 18 arrêts côté PWA
+        (12 sur le site, inchangés dans l'ordre/contenu — décision de Ryan du
+        2026-10-02 préservée). Les arrêts `pwaSeulement` (barre du bas,
+        bouton [+], geste retour) s'intercalent entre les arrêts « page »
+        existants plutôt que d'être un bloc à part : on présente un onglet,
+        puis on y entre pour de vrai.
+      - **Trois arrêts `interactif`** (Prestations, Horaires, Adresse de
+        départ — ce dernier nouveau, c'était le 3ᵉ essentiel bloquant de
+        `computeSetupProgress` et il manquait au tuto) : pas de fond sombre
+        bloquant, l'écran réel reste cliquable, et la visite avance TOUTE
+        SEULE dès que le laveur fait vraiment l'action (ajoute une
+        prestation, un horaire, une adresse) — détecté via
+        `signalerAvancement`/`abonnerAvancement` (`visiteGuidee.ts`), posé
+        juste après chaque écriture réussie dans `usePrestationsV2.ts`,
+        `useHorairesV2.ts` et `ProfilV2.tsx` (ces écrans gardent leur état
+        local après écriture sans rappeler le serveur, donc les props de la
+        page ne suffisaient pas).
+      - Découpe lumineuse en CSS pur (`box-shadow` à 9999px autour d'un
+        rectangle posé sur la cible via `getBoundingClientRect()`), comme
+        prévu initialement — mais le suivi de position est passé d'une
+        boucle `requestAnimationFrame` à 60 img/s (saccadait tout le reste
+        sur un vrai téléphone, voir plus bas) à de l'événementiel
+        (`ResizeObserver` + écouteurs scroll/resize + quelques mesures
+        bornées pour rattraper un bandeau qui charge après coup).
+      - **Trois tournées de retouches après test réel par Ryan sur preview
+        Vercel** (pas que de la vérification Playwright cette fois) :
+        1. Double contour (le contour pulsé du site restait posé en plus de
+           la découpe PWA, désaligné) — corrigé, l'app n'a plus qu'un seul
+           repère à la fois.
+        2. Jank réel sur téléphone (« aucune fluidité, mode saccadé ») —
+           cause : la boucle `requestAnimationFrame` perpétuelle ci-dessus,
+           combinée à des animations CSS qui repeignaient aussi en boucle
+           (`box-shadow`/`filter` animés en continu). Remplacées par de
+           l'`opacity` pure (compositeur, aucun repeint) ; navigation entre
+           arrêts préchargée (`router.prefetch`) plutôt que chargée au clic.
+           Mesuré sous ralentissement CPU 6x sur un build de production :
+           533 ms de blocage sur une image avant correctif, ~210 ms après.
+        3. Saut silencieux « étape 3 à étape 10 » — un arrêt `interactif`
+           déjà satisfait en arrivant (compte déjà configuré) avançait
+           instantanément sans rien montrer ; enchaîné sur les 3 arrêts
+           interactifs d'affilée, ça ressemblait à un bug. Montre maintenant
+           le même palier « Fait ✓ » visible que lorsque l'action vient
+           d'être faite.
+      - **4ᵉ tournée (2026-10-08/09, nuit) — Ryan pas satisfait du rendu
+        malgré les trois correctifs ci-dessus : « j'ai pas essayé de faire
+        des innovations ou des déplacements fluides et magnifiques »,
+        « carte blanche », autonomie totale accordée pour reprendre à zéro
+        si besoin.** Plutôt qu'ajuster encore le `transition` CSS, remplacé
+        le mécanisme de déplacement lui-même par la **View Transition
+        native du navigateur** (`document.startViewTransition`) — prévue
+        exactement pour ça : le navigateur capture l'état avant/après et
+        morphe lui-même position ET apparence (découpe sombre ↔ halo clair),
+        plutôt qu'un simple glissement de `top`/`left`/`width`/`height`.
+        - `view-transition-name: wb-visite-spot` sur la découpe/le halo,
+          timing personnalisé (rebond, cohérent avec le reste) via
+          `::view-transition-group/old/new`. La carte a son propre nom pour
+          s'isoler du fondu-enchaîné racine (sinon ancien et nouveau texte
+          restaient visibles, superposés — vu en capturant des écrans
+          Playwright à 30/80/150/280/450 ms pendant la transition, pas
+          seulement en relisant le CSS).
+        - Le callback attend la fin RÉELLE de la navigation Next.js
+          (asynchrone) via `navigation` (`useTransition`), avec un filet de
+          1,5 s pour ne jamais bloquer la page.
+        - Même traitement pour « Passer »/« Terminé » (fondu plutôt que
+          disparition sèche), petit retour haptique (`navigator.vibrate`,
+          Android uniquement) quand une action réelle vient d'être détectée.
+        - `prefers-reduced-motion` respecté ; Safari < 18 (pas de support) :
+          retombe sur la transition CSS déjà en place, aucune régression.
+      - Vérifié à chaque étape par des comptes Supabase jetables + Playwright
+        (jamais commités) : tour complet 18 arrêts, double-contour absent,
+        ajout réel d'une prestation → avance automatique confirmée,
+        recentrage derrière la carte, redémarrage depuis le Guide, fondu
+        d'ouverture/fermeture avec et sans support des View Transitions.
+        `tsc`, `eslint` (0 erreur), `vitest run` (2469 tests) et
+        `next build` propres à chaque commit.
+      - **5ᵉ tournée (2026-10-09, même nuit) — toujours pas satisfait : « j'ai
+        pas essayé de faire des innovations... carte blanche », « vingt fois
+        mieux, surtout au niveau du visuel ». Plan écrit et validé avant de
+        recoder (voir `.claude/agents/tuto-pwa.md`, nouveau fichier de
+        décisions persistantes, même rôle que `refonte.md`).**
+        - **Phase A étendue à 5 essentiels** (`computeSetupProgress` en a 5,
+          le tuto n'en couvrait que 3) : téléphone et logo rejoignent
+          prestations/horaires/adresse comme arrêts `interactif`.
+        - **Palier « déjà fait »** séparé du palier « vient de réussir »
+          (3 états au lieu d'un booléen) : un arrêt déjà satisfait en
+          arrivant montre l'explication complète et attend un clic, il
+          n'avance plus tout seul en 900ms — ça se lisait comme un bug.
+        - **Refonte visuelle** : assombrissement allégé (.78 → .35), carte
+          en verre (même matière que la barre du bas, `--v2-verre-*`),
+          flèche entre la carte et la cible, barre de progression segmentée
+          façon Stories, anneau lumineux à deux couches.
+        - **Phase B** : `ETAPES_VISITE` étendue de 18 à 24 arrêts PWA
+          (12 à 18 côté site) pour couvrir le catalogue réel de pages —
+          Clients/Messages automatiques/Publicités, Chiffres (3 onglets),
+          Devis-factures, Dépenses, Réglages, Assistance. Les 3 arrêts
+          morts vers d'anciens écrans v1 sans lien depuis aucun écran v2
+          (`/dashboard/crm`, `/dashboard/compta`, `/dashboard/factures`)
+          retirés, remplacés par `/dashboard/chiffres` et
+          `/dashboard/chiffres/documents`.
+        - Vérifié par comptes Supabase jetables + Playwright : tour complet
+          24 arrêts (compte Business, tout déverrouillé), flux
+          téléphone→logo avec vraie écriture, 18 arrêts côté site, aucune
+          régression. `tsc`, `eslint` (0 erreur), `vitest run` (2469 tests)
+          et `next build` propres.
+        - **Pas fait, noté dans `tuto-pwa.md`** : arrêts narratifs pour les
+          6 réglages « confort », cibles multiples dans un même arrêt.
+      - **Reste à faire** : accord final de Ryan sur le rendu après cette
+        dernière tournée (il doit se reconnecter sur le téléphone — même lien
+        de preview, pas besoin de réinstaller), puis fusion sur `master`.
 
 ## 🎨 Refonte 2026 — état de la branche `refonte-pwa` au 2026-09-22
 
@@ -942,18 +1046,16 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 > d'Alexandre reprenne sans redécouvrir. **Passes 0 à 3 faites, la 4 est la
 > suivante.** Le plan de vol complet est dans `.claude/agents/refonte.md`.
 
-- [ ] **Tuto PWA à la première installation de l'application** (demande
-      d'Alexandre, 2026-10-07). Distinct de la visite guidée du tableau de bord
-      (`VisiteGuidee.tsx`/`visiteGuidee.ts`, onze arrêts, déclenchée au premier
-      passage sur `/dashboard`, quel que soit le support) : ici, le
-      déclencheur est l'INSTALLATION de l'app elle-même (`usePwaStandalone()`
-      détecte le mode standalone), pour un laveur qui utilisait déjà le site
-      depuis un moment et installe l'app plus tard — il a donc déjà fait la
-      visite guidée, mais découvre une forme différente (barre du bas,
-      gestes, écrans v2) sans qu'on la lui présente. Contenu à définir : au
-      minimum la barre de navigation du bas et son bouton central, le geste
-      retour (`RetourGesteV2`), où retrouver ce qui a disparu (menu latéral →
-      « Plus »). Sujet à préciser avec Alexandre avant de lancer.
+- [x] **Tuto PWA à la première installation de l'application** (demande
+      d'Alexandre, 2026-10-07) — **résolu différemment de ce qui était prévu
+      ici : pas un second tuto séparé.** Ryan a tranché le 2026-10-07 que
+      cette présentation (barre du bas, bouton central, geste retour) devait
+      s'intercaler DANS la visite guidée existante plutôt que se déclencher à
+      part à l'installation — un laveur qui installe l'app après coup la
+      verra simplement en rejouant la visite depuis le Guide
+      (`redemarrerVisite()`). Voir l'entrée « Tuto PWA, FUSIONNÉ dans la
+      visite guidée » plus haut (section Guide/tuto) pour le détail de ce qui
+      a été construit.
 - [ ] **CHANGEMENT D'ARCHITECTURE (2026-09-22, pas encore commité) — v2
       seulement dans la PWA installée, jamais sur le site.** Alexandre : « moi
       je veux que la PWA ressemble a une app mais que le site web que ce soit

@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }))
 const { envoyerLien, trouverCompte } = vi.hoisted(() => ({ envoyerLien: vi.fn(), trouverCompte: vi.fn() }))
-vi.mock('@/lib/confirmationEmail', () => ({ envoyerLienConfirmation: envoyerLien }))
+vi.mock('@/lib/confirmationEmail', () => ({ envoyerCodeConfirmation: envoyerLien }))
 vi.mock('@/lib/compteParEmail', () => ({ trouverCompteParEmail: trouverCompte }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
@@ -53,12 +53,12 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs() })
 
 describe('POST /api/auth/resend-confirmation', () => {
-  it('renvoie le lien au compte en attente de cette adresse', async () => {
+  it('renvoie le code au compte en attente de cette adresse', async () => {
     const res = await POST(requete({ email: '  test@exemple.fr ' }))
     expect(res.status).toBe(200)
     expect(trouverCompte).toHaveBeenCalledWith(expect.anything(), 'test@exemple.fr')
     expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), {
-      userId: ID, email: 'test@exemple.fr', washerName: 'Kooki Clean', origin: ORIGINE,
+      userId: ID, email: 'test@exemple.fr', washerName: 'Kooki Clean',
     })
   })
 

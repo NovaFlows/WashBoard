@@ -7,6 +7,7 @@ import { BarreBasV2 } from './BarreBasV2'
 import ConfirmationEnvoiV2 from './ConfirmationEnvoiV2'
 import RetourGesteV2 from './RetourGesteV2'
 import VisiteGuidee from './VisiteGuidee'
+import type { VisitesAFaire } from '@/lib/visiteGuidee'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -45,8 +46,19 @@ type Props = {
   slug?: string | null
   /** Fin de la période payée (colonne écrite par le webhook Stripe) : décide du délai de grâce avant le retour sur Découverte. */
   subscriptionEndsAt?: string | null
-  /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche la visite guidée. */
-  visiteGuidee?: boolean
+  /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche les tutos. Un par
+   *  design (mobile, ordinateur) ; le tuto choisit celui du design affiché. */
+  visiteGuidee?: VisitesAFaire
+  /** Signaux des arrêts `interactif` de la visite (voir visiteGuidee.ts) : seules
+   *  Prestations et Horaires le renseignent — chacune avec son seul champ,
+   *  l'autre `undefined`. Sert à avancer la visite toute seule quand le
+   *  laveur vient de faire l'action réelle, pas à son arrivée sur la page.
+   *  (`baseAddressRempli`/`phoneRempli`/`logoRempli` sont partis le
+   *  2026-10-11 avec les arrêts correspondants, déplacés vers l'onboarding.) */
+  avancementVisite?: {
+    servicesCount?: number
+    availabilitiesCount?: number
+  }
 }
 
 function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
@@ -538,7 +550,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -811,7 +823,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </SupportBadgesContext.Provider>
       </main>
 
-      <VisiteGuidee aFaire={visiteGuidee} />
+      <VisiteGuidee aFaire={visiteGuidee} avancement={avancementVisite} />
 
       {/* Retiré dans la PWA en bêta : posé sous la barre du bas, il allongeait la page de
           plus d'un écran de vide et passait sous la barre (2026-09-25). */}

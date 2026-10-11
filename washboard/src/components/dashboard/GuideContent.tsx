@@ -2,9 +2,12 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MessageCircleQuestion } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { MessageCircleQuestion, RotateCcw } from 'lucide-react'
 import { searchGuide, type GuideEntry } from '@/lib/guide'
 import { useSupportThreads } from '@/lib/useSupportThreads'
+import { redemarrerVisite } from '@/lib/visiteGuidee'
+import { isDesignMobile } from '@/lib/designMobile'
 import SupportPanel from './SupportPanel'
 
 /**
@@ -51,7 +54,19 @@ function EntryCard({ entry }: { entry: GuideEntry }) {
  *               reponses, pas un lecteur video a faire defiler.
  */
 export default function GuideContent({ intro }: { intro?: React.ReactNode }) {
+  const router = useRouter()
   const [query, setQuery] = useState('')
+
+  // « Revoir la visite guidée » : repart du tout premier arrêt même si déjà
+  // terminée — demande de Ryan, 2026-10-07.
+  // `await` + `router.refresh()` : voir le commentaire de `redemarrerVisite`
+  // — sans ça, `/dashboard` pouvait resservir sa version en cache d'avant la
+  // remise à zéro (premier clic sans effet visible, Ryan 2026-10-10).
+  async function relancerLaVisite() {
+    await redemarrerVisite(isDesignMobile() ? 'mobile' : 'ordinateur')
+    router.push('/dashboard')
+    router.refresh()
+  }
 
   // Fils réels du laveur (table support_questions/support_messages, conçue
   // par cyber) : logique de chargement/envoi/lecture partagée avec la page
@@ -105,9 +120,17 @@ export default function GuideContent({ intro }: { intro?: React.ReactNode }) {
         </div>
 
         {/* Recours permanent, volontairement discret : la recherche reste le
-            premier réflexe, ce bouton ne fait qu'une ligne et ne pousse rien
+            premier réflexe, ces boutons ne font qu'une ligne et ne poussent rien
             à l'écran, y compris sur téléphone. */}
-        <div className="flex justify-end mt-2">
+        <div className="flex justify-end gap-2 mt-2">
+          <button
+            type="button"
+            onClick={relancerLaVisite}
+            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:border-[#1651E8] hover:text-[#1651E8] dark:hover:border-[#6A9FFF] dark:hover:text-[#6A9FFF] transition-colors"
+          >
+            <RotateCcw size={16} aria-hidden />
+            Revoir la visite guidée
+          </button>
           <button
             type="button"
             onClick={() => setSupportOpen(true)}

@@ -60,6 +60,13 @@ export const GUIDE: GuideSection[] = [
         keywords: ['url', 'adresse', 'slug', 'partager', 'lien client'],
       },
       {
+        id: 'liens-reseaux',
+        question: 'Comment partager mon lien sur Instagram, TikTok ou ma fiche Google ?',
+        answer:
+          "Toujours dans [vos liens](/dashboard/parametres#lien-reservation), un peu plus bas : une version de votre lien par réseau — Instagram, TikTok, Facebook, fiche Google. C'est le même lien de réservation à chaque fois, seule la fin change, pour que vous sachiez d'où vient chaque client une fois la réservation faite.",
+        keywords: ['instagram', 'tiktok', 'facebook', 'google', 'reseau', 'reseaux', 'bio'],
+      },
+      {
         id: 'tester-page',
         question: 'Comment vérifier ce que voient mes clients ?',
         answer:
@@ -109,6 +116,13 @@ export const GUIDE: GuideSection[] = [
         keywords: ['confirmer', 'valider', 'en attente', 'accepter', 'agenda google'],
       },
       {
+        id: 'google-agenda',
+        question: 'Comment connecter mon Google Agenda ?',
+        answer:
+          "Depuis [votre Calendrier](/dashboard/admin#agenda), bouton « Connecter ». Une fois relié, chaque rendez-vous confirmé s'y ajoute automatiquement, avec le nom du client et l'adresse — annulé, il en est retiré de la même façon. Pratique pour le retrouver sur votre téléphone sans ouvrir WashBoard, en plus de vos autres rendez-vous.",
+        keywords: ['google agenda', 'synchroniser', 'connecter', 'calendrier google'],
+      },
+      {
         id: 'terminer',
         question: 'Que se passe-t-il quand je marque un RDV « terminé » ?',
         answer:
@@ -140,7 +154,7 @@ export const GUIDE: GuideSection[] = [
         id: 'creneaux-groupes',
         question: 'À quoi servent les créneaux groupés ?',
         answer:
-          "Quand un client réserve dans un secteur où vous avez déjà un rendez-vous, WashBoard lui propose en priorité les horaires qui vous évitent un trajet. Vous pouvez accorder une petite remise sur ces créneaux pour encourager le regroupement : vous roulez moins et vous casez plus de rendez-vous dans la journée.",
+          "Quand un client réserve dans un secteur où vous avez déjà un rendez-vous, WashBoard lui propose en priorité les horaires qui vous évitent un trajet. Vous pouvez accorder une petite remise sur ces créneaux depuis [vos automatismes clients](/dashboard/admin#creneaux) pour encourager le regroupement : vous roulez moins et vous casez plus de rendez-vous dans la journée.",
         keywords: ['creneau', 'groupe', 'zone', 'tournee', 'trajet', 'optimisation', 'remise'],
       },
     ],
@@ -195,6 +209,27 @@ export const GUIDE: GuideSection[] = [
     ],
   },
   {
+    id: 'publicite',
+    title: 'Publicités',
+    summary: 'Savoir si une campagne vous rapporte de l’argent.',
+    entries: [
+      {
+        id: 'publicites-quoi',
+        question: 'À quoi sert l’écran Publicités ?',
+        answer:
+          "Disponible avec la formule Pro, [vos publicités](/dashboard/clients/publicites) répondent à une seule question : est-ce que cette campagne vous rapporte plus qu'elle ne coûte ? Créez une campagne (plateforme, dates, budget), WashBoard vous donne un lien à coller dans votre publicité — ou un lien par vidéo ou par image si vous en diffusez plusieurs, pour savoir laquelle fonctionne. Ensuite tout se compte tout seul : combien de visites sur votre page, combien de réservations, combien de chiffre d'affaires, par campagne et même par création.",
+        keywords: ['publicite', 'campagne', 'meta', 'facebook', 'instagram', 'tiktok', 'google ads', 'budget', 'rentable'],
+      },
+      {
+        id: 'publicites-fiabilite',
+        question: 'Pourquoi WashBoard me dit que le taux n’est pas fiable ?',
+        answer:
+          "Sous un petit nombre de visites, un taux de transformation ne veut rien dire — une seule réservation de plus ou de moins change tout le résultat. WashBoard l'affiche quand même, mais vous prévient plutôt que de vous laisser juger une campagne sur trop peu de données. Attendez qu'il y ait plus de visites avant de couper une campagne sur ce seul chiffre.",
+        keywords: ['fiable', 'taux', 'petit nombre', 'donnees', 'echantillon'],
+      },
+    ],
+  },
+  {
     id: 'factures',
     title: 'Factures',
     summary: 'Facturer vos clients et récupérer vos anciennes factures.',
@@ -234,6 +269,13 @@ export const GUIDE: GuideSection[] = [
           "Oui, depuis [vos factures](/dashboard/factures). Vous pouvez les déposer une par une, en PDF, JPG ou PNG, ou tout envoyer d'un coup dans un fichier ZIP — jusqu'à 200 factures. WashBoard tente de lire la date de chaque facture, mais vérifiez-la : une facture sans date ne peut pas être enregistrée. Le montant et le numéro d'origine sont facultatifs, et une facture importée garde son numéro d'origine, elle ne prend pas de numéro WashBoard. Un point important : cet import est réservé à vos factures de vente, celles que vous avez émises. Les factures d'achat auront leur propre espace, encore en développement.",
         keywords: ['import', 'importer', 'anciennes', 'zip', 'reprise', 'pdf', 'achat', 'vente'],
       },
+      {
+        id: 'documents-manuels',
+        question: 'Puis-je faire un devis ou une facture sans rendez-vous derrière ?',
+        answer:
+          "Oui, depuis [devis et factures](/dashboard/chiffres/documents) — le bouton le plus rapide pour ça, c'est le rond bleu en bas de l'écran, visible partout dans l'application. C'est différent des factures automatiques : celles-ci partent toutes seules quand vous terminez un rendez-vous, alors qu'ici c'est vous qui choisissez le client (ou qui le créez à la volée), les lignes et le total, sans passer par une réservation — utile sur le terrain, pour chiffrer une demande avant de s'engager. Un devis accepté se transforme en facture d'un tap, sans tout retaper. Les deux suivent la même numérotation que le reste de vos documents.",
+        keywords: ['devis', 'manuel', 'sans rendez-vous', 'sur place', 'terrain', 'creer facture'],
+      },
     ],
   },
   {
@@ -247,6 +289,13 @@ export const GUIDE: GuideSection[] = [
         answer:
           "Dans [vos chiffres](/dashboard/compta) : recettes, dépenses et résultat, mois par mois. Seuls les rendez-vous marqués « terminé » sont comptés, d'où l'importance de tenir votre agenda à jour.",
         keywords: ['ca', 'chiffre', 'revenu', 'compta', 'depense', 'benefice', 'resultat'],
+      },
+      {
+        id: 'depenses',
+        question: 'Comment suivre mes frais (essence, produits…) ?',
+        answer:
+          "Dans [vos dépenses](/dashboard/chiffres/depenses). Ajoutez un frais avec sa date, son montant et une catégorie — carburant, produits, matériel, ce qui correspond. Le total de la période s'affiche en haut, pour vérifier tout de suite ; le détail (résultat, graphiques) reste dans [vos chiffres](/dashboard/compta), pour ne pas avoir deux fois la même information à deux endroits.",
+        keywords: ['depense', 'frais', 'essence', 'carburant', 'produits', 'materiel'],
       },
       {
         id: 'abonnement',
@@ -303,6 +352,20 @@ export const GUIDE: GuideSection[] = [
         answer:
           "L'application fonctionne, mais elle est récente et nous la surveillons de près. Deux limites connues : sur iPhone, les boutons « Confirmer » et « Refuser » n'apparaissent pas dans la notification — Apple ne les gère pas — la notification reste simplement cliquable. Et une notification peut arriver avec quelques minutes de retard si votre téléphone est en veille prolongée. Si quelque chose vous semble anormal, écrivez-nous : c'est exactement ce qu'on cherche à savoir pendant cette phase.",
         keywords: ['beta', 'test', 'limite', 'bug', 'ios', 'iphone', 'retard'],
+      },
+    ],
+  },
+  {
+    id: 'aide',
+    title: 'Besoin d’aide ?',
+    summary: 'Quand la réponse n’est pas ici.',
+    entries: [
+      {
+        id: 'contacter-equipe',
+        question: 'Comment contacter l’équipe WashBoard ?',
+        answer:
+          "Depuis [l'assistance](/dashboard/assistance). Écrivez votre question, l'équipe vous répond directement sur place — vous retrouvez l'échange au même endroit la prochaine fois. C'est différent de ce guide : ici, des réponses déjà écrites, à chercher vous-même ; là, une vraie question pour votre situation.",
+        keywords: ['contact', 'contacter', 'support', 'equipe', 'aide', 'question', 'ecrire'],
       },
     ],
   },

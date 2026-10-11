@@ -9,6 +9,7 @@ import {
   modifierPrestation as apiModifierPrestation, supprimerCategorie as apiSupprimerCategorie,
   supprimerPrestation as apiSupprimerPrestation, type ResultatApi,
 } from '@/lib/prestationsApi'
+import { signalerAvancement } from '@/lib/visiteGuidee'
 
 // État de l'écran « Prestations et prix » de la PWA (`PrestationsV2`) : les
 // listes affichées et les six écritures. Chaque écriture rend `null` quand elle
@@ -28,6 +29,7 @@ export function usePrestationsV2(servicesInitiaux: Service[], categoriesInitiale
     const r = await apiCreerPrestation(form)
     if (!r.ok) return r.message
     setServices(s => [...s, r.data])
+    signalerAvancement('services')
     return null
   }
 

@@ -52,7 +52,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 // La génération et l'envoi du lien sont testés dans lib/confirmationEmail.test.ts.
 const { envoyerLien } = vi.hoisted(() => ({ envoyerLien: vi.fn() }))
-vi.mock('@/lib/confirmationEmail', () => ({ envoyerLienConfirmation: envoyerLien }))
+vi.mock('@/lib/confirmationEmail', () => ({ envoyerCodeConfirmation: envoyerLien }))
 
 const { POST } = await import('./route')
 
@@ -248,18 +248,17 @@ describe('POST /api/auth/signup — confirmation de l’email', () => {
     expect(comptesCrees[0]).toMatchObject({ email: 'test@exemple.fr', email_confirm: false })
   })
 
-  it('envoie le lien de confirmation au compte créé', async () => {
+  it('envoie le code de confirmation au compte créé', async () => {
     await inscrire({ name: ' Kooki Clean ' })
     expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), {
       userId: ID_COMPTE,
       email: 'test@exemple.fr',
       washerName: 'Kooki Clean',
-      origin: expect.any(String),
     })
   })
 
   it('un envoi raté ne fait PAS échouer l’inscription', async () => {
-    // Le compte existe : /verifier-email propose de renvoyer le lien.
+    // Le compte existe : /verifier-email propose de renvoyer le code.
     envoyerLien.mockResolvedValue(false)
     const { res, body } = await inscrire()
     expect(res.status).toBe(200)
@@ -271,7 +270,7 @@ describe('POST /api/auth/signup — confirmation de l’email', () => {
     expect(res.headers.get('set-cookie')).toBeNull()
   })
 
-  it('pas de lien quand la fiche n’a pas pu être créée', async () => {
+  it('pas de code quand la fiche n’a pas pu être créée', async () => {
     plan.insertErreurs = [{ code: '23505' }, { code: '23505' }, { code: '23505' }]
     await inscrire()
     expect(envoyerLien).not.toHaveBeenCalled()

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
 import { etatOnboarding } from '@/lib/onboarding'
+import { oublierVisite } from '@/lib/visiteGuidee'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -35,6 +36,7 @@ export default function LoginPage() {
       setError('Email ou mot de passe incorrect'); setLoading(false); return
     }
     const { destination } = await etatOnboarding(supabase, data.user.id)
+    oublierVisite()
     router.push(destination)
     router.refresh()
   }
