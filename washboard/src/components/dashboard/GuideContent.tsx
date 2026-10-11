@@ -7,6 +7,7 @@ import { MessageCircleQuestion, RotateCcw } from 'lucide-react'
 import { searchGuide, type GuideEntry } from '@/lib/guide'
 import { useSupportThreads } from '@/lib/useSupportThreads'
 import { redemarrerVisite } from '@/lib/visiteGuidee'
+import { isDesignMobile } from '@/lib/designMobile'
 import SupportPanel from './SupportPanel'
 
 /**
@@ -62,7 +63,7 @@ export default function GuideContent({ intro }: { intro?: React.ReactNode }) {
   // — sans ça, `/dashboard` pouvait resservir sa version en cache d'avant la
   // remise à zéro (premier clic sans effet visible, Ryan 2026-10-10).
   async function relancerLaVisite() {
-    await redemarrerVisite()
+    await redemarrerVisite(isDesignMobile() ? 'mobile' : 'ordinateur')
     router.push('/dashboard')
     router.refresh()
   }

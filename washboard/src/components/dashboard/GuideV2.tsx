@@ -8,6 +8,7 @@ import { CHAMP, PRESSION, corps, corpsFort, titre } from '@/components/dashboard
 import { searchGuide, type GuideEntry } from '@/lib/guide'
 import { lienV2 } from '@/lib/lienV2'
 import { redemarrerVisite } from '@/lib/visiteGuidee'
+import { isDesignMobile } from '@/lib/designMobile'
 
 // « Guide d'utilisation » — refonte 2026 (Alexandre, 2026-09-27 : « c'est la même qu'avant la
 // refonte PWA »). Même contenu que le site, à la virgule près : `lib/guide.ts` reste la seule
@@ -96,7 +97,7 @@ export default function GuideV2() {
   // — sans ça, `/dashboard` pouvait resservir sa version en cache d'avant la
   // remise à zéro (premier clic sans effet visible, Ryan 2026-10-10).
   async function relancerLeTuto() {
-    await redemarrerVisite()
+    await redemarrerVisite(isDesignMobile() ? 'mobile' : 'ordinateur')
     router.push('/dashboard')
     router.refresh()
   }

@@ -7,6 +7,7 @@ import { BarreBasV2 } from './BarreBasV2'
 import ConfirmationEnvoiV2 from './ConfirmationEnvoiV2'
 import RetourGesteV2 from './RetourGesteV2'
 import VisiteGuidee from './VisiteGuidee'
+import type { VisitesAFaire } from '@/lib/visiteGuidee'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -45,8 +46,9 @@ type Props = {
   slug?: string | null
   /** Fin de la période payée (colonne écrite par le webhook Stripe) : décide du délai de grâce avant le retour sur Découverte. */
   subscriptionEndsAt?: string | null
-  /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche la visite guidée. */
-  visiteGuidee?: boolean
+  /** Seule `/dashboard` le renseigne : c'est la seule page qui déclenche les tutos. Un par
+   *  design (mobile, ordinateur) ; le tuto choisit celui du design affiché. */
+  visiteGuidee?: VisitesAFaire
   /** Signaux des arrêts `interactif` de la visite (voir visiteGuidee.ts) : seules
    *  Prestations et Horaires le renseignent — chacune avec son seul champ,
    *  l'autre `undefined`. Sert à avancer la visite toute seule quand le

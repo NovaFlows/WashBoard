@@ -173,17 +173,18 @@ describe('etapeSuivante', () => {
   })
 })
 
-describe('visiteAFaire', () => {
-  it('à faire seulement quand la colonne existe et vaut NULL', async () => {
-    const { visiteAFaire } = await charger()
-    expect(visiteAFaire({ dashboard_tour_complete_at: null })).toBe(true)
-    expect(visiteAFaire({ dashboard_tour_complete_at: '2026-10-01T08:00:00Z' })).toBe(false)
-    expect(visiteAFaire(null)).toBe(false)
+describe('visitesAFaire', () => {
+  it('un tuto par design : chacun à faire seulement quand sa colonne existe et vaut NULL', async () => {
+    const { visitesAFaire } = await charger()
+    expect(visitesAFaire({ tuto_mobile_vu_le: null, tuto_ordinateur_vu_le: null })).toEqual({ mobile: true, ordinateur: true })
+    expect(visitesAFaire({ tuto_mobile_vu_le: null, tuto_ordinateur_vu_le: '2026-10-01T08:00:00Z' })).toEqual({ mobile: true, ordinateur: false })
+    expect(visitesAFaire({ tuto_mobile_vu_le: '2026-10-01T08:00:00Z', tuto_ordinateur_vu_le: null })).toEqual({ mobile: false, ordinateur: true })
+    expect(visitesAFaire(null)).toEqual({ mobile: false, ordinateur: false })
   })
 
-  it('colonne absente (SQL pas encore exécuté) : jamais déclenchée', async () => {
-    const { visiteAFaire } = await charger()
-    expect(visiteAFaire({})).toBe(false)
+  it('colonnes absentes (SQL pas encore exécuté) : jamais déclenché', async () => {
+    const { visitesAFaire } = await charger()
+    expect(visitesAFaire({})).toEqual({ mobile: false, ordinateur: false })
   })
 })
 
@@ -263,9 +264,9 @@ describe('fermerPourLInstant', () => {
   it('ferme tout de suite ET marque la visite vue en base — sinon elle se redéclenche toute seule en revenant sur /dashboard', async () => {
     const { fermerPourLInstant, ecrireVisite, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
     ecrireVisite({ statut: 'en_cours', etape: 3 })
-    const promesse = fermerPourLInstant()
+    const promesse = fermerPourLInstant('mobile')
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
-    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee?appareil=mobile', { method: 'POST', keepalive: true })
     // Attend la vraie fin de l'appel réseau (pas un délai deviné) — sinon il
     // peut se résoudre pendant le test SUIVANT, une fois `beforeEach` reposé
     // un `fetch` différent pour lui.
@@ -274,7 +275,7 @@ describe('fermerPourLInstant', () => {
 
   it('succès : rien à tracer', async () => {
     const { fermerPourLInstant, logger } = await charger()
-    await fermerPourLInstant()
+    await fermerPourLInstant('mobile')
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
   })
@@ -282,7 +283,7 @@ describe('fermerPourLInstant', () => {
   it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
     const { fermerPourLInstant, logger } = await charger()
-    await fermerPourLInstant()
+    await fermerPourLInstant('mobile')
     expect(logger.warn).toHaveBeenCalledWith('visite_guidee.passer.session_expiree', {})
   })
 
@@ -290,7 +291,7 @@ describe('fermerPourLInstant', () => {
     const panne = new TypeError('Failed to fetch')
     vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
     const { fermerPourLInstant, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
-    await fermerPourLInstant()
+    await fermerPourLInstant('mobile')
     expect(logger.error).toHaveBeenCalledWith('visite_guidee.passer.reseau', {}, panne)
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
   })
@@ -300,11 +301,11 @@ describe('terminerVisite', () => {
   it('finie tout de suite, une seule requête même sur double clic', async () => {
     const { terminerVisite, lireEtat, lireVisite, ecrireVisite, ETAPES_VISITE } = await charger()
     ecrireVisite({ statut: 'en_cours', etape: 3 })
-    const premiere = terminerVisite()
-    const seconde = terminerVisite()
+    const premiere = terminerVisite('mobile')
+    const seconde = terminerVisite('mobile')
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'finie' })
     expect(fetch).toHaveBeenCalledTimes(1)
-    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee?appareil=mobile', { method: 'POST', keepalive: true })
     // Attend la vraie fin (pas un délai deviné) — sinon le `.then()` peut se
     // résoudre pendant le test SUIVANT.
     await Promise.all([premiere, seconde])
@@ -312,7 +313,7 @@ describe('terminerVisite', () => {
 
   it('succès : rien à tracer', async () => {
     const { terminerVisite, logger } = await charger()
-    await terminerVisite()
+    await terminerVisite('mobile')
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
   })
@@ -320,7 +321,7 @@ describe('terminerVisite', () => {
   it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
     const { terminerVisite, logger } = await charger()
-    await terminerVisite()
+    await terminerVisite('mobile')
     expect(logger.warn).toHaveBeenCalledWith('visite_guidee.terminer.session_expiree', {})
   })
 
@@ -328,7 +329,7 @@ describe('terminerVisite', () => {
     const panne = new TypeError('Failed to fetch')
     vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
     const { terminerVisite, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
-    await terminerVisite()
+    await terminerVisite('mobile')
     expect(logger.error).toHaveBeenCalledWith('visite_guidee.terminer.reseau', {}, panne)
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'finie' })
   })
@@ -340,9 +341,9 @@ describe('redemarrerVisite', () => {
     ecrireVisite({ statut: 'finie' })
     // L'état en sessionStorage est écrit tout de suite, avant même que la
     // promesse se résolve — pas besoin de l'attendre pour le vérifier.
-    const promesse = redemarrerVisite()
+    const promesse = redemarrerVisite('mobile')
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
-    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee', { method: 'DELETE' })
+    expect(fetch).toHaveBeenCalledWith('/api/washer/visite-guidee?appareil=mobile', { method: 'DELETE' })
     // Renvoie une promesse — l'appelant (GuideV2/GuideContent) DOIT l'attendre
     // avant de naviguer, sinon `/dashboard` peut resservir sa version en
     // cache d'avant la remise à zéro (Ryan, 2026-10-10 : premier clic sans
@@ -353,7 +354,7 @@ describe('redemarrerVisite', () => {
   it('session expirée : averti (le serveur, lui, n’a rien tracé)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
     const { redemarrerVisite, logger } = await charger()
-    await redemarrerVisite()
+    await redemarrerVisite('mobile')
     expect(logger.warn).toHaveBeenCalledWith('visite_guidee.redemarrer.session_expiree', {})
   })
 
@@ -361,7 +362,7 @@ describe('redemarrerVisite', () => {
     const panne = new TypeError('Failed to fetch')
     vi.stubGlobal('fetch', vi.fn(async () => { throw panne }))
     const { redemarrerVisite, logger, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
-    await redemarrerVisite()
+    await redemarrerVisite('mobile')
     expect(logger.error).toHaveBeenCalledWith('visite_guidee.redemarrer.reseau', {}, panne)
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
   })

@@ -9,7 +9,7 @@ import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import {
   etapesPour, abonnerVisite, abonnerAvancement, ecrireVisite, etapeSuivante, etatAuChargement,
   fermerPourLInstant, lireEtat, lireVisite, serialiserEtat, terminerVisite,
-  type EtapeVisite,
+  type Appareil, type EtapeVisite, type VisitesAFaire,
 } from '@/lib/visiteGuidee'
 
 // Carte de la visite guidée, montée par DashboardShell sur toutes les pages du
@@ -254,10 +254,13 @@ function BarreProgres({ etape, total }: { etape: number; total: number }) {
   )
 }
 
-export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean; avancement?: Avancement }) {
+export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: { aFaire?: VisitesAFaire; avancement?: Avancement }) {
   const router = useRouter()
   const pathname = usePathname()
   const isPwa = useDesignMobile()
+  // Un tuto par design : celui de l'écran affiché, l'autre attend la première visite sur ce design.
+  const appareil: Appareil = isPwa ? 'mobile' : 'ordinateur'
+  const aFaire = aFaireParAppareil?.[appareil]
   const [navigation, naviguer] = useTransition()
   const etapes = etapesPour(isPwa)
   const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null), etapes.length)
@@ -267,7 +270,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
     const suivant = etatAuChargement(stocke, aFaire)
     if (serialiserEtat(suivant) !== serialiserEtat(stocke)) ecrireVisite(suivant)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `etapes` change seulement avec `isPwa`, pas à chaque rendu
-  }, [aFaire])
+  }, [aFaire, appareil])
 
   const etape = etat.statut === 'en_cours' ? etat.etape : null
   const etapeActuelle = etape === null ? undefined : etapes[etape]
@@ -327,11 +330,11 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   }
 
   function fermer() {
-    synchroVue(fermerPourLInstant)
+    synchroVue(() => fermerPourLInstant(appareil))
   }
 
   function avancer() {
-    if (suivante === null) { synchroVue(terminerVisite); return }
+    if (suivante === null) { synchroVue(() => terminerVisite(appareil)); return }
     const route = etapes[suivante].route
     // Route IDENTIQUE à la page déjà affichée (ex. l'arrêt d'ouverture, sur
     // `/dashboard`, suivi d'un arrêt qui reste sur `/dashboard`) : pas une
@@ -716,7 +719,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1651E8] dark:text-[#00C4D4]">Étape {etape + 1}/{etapes.length}</p>
           <button
             type="button"
-            onClick={fermerPourLInstant}
+            onClick={() => fermerPourLInstant(appareil)}
             className="-my-2 -mr-2 px-2 py-2 transition-colors text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
           >
             Passer

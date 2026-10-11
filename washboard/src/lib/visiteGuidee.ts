@@ -54,10 +54,12 @@
 // risquerait de faire fuir quelqu'un pas encore prêt à s'engager sur ces
 // détails (décision confirmée avec Ryan avant de les en sortir aussi).
 //
-// `washers.dashboard_tour_complete_at` dit si elle reste à faire. Les comptes
-// antérieurs à sa mise en place ont été remplis à leur date de création : seul un
-// compte créé depuis peut avoir NULL. La progression, elle, vit dans l'onglet
-// (sessionStorage) : elle survit aux changements de page comme à un rechargement.
+// Deux tutos, un par design (Alexandre, 2026-10-11) : `washers.tuto_mobile_vu_le` et
+// `washers.tuto_ordinateur_vu_le`. NULL = à faire. Chacun se lance une fois, la première
+// fois que le laveur arrive sur ce design : avoir vu le tuto ordinateur n'empêche pas le
+// tuto mobile, et inversement. Les comptes qui avaient déjà vu l'ancien tuto unique
+// (`dashboard_tour_complete_at`) ont été marqués « vus » sur les deux.
+// La progression, elle, vit dans l'onglet (sessionStorage) : elle survit aux changements de page comme à un rechargement.
 //
 // « Passer » marque la visite comme vue en base, au même titre que « Terminé »
 // (changé le 2026-10-10 — l'inverse avait été tranché le 2026-10-07, mais Ryan a
@@ -172,9 +174,29 @@ export function etapeSuivante(etape: number, nombreEtapes: number): number | nul
 /** Strictement `null` : tant que le SQL n'a pas tourné, la colonne manque dans
  *  la fiche (lue en `*`) et vaut `undefined` — la visite ne doit alors surtout
  *  pas apparaître chez tous les comptes existants. */
-export function visiteAFaire(fiche: { dashboard_tour_complete_at?: string | null } | null): boolean {
-  return fiche?.dashboard_tour_complete_at === null
+export type Appareil = 'mobile' | 'ordinateur'
+
+export const COLONNE_TUTO = {
+  mobile: 'tuto_mobile_vu_le',
+  ordinateur: 'tuto_ordinateur_vu_le',
+} as const satisfies Record<Appareil, string>
+
+export function estAppareil(v: unknown): v is Appareil {
+  return v === 'mobile' || v === 'ordinateur'
 }
+
+export type VisitesAFaire = Record<Appareil, boolean>
+
+export function visitesAFaire(
+  fiche: { tuto_mobile_vu_le?: string | null; tuto_ordinateur_vu_le?: string | null } | null,
+): VisitesAFaire {
+  return {
+    mobile: fiche?.tuto_mobile_vu_le === null,
+    ordinateur: fiche?.tuto_ordinateur_vu_le === null,
+  }
+}
+
+const route = (appareil: Appareil) => `/api/washer/visite-guidee?appareil=${appareil}`
 
 /** Ce qu'il faut afficher en arrivant sur une page.
  *
@@ -237,7 +259,7 @@ export function abonnerVisite(f: () => void): () => void {
  *  alors celle du nouveau compte, qui ne se lance jamais. Symptôme exact
  *  signalé le 2026-10-11 : « je viens de créer mon compte et le tuto ne sait
  *  pas lancer ». Effacer ici, à CHAQUE connexion réelle, rend la base
- *  (`dashboard_tour_complete_at`, lue par `aFaire`) de nouveau seule maîtresse
+ *  (`tuto_mobile_vu_le`/`tuto_ordinateur_vu_le`, lues par `aFaire`) de nouveau seule maîtresse
  *  dès qu'une session change de compte — sans rien changer pour le cas normal
  *  (un seul compte, toute la session) : `etatAuChargement` recalcule alors
  *  simplement à partir de `aFaire`, exactement ce qu'il aurait donné sans
@@ -263,10 +285,10 @@ export function oublierVisite(): void {
  *  à en faire, c'est un ping au mieux, la carte a déjà disparu) mais permet
  *  aux tests d'attendre la vraie fin de l'appel réseau plutôt que de deviner
  *  un délai. */
-export function fermerPourLInstant(): Promise<void> {
+export function fermerPourLInstant(appareil: Appareil): Promise<void> {
   ecrireVisite({ statut: 'absente' })
 
-  return fetch('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+  return fetch(route(appareil), { method: 'POST', keepalive: true })
     .then(res => {
       if (res.status === 401) logger.warn('visite_guidee.passer.session_expiree', {})
     })
@@ -281,11 +303,11 @@ export function fermerPourLInstant(): Promise<void> {
  *  trace déjà ses propres échecs (errorId), on ne trace ici que ce qu'il ne peut
  *  pas voir — la requête qui ne lui parvient pas, ou une session expirée.
  *  Renvoie une promesse pour la même raison que `fermerPourLInstant` ci-dessus. */
-export function terminerVisite(): Promise<void> {
+export function terminerVisite(appareil: Appareil): Promise<void> {
   if (lireEtat(lireVisite(), ETAPES_VISITE.length).statut === 'finie') return Promise.resolve()
   ecrireVisite({ statut: 'finie' })
 
-  return fetch('/api/washer/visite-guidee', { method: 'POST', keepalive: true })
+  return fetch(route(appareil), { method: 'POST', keepalive: true })
     .then(res => {
       if (res.status === 401) logger.warn('visite_guidee.terminer.session_expiree', {})
     })
@@ -293,7 +315,7 @@ export function terminerVisite(): Promise<void> {
 }
 
 /** Bouton « Revoir le tuto » du Guide : repart de zéro même si déjà terminée.
- *  Efface `dashboard_tour_complete_at` en base (sinon le prochain chargement de
+ *  Efface la colonne du tuto de cet appareil en base (sinon le prochain chargement de
  *  `/dashboard` la redirait aussitôt « finie ») puis relance au premier arrêt.
  *
  *  Renvoie une promesse — l'appelant DOIT l'attendre avant de naviguer vers
@@ -311,11 +333,11 @@ export function terminerVisite(): Promise<void> {
  *  Vérifié : 5 essais consécutifs sans échec une fois la suppression
  *  attendue ET `router.refresh()` ajouté (contre des échecs intermittents
  *  avec `router.refresh()` seul, sans l'attente). */
-export async function redemarrerVisite(): Promise<void> {
+export async function redemarrerVisite(appareil: Appareil): Promise<void> {
   ecrireVisite({ statut: 'en_cours', etape: 0 })
 
   try {
-    const res = await fetch('/api/washer/visite-guidee', { method: 'DELETE' })
+    const res = await fetch(route(appareil), { method: 'DELETE' })
     if (res.status === 401) logger.warn('visite_guidee.redemarrer.session_expiree', {})
   } catch (e) {
     logger.error('visite_guidee.redemarrer.reseau', {}, e)

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 
 // Fin de la visite guidée (POST) et reprise à volonté depuis le Guide (DELETE).
 // Ce qui compte : jamais sans session, la date posée une seule fois (POST) ou
@@ -26,13 +27,16 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 const { POST, DELETE } = await import('./route')
 const { logger } = await import('@/lib/logger')
 
-async function envoyer() {
-  const res = await POST()
+const requete = (appareil: string | null = 'mobile') =>
+  new NextRequest(`https://www.washboard.fr/api/washer/visite-guidee${appareil ? `?appareil=${appareil}` : ''}`)
+
+async function envoyer(appareil: string | null = 'mobile') {
+  const res = await POST(requete(appareil))
   return { status: res.status, body: await res.json() }
 }
 
-async function envoyerSuppression() {
-  const res = await DELETE()
+async function envoyerSuppression(appareil: string | null = 'mobile') {
+  const res = await DELETE(requete(appareil))
   return { status: res.status, body: await res.json() }
 }
 
@@ -50,9 +54,20 @@ describe('POST /api/washer/visite-guidee', () => {
     expect(marquer).not.toHaveBeenCalled()
   })
 
-  it('pose dashboard_tour_complete_at sur la fiche de l’utilisateur connecté', async () => {
-    expect(await envoyer()).toEqual({ status: 200, body: { success: true } })
-    expect(marquer).toHaveBeenCalledWith(expect.anything(), 'u-1', 'dashboard_tour_complete_at')
+  it('pose la date du tuto mobile, sans toucher au tuto ordinateur', async () => {
+    expect(await envoyer('mobile')).toEqual({ status: 200, body: { success: true } })
+    expect(marquer).toHaveBeenCalledWith(expect.anything(), 'u-1', 'tuto_mobile_vu_le')
+  })
+
+  it('pose la date du tuto ordinateur, sans toucher au tuto mobile', async () => {
+    expect(await envoyer('ordinateur')).toEqual({ status: 200, body: { success: true } })
+    expect(marquer).toHaveBeenCalledWith(expect.anything(), 'u-1', 'tuto_ordinateur_vu_le')
+  })
+
+  it('refuse un appareil absent ou inconnu, sans rien écrire', async () => {
+    expect((await envoyer(null)).status).toBe(400)
+    expect((await envoyer('tablette')).status).toBe(400)
+    expect(marquer).not.toHaveBeenCalled()
   })
 
   it('écriture refusée : 500 avec errorId, tracé', async () => {
@@ -79,9 +94,9 @@ describe('DELETE /api/washer/visite-guidee — « Revoir le tuto »', () => {
     expect(miseAJour).not.toHaveBeenCalled()
   })
 
-  it('efface dashboard_tour_complete_at sur la fiche de l’utilisateur connecté', async () => {
-    expect(await envoyerSuppression()).toEqual({ status: 200, body: { success: true } })
-    expect(miseAJour).toHaveBeenCalledWith('washers', { dashboard_tour_complete_at: null })
+  it('efface seulement la date du tuto de cet appareil', async () => {
+    expect(await envoyerSuppression('ordinateur')).toEqual({ status: 200, body: { success: true } })
+    expect(miseAJour).toHaveBeenCalledWith('washers', { tuto_ordinateur_vu_le: null })
   })
 
   it('écriture refusée : 500 avec errorId, tracé', async () => {
