@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import BilanPublicitesV2, { type BilanPublicitesProps } from '@/components/dashboard/BilanPublicitesV2'
 
 // Garde-fou PWA, même schéma que Publicites.tsx : v1 sur le site, v2 seulement
@@ -16,7 +16,7 @@ export default function BilanPublicites(props: BilanPublicitesProps) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

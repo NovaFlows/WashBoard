@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
 import type { Plan } from '@/lib/plan'
@@ -44,7 +44,7 @@ export default function Prestations(props: Props) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

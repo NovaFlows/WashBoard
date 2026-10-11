@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import type { Washer } from '@/types'
 import ParametresFormV1 from '@/components/dashboard/ParametresFormV1'
 import ParametresFormV2 from '@/components/dashboard/ParametresFormV2'
@@ -30,7 +30,7 @@ type Props = {
 }
 
 export default function ParametresForm({ washer, email, servicesCount, resumeHoraires }: Props) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   return isPwa
     ? <ParametresFormV2 washer={washer} servicesCount={servicesCount} resumeHoraires={resumeHoraires} />
     : <ParametresFormV1 washer={washer} email={email} />

@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 
 // En-tête de l'écran des réglages — deux versions, comme le reste.
 //
@@ -11,7 +11,7 @@ import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 // Rendu ici plutôt que dans ParametresFormV2 : l'en-tête précède la carte de configuration,
 // qui est posée par la page. Le mettre dans le formulaire l'aurait fait passer dessous.
 export function EnteteParametres() {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
 
   if (isPwa) {
     return (

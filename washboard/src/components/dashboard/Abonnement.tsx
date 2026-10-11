@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import AbonnementPanel from '@/components/dashboard/AbonnementPanel'
 import AbonnementV2 from '@/components/dashboard/AbonnementV2'
 import type { Plan } from '@/lib/plan'
@@ -8,7 +8,7 @@ import type { Plan } from '@/lib/plan'
 // Point de branchement v1/v2 de l'écran d'abonnement — même règle que
 // ClientsView.tsx, ParametresForm.tsx ou Accueil.tsx : la refonte 2026 ne
 // s'applique QU'à la PWA installée en mode standalone, le site reste v1 sans
-// exception (décision d'Alexandre, 2026-09-22). `usePwaStandalone()` plutôt
+// exception (décision d'Alexandre, 2026-09-22). `useDesignMobile()` plutôt
 // que la classe CSS `wb-pwa` : ce n'est pas un changement de couleurs, c'est
 // une mise en page différente (grille à deux colonnes contre pile d'offres).
 //
@@ -33,7 +33,7 @@ export type PropsAbonnement = {
 }
 
 export default function Abonnement(props: PropsAbonnement) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   return isPwa ? <AbonnementV2 {...props} /> : <AbonnementPanel {...props} />
 }
 
@@ -41,7 +41,7 @@ export default function Abonnement(props: PropsAbonnement) {
  *  titre, l'application n'en affiche pas ici car `AbonnementV2` porte le sien
  *  (« Mon offre ») en tête de son propre écran. */
 export function EnteteAbonnement() {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   if (isPwa) return null
   return (
     <div className="mb-6">

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PLAN_LABELS, PLAN_PRICES, SERVICE_QUOTA, type Plan } from '@/lib/plan'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 
 type PrestationChoisissable = {
   id: string
@@ -107,7 +107,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   // papier, les filets et la police v2 ; sur le site elle garde exactement la
   // carte blanche centrée d'avant. Alexandre, 2026-09-29 : une fenêtre du site
   // posée par-dessus l'application « n'a rien à voir » avec le reste.
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   // La fenêtre gère sa propre disparition : le layout la rend sur chaque page,
   // il ne peut pas savoir qu'on vient de la fermer.
   const [ferme, setFerme] = useState(false)

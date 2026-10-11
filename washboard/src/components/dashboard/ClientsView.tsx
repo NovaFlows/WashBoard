@@ -1,6 +1,6 @@
 'use client'
 
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { EntrepriseListItem } from '@/lib/entrepriseProfile'
@@ -49,7 +49,7 @@ export default function ClientsView({
   /** Avis Google, relance, créneaux intelligents : PWA seulement (2026-09-30). */
   automatismes?: AutomatismesClients
 }) {
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   return isPwa
     ? (
       <ClientsViewV2

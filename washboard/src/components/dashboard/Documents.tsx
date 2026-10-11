@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import DocumentsV2 from '@/components/dashboard/DocumentsV2'
 
 // Point d'entrée de « Devis et factures » — destination NEUVE de la refonte 2026 (même schéma
@@ -22,7 +22,7 @@ export default function Documents({ prestations, nomLaveur }: {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import ChiffresV2, { type ChiffresProps } from '@/components/dashboard/ChiffresV2'
 
 // Point d'entrée de « Chiffres » — nouvelle destination de la refonte 2026
@@ -22,7 +22,7 @@ import ChiffresV2, { type ChiffresProps } from '@/components/dashboard/ChiffresV
 // montage (aucun équivalent "cookie lu côté serveur" pour `display-mode`), et
 // il faut distinguer « pas encore vérifié » de « vérifié, ce n'est pas la
 // PWA » pour ne rediriger qu'une fois la certitude acquise — d'où cet état à
-// trois valeurs plutôt que le booléen de `usePwaStandalone()` seul.
+// trois valeurs plutôt que le booléen de `useDesignMobile()` seul.
 type Statut = 'verification' | 'pwa' | 'site'
 
 type Props = ChiffresProps
@@ -32,7 +32,7 @@ export default function Chiffres(props: Props) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {

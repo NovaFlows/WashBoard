@@ -293,8 +293,11 @@ export default async function DashboardPage() {
   )
   // Après aujourd'hui, pour ne pas doublonner le widget ci-dessus : les trois
   // prochains, dans l'ordre où `aVenir` est déjà trié.
+  // Strictement APRÈS aujourd'hui, avant de prendre les trois premiers : sans borne, trois
+  // anciens rendez-vous jamais clôturés occupaient les trois places, et un vrai rendez-vous
+  // à venir n'apparaissait jamais (compte NovaFlows, 2026-10-09).
   const rdvProchains = aVenirOuvertes
-    .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui)
+    .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) > aujourdhui)
     .slice(0, 3)
 
   // Les deux valeurs ci-dessous ne servent QUE à l'accueil v2 (PWA installée,

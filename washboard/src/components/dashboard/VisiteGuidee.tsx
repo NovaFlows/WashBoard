@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
-import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { Spinner } from '@/components/ui/Spinner'
 import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import {
@@ -257,7 +257,7 @@ function BarreProgres({ etape, total }: { etape: number; total: number }) {
 export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean; avancement?: Avancement }) {
   const router = useRouter()
   const pathname = usePathname()
-  const isPwa = usePwaStandalone()
+  const isPwa = useDesignMobile()
   const [navigation, naviguer] = useTransition()
   const etapes = etapesPour(isPwa)
   const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null), etapes.length)

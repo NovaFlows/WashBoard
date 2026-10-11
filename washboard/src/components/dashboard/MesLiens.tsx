@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { isDesignMobile } from '@/lib/designMobile'
 import MesLiensV2 from '@/components/dashboard/MesLiensV2'
 
 // Point d'entrée de « Mes liens » — destination NEUVE de la refonte 2026 (même schéma
@@ -21,7 +21,7 @@ export default function MesLiens({ slug }: { slug: string }) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
-    setStatut(isPwaStandalone() ? 'pwa' : 'site')
+    setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 
   useEffect(() => {
