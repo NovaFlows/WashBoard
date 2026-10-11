@@ -691,8 +691,17 @@ html.wb-pwa ::-webkit-scrollbar { display: none; width: 0; height: 0; }
    plat : la refonte du 2026-10-09 (« vingt fois mieux, surtout au niveau du
    visuel ») réutilise la matière déjà établie par le design system plutôt
    que d'en inventer une nouvelle. */
+/* Quasi opaque (2026-10-12) : à 50 % de transparence, la carte ne tenait que par le flou
+   d'arrière-plan ; quand l'iPhone ne l'applique pas, son texte se mélangeait au contenu de
+   la page (capture d'Alexandre). La couleur pleine d'abord, pour les navigateurs sans
+   `color-mix`. */
 .wb-visite-verre {
-  background: linear-gradient(180deg, var(--v2-verre-haut), var(--v2-verre-bas));
+  background: var(--v2-color-surface);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--v2-color-surface) 96%, transparent),
+    color-mix(in srgb, var(--v2-color-surface) 92%, transparent)
+  );
   backdrop-filter: var(--v2-verre-flou);
   -webkit-backdrop-filter: var(--v2-verre-flou);
   border: 1px solid var(--v2-verre-bordure);
