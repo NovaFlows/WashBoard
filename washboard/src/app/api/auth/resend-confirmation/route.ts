@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
-import { isTrustedOrigin, trustedOrigin } from '@/lib/appOrigin'
+import { isTrustedOrigin } from '@/lib/appOrigin'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { envoyerLienConfirmation } from '@/lib/confirmationEmail'
+import { envoyerCodeConfirmation } from '@/lib/confirmationEmail'
 import { trouverCompteParEmail } from '@/lib/compteParEmail'
 
 // « Renvoyer l'email » depuis /verifier-email, pour l'adresse affichée sur la
@@ -77,11 +77,10 @@ export async function POST(req: NextRequest) {
   if (erreurFiche) logger.warn('auth.resend_confirmation.washer_read_failed', { userId: compte.id }, erreurFiche)
   const washerName = (fiches?.[0] as { name?: string } | undefined)?.name ?? null
 
-  const envoye = await envoyerLienConfirmation(admin, {
+  const envoye = await envoyerCodeConfirmation(admin, {
     userId: compte.id,
     email: compte.email ?? email,
     washerName,
-    origin: trustedOrigin(req.headers.get('origin')),
   })
   if (!envoye) {
     return NextResponse.json({ error: 'L\'envoi a échoué. Réessaie dans quelques instants.' }, { status: 502 })
