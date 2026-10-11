@@ -46,6 +46,7 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
     - Notifications : « navigateur »/« ordinateur » au lieu de « téléphone » hors design mobile.
     - Côté téléphone (même jour) : bouton Itinéraire dans la fiche RDV de l'agenda (`DetailRendezVous`, `ChoixItineraireV2`) ; Documents avec la recherche commune + pastilles Tous/Devis/Factures/Impayées (`filtreMobile`).
   - 2026-10-12 — master fusionné dans la branche (tuto mobile/ordinateur de Ryan, inscription par code, onboarding). 5 conflits réglés en gardant les deux côtés : `VisiteGuidee.tsx` repris de master tel quel ; repères du tuto (`voir-page`, `lien`) reportés dans `ListeReglagesV2` (la liste Plus partagée). **Tuto ordinateur retiré** (Alexandre) : il visait l'ancien site ; `VisiteGuidee` n'est rendu que si `useDesignMobile`, et « Revoir le tuto » n'apparaît que sur téléphone (GuideV2, GuideContent). Un tuto pour le nouveau design ordinateur reste à faire ; la colonne `tuto_ordinateur_vu_le` est conservée.
+  - 2026-10-12 — Carte du tuto transparente sur la version de test de la branche (iPhone) : cause = cache de construction Vercel (styles du tuto absents de la feuille servie). Code et construction locale corrects. Réglé par Redeploy sans « Use existing Build Cache ». À refaire en premier si des styles manquent en ligne après une fusion.
   - Décisions d'Alexandre : « proposer un autre créneau » et « fiche prospect » ne sont pas construits ; bouton Support laissé tel quel.
 
 ## Travail précédent — refonte de la réservation
