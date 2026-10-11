@@ -2,20 +2,22 @@
 // sur `/dashboard` — et rejouable à volonté depuis le Guide (voir `redemarrerVisite`).
 //
 // RÉDUITE DE 21 À 13 ARRÊTS LE 2026-10-11 (Ryan, après avoir demandé mon avis
-// honnête : « je suis d'accord que 21 étapes c'est trop, que faire alors ? »).
-// Jusque-là le tuto visait l'EXHAUSTIVITÉ (tout le catalogue de pages, audité
-// le 2026-10-09) — mais un tuto n'est pas une liste de fonctionnalités, c'est
-// « comment on s'en sert tous les jours » + « ce qu'il faut faire pour
-// encaisser une première réservation ». Retirés : Messages automatiques,
-// Publicités, Chiffres (trois réglages verrouillés par l'offre — montrer un
-// mur payant à un compte en essai gratuit qui n'a même pas encore créé sa
-// première prestation ressemble plus à un argumentaire commercial qu'à de
-// l'aide), Chiffres/Documents (doublon exact du bouton [+], déjà expliqué à
-// l'arrêt juste avant), Chiffres/Dépenses, Abonnement, Réglages, et
-// Assistance (fusionnée dans le message de clôture avec Guide — les deux
-// sont de toute façon à un clic l'un de l'autre). Rien de tout ça n'est
-// perdu : ça se découvre tout seul en se baladant dans « Plus », avec le
-// Guide comme filet de sécurité.
+// honnête : « je suis d'accord que 21 étapes c'est trop, que faire alors ? »),
+// PUIS REMONTÉE À 14 LE MÊME JOUR (un seul ajout délibéré, pas un retour en
+// arrière — voir « voir-page » plus bas). Jusque-là le tuto visait
+// l'EXHAUSTIVITÉ (tout le catalogue de pages, audité le 2026-10-09) — mais un
+// tuto n'est pas une liste de fonctionnalités, c'est « comment on s'en sert
+// tous les jours » + « ce qu'il faut faire pour encaisser une première
+// réservation ». Retirés : Messages automatiques, Publicités, Chiffres (trois
+// réglages verrouillés par l'offre — montrer un mur payant à un compte en
+// essai gratuit qui n'a même pas encore créé sa première prestation
+// ressemble plus à un argumentaire commercial qu'à de l'aide),
+// Chiffres/Documents (doublon exact du bouton [+], déjà expliqué à l'arrêt
+// juste avant), Chiffres/Dépenses, Abonnement, Réglages, et Assistance
+// (fusionnée dans le message de clôture avec Guide — les deux sont de toute
+// façon à un clic l'un de l'autre). Rien de tout ça n'est perdu : ça se
+// découvre tout seul en se baladant dans « Plus », avec le Guide comme filet
+// de sécurité.
 //
 // Dans l'APPLICATION installée, des arrêts supplémentaires s'intercalent pour
 // présenter la barre du bas au fil de l'eau — « regarde cet onglet »
@@ -113,6 +115,12 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
   { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
   { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
+  // Juste après le lien, pas ailleurs (Ryan, 2026-10-11 : « important d'avoir
+  // la page de réservation juste après les liens, comme ça il voit ce que
+  // les clients voient ») — reste sur la même page (pas de `route` : la
+  // carte « Votre page de réservation » en haut de Plus porte déjà le lien
+  // « Voir », pas besoin de naviguer pour la montrer).
+  { cible: 'voir-page', texte: "Et voilà à quoi elle ressemble pour de vrai — ouvre-la, c'est exactement ce que voient tes clients." },
   { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, cheminPwa: 'Plus → Prestations et prix', interactif: 'services' },
   { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires', interactif: 'availabilities' },
   { pwaSeulement: true, cible: 'barre-bas-agenda', texte: 'Et sur Agenda :' },

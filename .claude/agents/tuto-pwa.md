@@ -465,6 +465,31 @@ chiffres. Un signal simple (numéro d'arrêt au clic sur « Passer », compléti
 l'onboarding) serait plus rentable que n'importe quel autre réglage visuel tant qu'il
 n'existe pas.
 
+## « voir-page » — ajouté juste après avoir réduit à 13 (toujours le 2026-10-11)
+
+Ryan, juste après la réduction à 13 : « c'est important d'avoir la page de réservation
+juste après les liens, comme ça il voit ce que les clients voient ». Pas un retour en
+arrière sur la réduction — un seul ajout délibéré, qui a sa propre valeur intrinsèque
+(contrairement à ce qui a été coupé) : voir sa propre page publique rassure et clarifie
+plus que n'importe lequel des réglages retirés.
+
+Implémenté sans nouvelle navigation : la carte d'identité en haut de la page Plus
+(`ParametresFormV2.tsx`) porte déjà un lien « Voir » vers `/book/{slug}` — juste ajouté
+`data-visite-cible="voir-page"` dessus. Le nouvel arrêt reste sur la même page que « Lien »
+(pas de `route` : on y est déjà), juste après lui dans `ETAPES_VISITE`. Cliquer « Voir »
+pendant cet arrêt ouvre la vraie page publique dans le même onglet — sort momentanément du
+tableau de bord (comportement normal d'un lien pendant un arrêt « regarde », pas une
+fonctionnalité neuve), le tuto reprend là où il était en revenant (état en base + session).
+
+Pas d'équivalent posé côté SITE v1 (`ParametresFormV1.tsx`) : son bloc lien n'a qu'un
+bouton « Copier », pas de lien cliquable « Voir » à marquer — la branche site du tuto n'a
+jamais dépendu de trouver une cible pour s'afficher (elle montre juste le texte), donc rien
+de cassé, juste moins précis sur le site que dans la PWA. À revoir seulement si quelqu'un
+construit un jour ce lien côté site.
+
+14 arrêts PWA au total maintenant (8 côté site), pas 13 — voir le commentaire d'en-tête de
+`ETAPES_VISITE` pour l'historique complet des deux changements du même jour.
+
 ## Le chemin d'accès affiché sous le texte — seulement à partir de 2 taps
 
 Demandé par Ryan le 2026-10-11 : afficher, entre guillemets, le chemin pour retrouver

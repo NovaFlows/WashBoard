@@ -43,11 +43,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('etapesPour', () => {
-  it('site : les sept arrêts « page », dans l’ordre (tuto réduit de 21 à 13 le 2026-10-11)', async () => {
+  it('site : les huit arrêts « page », dans l’ordre (tuto réduit de 21 à 13 le 2026-10-11, puis +1 « voir-page »)', async () => {
     const { etapesPour } = await charger()
     expect(etapesPour(false).map(e => e.route ?? null)).toEqual([
       '/dashboard',
       '/dashboard/parametres#lien-reservation',
+      null, // voir-page : même page que « lien », pas de route à part.
       '/dashboard/parametres/prestations',
       '/dashboard/parametres/horaires',
       '/dashboard/calendrier',
@@ -57,6 +58,7 @@ describe('etapesPour', () => {
     expect(etapesPour(false).map(e => e.texte)).toEqual([
       "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil.",
       "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.",
+      "Et voilà à quoi elle ressemble pour de vrai — ouvre-la, c'est exactement ce que voient tes clients.",
       "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.",
       'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.',
       'Toute ton activité en vue mois/semaine/jour.',
@@ -100,10 +102,10 @@ describe('etapesPour', () => {
     }
   })
 
-  it('seuls Lien, Prestations et Horaires mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
+  it('seuls Lien, Voir-page, Prestations et Horaires mettent en évidence un élément de PAGE (hors barre du bas)', async () => {
     const { etapesPour } = await charger()
     const ciblesDePage = etapesPour(false).flatMap(e => (e.cible ? [e.cible] : []))
-    expect(ciblesDePage).toEqual(['lien', 'prestations', 'horaires'])
+    expect(ciblesDePage).toEqual(['lien', 'voir-page', 'prestations', 'horaires'])
   })
 
   it('les deux essentiels restants (services, availabilities) sont interactifs, et eux seuls', async () => {
