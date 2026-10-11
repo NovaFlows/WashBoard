@@ -32,9 +32,10 @@ export function destinationSelonFiche(fiche: { onboarding_complete_at?: string |
   return fiche.onboarding_complete_at ? '/dashboard' : '/onboarding'
 }
 
-export type EtatOnboarding = { destination: Destination; slug: string | null }
+export type EtatOnboarding = { destination: Destination; slug: string | null; name: string | null }
 
-/** Où envoyer un laveur qui vient de se connecter, et son lien actuel.
+/** Où envoyer un laveur qui vient de se connecter, son lien actuel et son nom
+ *  (pour l'initiale du logo à l'étape correspondante, voir `Onboarding.tsx`).
  *
  *  Une lecture ratée mène au tableau de bord : l'onboarding n'ouvre aucun droit,
  *  et bloquer l'accès au compte pour une question marketing serait pire que de
@@ -43,14 +44,14 @@ export type EtatOnboarding = { destination: Destination; slug: string | null }
 export async function etatOnboarding(db: SupabaseClient, userId: string): Promise<EtatOnboarding> {
   const { data, error } = await db
     .from('washers')
-    .select('slug, onboarding_complete_at')
+    .select('slug, name, onboarding_complete_at')
     .eq('user_id', userId)
     .maybeSingle()
 
   if (error) {
     if (migrationEnAttente(error)) logger.warn('onboarding.gate.migration_en_attente', { userId })
     else logger.error('onboarding.gate.read_failed', { userId }, error)
-    return { destination: '/dashboard', slug: null }
+    return { destination: '/dashboard', slug: null, name: null }
   }
-  return { destination: destinationSelonFiche(data), slug: data?.slug ?? null }
+  return { destination: destinationSelonFiche(data), slug: data?.slug ?? null, name: data?.name ?? null }
 }

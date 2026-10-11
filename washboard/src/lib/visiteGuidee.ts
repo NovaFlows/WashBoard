@@ -16,13 +16,24 @@
 // du bas n'existe pas (demande de Ryan, 2026-10-07 : « tu peux présenter un onglet
 // de la barre puis rentrer dedans et présenter etc. »).
 //
-// Prestations, Horaires, Adresse de départ, Téléphone et Logo (les cinq
-// essentiels de `computeSetupProgress`, setupProgress.ts) sont en plus
+// Prestations et Horaires (deux des cinq essentiels de `computeSetupProgress`,
+// setupProgress.ts — les deux seuls qui restent à découvrir ici) sont en plus
 // `interactif` : la visite s'efface au profit d'un simple repère, laisse
 // l'écran réel cliquable, et avance toute seule dès que le laveur a vraiment
 // fait l'action — pas de « Suivant » à cliquer dans le vide (Ryan,
 // 2026-10-07 puis 2026-10-09 : « accompagner le laveur à remplir ses
-// informations », pour les cinq, pas seulement les trois bloquants).
+// informations »).
+//
+// Adresse de départ, logo et téléphone — les trois autres essentiels — ne
+// sont PLUS des arrêts du tuto depuis le 2026-10-11 : adresse et logo sont
+// maintenant des étapes de l'onboarding (`(public)/onboarding/Onboarding.tsx`,
+// juste après l'inscription, avant d'arriver sur `/dashboard`), le téléphone
+// était déjà posé à l'inscription elle-même. Les redécouvrir dans le tuto
+// aurait montré un champ que le laveur vient littéralement de remplir.
+// Prestations et horaires restent ici : pas un simple champ, un vrai travail
+// (catalogue, planning) — les imposer avant que le laveur ait vu l'app
+// risquerait de faire fuir quelqu'un pas encore prêt à s'engager sur ces
+// détails (décision confirmée avec Ryan avant de les en sortir aussi).
 //
 // `washers.dashboard_tour_complete_at` dit si elle reste à faire. Les comptes
 // antérieurs à sa mise en place ont été remplis à leur date de création : seul un
@@ -54,13 +65,11 @@ export type EtapeVisite = {
   /** Arrêt « fais-le maintenant », pas « regarde » : la carte s'efface au
    *  profit d'un simple repère lumineux, laisse l'écran réel cliquable, et
    *  avance toute seule dès que `avancement` (VisiteGuidee.tsx) dit que
-   *  c'est fait — ajouter une prestation, un horaire, une adresse, un
-   *  téléphone, un logo. Clé de `SetupInput`/`computeSetupProgress`
-   *  (setupProgress.ts) : les cinq essentiels (les trois bloquants, plus
-   *  téléphone et logo qui ne l'étaient pas mais restaient sans aucun arrêt
-   *  — Ryan, 2026-10-09 : « accompagner le laveur à remplir ses
-   *  informations », pas seulement 3 des 5). */
-  interactif?: 'services' | 'availabilities' | 'baseAddress' | 'phone' | 'logo'
+   *  c'est fait — ajouter une prestation ou un horaire. Les trois autres clés
+   *  qui existaient ici (`baseAddress`, `phone`, `logo`) sont parties le
+   *  2026-10-11 avec les arrêts correspondants, déplacés vers l'onboarding
+   *  (voir le commentaire d'en-tête de `ETAPES_VISITE`). */
+  interactif?: 'services' | 'availabilities'
 }
 
 // Les arrêts « page » visent les écrans de l'application installée : sur le site,
@@ -90,9 +99,6 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
   { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, interactif: 'services' },
   { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, interactif: 'availabilities' },
-  { route: '/dashboard/parametres/profil', cible: 'adresse-depart', texte: "Ton point de départ : sert à calculer les trajets, et à ne pas proposer un créneau hors de ta zone.", chemin: `${CHEMIN_CONFIGURER} → Mon profil`, interactif: 'baseAddress' },
-  { cible: 'telephone', texte: "Ton téléphone : le numéro que voient tes clients pour te joindre.", chemin: `${CHEMIN_CONFIGURER} → Mon profil`, interactif: 'phone' },
-  { route: '/dashboard/parametres/apparence', cible: 'logo', texte: "Ton logo : il habille ta page de réservation, pour que tes clients te reconnaissent du premier coup d'œil.", chemin: CHEMIN_CONFIGURER, interactif: 'logo' },
   { pwaSeulement: true, cible: 'barre-bas-agenda', texte: 'Et sur Agenda :' },
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
@@ -277,15 +283,17 @@ export async function redemarrerVisite(): Promise<void> {
 
 // ── Signal des arrêts `interactif` ──────────────────────────────────────────
 //
-// Les écrans de réglages (PrestationsV2, HorairesV2, ProfilV2) gardent leur
-// propre état local après une écriture — `usePrestationsV2`/`useHorairesV2` ne
-// rappellent PAS le serveur (affichage optimiste assumé, voir leurs
-// commentaires), donc les props que chaque page sert à `DashboardShell` à son
-// premier rendu restent figées : une prestation ajoutée pendant la visite ne
-// s'y reflète jamais. Plutôt que de forcer un `router.refresh()` que ces
-// écrans évitent exprès, chacun signale son écriture ici, et VisiteGuidee
-// n'écoute que l'arrêt affiché — même mécanisme que `abonnerVisite` ci-dessus.
-export type CleAvancement = 'services' | 'availabilities' | 'baseAddress' | 'phone' | 'logo'
+// Les écrans de réglages (PrestationsV2, HorairesV2) gardent leur propre état
+// local après une écriture — `usePrestationsV2`/`useHorairesV2` ne rappellent
+// PAS le serveur (affichage optimiste assumé, voir leurs commentaires), donc
+// les props que chaque page sert à `DashboardShell` à son premier rendu
+// restent figées : une prestation ajoutée pendant la visite ne s'y reflète
+// jamais. Plutôt que de forcer un `router.refresh()` que ces écrans évitent
+// exprès, chacun signale son écriture ici, et VisiteGuidee n'écoute que
+// l'arrêt affiché — même mécanisme que `abonnerVisite` ci-dessus.
+// (`baseAddress`/`phone`/`logo` sont partis le 2026-10-11 avec les arrêts
+// correspondants — ProfilV2/useApparenceV2 ne les signalent plus.)
+export type CleAvancement = 'services' | 'availabilities'
 
 const abonnesAvancement = new Set<(cle: CleAvancement) => void>()
 

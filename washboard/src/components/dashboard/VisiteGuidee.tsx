@@ -145,22 +145,18 @@ function surligner(
 
 const MARGE_DECOUPE = 8
 
-/** Signaux des cinq arrêts `interactif` — voir `EtapeVisite.interactif`. */
+/** Signaux des arrêts `interactif` — voir `EtapeVisite.interactif`. Trois clés
+ *  sont parties le 2026-10-11 (`baseAddressRempli`/`phoneRempli`/`logoRempli`)
+ *  avec les arrêts correspondants, déplacés vers l'onboarding. */
 type Avancement = {
   servicesCount?: number
   availabilitiesCount?: number
-  baseAddressRempli?: boolean
-  phoneRempli?: boolean
-  logoRempli?: boolean
 }
 
 function valeurInteractif(etape: EtapeVisite | undefined, avancement: Avancement | undefined): boolean | undefined {
   switch (etape?.interactif) {
     case 'services': return (avancement?.servicesCount ?? 0) > 0
     case 'availabilities': return (avancement?.availabilitiesCount ?? 0) > 0
-    case 'baseAddress': return !!avancement?.baseAddressRempli
-    case 'phone': return !!avancement?.phoneRempli
-    case 'logo': return !!avancement?.logoRempli
     default: return undefined
   }
 }

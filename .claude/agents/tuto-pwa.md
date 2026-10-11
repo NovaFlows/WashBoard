@@ -353,6 +353,59 @@ test de `fermerPourLInstant` qui appelle vraiment `logger.warn` faisait échouer
 ce nouveau test a fini par révéler. Corrigé avec `vi.clearAllMocks()` dans le `beforeEach`
 global du fichier.
 
+## Adresse de départ, téléphone et logo — partis à l'onboarding (2026-10-11)
+
+Ryan voulait réduire le nombre d'arrêts du tuto. Après avoir identifié que le lien de
+réservation est déjà choisi à l'onboarding (donc l'arrêt qui le présente est redondant),
+il a demandé d'y ajouter aussi l'**adresse de départ** (obligatoire) et le **logo**
+(optionnel, « avec le choix de le mettre plus tard »), pour retirer ces deux réglages du
+tuto — plus le **téléphone**, qui n'a jamais eu besoin d'y être (déjà posé à l'inscription,
+champ `phone` du formulaire `/signup`).
+
+**Onboarding passé de 2 à 4 étapes** (`(public)/onboarding/Onboarding.tsx`), dans cet ordre
+(choisi par moi, Ryan m'en a laissé le choix) : lien de réservation (inchangé) → adresse de
+départ (nouveau) → logo (nouveau, skippable via un lien « Plus tard ») → comment as-tu
+connu WashBoard (inchangé, reste l'étape finale qui pose `onboarding_complete_at`).
+
+L'adresse réutilise directement `AdresseV2` (autocomplétion Google Places déjà construite
+pour la PWA) et écrit via `enregistrerProfil({base_address})` — même route
+(`PATCH /api/washer`) que Mon profil, aucune nouvelle route API. Le logo réutilise le
+pipeline exact de `useApparenceV2.changerLogo` (détourage → compression → upload vers
+`/api/washer/logo`), répliqué dans le composant d'onboarding plutôt que d'appeler le hook
+(trop d'état inutile pour un simple écran linéaire) — les fonctions sous-jacentes
+(`retirerLeFond`, `compressImage`, `envoyerImage`) sont autonomes, pas emprisonnées dans le
+hook. Vérifié de bout en bout (compte jetable) : adresse persistée immédiatement, logo
+envoyé avec succès (détourage + compression + upload réels), et « Plus tard » qui avance
+sans rien envoyer — l'initiale du nom s'affiche ensuite partout comme pour un logo jamais
+donné.
+
+**Décision prise AVANT d'implémenter, pas après coup** : Ryan a demandé si d'autres champs
+« obligatoires dans les réglages » méritaient le même traitement. Deux autres réglages sont
+réellement bloquants (`computeSetupProgress`, setupProgress.ts) : prestations et horaires.
+Recommandation donnée et confirmée par Ryan : les laisser dans le tuto, pas à l'onboarding
+— ce ne sont pas de simples champs (créer une catégorie, fixer prix/durée, construire un
+planning), les imposer avant que le laveur ait vu l'application risquerait de faire fuir
+quelqu'un pas encore prêt à s'engager sur ces détails, et le tuto gère déjà bien ce cas (la
+mécanique interactive qui avance toute seule). Les 6 réglages « confort » (zone, avis,
+relances, agenda Google, créneaux intelligents, message d'accueil) ne sont pas bloquants du
+tout — encore moins de raison de les y pousser.
+
+**Tuto, côté `visiteGuidee.ts`** : les 3 arrêts `interactif` (`adresse-depart`,
+`telephone`, `logo`) retirés de `ETAPES_VISITE` — 18 arrêts PWA restants (24 avant), 15
+côté site (18 avant). `EtapeVisite.interactif`/`CleAvancement` réduits à `'services' |
+'availabilities'` (les deux seuls essentiels encore découverts dans le tuto). Nettoyage du
+code mort qui en découlait : les appels `signalerAvancement('baseAddress'/'phone')` dans
+`ProfilV2.tsx` et `signalerAvancement('logo')` dans `useApparenceV2.ts` (plus aucun abonné
+pour les écouter), les marqueurs `cibleVisite`/`data-visite-cible` devenus orphelins sur
+ces mêmes écrans, et les props `avancementVisite` que `DashboardShell`/pages
+profil/apparence calculaient pour rien.
+
+**Ce qui NE change PAS** : `computeSetupProgress` (`setupProgress.ts`) — le bandeau
+« Configurer mon compte » reste identique, il lit juste les champs déjà en base. Pour un
+compte qui vient de l'onboarding, adresse et logo y apparaîtront déjà cochés. Pour un
+compte antérieur à ce changement, rien ne change : ces réglages restent accessibles
+normalement depuis Mon profil/Apparence, seul le tuto ne les présente plus.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le

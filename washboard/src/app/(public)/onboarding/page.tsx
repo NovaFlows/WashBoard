@@ -17,8 +17,8 @@ export default async function OnboardingPage() {
   if (!user) redirect('/login')
   if (!user.email_confirmed_at) redirect('/verifier-email')
 
-  const { destination, slug } = await etatOnboarding(supabase, user.id)
+  const { destination, slug, name } = await etatOnboarding(supabase, user.id)
   if (destination !== '/onboarding' || !slug) redirect('/dashboard')
 
-  return <Onboarding slug={slug} />
+  return <Onboarding slug={slug} nom={name ?? ''} />
 }
