@@ -59,6 +59,14 @@ export type EtapeVisite = {
   /** Où retrouver cet écran par le menu, sur le SITE actuel (pas la PWA). À revoir
    *  à la refonte, quand cette navigation changera — voir TODO.md. */
   chemin?: string
+  /** Même idée que `chemin`, mais pour la navigation RÉELLE de la PWA installée
+   *  (barre du bas → Plus → …) — affiché entre guillemets, en petit, sous le
+   *  texte de l'arrêt (VisiteGuidee.tsx). Posé UNIQUEMENT quand la page visée
+   *  demande au moins 2 taps pour y arriver (Ryan, 2026-10-11 : « évidemment
+   *  pas ceux qui se font en un clic »). Jamais deviné : chaque valeur vient
+   *  d'une lecture du composant qui porte le vrai lien (`ParametresFormV2.tsx`,
+   *  `AutomatismesClientsV2.tsx`, `ReglagesV2.tsx`, `ChiffresArgent.tsx`). */
+  cheminPwa?: string
   /** N'apparaît que dans l'application installée (barre du bas, geste retour :
    *  rien de tout ça n'existe sur le site). */
   pwaSeulement?: boolean
@@ -97,22 +105,22 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
   { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
   { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
-  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, interactif: 'services' },
-  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, interactif: 'availabilities' },
+  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, cheminPwa: 'Plus → Prestations et prix', interactif: 'services' },
+  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires', interactif: 'availabilities' },
   { pwaSeulement: true, cible: 'barre-bas-agenda', texte: 'Et sur Agenda :' },
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
   { route: '/dashboard/clients', texte: "Chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
-  { route: '/dashboard/clients/messages', texte: `Avis Google et relances automatiques après chaque prestation — en formule ${requiredPlanLabel('followup')}.` },
-  { route: '/dashboard/clients/publicites', texte: `Le retour sur chaque campagne publicitaire, visites et réservations comptées — en formule ${requiredPlanLabel('campagnes')}.` },
-  { route: '/dashboard/chiffres', texte: `D'où viennent tes visiteurs et combien réservent vraiment, à côté de ton chiffre d'affaires — en formule ${requiredPlanLabel('crm')}.` },
+  { route: '/dashboard/clients/messages', texte: `Avis Google et relances automatiques après chaque prestation — en formule ${requiredPlanLabel('followup')}.`, cheminPwa: 'Clients → Avis Google / Relance client' },
+  { route: '/dashboard/clients/publicites', texte: `Le retour sur chaque campagne publicitaire, visites et réservations comptées — en formule ${requiredPlanLabel('campagnes')}.`, cheminPwa: 'Clients → Publicités' },
+  { route: '/dashboard/chiffres', texte: `D'où viennent tes visiteurs et combien réservent vraiment, à côté de ton chiffre d'affaires — en formule ${requiredPlanLabel('crm')}.`, cheminPwa: 'Plus → Chiffres' },
   { route: '/dashboard/chiffres/documents', texte: 'Un devis ou une facture sans rendez-vous derrière — le même écran que le bouton [+] de la barre.' },
-  { route: '/dashboard/chiffres/depenses', texte: "Tes dépenses, pour un chiffre d'affaires net plus juste." },
-  { route: '/dashboard/abonnement', texte: "Ici tu changes d'offre quand tu en as besoin." },
-  { route: '/dashboard/parametres/reglages', texte: 'Thème, notifications — et deux raccourcis vers ce qui vient juste après.' },
-  { route: '/dashboard/assistance', texte: "Une question sans réponse dans le Guide ? Écris directement à l'équipe." },
+  { route: '/dashboard/chiffres/depenses', texte: "Tes dépenses, pour un chiffre d'affaires net plus juste.", cheminPwa: 'Plus → Chiffres → Dépenses' },
+  { route: '/dashboard/abonnement', texte: "Ici tu changes d'offre quand tu en as besoin.", cheminPwa: 'Plus → Abonnement' },
+  { route: '/dashboard/parametres/reglages', texte: 'Thème, notifications — et deux raccourcis vers ce qui vient juste après.', cheminPwa: 'Plus → Réglages' },
+  { route: '/dashboard/assistance', texte: "Une question sans réponse dans le Guide ? Écris directement à l'équipe.", cheminPwa: 'Plus → Réglages → Aide et assistance' },
   { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
-  { route: '/dashboard/guide', texte: 'Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse.' },
+  { route: '/dashboard/guide', texte: 'Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse.', cheminPwa: 'Plus → Réglages → Guide d’utilisation' },
 ]
 
 /** La liste réellement montrée : tous les arrêts sur le site, les arrêts PWA en

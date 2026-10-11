@@ -130,6 +130,46 @@ describe('etapesPour', () => {
     // Chaque arrêt interactif porte une cible : sans elle, rien à mettre en valeur.
     for (const e of interactifs) expect(e.cible).toBeTruthy()
   })
+
+  // `cheminPwa` (2026-10-11, demande de Ryan) : affiché entre guillemets sous
+  // le texte de l'arrêt, UNIQUEMENT quand la page visée demande au moins 2
+  // taps depuis la barre du bas (jamais pour Aujourd'hui/Agenda/Clients, 1
+  // tap direct). Chaque valeur a été vérifiée contre le vrai composant qui
+  // porte le lien, pas devinée — voir le commentaire du champ dans
+  // `EtapeVisite`.
+  it('cheminPwa : jamais sur un arrêt à 1 tap (barre du bas directe)', async () => {
+    const { etapesPour } = await charger()
+    const unTap = ['/dashboard', '/dashboard/calendrier', '/dashboard/clients']
+    for (const e of etapesPour(true)) {
+      if (e.route && unTap.includes(e.route)) expect(e.cheminPwa, e.route).toBeUndefined()
+    }
+  })
+
+  it('cheminPwa : posé sur chaque arrêt à 2 taps ou plus', async () => {
+    const { etapesPour } = await charger()
+    const attendus: Record<string, string> = {
+      '/dashboard/parametres/prestations': 'Plus → Prestations et prix',
+      '/dashboard/parametres/horaires': 'Plus → Horaires',
+      '/dashboard/clients/messages': 'Clients → Avis Google / Relance client',
+      '/dashboard/clients/publicites': 'Clients → Publicités',
+      '/dashboard/chiffres': 'Plus → Chiffres',
+      '/dashboard/chiffres/depenses': 'Plus → Chiffres → Dépenses',
+      '/dashboard/abonnement': 'Plus → Abonnement',
+      '/dashboard/parametres/reglages': 'Plus → Réglages',
+      '/dashboard/assistance': 'Plus → Réglages → Aide et assistance',
+      '/dashboard/guide': 'Plus → Réglages → Guide d’utilisation',
+    }
+    for (const [route, cheminPwa] of Object.entries(attendus)) {
+      const etape = etapesPour(true).find(e => e.route === route)
+      expect(etape?.cheminPwa, route).toBe(cheminPwa)
+    }
+    // Lien (reste sur la page Plus elle-même, 1 tap) et le devis/facture du
+    // bouton [+] (1 tap, déjà dit dans le texte de l'arrêt) n'en ont pas.
+    const lien = etapesPour(true).find(e => e.cible === 'lien')
+    expect(lien?.cheminPwa).toBeUndefined()
+    const documents = etapesPour(true).find(e => e.route === '/dashboard/chiffres/documents')
+    expect(documents?.cheminPwa).toBeUndefined()
+  })
 })
 
 describe('lireEtat / serialiserEtat', () => {

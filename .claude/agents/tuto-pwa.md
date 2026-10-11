@@ -420,6 +420,29 @@ compte qui vient de l'onboarding, adresse et logo y apparaîtront déjà cochés
 compte antérieur à ce changement, rien ne change : ces réglages restent accessibles
 normalement depuis Mon profil/Apparence, seul le tuto ne les présente plus.
 
+## Le chemin d'accès affiché sous le texte — seulement à partir de 2 taps
+
+Demandé par Ryan le 2026-10-11 : afficher, entre guillemets, le chemin pour retrouver
+chaque écran — mais seulement à partir du moment où il faut 2 taps ou plus depuis la barre
+du bas pour y arriver. Jamais sur Aujourd'hui/Agenda/Clients (1 tap direct), ni sur l'arrêt
+« lien » (reste sur la page Plus elle-même) ni sur Chiffres/Documents (déjà dit dans le
+texte de l'arrêt : « le même écran que le bouton [+] »).
+
+Nouveau champ `cheminPwa?: string` sur `EtapeVisite` (distinct du `chemin` existant, qui
+reste la navigation du SITE v1 — les deux structures sont différentes, pas question de les
+confondre). Affiché par `VisiteGuidee.tsx` dans les deux rendus PWA (`estInteractif` et
+`isPwa`), juste sous le texte de l'arrêt, en petit et en gris (`text-[12px]`,
+`--v2-color-gris`) — discret comme demandé.
+
+**Chaque valeur vient d'une lecture du vrai composant qui porte le lien, jamais devinée** :
+`ParametresFormV2.tsx` pour tout ce qui part de « Plus » (Prestations, Horaires, Chiffres,
+Abonnement, Réglages), `AutomatismesClientsV2.tsx` pour ce qui part de « Clients » (Avis
+Google/Relance, Publicités — section « Automatismes », DANS la page Clients elle-même, pas
+une navigation à part), `ChiffresArgent.tsx` pour Dépenses (lien DANS Chiffres → 3 taps au
+total), `ReglagesV2.tsx` pour Guide/Assistance (DANS Réglages → 3 taps au total). Vérifié
+par capture sur un compte jetable, balayage des 21 arrêts PWA : le chemin apparaît
+exactement sur les arrêts attendus, jamais sur les autres.
+
 ## Verrouillage par offre
 
 Les arrêts de découverte sur une fonctionnalité verrouillée (Pro/Business) utilisent le

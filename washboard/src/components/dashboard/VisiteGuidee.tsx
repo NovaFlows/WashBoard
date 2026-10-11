@@ -539,6 +539,11 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           <p key={etape} aria-live="polite" className={`wb-visite-texte mt-2.5 text-[15px] leading-snug ${corps}`}>
             {vientDeReussir ? 'Fait ✓' : etapeActuelle.texte}
           </p>
+          {!vientDeReussir && etapeActuelle.cheminPwa && (
+            <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              « {etapeActuelle.cheminPwa} »
+            </p>
+          )}
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
               {vientDeReussir
@@ -609,6 +614,11 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
           <p key={etape} aria-live="polite" className={`wb-visite-texte mt-3 text-[15px] leading-snug ${corps}`}>
             {etapeActuelle.texte}
           </p>
+          {etapeActuelle.cheminPwa && (
+            <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              « {etapeActuelle.cheminPwa} »
+            </p>
+          )}
           <div className="mt-3 flex justify-end">
             <button
               type="button"
