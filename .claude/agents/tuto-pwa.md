@@ -490,6 +490,21 @@ construit un jour ce lien côté site.
 14 arrêts PWA au total maintenant (8 côté site), pas 13 — voir le commentaire d'en-tête de
 `ETAPES_VISITE` pour l'historique complet des deux changements du même jour.
 
+## Retiré l'intro de la barre du bas — 14 → 13 (encore le 2026-10-11)
+
+Ryan, en revoyant le tuto après l'ajout de « voir-page » : « l'étape une n'est pas
+nécessaire, ça paraît évident que c'est une barre de navigation ». Retiré le tout premier
+arrêt (« Nouveau : ta navigation passe maintenant par cette barre... »), qui expliquait
+l'existence même de la barre du bas avant même de montrer quoi que ce soit dessus. Le tuto
+démarre maintenant directement sur « Voilà ton tableau de bord », l'arrêt 2 d'avant.
+
+Retrait sans risque : `pwaSeulement`, ne comptait donc déjà pas dans les 8 arrêts côté
+site, et le `data-visite-cible="barre-bas"` qu'il ciblait reste posé sur `<nav>`
+(`BarreBasV2.tsx`) pour un usage totalement différent — `calculerDisposition()`
+(VisiteGuidee.tsx) measure cette barre pour placer la carte, rien à voir avec ce tuto. 14 →
+**13 arrêts PWA (toujours 8 côté site)**. Vérifié par parcours complet sur un compte
+jetable : exactement 13 arrêts, le premier directement sur « Aujourd'hui ».
+
 ## Le chemin d'accès affiché sous le texte — seulement à partir de 2 taps
 
 Demandé par Ryan le 2026-10-11 : afficher, entre guillemets, le chemin pour retrouver

@@ -4,7 +4,10 @@
 // RÉDUITE DE 21 À 13 ARRÊTS LE 2026-10-11 (Ryan, après avoir demandé mon avis
 // honnête : « je suis d'accord que 21 étapes c'est trop, que faire alors ? »),
 // PUIS REMONTÉE À 14 LE MÊME JOUR (un seul ajout délibéré, pas un retour en
-// arrière — voir « voir-page » plus bas). Jusque-là le tuto visait
+// arrière — voir « voir-page » plus bas), PUIS REDESCENDUE À 13 (l'ancien
+// premier arrêt, « ta navigation passe maintenant par cette barre », retiré
+// — Ryan : « ça paraît évident que c'est une barre de navigation », pas
+// besoin de l'expliquer). Jusque-là le tuto visait
 // l'EXHAUSTIVITÉ (tout le catalogue de pages, audité le 2026-10-09) — mais un
 // tuto n'est pas une liste de fonctionnalités, c'est « comment on s'en sert
 // tous les jours » + « ce qu'il faut faire pour encaisser une première
@@ -110,7 +113,6 @@ const CHEMIN_CONFIGURER = `${CHEMIN_PAGE_CLIENT} → « Configurer ma page clien
 // PWA s'intercalent juste avant l'arrêt qu'ils annoncent, sans jamais déplacer
 // les arrêts existants les uns par rapport aux autres.
 export const ETAPES_VISITE: readonly EtapeVisite[] = [
-  { pwaSeulement: true, cible: 'barre-bas', texte: 'Nouveau : ta navigation passe maintenant par cette barre, toujours sous le pouce — on commence par Aujourd’hui.' },
   { route: '/dashboard', texte: "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil." },
   { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
   { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
