@@ -420,6 +420,51 @@ compte qui vient de l'onboarding, adresse et logo y apparaîtront déjà cochés
 compte antérieur à ce changement, rien ne change : ces réglages restent accessibles
 normalement depuis Mon profil/Apparence, seul le tuto ne les présente plus.
 
+## Réduit de 21 à 13 arrêts (2026-10-11) — exhaustivité abandonnée pour de bon
+
+Ryan a demandé mon avis honnête sur l'onboarding et le tuto. Réponse donnée : le tuto
+polissait la fluidité d'un tuto à 21 arrêts sans jamais remettre en question le CHIFFRE
+21 lui-même — construit sur une logique d'EXHAUSTIVITÉ (audit du 2026-10-09 : couvrir tout
+le catalogue de pages) plutôt que de pertinence pour un premier contact. Ryan a confirmé :
+« je suis d'accord que 21 étapes c'est trop, que faire alors ? ».
+
+**Principe retenu** : un tuto n'est pas un inventaire de fonctionnalités, c'est « comment
+on s'en sert tous les jours » + « ce qu'il faut faire pour encaisser une première
+réservation ». Tout le reste se découvre tout seul en se baladant dans « Plus », avec le
+Guide comme filet de sécurité (déjà rejouable à volonté).
+
+**Retirés (8 arrêts)** :
+- **Messages automatiques, Publicités, Chiffres** — trois réglages verrouillés par l'offre.
+  Montrer un mur payant à un compte en essai gratuit qui n'a même pas encore créé sa
+  première prestation ressemble à un argumentaire commercial, pas à de l'aide.
+- **Chiffres/Documents** — doublon exact du bouton [+] de la barre, déjà expliqué à
+  l'arrêt juste avant (« le même écran que le bouton [+] » était littéralement le texte de
+  cet arrêt-ci avant qu'il ne parte).
+- **Chiffres/Dépenses, Abonnement, Réglages** — pas bloquants, pas quotidiens, pas
+  nécessaires avant d'avoir vu le reste de l'app une première fois.
+- **Assistance** — fusionnée dans le message de clôture avec Guide plutôt que supprimée :
+  les deux sont à un clic l'un de l'autre (`ReglagesV2.tsx`), pas besoin de deux arrêts.
+  Nouveau texte de clôture : « Si tu bloques un jour, commence ici : la plupart des
+  questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement
+  à l'équipe depuis cette page. »
+
+**Gardé** : l'orientation (barre du bas, bouton [+], intro Plus), Lien de réservation (ce
+qu'ils envoient littéralement à leurs clients), Prestations et Horaires (interactifs, les
+deux seuls réglages encore vraiment bloquants), Agenda et Clients (destinations
+quotidiennes), le geste retour, et la clôture Guide. Résultat : **13 arrêts PWA (7 côté
+site)**, contre 21/18 avant.
+
+Vérifié par parcours complet sur un compte jetable (Playwright) : exactement 13 arrêts,
+dans l'ordre, aucune route cassée, message de clôture correct.
+
+**Prochaine étape identifiée, pas faite ce soir** : il n'existe toujours AUCUNE mesure de
+ce qui marche — pas de signal sur où les gens décrochent dans le tuto ni sur le taux de
+complétion de l'onboarding. Tout le travail de ce soir (fluidité, positionnement, chemins
+d'accès, et maintenant ce découpage à 13 arrêts) repose sur du jugement, pas sur des
+chiffres. Un signal simple (numéro d'arrêt au clic sur « Passer », complétion de
+l'onboarding) serait plus rentable que n'importe quel autre réglage visuel tant qu'il
+n'existe pas.
+
 ## Le chemin d'accès affiché sous le texte — seulement à partir de 2 taps
 
 Demandé par Ryan le 2026-10-11 : afficher, entre guillemets, le chemin pour retrouver

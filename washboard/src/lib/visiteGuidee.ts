@@ -1,20 +1,29 @@
 // Visite guidée du tableau de bord : montrée une seule fois, au premier passage
 // sur `/dashboard` — et rejouable à volonté depuis le Guide (voir `redemarrerVisite`).
 //
-// Sur le SITE, dix-huit arrêts sur de vraies pages — couvre désormais tout le
-// catalogue réel de la PWA (audit du 2026-10-09 : barre du bas, sous-menu Plus,
-// Clients et ses automatismes/publicités, Chiffres et ses trois sous-écrans,
-// Réglages, Assistance). Les trois anciens arrêts CRM/Compta/Factures
-// (`/dashboard/crm`, `/dashboard/compta`, `/dashboard/factures`) ont été
-// retirés le même jour : ce sont d'anciens écrans v1 qu'aucun écran v2 ne lie
-// plus depuis que `/dashboard/chiffres` a absorbé leur contenu — des
-// impasses pour un laveur qui les suivrait. Dans l'APPLICATION installée, des
-// arrêts supplémentaires s'intercalent pour présenter la barre du bas au fil de
-// l'eau — « regarde cet onglet » (assombrissement + découpe, sans changer de
-// page) juste avant d'y naviguer pour de vrai, plutôt qu'un bloc à part à la
-// fin. `pwaSeulement` marque ces arrêts : invisibles sur le site, où la barre
-// du bas n'existe pas (demande de Ryan, 2026-10-07 : « tu peux présenter un onglet
-// de la barre puis rentrer dedans et présenter etc. »).
+// RÉDUITE DE 21 À 13 ARRÊTS LE 2026-10-11 (Ryan, après avoir demandé mon avis
+// honnête : « je suis d'accord que 21 étapes c'est trop, que faire alors ? »).
+// Jusque-là le tuto visait l'EXHAUSTIVITÉ (tout le catalogue de pages, audité
+// le 2026-10-09) — mais un tuto n'est pas une liste de fonctionnalités, c'est
+// « comment on s'en sert tous les jours » + « ce qu'il faut faire pour
+// encaisser une première réservation ». Retirés : Messages automatiques,
+// Publicités, Chiffres (trois réglages verrouillés par l'offre — montrer un
+// mur payant à un compte en essai gratuit qui n'a même pas encore créé sa
+// première prestation ressemble plus à un argumentaire commercial qu'à de
+// l'aide), Chiffres/Documents (doublon exact du bouton [+], déjà expliqué à
+// l'arrêt juste avant), Chiffres/Dépenses, Abonnement, Réglages, et
+// Assistance (fusionnée dans le message de clôture avec Guide — les deux
+// sont de toute façon à un clic l'un de l'autre). Rien de tout ça n'est
+// perdu : ça se découvre tout seul en se baladant dans « Plus », avec le
+// Guide comme filet de sécurité.
+//
+// Dans l'APPLICATION installée, des arrêts supplémentaires s'intercalent pour
+// présenter la barre du bas au fil de l'eau — « regarde cet onglet »
+// (assombrissement + découpe, sans changer de page) juste avant d'y naviguer
+// pour de vrai, plutôt qu'un bloc à part à la fin. `pwaSeulement` marque ces
+// arrêts : invisibles sur le site, où la barre du bas n'existe pas (demande
+// de Ryan, 2026-10-07 : « tu peux présenter un onglet de la barre puis
+// rentrer dedans et présenter etc. »).
 //
 // Prestations et Horaires (deux des cinq essentiels de `computeSetupProgress`,
 // setupProgress.ts — les deux seuls qui restent à découvrir ici) sont en plus
@@ -47,7 +56,6 @@
 // se relancer que depuis le Guide). Les deux ferment la visite pour de bon.
 
 import { logger } from './logger'
-import { requiredPlanLabel } from './plan'
 
 export type EtapeVisite = {
   /** Absente : l'arrêt reste sur la page déjà affichée (ex. un onglet de la barre
@@ -64,8 +72,8 @@ export type EtapeVisite = {
    *  texte de l'arrêt (VisiteGuidee.tsx). Posé UNIQUEMENT quand la page visée
    *  demande au moins 2 taps pour y arriver (Ryan, 2026-10-11 : « évidemment
    *  pas ceux qui se font en un clic »). Jamais deviné : chaque valeur vient
-   *  d'une lecture du composant qui porte le vrai lien (`ParametresFormV2.tsx`,
-   *  `AutomatismesClientsV2.tsx`, `ReglagesV2.tsx`, `ChiffresArgent.tsx`). */
+   *  d'une lecture du composant qui porte le vrai lien (`ParametresFormV2.tsx`
+   *  pour tout ce qui part de « Plus », `ReglagesV2.tsx` pour Guide). */
   cheminPwa?: string
   /** N'apparaît que dans l'application installée (barre du bas, geste retour :
    *  rien de tout ça n'existe sur le site). */
@@ -111,16 +119,8 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
   { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
   { route: '/dashboard/clients', texte: "Chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
-  { route: '/dashboard/clients/messages', texte: `Avis Google et relances automatiques après chaque prestation — en formule ${requiredPlanLabel('followup')}.`, cheminPwa: 'Clients → Avis Google / Relance client' },
-  { route: '/dashboard/clients/publicites', texte: `Le retour sur chaque campagne publicitaire, visites et réservations comptées — en formule ${requiredPlanLabel('campagnes')}.`, cheminPwa: 'Clients → Publicités' },
-  { route: '/dashboard/chiffres', texte: `D'où viennent tes visiteurs et combien réservent vraiment, à côté de ton chiffre d'affaires — en formule ${requiredPlanLabel('crm')}.`, cheminPwa: 'Plus → Chiffres' },
-  { route: '/dashboard/chiffres/documents', texte: 'Un devis ou une facture sans rendez-vous derrière — le même écran que le bouton [+] de la barre.' },
-  { route: '/dashboard/chiffres/depenses', texte: "Tes dépenses, pour un chiffre d'affaires net plus juste.", cheminPwa: 'Plus → Chiffres → Dépenses' },
-  { route: '/dashboard/abonnement', texte: "Ici tu changes d'offre quand tu en as besoin.", cheminPwa: 'Plus → Abonnement' },
-  { route: '/dashboard/parametres/reglages', texte: 'Thème, notifications — et deux raccourcis vers ce qui vient juste après.', cheminPwa: 'Plus → Réglages' },
-  { route: '/dashboard/assistance', texte: "Une question sans réponse dans le Guide ? Écris directement à l'équipe.", cheminPwa: 'Plus → Réglages → Aide et assistance' },
   { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
-  { route: '/dashboard/guide', texte: 'Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse.', cheminPwa: 'Plus → Réglages → Guide d’utilisation' },
+  { route: '/dashboard/guide', texte: "Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement à l'équipe depuis cette page.", cheminPwa: 'Plus → Réglages → Guide d’utilisation' },
 ]
 
 /** La liste réellement montrée : tous les arrêts sur le site, les arrêts PWA en

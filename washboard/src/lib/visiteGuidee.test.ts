@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { requiredPlanLabel } from './plan'
 
 vi.mock('./logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
@@ -44,7 +43,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('etapesPour', () => {
-  it('site : les quinze arrêts « page », dans l’ordre (adresse/téléphone/logo partis à l’onboarding le 2026-10-11)', async () => {
+  it('site : les sept arrêts « page », dans l’ordre (tuto réduit de 21 à 13 le 2026-10-11)', async () => {
     const { etapesPour } = await charger()
     expect(etapesPour(false).map(e => e.route ?? null)).toEqual([
       '/dashboard',
@@ -53,14 +52,6 @@ describe('etapesPour', () => {
       '/dashboard/parametres/horaires',
       '/dashboard/calendrier',
       '/dashboard/clients',
-      '/dashboard/clients/messages',
-      '/dashboard/clients/publicites',
-      '/dashboard/chiffres',
-      '/dashboard/chiffres/documents',
-      '/dashboard/chiffres/depenses',
-      '/dashboard/abonnement',
-      '/dashboard/parametres/reglages',
-      '/dashboard/assistance',
       '/dashboard/guide',
     ])
     expect(etapesPour(false).map(e => e.texte)).toEqual([
@@ -70,15 +61,7 @@ describe('etapesPour', () => {
       'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.',
       'Toute ton activité en vue mois/semaine/jour.',
       "Chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
-      `Avis Google et relances automatiques après chaque prestation — en formule ${requiredPlanLabel('followup')}.`,
-      `Le retour sur chaque campagne publicitaire, visites et réservations comptées — en formule ${requiredPlanLabel('campagnes')}.`,
-      `D'où viennent tes visiteurs et combien réservent vraiment, à côté de ton chiffre d'affaires — en formule ${requiredPlanLabel('crm')}.`,
-      'Un devis ou une facture sans rendez-vous derrière — le même écran que le bouton [+] de la barre.',
-      "Tes dépenses, pour un chiffre d'affaires net plus juste.",
-      "Ici tu changes d'offre quand tu en as besoin.",
-      'Thème, notifications — et deux raccourcis vers ce qui vient juste après.',
-      "Une question sans réponse dans le Guide ? Écris directement à l'équipe.",
-      'Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse.',
+      "Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement à l'équipe depuis cette page.",
     ])
   })
 
@@ -150,25 +133,15 @@ describe('etapesPour', () => {
     const attendus: Record<string, string> = {
       '/dashboard/parametres/prestations': 'Plus → Prestations et prix',
       '/dashboard/parametres/horaires': 'Plus → Horaires',
-      '/dashboard/clients/messages': 'Clients → Avis Google / Relance client',
-      '/dashboard/clients/publicites': 'Clients → Publicités',
-      '/dashboard/chiffres': 'Plus → Chiffres',
-      '/dashboard/chiffres/depenses': 'Plus → Chiffres → Dépenses',
-      '/dashboard/abonnement': 'Plus → Abonnement',
-      '/dashboard/parametres/reglages': 'Plus → Réglages',
-      '/dashboard/assistance': 'Plus → Réglages → Aide et assistance',
       '/dashboard/guide': 'Plus → Réglages → Guide d’utilisation',
     }
     for (const [route, cheminPwa] of Object.entries(attendus)) {
       const etape = etapesPour(true).find(e => e.route === route)
       expect(etape?.cheminPwa, route).toBe(cheminPwa)
     }
-    // Lien (reste sur la page Plus elle-même, 1 tap) et le devis/facture du
-    // bouton [+] (1 tap, déjà dit dans le texte de l'arrêt) n'en ont pas.
+    // Lien (reste sur la page Plus elle-même, 1 tap) n'en a pas.
     const lien = etapesPour(true).find(e => e.cible === 'lien')
     expect(lien?.cheminPwa).toBeUndefined()
-    const documents = etapesPour(true).find(e => e.route === '/dashboard/chiffres/documents')
-    expect(documents?.cheminPwa).toBeUndefined()
   })
 })
 
