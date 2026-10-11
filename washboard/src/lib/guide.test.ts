@@ -98,6 +98,8 @@ describe('intégrité du contenu', () => {
       '/dashboard', '/dashboard/crm', '/dashboard/calendrier', '/dashboard/compta',
       '/dashboard/admin', '/dashboard/parametres', '/dashboard/abonnement', '/dashboard/guide',
       '/dashboard/clients', '/dashboard/factures', '/dashboard/parametres/tout',
+      '/dashboard/chiffres/documents', '/dashboard/chiffres/depenses',
+      '/dashboard/clients/publicites', '/dashboard/assistance',
     ]
     const liens = allEntries.flatMap(e => [...e.answer.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map(m => m[1]))
     expect(liens.length).toBeGreaterThan(0)
