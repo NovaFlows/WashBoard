@@ -61,8 +61,8 @@ describe('etapesPour', () => {
       "Et voilà à quoi elle ressemble pour de vrai — ouvre-la, c'est exactement ce que voient tes clients.",
       "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.",
       'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.',
-      'Toute ton activité en vue mois/semaine/jour.',
-      "Chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
+      'Sur Agenda : toute ton activité en vue mois/semaine/jour.',
+      "Sur Clients : chaque client qui a réservé, avec son historique et son chiffre d'affaires.",
       "Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement à l'équipe depuis cette page.",
     ])
   })

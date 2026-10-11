@@ -7,7 +7,12 @@
 // arrière — voir « voir-page » plus bas), PUIS REDESCENDUE À 13 (l'ancien
 // premier arrêt, « ta navigation passe maintenant par cette barre », retiré
 // — Ryan : « ça paraît évident que c'est une barre de navigation », pas
-// besoin de l'expliquer). Jusque-là le tuto visait
+// besoin de l'expliquer), PUIS À 11 (Agenda et Clients avaient chacun DEUX
+// arrêts — « regarde ce bouton » puis « voilà la page » une fois dessus ;
+// Ryan a repéré la redondance et demandé de fusionner les deux en un seul,
+// même raisonnement que pour la barre elle-même : le bouton se voit tout
+// seul une fois sur place, pas besoin de l'annoncer avant). Jusque-là le
+// tuto visait
 // l'EXHAUSTIVITÉ (tout le catalogue de pages, audité le 2026-10-09) — mais un
 // tuto n'est pas une liste de fonctionnalités, c'est « comment on s'en sert
 // tous les jours » + « ce qu'il faut faire pour encaisser une première
@@ -125,10 +130,8 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { cible: 'voir-page', texte: "Et voilà à quoi elle ressemble pour de vrai — ouvre-la, c'est exactement ce que voient tes clients." },
   { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, cheminPwa: 'Plus → Prestations et prix', interactif: 'services' },
   { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires', interactif: 'availabilities' },
-  { pwaSeulement: true, cible: 'barre-bas-agenda', texte: 'Et sur Agenda :' },
-  { route: '/dashboard/calendrier', texte: 'Toute ton activité en vue mois/semaine/jour.' },
-  { pwaSeulement: true, cible: 'barre-bas-clients', texte: 'Sur Clients :' },
-  { route: '/dashboard/clients', texte: "Chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
+  { route: '/dashboard/calendrier', texte: 'Sur Agenda : toute ton activité en vue mois/semaine/jour.' },
+  { route: '/dashboard/clients', texte: "Sur Clients : chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
   { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
   { route: '/dashboard/guide', texte: "Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement à l'équipe depuis cette page.", cheminPwa: 'Plus → Réglages → Guide d’utilisation' },
 ]

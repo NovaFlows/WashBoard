@@ -505,6 +505,25 @@ site, et le `data-visite-cible="barre-bas"` qu'il ciblait reste posé sur `<nav>
 **13 arrêts PWA (toujours 8 côté site)**. Vérifié par parcours complet sur un compte
 jetable : exactement 13 arrêts, le premier directement sur « Aujourd'hui ».
 
+## Agenda et Clients fusionnés — 13 → 11 (encore le 2026-10-11)
+
+Ryan a repéré le même défaut sur Agenda et Clients que sur l'intro de la barre, retirée
+juste avant : « il y a deux bandeaux, une qui montre... le bouton agenda, et ensuite une
+deuxième qui explique l'agenda... je pense que c'est un peu [à] réunir, même principe pour
+client ». Chacun des deux avait un arrêt « regarde ce bouton » (`barre-bas-agenda` /
+`barre-bas-clients`, sans naviguer) suivi d'un arrêt « voilà la page » une fois dessus —
+redondant, le bouton se voit tout seul une fois sur place.
+
+Fusionnés en un seul arrêt chacun, qui navigue directement : « Sur Agenda : toute ton
+activité en vue mois/semaine/jour. » et « Sur Clients : chaque client qui a réservé, avec
+son historique et son chiffre d'affaires. » — le préfixe (« Sur Agenda », « Sur Clients »)
+reprend le texte de l'ancien arrêt « regarde le bouton », pour ne pas perdre cette
+annonce, juste fusionnée dans le même arrêt plutôt que sur deux.
+
+**13 → 11 arrêts PWA (toujours 8 côté site**, ces deux arrêts « pointe le bouton » étaient
+`pwaSeulement`, ne comptaient déjà pas côté site). Vérifié par parcours complet sur un
+compte jetable : exactement 11 arrêts.
+
 ## Le chemin d'accès affiché sous le texte — seulement à partir de 2 taps
 
 Demandé par Ryan le 2026-10-11 : afficher, entre guillemets, le chemin pour retrouver
