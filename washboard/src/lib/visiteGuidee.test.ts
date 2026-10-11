@@ -366,3 +366,25 @@ describe('redemarrerVisite', () => {
     expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'en_cours', etape: 0 })
   })
 })
+
+describe('oublierVisite', () => {
+  it('efface un état « finie » laissé par un AUTRE compte dans le même onglet', async () => {
+    // Le bug exact signalé par Ryan le 2026-10-11 : il supprime un compte de
+    // test et s'en recrée un dans le même onglet (PWA) pour retester un
+    // correctif — la visite « finie » du compte précédent reste en mémoire,
+    // le tuto du nouveau compte ne se lance jamais.
+    const { oublierVisite, ecrireVisite, lireEtat, lireVisite, etatAuChargement, ETAPES_VISITE } = await charger()
+    ecrireVisite({ statut: 'finie' })
+    oublierVisite()
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
+    // Une fois effacée, `/dashboard` du nouveau compte redonne la main à
+    // `aFaire` (lu en base) au lieu de rester bloqué sur « finie ».
+    expect(etatAuChargement({ statut: 'absente' }, true)).toEqual({ statut: 'en_cours', etape: 0 })
+  })
+
+  it('ne fait rien de spécial sans état laissé derrière (cas normal, un seul compte)', async () => {
+    const { oublierVisite, lireEtat, lireVisite, ETAPES_VISITE } = await charger()
+    oublierVisite()
+    expect(lireEtat(lireVisite(), ETAPES_VISITE.length)).toEqual({ statut: 'absente' })
+  })
+})

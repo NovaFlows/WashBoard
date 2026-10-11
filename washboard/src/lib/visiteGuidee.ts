@@ -226,6 +226,26 @@ export function abonnerVisite(f: () => void): () => void {
   return () => { abonnes.delete(f) }
 }
 
+/** À appeler juste après une AUTHENTIFICATION réussie (connexion, confirmation
+ *  d'inscription par code) — jamais après un simple rechargement de page.
+ *
+ *  `sessionStorage` retient l'état de l'ONGLET pour qu'un retour arrière ne
+ *  relance pas une visite déjà vue (voir `etatAuChargement`), mais rien n'y
+ *  associe un COMPTE : supprimer un compte de test et s'en recréer un dans
+ *  le même onglet (habitude de Ryan en ce moment, pour retester un correctif)
+ *  laisse la visite « finie » du compte précédent en mémoire — elle bloque
+ *  alors celle du nouveau compte, qui ne se lance jamais. Symptôme exact
+ *  signalé le 2026-10-11 : « je viens de créer mon compte et le tuto ne sait
+ *  pas lancer ». Effacer ici, à CHAQUE connexion réelle, rend la base
+ *  (`dashboard_tour_complete_at`, lue par `aFaire`) de nouveau seule maîtresse
+ *  dès qu'une session change de compte — sans rien changer pour le cas normal
+ *  (un seul compte, toute la session) : `etatAuChargement` recalcule alors
+ *  simplement à partir de `aFaire`, exactement ce qu'il aurait donné sans
+ *  cette valeur en cache. */
+export function oublierVisite(): void {
+  ecrireVisite({ statut: 'absente' })
+}
+
 /** « Passer » : ferme la carte tout de suite ET marque la visite comme vue
  *  en base — même effet que « Terminé » pour ce qui est de ne plus se
  *  redéclencher tout seul. Changé le 2026-10-10 : avant, « Passer » ne

@@ -524,6 +524,31 @@ annonce, juste fusionnée dans le même arrêt plutôt que sur deux.
 `pwaSeulement`, ne comptaient déjà pas côté site). Vérifié par parcours complet sur un
 compte jetable : exactement 11 arrêts.
 
+## État « finie » qui survit à un changement de compte dans le même onglet (2026-10-11)
+
+Ryan : « je viens de créer mon compte et le tuto ne sait pas lancer ». Diagnostic :
+`sessionStorage` (clé `wb_visite_guidee`) retient l'état de l'ONGLET, pas du compte
+(voir `etatAuChargement`, qui court-circuite dès que l'état stocké vaut `finie`, avant
+même de regarder `aFaire`). Ryan supprime un compte de test et s'en recrée un dans le
+MÊME onglet PWA pour retester un correctif (habitude de cette session) : la visite
+« finie » (ou « en_cours ») du compte précédent reste en mémoire et bloque celle du
+nouveau compte.
+
+Corrigé par une nouvelle fonction `oublierVisite()` (`lib/visiteGuidee.ts`), appelée à
+CHAQUE authentification réussie — `/login` (après `signInWithPassword`) et la
+confirmation d'inscription par code (`/verifier-email`, après succès de
+`/api/auth/confirm-code`) — juste avant la navigation vers la destination. Elle efface
+`sessionStorage`, redonnant la main à `dashboard_tour_complete_at` (lu en base via
+`aFaire`) dès qu'une session change réellement de compte. Aucun effet sur le cas normal
+(un seul compte pour toute la session) : `etatAuChargement` recalcule alors simplement
+à partir de `aFaire`, exactement ce qu'il aurait donné sans valeur en cache.
+
+Vérifié par un test NÉGATIF avant de livrer (retirer temporairement l'appel, rebuild,
+reproduire le bug avec succès, pour écarter un faux positif) puis par le correctif
+restauré : parcours Playwright reproduisant exactement le bug (sessionStorage à `finie`
+injecté avant connexion à un NOUVEAU compte) — sans le correctif, le tuto reste bloqué ;
+avec, il se relance normalement. Cas normal (sans aucune injection) revérifié intact.
+
 ## Carte réductible sur les arrêts `interactif` (2026-10-11)
 
 Ryan, sur l'arrêt Prestations, capture à l'appui (feuille « Nouvelle prestation ») :

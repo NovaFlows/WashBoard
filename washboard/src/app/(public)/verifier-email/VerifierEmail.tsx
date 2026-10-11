@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
+import { oublierVisite } from '@/lib/visiteGuidee'
 
 type Message = { type: 'ok' | 'erreur'; texte: string } | null
 
@@ -92,6 +93,7 @@ export default function VerifierEmail({ email, lienInvalide }: {
       })
       const json = await res.json().catch(() => null)
       if (res.ok && json?.destination) {
+        oublierVisite()
         router.push(json.destination)
         router.refresh()
         return
