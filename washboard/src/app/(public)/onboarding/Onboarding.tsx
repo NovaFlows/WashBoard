@@ -12,7 +12,7 @@ import { enregistrerSlug } from '@/lib/lienReservation'
 import { enregistrerProfil } from '@/lib/profilApi'
 import { appeler } from '@/lib/prestationsApi'
 import { SOURCES_ACQUISITION, type SourceAcquisition } from '@/lib/onboarding'
-import AdresseV2 from '@/components/dashboard/AdresseV2'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { estImageAcceptee } from '@/lib/apparence'
 import { retirerLeFond } from '@/hooks/retirerLeFond'
 import { compressImage, LOGO_OPTIONS } from '@/lib/imageCompression'
@@ -289,11 +289,12 @@ export default function Onboarding({ slug, nom }: { slug: string; nom: string })
               <form onSubmit={validerAdresse} noValidate className="space-y-4">
                 <div>
                   <label htmlFor="adresse" className="wb-label">Ton adresse</label>
-                  <AdresseV2
+                  <AddressAutocomplete
                     id="adresse"
-                    valeur={adresse}
+                    value={adresse}
                     onChange={v => { setAdresse(v); setErreur(null) }}
                     placeholder="12 rue de la Paix, 75001 Paris"
+                    className="wb-input"
                   />
                 </div>
 

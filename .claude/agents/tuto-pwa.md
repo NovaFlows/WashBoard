@@ -367,9 +367,23 @@ champ `phone` du formulaire `/signup`).
 départ (nouveau) → logo (nouveau, skippable via un lien « Plus tard ») → comment as-tu
 connu WashBoard (inchangé, reste l'étape finale qui pose `onboarding_complete_at`).
 
-L'adresse réutilise directement `AdresseV2` (autocomplétion Google Places déjà construite
-pour la PWA) et écrit via `enregistrerProfil({base_address})` — même route
-(`PATCH /api/washer`) que Mon profil, aucune nouvelle route API. Le logo réutilise le
+L'adresse écrit via `enregistrerProfil({base_address})` — même route (`PATCH /api/washer`)
+que Mon profil, aucune nouvelle route API.
+
+**Correctif du 2026-10-11, juste après coup** : la première version utilisait `AdresseV2`
+(le composant pensé pour les FEUILLES de la PWA — liste de suggestions EN LIGNE, parce
+qu'une liste flottante y serait coupée). Ryan a repéré au premier coup d'œil que ce champ
+jurait visuellement avec le reste de l'onboarding. Investigation (agent `designer`,
+consulté avant de toucher au style) : `refonte.md` interdit explicitement d'étendre la
+direction visuelle V2 (jetons `--v2-*`, verre de châssis) au-delà de la PWA installée —
+décision d'Alexandre du 2026-09-22, marquée « ne rouvre pas sans le dire ». Or
+login/signup/onboarding s'affichent dans un navigateur classique, jamais dans la PWA
+installée : ce n'est pas l'onboarding qui est en retard sur le design, c'est `AdresseV2`
+qui est le mauvais composant pour ce contexte. Remplacé par `AddressAutocomplete`
+(`components/ui/AddressAutocomplete.tsx`, l'équivalent déjà existant côté site — mêmes
+routes Google Places, liste de suggestions flottante, habillé avec les mêmes classes
+`wb-input` que les autres champs de l'onboarding). Un seul composant substitué, même
+comportement d'écriture, aucune autre page touchée. Le logo réutilise le
 pipeline exact de `useApparenceV2.changerLogo` (détourage → compression → upload vers
 `/api/washer/logo`), répliqué dans le composant d'onboarding plutôt que d'appeler le hook
 (trop d'état inutile pour un simple écran linéaire) — les fonctions sous-jacentes
