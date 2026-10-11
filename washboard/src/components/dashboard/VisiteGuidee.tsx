@@ -491,6 +491,24 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `etapeActuelle` est dérivée de `etape` (même tableau `etapes`) : le réécouter à chaque rendu resouscrirait sans raison.
   }, [etape, dejaSatisfait])
 
+  // Réduction manuelle d'un arrêt `interactif` : sur un écran chargé (une
+  // feuille comme « Nouvelle prestation »), la carte posée sous la cible peut
+  // recouvrir des champs plus bas dans la même feuille (les types de
+  // véhicule, le bouton Enregistrer — capture de Ryan, 2026-10-11, sur
+  // l'arrêt Prestations). Repliée, elle laisse l'écran entièrement libre ;
+  // le halo autour de la cible reste visible (pointer-events-none, jamais
+  // gênant) comme rappel discret que la visite continue.
+  //
+  // Se redéplie TOUTE SEULE dès que l'action réelle arrive
+  // (`vient_de_reussir`) : Ryan — « une fois qu'il valide [...], on lui
+  // repropose de continuer s'il veut ». Pas besoin d'un second geste pour
+  // voir la confirmation « Fait ✓ » avant l'avance automatique (ci-dessus).
+  const [reduite, setReduite] = useState(false)
+  useEffect(() => { setReduite(false) }, [etape])
+  useEffect(() => {
+    if (etatInteractif === 'vient_de_reussir') setReduite(false)
+  }, [etatInteractif])
+
   if (etape === null || !etapeActuelle) return null
 
   if (estInteractif) {
@@ -509,59 +527,83 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
             }}
           />
         )}
-        <div
-          ref={carteRef}
-          className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
-          style={styleCarte}
-        >
-          {flecheX !== null && (
-            <div
-              className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
-              style={{ transition: instantane ? 'none' : undefined }}
-              aria-hidden
-            />
-          )}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-                Étape {etape + 1}/{etapes.length}
-              </p>
-              {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>✓ Déjà fait</span>}
+        {reduite ? (
+          <button
+            type="button"
+            onClick={() => setReduite(false)}
+            aria-label={`Reprendre la visite guidée — étape ${etape + 1} sur ${etapes.length}`}
+            className={`wb-visite-verre pointer-events-auto absolute right-3 h-11 px-3.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
+            style={styleCarte}
+          >
+            Visite {etape + 1}/{etapes.length} ‹
+          </button>
+        ) : (
+          <div
+            ref={carteRef}
+            className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
+            style={styleCarte}
+          >
+            {flecheX !== null && (
+              <div
+                className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
+                style={{ transition: instantane ? 'none' : undefined }}
+                aria-hidden
+              />
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
+                  Étape {etape + 1}/{etapes.length}
+                </p>
+                {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>✓ Déjà fait</span>}
+              </div>
+              <div className="flex items-center -my-2 -mr-2">
+                {!vientDeReussir && (
+                  <button
+                    type="button"
+                    onClick={() => setReduite(true)}
+                    aria-label="Réduire la visite guidée sur le côté, pour libérer l'écran"
+                    className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                  >
+                    ›
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={fermer}
+                  className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                >
+                  Passer
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={fermer}
-              className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
-            >
-              Passer
-            </button>
-          </div>
-          <p key={etape} aria-live="polite" className={`wb-visite-texte mt-2.5 text-[15px] leading-snug ${corps}`}>
-            {vientDeReussir ? 'Fait ✓' : etapeActuelle.texte}
-          </p>
-          {!vientDeReussir && etapeActuelle.cheminPwa && (
-            <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              « {etapeActuelle.cheminPwa} »
+            <p key={etape} aria-live="polite" className={`wb-visite-texte mt-2.5 text-[15px] leading-snug ${corps}`}>
+              {vientDeReussir ? 'Fait ✓' : etapeActuelle.texte}
             </p>
-          )}
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              {vientDeReussir
-                ? 'On continue…'
-                : dejaFaitAffiche
-                  ? 'Déjà configuré — tu peux continuer.'
-                  : "L'écran reste à toi — la visite avance dès que c'est fait."}
-            </p>
-            <button
-              type="button"
-              onClick={avancer}
-              disabled={navigation || vientDeReussir}
-              className={`h-9 shrink-0 px-4 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)] border border-[color:var(--v2-filet-fort)] disabled:opacity-50 transition-opacity`}
-            >
-              {navigation ? <Spinner /> : dejaFaitAffiche ? 'Suivant' : 'Plus tard'}
-            </button>
+            {!vientDeReussir && etapeActuelle.cheminPwa && (
+              <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                « {etapeActuelle.cheminPwa} »
+              </p>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                {vientDeReussir
+                  ? 'On continue…'
+                  : dejaFaitAffiche
+                    ? 'Déjà configuré — tu peux continuer.'
+                    : "L'écran reste à toi — la visite avance dès que c'est fait."}
+              </p>
+              <button
+                type="button"
+                onClick={avancer}
+                disabled={navigation || vientDeReussir}
+                className={`h-9 shrink-0 px-4 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)] border border-[color:var(--v2-filet-fort)] disabled:opacity-50 transition-opacity`}
+              >
+                {navigation ? <Spinner /> : dejaFaitAffiche ? 'Suivant' : 'Plus tard'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     )
   }

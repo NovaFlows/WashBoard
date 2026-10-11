@@ -524,6 +524,37 @@ annonce, juste fusionnée dans le même arrêt plutôt que sur deux.
 `pwaSeulement`, ne comptaient déjà pas côté site). Vérifié par parcours complet sur un
 compte jetable : exactement 11 arrêts.
 
+## Carte réductible sur les arrêts `interactif` (2026-10-11)
+
+Ryan, sur l'arrêt Prestations, capture à l'appui (feuille « Nouvelle prestation ») :
+la carte de la visite, posée sous la cible, recouvrait les boutons de type de
+véhicule plus bas dans la même feuille — gênant pour vraiment configurer en
+direct pendant que la carte reste affichée. Deux pistes proposées (bloquer
+l'accès jusqu'à « Suivant », ou rendre la carte réductible) ; Ryan a détaillé la
+seconde en longueur et écarté la première (« c'est bien beau le bouton plus
+tard, mais imaginons il veut commencer à la configurer en direct, bah voilà, un
+peu chiant »).
+
+Ajouté : un bouton « › » sur la carte des arrêts `interactif` (Prestations,
+Horaires — pas sur les arrêts « regarde », qui bloquent déjà l'écran avec un
+fond sombre, rien à libérer) qui la réduit en une petite pastille sur le bord
+droit (« Visite 6/11 ‹ »), l'écran entièrement libre en dessous. Se redéploie
+TOUTE SEULE dès que l'action réelle arrive (`vient_de_reussir`) pour montrer
+« Fait ✓ » avant l'avance automatique déjà en place — Ryan : « une fois qu'il
+valide [...], on lui repropose de continuer s'il veut ». Se réinitialise
+(dépliée) à chaque nouvel arrêt.
+
+**Non repris** : la fonction de confirmation « une entrée par prestation enregistrée
+avant de proposer de passer à la suite » — le tuto avance toujours dès la
+PREMIÈRE prestation sauvegardée (`abonnerAvancement`/`servicesCount > 0`),
+comportement existant et délibéré, non modifié. Si Ryan veut pouvoir en
+enregistrer plusieurs avant que la visite n'avance, c'est un changement séparé,
+à confirmer.
+
+Vérifié par parcours Playwright complet (compte jetable, état vide → choix du
+modèle « Voiture » → feuille ouverte → réduction → remplissage et Enregistrer
+sans obstruction → redéploiement automatique → avance vers l'arrêt suivant).
+
 ## Le chemin d'accès affiché sous le texte — seulement à partir de 2 taps
 
 Demandé par Ryan le 2026-10-11 : afficher, entre guillemets, le chemin pour retrouver
