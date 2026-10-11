@@ -495,9 +495,11 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   // feuille comme « Nouvelle prestation »), la carte posée sous la cible peut
   // recouvrir des champs plus bas dans la même feuille (les types de
   // véhicule, le bouton Enregistrer — capture de Ryan, 2026-10-11, sur
-  // l'arrêt Prestations). Repliée, elle laisse l'écran entièrement libre ;
-  // le halo autour de la cible reste visible (pointer-events-none, jamais
-  // gênant) comme rappel discret que la visite continue.
+  // l'arrêt Prestations). Repliée, elle laisse l'écran ENTIÈREMENT libre : le
+  // halo autour de la cible disparaît aussi (une première version le gardait
+  // affiché « comme rappel discret » — Ryan, capture à l'appui : un cadre
+  // bleu qui reste allumé sans la carte pour l'expliquer n'a plus rien de
+  // discret, exactement ce que la réduction était censée éviter).
   //
   // Se redéplie TOUTE SEULE dès que l'action réelle arrive
   // (`vient_de_reussir`) : Ryan — « une fois qu'il valide [...], on lui
@@ -516,7 +518,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
     const dejaFaitAffiche = etatInteractif === 'deja_fait'
     return (
       <div className="fixed inset-0 z-[70] pointer-events-none" role="status" aria-label="Visite guidée">
-        {rect && (
+        {rect && !reduite && (
           <div
             aria-hidden
             className={`wb-visite-halo absolute rounded-2xl ${vientDeReussir ? 'wb-visite-halo-ok' : ''}`}
@@ -565,7 +567,7 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
                     aria-label="Réduire la visite guidée sur le côté, pour libérer l'écran"
                     className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                   >
-                    ›
+                    Réduire
                   </button>
                 )}
                 <button

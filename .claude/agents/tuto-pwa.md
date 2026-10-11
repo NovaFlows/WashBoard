@@ -524,6 +524,22 @@ annonce, juste fusionnée dans le même arrêt plutôt que sur deux.
 `pwaSeulement`, ne comptaient déjà pas côté site). Vérifié par parcours complet sur un
 compte jetable : exactement 11 arrêts.
 
+## Carte réductible : bouton invisible, halo laissé allumé (correctif du jour, 2026-10-11)
+
+Ryan a retesté la carte réductible (section plus bas) : « le petit bouton à côté de
+Passer je n'avais pas fait attention, c'est quasi impossible [à repérer] ». Le bouton
+« › » (un seul caractère) renommé en toutes lettres : **« Réduire »**.
+
+Capture à l'appui, une deuxième incohérence : le halo bleu autour de la cible restait
+affiché MÊME la carte réduite — pensé au départ comme « rappel discret que la visite
+continue », en réalité un cadre allumé sans rien pour l'expliquer une fois la carte
+partie, exactement ce que la réduction visait à éviter. Le halo disparaît maintenant
+avec la carte (`{rect && !reduite && (...)}`).
+
+Vérifié par parcours Playwright (compte jetable, même chemin que la vérification
+précédente) : bouton « Réduire » trouvé par son texte, halo présent avant réduction,
+absent après.
+
 ## État « finie » qui survit à un changement de compte dans le même onglet (2026-10-11)
 
 Ryan : « je viens de créer mon compte et le tuto ne sait pas lancer ». Diagnostic :
