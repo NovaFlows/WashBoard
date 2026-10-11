@@ -94,6 +94,11 @@ describe('isTrustedOrigin', () => {
   })
 
   it('n\'invente jamais ces origines sans que Vercel les ait posées', () => {
+    // Sur le CI Vercel lui-même, ces deux variables SONT posées (par ce
+    // déploiement) : les vider explicitement est ce qui rend ce test
+    // significatif, plutôt que de dépendre de l'environnement ambiant.
+    vi.stubEnv('VERCEL_URL', '')
+    vi.stubEnv('VERCEL_BRANCH_URL', '')
     expect(isTrustedOrigin('https://wash-board-git-feat-tuto-pwa-novaflows1.vercel.app', PROD)).toBe(false)
   })
 })
