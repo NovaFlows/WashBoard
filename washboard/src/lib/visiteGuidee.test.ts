@@ -108,12 +108,12 @@ describe('etapesPour', () => {
     expect(ciblesDePage).toEqual(['lien', 'voir-page', 'prestations', 'horaires'])
   })
 
-  it('les deux essentiels restants (services, availabilities) sont interactifs, et eux seuls', async () => {
+  // Plus aucun arrêt interactif (Alexandre, 2026-10-11) : pendant le tuto, seuls Suivant et
+  // Passer répondent, l'arrière-plan n'est jamais cliquable.
+  it('aucun arrêt n’est interactif', async () => {
     const { etapesPour } = await charger()
-    const interactifs = etapesPour(false).filter(e => e.interactif)
-    expect(interactifs.map(e => e.interactif)).toEqual(['services', 'availabilities'])
-    // Chaque arrêt interactif porte une cible : sans elle, rien à mettre en valeur.
-    for (const e of interactifs) expect(e.cible).toBeTruthy()
+    expect(etapesPour(true).filter(e => e.interactif)).toEqual([])
+    expect(etapesPour(false).filter(e => e.interactif)).toEqual([])
   })
 
   // `cheminPwa` (2026-10-11, demande de Ryan) : affiché entre guillemets sous

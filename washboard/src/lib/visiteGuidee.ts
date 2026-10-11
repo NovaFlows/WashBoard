@@ -128,8 +128,8 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   // carte « Votre page de réservation » en haut de Plus porte déjà le lien
   // « Voir », pas besoin de naviguer pour la montrer).
   { cible: 'voir-page', texte: "Et voilà à quoi elle ressemble pour de vrai — ouvre-la, c'est exactement ce que voient tes clients." },
-  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, cheminPwa: 'Plus → Prestations et prix', interactif: 'services' },
-  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires', interactif: 'availabilities' },
+  { route: '/dashboard/parametres/prestations', cible: 'prestations', texte: "Ce que tu vends : nom, prix, durée. Ajoutes-en au moins une — ta page reste vide tant que tu n'en as pas créé une.", chemin: `${CHEMIN_CONFIGURER} → Prestations`, cheminPwa: 'Plus → Prestations et prix' },
+  { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires' },
   { route: '/dashboard/calendrier', texte: 'Sur Agenda : toute ton activité en vue mois/semaine/jour.' },
   { route: '/dashboard/clients', texte: "Sur Clients : chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
   { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
