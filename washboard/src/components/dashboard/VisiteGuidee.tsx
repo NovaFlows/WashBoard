@@ -413,6 +413,29 @@ export default function VisiteGuidee({ aFaire, avancement }: { aFaire?: boolean;
   // cible/rect — APRÈS que `dispositionCarte` ait déjà positionné la carte
   // au commit précédent (sinon on mesurerait l'ancienne position).
   const carteRef = useRef<HTMLDivElement>(null)
+
+  // Pendant le tuto (application, arrêt d'explication), l'arrière-plan ne défile plus à la main
+  // (Alexandre, 2026-10-11) : seuls Suivant et Passer comptent. Les gestes (doigt, molette) sont
+  // annulés hors de la carte ; le défilement automatique du tuto (`scrollIntoView`) reste possible.
+  const bloquerFond = isPwa && etape !== null && !estInteractif
+  useEffect(() => {
+    if (!bloquerFond) return
+    const annuler = (e: Event) => {
+      if (carteRef.current?.contains(e.target as Node)) return
+      e.preventDefault()
+    }
+    document.addEventListener('touchmove', annuler, { passive: false })
+    document.addEventListener('wheel', annuler, { passive: false })
+    const html = document.documentElement
+    const avant = html.style.overscrollBehavior
+    html.style.overscrollBehavior = 'none'
+    return () => {
+      document.removeEventListener('touchmove', annuler)
+      document.removeEventListener('wheel', annuler)
+      html.style.overscrollBehavior = avant
+    }
+  }, [bloquerFond])
+
   const [flecheX, setFlecheX] = useState<number | null>(null)
   useEffect(() => {
     setFlecheX(positionFleche(rect, carteRef.current))
