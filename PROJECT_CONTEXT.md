@@ -26,6 +26,10 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
+## EN PRODUCTION depuis le 2026-10-12 — refonte bureau fusionnée dans master (`ff1bb4b`)
+- Fusion par avance rapide de `refonte/maquette-bureau` dans master, sur demande d'Alexandre. Conséquences assumées : nouveau bleu (#306090 / #6E9FD0) aussi sur téléphone pour tous ; version ordinateur v2 toujours réservée aux comptes `beta_refonte` ; doublon Chiffres/Devis dans Plus conservé ; tuto ordinateur retiré (y compris sur l'ancien site).
+- Le premier déploiement de production servait l'ANCIEN `globals.css` (cache de construction Vercel) ; redéployé sans cache, vérifié en ligne (accent, sur-accent, rail, rail réduit, tuto présents). Recommandé : variable Vercel `VERCEL_FORCE_NO_BUILD_CACHE=1` (Production + Preview).
+
 ## Travail actuel — refonte bureau (branche de Yanis `refonte/maquette-bureau`, reprise le 2026-10-09)
 - Worktree : `../WashBoard-bureau` (le dossier principal est utilisé par une autre session). `washboard/node_modules` = jonction vers celui du dossier principal ; lancer avec `NEXT_PUBLIC_DEV_BUREAU=1 npx next dev --webpack -p 3018`, puis `/demo` (données fictives, aucune base).
 - Maquette de référence : `washboard-design/maquettes/bureau-2026/` (README + CONTRAT). Les six destinations sont codées ; la v2 bureau n'est servie sur le site qu'aux comptes `beta_refonte` (garde-fou de `useDashboardV2.ts`).
