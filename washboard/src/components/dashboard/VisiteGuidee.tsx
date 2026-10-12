@@ -237,6 +237,21 @@ function positionnerCarte(r: DOMRect | null, cote: CoteCarte): { styleCarte: CSS
   return { styleCarte: { bottom: window.innerHeight - r.top + MARGE_CARTE }, flecheEnBas: true }
 }
 
+/** Tuto ordinateur : largeur fixe de la carte, et position horizontale — centrée sur la
+ *  cible et bornée aux bords de la fenêtre, ou centrée dans l'écran sans cible (`left`/`right`
+ *  à 0 + marges auto : avec une largeur fixée, une boîte absolue se centre ainsi). */
+const LARGEUR_CARTE_BUREAU = 400
+const MARGE_BORD_BUREAU = 16
+function positionHorizontaleBureau(r: DOMRect | null): CSSProperties {
+  if (!r || typeof window === 'undefined') {
+    return { width: LARGEUR_CARTE_BUREAU, left: 0, right: 0, marginLeft: 'auto', marginRight: 'auto' }
+  }
+  const centre = r.left + r.width / 2
+  const max = window.innerWidth - LARGEUR_CARTE_BUREAU - MARGE_BORD_BUREAU
+  const left = Math.min(Math.max(centre - LARGEUR_CARTE_BUREAU / 2, MARGE_BORD_BUREAU), Math.max(max, MARGE_BORD_BUREAU))
+  return { width: LARGEUR_CARTE_BUREAU, left }
+}
+
 /** Barre « Stories » : un segment par arrêt, rempli pour tout arrêt déjà
  *  passé (index < etape) ou en cours (index === etape) — jamais pour les
  *  arrêts à venir. Remplace la barre continue unique : reste lisible même
@@ -254,15 +269,21 @@ function BarreProgres({ etape, total }: { etape: number; total: number }) {
   )
 }
 
-export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: { aFaire?: VisitesAFaire; avancement?: Avancement }) {
+/** `bureau` : la page est dans la nouvelle version ordinateur (colonne de gauche, voir
+ *  DashboardShell). Tuto ordinateur du 2026-10-12 : MÊME rendu et mêmes arrêts que le
+ *  téléphone (carte en verre collée à la cible, découpe, arrêts interactifs), seules la
+ *  liste (`etapesPour('bureau')`) et la largeur de la carte changent. */
+export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bureau = false }: { aFaire?: VisitesAFaire; avancement?: Avancement; bureau?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const isPwa = useDesignMobile()
+  // Nouvelle version, téléphone OU ordinateur : c'est elle qui porte le rendu « verre ».
+  const v2 = isPwa || bureau
   // Un tuto par design : celui de l'écran affiché, l'autre attend la première visite sur ce design.
-  const appareil: Appareil = isPwa ? 'mobile' : 'ordinateur'
+  const appareil: Appareil = bureau || !isPwa ? 'ordinateur' : 'mobile'
   const aFaire = aFaireParAppareil?.[appareil]
   const [navigation, naviguer] = useTransition()
-  const etapes = etapesPour(isPwa)
+  const etapes = etapesPour(bureau ? 'bureau' : isPwa ? 'mobile' : 'site')
   const etat = lireEtat(useSyncExternalStore(abonnerVisite, lireVisite, () => null), etapes.length)
 
   useEffect(() => {
@@ -275,7 +296,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
   const etape = etat.statut === 'en_cours' ? etat.etape : null
   const etapeActuelle = etape === null ? undefined : etapes[etape]
   const cible = etapeActuelle?.cible
-  const estInteractif = isPwa && !!etapeActuelle?.interactif
+  const estInteractif = v2 && !!etapeActuelle?.interactif
 
   // Scroll/redimensionnement : la découpe doit suivre sans transition (voir
   // le commentaire au-dessus de `surligner()`) — `transition: 'none'` posé en
@@ -287,8 +308,8 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
   const [etatRect, setEtatRect] = useState<{ rect: DOMRect | null; instantane: boolean }>({ rect: null, instantane: false })
   useEffect(() => {
     if (!cible) { setEtatRect({ rect: null, instantane: true }); return }
-    return surligner(cible, !isPwa, (r, instantane) => setEtatRect({ rect: r, instantane }))
-  }, [cible, pathname, isPwa])
+    return surligner(cible, !v2, (r, instantane) => setEtatRect({ rect: r, instantane }))
+  }, [cible, pathname, v2])
   const { rect, instantane } = etatRect
 
   const suivante = etape === null ? null : etapeSuivante(etape, etapes.length)
@@ -420,7 +441,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
   // Pendant le tuto (application, arrêt d'explication), l'arrière-plan ne défile plus à la main
   // (Alexandre, 2026-10-11) : seuls Suivant et Passer comptent. Les gestes (doigt, molette) sont
   // annulés hors de la carte ; le défilement automatique du tuto (`scrollIntoView`) reste possible.
-  const bloquerFond = isPwa && etape !== null && !estInteractif
+  const bloquerFond = v2 && etape !== null && !estInteractif
   useEffect(() => {
     if (!bloquerFond) return
     const annuler = (e: Event) => {
@@ -445,6 +466,13 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
   }, [rect, dispositionCarte])
   const styleCarte: CSSProperties = { ...dispositionCarte }
   if (flecheX !== null) (styleCarte as Record<string, string>)['--wb-fleche-x'] = `${flecheX}%`
+  // Ordinateur : la carte du téléphone prend toute la largeur (`left-3 right-3`), illisible
+  // sur un grand écran. Ici, une largeur fixe, centrée sous la cible (bornée aux bords de la
+  // fenêtre), ou centrée dans l'écran pour un arrêt sans cible. La flèche suit d'elle-même
+  // (`positionFleche` mesure la carte réelle).
+  const styleCarteLarge: CSSProperties = bureau
+    ? { ...styleCarte, ...positionHorizontaleBureau(rect) }
+    : styleCarte
 
   // Filet de sécurité : `decidreCote` estime la hauteur de la carte AVANT
   // qu'elle existe dans le DOM (`HAUTEUR_CARTE_ESTIMEE`, une estimation, pas
@@ -568,8 +596,8 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
         ) : (
           <div
             ref={carteRef}
-            className="wb-visite-verre wb-visite-carte pointer-events-auto absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
-            style={styleCarte}
+            className={`wb-visite-verre wb-visite-carte pointer-events-auto absolute ${bureau ? '' : 'left-3 right-3'} rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4`}
+            style={styleCarteLarge}
           >
             {flecheX !== null && (
               <div
@@ -636,7 +664,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
     )
   }
 
-  if (isPwa) {
+  if (v2) {
     return (
       <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Visite guidée">
         {rect ? (
@@ -658,8 +686,8 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement }: 
 
         <div
           ref={carteRef}
-          className="wb-visite-verre wb-visite-carte absolute left-3 right-3 rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4"
-          style={styleCarte}
+          className={`wb-visite-verre wb-visite-carte absolute ${bureau ? '' : 'left-3 right-3'} rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4`}
+          style={styleCarteLarge}
         >
           {flecheX !== null && (
             <div

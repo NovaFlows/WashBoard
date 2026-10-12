@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 vi.mock('./logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
@@ -90,6 +90,36 @@ describe('etapesPour', () => {
     expect(pwaSansRoute.length).toBeGreaterThan(0)
     for (const e of pwaSansRoute) {
       if (e.cible) expect(e.cible).toMatch(/^barre-bas/)
+    }
+  })
+
+  // Tuto ordinateur (2026-10-12) : « exactement comme le mobile, les mêmes choses » — seule la
+  // disposition change (colonne de gauche au lieu de la barre du bas).
+  it('ordinateur : les arrêts du téléphone, dans le même ordre, sans le geste de retour', async () => {
+    const { etapesPour } = await charger()
+    const mobile = etapesPour('mobile')
+    const bureau = etapesPour('bureau')
+    expect(bureau.map(e => e.texte)).toEqual(mobile.filter(e => !e.mobileSeulement).map(e => e.texte))
+    expect(bureau.map(e => e.route)).toEqual(mobile.filter(e => !e.mobileSeulement).map(e => e.route))
+    expect(bureau.length).toBe(mobile.length - 1)
+    expect(etapesPour(true)).toEqual(mobile)
+  })
+
+  it('ordinateur : aucun arrêt ne vise la barre du bas, qui n’existe pas à cet écran', async () => {
+    const { etapesPour } = await charger()
+    const cibles = etapesPour('bureau').flatMap(e => (e.cible ? [e.cible] : []))
+    expect(cibles.filter(c => c.startsWith('barre-bas'))).toEqual([])
+    expect(cibles).toEqual(['rail-nouveau', 'rail-plus', 'lien', 'voir-page', 'prestations', 'horaires'])
+  })
+
+  it('ordinateur : chaque repère visé existe dans un composant de la nouvelle version', async () => {
+    const { etapesPour } = await charger()
+    const sources = ['RailBureauV2.tsx', 'ListeReglagesV2.tsx', 'PrestationsV2.tsx', 'HorairesV2.tsx']
+      .map(f => readFileSync(join(__dirname, '..', 'components', 'dashboard', f), 'utf-8'))
+      .join(' ')
+    for (const { cible } of etapesPour('bureau')) {
+      if (!cible) continue
+      expect(sources.includes(`"${cible}"`) || sources.includes(`'${cible}'`), cible).toBe(true)
     }
   })
 

@@ -52,6 +52,8 @@ type Destination = {
   label: string
   actif: (p: string) => boolean
   icone: React.ReactNode
+  /** Repère du tuto ordinateur (`data-visite-cible`, voir `lib/visiteGuidee.ts`). */
+  cibleVisite?: string
 }
 
 // Icônes reprises du sprite de la maquette bureau (même style que BarreBasV2 : trait 1.8px,
@@ -110,7 +112,7 @@ function destinations(): Destination[] {
         || p.startsWith('/dashboard/compta'),
       icone: ICONE_CHIFFRES,
     },
-    { href: '/dashboard/parametres', label: 'Plus', actif: p => p.startsWith('/dashboard/parametres'), icone: ICONE_PLUS_DESTINATION },
+    { href: '/dashboard/parametres', label: 'Plus', actif: p => p.startsWith('/dashboard/parametres'), icone: ICONE_PLUS_DESTINATION, cibleVisite: 'rail-plus' },
   ]
 }
 
@@ -142,6 +144,7 @@ function LigneRail({ item, actif }: { item: Destination; actif: boolean }) {
     <Link
       href={item.href}
       title={item.label}
+      data-visite-cible={item.cibleVisite}
       aria-current={actif ? 'page' : undefined}
       className={`flex h-[42px] items-center gap-[11px] rounded-[var(--v2-radius-bouton)] px-3 max-[1023px]:justify-center max-[1023px]:px-0 text-[13.5px] ${corpsFort} transition-colors ${
         actif
@@ -203,6 +206,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
       <Link
         href={nouveauHref}
         title="Nouveau devis ou facture"
+        data-visite-cible="rail-nouveau"
         onClick={e => {
           if (pathname.startsWith('/dashboard/chiffres/documents')) {
             e.preventDefault()

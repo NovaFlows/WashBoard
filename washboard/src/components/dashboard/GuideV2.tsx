@@ -11,8 +11,7 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { FilAriane } from '@/components/dashboard/ParametresFormV2'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { redemarrerVisite } from '@/lib/visiteGuidee'
-import { isDesignMobile } from '@/lib/designMobile'
-import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { estEcranRail } from '@/lib/grandEcran'
 
 // « Guide d'utilisation » — refonte 2026 (Alexandre, 2026-09-27 : « c'est la même qu'avant la
 // refonte PWA »). Même contenu que le site, à la virgule près : `lib/guide.ts` reste la seule
@@ -96,7 +95,6 @@ type Props = {
 export default function GuideV2({ liste }: Props) {
   const grandEcran = useGrandEcran()
   const router = useRouter()
-  const mobile = useDesignMobile()
   const [recherche, setRecherche] = useState('')
   const [ouvertes, setOuvertes] = useState<string[]>([])
 
@@ -108,7 +106,8 @@ export default function GuideV2({ liste }: Props) {
   // — sans ça, `/dashboard` pouvait resservir sa version en cache d'avant la
   // remise à zéro (premier clic sans effet visible, Ryan 2026-10-10).
   async function relancerLeTuto() {
-    await redemarrerVisite(isDesignMobile() ? 'mobile' : 'ordinateur')
+    // Même partage que DashboardShell : colonne de gauche à l'écran = tuto ordinateur.
+    await redemarrerVisite(estEcranRail() ? 'ordinateur' : 'mobile')
     router.push('/dashboard')
     router.refresh()
   }
@@ -193,8 +192,9 @@ export default function GuideV2({ liste }: Props) {
         </div>
       )}
 
-      {/* Pas de tuto ordinateur pour l'instant (2026-10-12) : rien à relancer hors téléphone. */}
-      {!cherche && mobile && (
+      {/* GuideV2 n'existe que dans la nouvelle version (téléphone ou ordinateur), qui a chacune
+          son tuto : le bouton relance celui de l'écran affiché. */}
+      {!cherche && (
         <button
           type="button"
           onClick={relancerLeTuto}

@@ -1058,10 +1058,12 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </>
       )}
 
-      {/* Tuto sur téléphone SEULEMENT (Alexandre, 2026-10-12) : le tuto ordinateur visait l'ancien
-          site (chemins « Paramètres → Page client »…) ; il est retiré en attendant d'en refaire un
-          pour le nouveau design ordinateur. La colonne `tuto_ordinateur_vu_le` reste en place. */}
-      {isPwa && <VisiteGuidee aFaire={visiteGuidee} avancement={avancementVisite} />}
+      {/* Tuto de la NOUVELLE version seulement : téléphone (barre du bas) et ordinateur (colonne
+          de gauche, tuto refait le 2026-10-12 — mêmes arrêts que le téléphone, disposition
+          adaptée). L'ancien site n'en a plus : son tuto visait des chemins qui n'existent plus. */}
+      {(isPwa || showRailBureau) && (
+        <VisiteGuidee aFaire={visiteGuidee} avancement={avancementVisite} bureau={showRailBureau} />
+      )}
 
       {/* Retiré dans la PWA en bêta et dans le châssis bureau : posé sous la barre du bas, il
           allongeait la page de plus d'un écran de vide et passait sous la barre (2026-09-25) ;

@@ -87,9 +87,15 @@ export type EtapeVisite = {
    *  d'une lecture du composant qui porte le vrai lien (`ParametresFormV2.tsx`
    *  pour tout ce qui part de « Plus », `ReglagesV2.tsx` pour Guide). */
   cheminPwa?: string
-  /** N'apparaît que dans l'application installée (barre du bas, geste retour :
-   *  rien de tout ça n'existe sur le site). */
+  /** N'apparaît que dans la NOUVELLE version (téléphone ou ordinateur), jamais sur
+   *  l'ancien site : barre du bas ou colonne de gauche, rien de tout ça n'y existe. */
   pwaSeulement?: boolean
+  /** Téléphone seulement, même dans la nouvelle version ordinateur — le geste de
+   *  retour (glisser vers la droite) n'a pas d'équivalent à la souris. */
+  mobileSeulement?: boolean
+  /** Tuto ordinateur (2026-10-12) : l'élément qui joue le même rôle dans la colonne
+   *  de gauche (`RailBureauV2.tsx`) quand celui du téléphone vit dans la barre du bas. */
+  cibleBureau?: string
   /** Arrêt « fais-le maintenant », pas « regarde » : la carte s'efface au
    *  profit d'un simple repère lumineux, laisse l'écran réel cliquable, et
    *  avance toute seule dès que `avancement` (VisiteGuidee.tsx) dit que
@@ -121,8 +127,8 @@ const CHEMIN_CONFIGURER = `${CHEMIN_PAGE_CLIENT} → « Configurer ma page clien
 // les arrêts existants les uns par rapport aux autres.
 export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard', texte: "Voilà ton tableau de bord : tes rendez-vous du jour et ceux à venir, en un coup d'œil." },
-  { pwaSeulement: true, cible: 'barre-bas-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
-  { pwaSeulement: true, cible: 'barre-bas-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
+  { pwaSeulement: true, cible: 'barre-bas-nouveau', cibleBureau: 'rail-nouveau', texte: 'Ce bouton va droit à un nouveau devis ou une nouvelle facture — le geste le plus fréquent sur le terrain.' },
+  { pwaSeulement: true, cible: 'barre-bas-plus', cibleBureau: 'rail-plus', texte: 'Plus loin dans Plus : tout ce que tu ne consultes pas tous les jours — prestations, horaires, factures, compte.' },
   { route: '/dashboard/parametres#lien-reservation', cible: 'lien', texte: "Le lien à donner à tes clients — celui que tu as choisi à l'inscription.", chemin: CHEMIN_PAGE_CLIENT },
   // Juste après le lien, pas ailleurs (Ryan, 2026-10-11 : « important d'avoir
   // la page de réservation juste après les liens, comme ça il voit ce que
@@ -134,16 +140,34 @@ export const ETAPES_VISITE: readonly EtapeVisite[] = [
   { route: '/dashboard/parametres/horaires', cible: 'horaires', texte: 'Tes dispos et tes congés : choisis un modèle de semaine, ça décide des créneaux que voient tes clients.', chemin: `${CHEMIN_CONFIGURER} → Disponibilités`, cheminPwa: 'Plus → Horaires' },
   { route: '/dashboard/calendrier', texte: 'Sur Agenda : toute ton activité en vue mois/semaine/jour.' },
   { route: '/dashboard/clients', texte: "Sur Clients : chaque client qui a réservé, avec son historique et son chiffre d'affaires." },
-  { pwaSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
+  { pwaSeulement: true, mobileSeulement: true, texte: "Dernière chose : pour revenir en arrière, glisse n'importe où sur l'écran vers la droite — pas besoin d'atteindre un bouton précis." },
   { route: '/dashboard/guide', texte: "Si tu bloques un jour, commence ici : la plupart des questions ont déjà leur réponse — et si la tienne n'y est pas, tu peux écrire directement à l'équipe depuis cette page.", cheminPwa: 'Plus → Réglages → Guide d’utilisation' },
 ]
 
-/** La liste réellement montrée : tous les arrêts sur le site, les arrêts PWA en
- *  plus dans l'application installée. Tout le reste (numérotation, navigation,
- *  stockage) travaille sur CETTE liste, jamais sur `ETAPES_VISITE` brute. */
-export function etapesPour(isPwa: boolean): readonly EtapeVisite[] {
-  return isPwa ? ETAPES_VISITE : ETAPES_VISITE.filter(e => !e.pwaSeulement)
+/** Les trois présentations qui peuvent montrer le tuto :
+ *  - `mobile` : la nouvelle version sur téléphone (barre du bas) ;
+ *  - `bureau` : la nouvelle version sur ordinateur (colonne de gauche) — tuto ordinateur
+ *    refait le 2026-10-12 (Alexandre : « exactement comme pour le tuto du mobile, les
+ *    mêmes choses, mais la disposition est différente ») ;
+ *  - `site` : l'ancien site, qui n'affiche plus de tuto depuis le 2026-10-12 (liste
+ *    gardée pour les tests et un éventuel retour). */
+export type ModeVisite = 'mobile' | 'bureau' | 'site'
+
+/** La liste réellement montrée. Tout le reste (numérotation, navigation, stockage)
+ *  travaille sur CETTE liste, jamais sur `ETAPES_VISITE` brute. Un booléen reste accepté :
+ *  `true` = mobile, `false` = site (appelants d'avant le tuto ordinateur). */
+export function etapesPour(mode: ModeVisite | boolean): readonly EtapeVisite[] {
+  const m: ModeVisite = mode === true ? 'mobile' : mode === false ? 'site' : mode
+  if (m === 'mobile') return ETAPES_VISITE
+  if (m === 'site') return ETAPES_VISITE.filter(e => !e.pwaSeulement)
+  return ETAPES_BUREAU
 }
+
+// Mêmes arrêts que le téléphone, dans le même ordre : seuls changent l'élément visé
+// quand il vit dans la colonne de gauche, et le geste de retour, retiré.
+const ETAPES_BUREAU: readonly EtapeVisite[] = ETAPES_VISITE
+  .filter(e => !e.mobileSeulement)
+  .map(e => (e.cibleBureau ? { ...e, cible: e.cibleBureau } : e))
 
 export type EtatVisite =
   | { statut: 'absente' }

@@ -26,6 +26,10 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
+## Branche `feat/tuto-ordinateur` (2026-10-12, non fusionnée)
+- Tuto pour la nouvelle version ordinateur : MÊMES arrêts que le téléphone, même rendu (`VisiteGuidee` prop `bureau`, `etapesPour('bureau')`). « Nouveau » et « Plus » visent la colonne de gauche (`rail-nouveau`, `rail-plus` dans `RailBureauV2`) ; le geste de retour (`mobileSeulement`) est retiré → 10 arrêts. Carte de 400px centrée sous la cible (pleine largeur sur téléphone). Mémoire `tuto_ordinateur_vu_le`. L'ancien site n'a toujours pas de tuto. « Revoir le tuto » du Guide v2 relance celui de l'écran affiché (`estEcranRail`).
+- Vérifié : tsc, vitest 2561, captures démo 1440 et 910 px (arrêts collés à leur cible, aucun débordement), tuto téléphone inchangé (11 arrêts).
+
 ## EN PRODUCTION depuis le 2026-10-12 — refonte bureau fusionnée dans master (`ff1bb4b`)
 - Fusion par avance rapide de `refonte/maquette-bureau` dans master, sur demande d'Alexandre. Conséquences assumées : nouveau bleu (#306090 / #6E9FD0) aussi sur téléphone pour tous ; version ordinateur v2 toujours réservée aux comptes `beta_refonte` ; doublon Chiffres/Devis dans Plus conservé ; tuto ordinateur retiré (y compris sur l'ancien site).
 - Le premier déploiement de production servait l'ANCIEN `globals.css` (cache de construction Vercel) ; redéployé sans cache, vérifié en ligne (accent, sur-accent, rail, rail réduit, tuto présents). Recommandé : variable Vercel `VERCEL_FORCE_NO_BUILD_CACHE=1` (Production + Preview).
