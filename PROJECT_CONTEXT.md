@@ -28,6 +28,7 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 
 ## Nouvelle version ordinateur OUVERTE À TOUS (2026-10-12)
 - `BUREAU_POUR_TOUS = true` (`hooks/useDashboardV2.ts`, fonction `bureauAutorise`) : `beta_refonte` ne décide plus rien ; tous les laveurs, anciens et nouveaux, ont la v2 sur ordinateur (fenêtre ≥ 880px avec souris). Retour arrière : passer la constante à `false`. Les tablettes sans souris gardent l'ancien site.
+- Annonce envoyée le 2026-10-12 (`/api/admin/annoncer-bureau-2026?confirmer=1&inclureInternes=1`, depuis la production) : 18 emails, 0 échec, notification push tentée pour les 18. **Ne pas relancer** — personne ne doit la recevoir deux fois.
 - `washers.tuto_ordinateur_vu_le` remis à NULL pour tous les laveurs (accord d'Alexandre) : le tuto ordinateur se lance à leur prochaine arrivée sur Aujourd'hui.
 
 ## Tuto ordinateur — fusionné dans master le 2026-10-12 (`25e0280`)
