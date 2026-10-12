@@ -1221,3 +1221,58 @@ export async function sendAnnoncePwa({ to, washerName, appUrl }: {
 </html>`.trim(),
   })
 }
+
+// Annonce du nouveau design ordinateur (2026-10-12) — envoyée une seule fois à tous les laveurs
+// par `/api/admin/annoncer-bureau-2026`. Même gabarit que `sendAnnoncePwa`, aux couleurs de la
+// nouvelle version (bleu du logo #306090).
+export async function sendAnnonceBureau({ to, washerName, appUrl }: {
+  to: string; washerName: string; appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: 'WashBoard a un nouveau design sur ordinateur',
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f6f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e7e5e0;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+    <div style="background:#306090;padding:28px 40px;">
+      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Un nouveau design sur ordinateur 💻</h1>
+      <p style="margin:0;color:#d6e4f2;font-size:13px;">Le même WashBoard que sur votre téléphone, sur grand écran</p>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#16161a;">Bonjour <strong>${escapeHtml(washerName)}</strong>,</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#55555c;line-height:1.6;">
+        Le tableau de bord sur ordinateur a été entièrement refait, avec le même design que
+        l&apos;application sur votre téléphone. Ce qui change :
+      </p>
+      <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#55555c;line-height:1.7;">
+        <li>un menu à gauche : Aujourd&apos;hui, Agenda, Clients, Chiffres, Plus et vos Documents ;</li>
+        <li>la liste et la fiche côte à côte : vous passez d&apos;un client ou d&apos;un rendez-vous à l&apos;autre sans rien fermer ;</li>
+        <li>l&apos;agenda en vue semaine et mois ;</li>
+        <li>une recherche et des filtres dans vos devis et factures.</li>
+      </ul>
+      <div style="background:#eef3f8;border-left:4px solid #306090;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#24486c;font-weight:600;line-height:1.5;">
+          Une visite guidée vous présente tout à votre prochaine connexion sur ordinateur.
+          Vos données sont les mêmes, rien à reconfigurer.
+        </p>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <a href="${url}/dashboard" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+          Découvrir le nouveau design →
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#8a8a90;text-align:center;">Vous pourrez revoir la visite à tout moment : Plus › Réglages › Guide d&apos;utilisation</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#8a8a90;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
