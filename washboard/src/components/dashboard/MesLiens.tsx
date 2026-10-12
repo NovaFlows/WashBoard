@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import MesLiensV2 from '@/components/dashboard/MesLiensV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
@@ -37,7 +37,7 @@ export default function MesLiens({ slug, liste, betaRefonte }: Props) {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import ReglagesV2 from '@/components/dashboard/ReglagesV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import type { SetupProgress } from '@/lib/setupProgress'
@@ -33,7 +33,7 @@ export default function Reglages({ liste, betaRefonte, progress }: Props) {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])
 

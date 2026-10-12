@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import ChiffresV2, { type ChiffresProps } from '@/components/dashboard/ChiffresV2'
 
 // Point d'entrée de « Chiffres » — nouvelle destination de la refonte 2026
@@ -49,7 +49,7 @@ export default function Chiffres({ betaRefonte, ...props }: Props) {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'v2' : 'v1')
     // Décidé une seule fois, au montage (voir le commentaire plus haut) : `betaRefonte` est une
     // prop stable pour la durée de vie de la page (venue du serveur), pas une raison de

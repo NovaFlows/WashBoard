@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import DepensesV2 from '@/components/dashboard/DepensesV2'
 
 // Point d'entrée de « Dépenses » — destination NEUVE de la refonte 2026 (même schéma que
@@ -31,7 +31,7 @@ export default function Depenses({ betaRefonte }: {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])
 

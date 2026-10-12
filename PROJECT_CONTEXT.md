@@ -26,6 +26,10 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
+## Nouvelle version ordinateur OUVERTE À TOUS (2026-10-12)
+- `BUREAU_POUR_TOUS = true` (`hooks/useDashboardV2.ts`, fonction `bureauAutorise`) : `beta_refonte` ne décide plus rien ; tous les laveurs, anciens et nouveaux, ont la v2 sur ordinateur (fenêtre ≥ 880px avec souris). Retour arrière : passer la constante à `false`. Les tablettes sans souris gardent l'ancien site.
+- `washers.tuto_ordinateur_vu_le` remis à NULL pour tous les laveurs (accord d'Alexandre) : le tuto ordinateur se lance à leur prochaine arrivée sur Aujourd'hui.
+
 ## Tuto ordinateur — fusionné dans master le 2026-10-12 (`25e0280`)
 - Tuto pour la nouvelle version ordinateur : MÊMES arrêts que le téléphone, même rendu (`VisiteGuidee` prop `bureau`, `etapesPour('bureau')`). « Nouveau » et « Plus » visent la colonne de gauche (`rail-nouveau`, `rail-plus` dans `RailBureauV2`) ; le geste de retour (`mobileSeulement`) est retiré → 10 arrêts. Carte de 400px centrée sous la cible (pleine largeur sur téléphone). Mémoire `tuto_ordinateur_vu_le`. L'ancien site n'a toujours pas de tuto. « Revoir le tuto » du Guide v2 relance celui de l'écran affiché (`estEcranRail`).
 - Vérifié : tsc, vitest 2561, captures démo 1440 et 910 px (arrêts collés à leur cible, aucun débordement), tuto téléphone inchangé (11 arrêts).

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import ApparenceV2 from '@/components/dashboard/ApparenceV2'
 import type { ReglagesApparence } from '@/hooks/useApparenceV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
@@ -46,7 +46,7 @@ export default function Apparence({ betaRefonte, ...props }: Props) {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])
 

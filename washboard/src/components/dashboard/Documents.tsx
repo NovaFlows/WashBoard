@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import DocumentsV2 from '@/components/dashboard/DocumentsV2'
 
 // Point d'entrée de « Devis et factures » — destination NEUVE de la refonte 2026 (même schéma
@@ -36,7 +36,7 @@ export default function Documents({ prestations, nomLaveur, betaRefonte }: {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'pwa-ou-bureau' : 'site')
   }, [betaRefonte])
 

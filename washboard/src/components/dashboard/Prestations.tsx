@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isDesignMobile } from '@/lib/designMobile'
 import { estEcranRail } from '@/lib/grandEcran'
-import { bureauForceEnDev } from '@/hooks/useDashboardV2'
+import { bureauAutorise } from '@/hooks/useDashboardV2'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import type { Availability, Service, ServiceCategory, ZoneConfig } from '@/types'
 import type { Plan } from '@/lib/plan'
@@ -56,7 +56,7 @@ export default function Prestations({ betaRefonte, ...props }: Props) {
 
   useEffect(() => {
     const pwa = isDesignMobile()
-    const bureau = estEcranRail() && (!!betaRefonte || bureauForceEnDev())
+    const bureau = estEcranRail() && bureauAutorise(betaRefonte)
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])
 
