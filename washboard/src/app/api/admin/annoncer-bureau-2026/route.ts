@@ -13,7 +13,7 @@ import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 //
 // Sans paramètre : aperçu seul (liste des destinataires, AUCUN envoi).
 // `?test=<email>` : le vrai email ET la vraie notification à CE laveur seulement.
-// `?confirmer=1` : l'envoi réel à tous.
+// `?confirmer=1` : l'envoi réel à tous. `&inclureInternes=1` : comptes internes de l'équipe compris.
 
 const NOTIFICATION = {
   title: '💻 Nouveau design sur ordinateur',
@@ -70,7 +70,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Lecture impossible' }, { status: 500 })
   }
 
-  const destinataires = (washers ?? []).filter(w => !COMPTES_INTERNES_EXCLUS_DIFFUSION.includes(w.slug))
+  // `?inclureInternes=1` : comptes internes de l'équipe compris (Alexandre, 2026-10-12 : « à tout
+  // le monde, même aux comptes test ou interne »).
+  const inclureInternes = request.nextUrl.searchParams.get('inclureInternes') === '1'
+  const destinataires = (washers ?? []).filter(w => inclureInternes || !COMPTES_INTERNES_EXCLUS_DIFFUSION.includes(w.slug))
 
   if (!confirmer) {
     return NextResponse.json({
