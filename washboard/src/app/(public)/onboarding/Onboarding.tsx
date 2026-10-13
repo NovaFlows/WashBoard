@@ -11,7 +11,7 @@ import { PHRASE_SLUG_INVALIDE, generateSlug, slugValide } from '@/lib/slug'
 import { enregistrerSlug } from '@/lib/lienReservation'
 import { enregistrerProfil } from '@/lib/profilApi'
 import { appeler } from '@/lib/prestationsApi'
-import { QUESTIONS_ACTIVITE, SOURCES_ACQUISITION, type ProfilActivite, type SourceAcquisition } from '@/lib/onboarding'
+import { QUESTIONS_FACULTATIVES, QUESTIONS_OBLIGATOIRES, SOURCES_ACQUISITION, questionsObligatoiresRepondues, type ProfilActivite, type QuestionActivite, type SourceAcquisition } from '@/lib/onboarding'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { estImageAcceptee } from '@/lib/apparence'
 import { retirerLeFond } from '@/hooks/retirerLeFond'
@@ -20,7 +20,7 @@ import { envoyerImage } from '@/lib/apparenceApi'
 import { EtatEnvoi } from '@/components/dashboard/ApparenceUiV2'
 import type { EtatImage } from '@/hooks/useApparenceV2'
 
-// Onboarding : 4 étapes, dans l'ordre choisi le 2026-10-11 (Ryan a demandé
+// Onboarding : 5 étapes (la 5e, facultative, ajoutée le 2026-10-13), dans l'ordre choisi le 2026-10-11 (Ryan a demandé
 // l'ajout de l'adresse de départ et du logo, « je te laisse le choix de
 // l'ordre ») — lien, adresse, logo, puis la question d'acquisition déjà en
 // place. Adresse et logo étaient auparavant des arrêts `interactif` du tuto
@@ -39,7 +39,8 @@ import type { EtatImage } from '@/hooks/useApparenceV2'
 // confirmée avec Ryan avant d'implémenter.
 
 const DOMAINE = SITE_URL_FALLBACK.replace(/^https?:\/\/(www\.)?/, '')
-const TOTAL_ETAPES = 4
+const TOTAL_ETAPES = 5
+type Etape = 1 | 2 | 3 | 4 | 5
 
 type Verification = { slug: string; etat: 'libre' | 'pris' | 'erreur'; message?: string }
 type Disponibilite = 'actuel' | 'invalide' | 'verification' | Verification['etat']
@@ -70,21 +71,59 @@ function Erreur({ texte }: { texte: string }) {
 const BOUTON_PRINCIPAL = 'w-full py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-lg shadow-[#1651E8]/20'
 const LIEN_DISCRET = 'text-xs text-slate-400 dark:text-white/35 hover:text-slate-600 dark:hover:text-white/60 underline-offset-2 hover:underline transition-colors disabled:opacity-40'
 
+const PASTILLE = 'py-2 px-3 text-sm font-semibold rounded-xl border transition-colors disabled:opacity-40'
+const PASTILLE_CHOISIE = 'border-[#1651E8] bg-[#1651E8]/10 text-[#1651E8] dark:border-[#6A9FFF] dark:bg-[#1651E8]/20 dark:text-[#6A9FFF]'
+const PASTILLE_LIBRE = 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:border-slate-300 dark:hover:border-white/20'
+
+function Question({ q, reponse, onChoisir, disabled }: {
+  q: QuestionActivite
+  reponse: string | string[] | undefined
+  onChoisir: (valeur: string) => void
+  disabled: boolean
+}) {
+  return (
+    <fieldset>
+      <legend className="text-sm font-bold text-slate-800 dark:text-white/90 mb-2">
+        {q.question}
+        {q.multiple && <span className="font-normal text-slate-400 dark:text-white/40"> (plusieurs choix)</span>}
+      </legend>
+      <div className="flex flex-wrap gap-2">
+        {q.choix.map(x => {
+          const choisi = Array.isArray(reponse) ? reponse.includes(x.valeur) : reponse === x.valeur
+          return (
+            <button
+              key={x.valeur}
+              type="button"
+              aria-pressed={choisi}
+              onClick={() => onChoisir(x.valeur)}
+              disabled={disabled}
+              className={`${PASTILLE} ${choisi ? PASTILLE_CHOISIE : PASTILLE_LIBRE}`}
+            >
+              {x.libelle}
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
 const REPOS_LOGO: EtatImage = { phase: 'repos', attenteLongue: false, erreur: null }
 const DELAI_ATTENTE_LONGUE_MS = 6000
 
-const TITRES: Record<1 | 2 | 3 | 4, { titre: string; sousTitre: string }> = {
+const TITRES: Record<Etape, { titre: string; sousTitre: string }> = {
   1: { titre: 'Ton lien de réservation', sousTitre: 'C’est l’adresse que tes clients utiliseront pour réserver.' },
   2: { titre: 'Ton adresse de départ', sousTitre: 'Sert à calculer la distance jusqu’à tes clients, et les frais de déplacement.' },
   3: { titre: 'Ton logo', sousTitre: 'Il habille ta page de réservation, pour que tes clients te reconnaissent du premier coup d’œil.' },
-  4: { titre: 'Ton activité', sousTitre: 'Quelques questions pour mieux t’accompagner. Réponds à ce que tu veux, tout tient sur cette page.' },
+  4: { titre: 'Ton activité', sousTitre: 'Quelques questions pour mieux t’accompagner.' },
+  5: { titre: 'C’est presque fini', sousTitre: 'Plus que quelques petites questions, toutes facultatives. Réponds à ce que tu veux, puis c’est terminé.' },
 }
 
 /** `etapeInitiale` : uniquement pour le banc d'essai de développement (`/dev/booking-preview?mode=onboarding`),
  *  qui ouvre directement la dernière page ; la vraie page part toujours de l'étape 1. */
-export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: string; nom: string; etapeInitiale?: 1 | 2 | 3 | 4 }) {
+export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: string; nom: string; etapeInitiale?: Etape }) {
   const router = useRouter()
-  const [etape, setEtape] = useState<1 | 2 | 3 | 4>(etapeInitiale)
+  const [etape, setEtape] = useState<Etape>(etapeInitiale)
 
   // Étape 1 — lien de réservation.
   const [slugEnregistre, setSlugEnregistre] = useState(slug)
@@ -103,21 +142,23 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
   const minuteurLogo = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (minuteurLogo.current) clearTimeout(minuteurLogo.current) }, [])
 
-  // Étape 4 — l'activité (facultatif, 2026-10-13) puis comment as-tu connu WashBoard
-  // (obligatoire), sur la même page.
+  // Étapes 4 et 5 — l'activité (2026-10-13) : à l'étape 4 les questions obligatoires, à
+  // l'étape 5 les facultatives et « Comment as-tu connu WashBoard ? ». Tout part en un seul
+  // envoi à la fin de l'étape 5.
   const [source, setSource] = useState<SourceAcquisition | null>(null)
   const [profil, setProfil] = useState<ProfilActivite>({})
-  function choisirReponse(cle: string, valeur: string, multiple: boolean) {
+  function choisirReponse(q: QuestionActivite, valeur: string) {
+    const cle = q.cle
     setProfil(p => {
       const actuel = p[cle]
-      if (multiple) {
+      if (q.multiple) {
         const liste = Array.isArray(actuel) ? actuel : []
         const suivant = liste.includes(valeur) ? liste.filter(v => v !== valeur) : [...liste, valeur]
         return { ...p, [cle]: suivant }
       }
       // Retoucher la réponse déjà choisie la retire : une question facultative doit pouvoir
-      // redevenir sans réponse.
-      if (actuel === valeur) { const reste = { ...p }; delete reste[cle]; return reste }
+      // redevenir sans réponse. Pas une obligatoire : rien à y gagner, sauf bloquer le bouton.
+      if (actuel === valeur && q.facultative) { const reste = { ...p }; delete reste[cle]; return reste }
       return { ...p, [cle]: valeur }
     })
   }
@@ -205,10 +246,9 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
   async function terminer(e: React.FormEvent) {
     e.preventDefault()
-    if (!source) return
     setErreur(null)
     setEnvoi(true)
-    const r = await appeler('enregistrer', 'POST', '/api/washer/onboarding', { acquisition_source: source, profil_activite: profil })
+    const r = await appeler('enregistrer', 'POST', '/api/washer/onboarding', { acquisition_source: source ?? undefined, profil_activite: profil })
     if (!r.ok) { setErreur(r.message); setEnvoi(false); return }
     router.push('/dashboard')
     router.refresh()
@@ -235,9 +275,9 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
       </nav>
 
       <main className="relative flex-1 flex items-center justify-center px-4 pb-12 -mt-2">
-        {/* La page « Ton activité » réunit une dizaine de questions : plus large que les autres
+        {/* Les pages de questions (4 et 5) en réunissent plusieurs : plus large que les autres
             étapes, pour que les pastilles tiennent sur deux ou trois lignes au lieu d'une colonne. */}
-        <div className={`w-full ${etape === 4 ? 'max-w-xl' : 'max-w-sm'}`}>
+        <div className={`w-full ${etape >= 4 ? 'max-w-xl' : 'max-w-sm'}`}>
 
           <div className="text-center mb-8">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={56} height={56} className="rounded-2xl object-contain mx-auto mb-3 shadow-sm" />
@@ -394,41 +434,32 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
             )}
 
             {etape === 4 && (
-              <form onSubmit={terminer} noValidate className="space-y-4">
-                {QUESTIONS_ACTIVITE.map(q => {
-                  const reponse = profil[q.cle]
-                  return (
-                    <fieldset key={q.cle}>
-                      <legend className="text-sm font-bold text-slate-800 dark:text-white/90 mb-2">
-                        {q.question}
-                        {q.multiple && <span className="font-normal text-slate-400 dark:text-white/40"> (plusieurs choix)</span>}
-                      </legend>
-                      <div className="flex flex-wrap gap-2">
-                        {q.choix.map(x => {
-                          const choisi = Array.isArray(reponse) ? reponse.includes(x.valeur) : reponse === x.valeur
-                          return (
-                            <button
-                              key={x.valeur}
-                              type="button"
-                              aria-pressed={choisi}
-                              onClick={() => choisirReponse(q.cle, x.valeur, !!q.multiple)}
-                              disabled={envoi}
-                              className={`py-2 px-3 text-sm font-semibold rounded-xl border transition-colors disabled:opacity-40 ${choisi
-                                ? 'border-[#1651E8] bg-[#1651E8]/10 text-[#1651E8] dark:border-[#6A9FFF] dark:bg-[#1651E8]/20 dark:text-[#6A9FFF]'
-                                : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:border-slate-300 dark:hover:border-white/20'}`}
-                            >
-                              {x.libelle}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </fieldset>
-                  )
-                })}
+              <form onSubmit={e => { e.preventDefault(); if (questionsObligatoiresRepondues(profil)) setEtape(5) }} noValidate className="space-y-4">
+                {QUESTIONS_OBLIGATOIRES.map(q => (
+                  <Question key={q.cle} q={q} reponse={profil[q.cle]} onChoisir={v => choisirReponse(q, v)} disabled={envoi} />
+                ))}
 
-                <fieldset className="pt-2 border-t border-slate-200 dark:border-white/10">
-                  <legend className="text-sm font-bold text-slate-800 dark:text-white/90 mb-2 pt-4">Comment as-tu connu WashBoard ?</legend>
-                  <div className="grid grid-cols-2 gap-2">
+                <button type="submit" disabled={!questionsObligatoiresRepondues(profil)} className={BOUTON_PRINCIPAL}>
+                  Continuer
+                </button>
+
+                <div className="text-center">
+                  <button type="button" onClick={() => { setEtape(3); setErreur(null) }} className={LIEN_DISCRET}>
+                    Revenir au logo
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {etape === 5 && (
+              <form onSubmit={terminer} noValidate className="space-y-4">
+                {QUESTIONS_FACULTATIVES.map(q => (
+                  <Question key={q.cle} q={q} reponse={profil[q.cle]} onChoisir={v => choisirReponse(q, v)} disabled={envoi} />
+                ))}
+
+                <fieldset>
+                  <legend className="text-sm font-bold text-slate-800 dark:text-white/90 mb-2">Comment as-tu connu WashBoard ?</legend>
+                  <div className="flex flex-wrap gap-2">
                     {SOURCES_ACQUISITION.map(s => {
                       const choisi = source === s.valeur
                       return (
@@ -436,11 +467,9 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                           key={s.valeur}
                           type="button"
                           aria-pressed={choisi}
-                          onClick={() => { setSource(s.valeur); setErreur(null) }}
+                          onClick={() => { setSource(choisi ? null : s.valeur); setErreur(null) }}
                           disabled={envoi}
-                          className={`py-2.5 px-3 text-sm font-semibold rounded-xl border transition-colors disabled:opacity-40 last:odd:col-span-2 ${choisi
-                            ? 'border-[#1651E8] bg-[#1651E8]/10 text-[#1651E8] dark:border-[#6A9FFF] dark:bg-[#1651E8]/20 dark:text-[#6A9FFF]'
-                            : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:border-slate-300 dark:hover:border-white/20'}`}
+                          className={`${PASTILLE} ${choisi ? PASTILLE_CHOISIE : PASTILLE_LIBRE}`}
                         >
                           {s.libelle}
                         </button>
@@ -459,20 +488,20 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                   </>
                 )}
 
-                <button type="submit" disabled={envoi || !source} className={BOUTON_PRINCIPAL}>
+                <button type="submit" disabled={envoi} className={BOUTON_PRINCIPAL}>
                   {envoi ? (
                     <span className="flex items-center justify-center gap-2"><Spinner />Enregistrement…</span>
-                  ) : 'Accéder à mon tableau de bord'}
+                  ) : 'Terminer'}
                 </button>
 
                 <div className="text-center">
                   <button
                     type="button"
-                    onClick={() => { setEtape(3); setErreur(null) }}
+                    onClick={() => { setEtape(4); setErreur(null) }}
                     disabled={envoi}
                     className={LIEN_DISCRET}
                   >
-                    Revenir au logo
+                    Revenir aux questions précédentes
                   </button>
                 </div>
               </form>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { QUESTIONS_ACTIVITE, nettoyerProfilActivite } from './onboarding'
+import { QUESTIONS_ACTIVITE, QUESTIONS_FACULTATIVES, QUESTIONS_OBLIGATOIRES, nettoyerProfilActivite, questionsObligatoiresRepondues, type ProfilActivite } from './onboarding'
 
 describe('questions sur l’activité', () => {
   it('chaque question a une clé unique et des valeurs uniques', () => {
@@ -25,5 +25,22 @@ describe('questions sur l’activité', () => {
 
   it('ne renvoie rien pour une entrée vide ou invalide', () => {
     for (const v of [null, undefined, 'texte', 42, [], {}]) expect(nettoyerProfilActivite(v)).toEqual({})
+  })
+})
+
+describe('questionsObligatoiresRepondues', () => {
+  it('statut, temps perdu et panier moyen sont facultatifs', () => {
+    expect(QUESTIONS_FACULTATIVES.map(q => q.cle).sort()).toEqual(['panier_moyen', 'statut', 'temps_perdu'])
+  })
+
+  it('exige une réponse à chaque question obligatoire', () => {
+    const complet: ProfilActivite = Object.fromEntries(
+      QUESTIONS_OBLIGATOIRES.map(q => [q.cle, q.multiple ? [q.choix[0].valeur] : q.choix[0].valeur]),
+    )
+    expect(questionsObligatoiresRepondues(complet)).toBe(true)
+    const multiple = QUESTIONS_OBLIGATOIRES.find(q => q.multiple)!
+    expect(questionsObligatoiresRepondues({ ...complet, [multiple.cle]: [] })).toBe(false)
+    const { [QUESTIONS_OBLIGATOIRES[0].cle]: _retiree, ...incomplet } = complet
+    expect(questionsObligatoiresRepondues(incomplet)).toBe(false)
   })
 })
