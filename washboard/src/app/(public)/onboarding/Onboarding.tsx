@@ -11,7 +11,7 @@ import { PHRASE_SLUG_INVALIDE, generateSlug, slugValide } from '@/lib/slug'
 import { enregistrerSlug } from '@/lib/lienReservation'
 import { enregistrerProfil } from '@/lib/profilApi'
 import { appeler } from '@/lib/prestationsApi'
-import { SOURCES_ACQUISITION, type SourceAcquisition } from '@/lib/onboarding'
+import { QUESTIONS_ACTIVITE, SOURCES_ACQUISITION, type ProfilActivite, type SourceAcquisition } from '@/lib/onboarding'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { estImageAcceptee } from '@/lib/apparence'
 import { retirerLeFond } from '@/hooks/retirerLeFond'
@@ -77,12 +77,14 @@ const TITRES: Record<1 | 2 | 3 | 4, { titre: string; sousTitre: string }> = {
   1: { titre: 'Ton lien de réservation', sousTitre: 'C’est l’adresse que tes clients utiliseront pour réserver.' },
   2: { titre: 'Ton adresse de départ', sousTitre: 'Sert à calculer la distance jusqu’à tes clients, et les frais de déplacement.' },
   3: { titre: 'Ton logo', sousTitre: 'Il habille ta page de réservation, pour que tes clients te reconnaissent du premier coup d’œil.' },
-  4: { titre: 'Une dernière question', sousTitre: 'Comment as-tu connu WashBoard ?' },
+  4: { titre: 'Ton activité', sousTitre: 'Quelques questions pour mieux t’accompagner. Réponds à ce que tu veux, tout tient sur cette page.' },
 }
 
-export default function Onboarding({ slug, nom }: { slug: string; nom: string }) {
+/** `etapeInitiale` : uniquement pour le banc d'essai de développement (`/dev/booking-preview?mode=onboarding`),
+ *  qui ouvre directement la dernière page ; la vraie page part toujours de l'étape 1. */
+export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: string; nom: string; etapeInitiale?: 1 | 2 | 3 | 4 }) {
   const router = useRouter()
-  const [etape, setEtape] = useState<1 | 2 | 3 | 4>(1)
+  const [etape, setEtape] = useState<1 | 2 | 3 | 4>(etapeInitiale)
 
   // Étape 1 — lien de réservation.
   const [slugEnregistre, setSlugEnregistre] = useState(slug)
@@ -101,8 +103,24 @@ export default function Onboarding({ slug, nom }: { slug: string; nom: string })
   const minuteurLogo = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (minuteurLogo.current) clearTimeout(minuteurLogo.current) }, [])
 
-  // Étape 4 — comment as-tu connu WashBoard.
+  // Étape 4 — l'activité (facultatif, 2026-10-13) puis comment as-tu connu WashBoard
+  // (obligatoire), sur la même page.
   const [source, setSource] = useState<SourceAcquisition | null>(null)
+  const [profil, setProfil] = useState<ProfilActivite>({})
+  function choisirReponse(cle: string, valeur: string, multiple: boolean) {
+    setProfil(p => {
+      const actuel = p[cle]
+      if (multiple) {
+        const liste = Array.isArray(actuel) ? actuel : []
+        const suivant = liste.includes(valeur) ? liste.filter(v => v !== valeur) : [...liste, valeur]
+        return { ...p, [cle]: suivant }
+      }
+      // Retoucher la réponse déjà choisie la retire : une question facultative doit pouvoir
+      // redevenir sans réponse.
+      if (actuel === valeur) { const reste = { ...p }; delete reste[cle]; return reste }
+      return { ...p, [cle]: valeur }
+    })
+  }
 
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -190,7 +208,7 @@ export default function Onboarding({ slug, nom }: { slug: string; nom: string })
     if (!source) return
     setErreur(null)
     setEnvoi(true)
-    const r = await appeler('enregistrer', 'POST', '/api/washer/onboarding', { acquisition_source: source })
+    const r = await appeler('enregistrer', 'POST', '/api/washer/onboarding', { acquisition_source: source, profil_activite: profil })
     if (!r.ok) { setErreur(r.message); setEnvoi(false); return }
     router.push('/dashboard')
     router.refresh()
@@ -217,7 +235,9 @@ export default function Onboarding({ slug, nom }: { slug: string; nom: string })
       </nav>
 
       <main className="relative flex-1 flex items-center justify-center px-4 pb-12 -mt-2">
-        <div className="w-full max-w-sm">
+        {/* La page « Ton activité » réunit une dizaine de questions : plus large que les autres
+            étapes, pour que les pastilles tiennent sur deux ou trois lignes au lieu d'une colonne. */}
+        <div className={`w-full ${etape === 4 ? 'max-w-xl' : 'max-w-sm'}`}>
 
           <div className="text-center mb-8">
             <Image src="/LogoWashBoard.png" alt="WashBoard" width={56} height={56} className="rounded-2xl object-contain mx-auto mb-3 shadow-sm" />
@@ -375,8 +395,39 @@ export default function Onboarding({ slug, nom }: { slug: string; nom: string })
 
             {etape === 4 && (
               <form onSubmit={terminer} noValidate className="space-y-4">
-                <fieldset>
-                  <legend className="sr-only">Comment as-tu connu WashBoard ?</legend>
+                {QUESTIONS_ACTIVITE.map(q => {
+                  const reponse = profil[q.cle]
+                  return (
+                    <fieldset key={q.cle}>
+                      <legend className="text-sm font-bold text-slate-800 dark:text-white/90 mb-2">
+                        {q.question}
+                        {q.multiple && <span className="font-normal text-slate-400 dark:text-white/40"> (plusieurs choix)</span>}
+                      </legend>
+                      <div className="flex flex-wrap gap-2">
+                        {q.choix.map(x => {
+                          const choisi = Array.isArray(reponse) ? reponse.includes(x.valeur) : reponse === x.valeur
+                          return (
+                            <button
+                              key={x.valeur}
+                              type="button"
+                              aria-pressed={choisi}
+                              onClick={() => choisirReponse(q.cle, x.valeur, !!q.multiple)}
+                              disabled={envoi}
+                              className={`py-2 px-3 text-sm font-semibold rounded-xl border transition-colors disabled:opacity-40 ${choisi
+                                ? 'border-[#1651E8] bg-[#1651E8]/10 text-[#1651E8] dark:border-[#6A9FFF] dark:bg-[#1651E8]/20 dark:text-[#6A9FFF]'
+                                : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:border-slate-300 dark:hover:border-white/20'}`}
+                            >
+                              {x.libelle}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </fieldset>
+                  )
+                })}
+
+                <fieldset className="pt-2 border-t border-slate-200 dark:border-white/10">
+                  <legend className="text-sm font-bold text-slate-800 dark:text-white/90 mb-2 pt-4">Comment as-tu connu WashBoard ?</legend>
                   <div className="grid grid-cols-2 gap-2">
                     {SOURCES_ACQUISITION.map(s => {
                       const choisi = source === s.valeur

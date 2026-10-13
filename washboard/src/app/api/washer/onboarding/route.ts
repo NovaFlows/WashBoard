@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError, errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { estSourceAcquisition } from '@/lib/onboarding'
+import { estSourceAcquisition, nettoyerProfilActivite } from '@/lib/onboarding'
+import { logger } from '@/lib/logger'
+import { migrationEnAttente } from '@/lib/migrationEnAttente'
 
 // Dernière étape de l'onboarding : la source d'acquisition, et l'onboarding
 // marqué terminé. Posé une seule fois — un double clic ou un retour arrière ne
 // réécrit ni la date ni la réponse.
+//
+// Depuis le 2026-10-13, la même page porte aussi les questions sur l'activité
+// (`profil_activite`, facultatives). Enregistrées APRÈS, dans une écriture à part :
+// un échec (colonne pas encore créée, panne passagère) est tracé mais ne bloque
+// jamais l'accès au tableau de bord.
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,6 +53,18 @@ export async function POST(request: NextRequest) {
         }),
         { userId: user.id },
       )
+    }
+  }
+
+  const profil = nettoyerProfilActivite(corps?.profil_activite)
+  if (Object.keys(profil).length > 0) {
+    const { error: erreurProfil } = await supabase
+      .from('washers')
+      .update({ profil_activite: profil, profil_activite_le: new Date().toISOString() })
+      .eq('user_id', user.id)
+    if (erreurProfil) {
+      if (migrationEnAttente(erreurProfil)) logger.warn('washer.onboarding.profil.migration_en_attente', { userId: user.id })
+      else logger.error('washer.onboarding.profil.write_failed', { userId: user.id }, erreurProfil)
     }
   }
 
