@@ -9,10 +9,10 @@ import type { Service, ServiceCategory } from '@/types'
 import Onboarding from '@/app/(public)/onboarding/Onboarding'
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
-  const { mode } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string }> }) {
+  const { mode, etape } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
-  if (mode === 'onboarding') return <Onboarding slug="eclat-mobile" nom="Éclat Mobile" etapeInitiale={4} />
+  if (mode === 'onboarding') return <Onboarding slug="eclat-mobile" nom="Éclat Mobile" etapeInitiale={([1, 2, 3, 4, 5, 6] as const).find(n => String(n) === etape) ?? 1} />
   if (mode === 'settings-web') return <IdentiteForm washer={{ id: 'demo', name: 'Brillance Mobile', slug: 'test-config-15d2', booking_page_mode: 'default', brand_color: '#7c3aed', welcome_message: 'Bienvenue chez Brillance Mobile', plan: 'business', zone_config: null } as Washer} />
   if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="test-config-15d2" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null, avisGoogle: null }} liste={{ nom: 'Brillance Mobile', slug: 'test-config-15d2', brandColor: '#7c3aed', plan: 'business', grandfathered: false }} />
   const washerId = '00000000-0000-4000-8000-000000000001'

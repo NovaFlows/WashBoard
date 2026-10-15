@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { Spinner } from '@/components/ui/Spinner'
 import { etatOnboarding } from '@/lib/onboarding'
 import { oublierVisite } from '@/lib/visiteGuidee'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import Image from 'next/image'
 import Link from 'next/link'
+import {
+  BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, LIEN_DISCRET, SAISIE, TitreEntree,
+} from '@/components/entree/Entree'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -42,110 +42,47 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col font-sans wb-auth-bg">
+    <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/' }}>
+      <form onSubmit={handleLogin} noValidate className="flex flex-col gap-5">
+        <TitreEntree titre="Content de te revoir" sousTitre="Connecte-toi pour retrouver ta journée." />
 
-      {/* Halo aqua */}
-      <div aria-hidden className="fixed inset-x-0 top-0 h-[500px] pointer-events-none overflow-hidden">
-        <div className="wb-auth-glow absolute inset-0" />
-      </div>
+        <GroupeChamps>
+          <Champ id="email" label="Email">
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              placeholder="toi@exemple.fr"
+              autoComplete="email"
+              className={SAISIE}
+            />
+          </Champ>
+          <Champ id="password" label="Mot de passe">
+            <PasswordInput
+              id="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className={SAISIE}
+            />
+          </Champ>
+        </GroupeChamps>
 
-      {/* Nav — transparent, juste les contrôles */}
-      <nav className="relative z-50 flex items-center justify-between px-5 sm:px-8 h-14">
-        <Link href="/" className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-white/40 hover:text-slate-800 dark:hover:text-white transition-colors">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 5l-7 7 7 7"/>
-          </svg>
-          Retour
-        </Link>
-        <ThemeToggle nav />
-      </nav>
+        <Link href="/forgot-password" className={`${LIEN_DISCRET} self-start`}>Mot de passe oublié ?</Link>
 
-      {/* Contenu centré */}
-      <main className="relative flex-1 flex items-center justify-center px-4 pb-12 -mt-6">
-        <div className="w-full max-w-sm">
+        {error && <Erreur texte={error} />}
 
-          {/* Logo + nom — dans la page, pas dans le header */}
-          <div className="text-center mb-8">
-            <Image src="/LogoWashBoard.png" alt="WashBoard" width={52} height={52} className="rounded-2xl object-contain mx-auto mb-2 shadow-sm" />
-            <p className="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-4">WashBoard</p>
-            <p className="text-xs font-black text-[#1651E8] dark:text-[#00C4D4] uppercase tracking-[0.22em] mb-2">
-              Espace laveur
-            </p>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              Connexion
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-white/45 mt-1.5">
-              Accède à ton tableau de bord
-            </p>
-          </div>
-
-          {/* Carte formulaire */}
-          <div className="wb-auth-card rounded-2xl p-7">
-            <form onSubmit={handleLogin} noValidate className="space-y-5">
-              <div>
-                <label htmlFor="email" className="wb-label">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  placeholder="vous@exemple.com"
-                  autoComplete="email"
-                  className="wb-input"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="password" className="wb-label" style={{ marginBottom: 0 }}>Mot de passe</label>
-                  <Link href="/forgot-password" className="text-xs text-slate-400 dark:text-white/30 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors">
-                    Oublié ?
-                  </Link>
-                </div>
-                <PasswordInput
-                  id="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  className="wb-input"
-                />
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl">
-                  <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-                  </svg>
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-lg shadow-[#1651E8]/20 mt-1"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Spinner />
-                    Connexion…
-                  </span>
-                ) : 'Se connecter'}
-              </button>
-            </form>
-          </div>
-
-          <p className="text-center text-sm text-slate-500 dark:text-white/40 mt-5">
-            Pas encore de compte ?{' '}
-            <Link href="/signup" className="text-[#1651E8] dark:text-[#6A9FFF] font-semibold hover:underline underline-offset-2">
-              Essai gratuit →
-            </Link>
-          </p>
-
-        </div>
-      </main>
-    </div>
+        <BarreActions>
+          <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Connexion…">Se connecter</BoutonPrincipal>
+          <Link href="/signup" className={`${LIEN_DISCRET} flex items-center justify-center`}>
+            Pas encore de compte ?&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">1 mois d’essai gratuit</b>
+          </Link>
+        </BarreActions>
+      </form>
+    </CadreEntree>
   )
 }
