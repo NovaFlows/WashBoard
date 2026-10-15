@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 // Les deux illustrations animées de l'onboarding v2 (maquette du 2026-10-14, validée par
 // Alexandre) : la carte des zones de déplacement à l'étape de l'adresse, et les bulles de
-// mousse de l'écran de fin. Styles et images-clés : bloc « Entrée dans l'app » de globals.css.
+// mousse de l'écran de fin. Styles et images-clés : entree.css.
 
 function Etiquette({ x, y, texte }: { x: number; y: number; texte: string }) {
   const largeur = texte.length * 6.4 + 14

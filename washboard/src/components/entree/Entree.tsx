@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Spinner } from '@/components/ui/Spinner'
+import './entree.css'
 
 // Briques communes aux écrans d'entrée v2 : connexion, inscription, code email et
 // onboarding (2026-10-15, maquette https://claude.ai/artifact/BPYytpi93EeXs1JtUadKph).
@@ -14,7 +15,7 @@ import { Spinner } from '@/components/ui/Spinner'
 //   défile dessous, et l'action principale dans une barre en verre sous le pouce ;
 // - ordinateur (≥ lg) : deux colonnes, à gauche le contexte (`gauche`), à droite le
 //   formulaire avec ses boutons à la suite.
-// Styles et animations : bloc « Entrée dans l'app en v2 » de globals.css.
+// Styles et animations : entree.css, à côté de ce fichier.
 
 export const POLICE = '[font-family:var(--font-archivo)]'
 
