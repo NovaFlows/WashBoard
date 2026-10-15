@@ -28,7 +28,7 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 
 ## Entrée v2 EN PRODUCTION (2026-10-15, `a546422` + `05b8836`)
 Connexion, inscription, code email et onboarding refaits au design v2 (maquette : https://claude.ai/artifact/BPYytpi93EeXs1JtUadKph). Briques communes dans `components/entree/` (`Entree.tsx`, `AnimationsEntree.tsx`, styles dans `entree.css` — volontairement HORS de globals.css, que le cache Vercel a resservi périmé). Onboarding : 5 étapes (4 = questions obligatoires, 5 = facultatives + source) puis écran « Ton espace est prêt ». Stickers de l'équipe dans `public/equipe/` (ryan.webp = Ryan ; les deux autres nommés d'après leurs lunettes).
-**Reste :** créer `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz) — sans elles, les réponses de l'onboarding sont perdues (route non bloquante, log `washer.onboarding.profil.migration_en_attente`). `forgot-password` et `reset-password` gardent l'ancien habillage.
+Colonnes `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz) créées en production le 2026-10-15. **Reste :** `forgot-password` et `reset-password` gardent l'ancien habillage.
 
 ## Nouvelle version ordinateur OUVERTE À TOUS (2026-10-12)
 - `BUREAU_POUR_TOUS = true` (`hooks/useDashboardV2.ts`, fonction `bureauAutorise`) : `beta_refonte` ne décide plus rien ; tous les laveurs, anciens et nouveaux, ont la v2 sur ordinateur (fenêtre ≥ 880px avec souris). Retour arrière : passer la constante à `false`. Les tablettes sans souris gardent l'ancien site.
