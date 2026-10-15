@@ -1,5 +1,7 @@
 /** Envoi de SMS transactionnels via l'API Brevo. */
 
+import { estExpediteurApprouve } from './expediteurs'
+
 /** Normalise un numéro français en format E.164 (+33XXXXXXXXX).
  *  Retourne null si le numéro ne peut pas être normalisé. */
 export function normalizePhone(raw: string): string | null {
@@ -31,10 +33,16 @@ export const EXPEDITEUR_SMS_DEFAUT = 'WashBoard'
 
 export type ExpediteurLaveur = { sms_sender: string | null; sms_sender_statut: string | null }
 
-/** Le nom du laveur, seulement une fois approuvé par l'équipe (demande faite dans le support). Sinon WashBoard. */
+/** Le nom du laveur, seulement une fois approuvé : par l'équipe (demande faite dans le support),
+ *  ou parce qu'il figure dans `EXPEDITEURS_APPROUVES` (déjà validé chez Brevo). Sinon WashBoard.
+ *
+ *  La liste compte aussi ici, pas seulement à l'enregistrement du nom : le 2026-10-15, AutoNett
+ *  voyait « approuvé » dans ses réglages (qui lisent la liste) alors que sa fiche était restée
+ *  « en attente » (demande antérieure à la liste) — ses SMS partaient donc avec WashBoard. */
 export function expediteurPour(laveur: ExpediteurLaveur): string {
   const nom = laveur.sms_sender?.trim()
-  return laveur.sms_sender_statut === 'approuve' && nom ? nom : EXPEDITEUR_SMS_DEFAUT
+  if (!nom) return EXPEDITEUR_SMS_DEFAUT
+  return laveur.sms_sender_statut === 'approuve' || estExpediteurApprouve(nom) ? nom : EXPEDITEUR_SMS_DEFAUT
 }
 
 export async function sendSms({ to, content, sender = EXPEDITEUR_SMS_DEFAUT }: { to: string; content: string; sender?: string }): Promise<void> {

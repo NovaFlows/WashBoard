@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { isSupportMember } from '@/lib/supportAccess'
+import { estExpediteurApprouve } from '@/lib/expediteurs'
 
 // Demandes de nom d'expéditeur SMS, à valider par l'équipe après l'approbation chez Brevo.
 // Même contrôle que la boîte de réception : l'équipe n'existe pas en base, le contrôle
@@ -28,5 +29,9 @@ export async function GET() {
     logger.error('support.expediteurs.get.read_failed', {}, error)
     return NextResponse.json({ error: 'Impossible de charger les demandes. Réessayez.' }, { status: 503 })
   }
-  return NextResponse.json({ demandes: data ?? [] })
+  // Un nom de la liste des noms déjà validés chez Brevo est approuvé, quel que soit l'état
+  // resté sur la fiche : même règle que l'envoi (`expediteurPour`) et que l'écran du laveur.
+  const demandes = (data ?? []).map(d =>
+    d.sms_sender && estExpediteurApprouve(d.sms_sender) ? { ...d, sms_sender_statut: 'approuve' } : d)
+  return NextResponse.json({ demandes })
 }
