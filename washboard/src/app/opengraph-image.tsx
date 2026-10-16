@@ -9,6 +9,6 @@ export default function Image() {
     title: 'Logiciel de lavage, nettoyage auto & detailing à domicile',
     eyebrow: 'Nettoyage & entretien automobile',
     footer: 'Réservation, planning, facturation — un seul outil',
-    screenshot: { src: '/landing/calendrier-clair.webp', frame: 'browser' },
+    screenshot: { src: '/og/agenda-ordinateur.webp', mobile: '/og/agenda-mobile.webp', frame: 'browser' },
   })
 }
