@@ -9,6 +9,6 @@ export default function Image() {
     title: 'Le trajet mange une prestation par jour',
     eyebrow: 'Optimisation de tournée',
     footer: 'Créneaux groupés au temps de trajet réel — WashBoard',
-    screenshot: { src: '/landing/calendrier-clair.webp', frame: 'browser' },
+    screenshot: { src: '/og/agenda-ordinateur.webp', mobile: '/og/agenda-mobile.webp', frame: 'browser' },
   })
 }

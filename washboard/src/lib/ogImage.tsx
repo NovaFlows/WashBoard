@@ -10,18 +10,29 @@ import sharp from 'sharp'
 // depuis le titre évite d'avoir à produire un visuel par article à la main.
 //
 // Chaque route `opengraph-image.tsx` appelle cette fonction avec son titre.
+//
+// Habillage refonte 2026 (2026-10-16) : fond papier, Archivo, vrai logo, et
+// captures de la nouvelle version (ordinateur + mobile) dans `public/og/`.
 
 export const OG_SIZE = { width: 1200, height: 630 }
 export const OG_CONTENT_TYPE = 'image/png'
 
-const ACCENT = '#00C4D4'
+// Jetons v2 de globals.css (thème clair).
+const FOND = '#F6F5F3'
+const ENCRE = '#16161A'
+const GRIS = '#6B6B76'
+const GRIS_CLAIR = '#9A9AA4'
+const ACCENT = '#306090'
 
 type ScreenshotSpec = {
-  /** Chemin sous `public/`, ex. `/landing/calendrier-clair.webp`. */
+  /** Chemin sous `public/`, ex. `/og/agenda-ordinateur.webp`. */
   src: string
-  /** `browser` = capture d'écran large (calendrier, stats) avec une barre de fenêtre.
+  /** `browser` = capture d'écran large (agenda, stats) avec une barre de fenêtre.
    *  `card` = capture verticale ou document (réservation mobile, facture) présentée comme une carte. */
   frame: 'browser' | 'card'
+  /** Avec `browser` : capture de la version mobile, posée dans un téléphone
+   *  devant la fenêtre — pour montrer les deux versions d'un coup. */
+  mobile?: string
   /** Dimensions du cadre. À défaut, une taille standard par type de frame —
    *  à ajuster si le format source (portrait très étroit, document presque
    *  carré...) fait déborder le recadrage `object-fit: cover` et coupe du
@@ -50,6 +61,17 @@ async function screenshotDataUri(relPath: string): Promise<string> {
   return uri
 }
 
+// Satori ne lit ni le woff2 ni les polices variables : Archivo en TTF statique.
+function polices() {
+  const lire = (fichier: string) => fs.readFileSync(path.join(process.cwd(), 'public/og', fichier))
+  return [
+    { name: 'Archivo', data: lire('archivo-500.ttf'), weight: 500 as const, style: 'normal' as const },
+    { name: 'Archivo', data: lire('archivo-800.ttf'), weight: 800 as const, style: 'normal' as const },
+  ]
+}
+
+const OMBRE = '0 30px 60px -18px rgba(22, 22, 26, 0.28), 0 8px 18px -6px rgba(22, 22, 26, 0.12)'
+
 export async function renderOgImage({
   title,
   eyebrow = 'Le blog',
@@ -66,19 +88,24 @@ export async function renderOgImage({
   const len = title.length
   const fontSize = screenshot
     ? len > 60
-      ? 42
+      ? 44
       : len > 40
-        ? 48
-        : 56
+        ? 50
+        : 58
     : len > 70
-      ? 52
+      ? 54
       : len > 45
-        ? 60
-        : 68
+        ? 62
+        : 70
 
-  const dataUri = screenshot ? await screenshotDataUri(screenshot.src) : null
-  const frameWidth = screenshot?.width ?? (screenshot?.frame === 'browser' ? 500 : 340)
-  const frameHeight = screenshot?.height ?? (screenshot?.frame === 'browser' ? 380 : 460)
+  const [dataUri, mobileUri, logoUri] = await Promise.all([
+    screenshot ? screenshotDataUri(screenshot.src) : null,
+    screenshot?.mobile ? screenshotDataUri(screenshot.mobile) : null,
+    screenshotDataUri('/LogoWashBoard.png'),
+  ])
+  const duo = screenshot?.frame === 'browser' && !!mobileUri
+  const frameWidth = screenshot?.width ?? (duo ? 680 : screenshot?.frame === 'browser' ? 520 : 340)
+  const frameHeight = screenshot?.height ?? (duo ? 368 : screenshot?.frame === 'browser' ? 390 : 460)
 
   return new ImageResponse(
     (
@@ -87,101 +114,99 @@ export async function renderOgImage({
           width: '100%',
           height: '100%',
           display: 'flex',
-          background: 'linear-gradient(135deg, #09111E 0%, #101C3A 55%, #1651E8 130%)',
-          color: '#FFFFFF',
-          fontFamily: 'sans-serif',
+          background: FOND,
+          color: ENCRE,
+          fontFamily: 'Archivo',
           position: 'relative',
         }}
       >
-        {/* Halo décoratif : un dégradé radial suffit à donner de la profondeur
-            sans `filter: blur()` — non fiable avec ce moteur (bords sombres
-            constatés au rendu PNG). */}
-        <div
-          style={{
-            position: 'absolute',
-            top: -160,
-            right: screenshot ? -80 : -140,
-            width: 620,
-            height: 620,
-            borderRadius: 9999,
-            background: `radial-gradient(circle at 32% 32%, ${ACCENT}55 0%, ${ACCENT}00 70%)`,
-            display: 'flex',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: -220,
-            left: -140,
-            width: 560,
-            height: 560,
-            borderRadius: 9999,
-            background: '#1651E855',
-            display: 'flex',
-          }}
-        />
-
         {/* Colonne de texte */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            padding: '60px 0 56px 72px',
-            width: screenshot ? 660 : '100%',
+            padding: '56px 0 52px 68px',
+            width: screenshot ? (duo ? 500 : 640) : '100%',
             flexShrink: 0,
             position: 'relative',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                background: 'linear-gradient(155deg, #3B78FF 0%, #1651E8 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 30,
-                fontWeight: 800,
-                marginRight: 16,
-              }}
-            >
-              W
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUri} alt="" width={54} height={54} style={{ marginRight: 16, borderRadius: 12 }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.4 }}>WashBoard</div>
-              <div style={{ fontSize: 18, color: ACCENT, letterSpacing: 2.5, textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.6 }}>WashBoard</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: GRIS, letterSpacing: 2.2, textTransform: 'uppercase', marginTop: 2 }}>
                 {eyebrow}
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'stretch' }}>
-            <div style={{ width: 6, borderRadius: 3, background: ACCENT, display: 'flex', marginRight: 24, flexShrink: 0 }} />
-            <div
-              style={{
-                fontSize,
-                fontWeight: 800,
-                lineHeight: 1.14,
-                letterSpacing: -1.2,
-                maxWidth: screenshot ? 560 : 980,
-                display: 'flex',
-              }}
-            >
-              {title}
-            </div>
+          <div
+            style={{
+              fontSize,
+              fontWeight: 800,
+              lineHeight: 1.06,
+              letterSpacing: -1.8,
+              maxWidth: screenshot ? (duo ? 440 : 540) : 1000,
+              display: 'flex',
+            }}
+          >
+            {title}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', fontSize: 21, color: '#B9C6EE' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', fontSize: duo ? 18 : 20, fontWeight: 500, color: GRIS }}>
             <div style={{ display: 'flex' }}>{footer}</div>
-            <div style={{ display: 'flex', marginTop: 10, color: '#5E76B8', fontSize: 18 }}>washboard.fr</div>
+            <div style={{ display: 'flex', marginTop: 8, color: ACCENT, fontWeight: 800, fontSize: 19 }}>washboard.fr</div>
           </div>
         </div>
 
-        {/* Colonne visuelle : capture d'écran réelle du produit, si fournie */}
-        {screenshot && dataUri && (
+        {/* Ordinateur + mobile : la fenêtre déborde à droite, le téléphone la chevauche. */}
+        {duo && dataUri && mobileUri && (
+          <div style={{ position: 'absolute', left: 0, top: 0, width: OG_SIZE.width, height: OG_SIZE.height, display: 'flex' }}>
+            <div
+              style={{
+                position: 'absolute',
+                left: 596,
+                top: 86,
+                width: frameWidth,
+                height: frameHeight,
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: 14,
+                overflow: 'hidden',
+                background: '#FFFFFF',
+                border: '1px solid rgba(22, 22, 26, 0.08)',
+                boxShadow: OMBRE,
+              }}
+            >
+              <BarreFenetre />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={dataUri} alt="" width={frameWidth} height={frameHeight - 28} style={{ objectFit: 'cover', objectPosition: 'top left' }} />
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                left: 524,
+                top: 262,
+                width: 196,
+                height: 330,
+                display: 'flex',
+                padding: 7,
+                borderRadius: 34,
+                background: ENCRE,
+                boxShadow: OMBRE,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mobileUri} alt="" width={182} height={316} style={{ borderRadius: 27, objectFit: 'cover', objectPosition: 'top' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Capture seule, si fournie */}
+        {screenshot && dataUri && !duo && (
           <div
             style={{
               display: 'flex',
@@ -197,35 +222,21 @@ export async function renderOgImage({
                 flexDirection: 'column',
                 width: frameWidth,
                 height: frameHeight,
-                borderRadius: 16,
+                borderRadius: 14,
                 overflow: 'hidden',
-                background: '#F1F5F9',
-                boxShadow: '0 40px 80px -20px rgba(3, 7, 18, 0.65)',
-                transform: 'rotate(3deg)',
+                background: '#FFFFFF',
+                border: '1px solid rgba(22, 22, 26, 0.08)',
+                boxShadow: OMBRE,
+                transform: 'rotate(2deg)',
               }}
             >
-              {screenshot.frame === 'browser' && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    height: 30,
-                    padding: '0 14px',
-                    background: '#E2E8F0',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ width: 10, height: 10, borderRadius: 9999, background: '#F87171', display: 'flex', marginRight: 7 }} />
-                  <div style={{ width: 10, height: 10, borderRadius: 9999, background: '#FBBF24', display: 'flex', marginRight: 7 }} />
-                  <div style={{ width: 10, height: 10, borderRadius: 9999, background: '#34D399', display: 'flex' }} />
-                </div>
-              )}
+              {screenshot.frame === 'browser' && <BarreFenetre />}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={dataUri}
                 alt=""
                 width={frameWidth}
-                height={screenshot.frame === 'browser' ? frameHeight - 30 : frameHeight}
+                height={screenshot.frame === 'browser' ? frameHeight - 28 : frameHeight}
                 style={{ objectFit: 'cover', objectPosition: 'top' }}
               />
             </div>
@@ -233,6 +244,26 @@ export async function renderOgImage({
         )}
       </div>
     ),
-    { ...OG_SIZE },
+    { ...OG_SIZE, fonts: polices() },
+  )
+}
+
+function BarreFenetre() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: 28,
+        padding: '0 13px',
+        background: FOND,
+        borderBottom: '1px solid rgba(22, 22, 26, 0.06)',
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ width: 9, height: 9, borderRadius: 9999, background: GRIS_CLAIR, display: 'flex', marginRight: 6, opacity: 0.55 }} />
+      <div style={{ width: 9, height: 9, borderRadius: 9999, background: GRIS_CLAIR, display: 'flex', marginRight: 6, opacity: 0.55 }} />
+      <div style={{ width: 9, height: 9, borderRadius: 9999, background: GRIS_CLAIR, display: 'flex', opacity: 0.55 }} />
+    </div>
   )
 }
