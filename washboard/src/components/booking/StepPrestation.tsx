@@ -5,12 +5,26 @@ import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import type { FormState } from './BookingForm'
 import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 
-export default function StepPrestation({ services, categories, form, onChange }: {
+/** Prix d'une prestation ; barré avec le prix remisé quand une promotion la concerne. */
+function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
+  if (!(remise > 0)) return <span className="whitespace-nowrap">{formatPrice(prix)}</span>
+  return (
+    <span className="whitespace-nowrap">
+      <s className="mr-1.5 font-normal text-zinc-400" aria-label={`Prix habituel ${formatPrice(prix)}`}>{formatPrice(prix)}</s>
+      <span className="text-emerald-700 dark:text-emerald-400">{formatPrice(prix - remise)}</span>
+    </span>
+  )
+}
+
+export default function StepPrestation({ services, categories, form, onChange, promotion = null }: {
   services: Service[]
   categories: ServiceCategory[]
   form: FormState
   onChange: (data: FormState) => void
+  /** Promotion en cours : le prix des prestations concernées s'affiche barré, avec le prix remisé. */
+  promotion?: PromotionPublique | null
 }) {
   const [category, setCategory] = useState<string | null>(services[0]?.category_id ?? null)
   const catalogue = services.filter(s => s.category_id === category)
@@ -73,7 +87,7 @@ export default function StepPrestation({ services, categories, form, onChange }:
           <input type="radio" name="booking-service" className="wb-booking-radio" checked={service?.id === s.id}
             onChange={() => change(vehicles.map(v => ({ ...v, addons: [] })), s)} />
           <span className="flex-1 min-w-0">
-            <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span><span className="whitespace-nowrap">{formatPrice(vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))}</span></span>
+            <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span><PrixPrestation prix={vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0)} remise={remisePromotion(promotion, s.id, vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))} /></span>
             {s.description && <span className="block text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{s.description}</span>}
             <span className="block text-xs text-zinc-500 mt-2">Environ {formatDureeFr(s.duration_minutes * vehicles.length)} sur place</span>
           </span>

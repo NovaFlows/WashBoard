@@ -10,6 +10,7 @@ import StepOptions from './StepOptions'
 import StepSlot from './LegacyStepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './LegacyStepConfirmation'
+import type { PromotionPublique } from '@/lib/promotion'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
 // (voir migration 003 booking_funnel_events).
@@ -45,6 +46,8 @@ type Props = {
    *  laveur fictif absent de la base. En production, on ne les passe pas. */
   disponibilites?: Disponibilites
   accent?: string
+  /** Promotion en cours, s'il y en a une (lib/promotion.ts). */
+  promotion?: PromotionPublique | null
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -88,7 +91,7 @@ export type WasherPublic = {
 export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb' }: Props) {
+export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -452,6 +455,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             jeton={jeton}
             form={form}
             services={services}
+            promotion={promotion}
           />
         )}
       </div>

@@ -5,6 +5,8 @@ import { notifierLaveur } from '@/lib/push'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
+import { remisePromotion } from '@/lib/promotion'
+import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { effectiveTeamSize } from '@/lib/slots'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
@@ -496,7 +498,33 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     : (selected_addons ?? []).reduce((total, a) => total + prixAuCatalogue(a), 0)
 
-  const base_price = prix_vehicules + prix_options
+  // ── Promotion en cours (lib/promotion.ts) ─────────────────────────────
+  //
+  // Lue et appliquée ICI, jamais reprise du navigateur : même règle que le prix.
+  // Elle porte sur la prestation et ses options, pas sur le déplacement, et vaut pour
+  // les réservations PRISES pendant la période. `booked_price` devient le prix remisé :
+  // tout ce qui s'appuie dessus (emails, facture, Chiffres) montre ce que le client paie.
+  // Table absente ou lecture en échec : pas de remise, la réservation passe quand même.
+  let promotion: { id: string; nom: string; remise: number } | null = null
+  {
+    const maintenant = new Date().toISOString()
+    const { data: promo, error: errPromo } = await supabase
+      .from('promotions')
+      .select('id, nom, type_remise, valeur, service_ids')
+      .eq('washer_id', bookingData.washer_id)
+      .lte('debut', maintenant)
+      .gt('fin', maintenant)
+      .limit(1)
+      .maybeSingle()
+    if (errPromo) {
+      if (!migrationEnAttente(errPromo)) logger.error('bookings.promotion.read_failed', { washerId: bookingData.washer_id }, errPromo)
+    } else if (promo) {
+      const remise = remisePromotion({ type_remise: promo.type_remise, valeur: Number(promo.valeur), service_ids: promo.service_ids }, bookingData.service_id, prix_vehicules + prix_options)
+      if (remise > 0) promotion = { id: promo.id, nom: promo.nom, remise }
+    }
+  }
+
+  const base_price = prix_vehicules + prix_options - (promotion?.remise ?? 0)
   const booked_price = base_price + computed_travel_fee
 
   // L'événement Google Agenda est créé uniquement à la confirmation du RDV
@@ -532,6 +560,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
       travel_fee:       computed_travel_fee,
+      // Seulement quand une remise s'applique : la fonction SQL insère chaque clé reçue,
+      // une colonne absente ferait échouer TOUTES les réservations.
+      ...(promotion ? { promotion_id: promotion.id, promo_remise: promotion.remise } : {}),
     },
     p_capacity: isOwner ? null : capacite,
   })

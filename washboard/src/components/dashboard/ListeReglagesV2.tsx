@@ -41,7 +41,7 @@ import { useDesignMobile } from '@/hooks/useDesignMobile'
 // donc `selection="reglages"` ET son propre fil d'Ariane « ‹ Réglages », exactement comme la
 // maquette (écrans 63/64 : la ligne surlignée à gauche reste « Réglages », un petit lien
 // « ‹ Réglages » apparaît en haut du panneau).
-export type ClePlus = 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence' | 'reglages' | 'abonnement' | null
+export type ClePlus = 'profil' | 'liens' | 'promotions' | 'prestations' | 'horaires' | 'apparence' | 'reglages' | 'abonnement' | null
 
 export type ReglagesListeProps = {
   nom: string
@@ -144,6 +144,12 @@ export default function ListeReglagesV2({
             href="/dashboard/parametres/liens"
             selected={selection === 'liens'}
             cibleVisite="lien"
+          />
+          <Ligne
+            label="Promotions"
+            sousLabel="Saint-Valentin, fêtes…"
+            href="/dashboard/parametres/promotions"
+            selected={selection === 'promotions'}
           />
         </CarteListe>
       </div>

@@ -11,6 +11,8 @@ import { urlVersionnee } from '@/lib/themes'
 import { reviewsForWasher } from '@/lib/googleReviews'
 import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
+import { COLONNES_PROMOTION, versPublique, type Promotion } from '@/lib/promotion'
+import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
@@ -155,7 +157,8 @@ export default async function BookingPage({ params }: Props) {
   // 2026-09-21 : ça ne représentait qu'une petite partie du TTFB de 2,3 s de
   // cette page, la majorité venait de l'appel externe vers le site du laveur
   // (voir plus bas).
-  const [{ data: services }, { data: categories }, { data: availabilities }] = await Promise.all([
+  const maintenantIso = new Date().toISOString()
+  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }] = await Promise.all([
     admin
       .from('services')
       .select('*')
@@ -181,7 +184,19 @@ export default async function BookingPage({ params }: Props) {
       .from('availabilities')
       .select('*')
       .eq('washer_id', washer.id),
+    // Promotion en cours (lib/promotion.ts). Une erreur (table pas encore créée) rend
+    // `data: null` : la page s'affiche simplement sans promotion.
+    admin
+      .from('promotions')
+      .select(COLONNES_PROMOTION)
+      .eq('washer_id', washer.id)
+      .lte('debut', maintenantIso)
+      .gt('fin', maintenantIso)
+      .limit(1)
+      .maybeSingle(),
   ])
+  // Seuls les champs d'affichage partent vers le navigateur (pas l'id ni les dates de début).
+  const promotion = promoEnCours ? versPublique(promoEnCours as Promotion) : null
 
   // ── Identité visuelle : réservée aux offres payantes ────────────────────
   //
@@ -213,7 +228,8 @@ export default async function BookingPage({ params }: Props) {
 
   if (bookingPageMode(washer.booking_page_mode) === 'custom') {
     return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
-      availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId} />
+      availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
+      promotion={promotion} />
   }
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
@@ -236,6 +252,7 @@ export default async function BookingPage({ params }: Props) {
     <>
     {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
     <RetourApercu />
+    {promotion && <BandeauPromotion promo={promotion} />}
     <div className="min-h-screen bg-[#f6f5f3] dark:bg-zinc-950">
       <BookingHero name={washer.name} message={null} accent={accent}
         logoUrl={logoUrl ? urlVersionnee(logoUrl, washer.profile_updated_at) : null}
@@ -277,6 +294,7 @@ export default async function BookingPage({ params }: Props) {
           // fond personnalisé reste réservé à la page classique.
           accent={accent}
           whatsappHref={waHref}
+          promotion={promotion}
         />
 
         {!personnalisee && (

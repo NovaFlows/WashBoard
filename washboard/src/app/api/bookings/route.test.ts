@@ -38,7 +38,7 @@ function nouveauBuilder(table: string) {
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
     update: (valeurs: Record<string, unknown>) => { majAppels.push({ table, valeurs }); return b },
-    eq: self, gte: self, lte: self, in: self, order: self, limit: self,
+    eq: self, gte: self, gt: self, lte: self, in: self, order: self, limit: self,
     neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
     maybeSingle: () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
@@ -240,6 +240,31 @@ describe('POST /api/bookings — le prix ne vient jamais du navigateur (H1)', ()
 
     const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
     expect(reserv.booked_price).toBe(75) // 60 + 15, l'option inventée vaut 0
+  })
+})
+
+describe('POST /api/bookings — promotion en cours', () => {
+  it('applique la remise du serveur et la trace sur la réservation', async () => {
+    plan.tables.promotions = { data: { id: 'promo-1', nom: 'Saint-Valentin', type_remise: 'pourcentage', valeur: 20, service_ids: null }, error: null }
+    await poster({ booked_price: 1 })
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(48) // 60 − 20 %
+    expect(reserv.promotion_id).toBe('promo-1')
+    expect(reserv.promo_remise).toBe(12)
+  })
+
+  it('sans promotion, n’envoie aucune colonne de promotion (la base ne les a peut-être pas)', async () => {
+    await poster({})
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(60)
+    expect(reserv).not.toHaveProperty('promotion_id')
+    expect(reserv).not.toHaveProperty('promo_remise')
+  })
+
+  it('table des promotions absente : la réservation passe sans remise', async () => {
+    plan.tables.promotions = { data: null, error: { code: '42P01', message: 'relation "public.promotions" does not exist' } }
+    expect((await poster({})).res.status).toBe(201)
+    expect((rpcAppels[0].args.p_booking as Record<string, unknown>).booked_price).toBe(60)
   })
 })
 

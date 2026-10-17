@@ -18,13 +18,16 @@ type Props = {
    *  pendant le formulaire (voir BookingForm) — `null` si le laveur n'a pas
    *  de téléphone ou a atteint son plafond de réservations du mois. */
   whatsappHref?: string | null
+  /** Remise de la promotion en cours, déjà calculée par BookingForm (0 sinon). */
+  remise?: number
+  nomPromotion?: string | null
 }
 
-export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null }: Props) {
+export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
-  const total = displayPrice + (form.travel_fee ?? 0) - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
+  const total = displayPrice + (form.travel_fee ?? 0) - remise - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
 
   const [source, setSource] = useState<SourceDecouverte | null>(null)
   const [sourceEnvoi, setSourceEnvoi] = useState<'repos' | 'envoi' | 'fait' | 'erreur'>('repos')
@@ -118,7 +121,10 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
         {form.travel_fee != null && form.travel_fee > 0 && (
           <Row label="Frais de déplacement" value={`+${form.travel_fee}€`} />
         )}
-        {form.travel_fee != null && form.travel_fee > 0 && (
+        {remise > 0 && (
+          <Row label={nomPromotion ? `Promotion ${nomPromotion}` : 'Promotion'} value={`−${formatPrice(remise)}`} />
+        )}
+        {((form.travel_fee != null && form.travel_fee > 0) || remise > 0) && (
           <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
             <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
             <span className="font-bold text-slate-900 dark:text-slate-100">{formatPrice(total)}</span>
