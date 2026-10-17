@@ -84,6 +84,12 @@ const ReglagesAcompteBase = z.object({
   remboursable: z.boolean(),
   /** Remboursé si le client annule au moins N heures avant le rendez-vous. */
   remboursement_heures: z.number().int().positive().max(720).nullable(),
+  /** Virement bancaire (2026-10-17) : coordonnées montrées au client APRÈS la réservation
+   *  seulement, jamais sur la page publique. */
+  virement: z.object({
+    titulaire: z.string().trim().max(70),
+    iban: z.string().max(42),
+  }).nullable().optional(),
 })
 
 export const ReglagesAcompteSchema = z.preprocess(reprendreAncienFormat, ReglagesAcompteBase.superRefine((r, ctx) => {
@@ -96,8 +102,12 @@ export const ReglagesAcompteSchema = z.preprocess(reprendreAncienFormat, Reglage
   if (r.liens.paypal?.trim() && lienValide(r.liens.paypal.trim()) && !estPaypalMe(r.liens.paypal.trim())) {
     ctx.addIssue({ code: 'custom', path: ['liens', 'paypal'], message: 'Lien PayPal : utilisez votre lien PayPal.me (https://paypal.me/votrenom).' })
   }
-  if (r.actif && liensRemplis(r.liens).length === 0) {
-    ctx.addIssue({ code: 'custom', path: ['liens'], message: 'Ajoutez au moins un lien de paiement.' })
+  if (r.virement) {
+    if (!r.virement.titulaire.trim()) ctx.addIssue({ code: 'custom', path: ['virement', 'titulaire'], message: 'Virement : indiquez le nom du titulaire du compte.' })
+    if (!ibanValide(r.virement.iban)) ctx.addIssue({ code: 'custom', path: ['virement', 'iban'], message: 'Virement : cet IBAN n’est pas valide. Vérifiez-le sur votre RIB.' })
+  }
+  if (r.actif && liensRemplis(r.liens).length === 0 && !r.virement) {
+    ctx.addIssue({ code: 'custom', path: ['liens'], message: 'Ajoutez au moins un moyen de paiement : un lien ou le virement.' })
   }
   if (r.type === 'pourcentage' && r.valeur > 100) {
     ctx.addIssue({ code: 'custom', path: ['valeur'], message: 'Un acompte ne peut pas dépasser 100 % du prix.' })
@@ -145,11 +155,49 @@ export function conditionsAcompte(r: Pick<ReglagesAcompte, 'delai_heures' | 'rem
 }
 
 /** Ce que la page publique reçoit des réglages : tout sauf l'interrupteur. */
-export type AcomptePublic = Omit<ReglagesAcompte, 'actif'>
+/** Ce que la page publique reçoit AVANT la réservation : jamais l'IBAN, seulement le fait
+ *  que le virement est proposé. */
+export type AcomptePublic = Omit<ReglagesAcompte, 'actif' | 'virement'> & { virementPropose: boolean }
 
 export function versPublic(r: ReglagesAcompte): AcomptePublic {
-  const { actif: _actif, ...reste } = r
-  return reste
+  const { actif: _actif, virement, ...reste } = r
+  return { ...reste, virementPropose: !!virement }
+}
+
+/** IBAN sans espaces, en majuscules. */
+export function normaliserIban(iban: string): string {
+  return iban.replace(/\s+/g, '').toUpperCase()
+}
+
+/** Contrôle de l'IBAN : longueur et clé (modulo 97, norme ISO 13616). Écarte les fautes de
+ *  frappe, pas les comptes fermés. */
+export function ibanValide(iban: string): boolean {
+  const i = normaliserIban(iban)
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(i)) return false
+  const reordonne = i.slice(4) + i.slice(0, 4)
+  let reste = 0
+  for (const c of reordonne) {
+    const v = /[A-Z]/.test(c) ? String(c.charCodeAt(0) - 55) : c
+    for (const chiffre of v) reste = (reste * 10 + Number(chiffre)) % 97
+  }
+  return reste === 1
+}
+
+/** IBAN par groupes de quatre, pour qu'il se lise et se recopie sans erreur. */
+export function formaterIban(iban: string): string {
+  return normaliserIban(iban).replace(/(.{4})/g, '$1 ').trim()
+}
+
+/** Référence à mettre dans le libellé du virement : le laveur retrouve la réservation. */
+export function referenceVirement(bookingId: string): string {
+  return `WB-${bookingId.slice(0, 8).toUpperCase()}`
+}
+
+export type VirementDu = { titulaire: string; iban: string; reference: string }
+
+export function virementPour(r: Pick<ReglagesAcompte, 'virement'>, bookingId: string): VirementDu | null {
+  if (!r.virement || !ibanValide(r.virement.iban)) return null
+  return { titulaire: r.virement.titulaire.trim(), iban: formaterIban(r.virement.iban), reference: referenceVirement(bookingId) }
 }
 
 /** Les boutons de paiement montrés au client, pour un acompte donné. Le lien PayPal.me reçoit
@@ -165,4 +213,11 @@ export function liensDePaiement(liens: LiensPaiement | undefined, montant: numbe
     }
     return { cle: l.cle, libelle: appli.libelle, url: l.url, montantExact: false }
   })
+}
+
+/** Les moyens de paiement proposés, dits au client AVANT qu'il réserve. */
+export function moyensPaiement(r: Pick<AcomptePublic, 'liens' | 'virementPropose'>): string[] {
+  const noms: string[] = liensRemplis(r.liens).map(l => APPLIS_PAIEMENT.find(a => a.cle === l.cle)!.libelle)
+  if (r.virementPropose) noms.push('virement')
+  return noms
 }

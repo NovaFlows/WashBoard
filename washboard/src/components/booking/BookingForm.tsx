@@ -5,7 +5,7 @@ import type { Service, ServiceCategory, Availability, BookingFormData } from '@/
 import { dureeTotale, formatPrice } from '@/lib/pricing'
 import { resumePrestation, resumeCreneau, montantMinimal, montantEstime } from '@/lib/bookingSummary'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
-import { conditionsAcompte, montantAcompte, type AcomptePublic } from '@/lib/acompte'
+import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
 import type { AcompteDu } from './EncartAcompte'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
@@ -443,7 +443,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 onChange={updateForm}
                 total={barAmount ?? 0}
                 whatsappHref={whatsappHref}
-                acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, barAmount ?? 0), conditions: conditionsAcompte(acompte) } : null}
+                acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, barAmount ?? 0), conditions: conditionsAcompte(acompte), moyens: moyensPaiement(acompte) } : null}
                 isProfessional={form.is_professional ?? false}
                 loading={loading}
                 error={error}

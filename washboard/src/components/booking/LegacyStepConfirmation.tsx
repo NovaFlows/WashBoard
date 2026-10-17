@@ -37,7 +37,7 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
 
       {acompte && (
         <div className="mb-5">
-          <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} liens={acompte.liens} accent={accent} />
+          <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} liens={acompte.liens} virement={acompte.virement ?? null} accent={accent} />
         </div>
       )}
 

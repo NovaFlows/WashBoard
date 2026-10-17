@@ -25,7 +25,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   total: number
   whatsappHref: string | null
   /** Acompte demandé par le laveur, annoncé AVANT la réservation (lib/acompte.ts). */
-  acompte?: { montant: number; conditions: string[] } | null
+  acompte?: { montant: number; conditions: string[]; moyens?: string[] } | null
 }) {
   const ref = useRef<HTMLFormElement>(null)
   const [name, setName] = useState('')
@@ -80,7 +80,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
     <div aria-hidden="true" className="absolute w-px h-px overflow-hidden -left-[9999px]"><label>Ne pas remplir ce champ<input name="wb-confirm-c7f3" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore="true" value={hp} onChange={e => setHp(e.target.value)} /></label></div>
     <div className="mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-700 text-sm leading-relaxed">
       {acompte
-        ? <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} />
+        ? <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} />
         : <><p className="font-semibold">Rien à payer maintenant</p><p className="text-zinc-500 dark:text-zinc-400 mt-1">Vous réglez {formatPrice(total)} sur place, une fois le lavage terminé.</p></>}
       {whatsappHref && <><p className="font-semibold mt-3">Un empêchement ?</p><p className="text-zinc-500 dark:text-zinc-400">Écrivez au laveur sur WhatsApp pour décaler ou annuler.</p></>}
     </div>

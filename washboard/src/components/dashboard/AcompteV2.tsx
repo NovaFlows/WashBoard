@@ -9,7 +9,7 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import EncartAcompte from '@/components/booking/EncartAcompte'
 import {
-  APPLIS_PAIEMENT, DELAIS_PAIEMENT, DELAIS_REMBOURSEMENT, conditionsAcompte, montantAcompte, type LiensPaiement, type ReglagesAcompte, type TypeAcompte,
+  APPLIS_PAIEMENT, DELAIS_PAIEMENT, formaterIban, ibanValide, normaliserIban, DELAIS_REMBOURSEMENT, conditionsAcompte, montantAcompte, moyensPaiement, type LiensPaiement, type ReglagesAcompte, type TypeAcompte,
 } from '@/lib/acompte'
 
 // « Acompte » — décisions d'Alexandre, 2026-10-17 : option 1 (lien de paiement du laveur),
@@ -25,9 +25,12 @@ type Brouillon = {
   delai_heures: number | null
   remboursable: boolean
   remboursement_heures: number | null
+  virementActif: boolean
+  titulaire: string
+  iban: string
 }
 
-const DEFAUT: Brouillon = { actif: false, type: 'pourcentage', valeur: '30', liens: {}, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
+const DEFAUT: Brouillon = { actif: false, type: 'pourcentage', valeur: '30', liens: {}, delai_heures: 24, remboursable: true, remboursement_heures: 48, virementActif: false, titulaire: '', iban: '' }
 
 function libelleHeures(h: number) {
   return h > 48 && h % 24 === 0 ? `${h / 24} jours` : `${h} h`
@@ -52,7 +55,12 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
         // Réglages enregistrés avant le passage à un lien par application : un seul `lien`,
         // repris dans « Autre » (même règle que lib/acompte.ts).
         const r = j.acompte as (ReglagesAcompte & { lien?: string }) | null
-        setB(r ? { ...DEFAUT, ...r, liens: r.liens ?? (r.lien ? { autre: r.lien } : {}), valeur: String(r.valeur).replace('.', ',') } : DEFAUT)
+        setB(r ? {
+          ...DEFAUT, ...r,
+          liens: r.liens ?? (r.lien ? { autre: r.lien } : {}),
+          valeur: String(r.valeur).replace('.', ','),
+          virementActif: !!r.virement, titulaire: r.virement?.titulaire ?? '', iban: r.virement ? formaterIban(r.virement.iban) : '',
+        } : DEFAUT)
       })
       .catch(() => { if (!annule) { setErreur('Impossible de charger vos réglages. Vérifiez votre connexion.'); setB(DEFAUT) } })
     return () => { annule = true }
@@ -65,7 +73,9 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
     setErreur(null)
     const valeur = Number(b.valeur.replace(',', '.'))
     if (b.actif && !(valeur > 0)) { setErreur('Indiquez le montant de l’acompte.'); return }
-    if (b.actif && !APPLIS_PAIEMENT.some(a => (b.liens[a.cle] ?? '').trim())) { setErreur('Ajoutez au moins un lien de paiement.'); return }
+    if (b.actif && !b.virementActif && !APPLIS_PAIEMENT.some(a => (b.liens[a.cle] ?? '').trim())) { setErreur('Ajoutez au moins un moyen de paiement : un lien ou le virement.'); return }
+    if (b.virementActif && !b.titulaire.trim()) { setErreur('Virement : indiquez le nom du titulaire du compte.'); return }
+    if (b.virementActif && !ibanValide(b.iban)) { setErreur('Virement : cet IBAN n’est pas valide. Vérifiez-le sur votre RIB.'); return }
     setEnregistrement(true)
     try {
       const res = await fetch('/api/washer/acompte', {
@@ -74,6 +84,8 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
         body: JSON.stringify({
           ...b, valeur: valeur > 0 ? valeur : 1,
           liens: Object.fromEntries(APPLIS_PAIEMENT.map(a => [a.cle, (b.liens[a.cle] ?? '').trim()]).filter(([, v]) => v)),
+          virement: b.virementActif ? { titulaire: b.titulaire.trim(), iban: normaliserIban(b.iban) } : null,
+          virementActif: undefined, titulaire: undefined, iban: undefined,
           remboursement_heures: b.remboursable ? b.remboursement_heures : null,
         }),
       })
@@ -165,6 +177,35 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
               </section>
 
               <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[15px] ${corpsFort}`}>Virement bancaire</p>
+                    <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Sans frais. Votre IBAN n’est montré qu’après la réservation.</p>
+                  </div>
+                  <Interrupteur actif={b.virementActif} enCours={false} libelle="Proposer le virement" onClick={() => maj({ virementActif: !b.virementActif })} />
+                </div>
+                {b.virementActif && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div>
+                      <label htmlFor="acompte-titulaire" className={ETIQUETTE}>Titulaire du compte</label>
+                      <input id="acompte-titulaire" className={CHAMP} maxLength={70} value={b.titulaire} onChange={e => maj({ titulaire: e.target.value })} placeholder="Nom inscrit sur votre RIB" />
+                    </div>
+                    <div>
+                      <label htmlFor="acompte-iban" className={ETIQUETTE}>IBAN</label>
+                      <input id="acompte-iban" className={`${CHAMP} font-mono`} autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={42}
+                        value={b.iban} onChange={e => maj({ iban: e.target.value.toUpperCase() })} placeholder="FR76 …" />
+                      {b.iban.trim() && !ibanValide(b.iban) && (
+                        <p className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>Cet IBAN n’est pas valide : vérifiez-le sur votre RIB.</p>
+                      )}
+                    </div>
+                    <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                      Le client reçoit le montant et une référence à mettre dans le libellé (par exemple WB-54CF8F67), pour que vous retrouviez sa réservation sur votre compte.
+                    </p>
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
                 <p className={ETIQUETTE}>Délai pour payer</p>
                 <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                   {DELAIS_PAIEMENT.map(h => (
@@ -176,6 +217,12 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                   {b.delai_heures
                     ? `Sans paiement confirmé par vous dans les ${libelleHeures(b.delai_heures)}, une réservation encore en attente est annulée et le créneau libéré.`
                     : 'La réservation n’est jamais annulée automatiquement.'}
+                  {b.virementActif && b.delai_heures !== null && b.delai_heures < 24 && (
+                    <span className="mt-1.5 flex items-start gap-2" style={{ color: 'var(--v2-color-encre)' }}>
+                      <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
+                      Un virement classique peut mettre 1 à 2 jours : avec ce délai, la réservation d’un client qui a payé par virement risque d’être annulée. Choisissez au moins 48 h si vous proposez le virement.
+                    </span>
+                  )}
                 </p>
 
                 <p className={`${ETIQUETTE} mt-5`}>Si le client annule</p>
@@ -200,6 +247,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                 <EncartAcompte
                   montant={montantAcompte({ type: b.type, valeur: valeurNum }, exempleTotal)}
                   conditions={conditionsAcompte(b)}
+                  moyens={moyensPaiement({ liens: b.liens, virementPropose: b.virementActif })}
                 />
               </section>
             </>

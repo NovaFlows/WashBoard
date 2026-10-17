@@ -11,7 +11,7 @@ import StepSlot from './LegacyStepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './LegacyStepConfirmation'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
-import { conditionsAcompte, montantAcompte, type AcomptePublic } from '@/lib/acompte'
+import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
 import type { AcompteDu } from './EncartAcompte'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
@@ -457,7 +457,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             error={error}
             onSubmit={submitBooking}
             onBack={() => setStep(3)}
-            acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, totalEstime), conditions: conditionsAcompte(acompte) } : null}
+            acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, totalEstime), conditions: conditionsAcompte(acompte), moyens: moyensPaiement(acompte) } : null}
             accent={accent}
           />
         )}

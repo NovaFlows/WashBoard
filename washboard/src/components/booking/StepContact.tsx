@@ -22,7 +22,7 @@ type Props = {
   onBack: () => void
   accent?: string
   /** Acompte demandé par le laveur, annoncé AVANT la réservation (lib/acompte.ts). */
-  acompte?: { montant: number; conditions: string[] } | null
+  acompte?: { montant: number; conditions: string[]; moyens?: string[] } | null
 }
 
 export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null }: Props) {
@@ -223,7 +223,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
         </div>
       )}
 
-      {acompte && <div className="mb-4"><EncartAcompte montant={acompte.montant} conditions={acompte.conditions} /></div>}
+      {acompte && <div className="mb-4"><EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} /></div>}
 
       <div className="flex gap-3">
         <button

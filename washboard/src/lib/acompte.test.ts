@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte } from './acompte'
+import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, versPublic, virementPour } from './acompte'
 
 const base = { actif: true, type: 'pourcentage' as const, valeur: 30, liens: { sumup: 'https://sumup.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
@@ -64,5 +64,24 @@ describe('liens de paiement', () => {
   it('reprend l’ancien format à un seul lien', () => {
     const { liens: _l, ...sansLiens } = base
     expect(acompteActif({ ...sansLiens, lien: 'https://buy.stripe.com/test' })?.liens).toEqual({ autre: 'https://buy.stripe.com/test' })
+  })
+})
+
+describe('virement', () => {
+  it('contrôle la clé de l’IBAN', () => {
+    expect(ibanValide('FR76 3000 6000 0112 3456 7890 189')).toBe(true)
+    expect(ibanValide('FR76 3000 6000 0112 3456 7890 188')).toBe(false)
+    expect(ibanValide('pas un iban')).toBe(false)
+  })
+  it('accepte un acompte payé seulement par virement, refuse un IBAN faux', () => {
+    const virement = { titulaire: 'Éclat Mobile', iban: 'FR7630006000011234567890189' }
+    expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, virement }).success).toBe(true)
+    expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, virement: { ...virement, iban: 'FR7630006000011234567890188' } }).success).toBe(false)
+  })
+  it('coordonnées montrées après la réservation, jamais avant', () => {
+    const r = acompteActif({ ...base, virement: { titulaire: 'Éclat Mobile', iban: 'fr7630006000011234567890189' } })!
+    expect(virementPour(r, '54cf8f67-aaaa-4bbb-8ccc-000000000000')).toEqual({ titulaire: 'Éclat Mobile', iban: 'FR76 3000 6000 0112 3456 7890 189', reference: 'WB-54CF8F67' })
+    expect(versPublic(r)).not.toHaveProperty('virement')
+    expect(versPublic(r).virementPropose).toBe(true)
   })
 })

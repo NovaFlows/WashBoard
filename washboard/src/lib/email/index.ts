@@ -44,7 +44,7 @@ type SendRequestParams = {
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
   /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
-  acompte?: { montant: number; liens: { libelle: string; url: string }[]; conditions: string[] }
+  acompte?: { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; conditions: string[] }
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -127,6 +127,13 @@ export async function sendBookingRequest(params: SendRequestParams) {
       <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
         <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Acompte à régler : ${formatEuros(params.acompte.montant)} €</p>
         ${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
+        ${params.acompte.virement ? `<div style="margin-top:10px;padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;line-height:1.6;">
+          <strong>Par virement</strong><br>
+          Titulaire : ${escapeHtml(params.acompte.virement.titulaire)}<br>
+          IBAN : <span style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.iban)}</span><br>
+          Montant : ${formatEuros(params.acompte.montant)} €<br>
+          Libellé à indiquer : <strong style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.reference)}</strong>
+        </div>` : ''}
         ${params.acompte.liens.map(l => `<a href="${escapeHtml(l.url)}" style="display:inline-block;margin:10px 8px 0 0;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer avec ${escapeHtml(l.libelle)}</a>`).join('')}
       </div>` : ''}
 
