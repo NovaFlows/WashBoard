@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, versPublic, virementPour } from './acompte'
+import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, contenuQrVirement, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, versPublic, virementPour } from './acompte'
 
 const base = { actif: true, type: 'pourcentage' as const, valeur: 30, liens: { sumup: 'https://sumup.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
@@ -83,5 +83,13 @@ describe('virement', () => {
     expect(virementPour(r, '54cf8f67-aaaa-4bbb-8ccc-000000000000')).toEqual({ titulaire: 'Éclat Mobile', iban: 'FR76 3000 6000 0112 3456 7890 189', reference: 'WB-54CF8F67' })
     expect(versPublic(r)).not.toHaveProperty('virement')
     expect(versPublic(r).virementPropose).toBe(true)
+  })
+})
+
+describe('QR code de virement', () => {
+  it('suit le format EPC : bénéficiaire, IBAN sans espaces, montant, libellé', () => {
+    expect(contenuQrVirement({ titulaire: 'Éclat Mobile', iban: 'FR76 3000 6000 0112 3456 7890 189', reference: 'WB-54CF8F67' }, 16.05).split('\n')).toEqual([
+      'BCD', '002', '1', 'SCT', '', 'Éclat Mobile', 'FR7630006000011234567890189', 'EUR16.05', '', '', 'WB-54CF8F67',
+    ])
   })
 })

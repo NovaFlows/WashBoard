@@ -221,3 +221,17 @@ export function moyensPaiement(r: Pick<AcomptePublic, 'liens' | 'virementPropose
   if (r.virementPropose) noms.push('virement')
   return noms
 }
+
+/** Contenu du QR code de virement au format européen EPC069-12 (« QR code SEPA », lu par de
+ *  nombreuses applications bancaires) : bénéficiaire, IBAN, montant et libellé préremplis.
+ *  Version 002, sans BIC (facultatif dans l'espace SEPA). */
+export function contenuQrVirement(v: VirementDu, montant: number): string {
+  return [
+    'BCD', '002', '1', 'SCT', '',
+    v.titulaire.slice(0, 70),
+    normaliserIban(v.iban),
+    `EUR${montant.toFixed(2)}`,
+    '', '',
+    v.reference.slice(0, 140),
+  ].join('\n')
+}

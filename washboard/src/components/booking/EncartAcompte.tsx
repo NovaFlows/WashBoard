@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { formatPrice } from '@/lib/pricing'
+import { contenuQrVirement } from '@/lib/acompte'
 
 export type LienPaiement = { libelle: string; url: string; montantExact?: boolean }
 export type VirementPaiement = { titulaire: string; iban: string; reference: string }
@@ -29,6 +31,29 @@ function Copier({ texte, libelle }: { texte: string; libelle: string }) {
     >
       {fait === 'ok' ? 'Copié' : fait === 'ko' ? 'Sélectionnez' : 'Copier'}
     </button>
+  )
+}
+
+/** QR code de virement (format EPC) : le client le scanne avec l'application de sa banque,
+ *  qui préremplit bénéficiaire, IBAN, montant et libellé. Masqué sur téléphone : on ne
+ *  scanne pas l'écran sur lequel on lit — il sert quand la réservation est faite sur un
+ *  ordinateur. Toutes les banques ne le lisent pas : l'IBAN à copier reste à côté. */
+function QrVirement({ virement, montant }: { virement: VirementPaiement; montant: number }) {
+  const [image, setImage] = useState<string | null>(null)
+  useEffect(() => {
+    let annule = false
+    QRCode.toDataURL(contenuQrVirement(virement, montant), { errorCorrectionLevel: 'M', margin: 1, width: 320 })
+      .then(url => { if (!annule) setImage(url) })
+      .catch(() => { /* sans QR code, l'IBAN à copier suffit */ })
+    return () => { annule = true }
+  }, [virement, montant])
+  if (!image) return null
+  return (
+    <div className="mt-3 hidden items-center gap-3 sm:flex">
+      {/* eslint-disable-next-line @next/next/no-img-element -- image générée dans le navigateur (data:) */}
+      <img src={image} alt="QR code de virement" width={120} height={120} className="h-[120px] w-[120px] rounded-lg border border-zinc-200 bg-white dark:border-zinc-700" />
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">Scannez ce code avec l’application de votre banque : le virement est déjà rempli (montant et libellé compris).</p>
+    </div>
   )
 }
 
@@ -87,6 +112,7 @@ export default function EncartAcompte({ montant, conditions, liens, virement = n
               <dd className="flex items-center justify-between gap-2"><span className="select-all font-mono font-semibold">{virement.reference}</span><Copier texte={virement.reference} libelle="le libellé" /></dd>
             </div>
           </dl>
+          <QrVirement virement={virement} montant={montant} />
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Choisissez un virement instantané si votre banque le propose : il arrive en quelques secondes.</p>
         </div>
       )}
