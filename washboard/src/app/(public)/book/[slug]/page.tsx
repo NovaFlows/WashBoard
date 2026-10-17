@@ -13,6 +13,8 @@ import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetour
 import { prestationsAffichees } from '@/lib/prestation'
 import { COLONNES_PROMOTION, versPublique, type Promotion } from '@/lib/promotion'
 import { acompteActif, versPublic as versPublicAcompte } from '@/lib/acompte'
+import { fideliteActive } from '@/lib/fidelite'
+import RappelFidelite from '@/components/booking/RappelFidelite'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
@@ -199,7 +201,7 @@ export default async function BookingPage({ params }: Props) {
     // créée rend une erreur ici, sans faire tomber la lecture du laveur ni la page.
     admin
       .from('washers')
-      .select('acompte')
+      .select('acompte, fidelite')
       .eq('id', washer.id)
       .maybeSingle(),
   ])
@@ -207,6 +209,8 @@ export default async function BookingPage({ params }: Props) {
   const promotion = promoEnCours ? versPublique(promoEnCours as Promotion) : null
   const reglagesAcompte = acompteActif((ficheAcompte as { acompte?: unknown } | null)?.acompte)
   const acompte = reglagesAcompte ? versPublicAcompte(reglagesAcompte) : null
+  // Carte de fidélité : le rappel n'est monté que si le laveur en propose une.
+  const fideliteProposee = !!fideliteActive((ficheAcompte as { fidelite?: unknown } | null)?.fidelite)
 
   // ── Identité visuelle : réservée aux offres payantes ────────────────────
   //
@@ -239,7 +243,7 @@ export default async function BookingPage({ params }: Props) {
   if (bookingPageMode(washer.booking_page_mode) === 'custom') {
     return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
-      promotion={promotion} acompte={acompte} />
+      promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} />
   }
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
@@ -271,6 +275,7 @@ export default async function BookingPage({ params }: Props) {
           ? <Suspense fallback={null}><ReviewSummary websiteUrl={washer.website_url} googlePlaceId={washer.google_place_id ?? null} /></Suspense>
           : null} />
       <main id="main-content" className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
+        {fideliteProposee && <RappelFidelite washerId={washer.id} />}
         <BookingForm
           // Champs énumérés un par un, jamais l'objet entier : tout ce qui
           // franchit la frontière serveur→client est sérialisé dans le HTML

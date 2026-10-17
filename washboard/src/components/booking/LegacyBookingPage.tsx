@@ -12,6 +12,7 @@ import ConsentementCookies, { LienGererCookies } from '@/components/booking/Cons
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import type { PromotionPublique } from '@/lib/promotion'
 import type { AcomptePublic } from '@/lib/acompte'
+import RappelFidelite from '@/components/booking/RappelFidelite'
 
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
@@ -21,9 +22,10 @@ type Props = {
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
  promotion?: PromotionPublique | null
  acompte?: AcomptePublic | null
+ fideliteProposee?: boolean
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null}: Props) {
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false}: Props) {
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -132,6 +134,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
           </>
         )}
 
+        {fideliteProposee && <RappelFidelite washerId={washer.id} />}
         <BookingForm
           // Champs énumérés un par un, jamais l'objet entier : tout ce qui
           // franchit la frontière serveur→client est sérialisé dans le HTML

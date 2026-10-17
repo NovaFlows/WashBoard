@@ -38,7 +38,8 @@ function nouveauBuilder(table: string) {
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
     update: (valeurs: Record<string, unknown>) => { majAppels.push({ table, valeurs }); return b },
-    eq: self, gte: self, gt: self, lte: self, in: self, order: self, limit: self,
+    eq: self, gte: self, gt: self, lte: self, in: self, order: self, limit: self, or: self, ilike: self,
+    upsert: () => Promise.resolve({ error: null }),
     neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
     maybeSingle: () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
@@ -899,5 +900,37 @@ describe('POST /api/bookings — acompte', () => {
     const { body } = await poster({})
     expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_statut')
     expect(body.data).not.toHaveProperty('acompte')
+  })
+})
+
+describe('POST /api/bookings — carte de fidélité', () => {
+  const FIDELITE = { actif: true, tampons: 10, recompense: 'pourcentage', valeur: 50 }
+  const termines = (n: number) => Array.from({ length: n }, () => ({ status: 'done', fidelite_remise: null, client_email: 'client@test.fr', client_phone: null }))
+
+  it('carte pleine : applique la récompense, la trace et renvoie la carte', async () => {
+    avecWasher({ fidelite: FIDELITE })
+    plan.tables.fidelite_cartes = { data: { jeton: 'a'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(10), error: null }
+    const { res, body } = await poster({ client_email: 'client@test.fr' })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.fidelite_remise).toBe(30) // 50 % de 60
+    expect(reserv.booked_price).toBe(30)
+    expect(body.data.fidelite).toMatchObject({ jeton: 'a'.repeat(36), remise: 30, etat: { disponibles: 0 } })
+  })
+
+  it('carte pas pleine : aucune remise, mais la carte est renvoyée', async () => {
+    avecWasher({ fidelite: FIDELITE })
+    plan.tables.fidelite_cartes = { data: { jeton: 'b'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(3), error: null }
+    const { body } = await poster({ client_email: 'client@test.fr' })
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('fidelite_remise')
+    expect(body.data.fidelite.etat).toMatchObject({ progression: 3, requis: 10 })
+  })
+
+  it('sans carte de fidélité chez le laveur : rien ne change', async () => {
+    const { body } = await poster({})
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('fidelite_remise')
+    expect(body.data).not.toHaveProperty('fidelite')
   })
 })

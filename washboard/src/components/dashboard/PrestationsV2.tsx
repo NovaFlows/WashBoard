@@ -464,6 +464,11 @@ export default function PrestationsV2({
             valeur="Demandé à la réservation, payé par votre lien"
             onClick={() => router.push('/dashboard/parametres/acompte')}
           />
+          <LigneDeuxNiveaux
+            label="Carte de fidélité"
+            valeur="Des tampons, puis une récompense automatique"
+            onClick={() => router.push('/dashboard/parametres/fidelite')}
+          />
         </ul>
       </CarteListe>
     </div>

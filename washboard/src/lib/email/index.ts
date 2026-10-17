@@ -43,6 +43,8 @@ type SendRequestParams = {
   vehiclesDetail?: VehicleItem[]
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
+  /** Carte de fidélité du client chez ce laveur (lib/fidelite.ts). */
+  fidelite?: { url: string; progression: number; requis: number; phrase: string }
   /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
   acompte?: { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; wero?: { telephone: string; lien: string | null } | null; conditions: string[] }
 }
@@ -140,6 +142,14 @@ export async function sendBookingRequest(params: SendRequestParams) {
           Libellé à indiquer : <strong style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.reference)}</strong>
         </div>` : ''}
         ${params.acompte.liens.map(l => `<a href="${escapeHtml(l.url)}" style="display:inline-block;margin:10px 8px 0 0;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer avec ${escapeHtml(l.libelle)}</a>`).join('')}
+      </div>` : ''}
+
+      ${params.fidelite ? `
+      <!-- Carte de fidélité -->
+      <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+        <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Votre carte de fidélité : ${params.fidelite.progression} / ${params.fidelite.requis}</p>
+        <p style="margin:0 0 10px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(params.fidelite.phrase)}</p>
+        <a href="${escapeHtml(params.fidelite.url)}" style="font-size:13px;font-weight:700;color:#0f172a;">Voir ma carte</a>
       </div>` : ''}
 
       <!-- Référence -->

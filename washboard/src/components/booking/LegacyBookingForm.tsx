@@ -13,6 +13,7 @@ import StepConfirmation from './LegacyStepConfirmation'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
 import type { AcompteDu } from './EncartAcompte'
+import type { FideliteDue } from './CarteApresReservation'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
 // (voir migration 003 booking_funnel_events).
@@ -101,6 +102,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [jeton, setJeton] = useState<string | null>(null)
   const [acompteDu, setAcompteDu] = useState<AcompteDu | null>(null)
+  const [fideliteDue, setFideliteDue] = useState<FideliteDue | null>(null)
   // Total estimé, pour annoncer l'acompte avant la réservation : même calcul que le
   // récapitulatif final (promotion et créneau avantageux déduits, déplacement compris).
   const totalEstime = (form.booked_price ?? 0) + (form.travel_fee ?? 0)
@@ -217,6 +219,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
       setJeton(json.data.jeton ?? null)
       // Montant recalculé par le serveur, jamais repris du formulaire.
       setAcompteDu(json.data.acompte ?? null)
+      setFideliteDue(json.data.fidelite ?? null)
       setStep(5)
 
       // ── Pixel Meta : « réservation confirmée » ──────────────────────────
@@ -471,6 +474,8 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             promotion={promotion}
             acompte={acompteDu}
             accent={accent}
+            fidelite={fideliteDue}
+            washerId={washer.id}
           />
         )}
       </div>

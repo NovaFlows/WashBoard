@@ -7,6 +7,7 @@ import { resumePrestation, resumeCreneau, montantMinimal, montantEstime } from '
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
 import type { AcompteDu } from './EncartAcompte'
+import type { FideliteDue } from './CarteApresReservation'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepPrestation from './StepPrestation'
@@ -121,6 +122,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [acompteDu, setAcompteDu] = useState<AcompteDu | null>(null)
+  const [fideliteDue, setFideliteDue] = useState<FideliteDue | null>(null)
   const [jeton, setJeton] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -217,6 +219,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
       setBookingId(json.data.id)
       // L'acompte vient de la RÉPONSE du serveur (montant recalculé), jamais du formulaire.
       setAcompteDu(json.data.acompte ?? null)
+      setFideliteDue(json.data.fidelite ?? null)
       setJeton(json.data.jeton ?? null)
       setScreen('done')
 
@@ -508,6 +511,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
           nomPromotion={promotion?.nom ?? null}
           acompte={acompteDu}
           accent={accent}
+          fidelite={fideliteDue}
+          washerId={washer.id}
         />
       )}
     </div>

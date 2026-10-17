@@ -4,6 +4,7 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { formatPrice } from '@/lib/pricing'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import EncartAcompte, { type AcompteDu } from './EncartAcompte'
+import CarteApresReservation, { type FideliteDue } from './CarteApresReservation'
 
 type Props = {
   washerName: string
@@ -13,10 +14,13 @@ type Props = {
   services: Service[]
   promotion?: PromotionPublique | null
   acompte?: AcompteDu | null
+  /** Carte de fidélité renvoyée par le serveur (lib/fidelite.ts), et le laveur concerné. */
+  fidelite?: FideliteDue | null
+  washerId?: string
   accent?: string
 }
 
-export default function LegacyStepConfirmation({ washerName, bookingId, jeton, form, services, promotion = null, acompte = null, accent }: Props) {
+export default function LegacyStepConfirmation({ washerName, bookingId, jeton, form, services, promotion = null, acompte = null, accent, fidelite = null, washerId }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -34,6 +38,8 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
 
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+
+      {fidelite && washerId && <CarteApresReservation fidelite={fidelite} washerId={washerId} />}
 
       {acompte && (
         <div className="mb-5">

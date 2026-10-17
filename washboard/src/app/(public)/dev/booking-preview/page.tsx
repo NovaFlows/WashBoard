@@ -10,6 +10,7 @@ import Onboarding from '@/app/(public)/onboarding/Onboarding'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import PromotionsV2 from '@/components/dashboard/PromotionsV2'
 import AcompteV2 from '@/components/dashboard/AcompteV2'
+import FideliteV2 from '@/components/dashboard/FideliteV2'
 import EncartAcompte from '@/components/booking/EncartAcompte'
 import type { PromotionPublique } from '@/lib/promotion'
 
@@ -41,6 +42,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 } }))
   if (mode === 'promotions') return <PromotionsV2 slug="demo" services={services.map(s => ({ id: s.id, name: s.name }))} liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'acompte') return <AcompteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
+  if (mode === 'fidelite') return <FideliteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'encart-acompte') return <div className="mx-auto max-w-lg p-4"><EncartAcompte montant={16.05} conditions={['À régler dans les 48 h après la réservation, sinon elle est annulée.', 'Remboursé si vous annulez au moins 48 h avant le rendez-vous.', 'Le reste se règle sur place.']}
     liens={[{ libelle: 'PayPal', url: 'https://paypal.me/eclat/16.05EUR', montantExact: true }, { libelle: 'Stripe', url: 'https://buy.stripe.com/test', montantExact: false }]}
     wero={{ telephone: '06 12 34 56 78', lien: 'https://share.weropay.eu/p/1/c/exemple' }}
