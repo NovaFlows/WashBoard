@@ -1,6 +1,6 @@
 # Contexte partagé — WashBoard
 
-Dernière mise à jour : 2026-10-09.
+Dernière mise à jour : 2026-10-18.
 
 ## Continuité de travail
 L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
@@ -26,9 +26,9 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
-## Carte de fidélité — branche `feat/fidelite`, PAS encore en production (2026-10-18)
+## Carte de fidélité EN PRODUCTION (2026-10-18, fusion `be42014`)
 Tampons (une prestation terminée = un tampon), récompense au choix du laveur (offerte / % / €, options et déplacement offerts au choix), appliquée automatiquement par `api/bookings`. Logique : `lib/fidelite.ts`, `lib/fideliteServeur.ts` ; table `fidelite_cartes` (jeton de la page `/fidelite/<jeton>`), colonnes `washers.fidelite` (jsonb) et `bookings.fidelite_remise`.
-Carte en 3D (maquette validée par Alexandre : https://claude.ai/artifact/J1kpcQ7DwvgmEyGs9Lg4KD) : `components/fidelite/CarteFidelite3D.tsx` + `carteFidelite3D.css` (hors globals.css, sans `:has()`). Le laveur choisit couleur (défaut : sa couleur de marque), finition (holo/brillante/mate) et logo ou initiale — rangés dans `washers.fidelite`, aucune colonne en plus ; teintes déduites dans `lib/carteFidelite.ts`. Parcours « option C » : à la réservation, tampon EN ATTENTE sur l'écran de confirmation ; quand le laveur marque « Terminé », email « Votre tampon est arrivé » (`prevenirTampon`, email seulement — SMS non tranché car il coûte des crédits) dont le lien `?tampon=1` fait frapper le tampon sur la page carte. Banc d'essai : `/dev/booking-preview?mode=carte-fidelite|confirmation-fidelite|fidelite`.
+Carte en 3D (maquette validée par Alexandre : https://claude.ai/artifact/J1kpcQ7DwvgmEyGs9Lg4KD) : `components/fidelite/CarteFidelite3D.tsx` + `carteFidelite3D.css` (hors globals.css, sans `:has()`). Le laveur choisit couleur (défaut : sa couleur de marque), finition (holo/brillante/mate) et logo ou initiale — rangés dans `washers.fidelite`, aucune colonne en plus ; teintes déduites dans `lib/carteFidelite.ts`. Parcours « option C » : à la réservation, tampon EN ATTENTE sur l'écran de confirmation ; quand le laveur marque « Terminé », email « Votre tampon est arrivé » (`prevenirTampon`, email seulement — SMS non tranché car il coûte des crédits) dont le lien `?tampon=1` fait frapper le tampon sur la page carte. Banc d'essai : `/dev/booking-preview?mode=carte-fidelite|confirmation-fidelite|fidelite`. Réglages : boutons − / + sous l'aperçu pour voir l'animation de la récompense ; page carte : lien retour vers la réservation. Limite connue : repasser un RDV « Terminé » en arrière puis le remettre renvoie l'email.
 
 ## Acompte EN PRODUCTION (2026-10-17)
 Prestations et prix › Acompte, tout au choix du laveur : montant (fixe ou %), délai pour payer (annulation auto des réservations encore en attente par `/api/cron/acomptes`, cron-job.org toutes les 15 min), remboursement annoncé au client AVANT de réserver. WashBoard n'encaisse rien (option « lien du laveur ») : liens PayPal.me (montant ajouté automatiquement), Stripe, SumUp, Lydia, Autre ; Wero (numéro + lien `share.weropay.eu` LU dans la capture du QR code par jsqr, QR redessiné net par qrcode) ; virement (IBAN contrôlé, montré seulement après réservation, libellé `WB-XXXXXXXX`). Le QR code SEPA/EPC a été essayé puis retiré (pas lu par la banque d'Alexandre). Le laveur confirme « Acompte reçu » dans la fiche du RDV. Logique : `lib/acompte.ts`. Colonnes : `washers.acompte` (jsonb), `bookings.acompte_montant/_statut/_echeance/_recu_le`.
