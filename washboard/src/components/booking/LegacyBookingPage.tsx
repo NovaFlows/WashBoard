@@ -21,9 +21,10 @@ type Props = {
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
  promotion?: PromotionPublique | null
  acompte?: AcomptePublic | null
+ fideliteProposee?: boolean
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null}: Props) {
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false}: Props) {
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -166,6 +167,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
           accent={accent}
           promotion={promotion}
           acompte={acompte}
+          fideliteProposee={fideliteProposee}
         />
 
         {(washer.website_url || washer.google_place_id) && (

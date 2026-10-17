@@ -6,6 +6,7 @@ import type { FormState } from './BookingForm'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { formatPrice, dureeTotale } from '@/lib/pricing'
 import EncartAcompte, { type AcompteDu } from './EncartAcompte'
+import CarteApresReservation, { type FideliteDue } from './CarteApresReservation'
 import { buildIcs } from '@/lib/ics'
 import { SOURCES_DECOUVERTE, type SourceDecouverte } from '@/lib/sourceDecouverte'
 
@@ -24,10 +25,13 @@ type Props = {
   nomPromotion?: string | null
   /** Acompte à régler par le lien du laveur, renvoyé par le serveur (lib/acompte.ts). */
   acompte?: AcompteDu | null
+  /** Carte de fidélité renvoyée par le serveur (lib/fidelite.ts), et le laveur concerné. */
+  fidelite?: FideliteDue | null
+  washerId?: string
   accent?: string
 }
 
-export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null, acompte = null, accent }: Props) {
+export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null, acompte = null, accent, fidelite = null, washerId }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -87,6 +91,8 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
 
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+
+      {fidelite && washerId && <CarteApresReservation fidelite={fidelite} washerId={washerId} />}
 
       {acompte && (
         <div className="mb-5">

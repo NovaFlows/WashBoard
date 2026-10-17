@@ -1,5 +1,6 @@
 'use client'
 
+import FideliteClientV2 from '@/components/dashboard/FideliteClientV2'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -893,6 +894,8 @@ export default function ClientProfileModalV2({
               </ul>
             </div>
           )}
+
+          <FideliteClientV2 cle={profile.cle} />
 
           <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-1">
             <h3 className="sr-only">Historique</h3>

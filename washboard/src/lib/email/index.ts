@@ -5,6 +5,7 @@ import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
 import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
+import { teintesCarte } from '@/lib/carteFidelite'
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -43,6 +44,8 @@ type SendRequestParams = {
   vehiclesDetail?: VehicleItem[]
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
+  /** Carte de fidélité du client chez ce laveur (lib/fidelite.ts). */
+  fidelite?: { url: string; progression: number; requis: number; phrase: string }
   /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
   acompte?: { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; wero?: { telephone: string; lien: string | null } | null; conditions: string[] }
 }
@@ -140,6 +143,14 @@ export async function sendBookingRequest(params: SendRequestParams) {
           Libellé à indiquer : <strong style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.reference)}</strong>
         </div>` : ''}
         ${params.acompte.liens.map(l => `<a href="${escapeHtml(l.url)}" style="display:inline-block;margin:10px 8px 0 0;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer avec ${escapeHtml(l.libelle)}</a>`).join('')}
+      </div>` : ''}
+
+      ${params.fidelite ? `
+      <!-- Carte de fidélité -->
+      <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+        <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Votre carte de fidélité : ${params.fidelite.progression} / ${params.fidelite.requis}</p>
+        <p style="margin:0 0 10px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(params.fidelite.phrase)}</p>
+        <a href="${escapeHtml(params.fidelite.url)}" style="font-size:13px;font-weight:700;color:#0f172a;">Voir ma carte</a>
       </div>` : ''}
 
       <!-- Référence -->
@@ -1329,6 +1340,65 @@ export async function sendAnnulationAcompte({ to, clientName, washerName, schedu
     <p style="margin:0;font-size:14px;color:#475569;line-height:1.6;">
       Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.
     </p>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+/** « Votre tampon est arrivé » : envoyé quand le laveur marque la prestation terminée
+ *  (`api/bookings/[id]` → `prevenirTampon`, option C retenue par Alexandre le 2026-10-18). Le
+ *  lien ouvre la page carte avec `?tampon=1`, où le tampon frappe la carte sous ses yeux. La
+ *  carte du message reprend la couleur choisie par le laveur, pas le bleu WashBoard. */
+export async function sendTamponFidelite({ to, clientName, washerName, url, tampons, requis, complete, phrase, couleur }: {
+  to: string
+  clientName: string | null
+  washerName: string
+  url: string
+  /** Tampons sur la carte, ce dernier compris. */
+  tampons: number
+  requis: number
+  /** Ce tampon complète la carte : la récompense est débloquée. */
+  complete: boolean
+  phrase: string
+  couleur: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const t = teintesCarte(couleur)
+  const titre = complete ? 'Votre carte est complète' : 'Votre tampon est arrivé'
+  const ronds = Array.from({ length: requis }, (_, i) => {
+    if (i >= tampons) return `<span style="display:inline-block;box-sizing:border-box;width:18px;height:18px;border-radius:9px;border:2px solid rgba(255,255,255,.42);margin:0 6px 6px 0;"></span>`
+    const dernier = complete && i === requis - 1
+    return `<span style="display:inline-block;width:18px;height:18px;border-radius:9px;background:${dernier ? '#E8B84A' : '#FFFFFF'};margin:0 6px 6px 0;"></span>`
+  }).join('')
+
+  return resend.emails.send({
+    from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: complete ? `Votre carte de fidélité ${washerName} est complète` : `Votre tampon ${washerName} est arrivé`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:28px 16px;background:#F6F5F3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#16161A;">
+  <div style="max-width:460px;margin:0 auto;">
+    ${clientName ? `<p style="margin:0 0 6px;font-size:14px;color:#6B6B76;">Bonjour ${escapeHtml(clientName)},</p>` : ''}
+    <h1 style="margin:0 0 18px;font-size:28px;line-height:1.08;font-weight:800;letter-spacing:-0.02em;color:#16161A;">${titre}</h1>
+    <div style="border-radius:18px;padding:22px 22px 16px;background-color:${t.base};background-image:linear-gradient(135deg,${t.clair} 0%,${t.base} 48%,${t.sombre} 100%);color:${t.texte};">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="vertical-align:top;">
+            <div style="font-size:19px;font-weight:800;line-height:1.1;color:${t.texte};">${escapeHtml(washerName)}</div>
+            <div style="margin-top:4px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${t.texteDoux};">Carte de fidélité</div>
+          </td>
+          <td style="vertical-align:top;text-align:right;white-space:nowrap;font-size:26px;font-weight:800;line-height:1;color:${t.texte};">${tampons}/${requis}</td>
+        </tr>
+      </table>
+      <div style="margin-top:18px;line-height:0;font-size:0;">${ronds}</div>
+    </div>
+    <p style="margin:18px 0 22px;font-size:15px;line-height:1.5;color:#16161A;">${escapeHtml(phrase)}</p>
+    <a href="${escapeHtml(url)}" style="display:inline-block;background:#16161A;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;padding:15px 26px;border-radius:14px;">${complete ? 'Voir ma carte' : 'Voir mon tampon'}</a>
+    <p style="margin:28px 0 0;font-size:11.5px;line-height:1.5;color:#9A9AA4;">Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}.</p>
   </div>
 </body>
 </html>`.trim(),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
 import { normalizePhone } from '@/lib/phone'
 import EncartAcompte from './EncartAcompte'
@@ -23,9 +23,13 @@ type Props = {
   accent?: string
   /** Acompte demandé par le laveur, annoncé AVANT la réservation (lib/acompte.ts). */
   acompte?: { montant: number; conditions: string[]; moyens?: string[] } | null
+  /** Appelé à chaque frappe dans l'email ou le téléphone (carte de fidélité, EncartFidelite). */
+  onCoordonnees?: (email: string, telephone: string) => void
+  /** Carte de fidélité du client, montrée une fois ses coordonnées tapées. */
+  fidelite?: React.ReactNode
 }
 
-export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null }: Props) {
+export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null, onCoordonnees, fidelite = null }: Props) {
   const [name,           setName]           = useState('')
   const [email,          setEmail]          = useState('')
   const [phone,          setPhone]          = useState('')
@@ -44,6 +48,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   const phoneDigits   = phone.replace(/\D/g, '')
   const phoneNormalise = normalizePhone(phone)
   const phoneValid  = phoneNormalise !== null
+  useEffect(() => { onCoordonnees?.(email, phone) }, [email, phone, onCoordonnees])
   const phoneError  = phoneTouched && !phoneValid
 
   const siretDigits = siret.replace(/\D/g, '')
@@ -223,6 +228,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
         </div>
       )}
 
+      {fidelite && <div className="mb-4">{fidelite}</div>}
       {acompte && <div className="mb-4"><EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} /></div>}
 
       <div className="flex gap-3">

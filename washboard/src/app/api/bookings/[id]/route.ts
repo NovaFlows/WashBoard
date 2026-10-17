@@ -10,6 +10,7 @@ import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import { genererJetonReservation } from '@/lib/bookingToken'
 import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/cloture'
+import { prevenirTampon } from '@/lib/fideliteServeur'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -248,6 +249,11 @@ export async function PATCH(
         }).catch(e => logger.error('facture.email_failed', { bookingId: id }, e))
       }
     }
+  }
+
+  // ── Carte de fidélité : « Votre tampon est arrivé » (lib/fideliteServeur.ts) ──
+  if (status === 'done' && booking.status !== 'done') {
+    await prevenirTampon(admin, washer, booking)
   }
 
   return NextResponse.json({ ...updated, ...(factureNumero ? { facture_numero: factureNumero } : {}) })

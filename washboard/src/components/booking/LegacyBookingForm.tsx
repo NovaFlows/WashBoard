@@ -13,6 +13,8 @@ import StepConfirmation from './LegacyStepConfirmation'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
 import type { AcompteDu } from './EncartAcompte'
+import type { FideliteDue } from './CarteApresReservation'
+import EncartFidelite, { useApercuFidelite } from './EncartFidelite'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
 // (voir migration 003 booking_funnel_events).
@@ -52,6 +54,8 @@ type Props = {
   promotion?: PromotionPublique | null
   /** Acompte demandé par le laveur, s'il en demande un (lib/acompte.ts). */
   acompte?: AcomptePublic | null
+  /** Le laveur propose une carte de fidélité (lib/fidelite.ts, EncartFidelite). */
+  fideliteProposee?: boolean
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -95,17 +99,26 @@ export type WasherPublic = {
 export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null, acompte = null }: Props) {
+export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null, acompte = null, fideliteProposee = false }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [jeton, setJeton] = useState<string | null>(null)
   const [acompteDu, setAcompteDu] = useState<AcompteDu | null>(null)
+  const [fideliteDue, setFideliteDue] = useState<FideliteDue | null>(null)
   // Total estimé, pour annoncer l'acompte avant la réservation : même calcul que le
   // récapitulatif final (promotion et créneau avantageux déduits, déplacement compris).
-  const totalEstime = (form.booked_price ?? 0) + (form.travel_fee ?? 0)
-    - remisePromotion(promotion, form.service_id, form.booked_price ?? 0)
-    - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
+  const remisePromo = remisePromotion(promotion, form.service_id, form.booked_price ?? 0)
+  const optionsEstimees = (form.selected_addons ?? []).reduce((t, a) => t + Number(a.price ?? 0), 0)
+  const prixOptionsApresPromo = Math.max(0, optionsEstimees - Math.max(0, remisePromo - Math.max(0, (form.booked_price ?? 0) - optionsEstimees)))
+  const prixPrestation = Math.max(0, (form.booked_price ?? 0) - optionsEstimees - remisePromo)
+  const deplacement = form.travel_fee ?? 0
+  // Carte de fidélité : cherchée à partir des coordonnées tapées (voir BookingForm).
+  const { apercu: apercuFidelite, verifier: verifierFidelite } = useApercuFidelite(washer.id, fideliteProposee)
+  const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, { prestation: prixPrestation, options: prixOptionsApresPromo, deplacement }), [verifierFidelite, prixPrestation, prixOptionsApresPromo, deplacement])
+  const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? apercuFidelite.remise : 0
+  const avantFidelite = (form.booked_price ?? 0) - remisePromo + deplacement - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
+  const totalEstime = Math.max(0, avantFidelite - remiseFidelite)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
@@ -217,6 +230,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
       setJeton(json.data.jeton ?? null)
       // Montant recalculé par le serveur, jamais repris du formulaire.
       setAcompteDu(json.data.acompte ?? null)
+      setFideliteDue(json.data.fidelite ?? null)
       setStep(5)
 
       // ── Pixel Meta : « réservation confirmée » ──────────────────────────
@@ -457,6 +471,8 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             error={error}
             onSubmit={submitBooking}
             onBack={() => setStep(3)}
+            onCoordonnees={surCoordonnees}
+            fidelite={apercuFidelite ? <EncartFidelite apercu={apercuFidelite} total={avantFidelite} /> : null}
             acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, totalEstime), conditions: conditionsAcompte(acompte), moyens: moyensPaiement(acompte) } : null}
             accent={accent}
           />
@@ -471,6 +487,8 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             promotion={promotion}
             acompte={acompteDu}
             accent={accent}
+            fidelite={fideliteDue}
+            washerId={washer.id}
           />
         )}
       </div>

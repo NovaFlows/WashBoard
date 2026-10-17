@@ -13,6 +13,7 @@ import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetour
 import { prestationsAffichees } from '@/lib/prestation'
 import { COLONNES_PROMOTION, versPublique, type Promotion } from '@/lib/promotion'
 import { acompteActif, versPublic as versPublicAcompte } from '@/lib/acompte'
+import { fideliteActive } from '@/lib/fidelite'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
@@ -159,7 +160,7 @@ export default async function BookingPage({ params }: Props) {
   // cette page, la majorité venait de l'appel externe vers le site du laveur
   // (voir plus bas).
   const maintenantIso = new Date().toISOString()
-  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }] = await Promise.all([
+  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }] = await Promise.all([
     admin
       .from('services')
       .select('*')
@@ -202,11 +203,20 @@ export default async function BookingPage({ params }: Props) {
       .select('acompte')
       .eq('id', washer.id)
       .maybeSingle(),
+    // Carte de fidélité (lib/fidelite.ts) : lue À PART de l'acompte, pour qu'une colonne
+    // manquante de l'une ne fasse pas disparaître l'autre.
+    admin
+      .from('washers')
+      .select('fidelite')
+      .eq('id', washer.id)
+      .maybeSingle(),
   ])
   // Seuls les champs d'affichage partent vers le navigateur (pas l'id ni les dates de début).
   const promotion = promoEnCours ? versPublique(promoEnCours as Promotion) : null
   const reglagesAcompte = acompteActif((ficheAcompte as { acompte?: unknown } | null)?.acompte)
   const acompte = reglagesAcompte ? versPublicAcompte(reglagesAcompte) : null
+  // Carte de fidélité : cherchée à partir des coordonnées du client (BookingForm).
+  const fideliteProposee = !!fideliteActive((ficheFidelite as { fidelite?: unknown } | null)?.fidelite)
 
   // ── Identité visuelle : réservée aux offres payantes ────────────────────
   //
@@ -239,7 +249,7 @@ export default async function BookingPage({ params }: Props) {
   if (bookingPageMode(washer.booking_page_mode) === 'custom') {
     return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
-      promotion={promotion} acompte={acompte} />
+      promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} />
   }
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
@@ -306,6 +316,7 @@ export default async function BookingPage({ params }: Props) {
           whatsappHref={waHref}
           promotion={promotion}
           acompte={acompte}
+          fideliteProposee={fideliteProposee}
         />
 
         {!personnalisee && (
