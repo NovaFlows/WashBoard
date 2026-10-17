@@ -23,6 +23,22 @@ export const DELAIS_PAIEMENT = [2, 12, 24, 48] as const
 /** Délais proposés pour annuler en étant remboursé, en heures avant le rendez-vous. */
 export const DELAIS_REMBOURSEMENT = [24, 48, 72] as const
 
+// Un lien par application (2026-10-17, Alexandre : « une case par appli ; il doit pouvoir
+// proposer tous les types de paiement »). Le client voit un bouton par lien rempli.
+//
+// Seul PayPal.me accepte le montant dans l'adresse (`paypal.me/nom/16.05EUR`) : c'est le
+// seul lien qui suit un acompte EN POURCENTAGE. Stripe, SumUp et Lydia ont un montant fixé
+// à la création du lien, par le laveur, dans leur application.
+export const APPLIS_PAIEMENT = [
+  { cle: 'paypal', libelle: 'PayPal', exemple: 'https://paypal.me/votrenom', montantAuto: true },
+  { cle: 'stripe', libelle: 'Stripe', exemple: 'https://buy.stripe.com/…', montantAuto: false },
+  { cle: 'sumup', libelle: 'SumUp', exemple: 'https://pay.sumup.com/…', montantAuto: false },
+  { cle: 'lydia', libelle: 'Lydia', exemple: 'https://…', montantAuto: false },
+  { cle: 'autre', libelle: 'Autre', exemple: 'https://…', montantAuto: false },
+] as const
+export type AppliPaiement = (typeof APPLIS_PAIEMENT)[number]['cle']
+export type LiensPaiement = Partial<Record<AppliPaiement, string>>
+
 function lienValide(lien: string): boolean {
   try {
     return new URL(lien).protocol === 'https:'
@@ -31,20 +47,57 @@ function lienValide(lien: string): boolean {
   }
 }
 
-export const ReglagesAcompteSchema = z.object({
+function estPaypalMe(lien: string): boolean {
+  try {
+    const u = new URL(lien)
+    return /(^|\.)paypal\.me$/.test(u.hostname) || (/(^|\.)paypal\.com$/.test(u.hostname) && u.pathname.startsWith('/paypalme/'))
+  } catch {
+    return false
+  }
+}
+
+/** Les liens remplis et valides, dans l'ordre des applications. */
+function liensRemplis(liens: LiensPaiement | undefined): { cle: AppliPaiement; url: string }[] {
+  return APPLIS_PAIEMENT
+    .map(a => ({ cle: a.cle, url: (liens?.[a.cle] ?? '').trim() }))
+    .filter(l => l.url && lienValide(l.url))
+}
+
+/** Réglages enregistrés avant le passage à un lien par application (un seul `lien`) :
+ *  repris comme « Autre ». */
+function reprendreAncienFormat(brut: unknown): unknown {
+  if (brut && typeof brut === 'object' && 'lien' in brut && !('liens' in brut)) {
+    const { lien, ...reste } = brut as { lien?: unknown }
+    return { ...reste, liens: { autre: typeof lien === 'string' ? lien : '' } }
+  }
+  return brut
+}
+
+const ReglagesAcompteBase = z.object({
   actif: z.boolean(),
   type: z.enum(TYPES_ACOMPTE),
   valeur: z.number().positive('Indiquez le montant de l’acompte.'),
-  /** Lien de paiement du laveur. Exigé seulement quand l'acompte est actif. */
-  lien: z.string().trim().max(500),
+  /** Liens de paiement du laveur, un par application. Au moins un quand l'acompte est actif. */
+  liens: z.object(Object.fromEntries(APPLIS_PAIEMENT.map(a => [a.cle, z.string().trim().max(500).optional()])) as Record<AppliPaiement, z.ZodOptional<z.ZodString>>),
   /** Heures pour payer avant annulation automatique ; `null` = jamais annulée. */
   delai_heures: z.number().int().positive().max(168).nullable(),
   remboursable: z.boolean(),
   /** Remboursé si le client annule au moins N heures avant le rendez-vous. */
   remboursement_heures: z.number().int().positive().max(720).nullable(),
-}).superRefine((r, ctx) => {
-  if (r.actif && !lienValide(r.lien)) {
-    ctx.addIssue({ code: 'custom', path: ['lien'], message: 'Collez votre lien de paiement complet, qui commence par https://' })
+})
+
+export const ReglagesAcompteSchema = z.preprocess(reprendreAncienFormat, ReglagesAcompteBase.superRefine((r, ctx) => {
+  for (const a of APPLIS_PAIEMENT) {
+    const lien = (r.liens[a.cle] ?? '').trim()
+    if (lien && !lienValide(lien)) {
+      ctx.addIssue({ code: 'custom', path: ['liens', a.cle], message: `Lien ${a.libelle} : collez l’adresse complète, qui commence par https://` })
+    }
+  }
+  if (r.liens.paypal?.trim() && lienValide(r.liens.paypal.trim()) && !estPaypalMe(r.liens.paypal.trim())) {
+    ctx.addIssue({ code: 'custom', path: ['liens', 'paypal'], message: 'Lien PayPal : utilisez votre lien PayPal.me (https://paypal.me/votrenom).' })
+  }
+  if (r.actif && liensRemplis(r.liens).length === 0) {
+    ctx.addIssue({ code: 'custom', path: ['liens'], message: 'Ajoutez au moins un lien de paiement.' })
   }
   if (r.type === 'pourcentage' && r.valeur > 100) {
     ctx.addIssue({ code: 'custom', path: ['valeur'], message: 'Un acompte ne peut pas dépasser 100 % du prix.' })
@@ -52,8 +105,8 @@ export const ReglagesAcompteSchema = z.object({
   if (r.remboursable && !r.remboursement_heures) {
     ctx.addIssue({ code: 'custom', path: ['remboursement_heures'], message: 'Choisissez jusqu’à quand l’acompte est remboursé.' })
   }
-})
-export type ReglagesAcompte = z.infer<typeof ReglagesAcompteSchema>
+}))
+export type ReglagesAcompte = z.infer<typeof ReglagesAcompteBase>
 
 /** Les réglages enregistrés, s'ils sont valides ET actifs ; sinon `null` (pas d'acompte).
  *  Une valeur abîmée en base ne doit jamais bloquer une réservation. */
@@ -83,7 +136,7 @@ export function conditionsAcompte(r: Pick<ReglagesAcompte, 'delai_heures' | 'rem
   const lignes: string[] = []
   lignes.push(r.delai_heures
     ? `À régler dans les ${heures(r.delai_heures)} après la réservation, sinon elle est annulée.`
-    : 'À régler après la réservation, avec le lien de paiement.')
+    : 'À régler après la réservation, avec l’un des liens de paiement.')
   lignes.push(r.remboursable && r.remboursement_heures
     ? `Remboursé si vous annulez au moins ${heures(r.remboursement_heures)} avant le rendez-vous.`
     : 'Non remboursable en cas d’annulation de votre part.')
@@ -97,4 +150,19 @@ export type AcomptePublic = Omit<ReglagesAcompte, 'actif'>
 export function versPublic(r: ReglagesAcompte): AcomptePublic {
   const { actif: _actif, ...reste } = r
   return reste
+}
+
+/** Les boutons de paiement montrés au client, pour un acompte donné. Le lien PayPal.me reçoit
+ *  le montant exact ; les autres s'ouvrent tels quels (montant fixé par le laveur). */
+export function liensDePaiement(liens: LiensPaiement | undefined, montant: number): { cle: AppliPaiement; libelle: string; url: string; montantExact: boolean }[] {
+  return liensRemplis(liens).map(l => {
+    const appli = APPLIS_PAIEMENT.find(a => a.cle === l.cle)!
+    if (l.cle === 'paypal' && estPaypalMe(l.url) && montant > 0) {
+      const base = l.url.replace(/\/+$/, '').split('?')[0]
+      // Une adresse qui porte déjà un montant (paypal.me/nom/30) le garde : on ne l'écrase pas.
+      const dejaMontant = /\/\d+([.,]\d+)?([A-Z]{3})?$/.test(base)
+      return { cle: l.cle, libelle: appli.libelle, url: dejaMontant ? base : `${base}/${montant.toFixed(2)}EUR`, montantExact: !dejaMontant }
+    }
+    return { cle: l.cle, libelle: appli.libelle, url: l.url, montantExact: false }
+  })
 }

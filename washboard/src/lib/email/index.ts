@@ -44,7 +44,7 @@ type SendRequestParams = {
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
   /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
-  acompte?: { montant: number; lien: string; conditions: string[] }
+  acompte?: { montant: number; liens: { libelle: string; url: string }[]; conditions: string[] }
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -127,7 +127,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
       <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
         <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Acompte à régler : ${formatEuros(params.acompte.montant)} €</p>
         ${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
-        <a href="${escapeHtml(params.acompte.lien)}" style="display:inline-block;margin-top:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer l’acompte</a>
+        ${params.acompte.liens.map(l => `<a href="${escapeHtml(l.url)}" style="display:inline-block;margin:10px 8px 0 0;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer avec ${escapeHtml(l.libelle)}</a>`).join('')}
       </div>` : ''}
 
       <!-- Référence -->

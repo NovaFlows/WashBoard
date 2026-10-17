@@ -873,7 +873,7 @@ describe('POST /api/bookings — fin d’essai selon l’âge du compte', () => 
 })
 
 describe('POST /api/bookings — acompte', () => {
-  const ACOMPTE = { actif: true, type: 'pourcentage', valeur: 30, lien: 'https://sumup.me/eclat', delai_heures: 24, remboursable: true, remboursement_heures: 48 }
+  const ACOMPTE = { actif: true, type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/eclat', paypal: 'https://paypal.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
   it('calcule l’acompte sur le total, le trace et renvoie le lien de paiement', async () => {
     avecWasher({ acompte: ACOMPTE })
@@ -883,7 +883,11 @@ describe('POST /api/bookings — acompte', () => {
     expect(reserv.acompte_montant).toBe(18) // 30 % de 60
     expect(reserv.acompte_statut).toBe('en_attente')
     expect(typeof reserv.acompte_echeance).toBe('string')
-    expect(body.data.acompte).toMatchObject({ montant: 18, lien: 'https://sumup.me/eclat' })
+    expect(body.data.acompte.montant).toBe(18)
+    expect(body.data.acompte.liens).toEqual([
+      { cle: 'paypal', libelle: 'PayPal', url: 'https://paypal.me/eclat/18.00EUR', montantExact: true },
+      { cle: 'sumup', libelle: 'SumUp', url: 'https://sumup.me/eclat', montantExact: false },
+    ])
   })
 
   it('acompte désactivé ou réglages abîmés : aucune colonne d’acompte envoyée', async () => {
@@ -891,7 +895,7 @@ describe('POST /api/bookings — acompte', () => {
     await poster({})
     expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_montant')
     rpcAppels.length = 0
-    avecWasher({ acompte: { ...ACOMPTE, lien: 'pas un lien' } })
+    avecWasher({ acompte: { ...ACOMPTE, liens: { stripe: 'pas un lien' } } })
     const { body } = await poster({})
     expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_statut')
     expect(body.data).not.toHaveProperty('acompte')

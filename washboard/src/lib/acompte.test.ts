@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, montantAcompte } from './acompte'
+import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte } from './acompte'
 
-const base = { actif: true, type: 'pourcentage' as const, valeur: 30, lien: 'https://sumup.me/eclat', delai_heures: 24, remboursable: true, remboursement_heures: 48 }
+const base = { actif: true, type: 'pourcentage' as const, valeur: 30, liens: { sumup: 'https://sumup.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
 describe('montantAcompte', () => {
   it('pourcentage du total, arrondi au centime', () => {
@@ -19,7 +19,7 @@ describe('réglages', () => {
   it('actif seulement si valide et allumé', () => {
     expect(acompteActif(base)).not.toBeNull()
     expect(acompteActif({ ...base, actif: false })).toBeNull()
-    expect(acompteActif({ ...base, lien: 'http://pas-securise.fr' })).toBeNull()
+    expect(acompteActif({ ...base, liens: { stripe: 'http://pas-securise.fr' } })).toBeNull()
     expect(acompteActif(null)).toBeNull()
     expect(acompteActif('n’importe quoi')).toBeNull()
   })
@@ -43,5 +43,26 @@ describe('échéance et conditions', () => {
     ])
     expect(conditionsAcompte({ delai_heures: 2, remboursable: false, remboursement_heures: null })[0]).toBe('À régler dans les 2 h après la réservation, sinon elle est annulée.')
     expect(conditionsAcompte({ delai_heures: null, remboursable: false, remboursement_heures: null })[1]).toBe('Non remboursable en cas d’annulation de votre part.')
+  })
+})
+
+describe('liens de paiement', () => {
+  it('PayPal.me reçoit le montant exact, les autres liens restent tels quels', () => {
+    expect(liensDePaiement({ paypal: 'https://paypal.me/eclat/', stripe: 'https://buy.stripe.com/abc', lydia: '' }, 16.05)).toEqual([
+      { cle: 'paypal', libelle: 'PayPal', url: 'https://paypal.me/eclat/16.05EUR', montantExact: true },
+      { cle: 'stripe', libelle: 'Stripe', url: 'https://buy.stripe.com/abc', montantExact: false },
+    ])
+  })
+  it('un lien PayPal.me qui porte déjà un montant le garde', () => {
+    expect(liensDePaiement({ paypal: 'https://paypal.me/eclat/30' }, 16.05)[0]).toMatchObject({ url: 'https://paypal.me/eclat/30', montantExact: false })
+  })
+  it('refuse un lien PayPal qui n’est pas un PayPal.me, et un acompte actif sans aucun lien', () => {
+    expect(ReglagesAcompteSchema.safeParse({ ...base, liens: { paypal: 'https://www.paypal.com/donate/xyz' } }).success).toBe(false)
+    expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {} }).success).toBe(false)
+    expect(ReglagesAcompteSchema.safeParse({ ...base, actif: false, liens: {} }).success).toBe(true)
+  })
+  it('reprend l’ancien format à un seul lien', () => {
+    const { liens: _l, ...sansLiens } = base
+    expect(acompteActif({ ...sansLiens, lien: 'https://buy.stripe.com/test' })?.liens).toEqual({ autre: 'https://buy.stripe.com/test' })
   })
 })
