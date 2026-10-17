@@ -5,6 +5,7 @@ import type { Service } from '@/types'
 import type { FormState } from './BookingForm'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { formatPrice, dureeTotale } from '@/lib/pricing'
+import EncartAcompte, { type AcompteDu } from './EncartAcompte'
 import { buildIcs } from '@/lib/ics'
 import { SOURCES_DECOUVERTE, type SourceDecouverte } from '@/lib/sourceDecouverte'
 
@@ -21,9 +22,12 @@ type Props = {
   /** Remise de la promotion en cours, déjà calculée par BookingForm (0 sinon). */
   remise?: number
   nomPromotion?: string | null
+  /** Acompte à régler par le lien du laveur, renvoyé par le serveur (lib/acompte.ts). */
+  acompte?: AcompteDu | null
+  accent?: string
 }
 
-export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null }: Props) {
+export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null, acompte = null, accent }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -83,6 +87,12 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
 
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+
+      {acompte && (
+        <div className="mb-5">
+          <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} lien={acompte.lien} accent={accent} />
+        </div>
+      )}
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-3 mb-5">
         <Row label="Prestataire" value={washerName} />

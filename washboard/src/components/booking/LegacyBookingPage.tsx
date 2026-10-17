@@ -11,6 +11,7 @@ import { prestationsAffichees } from '@/lib/prestation'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import type { PromotionPublique } from '@/lib/promotion'
+import type { AcomptePublic } from '@/lib/acompte'
 
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
@@ -19,9 +20,10 @@ type Props = {
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
  promotion?: PromotionPublique | null
+ acompte?: AcomptePublic | null
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null}: Props) {
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null}: Props) {
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -163,6 +165,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
           // le bleu WashBoard sinon (calculé plus haut).
           accent={accent}
           promotion={promotion}
+          acompte={acompte}
         />
 
         {(washer.website_url || washer.google_place_id) && (

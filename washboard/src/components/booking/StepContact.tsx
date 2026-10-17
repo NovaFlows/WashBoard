@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
 import { normalizePhone } from '@/lib/phone'
+import EncartAcompte from './EncartAcompte'
 
 type Props = {
   isProfessional: boolean
@@ -20,9 +21,11 @@ type Props = {
   }) => void
   onBack: () => void
   accent?: string
+  /** Acompte demandé par le laveur, annoncé AVANT la réservation (lib/acompte.ts). */
+  acompte?: { montant: number; conditions: string[] } | null
 }
 
-export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb' }: Props) {
+export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null }: Props) {
   const [name,           setName]           = useState('')
   const [email,          setEmail]          = useState('')
   const [phone,          setPhone]          = useState('')
@@ -219,6 +222,8 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
+
+      {acompte && <div className="mb-4"><EncartAcompte montant={acompte.montant} conditions={acompte.conditions} /></div>}
 
       <div className="flex gap-3">
         <button

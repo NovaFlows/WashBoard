@@ -10,7 +10,9 @@ import StepOptions from './StepOptions'
 import StepSlot from './LegacyStepSlot'
 import StepContact from './StepContact'
 import StepConfirmation from './LegacyStepConfirmation'
-import type { PromotionPublique } from '@/lib/promotion'
+import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
+import { conditionsAcompte, montantAcompte, type AcomptePublic } from '@/lib/acompte'
+import type { AcompteDu } from './EncartAcompte'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
 // (voir migration 003 booking_funnel_events).
@@ -48,6 +50,8 @@ type Props = {
   accent?: string
   /** Promotion en cours, s'il y en a une (lib/promotion.ts). */
   promotion?: PromotionPublique | null
+  /** Acompte demandé par le laveur, s'il en demande un (lib/acompte.ts). */
+  acompte?: AcomptePublic | null
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -91,11 +95,17 @@ export type WasherPublic = {
 export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null }: Props) {
+export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null, acompte = null }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [jeton, setJeton] = useState<string | null>(null)
+  const [acompteDu, setAcompteDu] = useState<AcompteDu | null>(null)
+  // Total estimé, pour annoncer l'acompte avant la réservation : même calcul que le
+  // récapitulatif final (promotion et créneau avantageux déduits, déplacement compris).
+  const totalEstime = (form.booked_price ?? 0) + (form.travel_fee ?? 0)
+    - remisePromotion(promotion, form.service_id, form.booked_price ?? 0)
+    - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
@@ -205,6 +215,8 @@ export default function LegacyBookingForm({ washer, services, categories, availa
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
       setBookingId(json.data.id)
       setJeton(json.data.jeton ?? null)
+      // Montant recalculé par le serveur, jamais repris du formulaire.
+      setAcompteDu(json.data.acompte ?? null)
       setStep(5)
 
       // ── Pixel Meta : « réservation confirmée » ──────────────────────────
@@ -445,6 +457,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             error={error}
             onSubmit={submitBooking}
             onBack={() => setStep(3)}
+            acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, totalEstime), conditions: conditionsAcompte(acompte) } : null}
             accent={accent}
           />
         )}
@@ -456,6 +469,8 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             form={form}
             services={services}
             promotion={promotion}
+            acompte={acompteDu}
+            accent={accent}
           />
         )}
       </div>

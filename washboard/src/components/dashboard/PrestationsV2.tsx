@@ -459,6 +459,11 @@ export default function PrestationsV2({
             valeur="Une remise pendant une période, annoncée sur votre page"
             onClick={() => router.push('/dashboard/parametres/promotions')}
           />
+          <LigneDeuxNiveaux
+            label="Acompte"
+            valeur="Demandé à la réservation, payé par votre lien"
+            onClick={() => router.push('/dashboard/parametres/acompte')}
+          />
         </ul>
       </CarteListe>
     </div>

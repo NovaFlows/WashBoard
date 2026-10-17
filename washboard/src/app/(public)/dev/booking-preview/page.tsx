@@ -9,6 +9,7 @@ import type { Service, ServiceCategory } from '@/types'
 import Onboarding from '@/app/(public)/onboarding/Onboarding'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import PromotionsV2 from '@/components/dashboard/PromotionsV2'
+import AcompteV2 from '@/components/dashboard/AcompteV2'
 import type { PromotionPublique } from '@/lib/promotion'
 
 // Fin de la promotion d'exemple, calculée au chargement du module et non pendant le rendu
@@ -38,6 +39,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     { id: '00000000-0000-4000-8000-000000000013', name: 'Complet', description: 'Intérieur et extérieur en une seule visite', price: 75, duration_minutes: 120, addons: [] },
   ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 } }))
   if (mode === 'promotions') return <PromotionsV2 slug="demo" services={services.map(s => ({ id: s.id, name: s.name }))} liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
+  if (mode === 'acompte') return <AcompteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'custom') return <LegacyBookingPage washer={{ id: washerId, name: 'Brillance Mobile', slug: 'demo', phone: null, logo_url: null, welcome_message: 'Bienvenue chez Brillance Mobile', brand_color: '#7c3aed', background_theme: null, website_url: null, base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], reservation_jour_meme: false, plan: 'business', subscription_status: 'active' }} services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))} plafondAtteint={false} facturationPrete={true} pixelId={null} promotion={promotion} />
   return <><div className="min-h-screen bg-[#f6f5f3] dark:bg-zinc-950">
     {promotion && <BandeauPromotion promo={promotion} />}

@@ -871,3 +871,29 @@ describe('POST /api/bookings — fin d’essai selon l’âge du compte', () => 
     expect((await poster()).res.status).toBe(201)
   })
 })
+
+describe('POST /api/bookings — acompte', () => {
+  const ACOMPTE = { actif: true, type: 'pourcentage', valeur: 30, lien: 'https://sumup.me/eclat', delai_heures: 24, remboursable: true, remboursement_heures: 48 }
+
+  it('calcule l’acompte sur le total, le trace et renvoie le lien de paiement', async () => {
+    avecWasher({ acompte: ACOMPTE })
+    const { res, body } = await poster({})
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.acompte_montant).toBe(18) // 30 % de 60
+    expect(reserv.acompte_statut).toBe('en_attente')
+    expect(typeof reserv.acompte_echeance).toBe('string')
+    expect(body.data.acompte).toMatchObject({ montant: 18, lien: 'https://sumup.me/eclat' })
+  })
+
+  it('acompte désactivé ou réglages abîmés : aucune colonne d’acompte envoyée', async () => {
+    avecWasher({ acompte: { ...ACOMPTE, actif: false } })
+    await poster({})
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_montant')
+    rpcAppels.length = 0
+    avecWasher({ acompte: { ...ACOMPTE, lien: 'pas un lien' } })
+    const { body } = await poster({})
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_statut')
+    expect(body.data).not.toHaveProperty('acompte')
+  })
+})

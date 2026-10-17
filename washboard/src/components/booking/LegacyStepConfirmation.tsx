@@ -3,6 +3,7 @@ import type { FormState } from './LegacyBookingForm'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { formatPrice } from '@/lib/pricing'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
+import EncartAcompte, { type AcompteDu } from './EncartAcompte'
 
 type Props = {
   washerName: string
@@ -11,9 +12,11 @@ type Props = {
   form: FormState
   services: Service[]
   promotion?: PromotionPublique | null
+  acompte?: AcompteDu | null
+  accent?: string
 }
 
-export default function LegacyStepConfirmation({ washerName, bookingId, jeton, form, services, promotion = null }: Props) {
+export default function LegacyStepConfirmation({ washerName, bookingId, jeton, form, services, promotion = null, acompte = null, accent }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -31,6 +34,12 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
 
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+
+      {acompte && (
+        <div className="mb-5">
+          <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} lien={acompte.lien} accent={accent} />
+        </div>
+      )}
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-3 mb-5">
         <Row label="Prestataire" value={washerName} />

@@ -6,6 +6,7 @@ import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { remisePromotion } from '@/lib/promotion'
+import { acompteActif, conditionsAcompte, echeanceAcompte, montantAcompte, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { effectiveTeamSize } from '@/lib/slots'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
@@ -527,6 +528,24 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   const base_price = prix_vehicules + prix_options - (promotion?.remise ?? 0)
   const booked_price = base_price + computed_travel_fee
 
+  // ── Acompte (lib/acompte.ts) ───────────────────────────────────────────
+  //
+  // Demandé sur le total réellement dû (après promotion et créneau avantageux), et jamais
+  // quand le laveur saisit lui-même le rendez-vous. Lu à part de la fiche : une colonne
+  // pas encore créée ne doit pas faire échouer la lecture du laveur, donc la réservation.
+  let acompte: { montant: number; echeance: string | null; reglages: ReglagesAcompte } | null = null
+  if (!isOwner) {
+    const { data: ficheAcompte, error: errAcompte } = await supabase
+      .from('washers').select('acompte').eq('id', bookingData.washer_id).maybeSingle()
+    if (errAcompte) {
+      if (!migrationEnAttente(errAcompte)) logger.error('bookings.acompte.read_failed', { washerId: bookingData.washer_id }, errAcompte)
+    } else {
+      const reglages = acompteActif(ficheAcompte?.acompte)
+      const montantAcompteDu = reglages ? montantAcompte(reglages, finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0)) : 0
+      if (reglages && montantAcompteDu > 0) acompte = { montant: montantAcompteDu, echeance: echeanceAcompte(reglages), reglages }
+    }
+  }
+
   // L'événement Google Agenda est créé uniquement à la confirmation du RDV
   // (voir PATCH /api/bookings/[id] quand status passe à 'confirmed'),
   // pas à la création — les RDV en attente ne sont pas ajoutés à l'agenda.
@@ -563,6 +582,8 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       // Seulement quand une remise s'applique : la fonction SQL insère chaque clé reçue,
       // une colonne absente ferait échouer TOUTES les réservations.
       ...(promotion ? { promotion_id: promotion.id, promo_remise: promotion.remise } : {}),
+      // Même prudence : les colonnes d'acompte ne partent que s'il y a un acompte à demander.
+      ...(acompte ? { acompte_montant: acompte.montant, acompte_statut: 'en_attente', acompte_echeance: acompte.echeance } : {}),
     },
     p_capacity: isOwner ? null : capacite,
   })
@@ -636,6 +657,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         vehiclesDetail: vehicles_detail ?? undefined,
         notes: bookingData.notes ?? undefined,
         selectedAddons: selected_addons ?? undefined,
+        acompte: acompte ? { montant: acompte.montant, lien: acompte.reglages.lien, conditions: conditionsAcompte(acompte.reglages) } : undefined,
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     )
 
@@ -734,5 +756,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // rendez-vous qu'il saisit lui-même : celui-là n'est jamais verrouillé, et
   // c'est précisément ce jeton qui ouvre le PDF d'une réservation verrouillée.
   const jeton = isOwner ? null : genererJetonReservation(id)
-  return Response.json({ data: { id, booked_price, jeton } }, { status: 201 })
+  return Response.json({
+    data: {
+      id, booked_price, jeton,
+      ...(acompte ? { acompte: { montant: acompte.montant, lien: acompte.reglages.lien, echeance: acompte.echeance, conditions: conditionsAcompte(acompte.reglages) } } : {}),
+    },
+  }, { status: 201 })
 })

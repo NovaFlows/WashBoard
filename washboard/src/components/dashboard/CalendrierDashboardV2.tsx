@@ -16,6 +16,7 @@ import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
 import { useConges } from '@/hooks/useConges'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
+import LigneAcompteV2 from '@/components/dashboard/LigneAcompteV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
 import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/ProposerCreneauV2'
@@ -1500,6 +1501,8 @@ function DetailRendezVous({
             </div>
           )}
 
+          <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
+
           <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{b.address}</p>
           {adresse && (
             <button
@@ -1973,6 +1976,8 @@ function FicheRdvBureauV2({
             )}
           </div>
         )}
+
+        <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
 
         <div className="mt-4">
           <label htmlFor="rdv-notes-bureau" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>

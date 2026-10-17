@@ -43,6 +43,8 @@ type SendRequestParams = {
   vehiclesDetail?: VehicleItem[]
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
+  /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
+  acompte?: { montant: number; lien: string; conditions: string[] }
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -119,6 +121,14 @@ export async function sendBookingRequest(params: SendRequestParams) {
           <td style="padding:10px 16px;font-weight:700;color:#0f172a;text-align:right;">${priceStr}€${params.isSmartSlot && discount > 0 ? ' ★' : ''} <span style="font-weight:400;color:#94a3b8;">(sur place)</span></td>
         </tr>
       </table>
+
+      ${params.acompte ? `
+      <!-- Acompte -->
+      <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+        <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Acompte à régler : ${formatEuros(params.acompte.montant)} €</p>
+        ${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
+        <a href="${escapeHtml(params.acompte.lien)}" style="display:inline-block;margin-top:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer l’acompte</a>
+      </div>` : ''}
 
       <!-- Référence -->
       <div style="margin-top:20px;padding:12px 16px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;">
@@ -1271,6 +1281,42 @@ export async function sendAnnonceBureau({ to, washerName, appUrl }: {
       <p style="margin:0;font-size:12px;color:#8a8a90;text-align:center;">Vous pourrez revoir la visite à tout moment : Plus › Réglages › Guide d&apos;utilisation</p>
       <p style="margin:16px 0 0;font-size:12px;color:#8a8a90;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
     </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
+/** Réservation annulée faute d'acompte réglé dans le délai choisi par le laveur
+ *  (`api/cron/acomptes`, voir lib/acompte.ts). */
+export async function sendAnnulationAcompte({ to, clientName, washerName, scheduledAt }: {
+  to: string
+  clientName: string
+  washerName: string
+  scheduledAt: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const date = new Date(scheduledAt)
+  const jour = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  return resend.emails.send({
+    from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: `Réservation annulée : acompte non réglé`,
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:24px 16px;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;padding:28px 32px;">
+    <p style="margin:0 0 14px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(clientName)}</strong>,</p>
+    <p style="margin:0 0 14px;font-size:14px;color:#475569;line-height:1.6;">
+      Votre réservation avec <strong>${escapeHtml(washerName)}</strong> du ${jour} à ${heure} a été annulée :
+      l’acompte n’a pas été réglé dans le délai indiqué au moment de réserver.
+    </p>
+    <p style="margin:0;font-size:14px;color:#475569;line-height:1.6;">
+      Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.
+    </p>
   </div>
 </body>
 </html>`.trim(),

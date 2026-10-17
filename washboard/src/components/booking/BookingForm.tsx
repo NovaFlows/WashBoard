@@ -5,6 +5,8 @@ import type { Service, ServiceCategory, Availability, BookingFormData } from '@/
 import { dureeTotale, formatPrice } from '@/lib/pricing'
 import { resumePrestation, resumeCreneau, montantMinimal, montantEstime } from '@/lib/bookingSummary'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
+import { conditionsAcompte, montantAcompte, type AcomptePublic } from '@/lib/acompte'
+import type { AcompteDu } from './EncartAcompte'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepPrestation from './StepPrestation'
@@ -62,6 +64,8 @@ type Props = {
   whatsappHref?: string | null
   /** Promotion en cours, s'il y en a une (lib/promotion.ts). */
   promotion?: PromotionPublique | null
+  /** Acompte demandé par le laveur, s'il en demande un (lib/acompte.ts). */
+  acompte?: AcomptePublic | null
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -107,7 +111,7 @@ export type FormState = Partial<BookingFormData>
 /** Les trois cartes de l'accordéon. */
 type Section = 1 | 2 | 3
 
-export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', whatsappHref = null, promotion = null }: Props) {
+export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', whatsappHref = null, promotion = null, acompte = null }: Props) {
   const [section, setSection] = useState<Section>(1)
   const [actionTarget, setActionTarget] = useState<HTMLDivElement | null>(null)
   const priceDialog = useRef<HTMLDialogElement>(null)
@@ -116,6 +120,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
   const [screen, setScreen] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
+  const [acompteDu, setAcompteDu] = useState<AcompteDu | null>(null)
   const [jeton, setJeton] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -210,6 +215,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
       if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
       updateForm(contactData)
       setBookingId(json.data.id)
+      // L'acompte vient de la RÉPONSE du serveur (montant recalculé), jamais du formulaire.
+      setAcompteDu(json.data.acompte ?? null)
       setJeton(json.data.jeton ?? null)
       setScreen('done')
 
@@ -436,6 +443,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 onChange={updateForm}
                 total={barAmount ?? 0}
                 whatsappHref={whatsappHref}
+                acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, barAmount ?? 0), conditions: conditionsAcompte(acompte) } : null}
                 isProfessional={form.is_professional ?? false}
                 loading={loading}
                 error={error}
@@ -498,6 +506,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
           whatsappHref={whatsappHref}
           remise={remise}
           nomPromotion={promotion?.nom ?? null}
+          acompte={acompteDu}
+          accent={accent}
         />
       )}
     </div>
