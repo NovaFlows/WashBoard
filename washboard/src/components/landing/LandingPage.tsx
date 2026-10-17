@@ -17,6 +17,7 @@ import { FAQ_ITEMS } from '@/lib/faq'
 import { metierPageForTheme } from '@/lib/metiers'
 import type { Theme } from '@/lib/blog'
 import { ComparatifBesoins } from '@/components/ComparatifBesoins'
+import DemoDashboard from '@/components/landing/DemoDashboard'
 import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 
 // Slogans courts et uniformes — pas de saut de layout
@@ -35,11 +36,20 @@ import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 // a une hauteur FIXE (h-[4em] / h-[3em] plus bas), calibrée sur les trois
 // slogans d'origine (23 à 48 caractères). Rester sous ~48 caractères, la
 // longueur du plus long des trois, garde le rendu dans les clous.
+//
+// 5ᵉ slogan ajouté lors de la refonte de la vitrine (chantier
+// `refonte/landing-vitrine`), repris du prototype validé par Alexandre.
+// Volontairement PAS en position 0 : avis de l'agent seo-geo avant d'y
+// toucher — le premier slogan est celui que Google et les IA lisent comme
+// H1 réel (rendu serveur, avant toute rotation JS), et il ne doit pas
+// perdre les mots-clés métier déjà en place depuis le 2026-09-28. Celui-ci
+// tourne normalement pour le visiteur humain, 38 caractères, sous le budget.
 const SLOGANS: { pre: string; hl: string; post: string }[] = [
   { pre: 'Nettoyage, detailing auto. ', hl: 'À domicile.', post: '' },
   { pre: 'Fais plus. ', hl: 'Gère moins.', post: '' },
   { pre: 'Tes clients réservent seuls. ', hl: 'Toi tu encaisses.', post: '' },
   { pre: 'Réservation, planning, factures. ', hl: 'Un seul outil.', post: '' },
+  { pre: 'Ton agenda se remplit. ', hl: 'Toi, tu laves.', post: '' },
 ]
 
 // Icônes des réseaux sociaux du pied de page : voir
@@ -200,6 +210,7 @@ const METIERS: { titre: string; desc: string; theme?: Theme }[] = [
 // des <section> plus bas.
 const SECTIONS_NAV = [
   { id: 'fonctionnalites', label: 'Fonctionnalités' },
+  { id: 'demo', label: 'Démo' },
   { id: 'tutoriel', label: 'Tutoriel' },
   { id: 'tarifs', label: 'Tarifs' },
   { id: 'faq', label: 'FAQ' },
@@ -621,7 +632,11 @@ export default function LandingPage() {
                 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.5, delay: 0.3 } } }}
                 className="text-xs text-slate-400 dark:text-white/25 mt-5"
               >
-                Sans engagement · Sans carte bancaire
+                {/* Reprend la formule déjà utilisée ailleurs sur la page
+                    (ETAPES, FAQ) plutôt que d'en inventer une nouvelle — le
+                    hero n'annonçait jusqu'ici que « sans engagement », sans
+                    dire ce qu'il y avait à essayer gratuitement. */}
+                Un mois offert, sans carte bancaire · aucun engagement
               </motion.p>
             </div>
 
@@ -986,14 +1001,28 @@ export default function LandingPage() {
       </section>
 
       {/* ── Le produit en vrai ── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
+      <section id="demo" className="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-slate-100 dark:border-slate-800/50">
         <FadeUp className="mb-12">
           <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le produit en vrai</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl">
-            Ce que voient tes clients. Ce que tu vois, toi.
+            Essaie-le ici, sans créer de compte.
           </h2>
           <p className="mt-4 text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-            Captures de WashBoard, avec des données de démonstration.
+            Les quatre mêmes destinations que ton vrai tableau de bord. Clique dans la colonne,
+            marque la prestation de 11:30 « Terminer » — et regarde une seule action se
+            répercuter sur ta fiche client et tes chiffres.
+          </p>
+        </FadeUp>
+        {/* Démo manipulable — remplace l'ancienne capture figée du CRM
+            (`/landing/crm-*.webp`, toujours dans public/ si besoin de
+            revenir en arrière). Chantier `refonte/landing-vitrine` : la
+            landing sert d'outil de démo commercial, le visiteur doit
+            pouvoir toucher le produit. Données figées dans le composant,
+            aucun appel réseau — voir DemoDashboard.tsx. */}
+        <FadeUp className="mb-10">
+          <DemoDashboard />
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            Démonstration avec des données d&apos;exemple. Rien n&apos;est enregistré.
           </p>
         </FadeUp>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_280px] gap-10 items-start">
@@ -1001,13 +1030,7 @@ export default function LandingPage() {
             <Capture
               clair="/landing/calendrier-clair.webp" sombre="/landing/calendrier-sombre.webp" largeur={1600} hauteur={1240}
               alt="Le calendrier WashBoard : les rendez-vous du mois, les créneaux groupés et les congés"
-              legende="Ton agenda : les réservations du mois, les créneaux groupés (★) et tes congés."
-              sizes="(min-width: 1024px) 760px, 100vw"
-            />
-            <Capture
-              clair="/landing/crm-clair.webp" sombre="/landing/crm-sombre.webp" largeur={1600} hauteur={498}
-              alt="Le CRM WashBoard : visiteurs et réservations de la page, jour après jour"
-              legende="Ton CRM : les visiteurs de ta page et les réservations, jour après jour."
+              legende="Ton agenda complet : les réservations du mois, les créneaux groupés (★) et tes congés."
               sizes="(min-width: 1024px) 760px, 100vw"
             />
           </div>
