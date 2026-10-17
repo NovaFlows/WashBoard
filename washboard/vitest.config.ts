@@ -55,6 +55,10 @@ export default defineConfig({
         'src/lib/useSupportUnreadBadge.ts',
         'src/lib/useEstEquipeSupport.ts',
         'src/lib/useSupportUnreadTeamBadge.ts',
+        // Données fictives de la page `/demo` (404 en production) : ce n'est pas
+        // de la logique métier, et ses ~1 400 lignes à 0 % faisaient passer
+        // tout `src/lib` sous le seuil.
+        'src/lib/demo/**',
       ],
 
       // Un seuil par couche. Les fichiers couverts par un motif sortent du
