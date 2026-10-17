@@ -135,6 +135,10 @@ const FONCTIONNALITES: Fonctionnalite[] = [
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
   { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
   { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.', offre: 'frais_deplacement' },
+  // Sorties en octobre 2026, ouvertes dès l'offre Découverte : pas de clé `offre`, donc pas de badge.
+  { titre: 'Acompte', desc: 'Un acompte demandé à la réservation, payé par ton lien PayPal, Stripe, SumUp, Lydia, par Wero ou par virement. Pas réglé à temps : le créneau se libère tout seul.' },
+  { titre: 'Promotions', desc: 'Une remise en % ou en € pendant la période de ton choix, sur tout ou partie de tes prestations, annoncée par un bandeau et un compte à rebours sur ta page.' },
+  { titre: 'Carte de fidélité', desc: 'Un tampon à chaque prestation, et la récompense de ton choix (prestation offerte ou remise) appliquée toute seule. Une carte en 3D, à tes couleurs.' },
   { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.', offre: 'crm' },
   { titre: 'Campagnes publicitaires', desc: 'Combien de réservations viennent de chaque campagne Meta, et ce qu’elle te rapporte.', offre: 'campagnes' },
   { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.', offre: 'creneaux_intelligents' },

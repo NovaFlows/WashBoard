@@ -532,6 +532,11 @@ export const PLAN_CARDS: PlanCard[] = [
       'Agenda et fiches clients',
       'Frais de déplacement facturés au client',
       'Page de réservation aux couleurs WashBoard',
+      // Ouverts à toutes les offres dès leur sortie (2026-10-17/18, décision d'Alexandre) :
+      // écrits ici, ils le sont aussi pour Starter, Pro et Business (« Tout le Découverte »).
+      'Acompte à la réservation',
+      'Promotions avec compte à rebours',
+      'Carte de fidélité',
     ],
   },
   {
