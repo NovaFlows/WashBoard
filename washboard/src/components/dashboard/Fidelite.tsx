@@ -16,9 +16,12 @@ type Props = {
   slug: string
   liste: ReglagesListeProps
   betaRefonte?: boolean | null
+  marque?: string | null
+  logo?: string | null
+  logoHorsOffre?: boolean
 }
 
-export default function Fidelite({ slug, liste, betaRefonte }: Props) {
+export default function Fidelite({ slug, liste, betaRefonte, marque, logo, logoHorsOffre }: Props) {
   const router = useRouter()
   const [statut, setStatut] = useState<Statut>('verification')
 
@@ -33,5 +36,5 @@ export default function Fidelite({ slug, liste, betaRefonte }: Props) {
   }, [statut, router])
 
   if (statut !== 'v2') return null
-  return <FideliteV2 slug={slug} liste={liste} />
+  return <FideliteV2 slug={slug} liste={liste} marque={marque} logo={logo} logoHorsOffre={logoHorsOffre} />
 }

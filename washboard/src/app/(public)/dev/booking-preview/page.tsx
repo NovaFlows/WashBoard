@@ -12,6 +12,8 @@ import PromotionsV2 from '@/components/dashboard/PromotionsV2'
 import AcompteV2 from '@/components/dashboard/AcompteV2'
 import FideliteV2 from '@/components/dashboard/FideliteV2'
 import EncartFidelite from '@/components/booking/EncartFidelite'
+import CarteApresReservation from '@/components/booking/CarteApresReservation'
+import CarteFidelite3D, { type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
 import EncartAcompte from '@/components/booking/EncartAcompte'
 import type { PromotionPublique } from '@/lib/promotion'
 
@@ -20,8 +22,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string }> }) {
-  const { mode, etape, promo } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -43,7 +45,16 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 } }))
   if (mode === 'promotions') return <PromotionsV2 slug="demo" services={services.map(s => ({ id: s.id, name: s.name }))} liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'acompte') return <AcompteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
-  if (mode === 'fidelite') return <FideliteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
+  if (mode === 'fidelite') return <FideliteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} marque="#7c3aed" />
+  // La carte en 3D seule (`?scenario=reservation|tampon|consultation&couleur=0F7A55&tampons=7`).
+  if (mode === 'carte-fidelite') return <main className="min-h-screen bg-[#F6F5F3] px-4 py-8 dark:bg-[#0E0E11]"><div className="mx-auto max-w-md">
+    <CarteFidelite3D couleur={`#${couleur ?? '6D28D9'}`} finition="holo" nom="Brillance Mobile" numero="4F2A" requis={10} tampons={Number(tampons ?? 7)}
+      recompense="Prestation offerte" scenario={(scenario ?? 'tampon') as ScenarioCarte} largeur={380} legende="Votre tampon est arrivé" />
+  </div></main>
+  if (mode === 'confirmation-fidelite') return <main className="mx-auto max-w-md bg-white p-4 text-center dark:bg-slate-900">
+    <CarteApresReservation fidelite={{ jeton: '4f2a9c0e00000000000000000000000000ab', remise: 0, etat: { progression: 7, requis: 10, disponibles: 0 }, phrase: 'Plus que 3 prestations avant une prestation offerte.',
+      carte: { couleur: `#${couleur ?? '0F7A55'}`, finition: 'holo', nom: 'Brillance Mobile', logo: null, numero: '4F2A', recompense: 'Prestation offerte' } }} />
+  </main>
   if (mode === 'encart-fidelite') return <div className="mx-auto flex max-w-lg flex-col gap-4 p-4">
     <EncartFidelite total={59} apercu={{ progression: 7, requis: 10, disponibles: 0, remise: 0, offerte: false, phrase: 'Plus que 3 prestations avant une prestation offerte.' }} />
     <EncartFidelite total={59} apercu={{ progression: 0, requis: 10, disponibles: 1, remise: 45, offerte: true, phrase: '' }} />

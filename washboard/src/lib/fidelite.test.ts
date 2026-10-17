@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesFideliteSchema, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, partiesOffertes, phraseCarte, remiseFidelite } from './fidelite'
+import { ReglagesFideliteSchema, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, partiesOffertes, phraseCarte, recompenseCourte, remiseFidelite } from './fidelite'
 
 const fait = (n: number) => Array.from({ length: n }, () => ({ status: 'done' }))
 
@@ -54,6 +54,18 @@ describe('réglages et jeton', () => {
     expect(ReglagesFideliteSchema.safeParse({ actif: true, tampons: 1, recompense: 'offerte', valeur: 0 }).success).toBe(false)
     expect(ReglagesFideliteSchema.safeParse({ actif: true, tampons: 10, recompense: 'pourcentage', valeur: 0 }).success).toBe(false)
     expect(fideliteActive('n’importe quoi')).toBeNull()
+  })
+  it('apparence de la carte : couleur, finition, logo ou initiale', () => {
+    const base = { actif: true, tampons: 10, recompense: 'offerte', valeur: 0 }
+    expect(ReglagesFideliteSchema.parse(base)).toMatchObject({ finition: 'holo' })
+    expect(ReglagesFideliteSchema.parse({ ...base, couleur: '#0F7A55', finition: 'mate', embleme: 'initiale' })).toMatchObject({ couleur: '#0F7A55', finition: 'mate', embleme: 'initiale' })
+    expect(ReglagesFideliteSchema.safeParse({ ...base, couleur: 'red' }).success).toBe(false)
+    expect(ReglagesFideliteSchema.safeParse({ ...base, finition: 'paillettes' }).success).toBe(false)
+  })
+  it('récompense en deux mots pour le recto', () => {
+    expect(recompenseCourte({ recompense: 'offerte', valeur: 0 })).toBe('Prestation offerte')
+    expect(recompenseCourte({ recompense: 'pourcentage', valeur: 20 })).toBe('−20 %')
+    expect(recompenseCourte({ recompense: 'montant', valeur: 12.5 })).toBe('−12,50 €')
   })
   it('jeton imprévisible et vérifiable', () => {
     const j = nouveauJeton()

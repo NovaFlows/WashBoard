@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { EMBLEMES_CARTE, FINITIONS_CARTE } from '@/lib/carteFidelite'
 
 // Carte de fidélité (décisions d'Alexandre, 2026-10-17) :
 // - des TAMPONS : une prestation terminée = un tampon ; après N tampons (choisi par le
@@ -30,6 +31,11 @@ export const ReglagesFideliteSchema = z.object({
    *  (demande d'Alexandre, 2026-10-17 : au choix du laveur). Ignorés pour une remise. */
   offre_options: z.boolean().optional().default(true),
   offre_deplacement: z.boolean().optional().default(false),
+  /** Apparence de la carte (lib/carteFidelite.ts). Couleur absente : celle de marque du laveur. */
+  couleur: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur invalide.').optional(),
+  finition: z.enum(FINITIONS_CARTE).optional().default('holo'),
+  /** Logo ou initiale sur la carte ; absent : le logo s'il y en a un. */
+  embleme: z.enum(EMBLEMES_CARTE).optional(),
 }).superRefine((r, ctx) => {
   if (r.recompense === 'pourcentage' && !(r.valeur > 0 && r.valeur <= 100)) {
     ctx.addIssue({ code: 'custom', path: ['valeur'], message: 'Une remise en pourcentage va de 1 à 100 %.' })
@@ -110,6 +116,13 @@ export function libelleRecompense(r: Pick<ReglagesFidelite, 'recompense' | 'vale
   }
   const v = Number.isInteger(r.valeur) ? String(r.valeur) : r.valeur.toFixed(2).replace('.', ',')
   return r.recompense === 'pourcentage' ? `−${v} % sur une prestation` : `−${v} € sur une prestation`
+}
+
+/** La récompense en deux mots, pour le recto de la carte : « Prestation offerte », « −20 % ». */
+export function recompenseCourte(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'>): string {
+  if (r.recompense === 'offerte') return 'Prestation offerte'
+  const v = Number.isInteger(r.valeur) ? String(r.valeur) : r.valeur.toFixed(2).replace('.', ',')
+  return r.recompense === 'pourcentage' ? `−${v} %` : `−${v} €`
 }
 
 /** La phrase que lit le client sous sa carte. */

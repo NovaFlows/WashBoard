@@ -2,23 +2,26 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { hasFeature } from '@/lib/plan'
-import { urlVersionnee } from '@/lib/themes'
 import { fideliteActive, jetonValide, phraseCarte } from '@/lib/fidelite'
-import { etatDuClient } from '@/lib/fideliteServeur'
+import { apparenceCarte, etatDuClient } from '@/lib/fideliteServeur'
+import CarteFidelite3D from '@/components/fidelite/CarteFidelite3D'
 
 // Page de la carte de fidélité d'un client (lien reçu dans ses emails de réservation) :
 // ses tampons chez CE laveur, la récompense qui l'attend, et un bouton pour réserver.
 // Publique, sans compte : le jeton imprévisible de l'adresse tient lieu d'accès. Aucune
 // donnée personnelle n'y figure (ni nom, ni email, ni téléphone du client).
+//
+// `?tampon=1` : le client arrive de l'email « Votre tampon est arrivé » (envoyé quand le
+// laveur marque la prestation terminée, `api/bookings/[id]`) — le dernier tampon frappe la
+// carte sous ses yeux. Sans ce paramètre, la carte est simplement montrée.
 
 export const metadata: Metadata = {
   title: 'Ma carte de fidélité',
   robots: { index: false, follow: false },
 }
 
-export default async function CarteFidelite({ params }: { params: Promise<{ jeton: string }> }) {
-  const { jeton } = await params
+export default async function CarteFidelite({ params, searchParams }: { params: Promise<{ jeton: string }>; searchParams: Promise<{ tampon?: string }> }) {
+  const [{ jeton }, { tampon }] = await Promise.all([params, searchParams])
   if (!jetonValide(jeton)) notFound()
   const admin = createAdminClient()
 
@@ -27,57 +30,49 @@ export default async function CarteFidelite({ params }: { params: Promise<{ jeto
 
   const { data: laveur } = await admin
     .from('washers')
-    .select('id, name, slug, logo_url, profile_updated_at, fidelite, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, account_status')
+    .select('id, name, slug, logo_url, brand_color, profile_updated_at, fidelite, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, account_status')
     .eq('id', carte.washer_id)
     .maybeSingle()
   if (!laveur || laveur.account_status !== 'active') notFound()
 
   const reglages = fideliteActive(laveur.fidelite)
   const etat = reglages ? await etatDuClient(admin, laveur.id, carte.cle as string, reglages.tampons, Number(carte.ajustement ?? 0)) : null
-  const logo = hasFeature(laveur, 'page_personnalisee') && laveur.logo_url ? urlVersionnee(laveur.logo_url, laveur.profile_updated_at) : null
+  const apparence = reglages ? apparenceCarte(laveur, reglages, jeton) : null
+  // La carte en cours ; complète (récompense pas encore utilisée), elle reste pleine.
+  const surLaCarte = etat ? (etat.disponibles > 0 ? etat.requis : etat.progression) : 0
+  const scenario = tampon === '1' && surLaCarte > 0 ? 'tampon' : 'consultation'
+  const complete = etat ? surLaCarte >= etat.requis : false
 
   return (
-    <main className="min-h-screen bg-[#f6f5f3] px-4 py-10 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+    <main className="min-h-screen bg-[#F6F5F3] px-4 pb-12 pt-8 text-[#16161A] [font-family:var(--font-archivo)] dark:bg-[#0E0E11] dark:text-[#F3F3F5]">
       <div className="mx-auto max-w-md">
-        <div className="flex items-center gap-3">
-          {logo
-            // eslint-disable-next-line @next/next/no-img-element -- logo du laveur (Supabase)
-            ? <img src={logo} alt="" className="h-12 w-12 rounded-xl object-cover" />
-            : <div aria-hidden className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-200 text-xl font-bold text-zinc-500 dark:bg-zinc-800">{laveur.name.charAt(0).toUpperCase()}</div>}
-          <div>
-            <p className="text-lg font-bold leading-tight">{laveur.name}</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Ma carte de fidélité</p>
-          </div>
-        </div>
+        <p className="text-[13px] font-medium text-[#6B6B76] dark:text-[#9A9AA4]">{laveur.name}</p>
+        <h1 className="mt-1 text-[30px] font-bold leading-[1.05] tracking-[-0.03em] [font-stretch:112%]">
+          {scenario === 'tampon' ? (complete ? 'Votre carte est complète' : 'Votre tampon est arrivé') : 'Ma carte de fidélité'}
+        </h1>
 
-        <section className="mt-6 rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          {reglages && etat ? (
-            <>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {etat.disponibles > 0 ? 'Carte complète' : `${etat.progression} sur ${etat.requis}`}
-              </p>
-              <ol className="mt-3 grid grid-cols-5 gap-2.5" aria-label={`${etat.disponibles > 0 ? etat.requis : etat.progression} tampons sur ${etat.requis}`}>
-                {Array.from({ length: etat.requis }, (_, i) => {
-                  const plein = etat.disponibles > 0 || i < etat.progression
-                  return (
-                    <li key={i} aria-hidden
-                      className={`flex aspect-square items-center justify-center rounded-full border-2 text-lg font-bold ${plein
-                        ? 'border-emerald-600 bg-emerald-600 text-white'
-                        : 'border-dashed border-zinc-300 text-zinc-300 dark:border-zinc-700 dark:text-zinc-700'}`}>
-                      {plein ? '✓' : i + 1}
-                    </li>
-                  )
-                })}
-              </ol>
-              <p className="mt-4 text-[15px] leading-snug">{phraseCarte(etat, reglages)}</p>
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Un tampon par prestation terminée. Réservez avec la même adresse email pour qu’il compte.</p>
-            </>
-          ) : (
-            <p className="text-[15px]">{laveur.name} ne propose plus de carte de fidélité pour le moment.</p>
-          )}
-        </section>
+        {reglages && etat && apparence ? (
+          <>
+            <div className="-mx-4 mt-2">
+              <CarteFidelite3D
+                {...apparence}
+                requis={etat.requis}
+                tampons={surLaCarte}
+                scenario={scenario}
+                largeur={380}
+                legende={scenario === 'tampon' ? (complete ? 'Carte complète · récompense débloquée' : `+1 tampon · ${surLaCarte} sur ${etat.requis}`) : null}
+              />
+            </div>
+            <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages)}</p>
+            <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">
+              Un tampon par prestation terminée. Réservez avec la même adresse email pour qu’il compte. Touchez la carte pour la retourner.
+            </p>
+          </>
+        ) : (
+          <p className="mt-6 text-[15px]">{laveur.name} ne propose plus de carte de fidélité pour le moment.</p>
+        )}
 
-        <Link href={`/book/${laveur.slug}`} className="mt-5 flex min-h-12 items-center justify-center rounded-2xl bg-zinc-900 px-4 text-[15px] font-semibold text-white dark:bg-white dark:text-zinc-900">
+        <Link href={`/book/${laveur.slug}`} className="mt-6 flex min-h-12 items-center justify-center rounded-2xl bg-[#16161A] px-4 text-[15px] font-semibold text-white active:scale-[.98] dark:bg-white dark:text-[#16161A]">
           Réserver un lavage
         </Link>
       </div>

@@ -7,23 +7,49 @@ import { BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce, titre } fro
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
-import { TAMPONS_PROPOSES, phraseCarte, type ReglagesFidelite, type TypeRecompense } from '@/lib/fidelite'
+import { TAMPONS_PROPOSES, phraseCarte, recompenseCourte, type ReglagesFidelite, type TypeRecompense } from '@/lib/fidelite'
+import { COULEUR_CARTE_DEFAUT, FINITIONS_CARTE, LIBELLES_FINITION, NUANCES_CARTE, couleurCarte, type EmblemeCarte, type FinitionCarte } from '@/lib/carteFidelite'
+import CarteFidelite3D, { type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
 
 // « Carte de fidélité » — décisions d'Alexandre, 2026-10-17 : des tampons (une prestation
 // terminée = un tampon), une récompense au choix du laveur (offerte, % ou €) appliquée
 // automatiquement à la réservation suivante, une page carte pour le client et un rappel sur
 // la page de réservation. Rangée dans Prestations et prix. Règles : lib/fidelite.ts.
+// Apparence (2026-10-18) : la carte en 3D en aperçu, sa couleur, sa finition, le logo ou
+// l'initiale — au choix du laveur (lib/carteFidelite.ts).
 
-type Brouillon = { actif: boolean; tampons: number; recompense: TypeRecompense; valeur: string; offre_options: boolean; offre_deplacement: boolean }
-const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20', offre_options: true, offre_deplacement: false }
+type Brouillon = {
+  actif: boolean; tampons: number; recompense: TypeRecompense; valeur: string; offre_options: boolean; offre_deplacement: boolean
+  /** `null` : la couleur de marque du laveur (ou le violet par défaut). */
+  couleur: string | null; finition: FinitionCarte
+  /** `null` : le logo s'il y en a un, sinon l'initiale. */
+  embleme: EmblemeCarte | null
+}
+const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20', offre_options: true, offre_deplacement: false, couleur: null, finition: 'holo', embleme: null }
 
-export default function FideliteV2({ slug, liste }: { slug: string; liste: ReglagesListeProps }) {
+/** L'exemple de l'aperçu : un client qui a fait 3 prestations. */
+const EXEMPLE_TAMPONS = 3
+
+type Props = {
+  slug: string
+  liste: ReglagesListeProps
+  /** Couleur de marque (Apparence de ma page), proposée en premier. */
+  marque?: string | null
+  /** Logo affichable sur la carte (le laveur en a un ET son offre le permet). */
+  logo?: string | null
+  /** Le laveur a un logo, mais son offre ne l'affiche pas. */
+  logoHorsOffre?: boolean
+}
+
+export default function FideliteV2({ slug, liste, marque = null, logo = null, logoHorsOffre = false }: Props) {
   const grandEcran = useGrandEcran()
   const [b, setB] = useState<Brouillon | null>(null)
   const [enAttente, setEnAttente] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [enregistrement, setEnregistrement] = useState(false)
   const [fait, setFait] = useState(false)
+  // L'aperçu suit les réglages ; « Rejouer » montre l'animation que verra le client.
+  const [lecture, setLecture] = useState<{ cle: number; scenario: ScenarioCarte }>({ cle: 0, scenario: 'apercu' })
 
   useEffect(() => {
     let annule = false
@@ -34,14 +60,28 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
         if (!ok) { setErreur(j?.error ?? 'Impossible de charger vos réglages.'); setB(DEFAUT); return }
         setEnAttente(j.enAttente === true)
         const r = j.fidelite as ReglagesFidelite | null
-        setB(r ? { ...DEFAUT, ...r, valeur: r.recompense === 'offerte' ? DEFAUT.valeur : String(r.valeur).replace('.', ',') } : DEFAUT)
+        setB(r ? { ...DEFAUT, ...r, couleur: r.couleur ?? null, finition: r.finition ?? 'holo', embleme: r.embleme ?? null, valeur: r.recompense === 'offerte' ? DEFAUT.valeur : String(r.valeur).replace('.', ',') } : DEFAUT)
       })
       .catch(() => { if (!annule) { setErreur('Impossible de charger vos réglages. Vérifiez votre connexion.'); setB(DEFAUT) } })
     return () => { annule = true }
   }, [])
 
-  const maj = (champs: Partial<Brouillon>) => { setFait(false); setB(x => (x ? { ...x, ...champs } : x)) }
+  const maj = (champs: Partial<Brouillon>) => {
+    setFait(false)
+    setB(x => (x ? { ...x, ...champs } : x))
+    // Après « Rejouer », l'aperçu reprend la main pour suivre ce qui change.
+    setLecture(l => (l.scenario === 'apercu' ? l : { cle: l.cle + 1, scenario: 'apercu' }))
+  }
   const valeurNum = b ? Number(b.valeur.replace(',', '.')) || 0 : 0
+  const marqueValide = marque ? couleurCarte(null, marque) : null
+  const couleurEffective = couleurCarte(b?.couleur, marque)
+  const emblemeEffectif: EmblemeCarte = logo && (b?.embleme ?? 'logo') === 'logo' ? 'logo' : 'initiale'
+  // La couleur de marque d'abord (si elle n'est pas déjà dans le nuancier), puis le nuancier.
+  const nuances = [
+    ...(marqueValide && marqueValide !== COULEUR_CARTE_DEFAUT && !NUANCES_CARTE.some(n => n.hex === marqueValide) ? [{ nom: 'Ma couleur de marque', hex: marqueValide }] : []),
+    ...NUANCES_CARTE,
+  ]
+  const couleurLibre = !nuances.some(n => n.hex === couleurEffective)
 
   async function enregistrer() {
     if (!b || enregistrement) return
@@ -52,7 +92,10 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
       const res = await fetch('/api/washer/fidelite', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actif: b.actif, tampons: b.tampons, recompense: b.recompense, valeur: b.recompense === 'offerte' ? 0 : valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement }),
+        body: JSON.stringify({
+          actif: b.actif, tampons: b.tampons, recompense: b.recompense, valeur: b.recompense === 'offerte' ? 0 : valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement,
+          finition: b.finition, ...(b.couleur ? { couleur: b.couleur } : {}), ...(b.embleme ? { embleme: b.embleme } : {}),
+        }),
       })
       const json = await res.json().catch(() => null)
       if (!res.ok) { setErreur(json?.error ?? 'Enregistrement impossible. Réessayez.'); return }
@@ -130,20 +173,67 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
                 </p>
               </section>
 
-              <section>
-                <p className={`${ETIQUETTE} px-0.5`}>Ce que voit le client (exemple : 3 prestations faites)</p>
-                <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
-                  <div className="grid grid-cols-5 gap-2" aria-hidden>
-                    {Array.from({ length: b.tampons }, (_, i) => (
-                      <span key={i} className={`flex aspect-square items-center justify-center rounded-full border-2 text-[13px] ${corpsFort} ${i < 3 ? 'border-[color:var(--v2-color-vert)] bg-[color:var(--v2-color-vert)] text-white' : 'border-dashed border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]'}`}>
-                        {i < 3 ? '✓' : i + 1}
-                      </span>
-                    ))}
-                  </div>
-                  <p className={`mt-3 text-[14px] ${corps}`}>
-                    {phraseCarte({ total: 3, progression: 3, requis: b.tampons, disponibles: 0 }, { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement })}
-                  </p>
+              <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className={`${ETIQUETTE} !mb-0`}>Ce que voit le client (exemple : {EXEMPLE_TAMPONS} prestations faites)</p>
+                  <button type="button" onClick={() => setLecture(l => ({ cle: l.cle + 1, scenario: 'tampon' }))}
+                    className={`shrink-0 text-[13px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
+                    Rejouer l’animation
+                  </button>
                 </div>
+                <div className="-mx-4">
+                  <CarteFidelite3D
+                    key={lecture.cle}
+                    scenario={lecture.scenario}
+                    couleur={couleurEffective}
+                    finition={b.finition}
+                    nom={liste.nom}
+                    logo={emblemeEffectif === 'logo' ? logo : null}
+                    numero="0427"
+                    requis={b.tampons}
+                    tampons={Math.min(EXEMPLE_TAMPONS, b.tampons)}
+                    recompense={recompenseCourte({ recompense: b.recompense, valeur: valeurNum })}
+                    largeur={340}
+                  />
+                </div>
+                <p className={`-mt-3 text-center text-[14px] ${corps}`}>
+                  {phraseCarte({ total: EXEMPLE_TAMPONS, progression: EXEMPLE_TAMPONS, requis: b.tampons, disponibles: 0 }, { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement })}
+                </p>
+                <p className={`mt-1 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Touchez la carte pour la retourner.</p>
+
+                <p className={`${ETIQUETTE} mt-5`}>Couleur de la carte</p>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {nuances.map(n => (
+                    <button key={n.hex} type="button" title={n.nom} aria-label={n.nom} aria-pressed={couleurEffective === n.hex}
+                      onClick={() => maj({ couleur: n.hex === marqueValide ? null : n.hex })}
+                      className="h-9 w-9 rounded-full border-2 transition-transform active:scale-90"
+                      style={{ background: n.hex, borderColor: couleurEffective === n.hex ? 'var(--v2-color-encre)' : 'transparent', boxShadow: 'inset 0 0 0 2px var(--v2-color-surface), 0 0 0 1px var(--v2-filet-fort)' }} />
+                  ))}
+                  <label className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] ${corpsFort}`}
+                    style={{ borderColor: couleurLibre ? 'var(--v2-color-encre)' : 'var(--v2-filet-fort)' }}>
+                    <input type="color" aria-label="Autre couleur" value={couleurEffective.toLowerCase()} onChange={e => maj({ couleur: e.target.value.toUpperCase() })}
+                      className="h-5 w-5 cursor-pointer border-0 bg-transparent p-0" />
+                    Autre
+                  </label>
+                </div>
+
+                <p className={`${ETIQUETTE} mt-5`}>Finition</p>
+                <div className="flex flex-wrap gap-2">
+                  {FINITIONS_CARTE.map(f => <button key={f} type="button" onClick={() => maj({ finition: f })} className={puce(b.finition === f)}>{LIBELLES_FINITION[f]}</button>)}
+                </div>
+
+                <p className={`${ETIQUETTE} mt-5`}>Sur la carte</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" disabled={!logo} onClick={() => maj({ embleme: 'logo' })} className={`${puce(emblemeEffectif === 'logo')} disabled:opacity-40`}>Mon logo</button>
+                  <button type="button" onClick={() => maj({ embleme: 'initiale' })} className={puce(emblemeEffectif === 'initiale')}>Mon initiale</button>
+                </div>
+                {!logo && (
+                  <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {logoHorsOffre
+                      ? 'Votre offre actuelle n’affiche pas votre logo sur vos pages : la carte porte votre initiale.'
+                      : <>Ajoutez votre logo dans <Link href="/dashboard/parametres/apparence" className="underline underline-offset-2">Apparence de ma page</Link> pour l’afficher sur la carte.</>}
+                  </p>
+                )}
               </section>
             </>
           )}

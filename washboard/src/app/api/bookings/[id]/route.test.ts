@@ -58,6 +58,7 @@ vi.mock('@/lib/google-calendar', () => ({
 }))
 vi.mock('@/lib/email', () => ({ sendBookingConfirmation: vi.fn(), sendFacture: vi.fn() }))
 vi.mock('@/lib/emettreFacture', () => ({ emettreFacture: vi.fn(async () => ({ ok: false })) }))
+vi.mock('@/lib/fideliteServeur', () => ({ prevenirTampon: vi.fn(async () => false) }))
 
 // Le seuil de la période est fixé ici ; le masque lui-même (estVerrouillee) reste le vrai.
 vi.mock('@/lib/reservationsVerrouillees', async importOriginal => ({
@@ -74,6 +75,7 @@ const { PATCH } = await import('./route')
 const { createCalendarEvent, patchCalendarEvent, deleteCalendarEvent } = await import('@/lib/google-calendar')
 const { sendBookingConfirmation, sendFacture } = await import('@/lib/email')
 const { emettreFacture } = await import('@/lib/emettreFacture')
+const { prevenirTampon } = await import('@/lib/fideliteServeur')
 const { jetonValide } = await import('@/lib/bookingToken')
 
 function requete(body: Record<string, unknown>) {
@@ -279,5 +281,29 @@ describe('PATCH /api/bookings/[id] — rendez-vous sans email', () => {
     const res = await PATCH(requete({ status: 'confirmed' }), { params })
     expect(res.status).toBe(200)
     expect(sendBookingConfirmation).not.toHaveBeenCalled()
+  })
+})
+
+describe('PATCH /api/bookings/[id] — carte de fidélité', () => {
+  beforeEach(() => {
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', client_email: 'nadia@example.com' }
+  })
+
+  it('prévient le client de son tampon au passage en « Terminé »', async () => {
+    await PATCH(requete({ status: 'done' }), { params })
+    expect(prevenirTampon).toHaveBeenCalledTimes(1)
+    const [client, laveur, reservation] = vi.mocked(prevenirTampon).mock.calls[0]
+    expect(client).toBe(fauxAdmin)
+    expect(laveur).toMatchObject({ id: 'washer-1' })
+    expect(reservation).toMatchObject({ client_email: 'nadia@example.com' })
+  })
+
+  it('rien pour une prestation déjà terminée, ni à la confirmation', async () => {
+    plan.booking = { ...plan.booking, status: 'done' }
+    await PATCH(requete({ status: 'done' }), { params })
+    plan.booking = { ...plan.booking, status: 'pending' }
+    vi.mocked(sendBookingConfirmation).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(prevenirTampon).not.toHaveBeenCalled()
   })
 })
