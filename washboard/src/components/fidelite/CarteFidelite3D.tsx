@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as PointerEventReact } from 'react'
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as PointerEventReact, type Ref } from 'react'
 import { teintesCarte, variablesCarte, type FinitionCarte } from '@/lib/carteFidelite'
 import './carteFidelite3D.css'
 
@@ -16,7 +16,8 @@ import './carteFidelite3D.css'
 //   et la dernière case débloque la récompense ;
 // - `consultation` : la carte est simplement montrée ;
 // - `apercu` : l'écran de réglages du laveur, qui réagit tout de suite à ses choix.
-// Pour rejouer un scénario, le parent change la `key` du composant.
+// Pour rejouer un scénario, le parent change la `key` du composant. En aperçu, il peut aussi
+// faire frapper un tampon sans tout rejouer (`ref` → `tamponner`, bouton « + » des réglages).
 
 export type ScenarioCarte = 'consultation' | 'reservation' | 'tampon' | 'apercu'
 
@@ -38,12 +39,20 @@ type Props = {
   /** Largeur maximale de la carte, en pixels. */
   largeur?: number
   halo?: boolean
+  ref?: Ref<CommandesCarte>
+}
+
+/** Commandes de l'aperçu (réglages du laveur). */
+export type CommandesCarte = {
+  /** Fait frapper le tampon de la case `index` (comptée depuis 0), qui vient d'être ajouté à
+   *  `tampons` ; la dernière case débloque la récompense, avec sa fête. */
+  tamponner: (index: number, requis: number) => void
 }
 
 type Fantome = 'non' | 'dessine' | 'fixe'
 type Goutte = { x: number; y: number; t: number }
 type Particule = { x: number; y: number; vx: number; vy: number; r: number; vie: number; g: number; bulle: boolean; fin?: number }
-type Moteur = { retourner: () => void }
+type Moteur = { retourner: () => void } & CommandesCarte
 
 const courbes = {
   lin: (p: number) => p,
@@ -59,7 +68,7 @@ function disposition(n: number) {
   return { cols: Math.ceil(n / rangs), rangs }
 }
 
-export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, requis, tampons, recompense, scenario, legende, largeur = 360, halo = true }: Props) {
+export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, requis, tampons, recompense, scenario, legende, largeur = 360, halo = true, ref }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const idEncre = `wb-cf-encre-${uid}`
   const idOr = `wb-cf-or-${uid}`
@@ -90,6 +99,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
   const geste = useRef({ pointeur: null as { x: number; y: number } | null, glisse: false, deplacement: 0, dernier: null as { x: number; y: number } | null })
 
   useEffect(() => { teinte.current = teintesCarte(couleur).lueur }, [couleur])
+  useImperativeHandle(ref, () => ({ tamponner: (index, req) => moteur.current?.tamponner(index, req) }), [])
 
   // Taille des cases du verso : la plus grande qui tient dans le panneau.
   useLayoutEffect(() => {
@@ -237,14 +247,6 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
     taillerToile()
     relancer()
 
-    moteur.current = {
-      retourner: () => {
-        if (m.verrou) return
-        m.verrou = true
-        tourner(m.spin + 180, 900).then(() => { m.verrou = false })
-      },
-    }
-
     const frapper = async (i: number) => {
       setGouttes(Array.from({ length: 3 }, () => {
         const ang = Math.random() * Math.PI * 2, dist = 52 + Math.random() * 14
@@ -273,6 +275,31 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
       tween(600, courbes.sortieCubique, e => { m.hb = e })
       await tourner(m.spin + 360, 1500)
       await tween(900, courbes.sortieCubique, e => { m.hb = 1 - e * 0.6 })
+    }
+
+    const verso = () => Math.round(m.spin / 180) % 2 !== 0
+    moteur.current = {
+      retourner: () => {
+        if (m.verrou) return
+        m.verrou = true
+        tourner(m.spin + 180, 900).then(() => { m.verrou = false })
+      },
+      tamponner: async (i, requisActuel) => {
+        // Attendre la fin d'un retournement en cours, puis montrer le verso s'il est caché.
+        for (let n = 0; m.verrou && vivant && n < 40; n++) await attente(80)
+        if (!vivant) return
+        if (!verso()) {
+          m.verrou = true
+          await tourner(m.spin + 180, 900)
+          m.verrou = false
+        }
+        await frapper(i)
+        if (vivant && i + 1 >= requisActuel) {
+          m.verrou = true
+          await celebrer()
+          m.verrou = false
+        }
+      },
     }
 
     const jouer = async () => {
@@ -409,15 +436,16 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
                   <div ref={grille} className="wb-cf-grille" aria-label={libelleCases} role="img">
                     {Array.from({ length: requis }, (_, i) => {
                       const dore = i === requis - 1
-                      const tamponne = i < nPleins || i === frappe
+                      const tamponne = i < nPleins || (i === frappe && scenario !== 'apercu')
+                      const enFrappe = tamponne && i === frappe
                       return (
                         <div key={i} className="wb-cf-case">
                           {tamponne
-                            ? <Tampon i={i} dore={dore} frappe={i === frappe} idEncre={idEncre} idOr={idOr} />
+                            ? <Tampon i={i} dore={dore} frappe={enFrappe} idEncre={idEncre} idOr={idOr} />
                             : i === nPleins && fantome !== 'non' && scenario !== 'apercu'
                               ? <TamponEnAttente dessine={fantome === 'dessine'} />
                               : <CaseVide n={i + 1} cadeau={dore} />}
-                          {i === frappe && (
+                          {enFrappe && (
                             <>
                               <span className="wb-cf-onde" />
                               {gouttes.map((g, k) => (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce, titre } from '@/components/dashboard/FeuilleV2'
@@ -9,7 +9,7 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { TAMPONS_PROPOSES, phraseCarte, recompenseCourte, type ReglagesFidelite, type TypeRecompense } from '@/lib/fidelite'
 import { COULEUR_CARTE_DEFAUT, FINITIONS_CARTE, LIBELLES_FINITION, NUANCES_CARTE, couleurCarte, type EmblemeCarte, type FinitionCarte } from '@/lib/carteFidelite'
-import CarteFidelite3D, { type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
+import CarteFidelite3D, { type CommandesCarte, type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
 
 // « Carte de fidélité » — décisions d'Alexandre, 2026-10-17 : des tampons (une prestation
 // terminée = un tampon), une récompense au choix du laveur (offerte, % ou €) appliquée
@@ -27,7 +27,8 @@ type Brouillon = {
 }
 const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20', offre_options: true, offre_deplacement: false, couleur: null, finition: 'holo', embleme: null }
 
-/** L'exemple de l'aperçu : un client qui a fait 3 prestations. */
+/** L'exemple de départ de l'aperçu : un client qui a fait 3 prestations. Le laveur peut en
+ *  ajouter jusqu'à la carte pleine pour voir l'animation de la récompense (2026-10-18). */
 const EXEMPLE_TAMPONS = 3
 
 type Props = {
@@ -50,6 +51,8 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
   const [fait, setFait] = useState(false)
   // L'aperçu suit les réglages ; « Rejouer » montre l'animation que verra le client.
   const [lecture, setLecture] = useState<{ cle: number; scenario: ScenarioCarte }>({ cle: 0, scenario: 'apercu' })
+  const [exemple, setExemple] = useState(EXEMPLE_TAMPONS)
+  const carte = useRef<CommandesCarte>(null)
 
   useEffect(() => {
     let annule = false
@@ -82,6 +85,20 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
     ...NUANCES_CARTE,
   ]
   const couleurLibre = !nuances.some(n => n.hex === couleurEffective)
+  const requis = b?.tampons ?? DEFAUT.tampons
+  const exempleAffiche = Math.min(exemple, requis)
+  const ajouterTampon = () => {
+    if (exempleAffiche >= requis) return
+    setExemple(exempleAffiche + 1)
+    // Après « Rejouer », l'aperçu repart de zéro ; sinon le nouveau tampon frappe la carte.
+    if (lecture.scenario === 'apercu') carte.current?.tamponner(exempleAffiche, requis)
+    else setLecture(l => ({ cle: l.cle + 1, scenario: 'apercu' }))
+  }
+  const retirerTampon = () => {
+    if (exempleAffiche <= 0) return
+    setExemple(exempleAffiche - 1)
+    if (lecture.scenario !== 'apercu') setLecture(l => ({ cle: l.cle + 1, scenario: 'apercu' }))
+  }
 
   async function enregistrer() {
     if (!b || enregistrement) return
@@ -175,7 +192,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
 
               <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className={`${ETIQUETTE} !mb-0`}>Ce que voit le client (exemple : {EXEMPLE_TAMPONS} prestations faites)</p>
+                  <p className={`${ETIQUETTE} !mb-0`}>Ce que voit le client</p>
                   <button type="button" onClick={() => setLecture(l => ({ cle: l.cle + 1, scenario: 'tampon' }))}
                     className={`shrink-0 text-[13px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
                     Rejouer l’animation
@@ -184,6 +201,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                 <div className="-mx-4">
                   <CarteFidelite3D
                     key={lecture.cle}
+                    ref={carte}
                     scenario={lecture.scenario}
                     couleur={couleurEffective}
                     finition={b.finition}
@@ -191,15 +209,30 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                     logo={emblemeEffectif === 'logo' ? logo : null}
                     numero="0427"
                     requis={b.tampons}
-                    tampons={Math.min(EXEMPLE_TAMPONS, b.tampons)}
+                    tampons={exempleAffiche}
                     recompense={recompenseCourte({ recompense: b.recompense, valeur: valeurNum })}
                     largeur={340}
                   />
                 </div>
-                <p className={`-mt-3 text-center text-[14px] ${corps}`}>
-                  {phraseCarte({ total: EXEMPLE_TAMPONS, progression: EXEMPLE_TAMPONS, requis: b.tampons, disponibles: 0 }, { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement })}
+                <div className="-mt-4 flex items-center justify-center gap-3">
+                  <button type="button" onClick={retirerTampon} disabled={exempleAffiche <= 0} aria-label="Retirer un tampon de l’exemple"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] text-[22px] leading-none transition-transform active:scale-90 disabled:opacity-35">−</button>
+                  <p className={`min-w-[150px] text-center text-[14px] ${corpsFort} tabular-nums`} aria-live="polite">
+                    {exempleAffiche} tampon{exempleAffiche > 1 ? 's' : ''} sur {requis}
+                  </p>
+                  <button type="button" onClick={ajouterTampon} disabled={exempleAffiche >= requis} aria-label="Ajouter un tampon à l’exemple"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-[22px] leading-none transition-transform active:scale-90 disabled:opacity-35"
+                    style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-fond)' }}>+</button>
+                </div>
+                <p className={`mt-2 text-center text-[14px] ${corps}`}>
+                  {phraseCarte(
+                    exempleAffiche >= requis
+                      ? { total: requis, progression: 0, requis, disponibles: 1 }
+                      : { total: exempleAffiche, progression: exempleAffiche, requis, disponibles: 0 },
+                    { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement },
+                  )}
                 </p>
-                <p className={`mt-1 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Touchez la carte pour la retourner.</p>
+                <p className={`mt-1 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Ajoutez des tampons pour voir l’animation de la récompense. Touchez la carte pour la retourner.</p>
 
                 <p className={`${ETIQUETTE} mt-5`}>Couleur de la carte</p>
                 <div className="flex flex-wrap items-center gap-2.5">

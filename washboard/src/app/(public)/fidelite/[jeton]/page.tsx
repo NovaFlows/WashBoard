@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fideliteActive, jetonValide, phraseCarte } from '@/lib/fidelite'
@@ -46,6 +47,12 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
   return (
     <main className="min-h-screen bg-[#F6F5F3] px-4 pb-12 pt-8 text-[#16161A] [font-family:var(--font-archivo)] dark:bg-[#0E0E11] dark:text-[#F3F3F5]">
       <div className="mx-auto max-w-md">
+        {/* Retour à la page de réservation (demande d'Alexandre, 2026-10-18) : le client arrive ici
+            depuis l'écran de confirmation ou depuis un email, sans historique sur lequel revenir. */}
+        <Link href={`/book/${laveur.slug}`} className="-ml-2 mb-3 inline-flex min-h-11 items-center gap-0.5 pr-3 text-[14px] font-semibold text-[#16161A] dark:text-[#F3F3F5]">
+          <ChevronLeft size={22} strokeWidth={2} aria-hidden />
+          Page de réservation
+        </Link>
         <p className="text-[13px] font-medium text-[#6B6B76] dark:text-[#9A9AA4]">{laveur.name}</p>
         <h1 className="mt-1 text-[30px] font-bold leading-[1.05] tracking-[-0.03em] [font-stretch:112%]">
           {scenario === 'tampon' ? (complete ? 'Votre carte est complète' : 'Votre tampon est arrivé') : 'Ma carte de fidélité'}
