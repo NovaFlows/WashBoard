@@ -6,8 +6,8 @@ import { z } from 'zod'
 // - la récompense, au choix du laveur : prestation offerte, remise en %, remise en € —
 //   appliquée AUTOMATIQUEMENT et recalculée par le serveur (`api/bookings`), comme les
 //   promotions ;
-// - le client voit sa carte sur une page personnelle (lien dans ses emails) et un rappel
-//   sur la page de réservation ;
+// - le client voit sa carte sur une page personnelle (lien dans ses emails), et sur la page
+//   de réservation une fois ses coordonnées tapées — jamais selon l'appareil ;
 // - un tampon compte quand le laveur marque le rendez-vous « Terminé » ; une annulation ne
 //   compte jamais ; le laveur peut ajouter ou retirer un tampon à la main.
 //
@@ -100,7 +100,3 @@ export function nouveauJeton(): string {
 export function jetonValide(j: unknown): j is string {
   return typeof j === 'string' && /^[0-9a-f]{36}$/.test(j)
 }
-
-/** Clé du stockage local qui garde le jeton de la carte du client chez CE laveur, pour lui
- *  montrer le rappel quand il revient sur la page de réservation. */
-export const cleStockageCarte = (washerId: string) => `wb-fidelite-${washerId}`

@@ -12,7 +12,6 @@ import ConsentementCookies, { LienGererCookies } from '@/components/booking/Cons
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import type { PromotionPublique } from '@/lib/promotion'
 import type { AcomptePublic } from '@/lib/acompte'
-import RappelFidelite from '@/components/booking/RappelFidelite'
 
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
@@ -134,7 +133,6 @@ export default function LegacyBookingPage({washer, services, categories, availab
           </>
         )}
 
-        {fideliteProposee && <RappelFidelite washerId={washer.id} />}
         <BookingForm
           // Champs énumérés un par un, jamais l'objet entier : tout ce qui
           // franchit la frontière serveur→client est sérialisé dans le HTML
@@ -169,6 +167,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
           accent={accent}
           promotion={promotion}
           acompte={acompte}
+          fideliteProposee={fideliteProposee}
         />
 
         {(washer.website_url || washer.google_place_id) && (

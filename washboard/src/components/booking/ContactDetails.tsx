@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import type { BookingFormData, VehicleItem } from '@/types'
 import { formatPrice } from '@/lib/pricing'
 import EncartAcompte from './EncartAcompte'
@@ -11,7 +11,7 @@ type Contact = Pick<BookingFormData, 'client_name' | 'client_email' | 'client_ph
   notes?: string; company_name?: string; siret?: string; billing_address?: string; hp?: string; is_professional: boolean
 }
 
-export default function ContactDetails({ isProfessional, clientsProAutorises, factureApresPrestation, vehicles, onChange, loading, error, onSubmit, accent = '#2563eb', actionTarget, total, whatsappHref, acompte = null }: {
+export default function ContactDetails({ isProfessional, clientsProAutorises, factureApresPrestation, vehicles, onChange, loading, error, onSubmit, accent = '#2563eb', actionTarget, total, whatsappHref, acompte = null, onCoordonnees, fidelite = null }: {
   isProfessional: boolean
   clientsProAutorises: boolean
   factureApresPrestation: boolean
@@ -26,6 +26,11 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   whatsappHref: string | null
   /** Acompte demandé par le laveur, annoncé AVANT la réservation (lib/acompte.ts). */
   acompte?: { montant: number; conditions: string[]; moyens?: string[] } | null
+  /** Appelé à chaque frappe dans l'email ou le téléphone : la carte de fidélité se cherche à
+   *  partir de ces coordonnées (voir EncartFidelite). */
+  onCoordonnees?: (email: string, telephone: string) => void
+  /** Carte de fidélité du client, montrée une fois ses coordonnées tapées. */
+  fidelite?: React.ReactNode
 }) {
   const ref = useRef<HTMLFormElement>(null)
   const [name, setName] = useState('')
@@ -44,6 +49,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   // Alexandre le 2026-10-04 après l'avoir vécu en testant sur son téléphone.
   // Même normalisation que washer/route.ts et lib/phone.ts partout ailleurs.
   const phoneNormalise = normalizePhone(phone)
+  useEffect(() => { onCoordonnees?.(email, phone) }, [email, phone, onCoordonnees])
   const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && phoneNormalise !== null && modelsValid
     && (!pro || (company.trim().length >= 2 && siret.replace(/\D/g, '').length === 14))
   const input = 'w-full min-h-12 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-3 bg-white dark:bg-zinc-900 outline-none focus:border-zinc-500'
@@ -79,6 +85,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
     </div>
     <div aria-hidden="true" className="absolute w-px h-px overflow-hidden -left-[9999px]"><label>Ne pas remplir ce champ<input name="wb-confirm-c7f3" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore="true" value={hp} onChange={e => setHp(e.target.value)} /></label></div>
     <div className="mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-700 text-sm leading-relaxed">
+      {fidelite && <div className="mb-4">{fidelite}</div>}
       {acompte
         ? <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} />
         : <><p className="font-semibold">Rien à payer maintenant</p><p className="text-zinc-500 dark:text-zinc-400 mt-1">Vous réglez {formatPrice(total)} sur place, une fois le lavage terminé.</p></>}

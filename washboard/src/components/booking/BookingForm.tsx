@@ -8,6 +8,7 @@ import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
 import type { AcompteDu } from './EncartAcompte'
 import type { FideliteDue } from './CarteApresReservation'
+import EncartFidelite, { useApercuFidelite } from './EncartFidelite'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepPrestation from './StepPrestation'
@@ -67,6 +68,9 @@ type Props = {
   promotion?: PromotionPublique | null
   /** Acompte demandé par le laveur, s'il en demande un (lib/acompte.ts). */
   acompte?: AcomptePublic | null
+  /** Le laveur propose une carte de fidélité : elle se cherche quand le client tape ses
+   *  coordonnées (lib/fidelite.ts, EncartFidelite). */
+  fideliteProposee?: boolean
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -112,7 +116,7 @@ export type FormState = Partial<BookingFormData>
 /** Les trois cartes de l'accordéon. */
 type Section = 1 | 2 | 3
 
-export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', whatsappHref = null, promotion = null, acompte = null }: Props) {
+export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', whatsappHref = null, promotion = null, acompte = null, fideliteProposee = false }: Props) {
   const [section, setSection] = useState<Section>(1)
   const [actionTarget, setActionTarget] = useState<HTMLDivElement | null>(null)
   const priceDialog = useRef<HTMLDialogElement>(null)
@@ -255,7 +259,14 @@ export default function BookingForm({ washer, services, categories, availabiliti
   // options, jamais sur le déplacement. Sans prestation choisie, « À partir de » reste le
   // prix plein : la remise peut ne pas concerner la moins chère.
   const remise = remisePromotion(promotion, form.service_id, form.booked_price ?? 0)
-  const barAmount = form.service_id ? montantEstime(form) - remise : montantMinimal(services)
+  // Carte de fidélité : cherchée à partir des coordonnées du client ; une récompense
+  // disponible baisse le prix de la prestation (à 0 si elle est offerte). Le serveur la
+  // recalcule à l'enregistrement.
+  const prixPrestation = Math.max(0, (form.booked_price ?? 0) - remise)
+  const { apercu: apercuFidelite, verifier: verifierFidelite } = useApercuFidelite(washer.id, fideliteProposee)
+  const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, prixPrestation), [verifierFidelite, prixPrestation])
+  const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? Math.min(apercuFidelite.remise, prixPrestation) : 0
+  const barAmount = form.service_id ? montantEstime(form) - remise - remiseFidelite : montantMinimal(services)
 
   const complete2 = !!(form.scheduled_at && form.address)
 
@@ -446,6 +457,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 onChange={updateForm}
                 total={barAmount ?? 0}
                 whatsappHref={whatsappHref}
+                onCoordonnees={surCoordonnees}
+                fidelite={apercuFidelite ? <EncartFidelite apercu={apercuFidelite} prixPrestation={prixPrestation} /> : null}
                 acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, barAmount ?? 0), conditions: conditionsAcompte(acompte), moyens: moyensPaiement(acompte) } : null}
                 isProfessional={form.is_professional ?? false}
                 loading={loading}
@@ -492,6 +505,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
               <div className="flex justify-between gap-3"><span>Déplacement</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : 'À confirmer avec l’adresse'}</span></div>
               {!!form.smart_discount && <div className="flex justify-between text-emerald-700"><span>Créneau avantageux</span><span>−{formatPrice(form.smart_discount)}</span></div>}
               {remise > 0 && promotion && <div className="flex justify-between text-emerald-700"><span>Promotion {promotion.nom}</span><span>−{formatPrice(remise)}</span></div>}
+              {remiseFidelite > 0 && <div className="flex justify-between text-emerald-700"><span>Récompense fidélité</span><span>−{formatPrice(remiseFidelite)}</span></div>}
               <div className="flex justify-between border-t border-zinc-200 pt-4 text-base font-bold"><span>Total estimé</span><span>{formatPrice(barAmount ?? 0)}</span></div>
               <p className="text-xs text-zinc-500">À régler sur place, après la prestation.</p>
             </div>

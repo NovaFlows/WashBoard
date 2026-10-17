@@ -6,7 +6,6 @@ import { hasFeature } from '@/lib/plan'
 import { urlVersionnee } from '@/lib/themes'
 import { fideliteActive, jetonValide, phraseCarte } from '@/lib/fidelite'
 import { etatDuClient } from '@/lib/fideliteServeur'
-import RetenirCarte from '@/components/booking/RetenirCarte'
 
 // Page de la carte de fidélité d'un client (lien reçu dans ses emails de réservation) :
 // ses tampons chez CE laveur, la récompense qui l'attend, et un bouton pour réserver.
@@ -39,7 +38,6 @@ export default async function CarteFidelite({ params }: { params: Promise<{ jeto
 
   return (
     <main className="min-h-screen bg-[#f6f5f3] px-4 py-10 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <RetenirCarte washerId={laveur.id} jeton={jeton} />
       <div className="mx-auto max-w-md">
         <div className="flex items-center gap-3">
           {logo
