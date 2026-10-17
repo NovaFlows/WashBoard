@@ -26,6 +26,9 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
+## Acompte EN PRODUCTION (2026-10-17)
+Prestations et prix › Acompte, tout au choix du laveur : montant (fixe ou %), délai pour payer (annulation auto des réservations encore en attente par `/api/cron/acomptes`, cron-job.org toutes les 15 min), remboursement annoncé au client AVANT de réserver. WashBoard n'encaisse rien (option « lien du laveur ») : liens PayPal.me (montant ajouté automatiquement), Stripe, SumUp, Lydia, Autre ; Wero (numéro + lien `share.weropay.eu` LU dans la capture du QR code par jsqr, QR redessiné net par qrcode) ; virement (IBAN contrôlé, montré seulement après réservation, libellé `WB-XXXXXXXX`). Le QR code SEPA/EPC a été essayé puis retiré (pas lu par la banque d'Alexandre). Le laveur confirme « Acompte reçu » dans la fiche du RDV. Logique : `lib/acompte.ts`. Colonnes : `washers.acompte` (jsonb), `bookings.acompte_montant/_statut/_echeance/_recu_le`.
+
 ## Promotions EN PRODUCTION (2026-10-17)
 Plus › Promotions : remise en % ou € pendant une période, sur toutes ou certaines prestations ; bandeau réglable (message, couleur, compte à rebours) en haut de la page de réservation (nouvelle page ET page personnalisée). Logique dans `lib/promotion.ts` ; la remise est recalculée par `api/bookings` et `booked_price` devient le prix remisé (`promotion_id`, `promo_remise` tracés). Table `promotions` + colonnes bookings créées en prod. Page personnalisée : prix pleins pendant le choix, remise visible au récapitulatif seulement. Ouvert à toutes les offres (pas de verrou Pro).
 
