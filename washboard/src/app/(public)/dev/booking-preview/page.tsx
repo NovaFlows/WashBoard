@@ -45,9 +45,9 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   if (mode === 'acompte') return <AcompteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'fidelite') return <FideliteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'encart-fidelite') return <div className="mx-auto flex max-w-lg flex-col gap-4 p-4">
-    <EncartFidelite prixPrestation={45} apercu={{ progression: 7, requis: 10, disponibles: 0, remise: 0, offerte: false, phrase: 'Plus que 3 prestations avant une prestation offerte.' }} />
-    <EncartFidelite prixPrestation={45} apercu={{ progression: 0, requis: 10, disponibles: 1, remise: 45, offerte: true, phrase: '' }} />
-    <EncartFidelite prixPrestation={45} apercu={{ progression: 0, requis: 10, disponibles: 1, remise: 9, offerte: false, phrase: '' }} />
+    <EncartFidelite total={59} apercu={{ progression: 7, requis: 10, disponibles: 0, remise: 0, offerte: false, phrase: 'Plus que 3 prestations avant une prestation offerte.' }} />
+    <EncartFidelite total={59} apercu={{ progression: 0, requis: 10, disponibles: 1, remise: 45, offerte: true, phrase: '' }} />
+    <EncartFidelite total={59} apercu={{ progression: 0, requis: 10, disponibles: 1, remise: 9, offerte: false, phrase: '' }} />
   </div>
   if (mode === 'encart-acompte') return <div className="mx-auto max-w-lg p-4"><EncartAcompte montant={16.05} conditions={['À régler dans les 48 h après la réservation, sinon elle est annulée.', 'Remboursé si vous annulez au moins 48 h avant le rendez-vous.', 'Le reste se règle sur place.']}
     liens={[{ libelle: 'PayPal', url: 'https://paypal.me/eclat/16.05EUR', montantExact: true }, { libelle: 'Stripe', url: 'https://buy.stripe.com/test', montantExact: false }]}

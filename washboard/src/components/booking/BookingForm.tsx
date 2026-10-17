@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
-import { dureeTotale, formatPrice } from '@/lib/pricing'
+import { dureeTotale, formatPrice, prixOptions } from '@/lib/pricing'
 import { resumePrestation, resumeCreneau, montantMinimal, montantEstime } from '@/lib/bookingSummary'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic } from '@/lib/acompte'
@@ -262,11 +262,15 @@ export default function BookingForm({ washer, services, categories, availabiliti
   // Carte de fidélité : cherchée à partir des coordonnées du client ; une récompense
   // disponible baisse le prix de la prestation (à 0 si elle est offerte). Le serveur la
   // recalcule à l'enregistrement.
-  const prixPrestation = Math.max(0, (form.booked_price ?? 0) - remise)
+  const optionsEstimees = prixOptions(form.vehicles_detail, form.selected_addons)
+  const prixOptionsApresPromo = Math.max(0, optionsEstimees - Math.max(0, remise - Math.max(0, (form.booked_price ?? 0) - optionsEstimees)))
+  const prixPrestation = Math.max(0, (form.booked_price ?? 0) - optionsEstimees - remise)
+  const deplacement = form.travel_fee ?? 0
   const { apercu: apercuFidelite, verifier: verifierFidelite } = useApercuFidelite(washer.id, fideliteProposee)
-  const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, prixPrestation), [verifierFidelite, prixPrestation])
-  const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? Math.min(apercuFidelite.remise, prixPrestation) : 0
-  const barAmount = form.service_id ? montantEstime(form) - remise - remiseFidelite : montantMinimal(services)
+  const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, { prestation: prixPrestation, options: prixOptionsApresPromo, deplacement }), [verifierFidelite, prixPrestation, prixOptionsApresPromo, deplacement])
+  const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? apercuFidelite.remise : 0
+  const avantFidelite = form.service_id ? montantEstime(form) - remise : 0
+  const barAmount = form.service_id ? Math.max(0, avantFidelite - remiseFidelite) : montantMinimal(services)
 
   const complete2 = !!(form.scheduled_at && form.address)
 
@@ -458,7 +462,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 total={barAmount ?? 0}
                 whatsappHref={whatsappHref}
                 onCoordonnees={surCoordonnees}
-                fidelite={apercuFidelite ? <EncartFidelite apercu={apercuFidelite} prixPrestation={prixPrestation} /> : null}
+                fidelite={apercuFidelite ? <EncartFidelite apercu={apercuFidelite} total={avantFidelite} /> : null}
                 acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, barAmount ?? 0), conditions: conditionsAcompte(acompte), moyens: moyensPaiement(acompte) } : null}
                 isProfessional={form.is_professional ?? false}
                 loading={loading}

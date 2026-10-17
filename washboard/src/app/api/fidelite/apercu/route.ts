@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { cleClient } from '@/lib/clientProfile'
-import { fideliteActive, phraseCarte, remiseFidelite } from '@/lib/fidelite'
+import { fideliteActive, partiesOffertes, phraseCarte, remiseFidelite } from '@/lib/fidelite'
 import { etatDuClient, lireCarte } from '@/lib/fideliteServeur'
 
 // Aperçu de la carte de fidélité au moment où le client a donné ses coordonnées, juste avant
@@ -19,7 +19,10 @@ const Corps = z.object({
   washerId: z.string().uuid(),
   email: z.string().trim().max(254).optional().default(''),
   telephone: z.string().trim().max(30).optional().default(''),
-  prix: z.number().min(0).max(100_000),
+  /** Prestation (après promotion), options et déplacement, tels qu'affichés au client. */
+  prestation: z.number().min(0).max(100_000),
+  options: z.number().min(0).max(100_000).optional().default(0),
+  deplacement: z.number().min(0).max(100_000).optional().default(0),
 })
 
 export async function POST(request: NextRequest) {
@@ -28,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const lu = Corps.safeParse(await request.json().catch(() => null))
   if (!lu.success) return NextResponse.json({ active: false }, { status: 400 })
-  const { washerId, email, telephone, prix } = lu.data
+  const { washerId, email, telephone, prestation, options, deplacement } = lu.data
   const cle = cleClient(email, telephone)
   if (!cle) return NextResponse.json({ active: false })
 
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
   const etat = await etatDuClient(admin, washerId, cle, reglages.tampons, carte?.ajustement ?? 0)
   if (!etat) return NextResponse.json({ active: false })
 
-  const remise = etat.disponibles > 0 ? remiseFidelite(reglages, prix) : 0
+  const remise = etat.disponibles > 0 ? remiseFidelite(reglages, { prestation, options, deplacement }) : 0
   return NextResponse.json({
     active: true,
     progression: etat.progression,
@@ -49,6 +52,7 @@ export async function POST(request: NextRequest) {
     disponibles: etat.disponibles,
     remise,
     offerte: etat.disponibles > 0 && reglages.recompense === 'offerte',
+    offert: etat.disponibles > 0 && reglages.recompense === 'offerte' ? partiesOffertes(reglages) : null,
     phrase: phraseCarte(etat, reglages),
   })
 }

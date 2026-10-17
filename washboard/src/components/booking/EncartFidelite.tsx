@@ -7,7 +7,8 @@ import { formatPrice } from '@/lib/pricing'
 // confirmer (demande d'Alexandre, 2026-10-17 : « seulement quand il a mis les coordonnées »).
 // Avec une récompense : le nouveau prix — 0 € pour la prestation si elle est offerte.
 
-export type ApercuFidelite = { progression: number; requis: number; disponibles: number; remise: number; offerte: boolean; phrase: string }
+export type ApercuFidelite = { progression: number; requis: number; disponibles: number; remise: number; offerte: boolean; offert?: string | null; phrase: string }
+export type PrixApercu = { prestation: number; options: number; deplacement: number }
 
 /** Demande l'aperçu au serveur ~0,6 s après la dernière frappe, quand l'email ou le
  *  téléphone est complet. Ne fait rien si le laveur n'a pas de carte de fidélité. */
@@ -17,12 +18,12 @@ export function useApercuFidelite(washerId: string, actif: boolean) {
   const derniere = useRef('')
   useEffect(() => () => { if (minuteur.current) clearTimeout(minuteur.current) }, [])
 
-  const verifier = useCallback((email: string, telephone: string, prix: number) => {
+  const verifier = useCallback((email: string, telephone: string, prix: PrixApercu) => {
     if (!actif) return
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     const telOk = telephone.replace(/\D/g, '').length >= 10
     if (!emailOk && !telOk) { setApercu(null); derniere.current = ''; return }
-    const signature = `${email.trim().toLowerCase()}|${telephone.replace(/\D/g, '')}|${prix}`
+    const signature = `${email.trim().toLowerCase()}|${telephone.replace(/\D/g, '')}|${prix.prestation}|${prix.options}|${prix.deplacement}`
     if (signature === derniere.current) return
     if (minuteur.current) clearTimeout(minuteur.current)
     minuteur.current = setTimeout(async () => {
@@ -31,7 +32,7 @@ export function useApercuFidelite(washerId: string, actif: boolean) {
         const res = await fetch('/api/fidelite/apercu', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ washerId, email: emailOk ? email.trim() : '', telephone: telOk ? telephone : '', prix }),
+          body: JSON.stringify({ washerId, email: emailOk ? email.trim() : '', telephone: telOk ? telephone : '', ...prix }),
         })
         const j = res.ok ? await res.json() : null
         setApercu(j?.active ? j : null)
@@ -42,16 +43,17 @@ export function useApercuFidelite(washerId: string, actif: boolean) {
   return { apercu, verifier }
 }
 
-export default function EncartFidelite({ apercu, prixPrestation }: { apercu: ApercuFidelite; prixPrestation: number }) {
+export default function EncartFidelite({ apercu, total }: { apercu: ApercuFidelite; /** Total avant la récompense. */ total: number }) {
   if (apercu.disponibles > 0 && apercu.remise > 0) {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
         <p className="font-semibold">Carte de fidélité complète : récompense appliquée</p>
+        {apercu.offert && <p className="mt-0.5 opacity-90">Offert : {apercu.offert}.</p>}
         <p className="mt-1 flex items-baseline justify-between gap-3">
-          <span>{apercu.offerte ? 'Votre prestation est offerte' : 'Votre prestation'}</span>
+          <span>Vous payez</span>
           <span className="whitespace-nowrap">
-            <s className="mr-1.5 opacity-60">{formatPrice(prixPrestation)}</s>
-            <strong>{formatPrice(Math.max(0, prixPrestation - apercu.remise))}</strong>
+            <s className="mr-1.5 opacity-60">{formatPrice(total)}</s>
+            <strong>{formatPrice(Math.max(0, total - apercu.remise))}</strong>
           </span>
         </p>
       </div>

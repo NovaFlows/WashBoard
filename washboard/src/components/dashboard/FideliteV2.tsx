@@ -14,8 +14,8 @@ import { TAMPONS_PROPOSES, phraseCarte, type ReglagesFidelite, type TypeRecompen
 // automatiquement à la réservation suivante, une page carte pour le client et un rappel sur
 // la page de réservation. Rangée dans Prestations et prix. Règles : lib/fidelite.ts.
 
-type Brouillon = { actif: boolean; tampons: number; recompense: TypeRecompense; valeur: string }
-const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20' }
+type Brouillon = { actif: boolean; tampons: number; recompense: TypeRecompense; valeur: string; offre_options: boolean; offre_deplacement: boolean }
+const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20', offre_options: true, offre_deplacement: false }
 
 export default function FideliteV2({ slug, liste }: { slug: string; liste: ReglagesListeProps }) {
   const grandEcran = useGrandEcran()
@@ -34,7 +34,7 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
         if (!ok) { setErreur(j?.error ?? 'Impossible de charger vos réglages.'); setB(DEFAUT); return }
         setEnAttente(j.enAttente === true)
         const r = j.fidelite as ReglagesFidelite | null
-        setB(r ? { ...r, valeur: r.recompense === 'offerte' ? DEFAUT.valeur : String(r.valeur).replace('.', ',') } : DEFAUT)
+        setB(r ? { ...DEFAUT, ...r, valeur: r.recompense === 'offerte' ? DEFAUT.valeur : String(r.valeur).replace('.', ',') } : DEFAUT)
       })
       .catch(() => { if (!annule) { setErreur('Impossible de charger vos réglages. Vérifiez votre connexion.'); setB(DEFAUT) } })
     return () => { annule = true }
@@ -52,7 +52,7 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
       const res = await fetch('/api/washer/fidelite', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actif: b.actif, tampons: b.tampons, recompense: b.recompense, valeur: b.recompense === 'offerte' ? 0 : valeurNum }),
+        body: JSON.stringify({ actif: b.actif, tampons: b.tampons, recompense: b.recompense, valeur: b.recompense === 'offerte' ? 0 : valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement }),
       })
       const json = await res.json().catch(() => null)
       if (!res.ok) { setErreur(json?.error ?? 'Enregistrement impossible. Réessayez.'); return }
@@ -109,12 +109,24 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
                   <button type="button" onClick={() => maj({ recompense: 'pourcentage' })} className={puce(b.recompense === 'pourcentage')}>Remise en %</button>
                   <button type="button" onClick={() => maj({ recompense: 'montant' })} className={puce(b.recompense === 'montant')}>Remise en €</button>
                 </div>
+                {b.recompense === 'offerte' && (
+                  <div className="mt-3 flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>Offrir aussi les options</p>
+                      <Interrupteur actif={b.offre_options} enCours={false} libelle="Offrir aussi les options" onClick={() => maj({ offre_options: !b.offre_options })} />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>Offrir aussi les frais de déplacement</p>
+                      <Interrupteur actif={b.offre_deplacement} enCours={false} libelle="Offrir aussi les frais de déplacement" onClick={() => maj({ offre_deplacement: !b.offre_deplacement })} />
+                    </div>
+                  </div>
+                )}
                 {b.recompense !== 'offerte' && (
                   <input aria-label={b.recompense === 'pourcentage' ? 'Remise en pourcentage' : 'Remise en euros'} className={`${CHAMP} mt-2.5`} inputMode="decimal"
                     value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
                 )}
                 <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                  Appliquée automatiquement à la réservation suivante, sur la prestation et ses options (pas sur le déplacement). Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.
+                  Appliquée automatiquement à la réservation suivante{b.recompense === 'offerte' ? '' : ', sur la prestation et ses options (pas sur le déplacement)'}. Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.
                 </p>
               </section>
 
@@ -129,7 +141,7 @@ export default function FideliteV2({ slug, liste }: { slug: string; liste: Regla
                     ))}
                   </div>
                   <p className={`mt-3 text-[14px] ${corps}`}>
-                    {phraseCarte({ total: 3, progression: 3, requis: b.tampons, disponibles: 0 }, { recompense: b.recompense, valeur: valeurNum })}
+                    {phraseCarte({ total: 3, progression: 3, requis: b.tampons, disponibles: 0 }, { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement })}
                   </p>
                 </div>
               </section>

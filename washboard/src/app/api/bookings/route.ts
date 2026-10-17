@@ -549,7 +549,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       ])
       if (carte && reservations) {
         const etat = etatCarte(reservations, carte.ajustement, reglages.tampons)
-        const remise = etat.disponibles > 0 ? remiseFidelite(reglages, prix_vehicules + prix_options - (promotion?.remise ?? 0)) : 0
+        // La promotion porte sur prestation + options : on la retire d'abord de la prestation.
+        const prestationApresPromo = Math.max(0, prix_vehicules - (promotion?.remise ?? 0))
+        const optionsApresPromo = Math.max(0, prix_options - Math.max(0, (promotion?.remise ?? 0) - prix_vehicules))
+        const remise = etat.disponibles > 0
+          ? remiseFidelite(reglages, { prestation: prestationApresPromo, options: optionsApresPromo, deplacement: computed_travel_fee })
+          : 0
         fidelite = { reglages, carte, etat, reservations, remise }
       }
     }

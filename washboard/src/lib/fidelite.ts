@@ -26,6 +26,10 @@ export const ReglagesFideliteSchema = z.object({
   recompense: z.enum(TYPES_RECOMPENSE),
   /** Remise en % ou en € ; ignorée pour une prestation offerte. */
   valeur: z.number().min(0).max(10_000),
+  /** Prestation offerte : les options et les frais de déplacement le sont-ils aussi ?
+   *  (demande d'Alexandre, 2026-10-17 : au choix du laveur). Ignorés pour une remise. */
+  offre_options: z.boolean().optional().default(true),
+  offre_deplacement: z.boolean().optional().default(false),
 }).superRefine((r, ctx) => {
   if (r.recompense === 'pourcentage' && !(r.valeur > 0 && r.valeur <= 100)) {
     ctx.addIssue({ code: 'custom', path: ['valeur'], message: 'Une remise en pourcentage va de 1 à 100 %.' })
@@ -68,23 +72,48 @@ export function etatCarte(reservations: readonly ReservationCarte[], ajustement:
   }
 }
 
-/** Remise en euros de la récompense sur un prix de prestation (options comprises), arrondie
- *  au centime, jamais plus que le prix. */
-export function remiseFidelite(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'>, prix: number): number {
-  if (!(prix > 0)) return 0
-  const brute = r.recompense === 'offerte' ? prix : r.recompense === 'pourcentage' ? prix * r.valeur / 100 : r.valeur
-  return Math.round(Math.min(Math.max(brute, 0), prix) * 100) / 100
+/** Ce que coûte la réservation, découpé comme la récompense le demande. `prestation` et
+ *  `options` sont après promotion ; `deplacement` est le frais de déplacement. */
+export type PrixReservation = { prestation: number; options: number; deplacement: number }
+
+/** Remise en euros de la récompense, arrondie au centime, jamais négative.
+ *  - prestation offerte : la prestation, plus les options et/ou le déplacement si le laveur
+ *    les offre aussi ;
+ *  - remise en % ou en € : sur la prestation et ses options, jamais sur le déplacement. */
+export function remiseFidelite(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>, prix: PrixReservation): number {
+  const prestation = Math.max(0, prix.prestation)
+  const options = Math.max(0, prix.options)
+  const deplacement = Math.max(0, prix.deplacement)
+  let brute: number
+  if (r.recompense === 'offerte') {
+    brute = prestation + (r.offre_options !== false ? options : 0) + (r.offre_deplacement ? deplacement : 0)
+  } else {
+    const base = prestation + options
+    brute = Math.min(base, r.recompense === 'pourcentage' ? base * r.valeur / 100 : r.valeur)
+  }
+  return Math.round(Math.max(brute, 0) * 100) / 100
+}
+
+/** Ce qui est offert, en toutes lettres (« la prestation, les options et le déplacement »). */
+export function partiesOffertes(r: Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>): string {
+  const parties = ['la prestation']
+  if (r.offre_options !== false) parties.push('les options')
+  if (r.offre_deplacement) parties.push('le déplacement')
+  return parties.length === 1 ? parties[0] : `${parties.slice(0, -1).join(', ')} et ${parties[parties.length - 1]}`
 }
 
 /** « Prestation offerte », « −20 % », « −15 € ». */
-export function libelleRecompense(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'>): string {
-  if (r.recompense === 'offerte') return 'une prestation offerte'
+export function libelleRecompense(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>): string {
+  if (r.recompense === 'offerte') {
+    const extra = [r.offre_options !== false ? 'options' : null, r.offre_deplacement ? 'déplacement' : null].filter(Boolean)
+    return extra.length ? `une prestation offerte (${extra.join(' et ')} compris)` : 'une prestation offerte'
+  }
   const v = Number.isInteger(r.valeur) ? String(r.valeur) : r.valeur.toFixed(2).replace('.', ',')
   return r.recompense === 'pourcentage' ? `−${v} % sur une prestation` : `−${v} € sur une prestation`
 }
 
 /** La phrase que lit le client sous sa carte. */
-export function phraseCarte(e: EtatCarte, r: Pick<ReglagesFidelite, 'recompense' | 'valeur'>): string {
+export function phraseCarte(e: EtatCarte, r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>): string {
   if (e.disponibles > 0) return `Récompense débloquée : ${libelleRecompense(r)}, appliquée automatiquement à votre prochaine réservation.`
   const reste = e.requis - e.progression
   return `Plus que ${reste} prestation${reste > 1 ? 's' : ''} avant ${libelleRecompense(r)}.`

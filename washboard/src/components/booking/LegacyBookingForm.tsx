@@ -108,13 +108,17 @@ export default function LegacyBookingForm({ washer, services, categories, availa
   const [fideliteDue, setFideliteDue] = useState<FideliteDue | null>(null)
   // Total estimé, pour annoncer l'acompte avant la réservation : même calcul que le
   // récapitulatif final (promotion et créneau avantageux déduits, déplacement compris).
-  const prixPrestation = Math.max(0, (form.booked_price ?? 0) - remisePromotion(promotion, form.service_id, form.booked_price ?? 0))
+  const remisePromo = remisePromotion(promotion, form.service_id, form.booked_price ?? 0)
+  const optionsEstimees = (form.selected_addons ?? []).reduce((t, a) => t + Number(a.price ?? 0), 0)
+  const prixOptionsApresPromo = Math.max(0, optionsEstimees - Math.max(0, remisePromo - Math.max(0, (form.booked_price ?? 0) - optionsEstimees)))
+  const prixPrestation = Math.max(0, (form.booked_price ?? 0) - optionsEstimees - remisePromo)
+  const deplacement = form.travel_fee ?? 0
   // Carte de fidélité : cherchée à partir des coordonnées tapées (voir BookingForm).
   const { apercu: apercuFidelite, verifier: verifierFidelite } = useApercuFidelite(washer.id, fideliteProposee)
-  const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, prixPrestation), [verifierFidelite, prixPrestation])
-  const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? Math.min(apercuFidelite.remise, prixPrestation) : 0
-  const totalEstime = prixPrestation + (form.travel_fee ?? 0) - remiseFidelite
-    - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
+  const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, { prestation: prixPrestation, options: prixOptionsApresPromo, deplacement }), [verifierFidelite, prixPrestation, prixOptionsApresPromo, deplacement])
+  const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? apercuFidelite.remise : 0
+  const avantFidelite = (form.booked_price ?? 0) - remisePromo + deplacement - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
+  const totalEstime = Math.max(0, avantFidelite - remiseFidelite)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dispos, setDispos] = useState<Disponibilites | null>(disponibilites ?? null)
@@ -468,7 +472,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             onSubmit={submitBooking}
             onBack={() => setStep(3)}
             onCoordonnees={surCoordonnees}
-            fidelite={apercuFidelite ? <EncartFidelite apercu={apercuFidelite} prixPrestation={prixPrestation} /> : null}
+            fidelite={apercuFidelite ? <EncartFidelite apercu={apercuFidelite} total={avantFidelite} /> : null}
             acompte={acompte && form.service_id ? { montant: montantAcompte(acompte, totalEstime), conditions: conditionsAcompte(acompte), moyens: moyensPaiement(acompte) } : null}
             accent={accent}
           />

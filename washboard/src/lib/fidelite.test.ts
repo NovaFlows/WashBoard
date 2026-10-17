@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesFideliteSchema, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, phraseCarte, remiseFidelite } from './fidelite'
+import { ReglagesFideliteSchema, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, partiesOffertes, phraseCarte, remiseFidelite } from './fidelite'
 
 const fait = (n: number) => Array.from({ length: n }, () => ({ status: 'done' }))
 
@@ -23,16 +23,26 @@ describe('etatCarte', () => {
 })
 
 describe('récompense', () => {
-  it('offerte, en %, en €, jamais plus que le prix', () => {
-    expect(remiseFidelite({ recompense: 'offerte', valeur: 0 }, 59)).toBe(59)
-    expect(remiseFidelite({ recompense: 'pourcentage', valeur: 20 }, 59)).toBe(11.8)
-    expect(remiseFidelite({ recompense: 'montant', valeur: 80 }, 59)).toBe(59)
-    expect(remiseFidelite({ recompense: 'montant', valeur: 10 }, 0)).toBe(0)
+  const prix = { prestation: 45, options: 14, deplacement: 10 }
+  it('offerte : la prestation, plus options et déplacement selon le laveur', () => {
+    expect(remiseFidelite({ recompense: 'offerte', valeur: 0, offre_options: true, offre_deplacement: false }, prix)).toBe(59)
+    expect(remiseFidelite({ recompense: 'offerte', valeur: 0, offre_options: false, offre_deplacement: false }, prix)).toBe(45)
+    expect(remiseFidelite({ recompense: 'offerte', valeur: 0, offre_options: true, offre_deplacement: true }, prix)).toBe(69)
+  })
+  it('remise en % ou en € : sur prestation et options, jamais le déplacement, jamais plus', () => {
+    expect(remiseFidelite({ recompense: 'pourcentage', valeur: 20 }, prix)).toBe(11.8)
+    expect(remiseFidelite({ recompense: 'montant', valeur: 80 }, prix)).toBe(59)
+    expect(remiseFidelite({ recompense: 'montant', valeur: 10 }, { prestation: 0, options: 0, deplacement: 10 })).toBe(0)
+  })
+  it('dit ce qui est offert', () => {
+    expect(partiesOffertes({ offre_options: true, offre_deplacement: true })).toBe('la prestation, les options et le déplacement')
+    expect(partiesOffertes({ offre_options: false })).toBe('la prestation')
+    expect(libelleRecompense({ recompense: 'offerte', valeur: 0, offre_options: true, offre_deplacement: true })).toBe('une prestation offerte (options et déplacement compris)')
   })
   it('phrases lisibles par le client', () => {
     expect(libelleRecompense({ recompense: 'pourcentage', valeur: 20 })).toBe('−20 % sur une prestation')
-    expect(phraseCarte({ total: 7, progression: 7, requis: 10, disponibles: 0 }, { recompense: 'offerte', valeur: 0 })).toBe('Plus que 3 prestations avant une prestation offerte.')
-    expect(phraseCarte({ total: 9, progression: 9, requis: 10, disponibles: 0 }, { recompense: 'offerte', valeur: 0 })).toBe('Plus que 1 prestation avant une prestation offerte.')
+    expect(phraseCarte({ total: 7, progression: 7, requis: 10, disponibles: 0 }, { recompense: 'offerte', valeur: 0, offre_options: false })).toBe('Plus que 3 prestations avant une prestation offerte.')
+    expect(phraseCarte({ total: 9, progression: 9, requis: 10, disponibles: 0 }, { recompense: 'offerte', valeur: 0, offre_options: false })).toBe('Plus que 1 prestation avant une prestation offerte.')
     expect(phraseCarte({ total: 10, progression: 0, requis: 10, disponibles: 1 }, { recompense: 'montant', valeur: 15 })).toMatch(/^Récompense débloquée : −15 € sur une prestation/)
   })
 })
