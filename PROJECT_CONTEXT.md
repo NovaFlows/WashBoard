@@ -26,6 +26,9 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
 
+## Promotions EN PRODUCTION (2026-10-17)
+Plus › Promotions : remise en % ou € pendant une période, sur toutes ou certaines prestations ; bandeau réglable (message, couleur, compte à rebours) en haut de la page de réservation (nouvelle page ET page personnalisée). Logique dans `lib/promotion.ts` ; la remise est recalculée par `api/bookings` et `booked_price` devient le prix remisé (`promotion_id`, `promo_remise` tracés). Table `promotions` + colonnes bookings créées en prod. Page personnalisée : prix pleins pendant le choix, remise visible au récapitulatif seulement. Ouvert à toutes les offres (pas de verrou Pro).
+
 ## Entrée v2 EN PRODUCTION (2026-10-15, `a546422` + `05b8836`)
 Connexion, inscription, code email et onboarding refaits au design v2 (maquette : https://claude.ai/artifact/BPYytpi93EeXs1JtUadKph). Briques communes dans `components/entree/` (`Entree.tsx`, `AnimationsEntree.tsx`, styles dans `entree.css` — volontairement HORS de globals.css, que le cache Vercel a resservi périmé). Onboarding : 5 étapes (4 = questions obligatoires, 5 = facultatives + source) puis écran « Ton espace est prêt ». Stickers de l'équipe dans `public/equipe/` (ryan.webp = Ryan ; les deux autres nommés d'après leurs lunettes).
 Colonnes `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz) créées en production le 2026-10-15. **Reste :** `forgot-password` et `reset-password` gardent l'ancien habillage.
