@@ -158,7 +158,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
   const enTete = (intitule: string, sousTitre: string, retour: () => void, lienRetour?: string) => (
     <div className="flex items-center gap-1 pb-3">
       {lienRetour ? (
-        <Link href={lienRetour} aria-label="Retour à Plus" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
+        <Link href={lienRetour} aria-label="Retour à Prestations et prix" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
       ) : (
@@ -176,7 +176,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
   // ── Vue liste ──────────────────────────────────────────────────────────
   const vueListe = (
     <>
-      {enTete('Promotions', 'Une remise pendant une période, annoncée sur votre page', () => {}, '/dashboard/parametres')}
+      {enTete('Promotions', 'Une remise pendant une période, annoncée sur votre page', () => {}, '/dashboard/parametres/prestations')}
 
       {chargementErreur && <Constat>{chargementErreur}</Constat>}
       {enAttente && <Constat>Les promotions arrivent très bientôt sur votre compte. Réessayez dans quelques minutes.</Constat>}
@@ -377,7 +377,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
   return (
     <div className="flex items-start gap-5">
       <div className="sticky top-0 w-[320px] shrink-0 max-h-[calc(100vh-60px)] overflow-y-auto">
-        <ListeReglagesV2 {...liste} selection="promotions" />
+        <ListeReglagesV2 {...liste} selection="prestations" />
       </div>
       <div className="min-w-0 max-w-[620px] flex-1">{contenu}</div>
     </div>

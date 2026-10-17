@@ -452,6 +452,13 @@ export default function PrestationsV2({
             ton={ligneZone.ton}
             onClick={() => setFeuille({ quoi: 'zone' })}
           />
+          {/* Promotions (2026-10-17), rangées ici à la demande d'Alexandre : une remise est
+              un prix, elle se règle à côté des prestations. Écran : PromotionsV2.tsx. */}
+          <LigneDeuxNiveaux
+            label="Promotions"
+            valeur="Une remise pendant une période, annoncée sur votre page"
+            onClick={() => router.push('/dashboard/parametres/promotions')}
+          />
         </ul>
       </CarteListe>
     </div>
