@@ -11,13 +11,17 @@ import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import PromotionsV2 from '@/components/dashboard/PromotionsV2'
 import type { PromotionPublique } from '@/lib/promotion'
 
+// Fin de la promotion d'exemple, calculée au chargement du module et non pendant le rendu
+// (un rendu doit rester pur).
+const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
+
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
 export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string }> }) {
   const { mode, etape, promo } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
-    nom: 'Saint-Valentin', type_remise: 'pourcentage', valeur: 20, fin: new Date(Date.now() + 2.5 * 86400000).toISOString(), service_ids: null,
+    nom: 'Saint-Valentin', type_remise: 'pourcentage', valeur: 20, fin: FIN_PROMO_EXEMPLE, service_ids: null,
     bandeau_actif: true, bandeau_texte: 'Offrez un lavage à votre moitié', bandeau_couleur: '#C2185B', bandeau_compteur: true,
   } : null
   if (mode === 'onboarding') return <Onboarding slug="eclat-mobile" nom="Éclat Mobile" etapeInitiale={([1, 2, 3, 4, 5, 6] as const).find(n => String(n) === etape) ?? 1} />
