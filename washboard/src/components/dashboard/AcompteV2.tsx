@@ -5,13 +5,14 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce, titre } from '@/components/dashboard/FeuilleV2'
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
-import { compressImage, LOGO_OPTIONS } from '@/lib/imageCompression'
+import { lireQrCode } from '@/lib/lireQrCode'
+import { QrDepuisLien } from '@/components/booking/EncartAcompte'
 import { isValidPhone } from '@/lib/phone'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import EncartAcompte from '@/components/booking/EncartAcompte'
 import {
-  APPLIS_PAIEMENT, DELAIS_PAIEMENT, formaterIban, ibanValide, normaliserIban, DELAIS_REMBOURSEMENT, conditionsAcompte, montantAcompte, moyensPaiement, type LiensPaiement, type ReglagesAcompte, type TypeAcompte,
+  APPLIS_PAIEMENT, DELAIS_PAIEMENT, estLienWero, formaterIban, ibanValide, normaliserIban, DELAIS_REMBOURSEMENT, conditionsAcompte, montantAcompte, moyensPaiement, type LiensPaiement, type ReglagesAcompte, type TypeAcompte,
 } from '@/lib/acompte'
 
 // « Acompte » — décisions d'Alexandre, 2026-10-17 : option 1 (lien de paiement du laveur),
@@ -32,10 +33,10 @@ type Brouillon = {
   iban: string
   weroActif: boolean
   weroTel: string
-  weroQr: string | null
+  weroLien: string | null
 }
 
-const DEFAUT: Brouillon = { actif: false, type: 'pourcentage', valeur: '30', liens: {}, delai_heures: 24, remboursable: true, remboursement_heures: 48, virementActif: false, titulaire: '', iban: '', weroActif: false, weroTel: '', weroQr: null }
+const DEFAUT: Brouillon = { actif: false, type: 'pourcentage', valeur: '30', liens: {}, delai_heures: 24, remboursable: true, remboursement_heures: 48, virementActif: false, titulaire: '', iban: '', weroActif: false, weroTel: '', weroLien: null }
 
 function libelleHeures(h: number) {
   return h > 48 && h % 24 === 0 ? `${h / 24} jours` : `${h} h`
@@ -65,7 +66,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
           liens: r.liens ?? (r.lien ? { autre: r.lien } : {}),
           valeur: String(r.valeur).replace('.', ','),
           virementActif: !!r.virement, titulaire: r.virement?.titulaire ?? '', iban: r.virement ? formaterIban(r.virement.iban) : '',
-          weroActif: !!r.wero, weroTel: r.wero?.telephone ?? '', weroQr: r.wero?.qr_url ?? null,
+          weroActif: !!r.wero, weroTel: r.wero?.telephone ?? '', weroLien: r.wero?.lien ?? null,
         } : DEFAUT)
       })
       .catch(() => { if (!annule) { setErreur('Impossible de charger vos réglages. Vérifiez votre connexion.'); setB(DEFAUT) } })
@@ -74,23 +75,22 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
 
   const maj = (champs: Partial<Brouillon>) => { setFait(false); setB(x => (x ? { ...x, ...champs } : x)) }
 
-  const [envoiQr, setEnvoiQr] = useState(false)
-  async function envoyerQr(fichier: File) {
+  // La capture du QR code Wero n'est PAS envoyée : elle est lue ici, dans le navigateur, et
+  // seul le lien qu'elle contient (`https://share.weropay.eu/…`) est gardé. Le client voit
+  // ensuite un QR code net, redessiné à partir de ce lien, et un bouton « Payer avec Wero ».
+  const [lectureQr, setLectureQr] = useState(false)
+  async function lireCapture(fichier: File) {
     setErreur(null)
-    setEnvoiQr(true)
+    setLectureQr(true)
     try {
-      const reduit = await compressImage(fichier, LOGO_OPTIONS)
-      const donnees = new FormData()
-      donnees.append('file', reduit)
-      const res = await fetch('/api/washer/acompte/wero-qr', { method: 'POST', body: donnees })
-      const json = await res.json().catch(() => null)
-      if (!res.ok || !json?.url) { setErreur(json?.error ?? 'La capture n’a pas pu être envoyée. Réessayez.'); return }
-      // Enregistrée avec les autres réglages au prochain « Enregistrer ».
-      maj({ weroQr: json.url })
+      const lien = await lireQrCode(fichier)
+      if (!lien) { setErreur('Aucun QR code trouvé sur cette image. Faites une capture où le QR code Wero est bien visible.'); return }
+      if (!estLienWero(lien)) { setErreur('Ce QR code n’est pas un QR code Wero. Prenez celui de Wero › Recevoir, dans l’application de votre banque.'); return }
+      maj({ weroLien: lien })
     } catch {
-      setErreur('La capture n’a pas pu être envoyée. Vérifiez votre connexion.')
+      setErreur('L’image n’a pas pu être lue. Essayez avec une autre capture.')
     } finally {
-      setEnvoiQr(false)
+      setLectureQr(false)
     }
   }
 
@@ -112,8 +112,8 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
           ...b, valeur: valeur > 0 ? valeur : 1,
           liens: Object.fromEntries(APPLIS_PAIEMENT.map(a => [a.cle, (b.liens[a.cle] ?? '').trim()]).filter(([, v]) => v)),
           virement: b.virementActif ? { titulaire: b.titulaire.trim(), iban: normaliserIban(b.iban) } : null,
-          wero: b.weroActif ? { telephone: b.weroTel.trim(), qr_url: b.weroQr } : null,
-          virementActif: undefined, titulaire: undefined, iban: undefined, weroActif: undefined, weroTel: undefined, weroQr: undefined,
+          wero: b.weroActif ? { telephone: b.weroTel.trim(), lien: b.weroLien } : null,
+          virementActif: undefined, titulaire: undefined, iban: undefined, weroActif: undefined, weroTel: undefined, weroLien: undefined,
           remboursement_heures: b.remboursable ? b.remboursement_heures : null,
         }),
       })
@@ -221,19 +221,17 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                     <div>
                       <p className={ETIQUETTE}>Votre QR code Wero (facultatif)</p>
                       <p className={`mb-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                        Dans l’application de votre banque : Wero › Recevoir › QR code, <strong className={corpsFort}>sans montant</strong>. Faites une capture d’écran et ajoutez-la ici. Il s’affiche quand le client réserve depuis un ordinateur.
+                        Dans l’application de votre banque : Wero › Recevoir › QR code, <strong className={corpsFort}>sans montant</strong>. Faites une capture d’écran et ajoutez-la ici : WashBoard y lit votre lien Wero.
                       </p>
-                      <div className="flex items-center gap-3">
-                        {b.weroQr && (
-                          // eslint-disable-next-line @next/next/no-img-element -- photo envoyée par le laveur
-                          <img src={b.weroQr} alt="Votre QR code Wero" className="h-20 w-20 rounded-lg border border-[color:var(--v2-filet-fort)] bg-white object-contain" />
-                        )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {b.weroLien && <QrDepuisLien lien={b.weroLien} taille={80} alt="Votre QR code Wero" />}
                         <label className={`${BOUTON} cursor-pointer border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>
-                          {envoiQr ? 'Envoi…' : b.weroQr ? 'Changer la capture' : 'Ajouter la capture'}
-                          <input type="file" accept="image/*" className="sr-only" disabled={envoiQr} onChange={e => { const f = e.target.files?.[0]; if (f) void envoyerQr(f); e.target.value = '' }} />
+                          {lectureQr ? 'Lecture…' : b.weroLien ? 'Changer la capture' : 'Ajouter la capture'}
+                          <input type="file" accept="image/*" className="sr-only" disabled={lectureQr} onChange={e => { const f = e.target.files?.[0]; if (f) void lireCapture(f); e.target.value = '' }} />
                         </label>
-                        {b.weroQr && <button type="button" onClick={() => maj({ weroQr: null })} className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] underline underline-offset-2`}>Retirer</button>}
+                        {b.weroLien && <button type="button" onClick={() => maj({ weroLien: null })} className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] underline underline-offset-2`}>Retirer</button>}
                       </div>
+                      {b.weroLien && <p className={`mt-2 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>QR code Wero reconnu : vos clients auront un bouton « Payer avec Wero ».</p>}
                     </div>
                   </div>
                 )}

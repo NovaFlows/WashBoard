@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { formatPrice } from '@/lib/pricing'
 
 export type LienPaiement = { libelle: string; url: string; montantExact?: boolean }
 export type VirementPaiement = { titulaire: string; iban: string; reference: string }
-export type WeroPaiement = { telephone: string; qrUrl: string | null }
+export type WeroPaiement = { telephone: string; lien: string | null }
 /** L'acompte tel que le serveur le renvoie après la réservation (`api/bookings`). */
 export type AcompteDu = { montant: number; liens: LienPaiement[]; virement?: VirementPaiement | null; wero?: WeroPaiement | null; echeance: string | null; conditions: string[] }
 
@@ -33,26 +34,52 @@ function Copier({ texte, libelle }: { texte: string; libelle: string }) {
   )
 }
 
-function Wero({ wero, montant, autres }: { wero: WeroPaiement; montant: number; autres: boolean }) {
+/** QR code net, redessiné à partir d'un lien (ici celui du QR code Wero du laveur) :
+ *  scannable avec l'appareil photo de n'importe quel téléphone. */
+export function QrDepuisLien({ lien, taille = 160, alt }: { lien: string; taille?: number; alt: string }) {
+  const [image, setImage] = useState<string | null>(null)
+  useEffect(() => {
+    let annule = false
+    QRCode.toDataURL(lien, { errorCorrectionLevel: 'M', margin: 1, width: taille * 2 })
+      .then(url => { if (!annule) setImage(url) })
+      .catch(() => { /* sans QR code, le bouton et le numéro suffisent */ })
+    return () => { annule = true }
+  }, [lien, taille])
+  if (!image) return <div style={{ width: taille, height: taille }} aria-hidden />
+  // eslint-disable-next-line @next/next/no-img-element -- image générée dans le navigateur (data:)
+  return <img src={image} alt={alt} width={taille} height={taille} className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-700" style={{ width: taille, height: taille }} />
+}
+
+function Wero({ wero, montant, autres, accent }: { wero: WeroPaiement; montant: number; autres: boolean; accent: string }) {
   return (
     <div className="mt-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-700">
       <p className="font-semibold text-zinc-900 dark:text-zinc-100">{autres ? 'Ou par Wero' : 'Par Wero'}</p>
       <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
-        Ouvrez Wero dans l’application de votre banque et envoyez {formatPrice(montant)} à ce numéro :
+        Envoyez {formatPrice(montant)} avec Wero, depuis l’application de votre banque.
       </p>
-      <p className="mt-2 flex items-center justify-between gap-2 text-[15px]">
+      {wero.lien && (
+        <a
+          href={wero.lien}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-[15px] font-semibold text-white"
+          style={{ background: accent }}
+        >
+          Payer avec Wero
+        </a>
+      )}
+      {/* Sur ordinateur : le QR code se scanne avec l'appareil photo du téléphone. */}
+      {wero.lien && (
+        <div className="mt-3 hidden items-center gap-3 sm:flex">
+          <QrDepuisLien lien={wero.lien} alt="QR code Wero du laveur" />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Ou scannez ce code avec l’appareil photo de votre téléphone, puis indiquez {formatPrice(montant)}.</p>
+        </div>
+      )}
+      <p className="mt-3 text-[13px] text-zinc-500 dark:text-zinc-400">Son numéro Wero :</p>
+      <p className="mt-1 flex items-center justify-between gap-2 text-[15px]">
         <span className="select-all font-mono font-semibold">{wero.telephone}</span>
         <Copier texte={wero.telephone} libelle="le numéro Wero" />
       </p>
-      {/* Le QR code Wero du laveur, photographié dans son application : utile quand la
-          réservation est faite sur un ordinateur ; sur téléphone, le numéro suffit. */}
-      {wero.qrUrl && (
-        <div className="mt-3 hidden items-center gap-3 sm:flex">
-          {/* eslint-disable-next-line @next/next/no-img-element -- photo envoyée par le laveur */}
-          <img src={wero.qrUrl} alt="QR code Wero du laveur" className="h-[140px] w-[140px] rounded-lg border border-zinc-200 bg-white object-contain dark:border-zinc-700" />
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Ou scannez ce code depuis Wero, puis indiquez {formatPrice(montant)}.</p>
-        </div>
-      )}
     </div>
   )
 }
@@ -98,7 +125,7 @@ export default function EncartAcompte({ montant, conditions, liens, virement = n
         </div>
       )}
 
-      {apres && wero && <Wero wero={wero} montant={montant} autres={liens.length > 0} />}
+      {apres && wero && <Wero wero={wero} montant={montant} autres={liens.length > 0} accent={accent} />}
 
       {apres && virement && (
         <div className="mt-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-700">

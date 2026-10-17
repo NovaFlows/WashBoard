@@ -88,13 +88,14 @@ describe('virement', () => {
 
 describe('Wero', () => {
   it('numéro et photo du QR code montrés après la réservation, jamais avant', () => {
-    const r = acompteActif({ ...base, liens: {}, wero: { telephone: '0612345678', qr_url: 'https://x.supabase.co/storage/v1/object/public/logos/wero/u.png' } })!
+    const r = acompteActif({ ...base, liens: {}, wero: { telephone: '0612345678', lien: 'https://share.weropay.eu/p/1/c/adogDkPxqc' } })!
     expect(r).not.toBeNull()
-    expect(weroPour(r)).toEqual({ telephone: '06 12 34 56 78', qrUrl: 'https://x.supabase.co/storage/v1/object/public/logos/wero/u.png' })
+    expect(weroPour(r)).toEqual({ telephone: '06 12 34 56 78', lien: 'https://share.weropay.eu/p/1/c/adogDkPxqc' })
     expect(versPublic(r)).not.toHaveProperty('wero')
     expect(moyensPaiement(versPublic(r))).toEqual(['Wero'])
   })
-  it('refuse un numéro invalide', () => {
+  it('refuse un numéro invalide et un QR code qui n’est pas un QR code Wero', () => {
     expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, wero: { telephone: '123' } }).success).toBe(false)
+    expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, wero: { telephone: '0612345678', lien: 'https://exemple.fr/arnaque' } }).success).toBe(false)
   })
 })

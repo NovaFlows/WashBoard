@@ -44,7 +44,7 @@ type SendRequestParams = {
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
   /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
-  acompte?: { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; wero?: { telephone: string; qrUrl: string | null } | null; conditions: string[] }
+  acompte?: { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; wero?: { telephone: string; lien: string | null } | null; conditions: string[] }
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -129,8 +129,8 @@ export async function sendBookingRequest(params: SendRequestParams) {
         ${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
         ${params.acompte.wero ? `<div style="margin-top:10px;padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;line-height:1.6;">
           <strong>Par Wero</strong><br>
-          Ouvrez Wero dans l’application de votre banque et envoyez ${formatEuros(params.acompte.montant)} € au <strong>${escapeHtml(params.acompte.wero.telephone)}</strong>.
-          ${params.acompte.wero.qrUrl ? `<br><img src="${escapeHtml(params.acompte.wero.qrUrl)}" alt="QR code Wero" width="140" height="140" style="margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;">` : ''}
+          Envoyez ${formatEuros(params.acompte.montant)} € avec Wero, depuis l’application de votre banque, au <strong>${escapeHtml(params.acompte.wero.telephone)}</strong>.
+          ${params.acompte.wero.lien ? `<br><a href="${escapeHtml(params.acompte.wero.lien)}" style="display:inline-block;margin-top:8px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;">Payer avec Wero</a>` : ''}
         </div>` : ''}
         ${params.acompte.virement ? `<div style="margin-top:10px;padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;line-height:1.6;">
           <strong>Par virement</strong><br>

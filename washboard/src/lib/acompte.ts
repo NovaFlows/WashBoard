@@ -91,12 +91,13 @@ const ReglagesAcompteBase = z.object({
     titulaire: z.string().trim().max(70),
     iban: z.string().max(42),
   }).nullable().optional(),
-  /** Wero (2026-10-17) : le numéro de téléphone du compte Wero du laveur, et la photo de son
-   *  QR code Wero personnel (sans montant), prise dans son application bancaire. Le format de
-   *  ce QR code n'est pas public : WashBoard ne peut pas le fabriquer, seulement le montrer. */
+  /** Wero (2026-10-17) : le numéro de téléphone du compte Wero du laveur, et le LIEN contenu
+   *  dans son QR code Wero personnel (`https://share.weropay.eu/…`), lu dans la capture qu'il
+   *  envoie. Un lien web : il s'ouvre aussi bien d'un bouton que d'un QR code scanné avec
+   *  l'appareil photo. WashBoard redessine le QR code, net, à partir de ce lien. */
   wero: z.object({
     telephone: z.string().trim().max(20),
-    qr_url: z.string().trim().max(500).nullable().optional(),
+    lien: z.string().trim().max(300).nullable().optional(),
   }).nullable().optional(),
 })
 
@@ -116,7 +117,7 @@ export const ReglagesAcompteSchema = z.preprocess(reprendreAncienFormat, Reglage
   }
   if (r.wero) {
     if (!isValidPhone(r.wero.telephone)) ctx.addIssue({ code: 'custom', path: ['wero', 'telephone'], message: 'Wero : indiquez le numéro de téléphone de votre compte Wero (ex. 06 12 34 56 78).' })
-    if (r.wero.qr_url && !lienValide(r.wero.qr_url)) ctx.addIssue({ code: 'custom', path: ['wero', 'qr_url'], message: 'Wero : la photo du QR code n’a pas pu être enregistrée. Ajoutez-la à nouveau.' })
+    if (r.wero.lien && !estLienWero(r.wero.lien)) ctx.addIssue({ code: 'custom', path: ['wero', 'lien'], message: 'Wero : ce QR code n’est pas un QR code Wero. Ajoutez la capture de votre QR code Wero.' })
   }
   if (r.actif && liensRemplis(r.liens).length === 0 && !r.virement && !r.wero) {
     ctx.addIssue({ code: 'custom', path: ['liens'], message: 'Ajoutez au moins un moyen de paiement : un lien, le virement ou Wero.' })
@@ -176,12 +177,22 @@ export function versPublic(r: ReglagesAcompte): AcomptePublic {
   return { ...reste, virementPropose: !!virement, weroPropose: !!wero }
 }
 
-export type WeroDu = { telephone: string; qrUrl: string | null }
+export type WeroDu = { telephone: string; lien: string | null }
+
+/** Un lien de paiement Wero, tel qu'on le trouve dans le QR code personnel d'un compte. */
+export function estLienWero(lien: string): boolean {
+  try {
+    const u = new URL(lien)
+    return u.protocol === 'https:' && /(^|\.)weropay\.eu$/.test(u.hostname)
+  } catch {
+    return false
+  }
+}
 
 /** Coordonnées Wero montrées au client APRÈS la réservation. */
 export function weroPour(r: Pick<ReglagesAcompte, 'wero'>): WeroDu | null {
   if (!r.wero || !isValidPhone(r.wero.telephone)) return null
-  return { telephone: formatPhone(r.wero.telephone), qrUrl: r.wero.qr_url && lienValide(r.wero.qr_url) ? r.wero.qr_url : null }
+  return { telephone: formatPhone(r.wero.telephone), lien: r.wero.lien && estLienWero(r.wero.lien) ? r.wero.lien : null }
 }
 
 /** IBAN sans espaces, en majuscules. */
