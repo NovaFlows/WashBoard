@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce, titre } from '@/components/dashboard/FeuilleV2'
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
+import { compressImage, LOGO_OPTIONS } from '@/lib/imageCompression'
+import { isValidPhone } from '@/lib/phone'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import EncartAcompte from '@/components/booking/EncartAcompte'
@@ -28,9 +30,12 @@ type Brouillon = {
   virementActif: boolean
   titulaire: string
   iban: string
+  weroActif: boolean
+  weroTel: string
+  weroQr: string | null
 }
 
-const DEFAUT: Brouillon = { actif: false, type: 'pourcentage', valeur: '30', liens: {}, delai_heures: 24, remboursable: true, remboursement_heures: 48, virementActif: false, titulaire: '', iban: '' }
+const DEFAUT: Brouillon = { actif: false, type: 'pourcentage', valeur: '30', liens: {}, delai_heures: 24, remboursable: true, remboursement_heures: 48, virementActif: false, titulaire: '', iban: '', weroActif: false, weroTel: '', weroQr: null }
 
 function libelleHeures(h: number) {
   return h > 48 && h % 24 === 0 ? `${h / 24} jours` : `${h} h`
@@ -60,6 +65,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
           liens: r.liens ?? (r.lien ? { autre: r.lien } : {}),
           valeur: String(r.valeur).replace('.', ','),
           virementActif: !!r.virement, titulaire: r.virement?.titulaire ?? '', iban: r.virement ? formaterIban(r.virement.iban) : '',
+          weroActif: !!r.wero, weroTel: r.wero?.telephone ?? '', weroQr: r.wero?.qr_url ?? null,
         } : DEFAUT)
       })
       .catch(() => { if (!annule) { setErreur('Impossible de charger vos réglages. Vérifiez votre connexion.'); setB(DEFAUT) } })
@@ -68,12 +74,33 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
 
   const maj = (champs: Partial<Brouillon>) => { setFait(false); setB(x => (x ? { ...x, ...champs } : x)) }
 
+  const [envoiQr, setEnvoiQr] = useState(false)
+  async function envoyerQr(fichier: File) {
+    setErreur(null)
+    setEnvoiQr(true)
+    try {
+      const reduit = await compressImage(fichier, LOGO_OPTIONS)
+      const donnees = new FormData()
+      donnees.append('file', reduit)
+      const res = await fetch('/api/washer/acompte/wero-qr', { method: 'POST', body: donnees })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.url) { setErreur(json?.error ?? 'La capture n’a pas pu être envoyée. Réessayez.'); return }
+      // Enregistrée avec les autres réglages au prochain « Enregistrer ».
+      maj({ weroQr: json.url })
+    } catch {
+      setErreur('La capture n’a pas pu être envoyée. Vérifiez votre connexion.')
+    } finally {
+      setEnvoiQr(false)
+    }
+  }
+
   async function enregistrer() {
     if (!b || enregistrement) return
     setErreur(null)
     const valeur = Number(b.valeur.replace(',', '.'))
     if (b.actif && !(valeur > 0)) { setErreur('Indiquez le montant de l’acompte.'); return }
-    if (b.actif && !b.virementActif && !APPLIS_PAIEMENT.some(a => (b.liens[a.cle] ?? '').trim())) { setErreur('Ajoutez au moins un moyen de paiement : un lien ou le virement.'); return }
+    if (b.actif && !b.virementActif && !b.weroActif && !APPLIS_PAIEMENT.some(a => (b.liens[a.cle] ?? '').trim())) { setErreur('Ajoutez au moins un moyen de paiement : un lien, Wero ou le virement.'); return }
+    if (b.weroActif && !isValidPhone(b.weroTel)) { setErreur('Wero : indiquez le numéro de téléphone de votre compte Wero.'); return }
     if (b.virementActif && !b.titulaire.trim()) { setErreur('Virement : indiquez le nom du titulaire du compte.'); return }
     if (b.virementActif && !ibanValide(b.iban)) { setErreur('Virement : cet IBAN n’est pas valide. Vérifiez-le sur votre RIB.'); return }
     setEnregistrement(true)
@@ -85,7 +112,8 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
           ...b, valeur: valeur > 0 ? valeur : 1,
           liens: Object.fromEntries(APPLIS_PAIEMENT.map(a => [a.cle, (b.liens[a.cle] ?? '').trim()]).filter(([, v]) => v)),
           virement: b.virementActif ? { titulaire: b.titulaire.trim(), iban: normaliserIban(b.iban) } : null,
-          virementActif: undefined, titulaire: undefined, iban: undefined,
+          wero: b.weroActif ? { telephone: b.weroTel.trim(), qr_url: b.weroQr } : null,
+          virementActif: undefined, titulaire: undefined, iban: undefined, weroActif: undefined, weroTel: undefined, weroQr: undefined,
           remboursement_heures: b.remboursable ? b.remboursement_heures : null,
         }),
       })
@@ -179,6 +207,41 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
               <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
+                    <p className={`text-[15px] ${corpsFort}`}>Wero</p>
+                    <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Le client paie depuis l’application de sa banque, avec votre numéro.</p>
+                  </div>
+                  <Interrupteur actif={b.weroActif} enCours={false} libelle="Proposer Wero" onClick={() => maj({ weroActif: !b.weroActif })} />
+                </div>
+                {b.weroActif && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div>
+                      <label htmlFor="acompte-wero-tel" className={ETIQUETTE}>Numéro de votre compte Wero</label>
+                      <input id="acompte-wero-tel" type="tel" inputMode="tel" className={CHAMP} value={b.weroTel} onChange={e => maj({ weroTel: e.target.value })} placeholder="06 12 34 56 78" />
+                    </div>
+                    <div>
+                      <p className={ETIQUETTE}>Votre QR code Wero (facultatif)</p>
+                      <p className={`mb-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                        Dans l’application de votre banque : Wero › Recevoir › QR code, <strong className={corpsFort}>sans montant</strong>. Faites une capture d’écran et ajoutez-la ici. Il s’affiche quand le client réserve depuis un ordinateur.
+                      </p>
+                      <div className="flex items-center gap-3">
+                        {b.weroQr && (
+                          // eslint-disable-next-line @next/next/no-img-element -- photo envoyée par le laveur
+                          <img src={b.weroQr} alt="Votre QR code Wero" className="h-20 w-20 rounded-lg border border-[color:var(--v2-filet-fort)] bg-white object-contain" />
+                        )}
+                        <label className={`${BOUTON} cursor-pointer border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>
+                          {envoiQr ? 'Envoi…' : b.weroQr ? 'Changer la capture' : 'Ajouter la capture'}
+                          <input type="file" accept="image/*" className="sr-only" disabled={envoiQr} onChange={e => { const f = e.target.files?.[0]; if (f) void envoyerQr(f); e.target.value = '' }} />
+                        </label>
+                        {b.weroQr && <button type="button" onClick={() => maj({ weroQr: null })} className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] underline underline-offset-2`}>Retirer</button>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className={`text-[15px] ${corpsFort}`}>Virement bancaire</p>
                     <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Sans frais. Votre IBAN n’est montré qu’après la réservation.</p>
                   </div>
@@ -247,7 +310,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                 <EncartAcompte
                   montant={montantAcompte({ type: b.type, valeur: valeurNum }, exempleTotal)}
                   conditions={conditionsAcompte(b)}
-                  moyens={moyensPaiement({ liens: b.liens, virementPropose: b.virementActif })}
+                  moyens={moyensPaiement({ liens: b.liens, virementPropose: b.virementActif, weroPropose: b.weroActif })}
                 />
               </section>
             </>

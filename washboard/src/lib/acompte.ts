@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { formatPhone, isValidPhone } from '@/lib/phone'
 
 // Acompte à la réservation (décisions d'Alexandre, 2026-10-17) — « option 1 » : l'argent
 // passe par le LIEN DE PAIEMENT DU LAVEUR (SumUp, PayPal, Lydia, lien Stripe à lui…), jamais
@@ -90,6 +91,13 @@ const ReglagesAcompteBase = z.object({
     titulaire: z.string().trim().max(70),
     iban: z.string().max(42),
   }).nullable().optional(),
+  /** Wero (2026-10-17) : le numéro de téléphone du compte Wero du laveur, et la photo de son
+   *  QR code Wero personnel (sans montant), prise dans son application bancaire. Le format de
+   *  ce QR code n'est pas public : WashBoard ne peut pas le fabriquer, seulement le montrer. */
+  wero: z.object({
+    telephone: z.string().trim().max(20),
+    qr_url: z.string().trim().max(500).nullable().optional(),
+  }).nullable().optional(),
 })
 
 export const ReglagesAcompteSchema = z.preprocess(reprendreAncienFormat, ReglagesAcompteBase.superRefine((r, ctx) => {
@@ -106,8 +114,12 @@ export const ReglagesAcompteSchema = z.preprocess(reprendreAncienFormat, Reglage
     if (!r.virement.titulaire.trim()) ctx.addIssue({ code: 'custom', path: ['virement', 'titulaire'], message: 'Virement : indiquez le nom du titulaire du compte.' })
     if (!ibanValide(r.virement.iban)) ctx.addIssue({ code: 'custom', path: ['virement', 'iban'], message: 'Virement : cet IBAN n’est pas valide. Vérifiez-le sur votre RIB.' })
   }
-  if (r.actif && liensRemplis(r.liens).length === 0 && !r.virement) {
-    ctx.addIssue({ code: 'custom', path: ['liens'], message: 'Ajoutez au moins un moyen de paiement : un lien ou le virement.' })
+  if (r.wero) {
+    if (!isValidPhone(r.wero.telephone)) ctx.addIssue({ code: 'custom', path: ['wero', 'telephone'], message: 'Wero : indiquez le numéro de téléphone de votre compte Wero (ex. 06 12 34 56 78).' })
+    if (r.wero.qr_url && !lienValide(r.wero.qr_url)) ctx.addIssue({ code: 'custom', path: ['wero', 'qr_url'], message: 'Wero : la photo du QR code n’a pas pu être enregistrée. Ajoutez-la à nouveau.' })
+  }
+  if (r.actif && liensRemplis(r.liens).length === 0 && !r.virement && !r.wero) {
+    ctx.addIssue({ code: 'custom', path: ['liens'], message: 'Ajoutez au moins un moyen de paiement : un lien, le virement ou Wero.' })
   }
   if (r.type === 'pourcentage' && r.valeur > 100) {
     ctx.addIssue({ code: 'custom', path: ['valeur'], message: 'Un acompte ne peut pas dépasser 100 % du prix.' })
@@ -157,11 +169,19 @@ export function conditionsAcompte(r: Pick<ReglagesAcompte, 'delai_heures' | 'rem
 /** Ce que la page publique reçoit des réglages : tout sauf l'interrupteur. */
 /** Ce que la page publique reçoit AVANT la réservation : jamais l'IBAN, seulement le fait
  *  que le virement est proposé. */
-export type AcomptePublic = Omit<ReglagesAcompte, 'actif' | 'virement'> & { virementPropose: boolean }
+export type AcomptePublic = Omit<ReglagesAcompte, 'actif' | 'virement' | 'wero'> & { virementPropose: boolean; weroPropose: boolean }
 
 export function versPublic(r: ReglagesAcompte): AcomptePublic {
-  const { actif: _actif, virement, ...reste } = r
-  return { ...reste, virementPropose: !!virement }
+  const { actif: _actif, virement, wero, ...reste } = r
+  return { ...reste, virementPropose: !!virement, weroPropose: !!wero }
+}
+
+export type WeroDu = { telephone: string; qrUrl: string | null }
+
+/** Coordonnées Wero montrées au client APRÈS la réservation. */
+export function weroPour(r: Pick<ReglagesAcompte, 'wero'>): WeroDu | null {
+  if (!r.wero || !isValidPhone(r.wero.telephone)) return null
+  return { telephone: formatPhone(r.wero.telephone), qrUrl: r.wero.qr_url && lienValide(r.wero.qr_url) ? r.wero.qr_url : null }
 }
 
 /** IBAN sans espaces, en majuscules. */
@@ -216,22 +236,10 @@ export function liensDePaiement(liens: LiensPaiement | undefined, montant: numbe
 }
 
 /** Les moyens de paiement proposés, dits au client AVANT qu'il réserve. */
-export function moyensPaiement(r: Pick<AcomptePublic, 'liens' | 'virementPropose'>): string[] {
+export function moyensPaiement(r: Pick<AcomptePublic, 'liens' | 'virementPropose' | 'weroPropose'>): string[] {
   const noms: string[] = liensRemplis(r.liens).map(l => APPLIS_PAIEMENT.find(a => a.cle === l.cle)!.libelle)
+  if (r.weroPropose) noms.push('Wero')
   if (r.virementPropose) noms.push('virement')
   return noms
 }
 
-/** Contenu du QR code de virement au format européen EPC069-12 (« QR code SEPA », lu par de
- *  nombreuses applications bancaires) : bénéficiaire, IBAN, montant et libellé préremplis.
- *  Version 002, sans BIC (facultatif dans l'espace SEPA). */
-export function contenuQrVirement(v: VirementDu, montant: number): string {
-  return [
-    'BCD', '002', '1', 'SCT', '',
-    v.titulaire.slice(0, 70),
-    normaliserIban(v.iban),
-    `EUR${montant.toFixed(2)}`,
-    '', '',
-    v.reference.slice(0, 140),
-  ].join('\n')
-}

@@ -6,7 +6,7 @@ import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { remisePromotion } from '@/lib/promotion'
-import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, type ReglagesAcompte } from '@/lib/acompte'
+import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { effectiveTeamSize } from '@/lib/slots'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
@@ -657,7 +657,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         vehiclesDetail: vehicles_detail ?? undefined,
         notes: bookingData.notes ?? undefined,
         selectedAddons: selected_addons ?? undefined,
-        acompte: acompte ? { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), conditions: conditionsAcompte(acompte.reglages) } : undefined,
+        acompte: acompte ? { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), conditions: conditionsAcompte(acompte.reglages) } : undefined,
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
     )
 
@@ -759,7 +759,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   return Response.json({
     data: {
       id, booked_price, jeton,
-      ...(acompte ? { acompte: { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), echeance: acompte.echeance, conditions: conditionsAcompte(acompte.reglages) } } : {}),
+      ...(acompte ? { acompte: { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), echeance: acompte.echeance, conditions: conditionsAcompte(acompte.reglages) } } : {}),
     },
   }, { status: 201 })
 })

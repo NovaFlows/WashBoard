@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, contenuQrVirement, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, versPublic, virementPour } from './acompte'
+import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, moyensPaiement, versPublic, virementPour, weroPour } from './acompte'
 
 const base = { actif: true, type: 'pourcentage' as const, valeur: 30, liens: { sumup: 'https://sumup.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
@@ -86,10 +86,15 @@ describe('virement', () => {
   })
 })
 
-describe('QR code de virement', () => {
-  it('suit le format EPC : bénéficiaire, IBAN sans espaces, montant, libellé', () => {
-    expect(contenuQrVirement({ titulaire: 'Éclat Mobile', iban: 'FR76 3000 6000 0112 3456 7890 189', reference: 'WB-54CF8F67' }, 16.05).split('\n')).toEqual([
-      'BCD', '002', '1', 'SCT', '', 'Éclat Mobile', 'FR7630006000011234567890189', 'EUR16.05', '', '', 'WB-54CF8F67',
-    ])
+describe('Wero', () => {
+  it('numéro et photo du QR code montrés après la réservation, jamais avant', () => {
+    const r = acompteActif({ ...base, liens: {}, wero: { telephone: '0612345678', qr_url: 'https://x.supabase.co/storage/v1/object/public/logos/wero/u.png' } })!
+    expect(r).not.toBeNull()
+    expect(weroPour(r)).toEqual({ telephone: '06 12 34 56 78', qrUrl: 'https://x.supabase.co/storage/v1/object/public/logos/wero/u.png' })
+    expect(versPublic(r)).not.toHaveProperty('wero')
+    expect(moyensPaiement(versPublic(r))).toEqual(['Wero'])
+  })
+  it('refuse un numéro invalide', () => {
+    expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, wero: { telephone: '123' } }).success).toBe(false)
   })
 })

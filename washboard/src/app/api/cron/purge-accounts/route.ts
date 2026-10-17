@@ -94,6 +94,14 @@ export async function GET(request: NextRequest) {
       } catch { /* non bloquant */ }
     }
 
+    // 2 ter. Photo du QR code Wero de l'acompte (api/washer/acompte/wero-qr) : un numéro de
+    // téléphone y est lisible. Best-effort comme le logo.
+    if (w.user_id) {
+      try {
+        await admin.storage.from('logos').remove(['png', 'jpg', 'webp'].map(e => `wero/${w.user_id}.${e}`))
+      } catch { /* non bloquant */ }
+    }
+
     // 2 bis. Factures importées : les lignes partent en cascade avec la fiche,
     // mais pas les fichiers du stockage privé, qui portent les noms et adresses
     // des clients du laveur. Best-effort comme le logo : un échec est tracé.
