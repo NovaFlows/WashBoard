@@ -161,7 +161,7 @@ export default async function BookingPage({ params }: Props) {
   // cette page, la majorité venait de l'appel externe vers le site du laveur
   // (voir plus bas).
   const maintenantIso = new Date().toISOString()
-  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }] = await Promise.all([
+  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }] = await Promise.all([
     admin
       .from('services')
       .select('*')
@@ -201,7 +201,14 @@ export default async function BookingPage({ params }: Props) {
     // créée rend une erreur ici, sans faire tomber la lecture du laveur ni la page.
     admin
       .from('washers')
-      .select('acompte, fidelite')
+      .select('acompte')
+      .eq('id', washer.id)
+      .maybeSingle(),
+    // Carte de fidélité (lib/fidelite.ts) : lue À PART de l'acompte, pour qu'une colonne
+    // manquante de l'une ne fasse pas disparaître l'autre.
+    admin
+      .from('washers')
+      .select('fidelite')
       .eq('id', washer.id)
       .maybeSingle(),
   ])
@@ -210,7 +217,7 @@ export default async function BookingPage({ params }: Props) {
   const reglagesAcompte = acompteActif((ficheAcompte as { acompte?: unknown } | null)?.acompte)
   const acompte = reglagesAcompte ? versPublicAcompte(reglagesAcompte) : null
   // Carte de fidélité : le rappel n'est monté que si le laveur en propose une.
-  const fideliteProposee = !!fideliteActive((ficheAcompte as { fidelite?: unknown } | null)?.fidelite)
+  const fideliteProposee = !!fideliteActive((ficheFidelite as { fidelite?: unknown } | null)?.fidelite)
 
   // ── Identité visuelle : réservée aux offres payantes ────────────────────
   //
