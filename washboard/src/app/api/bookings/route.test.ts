@@ -905,7 +905,8 @@ describe('POST /api/bookings — acompte', () => {
 
 describe('POST /api/bookings — carte de fidélité', () => {
   const FIDELITE = { actif: true, tampons: 10, recompense: 'pourcentage', valeur: 50 }
-  const termines = (n: number) => Array.from({ length: n }, () => ({ status: 'done', fidelite_remise: null, client_email: 'client@test.fr', client_phone: null }))
+  // La carte suit le téléphone (2026-10-18) : mêmes chiffres écrits autrement, autre email.
+  const termines = (n: number, vehicle_count = 1) => Array.from({ length: n }, () => ({ status: 'done', fidelite_remise: null, vehicle_count, client_email: 'ancienne@adresse.fr', client_phone: '06 12 34 56 78' }))
 
   it('carte pleine : applique la récompense, la trace et renvoie la carte', async () => {
     avecWasher({ fidelite: FIDELITE })
@@ -926,6 +927,15 @@ describe('POST /api/bookings — carte de fidélité', () => {
     const { body } = await poster({ client_email: 'client@test.fr' })
     expect(rpcAppels[0].args.p_booking).not.toHaveProperty('fidelite_remise')
     expect(body.data.fidelite.etat).toMatchObject({ progression: 3, requis: 10 })
+  })
+
+  it('un tampon par véhicule, si le laveur l’a choisi', async () => {
+    avecWasher({ fidelite: { ...FIDELITE, tampon_par_vehicule: true } })
+    plan.tables.fidelite_cartes = { data: { jeton: 'c'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(4, 2), error: null }
+    const { body } = await poster({ client_email: 'client@test.fr' })
+    expect(body.data.fidelite.etat).toMatchObject({ progression: 8, requis: 10 })
+    expect(body.data.fidelite.gain).toBe(1)
   })
 
   it('sans carte de fidélité chez le laveur : rien ne change', async () => {

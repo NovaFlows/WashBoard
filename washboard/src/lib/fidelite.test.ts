@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesFideliteSchema, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, partiesOffertes, phraseCarte, recompenseCourte, remiseFidelite } from './fidelite'
+import { ReglagesFideliteSchema, cleFidelite, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, numeroStable, partiesOffertes, phraseCarte, recompenseCourte, remiseFidelite, tamponsPour } from './fidelite'
 
 const fait = (n: number) => Array.from({ length: n }, () => ({ status: 'done' }))
 
@@ -15,6 +15,13 @@ describe('etatCarte', () => {
   })
   it('annuler la réservation qui utilisait la récompense la rend', () => {
     expect(etatCarte([...fait(10), { status: 'cancelled', fidelite_remise: 45 }], 0, 10).disponibles).toBe(1)
+  })
+  it('un tampon par véhicule quand le laveur l’a choisi, un par réservation sinon', () => {
+    const resas = [{ status: 'done', vehicle_count: 3 }, { status: 'done', vehicle_count: 1 }, { status: 'cancelled', vehicle_count: 4 }]
+    expect(etatCarte(resas, 0, 10).total).toBe(2)
+    expect(etatCarte(resas, 0, 10, true).total).toBe(4)
+    expect(tamponsPour({ vehicle_count: null }, true)).toBe(1)
+    expect(tamponsPour({ vehicle_count: 3 }, false)).toBe(1)
   })
   it('l’ajustement du laveur ajoute ou retire des tampons, jamais sous zéro', () => {
     expect(etatCarte(fait(3), 2, 10).total).toBe(5)
@@ -44,6 +51,21 @@ describe('récompense', () => {
     expect(phraseCarte({ total: 7, progression: 7, requis: 10, disponibles: 0 }, { recompense: 'offerte', valeur: 0, offre_options: false })).toBe('Plus que 3 prestations avant une prestation offerte.')
     expect(phraseCarte({ total: 9, progression: 9, requis: 10, disponibles: 0 }, { recompense: 'offerte', valeur: 0, offre_options: false })).toBe('Plus que 1 prestation avant une prestation offerte.')
     expect(phraseCarte({ total: 10, progression: 0, requis: 10, disponibles: 1 }, { recompense: 'montant', valeur: 15 })).toMatch(/^Récompense débloquée : −15 € sur une prestation/)
+  })
+})
+
+describe('client reconnu par son téléphone', () => {
+  it('un même numéro, quelle que soit sa façon de l’écrire', () => {
+    const cle = cleFidelite(null, '06 12 34 56 78')
+    expect(cle).toBe('tel:33612345678')
+    expect(cleFidelite('autre@mail.fr', '+33 6 12 34 56 78')).toBe(cle)
+    expect(cleFidelite(null, '0033612345678')).toBe(cle)
+    expect(cleFidelite(null, '06.12.34.56.78')).toBe(cle)
+  })
+  it('le téléphone passe avant l’email ; sans téléphone, l’email', () => {
+    expect(cleFidelite('Nadia@Example.com', '')).toBe('nadia@example.com')
+    expect(cleFidelite(null, null)).toBe('')
+    expect(numeroStable('12')).toBeNull()
   })
 })
 

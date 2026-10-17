@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit, clientIp } from '@/lib/rateLimit'
-import { cleClient } from '@/lib/clientProfile'
-import { fideliteActive, partiesOffertes, phraseCarte, remiseFidelite } from '@/lib/fidelite'
+import { cleFidelite, fideliteActive, partiesOffertes, phraseCarte, remiseFidelite } from '@/lib/fidelite'
 import { etatDuClient, lireCarte } from '@/lib/fideliteServeur'
 
 // Aperçu de la carte de fidélité au moment où le client a donné ses coordonnées, juste avant
@@ -32,7 +31,7 @@ export async function POST(request: NextRequest) {
   const lu = Corps.safeParse(await request.json().catch(() => null))
   if (!lu.success) return NextResponse.json({ active: false }, { status: 400 })
   const { washerId, email, telephone, prestation, options, deplacement } = lu.data
-  const cle = cleClient(email, telephone)
+  const cle = cleFidelite(email, telephone)
   if (!cle) return NextResponse.json({ active: false })
 
   const admin = createAdminClient()
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest) {
   if (!reglages) return NextResponse.json({ active: false })
 
   const carte = await lireCarte(admin, washerId, cle)
-  const etat = await etatDuClient(admin, washerId, cle, reglages.tampons, carte?.ajustement ?? 0)
+  const etat = await etatDuClient(admin, washerId, cle, reglages.tampons, carte?.ajustement ?? 0, reglages.tampon_par_vehicule)
   if (!etat) return NextResponse.json({ active: false })
 
   const remise = etat.disponibles > 0 ? remiseFidelite(reglages, { prestation, options, deplacement }) : 0

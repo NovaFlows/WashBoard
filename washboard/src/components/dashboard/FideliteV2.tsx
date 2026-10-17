@@ -20,12 +20,13 @@ import CarteFidelite3D, { type CommandesCarte, type ScenarioCarte } from '@/comp
 
 type Brouillon = {
   actif: boolean; tampons: number; recompense: TypeRecompense; valeur: string; offre_options: boolean; offre_deplacement: boolean
+  tampon_par_vehicule: boolean
   /** `null` : la couleur de marque du laveur (ou le violet par défaut). */
   couleur: string | null; finition: FinitionCarte
   /** `null` : le logo s'il y en a un, sinon l'initiale. */
   embleme: EmblemeCarte | null
 }
-const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20', offre_options: true, offre_deplacement: false, couleur: null, finition: 'holo', embleme: null }
+const DEFAUT: Brouillon = { actif: false, tampons: 10, recompense: 'offerte', valeur: '20', offre_options: true, offre_deplacement: false, tampon_par_vehicule: false, couleur: null, finition: 'holo', embleme: null }
 
 /** L'exemple de départ de l'aperçu : un client qui a fait 3 prestations. Le laveur peut en
  *  ajouter jusqu'à la carte pleine pour voir l'animation de la récompense (2026-10-18). */
@@ -111,7 +112,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           actif: b.actif, tampons: b.tampons, recompense: b.recompense, valeur: b.recompense === 'offerte' ? 0 : valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement,
-          finition: b.finition, ...(b.couleur ? { couleur: b.couleur } : {}), ...(b.embleme ? { embleme: b.embleme } : {}),
+          tampon_par_vehicule: b.tampon_par_vehicule, finition: b.finition, ...(b.couleur ? { couleur: b.couleur } : {}), ...(b.embleme ? { embleme: b.embleme } : {}),
         }),
       })
       const json = await res.json().catch(() => null)
@@ -161,6 +162,14 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                   <input aria-label="Autre nombre de tampons" inputMode="numeric" className={`${CHAMP} !w-24`}
                     value={TAMPONS_PROPOSES.includes(b.tampons as (typeof TAMPONS_PROPOSES)[number]) ? '' : String(b.tampons)} placeholder="Autre"
                     onChange={e => { const n = Number(e.target.value.replace(/\D/g, '')); if (n) maj({ tampons: Math.min(30, Math.max(2, n)) }) }} />
+                </div>
+
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[15px] ${corps}`}>Un tampon par véhicule</p>
+                    <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>Une réservation pour 3 véhicules donne 3 tampons</p>
+                  </div>
+                  <Interrupteur actif={b.tampon_par_vehicule} enCours={false} libelle="Un tampon par véhicule" onClick={() => maj({ tampon_par_vehicule: !b.tampon_par_vehicule })} />
                 </div>
 
                 <p className={`${ETIQUETTE} mt-5`}>Récompense</p>

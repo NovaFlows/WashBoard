@@ -34,6 +34,9 @@ type Props = {
   /** La récompense en deux mots (`recompenseCourte`). */
   recompense: string
   scenario: ScenarioCarte
+  /** Tampons apportés par la prestation (un par véhicule si le laveur l'a choisi) : ceux qui
+   *  frappent la carte en scénario `tampon`, et le « +N » du tampon en attente. */
+  nouveaux?: number
   /** Phrase affichée sous la carte une fois l'animation jouée. */
   legende?: string | null
   /** Largeur maximale de la carte, en pixels. */
@@ -68,13 +71,14 @@ function disposition(n: number) {
   return { cols: Math.ceil(n / rangs), rangs }
 }
 
-export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, requis, tampons, recompense, scenario, legende, largeur = 360, halo = true, ref }: Props) {
+export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, requis, tampons, recompense, scenario, nouveaux = 1, legende, largeur = 360, halo = true, ref }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const idEncre = `wb-cf-encre-${uid}`
   const idOr = `wb-cf-or-${uid}`
   const final = borne(Math.round(tampons), 0, requis)
+  const arrivent = borne(Math.round(nouveaux), 1, Math.max(1, final))
 
-  const [pleins, setPleins] = useState(() => (scenario === 'tampon' ? Math.max(0, final - 1) : final))
+  const [pleins, setPleins] = useState(() => (scenario === 'tampon' ? Math.max(0, final - arrivent) : final))
   const [fantome, setFantome] = useState<Fantome>(() => (scenario === 'tampon' && final > 0 ? 'fixe' : 'non'))
   const [frappe, setFrappe] = useState<number | null>(null)
   const [gouttes, setGouttes] = useState<Goutte[]>([])
@@ -95,7 +99,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
   const grille = useRef<HTMLDivElement>(null)
   const moteur = useRef<Moteur | null>(null)
   const teinte = useRef(teintesCarte(couleur).lueur)
-  const depart = useRef({ scenario, final, requis })
+  const depart = useRef({ scenario, final, requis, arrivent })
   const geste = useRef({ pointeur: null as { x: number; y: number } | null, glisse: false, deplacement: 0, dernier: null as { x: number; y: number } | null })
 
   useEffect(() => { teinte.current = teintesCarte(couleur).lueur }, [couleur])
@@ -124,7 +128,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
   // Le moteur : inclinaison, rotation, reflets et particules, image par image, et le scénario.
   useEffect(() => {
     const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const { scenario: sc, final: fin, requis: req } = depart.current
+    const { scenario: sc, final: fin, requis: req, arrivent: arr } = depart.current
     const m = { spin: 0, tx: 0, ty: 0, choc: 0, chocX: 0, hb: 0, verrou: false, visible: true, particules: [] as Particule[] }
     let vivant = true
     let raf = 0
@@ -320,8 +324,12 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
       if (sc === 'tampon' && fin > 0) {
         await attente(380)
         if (!vivant) return
-        await frapper(fin - 1)
-        if (!vivant) return
+        // Plusieurs véhicules : les tampons frappent l'un après l'autre.
+        for (let i = fin - arr; i < fin; i++) {
+          await frapper(i)
+          if (!vivant) return
+          if (i < fin - 1) await attente(120)
+        }
         setLegendeVisible(true)
         if (fin >= req) await celebrer()
       } else {
@@ -443,7 +451,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
                           {tamponne
                             ? <Tampon i={i} dore={dore} frappe={enFrappe} idEncre={idEncre} idOr={idOr} />
                             : i === nPleins && fantome !== 'non' && scenario !== 'apercu'
-                              ? <TamponEnAttente dessine={fantome === 'dessine'} />
+                              ? <TamponEnAttente dessine={fantome === 'dessine'} nombre={scenario === 'reservation' ? nouveaux : 1} />
                               : <CaseVide n={i + 1} cadeau={dore} />}
                           {enFrappe && (
                             <>
@@ -501,13 +509,13 @@ function Tampon({ i, dore, frappe, idEncre, idOr }: { i: number; dore: boolean; 
 // Les chiffres sont du texte HTML posé sur le cercle, pas du `<text>` SVG : dans une carte en
 // 3D, Chrome dessinait le texte SVG décalé et trop gros (vu en capture le 2026-10-18, alors que
 // sa position mesurée était juste).
-function TamponEnAttente({ dessine }: { dessine: boolean }) {
+function TamponEnAttente({ dessine, nombre }: { dessine: boolean; nombre: number }) {
   return (
     <>
       <svg className={`wb-cf-fantome${dessine ? ' wb-cf-dessine' : ''}`} viewBox="0 0 40 40" aria-hidden>
         <circle className="wb-cf-anneau" cx="20" cy="20" r="16" pathLength={100} />
       </svg>
-      <span className="wb-cf-num wb-cf-plus" data-dessine={dessine ? 'oui' : 'non'} aria-hidden>+1</span>
+      <span className="wb-cf-num wb-cf-plus" data-dessine={dessine ? 'oui' : 'non'} aria-hidden>+{Math.max(1, Math.round(nombre))}</span>
     </>
   )
 }

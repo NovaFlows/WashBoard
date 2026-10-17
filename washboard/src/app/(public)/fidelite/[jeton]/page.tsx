@@ -12,9 +12,10 @@ import CarteFidelite3D from '@/components/fidelite/CarteFidelite3D'
 // Publique, sans compte : le jeton imprévisible de l'adresse tient lieu d'accès. Aucune
 // donnée personnelle n'y figure (ni nom, ni email, ni téléphone du client).
 //
-// `?tampon=1` : le client arrive de l'email « Votre tampon est arrivé » (envoyé quand le
-// laveur marque la prestation terminée, `api/bookings/[id]`) — le dernier tampon frappe la
-// carte sous ses yeux. Sans ce paramètre, la carte est simplement montrée.
+// `?tampon=N` : le client arrive de l'email « Votre tampon est arrivé » (envoyé quand le
+// laveur marque la prestation terminée, `api/bookings/[id]`) — les N derniers tampons (un par
+// véhicule si le laveur l'a choisi) frappent la carte sous ses yeux. Sans ce paramètre, la
+// carte est simplement montrée.
 
 export const metadata: Metadata = {
   title: 'Ma carte de fidélité',
@@ -37,11 +38,12 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
   if (!laveur || laveur.account_status !== 'active') notFound()
 
   const reglages = fideliteActive(laveur.fidelite)
-  const etat = reglages ? await etatDuClient(admin, laveur.id, carte.cle as string, reglages.tampons, Number(carte.ajustement ?? 0)) : null
+  const etat = reglages ? await etatDuClient(admin, laveur.id, carte.cle as string, reglages.tampons, Number(carte.ajustement ?? 0), reglages.tampon_par_vehicule) : null
   const apparence = reglages ? apparenceCarte(laveur, reglages, jeton) : null
   // La carte en cours ; complète (récompense pas encore utilisée), elle reste pleine.
   const surLaCarte = etat ? (etat.disponibles > 0 ? etat.requis : etat.progression) : 0
-  const scenario = tampon === '1' && surLaCarte > 0 ? 'tampon' : 'consultation'
+  const nouveaux = Math.min(Math.max(0, Math.floor(Number(tampon) || 0)), surLaCarte)
+  const scenario = nouveaux > 0 ? 'tampon' : 'consultation'
   const complete = etat ? surLaCarte >= etat.requis : false
 
   return (
@@ -55,7 +57,7 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
         </Link>
         <p className="text-[13px] font-medium text-[#6B6B76] dark:text-[#9A9AA4]">{laveur.name}</p>
         <h1 className="mt-1 text-[30px] font-bold leading-[1.05] tracking-[-0.03em] [font-stretch:112%]">
-          {scenario === 'tampon' ? (complete ? 'Votre carte est complète' : 'Votre tampon est arrivé') : 'Ma carte de fidélité'}
+          {scenario === 'tampon' ? (complete ? 'Votre carte est complète' : nouveaux > 1 ? `Vos ${nouveaux} tampons sont arrivés` : 'Votre tampon est arrivé') : 'Ma carte de fidélité'}
         </h1>
 
         {reglages && etat && apparence ? (
@@ -66,13 +68,14 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
                 requis={etat.requis}
                 tampons={surLaCarte}
                 scenario={scenario}
+                nouveaux={Math.max(1, nouveaux)}
                 largeur={380}
-                legende={scenario === 'tampon' ? (complete ? 'Carte complète · récompense débloquée' : `+1 tampon · ${surLaCarte} sur ${etat.requis}`) : null}
+                legende={scenario === 'tampon' ? (complete ? 'Carte complète · récompense débloquée' : `+${nouveaux} tampon${nouveaux > 1 ? 's' : ''} · ${surLaCarte} sur ${etat.requis}`) : null}
               />
             </div>
             <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages)}</p>
             <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">
-              Un tampon par prestation terminée. Réservez avec la même adresse email pour qu’il compte. Touchez la carte pour la retourner.
+              {reglages.tampon_par_vehicule ? 'Un tampon par véhicule lavé' : 'Un tampon par prestation terminée'}. Réservez avec le même numéro de téléphone pour qu’il compte. Touchez la carte pour la retourner.
             </p>
           </>
         ) : (

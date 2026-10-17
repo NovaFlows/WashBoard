@@ -1350,11 +1350,13 @@ export async function sendAnnulationAcompte({ to, clientName, washerName, schedu
  *  (`api/bookings/[id]` → `prevenirTampon`, option C retenue par Alexandre le 2026-10-18). Le
  *  lien ouvre la page carte avec `?tampon=1`, où le tampon frappe la carte sous ses yeux. La
  *  carte du message reprend la couleur choisie par le laveur, pas le bleu WashBoard. */
-export async function sendTamponFidelite({ to, clientName, washerName, url, tampons, requis, complete, phrase, couleur }: {
+export async function sendTamponFidelite({ to, clientName, washerName, url, nouveaux = 1, tampons, requis, complete, phrase, couleur }: {
   to: string
   clientName: string | null
   washerName: string
   url: string
+  /** Tampons apportés par cette prestation (un par véhicule si le laveur l'a choisi). */
+  nouveaux?: number
   /** Tampons sur la carte, ce dernier compris. */
   tampons: number
   requis: number
@@ -1365,7 +1367,7 @@ export async function sendTamponFidelite({ to, clientName, washerName, url, tamp
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const t = teintesCarte(couleur)
-  const titre = complete ? 'Votre carte est complète' : 'Votre tampon est arrivé'
+  const titre = complete ? 'Votre carte est complète' : nouveaux > 1 ? `Vos ${nouveaux} tampons sont arrivés` : 'Votre tampon est arrivé'
   const ronds = Array.from({ length: requis }, (_, i) => {
     if (i >= tampons) return `<span style="display:inline-block;box-sizing:border-box;width:18px;height:18px;border-radius:9px;border:2px solid rgba(255,255,255,.42);margin:0 6px 6px 0;"></span>`
     const dernier = complete && i === requis - 1
@@ -1375,7 +1377,7 @@ export async function sendTamponFidelite({ to, clientName, washerName, url, tamp
   return resend.emails.send({
     from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
     to,
-    subject: complete ? `Votre carte de fidélité ${washerName} est complète` : `Votre tampon ${washerName} est arrivé`,
+    subject: complete ? `Votre carte de fidélité ${washerName} est complète` : nouveaux > 1 ? `Vos ${nouveaux} tampons ${washerName} sont arrivés` : `Votre tampon ${washerName} est arrivé`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1397,7 +1399,7 @@ export async function sendTamponFidelite({ to, clientName, washerName, url, tamp
       <div style="margin-top:18px;line-height:0;font-size:0;">${ronds}</div>
     </div>
     <p style="margin:18px 0 22px;font-size:15px;line-height:1.5;color:#16161A;">${escapeHtml(phrase)}</p>
-    <a href="${escapeHtml(url)}" style="display:inline-block;background:#16161A;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;padding:15px 26px;border-radius:14px;">${complete ? 'Voir ma carte' : 'Voir mon tampon'}</a>
+    <a href="${escapeHtml(url)}" style="display:inline-block;background:#16161A;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;padding:15px 26px;border-radius:14px;">${complete ? 'Voir ma carte' : nouveaux > 1 ? 'Voir mes tampons' : 'Voir mon tampon'}</a>
     <p style="margin:28px 0 0;font-size:11.5px;line-height:1.5;color:#9A9AA4;">Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}.</p>
   </div>
 </body>

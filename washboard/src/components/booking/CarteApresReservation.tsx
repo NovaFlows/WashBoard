@@ -12,6 +12,8 @@ export type FideliteDue = {
   phrase: string
   /** Absente d'une réponse antérieure à la carte en 3D : on retombe alors sur l'encart texte. */
   carte?: ApparenceCarte
+  /** Tampons que rapportera cette réservation une fois terminée (un par véhicule au choix du laveur). */
+  gain?: number
 }
 
 // Sur l'écran de confirmation : la récompense appliquée s'il y en a eu une, puis la carte qui
@@ -23,6 +25,7 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
   const complete = etat.disponibles > 0
   const surLaCarte = complete ? etat.requis : etat.progression
   const lien = `/fidelite/${fidelite.jeton}`
+  const gain = Math.max(1, fidelite.gain ?? 1)
 
   if (!carte) {
     return (
@@ -48,8 +51,9 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
           requis={etat.requis}
           tampons={surLaCarte}
           scenario="reservation"
+          nouveaux={gain}
           largeur={340}
-          legende={complete ? 'Votre récompense vous attend pour la prochaine réservation' : '+1 tampon dès que la prestation sera terminée'}
+          legende={complete ? 'Votre récompense vous attend pour la prochaine réservation' : `+${gain} tampon${gain > 1 ? 's' : ''} dès que la prestation sera terminée`}
         />
       </div>
       <p className="mt-1 text-[13px] leading-snug text-slate-500 dark:text-slate-400">{fidelite.phrase}</p>

@@ -6,9 +6,8 @@ import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { remisePromotion } from '@/lib/promotion'
-import { etatCarte, fideliteActive, phraseCarte, remiseFidelite, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
+import { cleFidelite, etatCarte, fideliteActive, phraseCarte, remiseFidelite, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
 import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte, type Carte } from '@/lib/fideliteServeur'
-import { cleClient } from '@/lib/clientProfile'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
@@ -537,7 +536,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // colonne pas encore créée ne fait pas échouer la réservation.
   let fidelite: { reglages: ReglagesFidelite; carte: Carte; etat: EtatCarte; reservations: ReservationCarte[]; remise: number; apparence: ApparenceCarte } | null = null
   if (!isOwner) {
-    const cle = cleClient(bookingData.client_email, bookingData.client_phone)
+    const cle = cleFidelite(bookingData.client_email, bookingData.client_phone)
     const { data: ficheFidelite, error: errFidelite } = await supabase
       .from('washers').select('fidelite, brand_color, logo_url, profile_updated_at').eq('id', bookingData.washer_id).maybeSingle()
     if (errFidelite && !migrationEnAttente(errFidelite)) logger.error('bookings.fidelite.read_failed', { washerId: bookingData.washer_id }, errFidelite)
@@ -548,7 +547,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         reservationsDuClient(supabase, bookingData.washer_id, cle),
       ])
       if (carte && reservations) {
-        const etat = etatCarte(reservations, carte.ajustement, reglages.tampons)
+        const etat = etatCarte(reservations, carte.ajustement, reglages.tampons, reglages.tampon_par_vehicule)
         // La promotion porte sur prestation + options : on la retire d'abord de la prestation.
         const prestationApresPromo = Math.max(0, prix_vehicules - (promotion?.remise ?? 0))
         const optionsApresPromo = Math.max(0, prix_options - Math.max(0, (promotion?.remise ?? 0) - prix_vehicules))
@@ -696,7 +695,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         notes: bookingData.notes ?? undefined,
         selectedAddons: selected_addons ?? undefined,
         fidelite: fidelite ? (() => {
-          const e = etatCarte([...fidelite.reservations, { status: 'pending', fidelite_remise: fidelite.remise }], fidelite.carte.ajustement, fidelite.reglages.tampons)
+          const e = etatCarte([...fidelite.reservations, { status: 'pending', fidelite_remise: fidelite.remise }], fidelite.carte.ajustement, fidelite.reglages.tampons, fidelite.reglages.tampon_par_vehicule)
           return { url: `${SITE_URL_FALLBACK}/fidelite/${fidelite.carte.jeton}`, progression: e.progression, requis: e.requis, phrase: phraseCarte(e, fidelite.reglages) }
         })() : undefined,
         acompte: acompte ? { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), conditions: conditionsAcompte(acompte.reglages) } : undefined,
@@ -799,13 +798,13 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // c'est précisément ce jeton qui ouvre le PDF d'une réservation verrouillée.
   const jeton = isOwner ? null : genererJetonReservation(id)
   const etatApres = fidelite
-    ? etatCarte([...fidelite.reservations, { status: 'pending', fidelite_remise: fidelite.remise }], fidelite.carte.ajustement, fidelite.reglages.tampons)
+    ? etatCarte([...fidelite.reservations, { status: 'pending', fidelite_remise: fidelite.remise }], fidelite.carte.ajustement, fidelite.reglages.tampons, fidelite.reglages.tampon_par_vehicule)
     : null
   return Response.json({
     data: {
       id, booked_price, jeton,
       // La carte APRÈS cette réservation : la récompense utilisée n'est plus disponible.
-      ...(fidelite && etatApres ? { fidelite: { jeton: fidelite.carte.jeton, remise: fidelite.remise, etat: etatApres, phrase: phraseCarte(etatApres, fidelite.reglages), carte: fidelite.apparence } } : {}),
+      ...(fidelite && etatApres ? { fidelite: { jeton: fidelite.carte.jeton, remise: fidelite.remise, etat: etatApres, phrase: phraseCarte(etatApres, fidelite.reglages), carte: fidelite.apparence, gain: tamponsPour({ vehicle_count: count }, fidelite.reglages.tampon_par_vehicule) } } : {}),
       ...(acompte ? { acompte: { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), echeance: acompte.echeance, conditions: conditionsAcompte(acompte.reglages) } } : {}),
     },
   }, { status: 201 })

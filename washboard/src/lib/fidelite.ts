@@ -13,9 +13,12 @@ import { EMBLEMES_CARTE, FINITIONS_CARTE } from '@/lib/carteFidelite'
 //   compte jamais ; le laveur peut ajouter ou retirer un tampon à la main.
 //
 // Rien n'est stocké tampon par tampon : la carte se RECALCULE à partir des réservations du
-// client (même identification que le reste du CRM, `cleClient` : email, à défaut téléphone),
-// plus l'ajustement manuel du laveur. Une réservation corrigée ou annulée après coup met donc
-// la carte à jour d'elle-même.
+// client, plus l'ajustement manuel du laveur. Une réservation corrigée ou annulée après coup
+// met donc la carte à jour d'elle-même.
+//
+// Le client est reconnu par son TÉLÉPHONE, pas par son email (décision d'Alexandre,
+// 2026-10-18) : `cleFidelite`. À la différence du CRM (`cleClient`, email d'abord), une
+// adresse mal tapée ou absente ne coupe plus la carte en deux. Sans téléphone, l'email.
 
 export const TAMPONS_PROPOSES = [5, 8, 10, 12] as const
 export const TYPES_RECOMPENSE = ['offerte', 'pourcentage', 'montant'] as const
@@ -31,6 +34,8 @@ export const ReglagesFideliteSchema = z.object({
    *  (demande d'Alexandre, 2026-10-17 : au choix du laveur). Ignorés pour une remise. */
   offre_options: z.boolean().optional().default(true),
   offre_deplacement: z.boolean().optional().default(false),
+  /** Une réservation pour 3 véhicules donne 3 tampons (au choix du laveur, 2026-10-18). */
+  tampon_par_vehicule: z.boolean().optional().default(false),
   /** Apparence de la carte (lib/carteFidelite.ts). Couleur absente : celle de marque du laveur. */
   couleur: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur invalide.').optional(),
   finition: z.enum(FINITIONS_CARTE).optional().default('holo'),
@@ -52,7 +57,28 @@ export function fideliteActive(brut: unknown): ReglagesFidelite | null {
   return r.success && r.data.actif ? r.data : null
 }
 
-export type ReservationCarte = { status: string; fidelite_remise?: number | null }
+export type ReservationCarte = { status: string; fidelite_remise?: number | null; vehicle_count?: number | null }
+
+/** Les tampons qu'apporte une réservation terminée : un, ou un par véhicule si le laveur l'a choisi. */
+export function tamponsPour(r: Pick<ReservationCarte, 'vehicle_count'>, parVehicule: boolean | undefined): number {
+  return parVehicule ? Math.max(1, Math.round(Number(r.vehicle_count ?? 1)) || 1) : 1
+}
+
+/** Le numéro écrit d'une seule façon : « 06 12 34 56 78 », « +33 6 12 34 56 78 » et
+ *  « 0033612345678 » donnent tous 33612345678. `null` s'il n'y a pas de quoi faire un numéro. */
+export function numeroStable(telephone: string | null | undefined): string | null {
+  const d = (telephone ?? '').replace(/\D/g, '')
+  if (d.length === 10 && d.startsWith('0')) return `33${d.slice(1)}`
+  if (d.length === 13 && d.startsWith('0033')) return d.slice(2)
+  return d.length >= 8 ? d : null
+}
+
+/** La clé de la carte d'un client chez un laveur : son téléphone, à défaut son email. */
+export function cleFidelite(email: string | null | undefined, telephone: string | null | undefined): string {
+  const tel = numeroStable(telephone)
+  if (tel) return `tel:${tel}`
+  return email?.trim().toLowerCase() ?? ''
+}
 
 export type EtatCarte = {
   /** Tampons gagnés depuis le début (prestations terminées + ajustement du laveur). */
@@ -64,8 +90,8 @@ export type EtatCarte = {
   disponibles: number
 }
 
-export function etatCarte(reservations: readonly ReservationCarte[], ajustement: number, requis: number): EtatCarte {
-  const terminees = reservations.filter(r => r.status === 'done').length
+export function etatCarte(reservations: readonly ReservationCarte[], ajustement: number, requis: number, parVehicule = false): EtatCarte {
+  const terminees = reservations.reduce((n, r) => n + (r.status === 'done' ? tamponsPour(r, parVehicule) : 0), 0)
   const total = Math.max(0, terminees + ajustement)
   // Une récompense est « utilisée » par une réservation qui l'a reçue et n'a pas été annulée :
   // annuler rend la récompense, comme si elle n'avait pas servi.
