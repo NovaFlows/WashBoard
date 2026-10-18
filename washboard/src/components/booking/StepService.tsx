@@ -6,7 +6,7 @@ import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
 import { hex } from '@/lib/colorUtils'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
-import SilhouetteVehicule3D, { prechargerSilhouettes } from './SilhouetteVehicule3D'
+import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 type Props = {
   services: Service[]
@@ -320,10 +320,10 @@ export default function StepService({ services, categories, selected, factureApr
           {selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
-            return (
-              <div style={{ '--booking-accent': accent } as React.CSSProperties}>
-                <SilhouetteVehicule3D key={affiche ?? 'aucun'} type={affiche} nom={affiche ? typeInfo(selectedService, affiche).name : null} />
-              </div>
+            return affiche && (
+              <ApparitionVehicule>
+                <SilhouetteVehicule3D key={affiche} type={affiche} nom={typeInfo(selectedService, affiche).name} />
+              </ApparitionVehicule>
             )
           })()}
           <div className="space-y-2">

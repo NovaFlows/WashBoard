@@ -7,7 +7,7 @@ import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pri
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
-import SilhouetteVehicule3D, { prechargerSilhouettes } from './SilhouetteVehicule3D'
+import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 /** Prix d'une prestation ; barré avec le prix remisé quand une promotion la concerne. */
 function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
@@ -78,7 +78,9 @@ export default function StepPrestation({ services, categories, form, onChange, p
         {categories.find(c => c.id === id)?.name ?? 'Autres'}
       </button>)}
     </div>}
-    {avecSilhouettes && <SilhouetteVehicule3D key={typeAffiche ?? 'aucun'} type={typeAffiche} nom={typeAffiche ? label(typeAffiche) : null} />}
+    {avecSilhouettes && typeAffiche && <ApparitionVehicule>
+      <SilhouetteVehicule3D key={typeAffiche} type={typeAffiche} nom={label(typeAffiche)} />
+    </ApparitionVehicule>}
     <div className="wb-booking-chips" aria-label="Type de véhicule">
       {types.map(type => <button key={type} type="button" aria-pressed={activeTypes.includes(type)} onClick={() => {
         setDernier(type)

@@ -45,6 +45,19 @@ export function prechargerSilhouettes(urls: readonly string[]) {
   else setTimeout(charger, 1200)
 }
 
+/** Ouvre la place du véhicule en douceur au premier choix, au lieu de faire sauter d'un coup
+ *  les boutons qui sont dessous. Ne pas lui donner de `key` : elle reste en place quand le
+ *  client change de véhicule, seul le véhicule qu'elle contient se rejoue. */
+export function ApparitionVehicule({ children }: { children: React.ReactNode }) {
+  const [ouverte, setOuverte] = useState(false)
+  return (
+    <div className="wb-sv-cadre" data-ouverte={ouverte ? 'oui' : 'non'}
+      onAnimationEnd={e => { if (e.target === e.currentTarget) setOuverte(true) }}>
+      {children}
+    </div>
+  )
+}
+
 function Face({ image, masque, cote, reflet, dos }: { image: string; masque: CSSProperties; cote: React.Ref<HTMLDivElement>; reflet: React.Ref<HTMLDivElement>; dos?: boolean }) {
   return (
     <div ref={cote} className="wb-sv-face" style={{ transform: `translateZ(${dos ? -EPAISSEUR / 2 : EPAISSEUR / 2}px)`, visibility: dos ? 'hidden' : 'visible' }}>
@@ -143,19 +156,8 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
     }
   }, [image])
 
-  // Avant le choix : la place reste réservée, une voiture estompée invite à choisir.
-  if (!type) {
-    return (
-      <div className="wb-sv" aria-hidden>
-        <div className="wb-sv-scene">
-          {/* eslint-disable-next-line @next/next/no-img-element -- image statique */}
-          <img src={silhouettePour('citadine')!} alt="" draggable={false} className="wb-sv-attente" />
-        </div>
-        <p className="wb-sv-nom">Choisissez votre véhicule</p>
-      </div>
-    )
-  }
-  // Un véhicule sans photo (moto, camping-car…) ou personnalisé : rien à montrer.
+  // Rien avant le choix (demande d'Alexandre, 2026-10-19 : « quand rien n'est sélectionné, je ne
+  // veux pas de visuel »), ni pour un véhicule sans photo (scooter, vélo) ou sans rapport.
   if (!image) return null
 
   const masque: CSSProperties = { WebkitMaskImage: `url(${image})`, maskImage: `url(${image})` }

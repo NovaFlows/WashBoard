@@ -16,7 +16,7 @@
 
 /* Les images sont déjà en « fantôme » gris très pâle, toutes du même ton
    (scripts/silhouettes/decoupe.py) : la voiture choisie a exactement l'aspect de l'image
-   d'attente. En sombre, le même fantôme, assombri. */
+   d'attente qui précédait le choix, retirée depuis. En sombre, le même fantôme, assombri. */
 /* La tranche : la voiture un peu plus grise, empilée dans l'épaisseur. */
 .wb-sv-couche { position: absolute; inset: 0; width: 100%; height: 100%; filter: brightness(.9); user-select: none; }
 .dark .wb-sv-couche { filter: brightness(.13); }
@@ -24,7 +24,7 @@
 /* Les deux faces : une seule est visible à la fois, choisie par le script selon l'angle. */
 .wb-sv-face { position: absolute; inset: 0; }
 .wb-sv-dessin { display: block; width: 100%; height: 100%; user-select: none; }
-.dark .wb-sv-dessin, .dark .wb-sv-attente { filter: brightness(.2); }
+.dark .wb-sv-dessin { filter: brightness(.2); }
 .wb-sv-reflet {
   position: absolute;
   inset: 0;
@@ -39,8 +39,11 @@
   mix-blend-mode: soft-light;
 }
 
-/* Avant le choix : la citadine, immobile. */
-.wb-sv-attente { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
+/* Rien avant le choix : au premier véhicule choisi, sa place s'ouvre en douceur
+   (ApparitionVehicule). Le rognage ne dure que le temps de l'ouverture, pour ne pas couper
+   ensuite la voiture quand elle penche. */
+.wb-sv-cadre[data-ouverte="non"] { overflow: hidden; animation: wb-sv-ouvrir .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes wb-sv-ouvrir { from { max-height: 0; } to { max-height: 240px; } }
 
 .wb-sv-ombre {
   position: absolute;
@@ -69,4 +72,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wb-sv-nom { transition: none; }
+  .wb-sv-cadre[data-ouverte="non"] { overflow: visible; animation: none; }
 }
