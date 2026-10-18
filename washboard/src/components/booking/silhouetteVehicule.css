@@ -1,0 +1,72 @@
+/* Véhicule 3D de la page de réservation (SilhouetteVehicule3D.tsx) — même esprit que la carte de
+   fidélité : la vraie voiture, détourée de sa photo et passée en gris très pâle, sur une plaque épaisse (tranche visible de
+   profil) qui fait un tour complet en apparaissant. Les images sont des WebP transparents
+   (public/silhouettes/) ; le reflet est découpé à leur forme par un masque. Fichier à part de
+   globals.css, sans `:has()` (piège Turbopack, mémoire du projet). */
+
+.wb-sv {
+  position: relative;
+  width: min(340px, 90%);
+  margin: 6px auto 2px;
+  perspective: 900px;
+}
+.wb-sv-scene { position: relative; aspect-ratio: 1040 / 420; }
+.wb-sv-objet { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.wb-sv-objet[data-cache="oui"] { opacity: 0; }
+
+/* Les images sont déjà en « fantôme » gris très pâle, toutes du même ton
+   (scripts/silhouettes/decoupe.py) : la voiture choisie a exactement l'aspect de l'image
+   d'attente. En sombre, le même fantôme, assombri. */
+/* La tranche : la voiture un peu plus grise, empilée dans l'épaisseur. */
+.wb-sv-couche { position: absolute; inset: 0; width: 100%; height: 100%; filter: brightness(.9); user-select: none; }
+.dark .wb-sv-couche { filter: brightness(.13); }
+
+/* Les deux faces : une seule est visible à la fois, choisie par le script selon l'angle. */
+.wb-sv-face { position: absolute; inset: 0; }
+.wb-sv-dessin { display: block; width: 100%; height: 100%; user-select: none; }
+.dark .wb-sv-dessin, .dark .wb-sv-attente { filter: brightness(.2); }
+.wb-sv-reflet {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%);
+  background-size: 300% 100%;
+  background-position: 50% 0;
+  mix-blend-mode: soft-light;
+}
+
+/* Avant le choix : la citadine, immobile. */
+.wb-sv-attente { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
+
+.wb-sv-ombre {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 78%;
+  height: 16px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(20, 20, 30, .1), transparent);
+  filter: blur(4px);
+  pointer-events: none;
+}
+.dark .wb-sv-ombre { background: radial-gradient(closest-side, rgba(0, 0, 0, .35), transparent); }
+.wb-sv-nom {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #A1A1AA;
+  transition: opacity .4s ease, transform .4s ease;
+}
+.wb-sv-nom[data-visible="non"] { opacity: 0; transform: translateY(4px); }
+.dark .wb-sv-nom { color: #71717A; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-sv-nom { transition: none; }
+}
