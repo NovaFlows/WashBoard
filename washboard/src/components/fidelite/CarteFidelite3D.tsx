@@ -50,12 +50,14 @@ export type CommandesCarte = {
   /** Fait frapper le tampon de la case `index` (comptée depuis 0), qui vient d'être ajouté à
    *  `tampons` ; la dernière case débloque la récompense, avec sa fête. */
   tamponner: (index: number, requis: number) => void
+  /** Retourne la carte d'un demi-tour (même geste qu'un toucher). */
+  retourner: () => void
 }
 
 type Fantome = 'non' | 'dessine' | 'fixe'
 type Goutte = { x: number; y: number; t: number }
 type Particule = { x: number; y: number; vx: number; vy: number; r: number; vie: number; g: number; bulle: boolean; fin?: number }
-type Moteur = { retourner: () => void } & CommandesCarte
+type Moteur = CommandesCarte
 
 const courbes = {
   lin: (p: number) => p,
@@ -103,7 +105,10 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
   const geste = useRef({ pointeur: null as { x: number; y: number } | null, glisse: false, deplacement: 0, dernier: null as { x: number; y: number } | null })
 
   useEffect(() => { teinte.current = teintesCarte(couleur).lueur }, [couleur])
-  useImperativeHandle(ref, () => ({ tamponner: (index, req) => moteur.current?.tamponner(index, req) }), [])
+  useImperativeHandle(ref, () => ({
+    tamponner: (index, req) => moteur.current?.tamponner(index, req),
+    retourner: () => moteur.current?.retourner(),
+  }), [])
 
   // Taille des cases du verso : la plus grande qui tient dans le panneau.
   useLayoutEffect(() => {

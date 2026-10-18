@@ -43,10 +43,22 @@ export const besoinsRows: string[][] = [
     `Oui, groupés au temps de trajet réel (formule ${requiredPlanLabel('creneaux_intelligents')})`,
   ],
   [
+    'Acompte à la réservation',
+    'À réclamer par message',
+    'Possible sur certains outils, souvent en option payante',
+    'Oui, payé par ton propre lien de paiement : WashBoard n’encaisse rien',
+  ],
+  [
     'Facturation conforme (SIRET, TVA, numérotation continue)',
     'Non — à refaire à part',
     'Non',
     `Oui, générée et envoyée automatiquement (formule ${requiredPlanLabel('facturation')})`,
+  ],
+  [
+    'Carte de fidélité',
+    'Carton papier, s’il ne le perd pas',
+    'Non',
+    'Oui, tampons et récompense appliqués automatiquement',
   ],
   [
     'Avis Google demandés après chaque prestation',

@@ -121,3 +121,21 @@ Colonnes `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz)
 - ~~Le REVOKE RLS sur `bookings`~~ **fait** : relu par `cyber`, exécuté en prod le 2026-10-04, vérifié (voir « Dernier travail » plus haut). Ne pas rouvrir.
 - Après la fusion de cette branche avec le chantier sécurité de Ryan : revérifier que le jeton PDF (`jeton` dans `BookingForm.tsx`/`StepConfirmation.tsx`) est toujours bien filé jusqu'au bouton de téléchargement dans la nouvelle présentation — les deux fichiers ont été réécrits en parallèle des deux côtés.
 - L'historique des conversations des comptes Claude n'a pas été importé. Reprendre à partir des fichiers disponibles et des indications de l'utilisateur.
+
+## Landing v2 repartie de zéro (branche `refonte/landing-v2`, 2026-10-18)
+- Remplace le chantier ci-dessous (refonte jugée insuffisante par Ryan) : nouvelle maquette validée par Ryan, dans la DA de l'app v2 — https://claude.ai/artifact/4vCgEYQ7JP6LZLfQaGBB5D (source : `WashBoard/landing_maquette/vitrine-v2.html`, hors dépôt). Branche partie de `refonte/landing-vitrine` + master.
+- Code : `components/landing/vitrine/` (une section par fichier, `vitrine.css`), démo manipulable dans `vitrine/demo/` (état partagé par contexte : téléphone du héros, démo téléphone/ordinateur et page de réservation client lisent le même état ; `demo.css`). Tout est scopé sous `.wb-vitrine`, jetons clair + `.dark .wb-vitrine`. `LandingPage.tsx` et `DemoDashboard.tsx` supprimés.
+- Carte de fidélité : le vrai `CarteFidelite3D` (journée, section fidélité, fin de réservation) ; `CommandesCarte.retourner` exposé pour la section fidélité.
+- Données : tarifs depuis `PLAN_CARDS`, FAQ depuis `lib/faq.ts` (question fidélité ajoutée, réponse « payer en ligne » corrigée pour l'acompte), comparatif depuis `lib/comparatifAuto.ts` (lignes acompte et fidélité ajoutées, visibles aussi sur /meilleur-logiciel-lavage-auto).
+- Même contrainte que la démo précédente : 100 % figée, aucune donnée réelle ni appel réseau. Les écrans d'app factices n'utilisent pas de balises h3–h6 (plan de page propre, relu par `seo-geo` le 2026-10-18 : aucun bloquant).
+- Reste ouvert (préexistant en prod) : `<link rel="preload">` de `/LogoWashBoard.png` (140 Ko) sur l'accueil sans image correspondante.
+
+## Refonte de la vitrine (branche `refonte/landing-vitrine`, 2026-10-17)
+- Chantier distinct de la refonte du dashboard ordinateur (`refonte/maquette-bureau`) : ici c'est la landing publique washboard.fr. Branche partie de `master`, poussée sur `origin`, pas encore fusionnée ni déployée.
+- Prototype de référence validé par Alexandre le 2026-10-14 (6 itérations) : https://claude.ai/artifact/8dxiU7GVd1M22PP4ZAV5tj — hero, storytelling en chapitres, dashboard/CRM cliquables, tarifs façon Rezam.
+- Fait (`f854197`) : hero — 5ᵉ slogan dans la rotation et ligne de réassurance alignée sur Étapes/FAQ.
+- Fait (`4a2d56b`) : `components/landing/DemoDashboard.tsx` — démo manipulable du tableau de bord dans la section « Le produit en vrai », ancre `#demo` et entrée « Démo » dans la nav. Quatre destinations réelles (Aujourd'hui/Agenda/Clients/Chiffres), un seul état partagé (prestation de 11:30 Terminée ou non) qui se répercute partout. La capture statique du CRM a été retirée de la page ; `/landing/crm-*.webp` reste dans `public/`.
+- **Contrainte à ne pas casser** : la démo est 100 % figée dans le composant — aucun Supabase, aucun compte de démonstration, aucun appel réseau, noms fictifs et montants illustratifs. Si quelqu'un veut la brancher sur de vraies données un jour, c'est une décision produit + sécurité à prendre explicitement (voir agent `cyber`).
+- **Point SEO** : le 1er slogan de `SLOGANS` est le H1 réel lu par Google et les IA (rendu serveur, avant la rotation JS). Mots-clés métier posés le 2026-09-28 — avis de l'agent `seo-geo` obligatoire avant de toucher à la position 0.
+- Vérifié : `tsc --noEmit` propre, `eslint` sans erreur sur les fichiers touchés (1 avertissement préexistant sur `ThemeToggle`), `next build` passe, captures Playwright du parcours complet en clair, sombre et mobile.
+- Reste à porter depuis le prototype : storytelling en chapitres, section créneaux intelligents interactive, tarifs façon Rezam. Rien de tout ça n'est commencé.

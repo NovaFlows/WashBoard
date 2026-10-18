@@ -1,4 +1,4 @@
-import LandingPage from '@/components/landing/LandingPage'
+import LandingVitrine from '@/components/landing/vitrine/LandingVitrine'
 import { buildSiteJsonLd } from '@/lib/siteJsonLd'
 
 export default function Home() {
@@ -11,7 +11,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingPage />
+      <LandingVitrine />
     </>
   )
 }

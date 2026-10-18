@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 // Réseaux sociaux de WashBoard : liste unique, réutilisée par le pied de page
-// public (LandingPage) et le menu du tableau de bord (Sidebar) — un logo se
+// public de la landing (PiedDePage) et le menu du tableau de bord (Sidebar) — un logo se
 // dessine une fois, pas à chaque endroit où il apparaît.
 //
 // Comptes confirmés (2026-09-15) : Instagram et TikTok. Le tableau est conçu

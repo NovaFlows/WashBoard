@@ -15,6 +15,14 @@ test.describe('Landing', () => {
     await expect(page.locator('a[href="/signup"]').first()).toBeVisible()
   })
 
+  test('le H1 rendu côté serveur porte les mots-clés métier', async ({ page }) => {
+    // Le premier slogan est celui que lisent Google et les IA avant toute rotation JS.
+    await page.goto('/')
+    await expect(page.locator('h1')).toContainText('Nettoyage, detailing auto.')
+    await expect(page.locator('h1')).toContainText('À domicile.')
+    await expect(page.locator('h2', { hasText: 'Le logiciel des pros du lavage auto et du detailing' })).toBeVisible()
+  })
+
   test('expose les données structurées Organization et SoftwareApplication', async ({ page }) => {
     await page.goto('/')
     const jsonLd = await page.locator('script[type="application/ld+json"]').first().textContent()

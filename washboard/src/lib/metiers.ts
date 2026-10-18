@@ -5,9 +5,8 @@
 // maillage automatique vers les articles du même thème (voir `@/lib/blog`).
 //
 // Une page n'existe ici qu'une fois écrite — jamais avant. La section
-// "Pour qui ?" de la landing (METIERS, dans LandingPage.tsx) ne fait un lien
-// vers une page métier que si son thème apparaît dans cette liste : ajouter
-// une entrée suffit à faire apparaître le lien, sans toucher à la landing.
+// colonne « Métiers » du pied de la landing (PiedDePage.tsx) liste ces pages
+// à la main : une nouvelle entrée ici demande d'y ajouter son lien.
 
 import type { Theme } from '@/lib/blog'
 
