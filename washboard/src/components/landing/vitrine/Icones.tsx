@@ -47,7 +47,7 @@ export function IcRaz() {
 }
 
 export function IcFleche() {
-  return <svg viewBox="0 0 52 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 8c15-4 30-2 44 6M41 9.5l6 4.5-6.5 3.5" /></svg>
+  return <svg viewBox="0 0 52 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 7c14-3 28-2 42 5M41.7 7 45 12l-6 .3" /></svg>
 }
 
 /** Signal et batterie de la barre d'état d'un téléphone. */

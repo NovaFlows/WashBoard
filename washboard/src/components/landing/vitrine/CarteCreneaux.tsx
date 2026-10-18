@@ -60,8 +60,8 @@ export default function CarteCreneaux({ avec }: { avec: boolean }) {
         {RUES_H.map((r, i) => <path key={`h${i}`} d={r.d} style={{ stroke: 'var(--filet)' }} strokeWidth={r.w} fill="none" />)}
         <path d="M-10 190 C 80 170 140 230 230 205 S 350 160 420 180" style={{ stroke: 'var(--accent-doux)' }} strokeWidth="16" fill="none" />
         <circle cx="293" cy="100" r="66" fill="none" style={{ stroke: 'var(--gris-2)' }} strokeDasharray="3 5" />
-        <path className="trajet" d={SANS} style={{ stroke: 'var(--rouge)', opacity: avec ? 0 : 1 }} strokeDasharray="1200" strokeDashoffset={avec ? 1200 : 0} />
-        <path className="trajet" d={AVEC} style={{ stroke: 'var(--accent)' }} strokeDasharray="900" strokeDashoffset={avec ? 0 : 900} />
+        <path className="trajet" d={SANS} style={{ stroke: 'var(--rouge)', opacity: avec ? 0 : 1 }} pathLength={100} strokeDasharray="100" strokeDashoffset={avec ? 100 : 0} />
+        <path className="trajet" d={AVEC} style={{ stroke: 'var(--accent)' }} pathLength={100} strokeDasharray="100" strokeDashoffset={avec ? 0 : 100} />
         <Epingle p={A} t="09:00" /><Epingle p={B} t="14:00" /><Epingle p={C} t="15:30" coul="var(--vert)" />
         <g transform={`translate(${H[0]} ${H[1]})`}>
           <circle r="13" style={{ fill: 'var(--encre)' }} />
