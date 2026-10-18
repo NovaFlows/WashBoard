@@ -6,9 +6,9 @@ import './silhouetteVehicule.css'
 
 // Le véhicule choisi sur la page de réservation, en 3D (demande d'Alexandre, 2026-10-18 :
 // « comme la carte, une animation rotation 3D 360 », puis la vraie voiture détourée de sa photo
-// plutôt qu'une silhouette dessinée). Une plaque épaisse : la photo devant, la même vue de dos
-// (donc tournée vers la gauche) et des couches assombries entre les deux, qui font la tranche
-// quand elle passe de profil. À chaque nouveau véhicule, elle apparaît en faisant un tour
+// plutôt qu'une silhouette dessinée). Une plaque épaisse : la photo devant, la même au dos (vue
+// de derrière, donc en miroir, tournée vers la gauche) et des couches assombries entre les deux,
+// qui font la tranche quand elle passe de profil. À chaque nouveau véhicule, elle apparaît en faisant un tour
 // complet ; ensuite elle flotte et suit la souris. Un reflet balaie la carrosserie, découpé à sa
 // forme par un masque CSS. Le parent change la `key` pour rejouer.
 
@@ -47,9 +47,9 @@ export function prechargerSilhouettes(types: readonly string[]) {
   else setTimeout(charger, 1200)
 }
 
-function Face({ image, masque, reflet, dos }: { image: string; masque: CSSProperties; reflet: React.Ref<HTMLDivElement>; dos?: boolean }) {
+function Face({ image, masque, cote, reflet, dos }: { image: string; masque: CSSProperties; cote: React.Ref<HTMLDivElement>; reflet: React.Ref<HTMLDivElement>; dos?: boolean }) {
   return (
-    <div className="wb-sv-face" style={{ transform: `${dos ? 'rotateY(180deg) ' : ''}translateZ(${EPAISSEUR / 2}px)` }}>
+    <div ref={cote} className="wb-sv-face" style={{ transform: `translateZ(${dos ? -EPAISSEUR / 2 : EPAISSEUR / 2}px)`, visibility: dos ? 'hidden' : 'visible' }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- image statique, mise en couches 3D */}
       <img src={image} alt="" draggable={false} className="wb-sv-dessin" />
       <div ref={reflet} className="wb-sv-reflet" style={masque} />
@@ -62,6 +62,8 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
   const scene = useRef<HTMLDivElement>(null)
   const objet = useRef<HTMLDivElement>(null)
   const ombre = useRef<HTMLDivElement>(null)
+  const faceAvant = useRef<HTMLDivElement>(null)
+  const faceArriere = useRef<HTMLDivElement>(null)
   const refletAvant = useRef<HTMLDivElement>(null)
   const refletArriere = useRef<HTMLDivElement>(null)
   const pointeur = useRef<{ x: number; y: number } | null>(null)
@@ -101,8 +103,14 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
       const angle = tour + m.ty
       el.style.opacity = String(Math.min(1, p * 3))
       el.style.transform = `translateY(${flotte.toFixed(2)}px) rotateX(${m.tx.toFixed(2)}deg) rotateY(${angle.toFixed(2)}deg) scale(${echelle.toFixed(3)})`
-      // Le reflet balaie la carrosserie à mesure qu'elle tourne.
       const a = (angle * Math.PI) / 180
+      // Une seule face à la fois, choisie ici plutôt que par `backface-visibility` : Safari
+      // (iPhone) affiche quand même la face de dos à travers les zones transparentes de la
+      // photo, et la voiture se voyait doublée de son reflet en miroir (2026-10-18).
+      const deFace = Math.cos(a) >= 0
+      if (faceAvant.current) faceAvant.current.style.visibility = deFace ? 'visible' : 'hidden'
+      if (faceArriere.current) faceArriere.current.style.visibility = deFace ? 'hidden' : 'visible'
+      // Le reflet balaie la carrosserie à mesure qu'elle tourne.
       const x = `${(50 - Math.sin(a) * 70).toFixed(1)}% 0`
       if (refletAvant.current) refletAvant.current.style.backgroundPosition = x
       if (refletArriere.current) refletArriere.current.style.backgroundPosition = x
@@ -164,8 +172,8 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
             // eslint-disable-next-line @next/next/no-img-element -- image statique, mise en couches 3D
             <img key={i} src={image} alt="" draggable={false} className="wb-sv-couche" style={{ transform: `translateZ(${z.toFixed(2)}px)` }} />
           ))}
-          <Face image={image} masque={masque} reflet={refletAvant} />
-          <Face image={image} masque={masque} reflet={refletArriere} dos />
+          <Face image={image} masque={masque} cote={faceAvant} reflet={refletAvant} />
+          <Face image={image} masque={masque} cote={faceArriere} reflet={refletArriere} dos />
         </div>
       </div>
       {nom && <p className="wb-sv-nom" data-visible={nomVisible ? 'oui' : 'non'}>{nom}</p>}
