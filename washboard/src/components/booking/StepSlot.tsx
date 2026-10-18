@@ -186,7 +186,16 @@ export default function StepSlot({
    *  et pas entièrement en congé. */
   function estReservable(d: Date): boolean {
     if (d < premierJour || d > dernierJour) return false
-    return availableDaysOfWeek.includes(d.getDay()) && !isDateUnavailable(d)
+    return availableDaysOfWeek.includes(d.getDay()) && !isDateUnavailable(d) && !journeeEcoulee(d)
+  }
+
+  /** Vrai le jour même une fois le dernier horaire passé (heure de Paris) :
+   *  le jour n'est plus proposé, au lieu d'ouvrir une journée vide le soir. */
+  function journeeEcoulee(d: Date): boolean {
+    const horaires = availabilities
+      .filter(a => a.day_of_week === d.getDay())
+      .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
+    return horaires.length > 0 && horaires.every(s => slotEstPasse(s, d))
   }
 
   function choisirJour(d: Date) {
