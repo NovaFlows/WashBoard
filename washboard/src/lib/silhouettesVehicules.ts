@@ -9,20 +9,47 @@
 // choisi : 15 à 25 Ko chacune. Toutes dans le même cadre 1040 × 420, roues sur la même ligne,
 // avant à droite (scripts/silhouettes/decoupe.py).
 //
-// Seuls les types qui ont une photo en ont une ; les autres (camping-car, scooter, vélo, en
-// attente de photos) et les types personnalisés par le laveur (« Canapé », etc.) n'affichent rien :
-// `silhouettePour` rend `null`.
+// Le type se reconnaît à son identifiant (« moto », celui des modèles de catégorie) ou, à
+// défaut, à son nom : un type ajouté à la main dans une catégorie reçoit un identifiant au
+// hasard (FeuilleCategorieV2), et la « Moto » qu'Alexandre avait ajoutée ainsi n'affichait rien
+// (2026-10-19). Les autres (camping-car, scooter, vélo, en attente de photos) et les types sans
+// rapport (« Canapé ») n'affichent rien : `silhouettePour` rend `null`.
+
+import { VEHICLE_LABELS } from './vehicle-labels'
 
 export const TYPES_AVEC_SILHOUETTE = [
   'citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire',
   'moto', 'camion', // ajoutés le 2026-10-19, photos d'Alexandre
 ] as const
+type TypeAvecImage = (typeof TYPES_AVEC_SILHOUETTE)[number]
 
 /** À changer quand les fichiers changent : les navigateurs gardent les anciens en cache. */
 const VERSION = '2026-10-19a'
 
-/** L'image du véhicule d'un type, ou `null` s'il n'en a pas. */
-export function silhouettePour(type: string | null | undefined): string | null {
-  if (!type || !(TYPES_AVEC_SILHOUETTE as readonly string[]).includes(type)) return null
-  return `/silhouettes/${encodeURIComponent(type)}.webp?v=${VERSION}`
+/** « Van / Utilitaire » → « van utilitaire » : minuscules, sans accents ni ponctuation. */
+const normaliser = (nom: string) =>
+  nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+/** Les noms qu'un laveur donne à ces véhicules, en plus de leurs libellés dans l'app. */
+const PAR_NOM = new Map<string, TypeAvecImage>([
+  ...TYPES_AVEC_SILHOUETTE.map(t => [normaliser(VEHICLE_LABELS[t]), t] as const),
+  ['citadines', 'citadine'],
+  ['citadine 2 places', 'citadine_2p'], ['citadine 2 portes', 'citadine_2p'],
+  ['berlines', 'berline'],
+  ['suv', 'SUV'], ['4x4', 'SUV'], ['suvs', 'SUV'],
+  ['monospaces', 'monospace'],
+  ['7places', '7places'], ['sept places', '7places'],
+  ['van', 'utilitaire'], ['vans', 'utilitaire'], ['utilitaire', 'utilitaire'], ['utilitaires', 'utilitaire'],
+  ['fourgon', 'utilitaire'], ['fourgonnette', 'utilitaire'], ['camionnette', 'utilitaire'],
+  ['motos', 'moto'],
+  ['camions', 'camion'], ['poids lourd', 'camion'], ['poids lourds', 'camion'],
+])
+
+/** L'image du véhicule d'un type, reconnu à son identifiant ou à son nom, ou `null`. */
+export function silhouettePour(type: string | null | undefined, nom?: string | null): string | null {
+  const connu = type && (TYPES_AVEC_SILHOUETTE as readonly string[]).includes(type)
+    ? type
+    : nom ? PAR_NOM.get(normaliser(nom)) : undefined
+  if (!connu) return null
+  return `/silhouettes/${encodeURIComponent(connu)}.webp?v=${VERSION}`
 }

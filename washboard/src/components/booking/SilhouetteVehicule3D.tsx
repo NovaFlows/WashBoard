@@ -33,15 +33,13 @@ function prete(url: string): Promise<void> {
   })
 }
 
-/** Précharge en fond, une fois la page au calme, les images des types proposés : le premier
- *  clic n'attend pas le réseau, sans retarder l'affichage de la page. */
-export function prechargerSilhouettes(types: readonly string[]) {
+/** Précharge en fond, une fois la page au calme, les images des types proposés (adresses
+ *  rendues par `silhouettePour`) : le premier clic n'attend pas le réseau, sans retarder
+ *  l'affichage de la page. */
+export function prechargerSilhouettes(urls: readonly string[]) {
   if (typeof window === 'undefined') return
   const charger = () => {
-    for (const t of types) {
-      const url = silhouettePour(t)
-      if (url) { const img = new Image(); img.src = url }
-    }
+    for (const url of urls) { const img = new Image(); img.src = url }
   }
   if ('requestIdleCallback' in window) window.requestIdleCallback(charger, { timeout: 2500 })
   else setTimeout(charger, 1200)
@@ -58,7 +56,7 @@ function Face({ image, masque, cote, reflet, dos }: { image: string; masque: CSS
 }
 
 export default function SilhouetteVehicule3D({ type, nom }: { type: string | null; nom?: string | null }) {
-  const image = silhouettePour(type)
+  const image = silhouettePour(type, nom)
   const scene = useRef<HTMLDivElement>(null)
   const objet = useRef<HTMLDivElement>(null)
   const ombre = useRef<HTMLDivElement>(null)

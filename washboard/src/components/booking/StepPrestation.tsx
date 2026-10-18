@@ -43,10 +43,12 @@ export default function StepPrestation({ services, categories, form, onChange, p
   const sansVehicule = vehicles.length === 0
   // La voiture affichée : le dernier type touché, sinon le dernier de la liste (types mélangés).
   const typeAffiche = dernier && activeTypes.includes(dernier) ? dernier : activeTypes[activeTypes.length - 1] ?? null
-  const avecSilhouettes = types.some(t => silhouettePour(t))
+  // Un type a son image s'il est reconnu à son identifiant ou à son nom (lib/silhouettesVehicules).
+  const images = types.map(t => silhouettePour(t, label(t))).filter((u): u is string => !!u)
+  const avecSilhouettes = images.length > 0
   // Les images des véhicules proposés se chargent en fond : le premier clic n'attend pas.
-  const typesCle = types.join('|')
-  useEffect(() => { prechargerSilhouettes(typesCle.split('|')) }, [typesCle])
+  const imagesCle = [...new Set(images)].join('|')
+  useEffect(() => { if (imagesCle) prechargerSilhouettes(imagesCle.split('|')) }, [imagesCle])
   /** Avant le choix du véhicule : le prix de départ de la prestation, tous types confondus. */
   const prixDepart = (s: Service) => Math.min(...s.vehicle_types.filter(t => types.includes(t)).map(t => vehiclePrice(s, t)))
 

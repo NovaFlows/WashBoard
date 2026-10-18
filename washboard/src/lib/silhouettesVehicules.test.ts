@@ -12,6 +12,19 @@ describe('images des véhicules', () => {
       expect(silhouettePour(type), type).not.toBeNull()
     }
   })
+  it('un type ajouté à la main se reconnaît à son nom', () => {
+    const auHasard = '7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f'
+    expect(silhouettePour(auHasard, 'Moto')).toBe(silhouettePour('moto'))
+    expect(silhouettePour(auHasard, ' camion ')).toBe(silhouettePour('camion'))
+    expect(silhouettePour(auHasard, 'Van / Utilitaire')).toBe(silhouettePour('utilitaire'))
+    expect(silhouettePour(auHasard, 'Fourgon')).toBe(silhouettePour('utilitaire'))
+    expect(silhouettePour(auHasard, '4x4')).toBe(silhouettePour('SUV'))
+    expect(silhouettePour(auHasard, 'Citadine 2 places')).toBe(silhouettePour('citadine_2p'))
+    expect(silhouettePour(auHasard, 'Canapé')).toBeNull()
+    expect(silhouettePour(auHasard, 'constructor')).toBeNull()
+    // L'identifiant prime sur le nom.
+    expect(silhouettePour('berline', 'Moto')).toBe(silhouettePour('berline'))
+  })
   it('un type sans photo ou personnalisé par le laveur n’en a pas', () => {
     expect(silhouettePour('scooter')).toBeNull()
     expect(silhouettePour('3f2a9c0e-1b2c-4d5e-8f90-123456789abc')).toBeNull()

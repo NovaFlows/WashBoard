@@ -46,8 +46,9 @@ export default function StepService({ services, categories, selected, factureApr
   const [models,    setModels]    = useState<Record<string, string[]>>({})
   // Le dernier véhicule ajouté au panier : son image 3D s'anime (2026-10-18).
   const [dernier,   setDernier]   = useState<string | null>(null)
-  const typesProposes = services.flatMap(sv => sv.vehicle_types).join('|')
-  useEffect(() => { prechargerSilhouettes([...new Set(typesProposes.split('|'))]) }, [typesProposes])
+  const imagesProposees = [...new Set(services.flatMap(sv => sv.vehicle_types.map(t => silhouettePour(t, typeInfo(sv, t).name)))
+    .filter((u): u is string => !!u))].join('|')
+  useEffect(() => { if (imagesProposees) prechargerSilhouettes(imagesProposees.split('|')) }, [imagesProposees])
 
   // Onglets : seules les catégories qui ont au moins une prestation.
   const tabs = useMemo(() => {
@@ -316,7 +317,7 @@ export default function StepService({ services, categories, selected, factureApr
         <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs éléments, de types différents si besoin.</p>
-          {selectedService.vehicle_types.some(t => silhouettePour(t)) && (() => {
+          {selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
             return (
