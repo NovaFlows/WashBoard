@@ -118,6 +118,36 @@ export const ARTICLES: Article[] = [
     readingMinutes: 8,
   },
   {
+    slug: 'devis-lavage-auto-domicile',
+    theme: 'auto',
+    title: 'Faire un devis de lavage auto à domicile : modèle, mentions obligatoires et durée de validité',
+    description:
+      'Un devis est-il obligatoire pour laver une voiture ? Quelles mentions y faire figurer, quelle durée de validité choisir, un modèle à recopier, et ce qui ne marche pas : le devis flou, le « à partir de », le prix changé après accord.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-18',
+    readingMinutes: 9,
+  },
+  {
+    slug: 'micro-entreprise-laveur-auto-mobile',
+    theme: 'auto',
+    title: 'Micro-entreprise pour laveur auto mobile : code APE, cotisations, démarches',
+    description:
+      'Code APE du lavage de véhicules, taux de cotisations, plafond de chiffre d’affaires, seuils de la franchise de TVA, Acre et démarches en ligne : les chiffres de la micro-entreprise pour un laveur auto, avec la source officielle et sa date.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-18',
+    readingMinutes: 9,
+  },
+  {
+    slug: 'lavage-flotte-vehicules-entreprise',
+    theme: 'auto',
+    title: 'Laver pour les entreprises : flottes, concessions, loueurs, auto-écoles — démarcher et facturer',
+    description:
+      'Comment approcher une concession, un loueur, une auto-école ou une flotte d’entreprise, les chiffrer par véhicule, cadrer un contrat, et facturer avec SIRET et TVA. Avec les délais de paiement légaux et ce qui ne marche pas.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-18',
+    readingMinutes: 10,
+  },
+  {
     slug: 'lavage-auto-sans-eau',
     theme: 'auto',
     title: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi',

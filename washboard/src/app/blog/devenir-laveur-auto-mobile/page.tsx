@@ -87,16 +87,17 @@ export default function Page() {
           trimestre, et vous payez un pourcentage dessus.
         </P>
         <P>
-          Le lavage de véhicules relève de la <strong>prestation de services</strong>, avec le code
-          APE correspondant au lavage automobile. Ce détail compte : le taux de cotisations et le
-          plafond de chiffre d&apos;affaires diffèrent de ceux de la vente de marchandises.
+          Le lavage de véhicules relève de la <strong>prestation de services</strong> : le taux de
+          cotisations et le plafond de chiffre d&apos;affaires diffèrent de ceux de la vente de
+          marchandises.
         </P>
         <Callout>
           <p>
-            Les taux de cotisations, les plafonds et les exonérations de début d&apos;activité
-            changent régulièrement. Vérifiez les chiffres en vigueur sur le site officiel de
-            l&apos;URSSAF au moment où vous vous lancez plutôt que de vous fier à un article — y
-            compris celui-ci.
+            Taux, plafonds, code APE, aide de début d&apos;activité et démarches, avec la source
+            officielle et son année : tout est dans{' '}
+            <A href="/blog/micro-entreprise-laveur-auto-mobile">micro-entreprise pour laveur auto mobile</A>.
+            Ces chiffres changent régulièrement : relisez les pages officielles au moment où vous
+            vous lancez.
           </p>
         </Callout>
 
@@ -227,6 +228,7 @@ export default function Page() {
 
         <AlsoRead
           items={[
+            { href: '/blog/micro-entreprise-laveur-auto-mobile', label: 'Micro-entreprise pour laveur auto mobile : code APE, cotisations, démarches' },
             { href: '/blog/assurance-laveur-auto-mobile', label: 'Quelle assurance pour un laveur auto mobile' },
             { href: '/blog/lavage-auto-sans-eau', label: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi' },
             { href: '/blog/combien-gagne-un-laveur-auto-mobile', label: 'Combien gagne un laveur auto mobile ? Revenus réels et simulation' },

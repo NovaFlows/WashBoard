@@ -3388,6 +3388,20 @@ rien à faire, mais que le projet reste globalement sain.
       extérieur 25–45 €, intérieur 35–60 €, complet 55–95 €, profondeur 120–250 €, taux horaire
       35–45 €/h minimum. Tirés de sources publiques par `seo-geo` : Alexandre, au contact des
       laveurs, confirme que ça colle au terrain.
+- [ ] **À valider avec Alexandre : exemples chiffrés des articles du lot SEO 1 (2026-10-19)** —
+      modèle de devis (complet 70 €, poils d’animaux 25 €, déplacement 10 €), repères de validité
+      (1 mois / 1-2 semaines / 2-3 mois), exemple flotte (extérieur 40 €, −10 %, 6 véhicules = 216 €).
+      Tous marqués indicatifs.
+- [ ] **Mention de franchise de TVA : « art. 293 B du CGI » → « art. L. 223 et s. du CIBS »**
+      depuis le 2026-09-01 selon Service-Public (ancienne mention tolérée jusqu’au 31/12/2027).
+      Imprimée dans `FacturePDF.tsx:203`, `email/index.ts:317`, `confirmation/[id]/page.tsx:145`,
+      `FacturationCard.tsx:209`. Agent : `dev` (+ relecture `legal`).
+- [ ] **Avis Google sans email** : le commentaire du cron dit qu’un rendez-vous sans email part
+      par SMS, mais `bookings/[id]/route.ts:211` exige un email pour programmer l’avis. À trancher
+      (code ou commentaire). Agent : `dev`.
+- [ ] **Facture automatique : « paiement comptant le jour de la prestation » imprimé pour tous,
+      clients pros compris.** L’article flottes le présente comme une limite ; à décider avec
+      Alexandre (délai de paiement configurable pour les pros ?).
 - [ ] **À trancher avec Alexandre : la FAQ dit publiquement qu'un client ne peut pas annuler
       seul** (pas de bouton d'annulation sur sa page de confirmation, il prévient le laveur).
       Vrai dans le code, mais c'est une limite affichée : la garder telle quelle, ou ajouter
