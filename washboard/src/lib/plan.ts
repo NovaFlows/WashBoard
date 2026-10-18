@@ -57,17 +57,19 @@ const MIN_PLAN: Record<Feature, Plan> = {
   page_personnalisee:    'starter',
   crm:                   'starter',
   ca_simple:             'starter',
-  avis_email:            'pro',
-  avis_sms:              'pro',
-  compta:                'pro',
-  facturation:           'pro',
+  // Descendus du Pro au Starter le 2026-10-18 (décision d'Alexandre) : comptabilité et
+  // facturation conforme, avis Google (email et SMS, quota réduit) et relances.
+  avis_email:            'starter',
+  avis_sms:              'starter',
+  compta:                'starter',
+  facturation:           'starter',
   creneaux_intelligents: 'pro',
   // Ouvert dès l'offre gratuite : un laveur mobile qui se déplace à quinze
   // kilomètres et ne peut pas le facturer perd de l'argent à chaque course.
   // Lui vendre le droit de ne pas travailler à perte serait une drôle de
   // façon de commencer une relation.
   frais_deplacement:     'decouverte',
-  followup:              'pro',
+  followup:              'starter',
   // Suivi des campagnes publicitaires. Réservé au Pro : un laveur qui achète
   // de la publicité a dépassé le stade où il compte ses cinq réservations.
   campagnes:             'pro',
@@ -145,9 +147,25 @@ export const SERVICE_QUOTA: Record<Plan, number | null> = {
 /** SMS d'avis inclus par mois (0 = email uniquement). */
 export const SMS_QUOTA: Record<Plan, number> = {
   decouverte: 0,
-  starter:    0,
+  starter:    30,
   pro:        150,
   business:   150,
+}
+
+/** Le quota de SMS d'avis en clair, tiré de SMS_QUOTA : « 30 SMS par mois en Starter, 150
+ *  dès le Pro ». Pour les pages publiques, qui écrivaient « 150 par mois » quand seul le Pro
+ *  en avait. */
+export function quotaSmsEnClair(): string {
+  const morceaux: string[] = []
+  let precedent = 0
+  for (const p of PLANS) {
+    const n = SMS_QUOTA[p]
+    if (n > 0 && n !== precedent) {
+      morceaux.push(morceaux.length ? `${n} dès le ${PLAN_LABELS[p]}` : `${n} SMS par mois en ${PLAN_LABELS[p]}`)
+      precedent = n
+    }
+  }
+  return morceaux.join(', ')
 }
 
 /** Laveurs simultanés compris dans l'offre. Au-delà, c'est facturé
@@ -553,6 +571,10 @@ export const PLAN_CARDS: PlanCard[] = [
       'Page de réservation personnalisée (logo, couleurs)',
       'CRM : d’où viennent vos clients',
       'Suivi simple du chiffre d’affaires',
+      // Descendus du Pro le 2026-10-18 (voir MIN_PLAN).
+      'Comptabilité et facturation conforme (SIRET, TVA)',
+      `Avis Google automatiques — email et SMS (${SMS_QUOTA.starter}/mois)`,
+      'Relances de suivi client',
     ],
   },
   {
@@ -562,9 +584,7 @@ export const PLAN_CARDS: PlanCard[] = [
       'Tout le Starter',
       'Réservations illimitées',
       'Créneaux intelligents',
-      'Comptabilité et facturation conforme (SIRET, TVA)',
-      'Avis Google automatiques — email et SMS (150/mois)',
-      'Relances de suivi client',
+      `Avis Google automatiques — email et SMS (${SMS_QUOTA.pro}/mois)`,
       'Suivi de vos campagnes publicitaires',
     ],
   },

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { minuitParisUTC } from './dateUtils'
-import {
+import { quotaSmsEnClair,
   hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
   formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
   quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
@@ -36,10 +36,11 @@ const ACCES: Record<Plan, Record<Feature, boolean>> = {
     creneaux_intelligents: false, frais_deplacement: true, followup: false,
     campagnes: false, multi_laveurs: false,
   },
+  // Comptabilité, facturation, avis et relances descendus du Pro le 2026-10-18.
   starter: {
     page_personnalisee: true, crm: true, ca_simple: true,
-    avis_email: false, avis_sms: false, compta: false, facturation: false,
-    creneaux_intelligents: false, frais_deplacement: true, followup: false,
+    avis_email: true, avis_sms: true, compta: true, facturation: true,
+    creneaux_intelligents: false, frais_deplacement: true, followup: true,
     campagnes: false, multi_laveurs: false,
   },
   pro: {
@@ -134,11 +135,11 @@ describe('requiredPlanLabel — l’offre à prendre pour débloquer', () => {
     expect(requiredPlanLabel('crm')).toBe('Starter')
     expect(requiredPlanLabel('page_personnalisee')).toBe('Starter')
     expect(requiredPlanLabel('ca_simple')).toBe('Starter')
-    expect(requiredPlanLabel('compta')).toBe('Pro')
-    expect(requiredPlanLabel('facturation')).toBe('Pro')
-    expect(requiredPlanLabel('avis_email')).toBe('Pro')
-    expect(requiredPlanLabel('avis_sms')).toBe('Pro')
-    expect(requiredPlanLabel('followup')).toBe('Pro')
+    expect(requiredPlanLabel('compta')).toBe('Starter')
+    expect(requiredPlanLabel('facturation')).toBe('Starter')
+    expect(requiredPlanLabel('avis_email')).toBe('Starter')
+    expect(requiredPlanLabel('avis_sms')).toBe('Starter')
+    expect(requiredPlanLabel('followup')).toBe('Starter')
     expect(requiredPlanLabel('creneaux_intelligents')).toBe('Pro')
     expect(requiredPlanLabel('campagnes')).toBe('Pro')
     expect(requiredPlanLabel('frais_deplacement')).toBe('Découverte')
@@ -218,9 +219,13 @@ describe('quotaDepasse — où tombe exactement la limite', () => {
 })
 
 describe('SMS d’avis inclus', () => {
-  it('n’en donne aucun aux offres sans avis', () => {
+  it('n’en donne aucun à l’offre gratuite, 30 au Starter', () => {
     expect(SMS_QUOTA.decouverte).toBe(0)
-    expect(SMS_QUOTA.starter).toBe(0)
+    expect(SMS_QUOTA.starter).toBe(30)
+  })
+
+  it('se dit en clair, palier par palier', () => {
+    expect(quotaSmsEnClair()).toBe('30 SMS par mois en Starter, 150 dès le Pro')
   })
 
   it('en donne 150 au Pro et au Business', () => {
@@ -769,7 +774,7 @@ describe('simulation d’offre en local', () => {
     vi.stubEnv('NEXT_PUBLIC_DEV_OFFRE', 'starter')
     expect(planEffectif(PRO_PAYANT)).toBe('starter')
     expect(hasFeature(PRO_PAYANT, 'crm')).toBe(true)      // Starter l'a
-    expect(hasFeature(PRO_PAYANT, 'compta')).toBe(false)  // Starter ne l'a pas
+    expect(hasFeature(PRO_PAYANT, 'creneaux_intelligents')).toBe(false)  // Starter ne l'a pas
     expect(quotaReservations(PRO_PAYANT)).toBe(15)
   })
 

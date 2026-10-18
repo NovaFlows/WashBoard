@@ -1,4 +1,4 @@
-import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
 
 // Contenu du comparatif « à la main / outil généraliste / WashBoard », utilisé
 // à la fois sur la page dédiée (/meilleur-logiciel-lavage-auto) et, en
@@ -52,7 +52,7 @@ export const besoinsRows: string[][] = [
     'Avis Google demandés après chaque prestation',
     'Non — à faire penser à soi-même',
     'Non',
-    `Oui, par email ou SMS (formule ${requiredPlanLabel('avis_email')}, ${SMS_QUOTA.pro} SMS/mois)`,
+    `Oui, par email ou SMS (dès la formule ${requiredPlanLabel('avis_email')} : ${quotaSmsEnClair()})`,
   ],
   [
     'Plusieurs véhicules dans une même réservation',

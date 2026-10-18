@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
   lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
-  PLAN_COULEURS, SMS_QUOTA, requiredPlan, requiredPlanLabel,
+  PLAN_COULEURS, quotaSmsEnClair, requiredPlan, requiredPlanLabel,
   type BillingCycle, type Feature,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -143,7 +143,7 @@ const FONCTIONNALITES: Fonctionnalite[] = [
   { titre: 'Campagnes publicitaires', desc: 'Combien de réservations viennent de chaque campagne Meta, et ce qu’elle te rapporte.', offre: 'campagnes' },
   { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.', offre: 'creneaux_intelligents' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
-  { titre: 'Avis Google automatiques', desc: `Une demande d’avis après chaque prestation terminée, par email ou par SMS (${SMS_QUOTA.pro} par mois).`, offre: 'avis_email' },
+  { titre: 'Avis Google automatiques', desc: `Une demande d’avis après chaque prestation terminée, par email ou par SMS (${quotaSmsEnClair()}).`, offre: 'avis_email' },
   { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', offre: 'followup' },
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', offre: 'compta' },
   { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', offre: 'multi_laveurs' },

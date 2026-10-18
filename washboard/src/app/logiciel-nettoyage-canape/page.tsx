@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SITE_URL } from '@/lib/blog'
-import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
 import { resumeOffres } from '@/lib/resumeOffres'
 import MetierPageTemplate, { type MetierFeature, type MetierProblem } from '@/components/metiers/MetierPageTemplate'
 import type { FaqItem } from '@/components/blog/Prose'
@@ -108,11 +108,11 @@ const fonctionnalites: MetierFeature[] = [
   },
   {
     titre: 'Une fiche client qui sait qui relancer',
-    desc: 'WashBoard garde l’historique de chaque client — quelle pièce, quelle date, quel montant — et calcule depuis combien de temps il n’est pas revenu. Un canapé ne se salit pas tous les mois : en formule Pro, une relance automatique part au bout du délai que tu choisis toi-même, 90 jours par défaut, réglable jusqu’à deux ans.',
+    desc: `WashBoard garde l’historique de chaque client — quelle pièce, quelle date, quel montant — et calcule depuis combien de temps il n’est pas revenu. Un canapé ne se salit pas tous les mois : en formule ${requiredPlanLabel('followup')}, une relance automatique part au bout du délai que tu choisis toi-même, 90 jours par défaut, réglable jusqu’à deux ans.`,
   },
   {
     titre: 'Des avis Google après chaque intervention',
-    desc: `En formule ${requiredPlanLabel('avis_email')}, une demande d'avis part automatiquement dès qu'un rendez-vous passe en « Terminé », par email ou par SMS (${SMS_QUOTA.pro} par mois). Dans un métier qui se vend sur un résultat visible, ce sont ces avis qui remplissent une fiche Google.`,
+    desc: `En formule ${requiredPlanLabel('avis_email')}, une demande d'avis part automatiquement dès qu'un rendez-vous passe en « Terminé », par email ou par SMS (${quotaSmsEnClair()}). Dans un métier qui se vend sur un résultat visible, ce sont ces avis qui remplissent une fiche Google.`,
   },
 ]
 
@@ -143,7 +143,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'Comment WashBoard aide-t-il face à un client qui ne revient qu’une ou deux fois par an ?',
     answer:
-      'WashBoard garde l’historique de chaque client et calcule depuis combien de temps il n’est pas revenu. En formule Pro, une relance automatique par email ou SMS part au bout du délai que tu règles toi-même — 90 jours par défaut, jusqu’à deux ans. C’est ce qui rappelle un client à qui personne ne pense de lui-même.',
+      `WashBoard garde l’historique de chaque client et calcule depuis combien de temps il n’est pas revenu. En formule ${requiredPlanLabel('followup')}, une relance automatique par email ou SMS part au bout du délai que tu règles toi-même — 90 jours par défaut, jusqu’à deux ans. C’est ce qui rappelle un client à qui personne ne pense de lui-même.`,
   },
   {
     question: 'Combien coûte WashBoard pour un professionnel du nettoyage de canapés ?',

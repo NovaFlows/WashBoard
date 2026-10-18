@@ -66,7 +66,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Je peux utiliser WashBoard uniquement depuis mon téléphone ?',
-    a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, en formule Pro). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
+    a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, dès la formule Starter). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
   },
   {
     q: 'Que se passe-t-il après le mois gratuit ?',

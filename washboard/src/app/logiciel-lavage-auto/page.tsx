@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SITE_URL } from '@/lib/blog'
-import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
 import { resumeOffres } from '@/lib/resumeOffres'
 import MetierPageTemplate, { type MetierFeature, type MetierProblem } from '@/components/metiers/MetierPageTemplate'
 import type { FaqItem } from '@/components/blog/Prose'
@@ -116,7 +116,7 @@ const fonctionnalites: MetierFeature[] = [
     desc: (
       <>
         En formule {requiredPlanLabel('avis_email')}, une demande d&apos;avis part automatiquement dès
-        qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({SMS_QUOTA.pro} par mois). Pour un laveur auto,
+        qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({quotaSmsEnClair()}). Pour un laveur auto,
         ce sont ces avis qui remplissent une{' '}
         <Link href="/blog/fiche-google-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
           fiche Google

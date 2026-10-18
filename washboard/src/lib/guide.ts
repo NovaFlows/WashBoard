@@ -203,7 +203,7 @@ export const GUIDE: GuideSection[] = [
         id: 'relances',
         question: 'Comment relancer mes anciens clients ?',
         answer:
-          "Dans [vos relances clients](/dashboard/parametres#relances), disponibles avec la formule Pro. Vous activez l'interrupteur, choisissez un délai — 90 jours par exemple — et écrivez votre message une seule fois. Écrivez {{nom}} dedans et le prénom du client s'y met automatiquement. Ensuite tout se fait seul : chaque client qui n'est pas revenu depuis ce délai reçoit votre message, par email ou par SMS selon le canal choisi pour [vos avis Google](/dashboard/parametres#avis), et toujours à votre nom. Deux sécurités : un client qui a déjà repris rendez-vous ne reçoit rien, et personne n'est relancé deux fois. Pensez à mettre votre lien de réservation dans le message, sinon le client n'a nulle part où cliquer.",
+          "Dans [vos relances clients](/dashboard/parametres#relances), disponibles dès la formule Starter. Vous activez l'interrupteur, choisissez un délai — 90 jours par exemple — et écrivez votre message une seule fois. Écrivez {{nom}} dedans et le prénom du client s'y met automatiquement. Ensuite tout se fait seul : chaque client qui n'est pas revenu depuis ce délai reçoit votre message, par email ou par SMS selon le canal choisi pour [vos avis Google](/dashboard/parametres#avis), et toujours à votre nom. Deux sécurités : un client qui a déjà repris rendez-vous ne reçoit rien, et personne n'est relancé deux fois. Pensez à mettre votre lien de réservation dans le message, sinon le client n'a nulle part où cliquer.",
         keywords: ['relance', 'fidelisation', 'revenir', 'inactif', 'reactivation', 'pro', 'sms'],
       },
     ],
