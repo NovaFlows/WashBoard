@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
-import { SILHOUETTES, silhouettePour, type Silhouette } from '@/lib/silhouettesVehicules'
+import { SILHOUETTES, silhouettePour, type Roue, type Silhouette } from '@/lib/silhouettesVehicules'
 import './silhouetteVehicule.css'
 
 // Le véhicule choisi sur la page de réservation, en silhouette 3D (demande d'Alexandre,
@@ -13,7 +13,8 @@ import './silhouetteVehicule.css'
 
 const COUCHES = 9
 const EPAISSEUR = 7 // px, de la face avant à la face arrière
-const VUE = '-12 -8 424 176'
+const VUE = '-20 -10 1040 420'
+const CONTOUR = 12 // épaisseur du contour blanc, dans le repère de 1000 de large
 
 const courbe = {
   cubique: (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2),
@@ -25,28 +26,88 @@ const courbe = {
 function Contour({ s }: { s: Silhouette }) {
   return (
     <>
-      {s.corps.map((d, i) => <path key={`c${i}`} d={d} fill="currentColor" stroke="currentColor" strokeWidth={14} strokeLinejoin="round" />)}
-      {s.traits?.map((t, i) => <path key={`t${i}`} d={t.d} fill="none" stroke="currentColor" strokeWidth={t.w + 14} strokeLinecap="round" strokeLinejoin="round" />)}
-      {s.roues.map((r, i) => <circle key={`r${i}`} cx={r.cx} cy={r.cy} r={r.r + 7} fill="currentColor" />)}
+      {[...s.corps, ...(s.sombres ?? []), ...s.passages].map((d, i) => <path key={`c${i}`} d={d} fill="currentColor" stroke="currentColor" strokeWidth={CONTOUR} strokeLinejoin="round" />)}
+      {s.traits?.map((t, i) => <path key={`t${i}`} d={t.d} fill="none" stroke="currentColor" strokeWidth={t.w + CONTOUR} strokeLinecap="round" strokeLinejoin="round" />)}
+      {s.roues.map((r, i) => <circle key={`r${i}`} cx={r.cx} cy={r.cy} r={r.r + CONTOUR / 2} fill="currentColor" />)}
     </>
   )
 }
 
-/** Une face complète : contour, carrosserie, roues, vitres, liserés, ombre et reflet. */
-function Face({ s, ids, reflet }: { s: Silhouette; ids: { decoupe: string; ombre: string; eclat: string }; reflet?: React.Ref<SVGRectElement> }) {
+const point = (cx: number, cy: number, a: number, r: number) => `${(cx + Math.cos(a) * r).toFixed(1)} ${(cy + Math.sin(a) * r).toFixed(1)}`
+
+/** Une roue : pneu, et une jante selon le véhicule (alu à cinq doubles branches, moto,
+ *  scooter, vélo à rayons). */
+function Jante({ r: roue }: { r: Roue }) {
+  const { cx, cy, r } = roue
+  if (roue.jante === 'velo') {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={r - 6} fill="none" stroke="#7C7C83" strokeWidth={12} />
+        <circle cx={cx} cy={cy} r={r - 14} fill="none" stroke="#C9C9CE" strokeWidth={3} />
+        {Array.from({ length: 18 }, (_, k) => {
+          const a = (k / 18) * Math.PI * 2
+          return <path key={k} d={`M ${cx} ${cy} L ${point(cx, cy, a, r - 15)}`} stroke="#B9B9BF" strokeWidth={1.6} />
+        })}
+        <circle cx={cx} cy={cy} r={9} fill="#A5A5AC" />
+      </g>
+    )
+  }
+  if (roue.jante === 'moto' || roue.jante === 'scooter') {
+    const rj = r * (roue.jante === 'moto' ? 0.72 : 0.62)
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={r} fill="#76767D" />
+        <circle cx={cx} cy={cy} r={rj} fill="#8E8E95" />
+        {roue.jante === 'moto' && <circle cx={cx} cy={cy} r={rj * 0.7} fill="none" stroke="#C3C3C8" strokeWidth={7} />}
+        {Array.from({ length: 5 }, (_, k) => {
+          const a = (k / 5) * Math.PI * 2 - Math.PI / 2
+          return roue.jante === 'moto'
+            ? <path key={k} d={`M ${point(cx, cy, a - 0.1, rj * 0.24)} L ${point(cx, cy, a - 0.05, rj - 3)} L ${point(cx, cy, a + 0.05, rj - 3)} L ${point(cx, cy, a + 0.1, rj * 0.24)} Z`} fill="#D0D0D5" />
+            : <circle key={k} cx={cx + Math.cos(a) * rj * 0.55} cy={cy + Math.sin(a) * rj * 0.55} r={rj * 0.18} fill="#76767D" />
+        })}
+        <circle cx={cx} cy={cy} r={rj * 0.22} fill="#C4C4C9" />
+        <circle cx={cx} cy={cy} r={rj} fill="none" stroke="#D6D6DA" strokeWidth={2.5} />
+      </g>
+    )
+  }
+  const rj = r * 0.66
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill="#7C7C83" />
+      <circle cx={cx} cy={cy} r={r - 5} fill="none" stroke="#88888F" strokeWidth={3} />
+      <circle cx={cx} cy={cy} r={rj} fill="#8E8E95" />
+      {Array.from({ length: 10 }, (_, k) => {
+        const a = (Math.floor(k / 2) / 5) * Math.PI * 2 + (k % 2 ? 0.13 : -0.13) - Math.PI / 2
+        return <path key={k} d={`M ${point(cx, cy, a - 0.07, rj * 0.24)} L ${point(cx, cy, a - 0.09, rj - 3)} L ${point(cx, cy, a + 0.09, rj - 3)} L ${point(cx, cy, a + 0.07, rj * 0.24)} Z`} fill="#D2D2D7" />
+      })}
+      <circle cx={cx} cy={cy} r={rj * 0.26} fill="#C4C4C9" />
+      <circle cx={cx} cy={cy} r={rj} fill="none" stroke="#DADADE" strokeWidth={2.5} />
+    </g>
+  )
+}
+
+type Ids = { decoupe: string; ombre: string; eclat: string; caisse: string; verre: string }
+
+/** Une face complète : contour, passages de roue, carrosserie, vitres, montants, feux,
+ *  liserés, poignées, roues, puis l'ombre du bas et le reflet qui balaie. */
+function Face({ s, ids, reflet }: { s: Silhouette; ids: Ids; reflet?: React.Ref<SVGRectElement> }) {
   return (
     <>
       <g style={{ color: '#FFFFFF' }}><Contour s={s} /></g>
-      {s.corps.map((d, i) => <path key={`c${i}`} d={d} fill="#B6B6BC" />)}
-      {s.traits?.map((t, i) => <path key={`t${i}`} d={t.d} fill="none" stroke="#B6B6BC" strokeWidth={t.w} strokeLinecap="round" strokeLinejoin="round" />)}
-      {s.roues.map((r, i) => r.fin
-        ? <g key={`r${i}`}><circle cx={r.cx} cy={r.cy} r={r.r - 3} fill="none" stroke="#A3A3AA" strokeWidth={6} /><circle cx={r.cx} cy={r.cy} r={4} fill="#A3A3AA" /></g>
-        : <g key={`r${i}`}><circle cx={r.cx} cy={r.cy} r={r.r} fill="#A7A7AD" /><circle cx={r.cx} cy={r.cy} r={r.r * 0.62} fill="#B9B9BF" stroke="#C4C4C9" strokeWidth={1.5} /></g>)}
-      {s.vitres?.map((d, i) => <path key={`v${i}`} d={d} fill="#D3D3D8" />)}
-      {s.lignes?.map((d, i) => <path key={`l${i}`} d={d} fill="none" stroke="#A9A9AF" strokeWidth={1.6} strokeLinecap="round" />)}
+      {s.passages.map((d, i) => <path key={`p${i}`} d={d} fill="#6F6F76" />)}
+      {s.corps.map((d, i) => <path key={`c${i}`} d={d} fill={`url(#${ids.caisse})`} />)}
+      {s.traits?.map((t, i) => <path key={`t${i}`} d={t.d} fill="none" stroke="#ABABB1" strokeWidth={t.w} strokeLinecap="round" strokeLinejoin="round" />)}
+      {s.sombres?.map((d, i) => <path key={`s${i}`} d={d} fill="#9A9AA1" />)}
+      {s.vitres?.map((d, i) => <path key={`v${i}`} d={d} fill={`url(#${ids.verre})`} />)}
+      {s.montants?.map((d, i) => <path key={`m${i}`} d={d} fill="#8D8D94" />)}
+      {s.feux?.map((l, i) => <path key={`f${i}`} d={l.d} fill={l.ton === 'clair' ? '#E4E4E8' : '#97979E'} />)}
+      {s.details?.map((d, i) => <path key={`d${i}`} d={d} fill="none" stroke="#D3D3D8" strokeWidth={3} strokeLinecap="round" />)}
+      {s.lignes?.map((d, i) => <path key={`l${i}`} d={d} fill="none" stroke="#97979E" strokeWidth={2.2} strokeLinecap="round" />)}
+      {s.poignees?.map((d, i) => <path key={`h${i}`} d={d} fill="#A6A6AD" />)}
+      {s.roues.map((r, i) => <Jante key={`r${i}`} r={r} />)}
       <g clipPath={`url(#${ids.decoupe})`}>
-        <rect x={-12} y={-8} width={424} height={176} fill={`url(#${ids.ombre})`} />
-        <rect ref={reflet} x={-200} y={-8} width={150} height={176} fill={`url(#${ids.eclat})`} />
+        <rect x={-20} y={-10} width={1040} height={420} fill={`url(#${ids.ombre})`} />
+        <rect ref={reflet} x={-400} y={-10} width={340} height={420} fill={`url(#${ids.eclat})`} />
       </g>
     </>
   )
@@ -55,7 +116,7 @@ function Face({ s, ids, reflet }: { s: Silhouette; ids: { decoupe: string; ombre
 export default function SilhouetteVehicule3D({ type, nom }: { type: string | null; nom?: string | null }) {
   const s = silhouettePour(type)
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  const ids = { decoupe: `wb-sv-decoupe-${uid}`, ombre: `wb-sv-ombre-${uid}`, eclat: `wb-sv-eclat-${uid}` }
+  const ids: Ids = { decoupe: `wb-sv-decoupe-${uid}`, ombre: `wb-sv-ombre-${uid}`, eclat: `wb-sv-eclat-${uid}`, caisse: `wb-sv-caisse-${uid}`, verre: `wb-sv-verre-${uid}` }
   const scene = useRef<HTMLDivElement>(null)
   const objet = useRef<HTMLDivElement>(null)
   const ombre = useRef<HTMLDivElement>(null)
@@ -100,7 +161,7 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
       el.style.transform = `translateY(${flotte.toFixed(2)}px) rotateX(${m.tx.toFixed(2)}deg) rotateY(${angle.toFixed(2)}deg) scale(${echelle.toFixed(3)})`
       // Le reflet balaie la face à mesure qu'elle tourne.
       const a = (angle * Math.PI) / 180
-      const x = (120 - Math.sin(a) * 300).toFixed(1)
+      const x = (330 - Math.sin(a) * 760).toFixed(1)
       refletAvant.current?.setAttribute('x', x)
       refletArriere.current?.setAttribute('x', x)
       if (ombre.current) ombre.current.style.transform = `translateX(-50%) scaleX(${(0.4 + 0.6 * Math.abs(Math.cos(a))).toFixed(3)})`
@@ -139,8 +200,8 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
       <div className="wb-sv" aria-hidden>
         <div className="wb-sv-scene">
           <svg viewBox={VUE} className="wb-sv-face wb-sv-attente" style={{ filter: 'none' }}>
-            <path d={SILHOUETTES.citadine.corps[0]} fill="none" stroke="currentColor" strokeWidth={2.5} strokeDasharray="7 7" strokeLinejoin="round" />
-            {SILHOUETTES.citadine.roues.map((r, i) => <circle key={i} cx={r.cx} cy={r.cy} r={r.r} fill="none" stroke="currentColor" strokeWidth={2.5} strokeDasharray="7 7" />)}
+            <path d={SILHOUETTES.citadine.corps[0]} fill="none" stroke="currentColor" strokeWidth={5} strokeDasharray="16 14" strokeLinejoin="round" />
+            {SILHOUETTES.citadine.roues.map((r, i) => <circle key={i} cx={r.cx} cy={r.cy} r={r.r} fill="none" stroke="currentColor" strokeWidth={5} strokeDasharray="16 14" />)}
           </svg>
         </div>
         <p className="wb-sv-nom">Choisissez votre véhicule</p>
@@ -155,16 +216,22 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
         <defs>
           <clipPath id={ids.decoupe}>
-            {s.corps.map((d, i) => <path key={i} d={d} />)}
+            {[...s.corps, ...(s.sombres ?? []), ...s.passages].map((d, i) => <path key={i} d={d} />)}
             {s.roues.map((r, i) => <circle key={`r${i}`} cx={r.cx} cy={r.cy} r={r.r} />)}
           </clipPath>
+          <linearGradient id={ids.caisse} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#C9C9CE" /><stop offset="0.55" stopColor="#B5B5BB" /><stop offset="1" stopColor="#A3A3AA" />
+          </linearGradient>
+          <linearGradient id={ids.verre} x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0" stopColor="#E2E2E6" /><stop offset="1" stopColor="#C7C7CD" />
+          </linearGradient>
           <linearGradient id={ids.ombre} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0.45" stopColor="#000" stopOpacity="0" />
-            <stop offset="1" stopColor="#000" stopOpacity="0.12" />
+            <stop offset="0.5" stopColor="#000" stopOpacity="0" />
+            <stop offset="1" stopColor="#000" stopOpacity="0.08" />
           </linearGradient>
           <linearGradient id={ids.eclat} x1="0" y1="0" x2="1" y2="0.35">
             <stop offset="0" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="0.55" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0.45" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
         </defs>

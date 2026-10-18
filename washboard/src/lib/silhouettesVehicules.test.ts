@@ -14,7 +14,7 @@ describe('silhouettes des véhicules', () => {
   it('chaque silhouette tient dans son cadre et pose ses roues au sol', () => {
     for (const [type, s] of Object.entries(SILHOUETTES)) {
       expect(s.corps.length, type).toBeGreaterThan(0)
-      for (const r of s.roues) expect(Math.abs(r.cy + r.r - 152), type).toBeLessThanOrEqual(1)
+      for (const r of s.roues) expect(Math.abs(r.cy + r.r - 380), type).toBeLessThanOrEqual(1)
     }
   })
 })
