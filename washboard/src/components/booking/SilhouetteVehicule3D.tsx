@@ -4,16 +4,16 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
 import './silhouetteVehicule.css'
 
-// Le véhicule choisi sur la page de réservation, en silhouette 3D (demande d'Alexandre,
-// 2026-10-18 : « comme la carte, une animation rotation 3D 360 »). Un autocollant épais :
-// face avant, face arrière (la silhouette vue de dos, donc tournée vers la gauche) et des
-// couches de tranche entre les deux, visibles quand il passe de profil. À chaque nouveau
-// véhicule, il apparaît en faisant un tour complet ; ensuite il flotte et suit la souris.
-// Les dessins sont des fichiers (lib/silhouettesVehicules.ts) ; le reflet et l'ombre sont
-// découpés à leur forme par un masque CSS. Le parent change la `key` pour rejouer.
+// Le véhicule choisi sur la page de réservation, en 3D (demande d'Alexandre, 2026-10-18 :
+// « comme la carte, une animation rotation 3D 360 », puis la vraie voiture détourée de sa photo
+// plutôt qu'une silhouette dessinée). Une plaque épaisse : la photo devant, la même vue de dos
+// (donc tournée vers la gauche) et des couches assombries entre les deux, qui font la tranche
+// quand elle passe de profil. À chaque nouveau véhicule, elle apparaît en faisant un tour
+// complet ; ensuite elle flotte et suit la souris. Un reflet balaie la carrosserie, découpé à sa
+// forme par un masque CSS. Le parent change la `key` pour rejouer.
 
-const COUCHES = 9
-const EPAISSEUR = 7 // px, de la face avant à la face arrière
+const COUCHES = 10
+const EPAISSEUR = 5 // px, de la face avant à la face arrière
 
 const courbe = {
   cubique: (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2),
@@ -33,30 +33,32 @@ function prete(url: string): Promise<void> {
   })
 }
 
-/** Précharge, sans rien afficher, les silhouettes des types proposés : le premier clic
- *  n'attend pas le réseau. */
+/** Précharge en fond, une fois la page au calme, les images des types proposés : le premier
+ *  clic n'attend pas le réseau, sans retarder l'affichage de la page. */
 export function prechargerSilhouettes(types: readonly string[]) {
   if (typeof window === 'undefined') return
-  for (const t of types) {
-    const s = silhouettePour(t)
-    if (!s) continue
-    for (const url of [s.face, s.contour]) { const img = new Image(); img.src = url }
+  const charger = () => {
+    for (const t of types) {
+      const url = silhouettePour(t)
+      if (url) { const img = new Image(); img.src = url }
+    }
   }
+  if ('requestIdleCallback' in window) window.requestIdleCallback(charger, { timeout: 2500 })
+  else setTimeout(charger, 1200)
 }
 
-function Face({ face, masque, reflet, dos }: { face: string; masque: CSSProperties; reflet: React.Ref<HTMLDivElement>; dos?: boolean }) {
+function Face({ image, masque, reflet, dos }: { image: string; masque: CSSProperties; reflet: React.Ref<HTMLDivElement>; dos?: boolean }) {
   return (
     <div className="wb-sv-face" style={{ transform: `${dos ? 'rotateY(180deg) ' : ''}translateZ(${EPAISSEUR / 2}px)` }}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- SVG statique, mis en couches 3D */}
-      <img src={face} alt="" draggable={false} className="wb-sv-dessin" />
-      <div className="wb-sv-ombre-caisse" style={masque} />
+      {/* eslint-disable-next-line @next/next/no-img-element -- image statique, mise en couches 3D */}
+      <img src={image} alt="" draggable={false} className="wb-sv-dessin" />
       <div ref={reflet} className="wb-sv-reflet" style={masque} />
     </div>
   )
 }
 
 export default function SilhouetteVehicule3D({ type, nom }: { type: string | null; nom?: string | null }) {
-  const s = silhouettePour(type)
+  const image = silhouettePour(type)
   const scene = useRef<HTMLDivElement>(null)
   const objet = useRef<HTMLDivElement>(null)
   const ombre = useRef<HTMLDivElement>(null)
@@ -64,11 +66,9 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
   const refletArriere = useRef<HTMLDivElement>(null)
   const pointeur = useRef<{ x: number; y: number } | null>(null)
   const [nomVisible, setNomVisible] = useState(false)
-  const face = s?.face ?? null
-  const contour = s?.contour ?? null
 
   useEffect(() => {
-    if (!face || !contour) return
+    if (!image) return
     const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let vivant = true
     let raf = 0
@@ -78,7 +78,7 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
     const DUREE = reduit ? 300 : 1500
     const m = { tx: 0, ty: 0 }
 
-    const image = (t: number) => {
+    const etape = (t: number) => {
       if (!vivant || !visible) { raf = 0; return }
       const el = objet.current
       if (!el) return
@@ -101,15 +101,15 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
       const angle = tour + m.ty
       el.style.opacity = String(Math.min(1, p * 3))
       el.style.transform = `translateY(${flotte.toFixed(2)}px) rotateX(${m.tx.toFixed(2)}deg) rotateY(${angle.toFixed(2)}deg) scale(${echelle.toFixed(3)})`
-      // Le reflet balaie la face à mesure qu'elle tourne.
+      // Le reflet balaie la carrosserie à mesure qu'elle tourne.
       const a = (angle * Math.PI) / 180
       const x = `${(50 - Math.sin(a) * 70).toFixed(1)}% 0`
       if (refletAvant.current) refletAvant.current.style.backgroundPosition = x
       if (refletArriere.current) refletArriere.current.style.backgroundPosition = x
       if (ombre.current) ombre.current.style.transform = `translateX(-50%) scaleX(${(0.4 + 0.6 * Math.abs(Math.cos(a))).toFixed(3)})`
-      raf = requestAnimationFrame(image)
+      raf = requestAnimationFrame(etape)
     }
-    const relancer = () => { if (!raf && vivant && visible) raf = requestAnimationFrame(image) }
+    const relancer = () => { if (!raf && vivant && visible) raf = requestAnimationFrame(etape) }
 
     const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; relancer() })
     if (scene.current) io.observe(scene.current)
@@ -126,8 +126,8 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
     const zone = scene.current
     zone?.addEventListener('pointermove', bouger)
     zone?.addEventListener('pointerleave', quitter)
-    // Le tour ne commence qu'une fois le dessin prêt : sinon il tournerait à vide.
-    Promise.all([prete(face), prete(contour)]).then(() => { if (vivant) relancer() })
+    // Le tour ne commence qu'une fois l'image prête : sinon il tournerait à vide.
+    prete(image).then(() => { if (vivant) relancer() })
     return () => {
       vivant = false
       if (raf) cancelAnimationFrame(raf)
@@ -135,23 +135,25 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
       zone?.removeEventListener('pointermove', bouger)
       zone?.removeEventListener('pointerleave', quitter)
     }
-  }, [face, contour])
+  }, [image])
 
-  // Avant le choix : la place reste réservée, une silhouette pâle invite à choisir.
-  if (!face || !contour) {
-    const attente = silhouettePour('citadine')!
+  // Avant le choix : la place reste réservée, une voiture estompée invite à choisir.
+  if (!type) {
     return (
       <div className="wb-sv" aria-hidden>
         <div className="wb-sv-scene">
-          <div className="wb-sv-attente" style={{ WebkitMaskImage: `url(${attente.contour})`, maskImage: `url(${attente.contour})` }} />
+          {/* eslint-disable-next-line @next/next/no-img-element -- image statique */}
+          <img src={silhouettePour('citadine')!} alt="" draggable={false} className="wb-sv-attente" />
         </div>
         <p className="wb-sv-nom">Choisissez votre véhicule</p>
       </div>
     )
   }
+  // Un véhicule sans photo (moto, camping-car…) ou personnalisé : rien à montrer.
+  if (!image) return null
 
-  const masque: CSSProperties = { WebkitMaskImage: `url(${contour})`, maskImage: `url(${contour})` }
-  const tranche = Array.from({ length: COUCHES }, (_, i) => -EPAISSEUR / 2 + 0.6 + (i * (EPAISSEUR - 1.2)) / (COUCHES - 1))
+  const masque: CSSProperties = { WebkitMaskImage: `url(${image})`, maskImage: `url(${image})` }
+  const tranche = Array.from({ length: COUCHES }, (_, i) => -EPAISSEUR / 2 + 0.5 + (i * (EPAISSEUR - 1)) / (COUCHES - 1))
 
   return (
     <div className="wb-sv" role="img" aria-label={nom ? `Votre véhicule : ${nom}` : 'Votre véhicule'}>
@@ -159,11 +161,11 @@ export default function SilhouetteVehicule3D({ type, nom }: { type: string | nul
         <div ref={ombre} className="wb-sv-ombre" />
         <div ref={objet} className="wb-sv-objet" data-cache="oui" aria-hidden>
           {tranche.map((z, i) => (
-            // eslint-disable-next-line @next/next/no-img-element -- SVG statique, mis en couches 3D
-            <img key={i} src={contour} alt="" draggable={false} className="wb-sv-couche" style={{ transform: `translateZ(${z.toFixed(2)}px)` }} />
+            // eslint-disable-next-line @next/next/no-img-element -- image statique, mise en couches 3D
+            <img key={i} src={image} alt="" draggable={false} className="wb-sv-couche" style={{ transform: `translateZ(${z.toFixed(2)}px)` }} />
           ))}
-          <Face face={face} masque={masque} reflet={refletAvant} />
-          <Face face={face} masque={masque} reflet={refletArriere} dos />
+          <Face image={image} masque={masque} reflet={refletAvant} />
+          <Face image={image} masque={masque} reflet={refletArriere} dos />
         </div>
       </div>
       {nom && <p className="wb-sv-nom" data-visible={nomVisible ? 'oui' : 'non'}>{nom}</p>}

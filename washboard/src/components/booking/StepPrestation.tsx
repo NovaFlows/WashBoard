@@ -34,17 +34,17 @@ export default function StepPrestation({ services, categories, form, onChange, p
   const service = services.find(s => s.id === form.service_id)
   const label = (type: string) => categories.find(c => c.id === category)?.types.find(t => t.id === type)?.name ?? VEHICLE_LABELS[type] ?? type
   // Aucun véhicule présélectionné (demande d'Alexandre, 2026-10-18) : le client choisit, et sa
-  // silhouette apparaît. Seule exception, un catalogue à un seul type : il n'y a rien à choisir.
+  // voiture apparaît en 3D. Seule exception, un catalogue à un seul type : il n'y a rien à choisir.
   const vehicles = form.vehicles_detail?.length ? form.vehicles_detail : types.length === 1 ? [{ type: types[0], count: 1, unit_price: 0, label: label(types[0]), addons: [] }] : []
   const activeTypes = [...new Set(vehicles.map(v => v.type))]
   const [mixed, setMixed] = useState(activeTypes.length > 1)
   const [dernier, setDernier] = useState<string | null>(null)
   const visible = catalogue.filter(s => activeTypes.every(t => s.vehicle_types.includes(t)))
   const sansVehicule = vehicles.length === 0
-  // La silhouette : le dernier type touché, sinon le dernier de la liste (types mélangés).
+  // La voiture affichée : le dernier type touché, sinon le dernier de la liste (types mélangés).
   const typeAffiche = dernier && activeTypes.includes(dernier) ? dernier : activeTypes[activeTypes.length - 1] ?? null
   const avecSilhouettes = types.some(t => silhouettePour(t))
-  // Les silhouettes des véhicules proposés se chargent en fond : le premier clic n'attend pas.
+  // Les images des véhicules proposés se chargent en fond : le premier clic n'attend pas.
   const typesCle = types.join('|')
   useEffect(() => { prechargerSilhouettes(typesCle.split('|')) }, [typesCle])
   /** Avant le choix du véhicule : le prix de départ de la prestation, tous types confondus. */

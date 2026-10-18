@@ -6,22 +6,25 @@ import { VEHICLE_LABELS } from './vehicle-labels'
 
 const fichier = (url: string) => join(process.cwd(), 'public', decodeURIComponent(url.split('?')[0]))
 
-describe('silhouettes des véhicules', () => {
-  it('chaque type de véhicule de l’app a sa silhouette', () => {
-    for (const type of Object.keys(VEHICLE_LABELS)) expect(silhouettePour(type), type).not.toBeNull()
+describe('images des véhicules', () => {
+  it('chaque voiture de l’app a son image', () => {
+    for (const type of ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire']) {
+      expect(silhouettePour(type), type).not.toBeNull()
+    }
   })
-  it('un type personnalisé par le laveur n’en a pas', () => {
+  it('un type sans photo ou personnalisé par le laveur n’en a pas', () => {
+    expect(silhouettePour('moto')).toBeNull()
     expect(silhouettePour('3f2a9c0e-1b2c-4d5e-8f90-123456789abc')).toBeNull()
     expect(silhouettePour(null)).toBeNull()
     expect(silhouettePour('toString')).toBeNull()
   })
-  it('les deux fichiers de chaque silhouette existent, dans le repère commun', () => {
+  it('chaque image existe, est un WebP, pour un type connu de l’app', () => {
     for (const type of TYPES_AVEC_SILHOUETTE) {
-      const s = silhouettePour(type)!
-      for (const url of [s.face, s.contour]) {
-        expect(existsSync(fichier(url)), url).toBe(true)
-        expect(readFileSync(fichier(url), 'utf8')).toContain('viewBox="-20 -10 1040 420"')
-      }
+      expect(VEHICLE_LABELS[type], type).toBeDefined()
+      const chemin = fichier(silhouettePour(type)!)
+      expect(existsSync(chemin), chemin).toBe(true)
+      const entete = readFileSync(chemin).subarray(0, 12).toString('latin1')
+      expect(entete.startsWith('RIFF') && entete.endsWith('WEBP'), chemin).toBe(true)
     }
   })
 })

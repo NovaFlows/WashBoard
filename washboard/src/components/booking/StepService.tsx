@@ -44,7 +44,7 @@ export default function StepService({ services, categories, selected, factureApr
   const [basket,    setBasket]    = useState<Record<string, number>>({})
   // Modèle (texte libre) par véhicule : un tableau par type, aligné sur le compteur
   const [models,    setModels]    = useState<Record<string, string[]>>({})
-  // Le dernier véhicule ajouté au panier : sa silhouette 3D s'anime (2026-10-18).
+  // Le dernier véhicule ajouté au panier : son image 3D s'anime (2026-10-18).
   const [dernier,   setDernier]   = useState<string | null>(null)
   const typesProposes = services.flatMap(sv => sv.vehicle_types).join('|')
   useEffect(() => { prechargerSilhouettes([...new Set(typesProposes.split('|'))]) }, [typesProposes])
