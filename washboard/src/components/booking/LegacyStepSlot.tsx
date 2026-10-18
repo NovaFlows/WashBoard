@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
-import { toDateStr } from '@/lib/dateUtils'
+import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -49,13 +49,6 @@ const MOIS_LONGS = [
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ]
 
-/** Minuit, pour comparer des jours sans se soucier de l'heure. */
-function aMinuit(d: Date): Date {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  return x
-}
-
 /** Les cases d'un mois : d'abord les vides qui décalent le 1er sur son jour de
  *  semaine, puis chaque jour. Une grille de calendrier, pas une liste. */
 function grilleDuMois(mois: Date): (Date | null)[] {
@@ -96,12 +89,12 @@ export default function LegacyStepSlot({
   // Fenêtre réservable : d'aujourd'hui (si le laveur l'a activé) ou de
   // demain, à l'horizon que le serveur accepte.
   const [premierJour] = useState(() => {
-    const d = aMinuit(new Date())
+    const d = aujourdhuiParis()
     if (!reservationJourMeme) d.setDate(d.getDate() + 1)
     return d
   })
   const [dernierJour] = useState(() => {
-    const d = aMinuit(new Date())
+    const d = aujourdhuiParis()
     d.setDate(d.getDate() + BOOKING_HORIZON_DAYS)
     return d
   })
@@ -157,10 +150,7 @@ export default function LegacyStepSlot({
 
     let scheduledAtParam = ''
     if (selectedDate && selectedTime) {
-      const [h, m] = selectedTime.split(':').map(Number)
-      const dt = new Date(selectedDate)
-      dt.setHours(h, m, 0, 0)
-      scheduledAtParam = `&scheduled_at=${encodeURIComponent(dt.toISOString())}`
+      scheduledAtParam = `&scheduled_at=${encodeURIComponent(debutCreneauIso(selectedTime, selectedDate))}`
     }
 
     setFetchingTravelFee(true)
@@ -283,13 +273,10 @@ export default function LegacyStepSlot({
 
   function handleNext() {
     if (!selectedDate || !selectedTime || !address) return
-    const [h, m] = selectedTime.split(':').map(Number)
-    const dt = new Date(selectedDate)
-    dt.setHours(h, m, 0, 0)
-    const isSmart = isSlotInWindows(selectedTime, dt, smartWindows)
+    const isSmart = isSlotInWindows(selectedTime, selectedDate, smartWindows)
     const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
     onNext({
-      scheduled_at: dt.toISOString(),
+      scheduled_at: debutCreneauIso(selectedTime, selectedDate),
       address,
       is_smart_slot: isSmart,
       smart_discount: discount,

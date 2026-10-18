@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest'
 import {
   generateSlots, countOverlaps, countConflicts, isSlotInWindows,
   isSlotFeasible, effectiveTeamSize, dureeIncompatible, joursDureeIncompatible,
-  slotEstPasse, derniereLocalisation,
+  slotEstPasse, derniereLocalisation, debutCreneauIso,
 } from './slots'
+import { instantParis } from './dateUtils'
 
-// Repère local fixe → ISO construits localement pour être TZ-safe
+// Jour civil fixe ; les heures sont celles de Paris (horaires du laveur), quel
+// que soit le fuseau de la machine qui exécute les tests (UTC en CI).
 const date = new Date(2026, 0, 15)
-const iso = (h: number, m = 0) => new Date(2026, 0, 15, h, m, 0, 0).toISOString()
-const ms  = (h: number, m = 0) => new Date(2026, 0, 15, h, m, 0, 0).getTime()
+const iso = (h: number, m = 0) => new Date(instantParis(2026, 1, 15, h, m)).toISOString()
+const ms  = (h: number, m = 0) => instantParis(2026, 1, 15, h, m)
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('generateSlots — génération de créneaux', () => {
@@ -276,5 +278,38 @@ describe('derniereLocalisation — position du laveur pour le jour même', () =>
       { scheduled_at: iso(10, 0), durationMin: 60, address: 'Deuxième client' }, // 10h-11h
     ]
     expect(derniereLocalisation(bookings, ms(12, 0), '1 rue de Paris')).toEqual({ address: 'Deuxième client' })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Incident du 2026-10-18 : la page de réservation construisait l'heure dans le
+// fuseau de l'appareil. En UTC, le créneau « 17:00 » partait à 19:00 heure de
+// Paris et le serveur le refusait (hors horaires). Ces tests passent quel que
+// soit le fuseau de la machine ; pour reproduire la CI : TZ=UTC npx vitest run.
+describe('heure envoyée pour un créneau — toujours celle de Paris', () => {
+  it('l’été, « 17:00 » part à 15:00 UTC (Paris = UTC+2)', () => {
+    expect(debutCreneauIso('17:00', new Date(2026, 9, 18))).toBe('2026-10-18T15:00:00.000Z')
+  })
+
+  it('l’hiver, « 17:00 » part à 16:00 UTC (Paris = UTC+1)', () => {
+    expect(debutCreneauIso('17:00', new Date(2026, 11, 10))).toBe('2026-12-10T16:00:00.000Z')
+  })
+
+  it('le jour du passage à l’heure d’hiver, avant et après 3 h', () => {
+    // 25 octobre 2026 : à 3 h, on revient à 2 h.
+    expect(debutCreneauIso('01:00', new Date(2026, 9, 25))).toBe('2026-10-24T23:00:00.000Z')
+    expect(debutCreneauIso('09:00', new Date(2026, 9, 25))).toBe('2026-10-25T08:00:00.000Z')
+  })
+
+  it('le jour du passage à l’heure d’été', () => {
+    // 29 mars 2026 : à 2 h, on passe à 3 h.
+    expect(debutCreneauIso('09:00', new Date(2026, 2, 29))).toBe('2026-03-29T07:00:00.000Z')
+  })
+
+  it('un créneau de 17:00 est passé à 18:40 heure de Paris, même vu d’une machine en UTC', () => {
+    // 16:40 UTC le 18 octobre = 18:40 à Paris : c'est l'heure de la CI qui échouait.
+    const maintenant = Date.UTC(2026, 9, 18, 16, 40)
+    expect(slotEstPasse('17:00', new Date(2026, 9, 18), maintenant)).toBe(true)
+    expect(slotEstPasse('19:00', new Date(2026, 9, 18), maintenant)).toBe(false)
   })
 })

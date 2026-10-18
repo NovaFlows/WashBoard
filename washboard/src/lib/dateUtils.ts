@@ -36,6 +36,41 @@ export function dateStrParis(d: Date = new Date()): string {
   return d.toLocaleDateString('en-CA', { timeZone: FUSEAU })
 }
 
+const FORMAT_PARIS = new Intl.DateTimeFormat('en-US', {
+  timeZone: FUSEAU, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+})
+
+/** Avance de Paris sur UTC à cet instant, en ms (+2 h l'été, +1 h l'hiver). */
+function decalageParis(ms: number): number {
+  const p = FORMAT_PARIS.formatToParts(new Date(ms))
+  const n = (type: string) => Number(p.find(x => x.type === type)?.value)
+  const lu = Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second'))
+  return lu - Math.floor(ms / 1000) * 1000
+}
+
+/** Instant exact (ms epoch) de « tel jour, telle heure, à Paris », quel que
+ *  soit le fuseau de l'appareil. `mois` va de 1 à 12.
+ *
+ *  Les horaires d'un laveur sont des heures de Paris et le serveur vérifie
+ *  chaque réservation en heure de Paris (`heureParis`). Construire l'heure
+ *  avec `setHours` la plaçait dans le fuseau de l'appareil : en UTC, le
+ *  créneau « 17:00 » partait à 19:00 heure de Paris (2026-10-18). */
+export function instantParis(annee: number, mois: number, jour: number, heures: number, minutes: number): number {
+  const naif = Date.UTC(annee, mois - 1, jour, heures, minutes)
+  // Deux passes : la première estimation peut tomber de l'autre côté d'un
+  // changement d'heure.
+  const essai = naif - decalageParis(naif)
+  return naif - decalageParis(essai)
+}
+
+/** Aujourd'hui à Paris, à minuit de l'appareil : la case « aujourd'hui » d'un
+ *  calendrier de réservation, même sur un appareil réglé sur un autre fuseau. */
+export function aujourdhuiParis(maintenant: Date = new Date()): Date {
+  const [a, m, j] = dateStrParis(maintenant).split('-').map(Number)
+  return new Date(a, m - 1, j)
+}
+
 /** Heure au format court français (09:05, 14:30), à l'heure de Paris.
  *
  *  Était recopiée dans trois fichiers (calendrier, liste de RDV, liens de

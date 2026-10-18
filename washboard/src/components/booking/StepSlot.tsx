@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
-import { toDateStr } from '@/lib/dateUtils'
+import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -52,13 +52,6 @@ const MOIS_LONGS = [
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ]
 
-/** Minuit, pour comparer des jours sans se soucier de l'heure. */
-function aMinuit(d: Date): Date {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  return x
-}
-
 /** Les cases d'un mois : d'abord les vides qui décalent le 1er sur son jour de
  *  semaine, puis chaque jour. Une grille de calendrier, pas une liste. */
 function grilleDuMois(mois: Date): (Date | null)[] {
@@ -101,12 +94,12 @@ export default function StepSlot({
   // Fenêtre réservable : d'aujourd'hui (si le laveur l'a activé) ou de
   // demain, à l'horizon que le serveur accepte.
   const [premierJour] = useState(() => {
-    const d = aMinuit(new Date())
+    const d = aujourdhuiParis()
     if (!reservationJourMeme) d.setDate(d.getDate() + 1)
     return d
   })
   const [dernierJour] = useState(() => {
-    const d = aMinuit(new Date())
+    const d = aujourdhuiParis()
     d.setDate(d.getDate() + BOOKING_HORIZON_DAYS)
     return d
   })
@@ -149,10 +142,7 @@ export default function StepSlot({
     let stale = false
     let scheduled = ''
     if (selectedDate && selectedTime) {
-      const dt = new Date(selectedDate)
-      const [h, m] = selectedTime.split(':').map(Number)
-      dt.setHours(h, m, 0, 0)
-      scheduled = '&scheduled_at=' + encodeURIComponent(dt.toISOString())
+      scheduled = '&scheduled_at=' + encodeURIComponent(debutCreneauIso(selectedTime, selectedDate))
     }
     setTravelFeeEstimate(null)
     setFetchingTravelFee(true)
@@ -254,7 +244,7 @@ export default function StepSlot({
   const fee = hasTravelFee ? travelFeeEstimate ?? undefined : 0
   const canContinue = !!(selectedDate && selectedTime && slotsForDay.includes(selectedTime) && addressReady && zoneAllowed && !busy && !requestError && fee !== undefined)
   const scheduledAt = selectedDate && selectedTime ? (() => {
-    const dt = new Date(selectedDate); const [h, m] = selectedTime.split(':').map(Number); dt.setHours(h, m, 0, 0); return dt.toISOString()
+    return debutCreneauIso(selectedTime, selectedDate)
   })() : undefined
   useEffect(() => {
     if (active) onDraft({ address, scheduled_at: canContinue ? scheduledAt : undefined, travel_fee: addressReady ? fee : undefined,

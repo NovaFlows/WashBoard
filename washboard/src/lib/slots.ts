@@ -1,6 +1,8 @@
 // Logique de créneaux — fonctions pures, testables (voir slots.test.ts).
 // Utilisée par StepSlot (réservation) et alignée avec le calendrier dashboard.
 
+import { instantParis } from './dateUtils'
+
 export const SLOT_STEP = 30 // minutes entre deux créneaux proposés
 
 export type SlotBooking = { scheduled_at: string; durationMin: number }
@@ -24,13 +26,18 @@ export function generateSlots(start: string, end: string, durationMinutes: numbe
   return slots
 }
 
-/** Plage [start,end[ d'un créneau local (ms epoch), sur une date donnée. */
+/** Plage [start,end[ (ms epoch) d'un créneau. `date` porte le jour civil
+ *  (année, mois, jour de l'appareil) ; l'heure est celle de Paris, comme les
+ *  horaires du laveur et la vérification serveur (`creneauDansOuverture`). */
 function slotRange(slotTime: string, date: Date, durationMin: number): { start: number; end: number } {
   const [h, m] = slotTime.split(':').map(Number)
-  const d = new Date(date)
-  d.setHours(h, m, 0, 0)
-  const start = d.getTime()
+  const start = instantParis(date.getFullYear(), date.getMonth() + 1, date.getDate(), h, m)
   return { start, end: start + durationMin * 60_000 }
+}
+
+/** `scheduled_at` à envoyer pour ce créneau, ce jour-là (ISO, UTC). */
+export function debutCreneauIso(slotTime: string, date: Date): string {
+  return new Date(slotRange(slotTime, date, 0).start).toISOString()
 }
 
 /** Nombre de réservations qui chevauchent un créneau (pour comparer à la capacité). */
