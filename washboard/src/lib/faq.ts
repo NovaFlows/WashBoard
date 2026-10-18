@@ -1,7 +1,7 @@
 // Questions/réponses de la FAQ de la page d'accueil.
 //
-// Source unique : affichée telle quelle dans `LandingPage.tsx` (section
-// #faq) ET utilisée pour générer le JSON-LD `FAQPage` dans `siteJsonLd.ts`.
+// Source unique : affichée telle quelle dans la landing (`LandingVitrine`,
+// section #faq) ET utilisée pour générer le JSON-LD `FAQPage` dans `siteJsonLd.ts`.
 // Un seul endroit à modifier pour changer une question — impossible que le
 // balisage envoyé à Google diverge du texte que lit un visiteur, ce qui est
 // précisément ce que les moteurs sanctionnent sur ce type de balisage.
@@ -69,6 +69,10 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, dès la formule Starter). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
   },
   {
+    q: 'Comment marche la carte de fidélité ?',
+    a: 'Chaque prestation terminée ajoute un tampon (un par véhicule si tu le choisis). Au nombre de tampons que tu fixes, la récompense de ton choix, prestation offerte ou remise, s\'applique toute seule à la réservation suivante. Ton client reçoit un email à chaque tampon.',
+  },
+  {
     q: 'Que se passe-t-il après le mois gratuit ?',
     a: `Tu choisis une formule : ${starter.name} à ${tarifOffre(starter)} ou ${pro.name} à ${tarifOffre(pro)} — ou ${business.name}, ${tarifOffre(business)}, si tu travailles en équipe. Si tu ne choisis pas, ton compte passe tout seul sur l'offre ${decouverte.name} : ${tarifOffre(decouverte)}, limitée à ${BOOKING_QUOTA.decouverte} réservations par mois. On ne coupe rien. Aucune carte n'est demandée pendant l'essai.`,
   },
@@ -82,7 +86,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Les clients peuvent payer en ligne ?',
-    a: 'Non, le paiement reste sur place. WashBoard gère la réservation — le règlement, c\'est entre toi et ton client.',
+    a: 'Le solde se règle sur place. Si tu veux, tu demandes un acompte à la réservation, payé par ton propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement). WashBoard n\'encaisse rien : l\'argent va directement chez toi.',
   },
   {
     q: 'Et la facturation électronique obligatoire en 2027 ?',

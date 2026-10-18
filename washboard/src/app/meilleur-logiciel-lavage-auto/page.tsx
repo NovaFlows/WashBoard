@@ -44,13 +44,13 @@ import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 //   (doitEnvoyerFactureAuClient) — le client particulier la retrouve sur le
 //   même lien que sa confirmation de réservation :
 //   src/components/booking/StepConfirmation.tsx, src/app/api/bookings/[id]/pdf/route.ts
-// - avis Google (email et SMS, 150 SMS/mois), créneaux intelligents et
-//   facturation réservés à la formule Pro, frais de déplacement ouverts dès
-//   l'offre gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
+// - avis Google (email et SMS), facturation et relances dès Starter, créneaux
+//   intelligents en Pro, frais de déplacement, acompte, promotions et carte de
+//   fidélité dès l'offre gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
 // - prix des formules et mois offert : src/lib/plan.ts (PLAN_CARDS, freeMonthsLabel())
 // - "Un RDV confirmé = 4 messages échangés" : reprise telle quelle de la
-//   landing (src/components/landing/LandingPage.tsx, section "Ce que tu fais
-//   encore à la main"), pas une donnée inventée pour cette page.
+//   ancienne landing (section "Ce que tu fais encore à la main"), pas une
+//   donnée inventée pour cette page.
 //
 // Ce qui n'est PAS affirmé faute de preuve dans le code, à dessein : aucun
 // devis, aucun rendez-vous récurrent dans l'agenda (materializeRecurring.ts
