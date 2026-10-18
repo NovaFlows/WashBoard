@@ -1,0 +1,55 @@
+/* Silhouette 3D du véhicule choisi (SilhouetteVehicule3D.tsx) — même esprit que la carte de
+   fidélité : un « autocollant » épais (contour blanc, tranche visible de profil) qui fait un
+   tour complet en apparaissant, avec un halo à la couleur du laveur (--booking-accent).
+   Fichier à part de globals.css, sans `:has()` (piège Turbopack, mémoire du projet). */
+
+.wb-sv {
+  position: relative;
+  width: min(320px, 86%);
+  margin: 6px auto 2px;
+  perspective: 900px;
+}
+.wb-sv-scene { position: relative; aspect-ratio: 424 / 176; }
+.wb-sv-objet { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.wb-sv-objet[data-cache="oui"] { opacity: 0; }
+.wb-sv-couche, .wb-sv-face { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wb-sv-couche { color: #E4E4E9; }
+.wb-sv-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  filter:
+    drop-shadow(0 8px 16px color-mix(in srgb, var(--booking-accent, #6D8BEF) 42%, transparent))
+    drop-shadow(0 0 7px color-mix(in srgb, var(--booking-accent, #6D8BEF) 28%, transparent));
+}
+.wb-sv-ombre {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 70%;
+  height: 14px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(20, 20, 30, .22), transparent);
+  filter: blur(4px);
+  pointer-events: none;
+}
+.wb-sv-nom {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #A1A1AA;
+  transition: opacity .4s ease, transform .4s ease;
+}
+.wb-sv-nom[data-visible="non"] { opacity: 0; transform: translateY(4px); }
+
+/* Avant le choix : la place est gardée (pas de saut de mise en page), en pointillés. */
+.wb-sv-attente { color: #C9C9CF; }
+.dark .wb-sv-attente { color: #52525B; }
+.dark .wb-sv-couche { color: #3F3F46; }
+.dark .wb-sv-nom { color: #71717A; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-sv-nom { transition: none; }
+}

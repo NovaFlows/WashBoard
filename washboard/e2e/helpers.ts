@@ -58,7 +58,8 @@ export async function reserverCommeClient(page: Page, client: { nom: string; ema
   await page.goto(`/book/${TEST_WASHER_SLUG}`)
   await expectNoAppError(page)
 
-  // Prestation : véhicule par défaut, prestation et options réunis dans une carte.
+  // Véhicule, puis prestation : aucun véhicule n'est présélectionné depuis le 2026-10-18.
+  await page.locator('[aria-label="Type de véhicule"] button').first().click()
   const service = page.getByRole('radio').first()
   await expect(service).toBeVisible({ timeout: 15_000 })
   await service.check()
@@ -70,11 +71,13 @@ export async function reserverCommeClient(page: Page, client: { nom: string; ema
   // suggestions s'ouvrent alors et masquent les jours ; on choisit la première, comme un
   // client. Sans clé (la CI), la réponse est vide et on continue. Attendre la RÉPONSE, et
   // pas un délai fixe : une suggestion arrivée après le délai bloquait le clic suivant.
-  const recherche = page.waitForResponse(r => r.url().includes('/api/places/autocomplete'), { timeout: 10_000 }).catch(() => null)
+  const recherche = page.waitForResponse(r => r.url().includes('/api/places/autocomplete'), { timeout: 30_000 }).catch(() => null)
   await page.getByLabel('Adresse du lavage').fill('15 Rue du Général de Gaulle, Paris')
   await recherche
   const suggestion = page.getByRole('listitem').getByRole('button', { name: /Général de Gaulle/ }).first()
-  await suggestion.waitFor({ state: 'visible', timeout: 1_500 }).then(() => suggestion.dispatchEvent('mousedown')).catch(() => {})
+  const choisie = await suggestion.waitFor({ state: 'visible', timeout: 2_000 }).then(() => suggestion.dispatchEvent('mousedown')).then(() => true, () => false)
+  // Rien à choisir : un clic sur le titre referme une liste qui serait arrivée quand même.
+  if (!choisie) await page.getByRole('heading', { name: 'Où et quand ?' }).click()
   await page.locator('[aria-label="Jours disponibles"] button').first().click()
   const creneau = page.locator('#wb-section-2 .grid.grid-cols-3 button').first()
   await expect(creneau).toBeVisible({ timeout: 15_000 })
