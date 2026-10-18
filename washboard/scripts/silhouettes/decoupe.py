@@ -6,7 +6,11 @@
 #
 #   python -m venv venv && venv/Scripts/pip install "rembg[cpu]" opencv-python-headless
 #   (environnement à part : rembg tire numpy 2, qui casse les autres outils Python de la machine)
-#   venv/Scripts/python decoupe.py [type…]   →  public/silhouettes/<type>.webp
+#   venv/Scripts/python decoupe.py [--couleur] [type…]   →  public/silhouettes/<type>.webp
+#
+# Les voitures sortent en gris clair, toutes du même ton (demande d'Alexandre, 2026-10-18 :
+# « toutes les voitures sélectionnées dans ce type de forme grise », celle de l'image
+# d'attente) ; --couleur garde les couleurs des photos.
 #
 # Repère commun : 1040 × 420 px, voiture centrée, au plus 1000 × 370, roues posées sur y = 390.
 import os, sys
@@ -23,6 +27,8 @@ APERCU = os.path.join(ICI, 'decoupe')
 os.makedirs(APERCU, exist_ok=True)
 
 LARGEUR, HAUTEUR, SOL = 1040, 420, 390
+COULEUR = '--couleur' in sys.argv
+TYPES = [t for t in sys.argv[1:] if not t.startswith('--')]
 
 PHOTOS = {
     '26.jpg': 'citadine',
@@ -46,6 +52,32 @@ def roues(gris, masque):
     gauche = [k for k in c if k[0] < w / 2][:1]
     droite = [k for k in c if k[0] >= w / 2][:1]
     return gauche + droite
+
+
+# Répartition des gris visée, du plus sombre au plus clair : la part de la voiture (0 à 1) sous
+# chaque gris. Les pneus et les vitres restent sombres, la carrosserie gris clair.
+PARTS = [0, 0.04, 0.12, 0.25, 0.50, 0.80, 0.97, 1]
+GRIS = [0.16, 0.27, 0.43, 0.60, 0.74, 0.83, 0.92, 0.97]
+CAISSE = 0.74   # gris de la carrosserie (luminance médiane), le même sur toutes les voitures
+PENTE = 0.78    # contraste conservé de la photo
+
+
+def en_gris(rgb, opaque):
+    """La voiture en gris clair, du même ton quelle que soit sa couleur (une voiture bleu foncé
+    et un utilitaire blanc finissent dans le même gris). Moitié-moitié entre :
+    - la photo en gris, recalée pour que sa carrosserie (luminance médiane) tombe sur CAISSE :
+      garde le modelé, mais pas l'écart des sombres d'une voiture à l'autre ;
+    - le gris du rang de chaque pixel dans la voiture (PARTS → GRIS) : même répartition des
+      gris partout, mais grossit le grain des grandes surfaces unies (utilitaire blanc)."""
+    lum = (rgb @ np.array([0.2126, 0.7152, 0.0722])) / 255
+    valeurs = np.sort(lum[opaque])
+    mediane = valeurs[valeurs.size // 2]
+    recale = CAISSE + (lum - mediane) * PENTE
+    rangs = np.linspace(0, 1, valeurs.size)
+    valeurs, premiers = np.unique(valeurs, return_index=True)
+    par_rang = np.interp(lum, valeurs, np.interp(rangs[premiers], PARTS, GRIS))
+    gris = np.clip(0.5 * recale + 0.5 * par_rang, 0, 1)
+    return np.repeat((gris * 255)[:, :, None], 3, axis=2)
 
 
 def traiter(fichier, nom, session):
@@ -79,6 +111,8 @@ def traiter(fichier, nom, session):
     sur = np.where(a > 0.02, a, 1)
     couleur = np.clip((rgb - (1 - a) * 255) / sur, 0, 255)
     couleur = np.where(a > 0.97, rgb, couleur)
+    if not COULEUR:
+        couleur = en_gris(couleur, a[:, :, 0] > 0.5)
     rgba = np.dstack([couleur, a[:, :, 0] * 255]).round().astype(np.uint8)
 
     out = Image.fromarray(rgba, 'RGBA')
@@ -96,6 +130,6 @@ def traiter(fichier, nom, session):
 
 session = new_session('isnet-general-use')
 for fichier, nom in PHOTOS.items():
-    if len(sys.argv) > 1 and nom not in sys.argv[1:]:
+    if TYPES and nom not in TYPES:
         continue
     traiter(fichier, nom, session)
