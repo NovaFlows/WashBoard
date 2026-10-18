@@ -3383,9 +3383,11 @@ rien à faire, mais que le projet reste globalement sain.
       (facturation et avis dès Starter, acompte/promotions/fidélité dès l'offre gratuite).
       Nouvelles pages : `/facturation-laveur-auto`, articles « acompte à la réservation » et
       « carte de fidélité » (image de partage + sitemap).
-- [ ] **À valider avec Alexandre : les fourchettes de prix citées dans les articles de blog**
-      (tarifs de lavage, revenus d'un laveur, coût d'un rendez-vous manqué). Rédigées par
-      `seo-geo` à partir de sources publiques, jamais confrontées au terrain.
+- [ ] **À valider avec Alexandre : les prix du MARCHÉ cités dans les articles de blog** (pas
+      les tarifs WashBoard, qui viennent tous de `plan.ts`). Ex. « Tarifs lavage auto à domicile » :
+      extérieur 25–45 €, intérieur 35–60 €, complet 55–95 €, profondeur 120–250 €, taux horaire
+      35–45 €/h minimum. Tirés de sources publiques par `seo-geo` : Alexandre, au contact des
+      laveurs, confirme que ça colle au terrain.
 - [ ] **À trancher avec Alexandre : la FAQ dit publiquement qu'un client ne peut pas annuler
       seul** (pas de bouton d'annulation sur sa page de confirmation, il prévient le laveur).
       Vrai dans le code, mais c'est une limite affichée : la garder telle quelle, ou ajouter
