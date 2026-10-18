@@ -20,13 +20,16 @@ function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
   )
 }
 
-export default function StepPrestation({ services, categories, form, onChange, promotion = null }: {
+export default function StepPrestation({ services, categories, form, onChange, promotion = null, vehicule3D = true }: {
   services: Service[]
   categories: ServiceCategory[]
   form: FormState
   onChange: (data: FormState) => void
   /** Promotion en cours : le prix des prestations concernées s'affiche barré, avec le prix remisé. */
   promotion?: PromotionPublique | null
+  /** Le véhicule choisi apparaît en 3D — réglage du laveur, affiché par défaut. Éteint : ni
+   *  image ni préchargement. */
+  vehicule3D?: boolean
 }) {
   const [category, setCategory] = useState<string | null>(services[0]?.category_id ?? null)
   const catalogue = services.filter(s => s.category_id === category)
@@ -44,7 +47,7 @@ export default function StepPrestation({ services, categories, form, onChange, p
   // La voiture affichée : le dernier type touché, sinon le dernier de la liste (types mélangés).
   const typeAffiche = dernier && activeTypes.includes(dernier) ? dernier : activeTypes[activeTypes.length - 1] ?? null
   // Un type a son image s'il est reconnu à son identifiant ou à son nom (lib/silhouettesVehicules).
-  const images = types.map(t => silhouettePour(t, label(t))).filter((u): u is string => !!u)
+  const images = vehicule3D ? types.map(t => silhouettePour(t, label(t))).filter((u): u is string => !!u) : []
   const avecSilhouettes = images.length > 0
   // Les images des véhicules proposés se chargent en fond : le premier clic n'attend pas.
   const imagesCle = [...new Set(images)].join('|')

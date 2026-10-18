@@ -13,7 +13,8 @@ import FeuillePrestationV2 from '@/components/dashboard/FeuillePrestationV2'
 import FeuilleCategorieV2 from '@/components/dashboard/FeuilleCategorieV2'
 import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
-import { ConfirmationSuppression, Constat, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
+import { ConfirmationSuppression, Constat, Interrupteur, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
+import { enregistrerProfil } from '@/lib/profilApi'
 import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { PLAN_LABELS, offreCatalogueIllimite, type Plan } from '@/lib/plan'
 import {
@@ -78,6 +79,9 @@ type Props = {
   /** `washers.base_address` : proposée d'un tap dans la feuille Zone, jamais
    *  fusionnée avec `zone_config.center_address` (deux adresses distinctes). */
   adresseDeBase: string | null
+  /** `washers.silhouettes_vehicules` : le véhicule choisi apparaît en 3D sur la page de
+   *  réservation. Allumé par défaut pour tous (Alexandre, 2026-10-19). */
+  silhouettesVehicules: boolean
   /** Nombre de prestations que l'offre affiche sur la page de réservation —
    *  `null` : aucune limite (Pro, Business, clients historiques). Au-delà, les
    *  suivantes sont MASQUÉES aux clients sans être effacées, voir
@@ -259,7 +263,7 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, plafond, offre, liste,
+  zone: zoneServeur, adresseDeBase, silhouettesVehicules, plafond, offre, liste,
 }: Props) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -283,6 +287,20 @@ export default function PrestationsV2({
   // le refus éventuel, lus par la feuille d'édition de la prestation ouverte.
   const [veilleEnCours, setVeilleEnCours] = useState<string | null>(null)
   const [veilleRefus, setVeilleRefus] = useState<string | null>(null)
+  const [silhouettes, setSilhouettes] = useState(silhouettesVehicules)
+  const [silhouettesEnCours, setSilhouettesEnCours] = useState(false)
+  const [silhouettesErreur, setSilhouettesErreur] = useState<string | null>(null)
+
+  // L'affichage suit la base, pas le doigt : on n'inverse l'interrupteur qu'une fois l'écriture faite.
+  async function basculerSilhouettes() {
+    if (silhouettesEnCours) return
+    setSilhouettesEnCours(true)
+    setSilhouettesErreur(null)
+    const r = await enregistrerProfil({ silhouettes_vehicules: !silhouettes })
+    setSilhouettesEnCours(false)
+    if (r.ok) setSilhouettes(!silhouettes)
+    else setSilhouettesErreur(r.message)
+  }
 
   // Ce que les clients voient VRAIMENT : ni en veille, ni sans type de véhicule.
   // C'est ce compte-là que le plafond borne, pas le nombre de lignes de l'écran.
@@ -574,6 +592,30 @@ export default function PrestationsV2({
               <Ligne label="+ Ajouter une catégorie" onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
             </CarteListe>
           </div>
+
+          {/* Demande d'Alexandre (2026-10-19) : pouvoir éteindre le véhicule 3D de la page de
+              réservation ; allumé par défaut pour tous. */}
+          <section aria-label="Silhouette du véhicule" className="mt-[22px]">
+            <CarteListe>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1 py-3">
+                  <p className={`text-[15.5px] ${nom}`}>Afficher la silhouette du véhicule</p>
+                  <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {silhouettes
+                      ? 'Sur votre page de réservation, le véhicule choisi par le client apparaît en 3D.'
+                      : 'Votre page de réservation n’affiche pas le véhicule choisi.'}
+                  </p>
+                </div>
+                <Interrupteur
+                  actif={silhouettes}
+                  enCours={silhouettesEnCours}
+                  libelle="Afficher la silhouette du véhicule sur la page de réservation"
+                  onClick={basculerSilhouettes}
+                />
+              </div>
+            </CarteListe>
+            {silhouettesErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{silhouettesErreur}</Constat></div>}
+          </section>
         </>
       )}
 

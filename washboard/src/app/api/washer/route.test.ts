@@ -173,6 +173,12 @@ describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
       expect(updates).toHaveLength(0)
     })
 
+    it('laisse éteindre et rallumer la silhouette du véhicule, dès l’offre gratuite', async () => {
+      expect((await patch({ silhouettes_vehicules: false })).res.status).toBe(200)
+      expect((await patch({ silhouettes_vehicules: true })).res.status).toBe(200)
+      expect(updates.map(u => u.silhouettes_vehicules)).toEqual([false, true])
+    })
+
     it('laisse modifier ce qui n’appartient à aucune offre', async () => {
       // Nom, téléphone et message d'accueil restent ouverts à tout le monde :
       // sans eux, l'offre gratuite ne serait pas utilisable du tout.

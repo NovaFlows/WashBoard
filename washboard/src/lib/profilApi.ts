@@ -14,6 +14,7 @@ export type ChampsProfil = Partial<{
   base_address: string
   team_size: number
   reservation_jour_meme: boolean
+  silhouettes_vehicules: boolean
   travel_fee_tiers: { max_minutes: number; fee: number }[]
   travel_fee_mode: 'base' | 'previous'
   sms_sender: string

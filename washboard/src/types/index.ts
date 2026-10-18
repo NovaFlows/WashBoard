@@ -23,6 +23,10 @@ export type Washer = {
   smart_slot_discount_type: 'fixed' | 'percent'
   smart_slot_discount_value: number
   reservation_jour_meme: boolean
+  /** Le véhicule choisi apparaît en 3D sur la page de réservation (interrupteur de l'écran
+   *  Prestations, allumé par défaut pour tous, 2026-10-19). Seul `false` l'éteint : `undefined`
+   *  tant que la colonne n'existe pas en base, `null` — les deux valent « affiché ». */
+  silhouettes_vehicules?: boolean | null
   travel_fee_tiers: { max_minutes: number; fee: number }[]
   base_address: string | null
   travel_fee_mode: 'base' | 'previous'
