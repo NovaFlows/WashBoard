@@ -1,6 +1,6 @@
 # Contexte partagé — WashBoard
 
-Dernière mise à jour : 2026-10-09.
+Dernière mise à jour : 2026-10-18.
 
 ## Continuité de travail
 L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
@@ -25,6 +25,24 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 
 ## À faire avant de pousser
 - Ajouter `BOOKING_LINK_SECRET` sur Vercel (production + preview). Présente en local dans `washboard/.env.local`, documentée dans `.env.example`.
+
+## Grille des offres et tests e2e (2026-10-18)
+- Starter (19 €) inclut désormais comptabilité + facturation conforme, avis Google (email et 30 SMS/mois) et relances (`MIN_PLAN` / `SMS_QUOTA` dans `lib/plan.ts`) ; le Pro garde 150 SMS. Acompte, promotions et carte de fidélité sont ouverts dès Découverte.
+- Tests e2e réécrits pour la v2 (`dc608dc`) : 154 passent sur un build de production. Compte de test = AutoNett ; les réservations `[E2E]` créées sur un serveur de test ne déclenchent ni email ni notification (`lib/e2e.ts`). Les lancer en local : `npm run build`, `E2E_CLEANUP_ENABLED=true npx next start -p 3019`, puis `E2E_PORT=3019 npx playwright test`.
+
+## Carte de fidélité EN PRODUCTION (2026-10-18, fusion `be42014`)
+Tampons (une prestation terminée = un tampon), récompense au choix du laveur (offerte / % / €, options et déplacement offerts au choix), appliquée automatiquement par `api/bookings`. Logique : `lib/fidelite.ts`, `lib/fideliteServeur.ts` ; table `fidelite_cartes` (jeton de la page `/fidelite/<jeton>`), colonnes `washers.fidelite` (jsonb) et `bookings.fidelite_remise`.
+Carte en 3D (maquette validée par Alexandre : https://claude.ai/artifact/J1kpcQ7DwvgmEyGs9Lg4KD) : `components/fidelite/CarteFidelite3D.tsx` + `carteFidelite3D.css` (hors globals.css, sans `:has()`). Le laveur choisit couleur (défaut : sa couleur de marque), finition (holo/brillante/mate) et logo ou initiale — rangés dans `washers.fidelite`, aucune colonne en plus ; teintes déduites dans `lib/carteFidelite.ts`. Parcours « option C » : à la réservation, tampon EN ATTENTE sur l'écran de confirmation ; quand le laveur marque « Terminé », email « Votre tampon est arrivé » (`prevenirTampon`, email seulement — SMS non tranché car il coûte des crédits) dont le lien `?tampon=1` fait frapper le tampon sur la page carte. Banc d'essai : `/dev/booking-preview?mode=carte-fidelite|confirmation-fidelite|fidelite`. Réglages : boutons − / + sous l'aperçu pour voir l'animation de la récompense ; page carte : lien retour vers la réservation. Limite connue : repasser un RDV « Terminé » en arrière puis le remettre renvoie l'email. La carte suit le TÉLÉPHONE du client (`cleFidelite`, numéro écrit d'une seule façon), pas l'email comme le CRM ; la fiche client retrouve la carte par `cleFideliteDepuisCrm`. Option « Un tampon par véhicule » (`tampon_par_vehicule`) : le lien de l'email devient `?tampon=N`.
+
+## Acompte EN PRODUCTION (2026-10-17)
+Prestations et prix › Acompte, tout au choix du laveur : montant (fixe ou %), délai pour payer (annulation auto des réservations encore en attente par `/api/cron/acomptes`, cron-job.org toutes les 15 min), remboursement annoncé au client AVANT de réserver. WashBoard n'encaisse rien (option « lien du laveur ») : liens PayPal.me (montant ajouté automatiquement), Stripe, SumUp, Lydia, Autre ; Wero (numéro + lien `share.weropay.eu` LU dans la capture du QR code par jsqr, QR redessiné net par qrcode) ; virement (IBAN contrôlé, montré seulement après réservation, libellé `WB-XXXXXXXX`). Le QR code SEPA/EPC a été essayé puis retiré (pas lu par la banque d'Alexandre). Le laveur confirme « Acompte reçu » dans la fiche du RDV. Logique : `lib/acompte.ts`. Colonnes : `washers.acompte` (jsonb), `bookings.acompte_montant/_statut/_echeance/_recu_le`.
+
+## Promotions EN PRODUCTION (2026-10-17)
+Plus › Promotions : remise en % ou € pendant une période, sur toutes ou certaines prestations ; bandeau réglable (message, couleur, compte à rebours) en haut de la page de réservation (nouvelle page ET page personnalisée). Logique dans `lib/promotion.ts` ; la remise est recalculée par `api/bookings` et `booked_price` devient le prix remisé (`promotion_id`, `promo_remise` tracés). Table `promotions` + colonnes bookings créées en prod. Page personnalisée : prix pleins pendant le choix, remise visible au récapitulatif seulement. Ouvert à toutes les offres (pas de verrou Pro).
+
+## Entrée v2 EN PRODUCTION (2026-10-15, `a546422` + `05b8836`)
+Connexion, inscription, code email et onboarding refaits au design v2 (maquette : https://claude.ai/artifact/BPYytpi93EeXs1JtUadKph). Briques communes dans `components/entree/` (`Entree.tsx`, `AnimationsEntree.tsx`, styles dans `entree.css` — volontairement HORS de globals.css, que le cache Vercel a resservi périmé). Onboarding : 5 étapes (4 = questions obligatoires, 5 = facultatives + source) puis écran « Ton espace est prêt ». Stickers de l'équipe dans `public/equipe/` (ryan.webp = Ryan ; les deux autres nommés d'après leurs lunettes).
+Colonnes `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz) créées en production le 2026-10-15. **Reste :** `forgot-password` et `reset-password` gardent l'ancien habillage.
 
 ## Nouvelle version ordinateur OUVERTE À TOUS (2026-10-12)
 - `BUREAU_POUR_TOUS = true` (`hooks/useDashboardV2.ts`, fonction `bureauAutorise`) : `beta_refonte` ne décide plus rien ; tous les laveurs, anciens et nouveaux, ont la v2 sur ordinateur (fenêtre ≥ 880px avec souris). Retour arrière : passer la constante à `false`. Les tablettes sans souris gardent l'ancien site.

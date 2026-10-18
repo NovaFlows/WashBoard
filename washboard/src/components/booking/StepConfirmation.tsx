@@ -5,6 +5,8 @@ import type { Service } from '@/types'
 import type { FormState } from './BookingForm'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { formatPrice, dureeTotale } from '@/lib/pricing'
+import EncartAcompte, { type AcompteDu } from './EncartAcompte'
+import CarteApresReservation, { type FideliteDue } from './CarteApresReservation'
 import { buildIcs } from '@/lib/ics'
 import { SOURCES_DECOUVERTE, type SourceDecouverte } from '@/lib/sourceDecouverte'
 
@@ -18,13 +20,22 @@ type Props = {
    *  pendant le formulaire (voir BookingForm) — `null` si le laveur n'a pas
    *  de téléphone ou a atteint son plafond de réservations du mois. */
   whatsappHref?: string | null
+  /** Remise de la promotion en cours, déjà calculée par BookingForm (0 sinon). */
+  remise?: number
+  nomPromotion?: string | null
+  /** Acompte à régler par le lien du laveur, renvoyé par le serveur (lib/acompte.ts). */
+  acompte?: AcompteDu | null
+  /** Carte de fidélité renvoyée par le serveur (lib/fidelite.ts), et le laveur concerné. */
+  fidelite?: FideliteDue | null
+  washerId?: string
+  accent?: string
 }
 
-export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null }: Props) {
+export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null, acompte = null, accent, fidelite = null, washerId }: Props) {
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
-  const total = displayPrice + (form.travel_fee ?? 0) - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
+  const total = displayPrice + (form.travel_fee ?? 0) - remise - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0)
 
   const [source, setSource] = useState<SourceDecouverte | null>(null)
   const [sourceEnvoi, setSourceEnvoi] = useState<'repos' | 'envoi' | 'fait' | 'erreur'>('repos')
@@ -81,6 +92,14 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
 
+      {fidelite && washerId && <CarteApresReservation fidelite={fidelite} washerId={washerId} />}
+
+      {acompte && (
+        <div className="mb-5">
+          <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} liens={acompte.liens} virement={acompte.virement ?? null} wero={acompte.wero ?? null} accent={accent} />
+        </div>
+      )}
+
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-3 mb-5">
         <Row label="Prestataire" value={washerName} />
         {service && (
@@ -118,7 +137,10 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
         {form.travel_fee != null && form.travel_fee > 0 && (
           <Row label="Frais de déplacement" value={`+${form.travel_fee}€`} />
         )}
-        {form.travel_fee != null && form.travel_fee > 0 && (
+        {remise > 0 && (
+          <Row label={nomPromotion ? `Promotion ${nomPromotion}` : 'Promotion'} value={`−${formatPrice(remise)}`} />
+        )}
+        {((form.travel_fee != null && form.travel_fee > 0) || remise > 0) && (
           <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
             <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
             <span className="font-bold text-slate-900 dark:text-slate-100">{formatPrice(total)}</span>

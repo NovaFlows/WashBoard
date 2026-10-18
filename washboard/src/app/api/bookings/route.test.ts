@@ -38,7 +38,8 @@ function nouveauBuilder(table: string) {
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
     update: (valeurs: Record<string, unknown>) => { majAppels.push({ table, valeurs }); return b },
-    eq: self, gte: self, lte: self, in: self, order: self, limit: self,
+    eq: self, gte: self, gt: self, lte: self, in: self, order: self, limit: self, or: self, ilike: self,
+    upsert: () => Promise.resolve({ error: null }),
     neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
     maybeSingle: () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
@@ -240,6 +241,31 @@ describe('POST /api/bookings — le prix ne vient jamais du navigateur (H1)', ()
 
     const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
     expect(reserv.booked_price).toBe(75) // 60 + 15, l'option inventée vaut 0
+  })
+})
+
+describe('POST /api/bookings — promotion en cours', () => {
+  it('applique la remise du serveur et la trace sur la réservation', async () => {
+    plan.tables.promotions = { data: { id: 'promo-1', nom: 'Saint-Valentin', type_remise: 'pourcentage', valeur: 20, service_ids: null }, error: null }
+    await poster({ booked_price: 1 })
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(48) // 60 − 20 %
+    expect(reserv.promotion_id).toBe('promo-1')
+    expect(reserv.promo_remise).toBe(12)
+  })
+
+  it('sans promotion, n’envoie aucune colonne de promotion (la base ne les a peut-être pas)', async () => {
+    await poster({})
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(60)
+    expect(reserv).not.toHaveProperty('promotion_id')
+    expect(reserv).not.toHaveProperty('promo_remise')
+  })
+
+  it('table des promotions absente : la réservation passe sans remise', async () => {
+    plan.tables.promotions = { data: null, error: { code: '42P01', message: 'relation "public.promotions" does not exist' } }
+    expect((await poster({})).res.status).toBe(201)
+    expect((rpcAppels[0].args.p_booking as Record<string, unknown>).booked_price).toBe(60)
   })
 })
 
@@ -844,5 +870,77 @@ describe('POST /api/bookings — fin d’essai selon l’âge du compte', () => 
     })
     plan.countMois = 500
     expect((await poster()).res.status).toBe(201)
+  })
+})
+
+describe('POST /api/bookings — acompte', () => {
+  const ACOMPTE = { actif: true, type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/eclat', paypal: 'https://paypal.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
+
+  it('calcule l’acompte sur le total, le trace et renvoie le lien de paiement', async () => {
+    avecWasher({ acompte: ACOMPTE })
+    const { res, body } = await poster({})
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.acompte_montant).toBe(18) // 30 % de 60
+    expect(reserv.acompte_statut).toBe('en_attente')
+    expect(typeof reserv.acompte_echeance).toBe('string')
+    expect(body.data.acompte.montant).toBe(18)
+    expect(body.data.acompte.liens).toEqual([
+      { cle: 'paypal', libelle: 'PayPal', url: 'https://paypal.me/eclat/18.00EUR', montantExact: true },
+      { cle: 'sumup', libelle: 'SumUp', url: 'https://sumup.me/eclat', montantExact: false },
+    ])
+  })
+
+  it('acompte désactivé ou réglages abîmés : aucune colonne d’acompte envoyée', async () => {
+    avecWasher({ acompte: { ...ACOMPTE, actif: false } })
+    await poster({})
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_montant')
+    rpcAppels.length = 0
+    avecWasher({ acompte: { ...ACOMPTE, liens: { stripe: 'pas un lien' } } })
+    const { body } = await poster({})
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_statut')
+    expect(body.data).not.toHaveProperty('acompte')
+  })
+})
+
+describe('POST /api/bookings — carte de fidélité', () => {
+  const FIDELITE = { actif: true, tampons: 10, recompense: 'pourcentage', valeur: 50 }
+  // La carte suit le téléphone (2026-10-18) : mêmes chiffres écrits autrement, autre email.
+  const termines = (n: number, vehicle_count = 1) => Array.from({ length: n }, () => ({ status: 'done', fidelite_remise: null, vehicle_count, client_email: 'ancienne@adresse.fr', client_phone: '06 12 34 56 78' }))
+
+  it('carte pleine : applique la récompense, la trace et renvoie la carte', async () => {
+    avecWasher({ fidelite: FIDELITE })
+    plan.tables.fidelite_cartes = { data: { jeton: 'a'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(10), error: null }
+    const { res, body } = await poster({ client_email: 'client@test.fr' })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.fidelite_remise).toBe(30) // 50 % de 60
+    expect(reserv.booked_price).toBe(30)
+    expect(body.data.fidelite).toMatchObject({ jeton: 'a'.repeat(36), remise: 30, etat: { disponibles: 0 } })
+  })
+
+  it('carte pas pleine : aucune remise, mais la carte est renvoyée', async () => {
+    avecWasher({ fidelite: FIDELITE })
+    plan.tables.fidelite_cartes = { data: { jeton: 'b'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(3), error: null }
+    const { body } = await poster({ client_email: 'client@test.fr' })
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('fidelite_remise')
+    expect(body.data.fidelite.etat).toMatchObject({ progression: 3, requis: 10 })
+  })
+
+  it('un tampon par véhicule, si le laveur l’a choisi', async () => {
+    avecWasher({ fidelite: { ...FIDELITE, tampon_par_vehicule: true } })
+    plan.tables.fidelite_cartes = { data: { jeton: 'c'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(4, 2), error: null }
+    const { body } = await poster({ client_email: 'client@test.fr' })
+    expect(body.data.fidelite.etat).toMatchObject({ progression: 8, requis: 10 })
+    expect(body.data.fidelite.gain).toBe(1)
+  })
+
+  it('sans carte de fidélité chez le laveur : rien ne change', async () => {
+    const { body } = await poster({})
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('fidelite_remise')
+    expect(body.data).not.toHaveProperty('fidelite')
   })
 })

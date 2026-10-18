@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page, type TestInfo } from '@playwright/test'
 import { expectNoAppError, hasWasherCredentials } from './helpers'
 
 // Clôture d'un créneau passé : « Terminé » émet la facture, donc l'application
@@ -24,39 +24,44 @@ test.beforeEach(async ({}, testInfo) => {
   testInfo.skip(!hasWasherCredentials, 'TEST_WASHER_EMAIL absent — tests laveur ignorés')
 })
 
+// v2 (2026-10-18) : l'accueil marque « À clôturer » un rendez-vous fini mais pas clôturé ;
+// son détail, dans l'Agenda, propose « Marquer terminé » (ou « Terminé » s'il était resté
+// en attente), qui pose la question. L'ancien bouton « Clôturer » de l'accueil v1 n'existe
+// plus : le test le comptait dans le rendu serveur, avant que la v2 ne le remplace, puis
+// attendait indéfiniment de cliquer dessus.
+async function ouvrirQuestion(page: Page, testInfo: TestInfo) {
+  await page.goto('/dashboard')
+  await expectNoAppError(page)
+  await expect(page.getByRole('navigation', { name: 'Navigation' })).toBeVisible({ timeout: 15_000 })
+  await page.waitForLoadState('networkidle')
+
+  const aCloturer = page.getByRole('main').getByRole('link').filter({ hasText: 'À clôturer' }).first()
+  testInfo.skip(await aCloturer.count() === 0, 'aucun créneau passé à clôturer sur le compte de test')
+
+  await aCloturer.click()
+  await page.getByRole('button', { name: /^(Marquer terminé|Terminé)$/ }).first().click()
+  const question = page.getByRole('dialog', { name: /Avez-vous fait ce rendez-vous/ })
+  await expect(question).toBeVisible({ timeout: 10_000 })
+  return question
+}
+
 test.describe('Clôture d’un créneau passé', () => {
   test('la question s’ouvre, propose les deux réponses, et « Revenir » ne change rien', async ({ page }, testInfo) => {
-    await page.goto('/dashboard')
-    await expectNoAppError(page)
-
-    const cloturer = page.getByRole('button', { name: 'Clôturer' }).first()
-    testInfo.skip(await cloturer.count() === 0, 'aucun créneau passé à clôturer sur le compte de test')
-
-    await cloturer.click()
-
-    const question = page.getByRole('dialog', { name: /Avez-vous fait ce rendez-vous/ })
-    await expect(question).toBeVisible({ timeout: 10_000 })
+    const question = await ouvrirQuestion(page, testInfo)
     await expect(question.getByRole('button', { name: /Oui, je l’ai fait/ })).toBeVisible()
     await expect(question.getByRole('button', { name: /Non, il n’a pas eu lieu/ })).toBeVisible()
 
     // Sortie sans effet : le rendez-vous reste tel quel, et son bouton aussi.
     await question.getByRole('button', { name: 'Revenir' }).click()
     await expect(question).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Clôturer' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /^(Marquer terminé|Terminé)$/ }).first()).toBeVisible()
     await expectNoAppError(page)
   })
 
   test('la touche Échap ferme la question sans rien clôturer', async ({ page }, testInfo) => {
-    await page.goto('/dashboard')
-    const cloturer = page.getByRole('button', { name: 'Clôturer' }).first()
-    testInfo.skip(await cloturer.count() === 0, 'aucun créneau passé à clôturer sur le compte de test')
-
-    await cloturer.click()
-    const question = page.getByRole('dialog', { name: /Avez-vous fait ce rendez-vous/ })
-    await expect(question).toBeVisible({ timeout: 10_000 })
-
+    const question = await ouvrirQuestion(page, testInfo)
     await page.keyboard.press('Escape')
     await expect(question).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Clôturer' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /^(Marquer terminé|Terminé)$/ }).first()).toBeVisible()
   })
 })

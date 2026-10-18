@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { serveurDeTest } from '@/lib/e2e'
 
 // Endpoint de nettoyage réservé aux tests E2E — bloqué en production.
 //
@@ -22,7 +23,7 @@ const E2E_PREFIX = '[E2E]'
  *  situations. Elle ne doit jamais être définie sur Vercel — sinon n'importe
  *  qui pourrait effacer les données `[E2E]` du site en ligne. */
 function nettoyageAutorisé(): boolean {
-  return process.env.NODE_ENV !== 'production' || process.env.E2E_CLEANUP_ENABLED === 'true'
+  return serveurDeTest()
 }
 
 export async function POST(req: Request) {

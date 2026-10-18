@@ -9,6 +9,9 @@ import { reviewsForWasher } from '@/lib/googleReviews'
 import { hasFeature, quotaPrestations } from '@/lib/plan'
 import { prestationsAffichees } from '@/lib/prestation'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
+import BandeauPromotion from '@/components/booking/BandeauPromotion'
+import type { PromotionPublique } from '@/lib/promotion'
+import type { AcomptePublic } from '@/lib/acompte'
 
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
@@ -16,9 +19,12 @@ type Props = {
  washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
+ promotion?: PromotionPublique | null
+ acompte?: AcomptePublic | null
+ fideliteProposee?: boolean
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId}: Props) {
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false}: Props) {
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -30,6 +36,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
     <>
     {logoUrl && <link rel="icon" href={logoUrl} type="image/png" />}
     <RetourApercu />
+    {promotion && <BandeauPromotion promo={promotion} />}
     <div
       className={`min-h-screen ${themed ? '' : 'bg-slate-50 dark:bg-slate-950'}`}
       style={bgStyle ?? undefined}
@@ -158,6 +165,9 @@ export default function LegacyBookingPage({washer, services, categories, availab
           // payantes" — c'est washer.brand_color brut sur les offres payantes,
           // le bleu WashBoard sinon (calculé plus haut).
           accent={accent}
+          promotion={promotion}
+          acompte={acompte}
+          fideliteProposee={fideliteProposee}
         />
 
         {(washer.website_url || washer.google_place_id) && (

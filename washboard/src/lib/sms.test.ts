@@ -6,8 +6,11 @@ describe('expediteurPour', () => {
     expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'approuve' })).toBe('AutoNett')
   })
   it('reste sur WashBoard tant que la demande attend ou a été refusée', () => {
-    expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'en_attente' })).toBe('WashBoard')
-    expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'refuse' })).toBe('WashBoard')
+    expect(expediteurPour({ sms_sender: 'EclatMobile', sms_sender_statut: 'en_attente' })).toBe('WashBoard')
+    expect(expediteurPour({ sms_sender: 'EclatMobile', sms_sender_statut: 'refuse' })).toBe('WashBoard')
+  })
+  it('un nom déjà validé chez Brevo (liste) part sous ce nom même si la fiche est restée en attente', () => {
+    expect(expediteurPour({ sms_sender: 'AutoNett', sms_sender_statut: 'en_attente' })).toBe('AutoNett')
   })
   it('reste sur WashBoard sans nom', () => {
     expect(expediteurPour({ sms_sender: null, sms_sender_statut: 'approuve' })).toBe('WashBoard')

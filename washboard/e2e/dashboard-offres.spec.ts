@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { expectNoAppError, hasWasherCredentials, TEST_WASHER_SLUG } from './helpers'
-import { PLAN_CARDS, BOOKING_QUOTA, SERVICE_QUOTA, PLAN_PRICES } from '../src/lib/plan'
+import { PLAN_CARDS, BOOKING_QUOTA, SERVICE_QUOTA, PLAN_PRICES, LIBELLE_CONTACT } from '../src/lib/plan'
 
 // Grille tarifaire 2026 : ce que voit réellement un laveur selon son offre.
 //
@@ -43,9 +43,11 @@ test.describe('Offres — la grille 2026 est bien celle qui s’affiche', () => 
       await expect(page.locator(`text=${carte.name}`).first()).toBeVisible()
     }
     // Les prix viennent de `lib/plan.ts` : si quelqu'un modifie un tarif sans
-    // toucher à l'affichage (ou l'inverse), ce test tombe.
-    for (const carte of PLAN_CARDS.filter(c => c.price > 0)) {
-      await expect(page.locator(`text=${carte.price}€`).first()).toBeVisible()
+    // toucher à l'affichage (ou l'inverse), ce test tombe. En mensuel : l'annuel,
+    // présélectionné, affiche l'équivalent par mois (« 17,42 € »), pas le tarif.
+    await page.getByRole('tab', { name: 'Mensuel' }).click()
+    for (const carte of PLAN_CARDS.filter(c => c.price > 0 && !c.surDevis)) {
+      await expect(page.getByText(new RegExp(`^${carte.price} €`)).first()).toBeVisible()
     }
   })
 
@@ -57,13 +59,15 @@ test.describe('Offres — la grille 2026 est bien celle qui s’affiche', () => 
     await expect(page.locator('text=0€/mois')).toHaveCount(0)
   })
 
-  test('le Business annonce un prix de départ, pas un prix ferme', async ({ page }) => {
-    // Son tarif dépend du nombre de laveurs : l'afficher sec ferait une
-    // promesse qu'on ne tient pas dès le 4ᵉ laveur.
+  test('le Business se demande, sans prix affiché', async ({ page }) => {
+    // Son tarif dépend de la taille de l'équipe : depuis la grille 2026 la carte dit
+    // « Nous contacter », et afficher un prix deux lignes plus bas la contredirait
+    // (voir le commentaire de PLAN_CARDS dans lib/plan.ts).
     await page.goto('/dashboard/abonnement')
     await expect(page.locator('text=Nos offres').first()).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator(`text=dès`).first()).toBeVisible()
-    await expect(page.locator(`text=${PLAN_PRICES.business}€`).first()).toBeVisible()
+    await expect(page.getByText(LIBELLE_CONTACT, { exact: true }).first()).toBeVisible()
+    await page.getByRole('tab', { name: 'Mensuel' }).click()
+    await expect(page.getByText(new RegExp(`^${PLAN_PRICES.business} €`))).toHaveCount(0)
   })
 
   test('aucune offre ne propose de payer une offre gratuite', async ({ page }) => {
@@ -166,10 +170,11 @@ test.describe('Offre Starter — le palier du milieu', () => {
     await expect(page.locator('text=viennent vos clients')).toHaveCount(0)
   })
 
-  test('la comptabilité reste fermée', async ({ page }) => {
+  test('la comptabilité est ouverte (descendue du Pro le 2026-10-18)', async ({ page }) => {
     await page.goto('/dashboard/compta')
     await expectNoAppError(page)
-    await expect(page.locator('text=Gérez votre comptabilité').first()).toBeVisible({ timeout: 15_000 })
+    // L'invitation à changer d'offre ne doit PAS être là.
+    await expect(page.locator('text=Gérez votre comptabilité')).toHaveCount(0)
   })
 
   test('la jauge affiche le plafond du Starter, pas celui du gratuit', async ({ page }) => {

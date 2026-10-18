@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   PLAN_CARDS, freeMonthsLabel, formatEuros, yearlyPrice, yearlyMonthlyEquivalent,
   lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
-  PLAN_COULEURS, SMS_QUOTA, requiredPlan, requiredPlanLabel,
+  PLAN_COULEURS, quotaSmsEnClair, requiredPlan, requiredPlanLabel,
   type BillingCycle, type Feature,
 } from '@/lib/plan'
 import BillingToggle from '@/components/ui/BillingToggle'
@@ -145,11 +145,15 @@ const FONCTIONNALITES: Fonctionnalite[] = [
   { titre: 'Appli et notifications', desc: 'WashBoard s’installe sur ton téléphone et t’envoie chaque nouvelle réservation. En bêta.' },
   { titre: 'Google Agenda', desc: 'Tes réservations s’ajoutent à ton Google Agenda et suivent chaque modification.' },
   { titre: 'Frais de déplacement', desc: 'Calculés selon la distance, depuis ton point de départ ou ton rendez-vous précédent.', offre: 'frais_deplacement' },
+  // Sorties en octobre 2026, ouvertes dès l'offre Découverte : pas de clé `offre`, donc pas de badge.
+  { titre: 'Acompte', desc: 'Un acompte demandé à la réservation, payé par ton lien PayPal, Stripe, SumUp, Lydia, par Wero ou par virement. Pas réglé à temps : le créneau se libère tout seul.' },
+  { titre: 'Promotions', desc: 'Une remise en % ou en € pendant la période de ton choix, sur tout ou partie de tes prestations, annoncée par un bandeau et un compte à rebours sur ta page.' },
+  { titre: 'Carte de fidélité', desc: 'Un tampon à chaque prestation, et la récompense de ton choix (prestation offerte ou remise) appliquée toute seule. Une carte en 3D, à tes couleurs.' },
   { titre: 'CRM et statistiques', desc: 'Visiteurs, taux de conversion, sources (Instagram, TikTok, Google…) et export Excel.', offre: 'crm' },
   { titre: 'Campagnes publicitaires', desc: 'Combien de réservations viennent de chaque campagne Meta, et ce qu’elle te rapporte.', offre: 'campagnes' },
   { titre: 'Créneaux intelligents', desc: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant au client, avec une remise si tu en as réglé une.', offre: 'creneaux_intelligents' },
   { titre: 'Fiche client', desc: 'Historique, chiffre d’affaires, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
-  { titre: 'Avis Google automatiques', desc: `Une demande d’avis après chaque prestation terminée, par email ou par SMS (${SMS_QUOTA.pro} par mois).`, offre: 'avis_email' },
+  { titre: 'Avis Google automatiques', desc: `Une demande d’avis après chaque prestation terminée, par email ou par SMS (${quotaSmsEnClair()}).`, offre: 'avis_email' },
   { titre: 'Relances de suivi', desc: 'Un message automatique pour faire revenir un client après sa dernière prestation.', offre: 'followup' },
   { titre: 'Comptabilité', desc: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', offre: 'compta' },
   { titre: 'Multi-laveurs', desc: 'Plusieurs rendez-vous en même temps, selon la taille de ton équipe.', offre: 'multi_laveurs' },

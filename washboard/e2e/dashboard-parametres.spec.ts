@@ -1,128 +1,159 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { expectNoAppError, hasWasherCredentials } from './helpers'
 import { TRAFFIC_SOURCES } from '../src/lib/trafficSources'
 
-// Paramètres : lien de réservation, frais de déplacement, relances, avis,
-// équipe, sécurité du compte.
+// Réglages : lien de réservation, frais de déplacement, relances, avis, équipe,
+// sécurité du compte.
 //
-// ⚠️ Aucun test ne déclenche la désactivation ni la suppression du compte :
-// la base est partagée avec la production, et le compte de test est celui qui
-// fait tourner tous les autres tests. On vérifie la présence et les garde-fous
-// de ces actions, jamais leur exécution.
+// Écrits pour la v2 (2026-10-18) : sur ordinateur, tous les laveurs l'ont depuis le
+// 2026-10-12. Les anciens onglets « Général / Page client » de /dashboard/parametres
+// sont devenus le menu « Plus » et ses écrans (Mon profil, Mes liens, Réglages…), et
+// chaque réglage s'ouvre dans une feuille.
+//
+// ⚠️ Aucun test ne déclenche la mise en pause ni la suppression du compte, et aucune
+// feuille n'est enregistrée : la base est partagée avec la production, et le compte de
+// test est celui qui fait tourner tous les autres tests. On vérifie la présence et les
+// garde-fous de ces actions, jamais leur exécution.
 
 test.beforeEach(async ({}, testInfo) => {
   testInfo.skip(!hasWasherCredentials, 'TEST_WASHER_EMAIL absent — tests laveur ignorés')
 })
 
-test.describe('Paramètres — lien de réservation', () => {
-  test('les deux onglets sont accessibles', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await expectNoAppError(page)
-    await expect(page.getByTestId('parametres-tab-general')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('parametres-tab-client')).toBeVisible()
-  })
+async function ouvrir(page: Page, chemin: string, titre: string) {
+  await page.goto(chemin)
+  await expectNoAppError(page)
+  await expect(page.getByRole('heading', { name: titre, level: 1 })).toBeVisible({ timeout: 15_000 })
+}
 
-  test('le lien personnalisé est affiché et copiable', async ({ page }) => {
+/** Ouvre la feuille d'un réglage et la rend, pour qu'un test la referme sans enregistrer. */
+async function feuille(page: Page, ligne: RegExp, titre: string) {
+  await page.getByRole('button', { name: ligne }).first().click()
+  const dialogue = page.getByRole('dialog', { name: titre })
+  await expect(dialogue).toBeVisible({ timeout: 10_000 })
+  return dialogue
+}
+
+test.describe('Plus — accès aux réglages', () => {
+  test('le menu Plus mène à chaque écran de réglages', async ({ page }) => {
     await page.goto('/dashboard/parametres')
-    await page.getByTestId('parametres-tab-client').click()
     await expectNoAppError(page)
-    await expect(page.locator('text=Votre lien de réservation')).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('text=/book/').first()).toBeVisible()
+    for (const ecran of ['Mon profil', 'Mes liens', 'Prestations et prix', 'Horaires', 'Apparence de ma page', 'Abonnement', 'Réglages']) {
+      await expect(page.getByRole('main').getByRole('link', { name: new RegExp(`^${ecran}`) }).first()).toBeVisible({ timeout: 15_000 })
+    }
+  })
+})
+
+test.describe('Mes liens — lien de réservation', () => {
+  test('le lien personnalisé est affiché et copiable', async ({ page }) => {
+    await ouvrir(page, '/dashboard/parametres/liens', 'Mes liens')
+    const lien = page.getByRole('region', { name: 'Lien de réservation' })
+    await expect(lien.getByText(/\/book\//)).toBeVisible()
+    await expect(lien.getByRole('button', { name: 'Copier le lien' })).toBeVisible()
   })
 
   test('un lien dédié est proposé pour chaque réseau', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await page.getByTestId('parametres-tab-client').click()
-    await expect(page.locator('text=Votre lien de réservation')).toBeVisible({ timeout: 15_000 })
+    await ouvrir(page, '/dashboard/parametres/liens', 'Mes liens')
     for (const source of TRAFFIC_SOURCES) {
-      const étiquette = source.label.split(' (')[0]
-      await expect(page.locator(`text=${étiquette}`).first()).toBeVisible()
+      const etiquette = source.label.split(' (')[0]
+      await expect(page.getByRole('button', { name: `Copier le lien ${etiquette}` })).toBeVisible()
     }
   })
 
   test('un slug invalide est refusé', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await page.getByTestId('parametres-tab-client').click()
-    await expect(page.locator('text=Votre lien de réservation')).toBeVisible({ timeout: 15_000 })
-
-    // Le champ filtre déjà la saisie (minuscules, chiffres, tirets) : on vérifie
-    // qu'un caractère interdit n'atteint jamais la valeur, sinon un slug cassé
-    // rendrait la page de réservation inaccessible.
-    const champ = page.locator('input[placeholder="mon-entreprise"]')
+    await ouvrir(page, '/dashboard/parametres/liens', 'Mes liens')
+    const dialogue = await feuille(page, /^Changer mon lien$/, 'Changer mon lien')
+    const champ = dialogue.getByLabel('Fin de votre lien de réservation')
+    const avant = await champ.inputValue()
+    // Un slug cassé rendrait la page de réservation inaccessible : la feuille doit le
+    // refuser, et rien ne doit partir tant qu'il est invalide.
     await champ.fill('MAJUSCULES ET ESPACES!!')
-    expect(await champ.inputValue()).toMatch(/^[a-z0-9-]*$/)
+    await dialogue.getByRole('button', { name: 'Continuer' }).click()
+    await expect(dialogue).toBeVisible()
+    await expect(champ).toHaveAttribute('aria-invalid', 'true')
+    await expect(dialogue.getByRole('alert')).toBeVisible()
+    await dialogue.getByRole('button', { name: 'Annuler' }).click()
+    await expect(dialogue).toBeHidden()
+    // Le lien affiché n'a pas bougé.
+    await expect(page.getByRole('region', { name: 'Lien de réservation' }).getByText(`/book/${avant}`)).toBeVisible()
   })
 })
 
-test.describe('Paramètres — sections métier', () => {
-  const sections = [
-    'Frais de déplacement par durée',
-    'Calculer le trajet depuis',
-    'Demander des avis',
-    'Relances automatiques',
-    'Nombre de laveurs',
-  ]
-
-  for (const section of sections) {
-    test(`la section « ${section} » est rendue`, async ({ page }) => {
-      await page.goto('/dashboard/parametres')
-      await expectNoAppError(page)
-      await expect(page.locator(`text=${section}`).first()).toBeVisible({ timeout: 15_000 })
+test.describe('Mon profil — sections métier', () => {
+  for (const [ligne, titre] of [
+    [/^Frais de déplacement/, 'Frais de déplacement'],
+    [/^Adresse de départ/, 'Adresse de départ'],
+    [/^Nombre de laveurs/, 'Nombre de laveurs'],
+  ] as const) {
+    test(`le réglage « ${titre} » s’ouvre`, async ({ page }) => {
+      await ouvrir(page, '/dashboard/parametres/profil', 'Mon profil')
+      const dialogue = await feuille(page, ligne, titre)
+      await dialogue.getByRole('button', { name: 'Annuler' }).click()
+      await expect(dialogue).toBeHidden()
     })
   }
 
-  test('les relances exposent leur délai et leur message', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await expect(page.locator('text=Relances automatiques')).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('text=Délai avant relance').first()).toBeVisible()
-    await expect(page.locator('text=Message de relance').first()).toBeVisible()
+  test('les frais de déplacement exposent leurs paliers et le point de départ du trajet', async ({ page }) => {
+    await ouvrir(page, '/dashboard/parametres/profil', 'Mon profil')
+    const dialogue = await feuille(page, /^Frais de déplacement/, 'Frais de déplacement')
+    await expect(dialogue.getByRole('heading', { name: 'Paliers' })).toBeVisible()
+    await expect(dialogue.getByRole('group', { name: 'Point de départ du trajet' })).toBeVisible()
+    await dialogue.getByRole('button', { name: 'Annuler' }).click()
   })
 })
 
-test.describe('Paramètres — sécurité du compte', () => {
+test.describe('Messages automatiques — avis et relances', () => {
+  test('la demande d’avis et la relance sont proposées', async ({ page }) => {
+    await ouvrir(page, '/dashboard/clients/messages', 'Messages automatiques')
+    await expect(page.getByRole('switch', { name: 'Demande d’avis Google' })).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Relance' })).toBeVisible()
+  })
+
+  test('les relances exposent leur délai et leur message', async ({ page }) => {
+    await ouvrir(page, '/dashboard/clients/messages', 'Messages automatiques')
+    await page.getByRole('button', { name: 'Réglages : Relance' }).click()
+    const dialogue = page.getByRole('dialog', { name: 'Relance' })
+    await expect(dialogue.getByRole('group', { name: 'Délai avant la relance' })).toBeVisible({ timeout: 10_000 })
+    await expect(dialogue.getByLabel('Message de relance')).toBeVisible()
+    await dialogue.getByRole('button', { name: 'Annuler' }).click()
+    await expect(dialogue).toBeHidden()
+  })
+})
+
+test.describe('Mon profil — sécurité du compte', () => {
   test('le changement de mot de passe est proposé', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await expect(page.locator('text=Nouveau mot de passe').first()).toBeVisible({ timeout: 15_000 })
+    await ouvrir(page, '/dashboard/parametres/profil', 'Mon profil')
+    const dialogue = await feuille(page, /^Mot de passe/, 'Mot de passe')
+    await expect(dialogue.getByLabel('Nouveau mot de passe', { exact: true })).toBeVisible()
+    await dialogue.getByRole('button', { name: 'Annuler' }).click()
   })
 
   test('supprimer le compte exige une confirmation par le nom', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await expect(page.locator('text=Zone de danger').first()).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('text=Désactiver mon compte').first()).toBeVisible()
+    await ouvrir(page, '/dashboard/parametres/profil', 'Mon profil')
+    await expect(page.getByRole('button', { name: /^Mettre mon compte en pause/ })).toBeVisible()
 
-    // Ouvrir la confirmation ne doit RIEN supprimer : c'est tout l'intérêt du
-    // garde-fou. Le test ouvre la fenêtre, vérifie qu'on y demande de saisir le
-    // nom de l'entreprise, puis referme — il ne confirme jamais.
-    // Identifiant explicite : plusieurs boutons « Supprimer » coexistent sur la
-    // page (paliers de frais…), et se tromper de cible sur une action de
-    // suppression de compte n'est pas un risque acceptable dans un test.
-    await page.getByTestId('delete-account-open').click()
-    await expect(page.locator('text=Supprimer définitivement le compte')).toBeVisible({ timeout: 10_000 })
-
-    // Le bouton de confirmation reste inactif tant que le nom n'est pas saisi.
-    const confirmer = page.locator('button', { hasText: /^Confirmer$/ }).first()
-    if (await confirmer.isVisible().catch(() => false)) {
-      await expect(confirmer).toBeDisabled()
-    }
+    // Ouvrir la confirmation ne doit RIEN supprimer : c'est tout l'intérêt du garde-fou.
+    // Le test vérifie qu'on y demande le nom de l'entreprise, qu'un mauvais nom laisse le
+    // bouton inactif, puis referme — il ne saisit JAMAIS le bon nom.
+    const dialogue = await feuille(page, /^Supprimer mon compte/, 'Supprimer mon compte')
+    const confirmer = dialogue.getByRole('button', { name: 'Supprimer mon compte' })
+    await expect(confirmer).toBeDisabled()
+    await dialogue.getByLabel('Nom de votre entreprise').fill('[E2E] pas le bon nom')
+    await expect(confirmer).toBeDisabled()
+    await dialogue.getByRole('button', { name: 'Annuler' }).click()
+    await expect(dialogue).toBeHidden()
 
     // On quitte la page sans confirmer, pour ne rien laisser en suspens.
     await page.goto('/dashboard')
-    await expect(page.locator('text=Compte désactivé')).toHaveCount(0)
+    await expect(page.getByText('Compte désactivé')).toHaveCount(0)
   })
 })
 
-test.describe('Paramètres — accès à la page client', () => {
-  test('le raccourci vers la configuration de la page client est présent', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await page.getByTestId('parametres-tab-client').click()
-    await expect(page.locator('a[href="/dashboard/admin"]').first()).toBeVisible({ timeout: 15_000 })
-  })
-})
-
-test.describe('Paramètres — notifications', () => {
+test.describe('Réglages — notifications', () => {
   test('la section notifications est présente', async ({ page }) => {
-    await page.goto('/dashboard/parametres')
-    await expect(page.locator('text=Soyez prévenu sur votre téléphone')).toBeVisible({ timeout: 15_000 })
+    await ouvrir(page, '/dashboard/parametres/reglages', 'Réglages')
+    const dialogue = await feuille(page, /^Notifications/, 'Notifications')
+    await expect(dialogue.getByText(/dès qu’un client réserve/)).toBeVisible()
+    await page.keyboard.press('Escape')
   })
 
   test("l'enregistrement d'un appareil atteint réellement la base", async ({ page }) => {

@@ -1,0 +1,145 @@
+/* Styles des écrans d'entrée v2 : connexion, inscription, code email, onboarding.
+   Importé par components/entree/Entree.tsx, PAS ajouté à globals.css : le 2026-10-15, le
+   cache de construction de Vercel a resservi l'ancien globals.css avec le nouveau code
+   (piège déjà vu le 2026-10-12), et tout ce bloc manquait en production. Un fichier à part,
+   neuf, ne peut pas être pris pour une version en cache. */
+/* ── Entrée dans l'app en v2 : connexion, inscription, code email, onboarding (2026-10-15) ──
+   Maquette validée par Alexandre : https://claude.ai/artifact/BPYytpi93EeXs1JtUadKph
+   Fond papier plat (plus de halo), contenu sur surface blanche, verre réservé au châssis :
+   l'en-tête et la barre d'action du bas sur téléphone, sous lesquels le contenu défile.
+   Sur ordinateur (≥ 1024px) la barre d'action redevient un bloc ordinaire sous le formulaire.
+   Pas de `:has()` ici (voir l'avertissement en tête de fichier). */
+.wb-entree {
+  background: var(--v2-color-fond);
+  color: var(--v2-color-encre);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+.wb-entree-verre {
+  background: linear-gradient(180deg, var(--v2-verre-haut), var(--v2-verre-bas));
+  backdrop-filter: var(--v2-verre-flou);
+  -webkit-backdrop-filter: var(--v2-verre-flou);
+  border: 1px solid var(--v2-verre-bordure);
+  box-shadow: var(--v2-verre-ombre), inset 0 1px 0 var(--v2-verre-arete), inset 0 -1px 0 var(--v2-verre-arete-basse);
+}
+.wb-entree-actions {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  border-radius: 30px;
+  padding: 12px 12px 10px;
+}
+@media (min-width: 1024px) {
+  .wb-entree-actions {
+    position: static;
+    padding: 0;
+    margin-top: 4px;
+    border-radius: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+.wb-entree-titre {
+  font-weight: var(--v2-type-titre-poids);
+  font-stretch: var(--v2-type-titre-largeur);
+  letter-spacing: var(--v2-type-titre-tracking);
+  text-wrap: balance;
+}
+.wb-entree-pitch {
+  font-weight: var(--v2-type-hero-poids);
+  font-stretch: var(--v2-type-hero-largeur);
+  letter-spacing: var(--v2-type-hero-tracking);
+  text-wrap: balance;
+}
+.wb-entree-champ-saisie {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 2px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--v2-color-encre);
+}
+/* Pas d'anneau autour d'un champ sans bordure : c'est le libellé du champ qui passe à la
+   couleur d'accent (`Champ`, Entree.tsx). */
+.wb-entree-champ-saisie:focus-visible { outline: none; }
+.wb-entree-champ-saisie::placeholder { color: var(--v2-color-gris); opacity: .6; font-weight: 450; }
+.wb-entree-bouton {
+  transition: transform var(--v2-duration-press) var(--v2-ease-out), opacity .15s;
+}
+.wb-entree-bouton:active:not(:disabled) { transform: scale(.97); }
+
+/* Mouvement */
+/* Le glissement s'applique aux blocs de l'écran, JAMAIS à leur conteneur : une
+   transformation sur un ancêtre devient le repère des éléments `position: fixed`, et la
+   barre d'action du bas se retrouvait au milieu de la page (vu en test le 2026-10-15). */
+.wb-entree-vue-av > * > *:not(.wb-entree-actions) { animation: wb-entree-av 280ms var(--v2-ease-out) backwards; }
+.wb-entree-vue-ar > * > *:not(.wb-entree-actions) { animation: wb-entree-ar 280ms var(--v2-ease-out) backwards; }
+@keyframes wb-entree-av { from { opacity: 0; transform: translateX(18px); } }
+@keyframes wb-entree-ar { from { opacity: 0; transform: translateX(-18px); } }
+.wb-entree-remplit { animation: wb-entree-remplit 420ms var(--v2-ease-out) both; transform-origin: left; }
+@keyframes wb-entree-remplit { from { transform: scaleX(0); } }
+.wb-entree-pop { animation: wb-entree-pop 260ms var(--v2-ease-out); }
+@keyframes wb-entree-pop { 0% { transform: scale(.9); } 60% { transform: scale(1.05); } 100% { transform: scale(1); } }
+.wb-entree-brille { position: relative; overflow: hidden; }
+.wb-entree-brille::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%);
+  transform: translateX(-100%); animation: wb-entree-brille 900ms var(--v2-ease-out) 120ms both;
+}
+@keyframes wb-entree-brille { to { transform: translateX(100%); } }
+.wb-entree-guide-gens img { filter: drop-shadow(0 4px 8px rgba(0,0,0,.12)); }
+.wb-entree-guide-anime .wb-entree-guide-gens img { animation: wb-entree-monte 520ms cubic-bezier(.34,1.56,.64,1) both; transform-origin: bottom center; }
+.wb-entree-guide-anime .wb-entree-guide-gens img:nth-child(2) { animation-delay: 90ms; }
+.wb-entree-guide-anime .wb-entree-guide-gens img:nth-child(3) { animation-delay: 180ms; }
+.wb-entree-guide-anime .wb-entree-bulle { animation: wb-entree-bulle 300ms var(--v2-ease-out) 320ms both; }
+@keyframes wb-entree-monte { from { transform: translateY(22px) rotate(-6deg); opacity: 0; } }
+@keyframes wb-entree-bulle { from { opacity: 0; transform: translateX(-6px) scale(.96); } }
+.wb-entree-bulle::before {
+  content: ""; position: absolute; left: -6px; bottom: 12px; width: 10px; height: 10px;
+  background: var(--v2-color-surface);
+  border-left: 1px solid var(--v2-filet-fort); border-bottom: 1px solid var(--v2-filet-fort);
+  transform: rotate(45deg);
+}
+/* Carte des zones (étape 2) */
+.wb-entree-carte .zone { transform-box: fill-box; transform-origin: center; }
+.wb-entree-carte-anime .zone { animation: wb-entree-onde 700ms var(--v2-ease-out) both; }
+.wb-entree-carte-anime .z2 { animation-delay: 120ms; }
+.wb-entree-carte-anime .z3 { animation-delay: 240ms; }
+.wb-entree-carte-anime .etiquettes { animation: wb-entree-fondu 300ms var(--v2-ease-out) 520ms both; }
+.wb-entree-carte-anime .epingle { animation: wb-entree-tombe 520ms cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes wb-entree-onde { from { transform: scale(0); opacity: 0; } }
+@keyframes wb-entree-fondu { from { opacity: 0; } }
+@keyframes wb-entree-tombe { from { transform: translateY(-40px); opacity: 0; } }
+/* Logo : un trait balaye l'image pendant le détourage */
+.wb-entree-detourage {
+  background-color: var(--v2-color-surface);
+  background-image:
+    linear-gradient(45deg, var(--v2-filet-fort) 25%, transparent 25%, transparent 75%, var(--v2-filet-fort) 75%),
+    linear-gradient(45deg, var(--v2-filet-fort) 25%, transparent 25%, transparent 75%, var(--v2-filet-fort) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+}
+.wb-entree-detourage::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 3px; top: 0;
+  background: var(--v2-color-accent); box-shadow: 0 0 14px var(--v2-color-accent);
+  animation: wb-entree-balaye 1.3s var(--v2-ease-in-out) infinite alternate;
+}
+@keyframes wb-entree-balaye { to { top: calc(100% - 3px); } }
+/* Code email : les cases se valident une à une */
+.wb-entree-case-ok { animation: wb-entree-case 260ms var(--v2-ease-out) both; }
+@keyframes wb-entree-case { to { border-color: var(--v2-color-vert); color: var(--v2-color-vert); } }
+.wb-entree-coche { animation: wb-entree-fondu 300ms var(--v2-ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .wb-entree-vue-av > * > *, .wb-entree-vue-ar > * > *, .wb-entree-remplit, .wb-entree-pop, .wb-entree-brille::after,
+  .wb-entree-guide-anime .wb-entree-guide-gens img, .wb-entree-guide-anime .wb-entree-bulle,
+  .wb-entree-carte-anime .zone, .wb-entree-carte-anime .etiquettes, .wb-entree-carte-anime .epingle,
+  .wb-entree-detourage::after, .wb-entree-case-ok, .wb-entree-coche { animation: none; }
+  .wb-entree-bouton { transition: none; }
+}

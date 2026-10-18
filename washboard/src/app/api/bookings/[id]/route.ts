@@ -10,6 +10,7 @@ import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import { genererJetonReservation } from '@/lib/bookingToken'
 import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/cloture'
+import { prevenirTampon } from '@/lib/fideliteServeur'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -30,7 +31,10 @@ export async function PATCH(
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const body = await request.json()
-  const { status, notes, closed_late, scheduled_at, montant_encaisse } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string; montant_encaisse?: unknown }
+  const { status, notes, closed_late, scheduled_at, montant_encaisse, acompte_recu } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string; montant_encaisse?: unknown; acompte_recu?: unknown }
+
+  if (acompte_recu !== undefined && typeof acompte_recu !== 'boolean')
+    return NextResponse.json({ error: 'Valeur invalide' }, { status: 400 })
 
   if (status && !VALID_STATUSES.includes(status))
     return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
@@ -102,6 +106,13 @@ export async function PATCH(
   if (notes        !== undefined) updates.notes        = notes
   if (closed_late  !== undefined) updates.closed_late  = closed_late
   if (scheduled_at !== undefined) updates.scheduled_at = scheduled_at
+  // Acompte payé par le lien du laveur (lib/acompte.ts) : c'est lui qui confirme l'avoir reçu.
+  // Seulement sur une réservation qui en demande un : sinon la colonne peut ne pas exister.
+  if (typeof acompte_recu === 'boolean') {
+    if (booking.acompte_statut == null) return NextResponse.json({ error: 'Cette réservation ne demande pas d’acompte.' }, { status: 400 })
+    updates.acompte_statut = acompte_recu ? 'recu' : 'en_attente'
+    updates.acompte_recu_le = acompte_recu ? new Date().toISOString() : null
+  }
 
   const { data: updated, error } = await admin
     .from('bookings')
@@ -238,6 +249,11 @@ export async function PATCH(
         }).catch(e => logger.error('facture.email_failed', { bookingId: id }, e))
       }
     }
+  }
+
+  // ── Carte de fidélité : « Votre tampon est arrivé » (lib/fideliteServeur.ts) ──
+  if (status === 'done' && booking.status !== 'done') {
+    await prevenirTampon(admin, washer, booking)
   }
 
   return NextResponse.json({ ...updated, ...(factureNumero ? { facture_numero: factureNumero } : {}) })

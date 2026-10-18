@@ -24,6 +24,7 @@ import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import { useEcranRail } from '@/hooks/useEcranRail'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { DesignV2Context } from '@/components/dashboard/DesignV2Context'
+import SuiviPwa from '@/components/dashboard/SuiviPwa'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -838,6 +839,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // dupliquer les deux Providers entre la branche v1/PWA-téléphone et la branche bureau.
   const pageContent = (
     <DesignV2Context.Provider value={estV2}>
+      <SuiviPwa />
       <SupportBadgesContext.Provider value={supportBadges}>
         <OffreContext.Provider value={offreCourante}>
           {children}

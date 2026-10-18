@@ -152,6 +152,10 @@ export type Booking = {
   created_at: string
   facture_numero?: string | null
   facture_emise_le?: string | null
+  /** Acompte demandé au client (lib/acompte.ts) ; absent si le laveur n'en demande pas. */
+  acompte_montant?: number | null
+  acompte_statut?: 'en_attente' | 'recu' | null
+  acompte_echeance?: string | null
 }
 
 export type Unavailability = {

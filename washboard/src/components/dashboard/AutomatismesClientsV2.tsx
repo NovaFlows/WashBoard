@@ -78,7 +78,7 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
       : blocage === 'lien'
         ? { texte: 'Rien ne part : ajoutez votre lien d’avis Google', ton: 'ambre' as const }
         : blocage === 'sms'
-          ? { texte: 'Rien ne part : le SMS est réservé au plan Pro', ton: 'ambre' as const }
+          ? { texte: `Rien ne part : le SMS est inclus dès l’offre ${requiredPlanLabel('avis_sms')}`, ton: 'ambre' as const }
           : { texte: 'Désactivée. Un avis après chaque lavage, sans y penser.' }
 
   const relance = !relanceDisponible

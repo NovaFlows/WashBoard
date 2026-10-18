@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { SITE_URL } from '@/lib/blog'
-import { SMS_QUOTA, requiredPlanLabel } from '@/lib/plan'
+import { quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
 import { resumeOffres } from '@/lib/resumeOffres'
 import { metierPageForTheme } from '@/lib/metiers'
 import type { Theme } from '@/lib/blog'
@@ -129,7 +129,7 @@ const fonctionnalites: MetierFeature[] = [
     desc: (
       <>
         En formule {requiredPlanLabel('avis_email')}, une demande d&apos;avis part automatiquement dès
-        qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({SMS_QUOTA.pro} par mois). Ce sont ces avis qui
+        qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({quotaSmsEnClair()}). Ce sont ces avis qui
         remplissent ta fiche Google et ton agenda de la semaine suivante.
       </>
     ),
@@ -192,7 +192,7 @@ const faqItems: FaqItem[] = [
   {
     question: 'WashBoard gère-t-il les rendez-vous récurrents, comme un ménage chaque semaine ?',
     answer:
-      'Non, pas aujourd’hui : aucun rendez-vous ne se répète automatiquement dans l’agenda. Un client qui revient chaque semaine ou chaque mois reprend un créneau à chaque fois, comme n’importe quelle autre réservation. WashBoard garde en revanche l’historique de chaque client, et une relance automatique peut repartir vers ceux qui ne reviennent pas, en formule Pro.',
+      `Non, pas aujourd’hui : aucun rendez-vous ne se répète automatiquement dans l’agenda. Un client qui revient chaque semaine ou chaque mois reprend un créneau à chaque fois, comme n’importe quelle autre réservation. WashBoard garde en revanche l’historique de chaque client, et une relance automatique peut repartir vers ceux qui ne reviennent pas, en formule ${requiredPlanLabel('followup')}.`,
   },
   {
     question: 'Puis-je facturer mes clients directement depuis WashBoard ?',

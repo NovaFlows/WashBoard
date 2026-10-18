@@ -10,13 +10,12 @@
  *   TEST_WASHER_SLUG, TEST_CLIENT_EMAIL
  */
 import { test, expect } from '@playwright/test'
+import { reserverCommeClient } from './helpers'
 
 const SLUG         = process.env.TEST_WASHER_SLUG ?? ''
 const CLIENT_EMAIL = process.env.TEST_CLIENT_EMAIL ?? 'e2e-client@washboard-test.fr'
-const TEST_ADDRESS = '15 Rue du Général de Gaulle, Paris'
 const TEST_NAME    = '[E2E] Test Client'
 const TEST_PHONE   = '0600000000'
-const TEST_MODEL   = 'Peugeot 208 E2E'
 
 test.describe('Réservation client complète', () => {
   test.skip(!SLUG, 'TEST_WASHER_SLUG absent — skip client booking tests')
@@ -29,43 +28,12 @@ test.describe('Réservation client complète', () => {
   })
 
   test('Parcours complet : service → créneau → coordonnées → confirmation', async ({ page }) => {
+    // Tout le parcours public, puis la confirmation : plus long que la minute par défaut.
+    test.setTimeout(120_000)
+    const creation = await reserverCommeClient(page, { nom: TEST_NAME, email: CLIENT_EMAIL, telephone: TEST_PHONE })
+    expect(creation.status(), `refus du serveur : ${await creation.text()}`).toBe(201)
 
-    // ── 1. Ouvrir la page de réservation ───────────────────────────────
-    await page.goto(`/book/${SLUG}`)
-    await expect(page.locator('text=Application error')).not.toBeVisible()
-
-    // ── 2. Sélectionner une prestation ────────────────────────────────
-    // Véhicule par défaut, prestation et options réunis dans une carte.
-    const service = page.getByRole('radio').first()
-    await expect(service).toBeVisible({ timeout: 15_000 })
-    await service.check()
-    await page.getByTestId('booking-continue').click()
-
-    // ── 3. Adresse, puis jour et horaire ───────────────────────────────
-    await expect(page.getByRole('heading', { name: 'Où et quand ?' })).toBeVisible()
-    await page.getByLabel('Adresse du lavage').fill(TEST_ADDRESS)
-    await page.keyboard.press('Escape')
-    await page.locator('[aria-label="Jours disponibles"] button').first().click()
-    const slot = page.locator('#wb-section-2 .grid.grid-cols-3 button').first()
-    await expect(slot).toBeVisible({ timeout: 15_000 })
-    await slot.click()
-    await expect(page.getByTestId('booking-continue')).toBeEnabled({ timeout: 15_000 })
-    await page.getByTestId('booking-continue').click()
-
-    // ── 4. Coordonnées et identification du véhicule ───────────────────
-    await expect(page.getByRole('heading', { name: 'Vos coordonnées' })).toBeVisible()
-    await page.getByLabel('Nom et prénom').fill(TEST_NAME)
-    await page.getByLabel(/Email pour/).fill(CLIENT_EMAIL)
-    await page.getByLabel('Téléphone', { exact: true }).fill(TEST_PHONE)
-    const model = page.getByLabel('Modèle du véhicule')
-    if (await model.isVisible()) await model.fill(TEST_MODEL)
-
-    const confirmer = page.getByRole('button', { name: 'Confirmer la réservation' })
-    await expect(confirmer).toBeEnabled({ timeout: 5_000 })
-    await confirmer.click()
-
-    // ── 5. Vérifier la confirmation ───────────────────────────────────
-    await expect(page.locator('text=Réservation envoyée !')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText('Réservation envoyée !')).toBeVisible({ timeout: 30_000 })
     // La référence de réservation est affichée (8 caractères alphanumériques)
     await expect(page.locator('.font-mono')).toBeVisible()
   })

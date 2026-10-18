@@ -18,6 +18,7 @@ import {
 } from '@/lib/messagesAutomatiques'
 import { cleClient } from '@/lib/clientProfile'
 import FeuilleMessageProgrammeV2, { type ResultatMessage } from '@/components/dashboard/FeuilleMessageProgrammeV2'
+import { requiredPlanLabel } from '@/lib/plan'
 
 // « Messages automatiques » — refonte 2026, planche `project/ARelancer.dc.html`.
 // Réservé à la PWA installée (voir MessagesAutomatiques.tsx, le garde-fou) ;
@@ -359,7 +360,7 @@ export default function MessagesAutomatiquesV2({
 
   const avertissementAvis = blocage === 'lien'
     ? 'Rien ne part : ajoutez votre lien d’avis Google'
-    : blocage === 'sms' ? 'Rien ne part : le SMS est réservé au plan Pro' : null
+    : blocage === 'sms' ? `Rien ne part : le SMS est inclus dès l’offre ${requiredPlanLabel('avis_sms')}` : null
   const avertissementRelance = reglages.followup_enabled && !reglages.followup_message?.trim()
     ? 'Rien ne part : écrivez le message à envoyer' : null
 

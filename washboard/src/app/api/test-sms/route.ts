@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSms, expediteurPour } from '@/lib/sms'
-import { hasFeature } from '@/lib/plan'
+import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 
 import { logger } from '@/lib/logger'
 
@@ -20,7 +20,7 @@ export async function POST() {
 
   if (!washer) return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
   if (!hasFeature(washer, 'avis_sms')) {
-    return NextResponse.json({ error: 'Fonctionnalité réservée au plan Pro' }, { status: 403 })
+    return NextResponse.json({ error: `Fonctionnalité incluse dès l’offre ${requiredPlanLabel('avis_sms')}` }, { status: 403 })
   }
   if (!washer.phone) {
     return NextResponse.json({ error: 'Ajoutez votre numéro de téléphone dans Paramètres > Général pour recevoir le SMS test' }, { status: 400 })

@@ -59,7 +59,7 @@ describe('POST /api/washer/onboarding', () => {
   })
 
   it('refuse une réponse hors liste ou un corps illisible', async () => {
-    for (const corps of [{ acquisition_source: 'facebook' }, {}, { acquisition_source: 'Google' }, 'pas du json']) {
+    for (const corps of [{ acquisition_source: 'facebook' }, { acquisition_source: 'Google' }, 'pas du json']) {
       expect((await envoyer(corps)).status).toBe(400)
     }
     expect(ecritures).toHaveLength(0)
@@ -73,6 +73,14 @@ describe('POST /api/washer/onboarding', () => {
     expect(typeof ecritures[0].valeurs.onboarding_complete_at).toBe('string')
     expect(ecritures[0].filtres).toContainEqual(['eq', 'user_id', 'u-1'])
     expect(ecritures[0].filtres).toContainEqual(['is', 'onboarding_complete_at', null])
+  })
+
+  it('source facultative : sans elle, termine l’onboarding sans écrire de source', async () => {
+    const { status } = await envoyer({})
+    expect(status).toBe(200)
+    expect(ecritures).toHaveLength(1)
+    expect(ecritures[0].valeurs).not.toHaveProperty('acquisition_source')
+    expect(typeof ecritures[0].valeurs.onboarding_complete_at).toBe('string')
   })
 
   it('déjà terminé (double envoi) : succès sans rien réécrire', async () => {

@@ -168,7 +168,8 @@ describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
     it('refuse les mentions légales de facturation', async () => {
       const { res, body } = await patch({ facture_siret: '73282932000074' })
       expect(res.status).toBe(403)
-      expect(body.error).toMatch(/Pro/)
+      // La facturation est ouverte dès le Starter depuis le 2026-10-18.
+      expect(body.error).toMatch(/Starter/)
       expect(updates).toHaveLength(0)
     })
 
@@ -200,14 +201,18 @@ describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
       expect((await patch({ background_theme: 'nuit' })).res.status).toBe(200)
     })
 
-    it('refuse encore tout ce qui appartient au Pro', async () => {
+    it('refuse encore ce qui appartient au Pro : les créneaux intelligents', async () => {
       // Les frais de déplacement n'y sont plus : ils sont ouverts dès le
       // gratuit, donc le Starter les a forcément aussi.
       expect((await patch({ smart_slot_enabled: true })).res.status).toBe(403)
-      expect((await patch({ review_enabled: true })).res.status).toBe(403)
-      expect((await patch({ followup_enabled: true })).res.status).toBe(403)
-      expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(403)
       expect(updates).toHaveLength(0)
+    })
+
+    it('ouvre les avis, les relances et la facturation (descendus du Pro le 2026-10-18)', async () => {
+      expect((await patch({ review_enabled: true })).res.status).toBe(200)
+      expect((await patch({ review_channel: 'sms' })).res.status).toBe(200)
+      expect((await patch({ followup_enabled: true })).res.status).toBe(200)
+      expect((await patch({ facture_siret: '73282932000074' })).res.status).toBe(200)
     })
 
     it('refuse le multi-laveurs, réservé au Business', async () => {

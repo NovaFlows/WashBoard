@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { expectNoAppError } from './helpers'
 
 // Parcours d'authentification vus par un visiteur non connecté.
@@ -10,69 +10,93 @@ import { expectNoAppError } from './helpers'
 // d'erreur, qui sont là où les bugs se cachent, pas le chemin nominal.
 
 test.describe('Inscription — validations', () => {
+  // Écran d'inscription v2 (2026-10-15) : champs repérés par leur libellé, case des CGV
+  // obligatoire, et vérifications dans l'ordre nom → email → téléphone → mots de passe → CGV.
   test.beforeEach(async ({ page }) => {
     await page.goto('/signup')
     await expectNoAppError(page)
   })
 
-  test('la page affiche les cinq champs attendus', async ({ page }) => {
-    await expect(page.locator('input[placeholder="CleanCar"]')).toBeVisible()
-    await expect(page.locator('input[type="email"]')).toBeVisible()
-    await expect(page.locator('input[type="tel"]')).toBeVisible()
-    await expect(page.locator('input[placeholder="Min. 6 caractères"]')).toBeVisible()
-    await expect(page.locator('input[placeholder="••••••••"]')).toBeVisible()
+  const champs = (page: Page) => ({
+    nom: page.getByLabel('Nom de ton entreprise'),
+    email: page.getByLabel('Email'),
+    tel: page.getByLabel('Téléphone'),
+    mdp: page.getByLabel('Mot de passe', { exact: true }),
+    confirmation: page.getByLabel('Confirmer le mot de passe'),
+    cgv: page.getByLabel(/conditions générales de vente/),
+    envoyer: page.getByRole('button', { name: 'Lancer mon mois gratuit' }),
+  })
+
+  test('la page affiche les cinq champs attendus et la case des CGV', async ({ page }) => {
+    const c = champs(page)
+    for (const champ of [c.nom, c.email, c.tel, c.mdp, c.confirmation, c.cgv]) await expect(champ).toBeVisible()
   })
 
   test('refuse un nom d’entreprise vide', async ({ page }) => {
-    await page.locator('input[type="email"]').fill('e2e-nom-vide@example.test')
-    await page.locator('input[type="tel"]').fill('0612345678')
-    await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
-    await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
-    await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Le nom de votre entreprise est requis')).toBeVisible()
+    const c = champs(page)
+    await c.email.fill('e2e-nom-vide@example.test')
+    await c.tel.fill('0612345678')
+    await c.mdp.fill('motdepasse123')
+    await c.confirmation.fill('motdepasse123')
+    await c.envoyer.click()
+    await expect(page.getByText('Le nom de ton entreprise est requis')).toBeVisible()
   })
 
   test('refuse un numéro de téléphone invalide', async ({ page }) => {
     // Le téléphone limite l'ouverture de plusieurs essais gratuits avec des
     // emails différents : s'il devenait facultatif, la protection sauterait.
-    await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
-    await page.locator('input[type="email"]').fill('e2e-tel@example.test')
-    await page.locator('input[type="tel"]').fill('123')
-    await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
-    await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
-    await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Numéro de téléphone invalide')).toBeVisible()
+    const c = champs(page)
+    await c.nom.fill('E2E Test')
+    await c.email.fill('e2e-tel@example.test')
+    await c.tel.fill('123')
+    await c.mdp.fill('motdepasse123')
+    await c.confirmation.fill('motdepasse123')
+    await c.envoyer.click()
+    await expect(page.getByText('Numéro de téléphone invalide')).toBeVisible()
   })
 
   test('refuse une adresse email malformée', async ({ page }) => {
-    await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
-    // `type="email"` bloquerait la soumission avant la validation applicative :
-    // on passe donc une valeur que le navigateur accepte mais que la regex refuse.
-    await page.locator('input[type="email"]').fill('pas-un-email@sans-point')
-    await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
-    await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
-    await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Adresse email invalide')).toBeVisible()
+    const c = champs(page)
+    await c.nom.fill('E2E Test')
+    // Le formulaire est en `noValidate` : la validation applicative parle d'elle-même.
+    await c.email.fill('pas-un-email@sans-point')
+    await c.mdp.fill('motdepasse123')
+    await c.confirmation.fill('motdepasse123')
+    await c.envoyer.click()
+    await expect(page.getByText('Adresse email invalide')).toBeVisible()
   })
 
   test('refuse deux mots de passe différents', async ({ page }) => {
-    await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
-    await page.locator('input[type="email"]').fill('e2e-mdp@example.test')
-    await page.locator('input[type="tel"]').fill('0612345678')
-    await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
-    await page.locator('input[placeholder="••••••••"]').fill('autrechose456')
-    await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Les mots de passe ne correspondent pas')).toBeVisible()
+    const c = champs(page)
+    await c.nom.fill('E2E Test')
+    await c.email.fill('e2e-mdp@example.test')
+    await c.tel.fill('0612345678')
+    await c.mdp.fill('motdepasse123')
+    await c.confirmation.fill('autrechose456')
+    await c.envoyer.click()
+    await expect(page.getByText('Les mots de passe ne correspondent pas')).toBeVisible()
   })
 
   test('refuse un mot de passe de moins de 6 caractères', async ({ page }) => {
-    await page.locator('input[placeholder="CleanCar"]').fill('E2E Test')
-    await page.locator('input[type="email"]').fill('e2e-court@example.test')
-    await page.locator('input[type="tel"]').fill('0612345678')
-    await page.locator('input[placeholder="Min. 6 caractères"]').fill('court')
-    await page.locator('input[placeholder="••••••••"]').fill('court')
-    await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=au moins 6 caractères')).toBeVisible()
+    const c = champs(page)
+    await c.nom.fill('E2E Test')
+    await c.email.fill('e2e-court@example.test')
+    await c.tel.fill('0612345678')
+    await c.mdp.fill('court')
+    await c.confirmation.fill('court')
+    await c.envoyer.click()
+    await expect(page.getByText('au moins 6 caractères')).toBeVisible()
+  })
+
+  test('refuse l’inscription sans accepter les CGV', async ({ page }) => {
+    const c = champs(page)
+    await c.nom.fill('E2E Test')
+    await c.email.fill('e2e-cgv@example.test')
+    await c.tel.fill('0612345678')
+    await c.mdp.fill('motdepasse123')
+    await c.confirmation.fill('motdepasse123')
+    await c.envoyer.click()
+    await expect(page.getByText('Merci d’accepter les CGV pour continuer')).toBeVisible()
   })
 
   test('un email déjà utilisé est refusé avec un message clair', async ({ page }) => {
@@ -80,13 +104,17 @@ test.describe('Inscription — validations', () => {
     const existing = process.env.TEST_WASHER_EMAIL
     test.skip(!existing, 'TEST_WASHER_EMAIL absent')
 
-    await page.locator('input[placeholder="CleanCar"]').fill('E2E Doublon')
-    await page.locator('input[type="email"]').fill(existing!)
-    await page.locator('input[type="tel"]').fill('0612345678')
-    await page.locator('input[placeholder="Min. 6 caractères"]').fill('motdepasse123')
-    await page.locator('input[placeholder="••••••••"]').fill('motdepasse123')
-    await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Cet email est déjà utilisé')).toBeVisible({ timeout: 15_000 })
+    const c = champs(page)
+    await c.nom.fill('E2E Doublon')
+    await c.email.fill(existing!)
+    // Un numéro jamais attribué : un numéro déjà porté par un laveur serait refusé AVANT
+    // l'email (« déjà associé à un compte »), et le test ne vérifierait plus rien.
+    await c.tel.fill(`07${Date.now().toString().slice(-8)}`)
+    await c.mdp.fill('motdepasse123')
+    await c.confirmation.fill('motdepasse123')
+    await c.cgv.check()
+    await c.envoyer.click()
+    await expect(page.getByText('Cet email est déjà utilisé')).toBeVisible({ timeout: 15_000 })
   })
 
   test('lien vers la connexion présent', async ({ page }) => {

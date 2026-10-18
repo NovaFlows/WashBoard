@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { Spinner } from '@/components/ui/Spinner'
 import { oublierVisite } from '@/lib/visiteGuidee'
+import {
+  BOUTON_SECONDAIRE, BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, LIEN_DISCRET, SAISIE, TitreEntree,
+} from '@/components/entree/Entree'
 
 type Message = { type: 'ok' | 'erreur'; texte: string } | null
 
@@ -31,37 +31,60 @@ async function appeler(url: string, corps: Record<string, string>): Promise<{ ok
 }
 
 // « Un email vient de partir, attends X s » n'est pas une erreur : l'inscrit
-// n'a rien fait de mal, il a juste redemandé un peu tôt. Un cadre rouge lui
-// ferait croire à un problème de sa part — traitement neutre à la place, avec
-// une icône horloge plutôt qu'une icône d'alerte.
+// n'a rien fait de mal, il a juste redemandé un peu tôt. Un message rouge lui
+// ferait croire à un problème de sa part — traitement neutre à la place.
 function estPatience(texte: string) {
   return texte.startsWith('Un email vient de partir')
 }
 
 function Alerte({ message }: { message: NonNullable<Message> }) {
+  if (message.type === 'erreur' && !estPatience(message.texte)) return <Erreur texte={message.texte} />
   const ok = message.type === 'ok'
-  const patience = !ok && estPatience(message.texte)
-
-  if (patience) {
-    return (
-      <div role="status" className="flex items-start gap-2 p-3 rounded-xl border text-sm bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70">
-        <svg className="w-4 h-4 mt-0.5 shrink-0 text-slate-400 dark:text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <circle cx="12" cy="12" r="9" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 3" />
-        </svg>
-        <span>{message.texte}</span>
-      </div>
-    )
-  }
-
   return (
-    <div
-      role={ok ? 'status' : 'alert'}
-      className={`p-3 rounded-xl border text-sm ${ok
-        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400'
-        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60 text-red-600 dark:text-red-400'}`}
-    >
+    <p role="status" className={`flex items-start gap-2 text-sm ${ok ? 'text-[color:var(--v2-color-vert)]' : 'text-[color:var(--v2-color-gris)]'}`}>
+      <span aria-hidden className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
       {message.texte}
+    </p>
+  )
+}
+
+/** Le code en cases : un seul vrai champ (collage, remplissage automatique du code reçu
+ *  par SMS/email sur iPhone) posé en transparent sur les cases dessinées. */
+function CasesCode({ code, onChange, desactive, valide }: { code: string; onChange: (v: string) => void; desactive: boolean; valide: boolean }) {
+  const [focus, setFocus] = useState(false)
+  return (
+    <div className="relative">
+      <div className="grid grid-cols-8 gap-1.5 sm:gap-2" aria-hidden>
+        {Array.from({ length: LONGUEUR_CODE }, (_, i) => {
+          const actif = focus && (i === code.length || (i === LONGUEUR_CODE - 1 && code.length === LONGUEUR_CODE))
+          return (
+            <span
+              key={i}
+              style={valide ? { animationDelay: `${i * 45}ms` } : undefined}
+              className={`flex h-14 items-center justify-center rounded-[var(--v2-radius-bouton)] border bg-[color:var(--v2-color-surface)] text-[24px] font-[650] tabular-nums [font-stretch:112%] ${actif ? 'border-[color:var(--v2-color-encre)]' : 'border-[color:var(--v2-filet-fort)]'} ${valide ? 'wb-entree-case-ok' : ''}`}
+            >
+              {code[i] ?? ''}
+            </span>
+          )
+        })}
+      </div>
+      <input
+        id="code-confirmation"
+        aria-label="Code de confirmation"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="one-time-code"
+        maxLength={LONGUEUR_CODE}
+        value={code}
+        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, LONGUEUR_CODE))}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
+        required
+        disabled={desactive}
+        autoFocus
+        className="absolute inset-0 h-full w-full cursor-text bg-transparent text-transparent caret-transparent !shadow-none !outline-none !ring-0 [font-size:16px]"
+      />
     </div>
   )
 }
@@ -80,16 +103,15 @@ export default function VerifierEmail({ email, lienInvalide }: {
   const [motDePasse, setMotDePasse] = useState('')
   const etat = email ? 'attente' : 'sans-inscription'
 
-  async function confirmer(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email || code.length !== LONGUEUR_CODE) return
+  async function verifier(valeur: string) {
+    if (!email || valeur.length !== LONGUEUR_CODE) return
     setVerification(true)
     setMessage(null)
     try {
       const res = await fetch('/api/auth/confirm-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code: valeur }),
       })
       const json = await res.json().catch(() => null)
       if (res.ok && json?.destination) {
@@ -103,6 +125,13 @@ export default function VerifierEmail({ email, lienInvalide }: {
       setMessage({ type: 'erreur', texte: 'Connexion impossible. Vérifie ta connexion internet et réessaie.' })
     }
     setVerification(false)
+  }
+
+  // Le dernier chiffre tapé (ou un code collé en entier) lance la vérification : plus besoin
+  // d'aller chercher le bouton.
+  function saisir(valeur: string) {
+    setCode(valeur)
+    if (valeur.length === LONGUEUR_CODE && !verification) void verifier(valeur)
   }
 
   async function renvoyer() {
@@ -128,192 +157,118 @@ export default function VerifierEmail({ email, lienInvalide }: {
     setSuppression(false)
   }
 
-  return (
-    <div className="min-h-screen flex flex-col font-sans wb-auth-bg">
+  const avertissementLien = lienInvalide && (
+    <Erreur texte={etat === 'attente'
+      ? 'Ce lien de confirmation n’est plus valable : il a déjà servi ou il a expiré. Demande-en un nouveau ci-dessous.'
+      : 'Ce lien de confirmation n’est plus valable : il a déjà servi ou il a expiré. Si ton email est déjà confirmé, connecte-toi.'}
+    />
+  )
 
-      <div aria-hidden className="fixed inset-x-0 top-0 h-[500px] pointer-events-none overflow-hidden">
-        <div className="wb-auth-glow absolute inset-0" />
-      </div>
-
-      <nav className="relative z-50 flex items-center justify-end px-5 sm:px-8 h-14">
-        <ThemeToggle nav />
-      </nav>
-
-      <main className="relative flex-1 flex items-center justify-center px-4 pb-12 -mt-2">
-        <div className="w-full max-w-sm">
-
-          <div className="text-center mb-8">
-            <Image src="/LogoWashBoard.png" alt="WashBoard" width={56} height={56} className="rounded-2xl object-contain mx-auto mb-3 shadow-sm" />
-            <p className="text-xs font-black text-[#1651E8] dark:text-[#00C4D4] uppercase tracking-[0.22em] mb-2">
-              Espace laveur
-            </p>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-              Confirme ton email
-            </h1>
-          </div>
-
-          <div className="wb-auth-card rounded-2xl p-7 space-y-4">
-            {lienInvalide && (
-              <Alerte message={{
-                type: 'erreur',
-                texte: etat === 'attente'
-                  ? 'Ce lien de confirmation n\'est plus valable : il a déjà servi ou il a expiré. Demande-en un nouveau ci-dessous.'
-                  : 'Ce lien de confirmation n\'est plus valable : il a déjà servi ou il a expiré. Si ton email est déjà confirmé, connecte-toi.',
-              }} />
-            )}
-
-            {etat === 'attente' && (
-              <>
-                <div className="flex justify-center">
-                  <div className="w-14 h-14 rounded-full bg-[#1651E8]/10 dark:bg-[#1651E8]/15 flex items-center justify-center">
-                    <svg className="w-7 h-7 text-[#1651E8] dark:text-[#6A9FFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <rect x="3" y="5" width="18" height="14" rx="2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m3 7 9 6 9-6" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-white/70 leading-relaxed text-center">
-                  Un code de confirmation a été envoyé à{' '}
-                  <strong className="text-slate-900 dark:text-white break-all">{email}</strong>.
-                  Entre-le ci-dessous pour activer ton compte.
-                </p>
-                <p className="text-xs text-slate-400 dark:text-white/40 text-center">
-                  Rien reçu ? Regarde dans tes courriers indésirables avant de le renvoyer.
-                </p>
-
-                {message && <Alerte message={message} />}
-
-                <form onSubmit={confirmer} noValidate className="space-y-3">
-                  <div>
-                    <label htmlFor="code-confirmation" className="wb-label">
-                      Code de confirmation
-                    </label>
-                    <input
-                      id="code-confirmation"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete="one-time-code"
-                      maxLength={LONGUEUR_CODE}
-                      value={code}
-                      onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, LONGUEUR_CODE))}
-                      required
-                      placeholder={'0'.repeat(LONGUEUR_CODE)}
-                      disabled={verification}
-                      className="wb-input text-center text-2xl font-bold tracking-[0.2em]"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={verification || code.length !== LONGUEUR_CODE}
-                    className="w-full py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-lg shadow-[#1651E8]/20"
-                  >
-                    {verification ? (
-                      <span className="flex items-center justify-center gap-2"><Spinner />Vérification…</span>
-                    ) : 'Confirmer'}
-                  </button>
-                </form>
-
-                <div className="pt-1 text-center">
-                  <button
-                    type="button"
-                    onClick={renvoyer}
-                    disabled={envoi || verification || suppression}
-                    className="text-xs text-slate-400 dark:text-white/35 hover:text-slate-600 dark:hover:text-white/60 underline-offset-2 hover:underline transition-colors disabled:opacity-40"
-                  >
-                    {envoi ? 'Envoi…' : 'Renvoyer le code'}
-                  </button>
-                </div>
-
-                {!confirmerRecommencer ? (
-                  // Volontairement discret : contrairement à « Confirmer » et
-                  // « Renvoyer le code », cette action supprime le compte. Petit
-                  // texte centré, sans le bleu de marque (qui appelle au clic) et
-                  // sans pleine largeur, pour qu'il ne se lise pas comme une
-                  // deuxième option au même niveau que le bouton principal.
-                  <div className="pt-1 text-center">
-                    <button
-                      type="button"
-                      onClick={() => { setConfirmerRecommencer(true); setMessage(null) }}
-                      disabled={envoi || verification || suppression}
-                      className="text-xs text-slate-400 dark:text-white/35 hover:text-slate-600 dark:hover:text-white/60 underline-offset-2 hover:underline transition-colors disabled:opacity-40"
-                    >
-                      Mauvaise adresse ? Recommence l&apos;inscription
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={recommencer} noValidate className="p-4 rounded-xl border border-slate-200 dark:border-white/10 space-y-3">
-                    <p className="text-sm text-slate-600 dark:text-white/70">
-                      Ton inscription en attente sera supprimée, et tu pourras t&apos;inscrire à nouveau avec la bonne adresse.
-                    </p>
-                    <div>
-                      <label htmlFor="mot-de-passe-recommencer" className="wb-label">
-                        Confirme ton mot de passe pour supprimer ce compte
-                      </label>
-                      <input
-                        id="mot-de-passe-recommencer"
-                        type="password"
-                        value={motDePasse}
-                        onChange={e => setMotDePasse(e.target.value)}
-                        required
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        disabled={suppression}
-                        className="wb-input"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        disabled={suppression || !motDePasse}
-                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
-                      >
-                        {suppression ? (
-                          <span className="flex items-center justify-center gap-2"><Spinner />Suppression…</span>
-                        ) : 'Recommencer'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setConfirmerRecommencer(false); setMotDePasse('') }}
-                        disabled={suppression}
-                        className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 disabled:opacity-40"
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </>
-            )}
-
-            {etat === 'sans-inscription' && (
-              <>
-                <p className="text-sm text-slate-600 dark:text-white/70 leading-relaxed">
-                  Aucune inscription en attente à afficher. Connecte-toi avec ton email et ton mot de passe :
-                  si ton adresse reste à confirmer, tu reviendras sur cette page.
-                </p>
-                <Link
-                  href="/login"
-                  className="block w-full py-3.5 text-center bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#1651E8]/20"
-                >
-                  Se connecter
-                </Link>
-              </>
-            )}
-
-          </div>
-
-          {etat === 'sans-inscription' && (
-            <p className="text-center text-sm text-slate-500 dark:text-white/40 mt-5">
-              Pas encore de compte ?{' '}
-              <Link href="/signup" className="text-[#1651E8] dark:text-[#6A9FFF] font-semibold hover:underline underline-offset-2">
-                S&apos;inscrire
-              </Link>
-            </p>
-          )}
-
+  if (etat === 'sans-inscription') {
+    return (
+      <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/login' }}>
+        <div className="flex flex-col gap-5">
+          <TitreEntree titre="Confirme ton email" />
+          {avertissementLien}
+          <p className="text-sm text-[color:var(--v2-color-gris)]">
+            Aucune inscription en attente à afficher. Connecte-toi avec ton email et ton mot de passe :
+            si ton adresse reste à confirmer, tu reviendras sur cette page.
+          </p>
+          <BarreActions>
+            <Link
+              href="/login"
+              className="wb-entree-bouton flex min-h-[50px] w-full items-center justify-center rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-color-accent)] text-base font-semibold text-[color:var(--v2-color-sur-accent)]"
+            >
+              Se connecter
+            </Link>
+            <Link href="/signup" className={`${LIEN_DISCRET} flex items-center justify-center`}>
+              Pas encore de compte ?&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">S’inscrire</b>
+            </Link>
+          </BarreActions>
         </div>
-      </main>
-    </div>
+      </CadreEntree>
+    )
+  }
+
+  const occupe = envoi || verification || suppression
+
+  return (
+    <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/signup' }}>
+      <div className="flex flex-col gap-5">
+        <TitreEntree
+          titre="Confirme ton email"
+          sousTitre={<>On vient d’envoyer un code à {LONGUEUR_CODE} chiffres à <strong className="break-all font-semibold text-[color:var(--v2-color-encre)]">{email}</strong>.</>}
+        />
+        {avertissementLien}
+
+        <form onSubmit={e => { e.preventDefault(); void verifier(code) }} noValidate className="flex flex-col gap-3">
+          <CasesCode code={code} onChange={saisir} desactive={verification} valide={verification} />
+          <p className="text-[13px] text-[color:var(--v2-color-gris)]">
+            Rien reçu ? Regarde dans tes courriers indésirables, puis{' '}
+            <button type="button" onClick={renvoyer} disabled={occupe} className="underline underline-offset-2 disabled:opacity-40">
+              {envoi ? 'envoi…' : 'renvoie le code'}
+            </button>.
+          </p>
+          {message && <Alerte message={message} />}
+
+          {!confirmerRecommencer ? (
+            <BarreActions>
+              <BoutonPrincipal type="submit" disabled={code.length !== LONGUEUR_CODE} chargement={verification} libelleChargement="Vérification…">
+                Valider
+              </BoutonPrincipal>
+              {/* Volontairement discret : cette action supprime le compte en attente. */}
+              <button
+                type="button"
+                onClick={() => { setConfirmerRecommencer(true); setMessage(null) }}
+                disabled={occupe}
+                className={LIEN_DISCRET}
+              >
+                Mauvaise adresse ? Recommencer l’inscription
+              </button>
+            </BarreActions>
+          ) : null}
+        </form>
+
+        {confirmerRecommencer && (
+          <form onSubmit={recommencer} noValidate className="flex flex-col gap-3">
+            <p className="text-sm text-[color:var(--v2-color-gris)]">
+              Ton inscription en attente sera supprimée, et tu pourras t’inscrire à nouveau avec la bonne adresse.
+            </p>
+            <GroupeChamps>
+              <Champ id="mot-de-passe-recommencer" label="Confirme ton mot de passe pour supprimer ce compte">
+                <input
+                  id="mot-de-passe-recommencer"
+                  type="password"
+                  value={motDePasse}
+                  onChange={e => setMotDePasse(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  disabled={suppression}
+                  className={SAISIE}
+                />
+              </Champ>
+            </GroupeChamps>
+            <BarreActions>
+              <button
+                type="submit"
+                disabled={suppression || !motDePasse}
+                className="wb-entree-bouton min-h-[50px] w-full rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-color-rouge)] text-base font-semibold text-white disabled:opacity-35"
+              >
+                {suppression ? 'Suppression…' : 'Supprimer et recommencer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setConfirmerRecommencer(false); setMotDePasse('') }}
+                disabled={suppression}
+                className={BOUTON_SECONDAIRE}
+              >
+                Annuler
+              </button>
+            </BarreActions>
+          </form>
+        )}
+      </div>
+    </CadreEntree>
   )
 }
