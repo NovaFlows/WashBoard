@@ -31,22 +31,31 @@ LARGEUR, HAUTEUR, SOL = 1040, 420, 390
 COULEUR = '--couleur' in sys.argv
 TYPES = [t for t in sys.argv[1:] if not t.startswith('--')]
 
+# photo → (type, réglages). Par défaut : photo de studio sur fond blanc, trous bouchés (vitres).
+#   trous=False   garde les ajours (roues à rayons, cadre d'une moto) au lieu de les boucher
+#   fond_blanc=False   photo sur un autre fond : pas de retrait du blanc sur les bords
+#   sol=y         la ligne du sol à la main, quand les roues ne se trouvent pas toutes seules
+#   rayon_min=r   roues plus petites que 6 % de la largeur de la photo (camion à grande caisse)
 PHOTOS = {
-    '26.jpg': 'citadine',
-    '20.jpg': 'citadine_2p',
-    '22.jpg': 'berline',
-    '24.jpg': 'SUV',
-    '21.jpg': 'monospace',
-    '23.jpg': '7places',
-    '25.jpg': 'utilitaire',
+    '26.jpg': ('citadine', {}),
+    '20.jpg': ('citadine_2p', {}),
+    '22.jpg': ('berline', {}),
+    '24.jpg': ('SUV', {}),
+    '21.jpg': ('monospace', {}),
+    '23.jpg': ('7places', {}),
+    '25.jpg': ('utilitaire', {}),
+    # Ajoutées le 2026-10-19 : une moto de studio (avec son reflet au sol) et un camion à
+    # caisse photographié dehors.
+    '29.png': ('moto', {'trous': False, 'fond_blanc': False}),
+    '30.png': ('camion', {'fond_blanc': False, 'sol': 267}),
 }
 
 
-def roues(gris, masque):
+def roues(gris, masque, rayon_min=0.06):
     """Les deux roues (cercles) : leur bas donne le sol, sous lequel il n'y a que de l'ombre."""
     h, w = masque.shape
     cercles = cv2.HoughCircles(cv2.medianBlur(gris, 5), cv2.HOUGH_GRADIENT, dp=1.2, minDist=w * 0.35,
-                               param1=120, param2=28, minRadius=int(w * 0.06), maxRadius=int(w * 0.13))
+                               param1=120, param2=28, minRadius=int(w * rayon_min), maxRadius=int(w * 0.13))
     if cercles is None:
         return []
     c = sorted(cercles[0], key=lambda k: -k[1])
@@ -88,7 +97,7 @@ def fantome(gris):
     return 1 - 0.14 * (1 - ((gris - 0.5) * 0.7 + 0.5))
 
 
-def traiter(fichier, nom, session):
+def traiter(fichier, nom, reglages, session):
     im = Image.open(os.path.join(IMAGES, fichier)).convert('RGB')
     rgb = np.array(im).astype(np.float32)
     alpha = np.array(remove(im, session=session, only_mask=True, post_process_mask=False)).astype(np.float32) / 255
@@ -100,13 +109,16 @@ def traiter(fichier, nom, session):
     if n > 1:
         tailles = ndimage.sum(plein, etiq, range(1, n + 1))
         plein = etiq == (1 + int(np.argmax(tailles)))
-    bouche = ndimage.binary_fill_holes(plein)
+    bouche = ndimage.binary_fill_holes(plein) if reglages.get('trous', True) else plein
     proche = ndimage.binary_dilation(bouche, iterations=3)
     alpha = np.where(bouche & ~plein, 1.0, alpha) * proche
 
     # Le sol : rien sous le bas des pneus (l'ombre portée de la photo).
-    rs = roues(cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2GRAY), bouche)
-    if len(rs) == 2:
+    rs = roues(cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2GRAY), bouche, reglages.get('rayon_min', 0.06))
+    if 'sol' in reglages:
+        alpha[reglages['sol'] + 1:, :] = 0
+        print(f'  {nom}: sol {reglages["sol"]} (à la main)')
+    elif len(rs) == 2:
         sol = int(round(max(r[1] + r[2] for r in rs)))
         alpha[sol + 1:, :] = 0
         print(f'  {nom}: roues {[(int(x), int(y), int(r)) for x, y, r in rs]}, sol {sol}')
@@ -119,6 +131,8 @@ def traiter(fichier, nom, session):
     sur = np.where(a > 0.02, a, 1)
     couleur = np.clip((rgb - (1 - a) * 255) / sur, 0, 255)
     couleur = np.where(a > 0.97, rgb, couleur)
+    if not reglages.get('fond_blanc', True):
+        couleur = rgb
     if not COULEUR:
         couleur = en_gris(couleur, a[:, :, 0] > 0.5)
     rgba = np.dstack([couleur, a[:, :, 0] * 255]).round().astype(np.uint8)
@@ -137,7 +151,7 @@ def traiter(fichier, nom, session):
 
 
 session = new_session('isnet-general-use')
-for fichier, nom in PHOTOS.items():
+for fichier, (nom, reglages) in PHOTOS.items():
     if TYPES and nom not in TYPES:
         continue
-    traiter(fichier, nom, session)
+    traiter(fichier, nom, reglages, session)

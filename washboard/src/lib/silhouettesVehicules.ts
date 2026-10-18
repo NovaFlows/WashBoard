@@ -9,16 +9,17 @@
 // choisi : 15 à 25 Ko chacune. Toutes dans le même cadre 1040 × 420, roues sur la même ligne,
 // avant à droite (scripts/silhouettes/decoupe.py).
 //
-// Seuls les types qui ont une photo en ont une ; les autres (moto, camping-car… en attente de
-// photos) et les types personnalisés par le laveur (« Canapé », etc.) n'affichent rien :
+// Seuls les types qui ont une photo en ont une ; les autres (camping-car, scooter, vélo, en
+// attente de photos) et les types personnalisés par le laveur (« Canapé », etc.) n'affichent rien :
 // `silhouettePour` rend `null`.
 
 export const TYPES_AVEC_SILHOUETTE = [
   'citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire',
+  'moto', 'camion', // ajoutés le 2026-10-19, photos d'Alexandre
 ] as const
 
 /** À changer quand les fichiers changent : les navigateurs gardent les anciens en cache. */
-const VERSION = '2026-10-18e'
+const VERSION = '2026-10-19a'
 
 /** L'image du véhicule d'un type, ou `null` s'il n'en a pas. */
 export function silhouettePour(type: string | null | undefined): string | null {

@@ -7,13 +7,13 @@ import { VEHICLE_LABELS } from './vehicle-labels'
 const fichier = (url: string) => join(process.cwd(), 'public', decodeURIComponent(url.split('?')[0]))
 
 describe('images des véhicules', () => {
-  it('chaque voiture de l’app a son image', () => {
-    for (const type of ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire']) {
+  it('chaque véhicule photographié a son image', () => {
+    for (const type of ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire', 'moto', 'camion']) {
       expect(silhouettePour(type), type).not.toBeNull()
     }
   })
   it('un type sans photo ou personnalisé par le laveur n’en a pas', () => {
-    expect(silhouettePour('moto')).toBeNull()
+    expect(silhouettePour('scooter')).toBeNull()
     expect(silhouettePour('3f2a9c0e-1b2c-4d5e-8f90-123456789abc')).toBeNull()
     expect(silhouettePour(null)).toBeNull()
     expect(silhouettePour('toString')).toBeNull()
