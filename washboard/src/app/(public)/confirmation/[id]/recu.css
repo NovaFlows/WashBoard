@@ -1,0 +1,71 @@
+/* Reçu de réservation vu par le client du laveur (refonte 2026). Mêmes jetons --v2-* que les
+   écrans d'entrée. Le reçu s'imprime ou s'enregistre en PDF : en impression tout repasse en
+   noir sur blanc, quel que soit le thème. */
+.wb-recu {
+  min-height: 100vh;
+  padding: 36px 16px 56px;
+  background: var(--v2-color-fond);
+  color: var(--v2-color-encre);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-weight: 450;
+  -webkit-font-smoothing: antialiased;
+}
+.wb-recu :focus-visible { outline: 2px solid var(--v2-color-accent); outline-offset: 2px; }
+.wb-recu-col { max-width: 680px; margin-inline: auto; }
+.wb-recu-barre { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; font-size: 14px; color: var(--v2-color-gris); }
+.wb-recu-barre b { color: var(--v2-color-encre); font-weight: 600; font-variant-numeric: tabular-nums; }
+.wb-recu-bouton {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px;
+  border-radius: var(--v2-radius-bouton); background: var(--v2-color-accent); color: var(--v2-color-sur-accent);
+  font-size: 15px; font-weight: 600; text-decoration: none;
+}
+.wb-recu-bouton svg { width: 17px; height: 17px; }
+.wb-recu-doc { background: var(--v2-color-surface); border: 1px solid var(--v2-filet-fort); border-radius: var(--v2-radius-surface); overflow: hidden; }
+.wb-recu-kicker { padding: 14px 28px; border-bottom: 1px solid var(--v2-filet); display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--v2-color-gris); }
+.wb-recu-kicker b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.wb-recu-tete { padding: 28px 28px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.wb-recu-logo { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; margin-bottom: 12px; display: block; }
+.wb-recu h1 { font-size: 28px; font-weight: var(--v2-type-titre-poids); font-stretch: var(--v2-type-titre-largeur); letter-spacing: var(--v2-type-titre-tracking); line-height: 1.1; overflow-wrap: anywhere; }
+.wb-recu-doux { font-size: 14px; color: var(--v2-color-gris); margin-top: 3px; }
+.wb-recu-droite { text-align: right; font-size: 14px; }
+.wb-recu-droite .lib { font-size: 13px; color: var(--v2-color-gris); }
+.wb-recu-droite .val { font-weight: 600; margin-top: 2px; }
+.wb-recu-ref { margin-top: 12px; font-size: 20px; font-weight: 650; font-stretch: 110%; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.wb-recu-parties { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--v2-filet); border-bottom: 1px solid var(--v2-filet); }
+.wb-recu-partie { padding: 20px 28px; min-width: 0; overflow-wrap: anywhere; }
+.wb-recu-partie + .wb-recu-partie { border-left: 1px solid var(--v2-filet); }
+.wb-recu-partie .lib { font-size: 13px; color: var(--v2-color-gris); margin-bottom: 6px; }
+.wb-recu-partie .nom { font-weight: 600; }
+.wb-recu-lignes { padding: 8px 28px 0; }
+.wb-recu-ligne { display: flex; justify-content: space-between; gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--v2-filet); }
+.wb-recu-ligne .titre { font-size: 17px; font-weight: 600; }
+.wb-recu-ligne .titre span { font-weight: 450; color: var(--v2-color-gris); }
+.wb-recu-ligne .petit { font-size: 14px; color: var(--v2-color-gris); margin-top: 3px; }
+.wb-recu-ligne .promo { font-size: 14px; font-weight: 600; color: var(--v2-color-ambre); margin-top: 6px; }
+.wb-recu-ligne .prix { text-align: right; white-space: nowrap; font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.wb-recu-ligne .prix s { display: block; font-size: 14px; font-weight: 450; color: var(--v2-color-gris); }
+.wb-recu-ligne .prix .promo { font-size: 17px; font-weight: 650; margin-top: 0; }
+.wb-recu-tva { padding: 12px 0; font-size: 13px; font-style: italic; color: var(--v2-color-gris); }
+.wb-recu-total { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 20px 28px; border-top: 1px solid var(--v2-color-encre); }
+.wb-recu-total .lib { font-weight: 600; font-size: 14px; }
+.wb-recu-total .montant { font-size: 34px; font-weight: var(--v2-type-hero-poids); font-stretch: var(--v2-type-hero-largeur); letter-spacing: var(--v2-type-hero-tracking); line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wb-recu-reglement { padding: 0 28px 20px; text-align: right; font-size: 13px; color: var(--v2-color-gris); }
+.wb-recu-just { margin: 0 28px 24px; padding: 2px 0 2px 16px; border-left: 2px solid var(--v2-color-gris); font-size: 14px; color: var(--v2-color-gris); }
+.wb-recu-just b { display: block; color: var(--v2-color-encre); font-weight: 600; margin-bottom: 2px; }
+.wb-recu-pied { padding: 16px 28px; border-top: 1px solid var(--v2-filet); text-align: center; font-size: 13px; color: var(--v2-color-gris); }
+@media (max-width: 520px) {
+  .wb-recu-kicker, .wb-recu-tete, .wb-recu-lignes, .wb-recu-total, .wb-recu-pied { padding-inline: 20px; }
+  .wb-recu-partie { padding-inline: 20px; }
+  .wb-recu-reglement { padding-inline: 20px; }
+  .wb-recu-just { margin-inline: 20px; }
+  .wb-recu-droite { text-align: left; }
+  .wb-recu-parties { grid-template-columns: 1fr; }
+  .wb-recu-partie + .wb-recu-partie { border-left: 0; border-top: 1px solid var(--v2-filet); }
+}
+@media print {
+  .no-print { display: none !important; }
+  .wb-recu { background: #fff; color: #000; padding: 0; min-height: 0; }
+  .wb-recu-doc { border: 0; border-radius: 0; background: #fff; }
+  .wb-recu * { color: #000 !important; border-color: #ccc !important; }
+}
+.wb-recu .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

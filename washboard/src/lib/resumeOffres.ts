@@ -1,4 +1,4 @@
-import { BOOKING_QUOTA, PLAN_CARDS, type Plan, type PlanCard } from '@/lib/plan'
+import { BOOKING_QUOTA, PLAN_CARDS, SMS_QUOTA, type Plan, type PlanCard } from '@/lib/plan'
 
 // Réponse « Combien coûte WashBoard ? » des FAQ des pages pilier.
 //
@@ -25,9 +25,9 @@ export function resumeOffres(): string {
   const pro = carte('pro')
   const business = carte('business')
   return (
-    `${decouverte.name} est ${tarifOffre(decouverte)}, limitée à ${BOOKING_QUOTA.decouverte} réservations par mois, et calcule déjà tes frais de déplacement. ` +
-    `${starter.name}, à ${tarifOffre(starter)}, monte à ${BOOKING_QUOTA.starter} réservations par mois, avec une page personnalisée et le CRM. ` +
-    `${pro.name}, à ${tarifOffre(pro)}, ajoute les réservations illimitées, les créneaux intelligents, la comptabilité, la facturation, les avis Google (email et SMS) et les relances de suivi. ` +
+    `${decouverte.name} est ${tarifOffre(decouverte)}, limitée à ${BOOKING_QUOTA.decouverte} réservations par mois, et inclut déjà les frais de déplacement automatiques, l’acompte à la réservation, les promotions et la carte de fidélité. ` +
+    `${starter.name}, à ${tarifOffre(starter)}, monte à ${BOOKING_QUOTA.starter} réservations par mois, avec une page personnalisée, le CRM, la comptabilité, la facturation conforme, les avis Google (email et ${SMS_QUOTA.starter} SMS par mois) et les relances de suivi. ` +
+    `${pro.name}, à ${tarifOffre(pro)}, ajoute les réservations illimitées, les créneaux intelligents, ${SMS_QUOTA.pro} SMS par mois et le suivi des campagnes publicitaires. ` +
     `${business.name}, pour une équipe, est ${tarifOffre(business)}. ` +
     'Un mois est offert à l’inscription, sans carte bancaire.'
   )

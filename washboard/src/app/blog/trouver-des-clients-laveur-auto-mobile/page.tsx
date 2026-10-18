@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, P, UL, A, Callout, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('trouver-des-clients-laveur-auto-mobile')!
@@ -131,7 +132,8 @@ export default function Page() {
             <strong>Le bon moment, c&apos;est le jour même.</strong>{' '}Un avis demandé trois jours
             plus tard obtient beaucoup moins de réponses : l&apos;effet « waouh » est retombé, la
             voiture a repris la route. WashBoard envoie cette demande automatiquement, par email ou
-            SMS, avec le délai de votre choix après le rendez-vous.
+            SMS, avec le délai de votre choix après le rendez-vous (à partir de la formule{' '}
+            {requiredPlanLabel('avis_email')}).
           </p>
         </Callout>
 
@@ -227,6 +229,13 @@ export default function Page() {
           mois et jamais revus ? Chez la plupart des laveurs, c&apos;est le plus gros gisement
           disponible, et il ne coûte rien à exploiter.
         </P>
+        <P>
+          Pour donner une raison de revenir, et pas seulement un rappel, il existe un second outil :
+          la carte de fidélité. Une prestation offerte ou une remise tous les cinq à dix tampons
+          fait pencher la balance le jour où le client hésite entre vous et la première annonce
+          venue. Combien de tampons, quelle récompense, et ce que cela vous coûte vraiment : voir{' '}
+          <A href="/blog/carte-de-fidelite-laveur-auto-mobile">notre guide sur la carte de fidélité</A>.
+        </P>
 
         <H2>Ce sur quoi il ne faut pas compter au démarrage</H2>
         <P>
@@ -267,14 +276,16 @@ export default function Page() {
           title="Lave plus. Roule moins."
           secondary={lienPageMetier(article.theme)}
         >
-          WashBoard s&apos;occupe des réservations, groupe vos rendez-vous par quartier, demande
-          les avis à votre place et relance vos anciens clients. Vous lavez des voitures, on gère
-          le reste.
+          WashBoard s&apos;occupe des réservations, demande les avis à votre place, relance vos
+          anciens clients, fait tenir la carte de fidélité et, en formule{' '}
+          {requiredPlanLabel('creneaux_intelligents')}, met en avant les créneaux proches de vos rendez-vous
+          déjà prévus. Vous lavez des voitures, on gère le reste.
         </Cta>
 
         <AlsoRead
           items={[
             { href: '/blog/fiche-google-laveur-auto-mobile', label: 'Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels' },
+            { href: '/blog/carte-de-fidelite-laveur-auto-mobile', label: 'Carte de fidélité pour laveur auto mobile : faire revenir ses clients' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
             { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
             { href: '/blog/devenir-laveur-auto-mobile', label: 'Devenir laveur auto mobile : par où commencer' },

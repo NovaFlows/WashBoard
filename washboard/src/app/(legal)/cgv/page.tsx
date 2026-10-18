@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 
 export default function CGV() {
   return (
-    <article className="prose prose-slate dark:prose-invert max-w-none">
-      <h1 className="text-3xl font-extrabold tracking-tight mb-2">Conditions Générales de Vente</h1>
-      <p className="text-sm text-slate-400 mb-10">Dernière mise à jour : juillet 2026</p>
+    <article className="lg">
+      <h1>Conditions Générales de Vente</h1>
+      <p className="lg-maj">Dernière mise à jour : juillet 2026</p>
 
       <Section title="1. Objet">
         <p>
@@ -165,16 +165,16 @@ export default function CGV() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">{title}</h2>
-      <div className="text-slate-600 dark:text-slate-400 space-y-2 text-sm leading-relaxed">{children}</div>
+    <section>
+      <h2>{title}</h2>
+      <div className="lg-corps">{children}</div>
     </section>
   )
 }
 
 function Placeholder({ children }: { children: React.ReactNode }) {
   return (
-    <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1 rounded font-mono text-xs">
+    <span className="lg-ph">
       [{children}]
     </span>
   )

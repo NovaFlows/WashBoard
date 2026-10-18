@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('tarifs-lavage-auto-domicile')!
@@ -174,7 +175,9 @@ export default function Page() {
           </li>
           <li>
             <strong>La remise systématique.</strong>{' '}Accorder dix euros à chaque hésitation
-            apprend à vos clients à négocier, et détruit votre grille en quelques mois.
+            apprend à vos clients à négocier, et détruit votre grille en quelques mois. Une promotion
+            datée, avec un début et une fin annoncés, est tout autre chose : elle crée l&apos;urgence
+            au lieu d&apos;installer une habitude.
           </li>
           <li>
             <strong>Ne jamais augmenter.</strong>{' '}Vos produits, votre carburant et vos cotisations
@@ -208,9 +211,10 @@ export default function Page() {
           title="Savoir ce que vous gagnez vraiment"
           secondary={lienPageMetier(article.theme)}
         >
-          WashBoard suit votre chiffre d&apos;affaires par prestation, calcule automatiquement les
-          frais de déplacement selon la distance, et vous montre ce que rapporte réellement chaque
-          journée. Plus besoin d&apos;estimer à la fin du mois.
+          WashBoard calcule automatiquement les frais de déplacement selon le temps de trajet réel,
+          vous laisse lancer une promotion datée, avec bandeau et compte à rebours, plutôt qu&apos;une
+          remise permanente, et suit vos recettes et vos dépenses mois par mois (dès la formule{' '}
+          {requiredPlanLabel('compta')}). Plus besoin d&apos;estimer à la fin du mois.
         </Cta>
 
         <AlsoRead

@@ -12,6 +12,7 @@ import { useDemo } from './etat'
 import { I } from './icones'
 import { Ordinateur } from './Ordinateur'
 import type { EcranDemo } from './types'
+import '../base.css'
 import './demo.css'
 
 export type { EcranDemo }

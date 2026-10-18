@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { SITE_URL } from '@/lib/blog'
 import { freeMonthsLabel } from '@/lib/plan'
 import { resumeOffres } from '@/lib/resumeOffres'
 import type { FaqItem } from '@/components/blog/Prose'
+import Coque from '@/components/landing/vitrine/Coque'
+import FilAriane from '@/components/landing/vitrine/FilAriane'
 import { ComparatifBesoins } from '@/components/ComparatifBesoins'
 import { besoinsHead, besoinsRows } from '@/lib/comparatifAuto'
 
@@ -76,60 +77,6 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title, description },
 }
 
-function Nav() {
-  return (
-    <nav className="sticky top-0 z-50 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity">
-          <Image src="/LogoWashBoard.png" alt="WashBoard" width={32} height={32} className="w-8 h-8 rounded-lg shrink-0 object-contain" />
-          <span className="font-extrabold tracking-tight text-slate-900 dark:text-white">WashBoard</span>
-        </Link>
-        <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-          <Link href="/blog" className="hidden sm:inline text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors px-2 py-2">
-            Blog
-          </Link>
-          <Link href="/signup" className="px-3.5 sm:px-4 py-2 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
-            Essai gratuit
-          </Link>
-        </div>
-      </div>
-    </nav>
-  )
-}
-
-function Breadcrumb({ current }: { current: string }) {
-  return (
-    <nav aria-label="Fil d'Ariane" className="mb-6 text-xs text-slate-400 dark:text-slate-500">
-      <ol className="flex flex-wrap items-center gap-1.5">
-        <li>
-          <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Accueil</Link>
-        </li>
-        <li aria-hidden="true">/</li>
-        <li className="text-slate-500 dark:text-slate-400 truncate max-w-[70vw] sm:max-w-none" aria-current="page">
-          {current}
-        </li>
-      </ol>
-    </nav>
-  )
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-slate-200 dark:border-slate-800 py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-        <p>© 2026 WashBoard · Logiciel pour pros du lavage automobile</p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Accueil</Link>
-          <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Blog</Link>
-          <Link href="/mentions-legales" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Mentions légales</Link>
-          <Link href="/cgv" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">CGV</Link>
-          <Link href="/confidentialite" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Confidentialité</Link>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 // Grille 2026 à 4 offres : la réponse « Combien coûte » vient de
 // resumeOffres(), dérivée de plan.ts — plus de prix ni de nom d'offre recopié.
 
@@ -152,7 +99,17 @@ const faqItems: FaqItem[] = [
   {
     question: 'WashBoard remplace-t-il mon Google Agenda ?',
     answer:
-      'Non, il s’en sert. Chaque réservation confirmée sur WashBoard crée automatiquement un événement dans ton Google Agenda existant : tu gardes ton agenda, WashBoard y ajoute ce qu’un agenda seul ne calcule pas (prix par véhicule, frais de déplacement, créneaux qui limitent les trajets).',
+      'Non, il s’en sert. Une fois ton Google Agenda connecté, chaque réservation confirmée sur WashBoard y crée automatiquement un événement : tu gardes ton agenda, WashBoard y ajoute ce qu’un agenda seul ne calcule pas (prix par véhicule, frais de déplacement, créneaux qui limitent les trajets).',
+  },
+  {
+    question: 'Peut-on demander un acompte à la réservation ?',
+    answer:
+      'Oui, dès l’offre gratuite. Tu choisis le montant et ton client le paie par ton propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement) : WashBoard n’encaisse rien, l’argent va directement chez toi. Les conditions de remboursement sont affichées au client avant qu’il réserve. Avec Calendly ou un simple agenda, ce suivi reste à faire à la main.',
+  },
+  {
+    question: 'Comment fidéliser ses clients de lavage auto ?',
+    answer:
+      'Avec une carte de fidélité intégrée, incluse dès l’offre gratuite : chaque prestation terminée ajoute un tampon, et au nombre que tu fixes, la récompense de ton choix (prestation offerte ou remise) s’applique toute seule à la réservation suivante. Ton client reçoit un email à chaque tampon, sans carte papier à tamponner ni tableau Excel à tenir.',
   },
   {
     question: 'Combien coûte un logiciel dédié comme WashBoard ?',
@@ -185,164 +142,142 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans">
+    <Coque>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <Nav />
 
       {/* ── Hero ── */}
-      <header className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-12 sm:pb-16">
-        <Breadcrumb current={title.split(' | ')[0]} />
-        <p className="text-xs font-black text-[#1651E8] dark:text-[#00C4D4] uppercase tracking-[0.22em] mb-5">
-          Comparatif
-        </p>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight text-slate-900 dark:text-white mb-6 max-w-3xl text-balance">
-          Meilleur logiciel de gestion pour laveur auto mobile
-        </h1>
-        <p className="text-base sm:text-lg text-slate-600 dark:text-white/65 max-w-2xl leading-relaxed mb-4">
-          Il y a trois façons de piloter une activité de lavage auto mobile : à la main (WhatsApp,
-          Excel, un carnet papier), avec un outil de prise de rendez-vous généraliste (Calendly,
-          Google Agenda seul), ou avec un logiciel pensé pour ce métier précis. Les trois fonctionnent
-          au début. Elles ne tiennent pas la charge de la même façon.
-        </p>
-        <p className="text-sm text-slate-500 dark:text-white/50 max-w-2xl leading-relaxed mb-8">
-          Cette page ne compare WashBoard à aucun concurrent nommé du secteur : elle compare des
-          catégories d&apos;outils, honnêtement, poste par poste.
-        </p>
-        <div className="flex flex-wrap items-center gap-5">
-          <Link href="/signup" className="px-7 py-3.5 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#1651E8]/25">
-            Lancer mon mois gratuit
-          </Link>
-          <Link href="/booking" className="text-slate-500 dark:text-white/55 hover:text-slate-800 dark:hover:text-white text-sm font-medium transition-colors underline underline-offset-4">
-            ou prendre un appel
-          </Link>
+      <header className="pg-hero">
+        <div className="w">
+          <FilAriane items={[{ label: 'Accueil', href: '/' }, { label: title.split(' | ')[0] }]} />
+          <p className="sur-titre"><span className="pt" />Comparatif</p>
+          <h1 className="pg-h1">Meilleur logiciel de gestion pour laveur auto mobile</h1>
+          <p className="chapo">
+            Il y a trois façons de piloter une activité de lavage auto mobile : à la main (WhatsApp,
+            Excel, un carnet papier), avec un outil de prise de rendez-vous généraliste (Calendly,
+            Google Agenda seul), ou avec un logiciel pensé pour ce métier précis. Les trois fonctionnent
+            au début. Elles ne tiennent pas la charge de la même façon.
+          </p>
+          <p className="chapo">
+            Cette page ne compare WashBoard à aucun concurrent nommé du secteur : elle compare des
+            catégories d&apos;outils, honnêtement, poste par poste.
+          </p>
+          <div className="heros-cta">
+            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+            <Link href="/booking" className="pg-lien-doux">ou prendre un appel</Link>
+          </div>
+          <p className="rassure">Sans engagement · Sans carte bancaire</p>
         </div>
-        <p className="text-xs text-slate-400 dark:text-white/25 mt-5">Sans engagement · Sans carte bancaire</p>
       </header>
 
       {/* ── Les trois approches ── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
-        <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Le choix</p>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-10">
-          Trois façons de gérer, aucune n&apos;est absurde
-        </h2>
-        <div className="grid sm:grid-cols-3 gap-8 sm:gap-10">
-          <div>
-            <span className="text-3xl font-black text-[#1651E8]/25 leading-none">01</span>
-            <p className="mt-3 font-bold text-slate-900 dark:text-white">À la main</p>
-            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              WhatsApp pour les réservations, Excel pour les prix et le suivi, un carnet ou une note
-              pour l&apos;agenda. Zéro coût, zéro mise en place. Tient tant que le volume reste faible
-              et que personne d&apos;autre n&apos;a besoin de lire ces informations.
-            </p>
-          </div>
-          <div>
-            <span className="text-3xl font-black text-[#1651E8]/25 leading-none">02</span>
-            <p className="mt-3 font-bold text-slate-900 dark:text-white">Un outil généraliste</p>
-            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Calendly ou un agenda Google partagé gèrent très bien la prise de rendez-vous en ligne
-              sans échange de messages. Ils ne savent en revanche rien du métier : ni du véhicule, ni
-              du trajet, ni de la facture qui doit suivre.
-            </p>
-          </div>
-          <div>
-            <span className="text-3xl font-black text-[#1651E8]/25 leading-none">03</span>
-            <p className="mt-3 font-bold text-slate-900 dark:text-white">Un logiciel dédié</p>
-            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Pensé pour une activité qui se déplace : prix par véhicule, frais de déplacement,
-              créneaux qui limitent la route, facture conforme. Le compromis : un abonnement, et une
-              mise en place initiale.
-            </p>
+      <section className="section">
+        <div className="w">
+          <p className="sur-titre"><span className="pt" />Le choix</p>
+          <h2 className="pg-h2">Trois façons de gérer, aucune n&apos;est absurde</h2>
+          <div className="pg-cols">
+            <div className="pg-col">
+              <span className="nb">01</span>
+              <h3>À la main</h3>
+              <p>
+                WhatsApp pour les réservations, Excel pour les prix et le suivi, un carnet ou une note
+                pour l&apos;agenda. Zéro coût, zéro mise en place. Tient tant que le volume reste faible
+                et que personne d&apos;autre n&apos;a besoin de lire ces informations.
+              </p>
+            </div>
+            <div className="pg-col">
+              <span className="nb">02</span>
+              <h3>Un outil généraliste</h3>
+              <p>
+                Calendly ou un agenda Google partagé gèrent très bien la prise de rendez-vous en ligne
+                sans échange de messages. Ils ne savent en revanche rien du métier : ni du véhicule, ni
+                du trajet, ni de la facture qui doit suivre.
+              </p>
+            </div>
+            <div className="pg-col">
+              <span className="nb">03</span>
+              <h3>Un logiciel dédié</h3>
+              <p>
+                Pensé pour une activité qui se déplace : prix par véhicule, frais de déplacement,
+                créneaux qui limitent la route, facture conforme. Le compromis : un abonnement, et une
+                mise en place initiale.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Le tableau des besoins ── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
-        <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Poste par poste</p>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-4">
-          Ce qui change vraiment selon l&apos;outil
-        </h2>
-        <p className="text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed mb-10">
-          Pas de note globale ni de verdict à l&apos;emporte-pièce : chaque besoin, comparé pour ce
-          qu&apos;il est. Un outil comme Calendly fait très bien la prise de rendez-vous simple —
-          l&apos;écart se joue ailleurs.
-        </p>
-        <ComparatifBesoins head={besoinsHead} rows={besoinsRows} />
+      <section className="section">
+        <div className="w">
+          <p className="sur-titre"><span className="pt" />Poste par poste</p>
+          <h2 className="pg-h2">Ce qui change vraiment selon l&apos;outil</h2>
+          <p className="chapo">
+            Pas de note globale ni de verdict à l&apos;emporte-pièce : chaque besoin, comparé pour ce
+            qu&apos;il est. Un outil comme Calendly fait très bien la prise de rendez-vous simple —
+            l&apos;écart se joue ailleurs.
+          </p>
+          <ComparatifBesoins head={besoinsHead} rows={besoinsRows} />
+        </div>
       </section>
 
       {/* ── Pourquoi pas juste combiner ── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
-        <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">La question qui revient</p>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-6">
-          Pourquoi pas juste WhatsApp + Excel + Calendly, combinés ?
-        </h2>
-        <div className="max-w-2xl space-y-4 text-slate-500 dark:text-slate-400 leading-relaxed">
-          <p>
-            Chaque outil pris séparément fonctionne. Le problème apparaît entre eux : un rendez-vous
-            pris sur Calendly n&apos;a pas le prix du véhicule, qui doit être recalculé à la main dans
-            Excel, pendant qu&apos;un détail se négocie encore sur WhatsApp. Rien ne se parle, donc
-            tout se recopie.
-          </p>
-          <p>
-            Sur la landing, on chiffre déjà ce que coûte la seule étape des réservations sur WhatsApp
-            :{' '}
-            <strong className="font-semibold text-slate-700 dark:text-slate-300">
-              un rendez-vous confirmé, c&apos;est 4 messages échangés
-            </strong>{' '}
-            — multiplié par plusieurs clients chaque jour, ça absorbe du temps qui ne sert ni à laver
-            une voiture ni à en trouver une nouvelle. Ce temps de coordination entre outils qui ne se
-            parlent pas est le vrai coût, plus que le prix de chaque outil pris isolément.
-          </p>
-          <p>
-            C&apos;est l&apos;argument du tout-en-un : un seul endroit où le prix du véhicule, le
-            trajet, l&apos;agenda et la facture se déduisent les uns des autres, sans ressaisie.
-          </p>
-        </div>
-      </section>
-
-      {/* ── FAQ ── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 border-t border-slate-100 dark:border-slate-800/50">
-        <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.22em] mb-4">Questions</p>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white max-w-2xl mb-10">
-          Questions fréquentes
-        </h2>
-        <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
-          {faqItems.map(item => (
-            <details key={item.question} className="group py-4">
-              <summary className="flex items-start justify-between gap-4 cursor-pointer list-none font-semibold text-slate-900 dark:text-slate-100 [&::-webkit-details-marker]:hidden">
-                <span>{item.question}</span>
-                <span aria-hidden="true" className="shrink-0 mt-0.5 text-slate-400 transition-transform group-open:rotate-45">+</span>
-              </summary>
-              <p className="mt-3 text-slate-700 dark:text-slate-300 leading-[1.7]">{item.answer}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      {/* ── CTA final ── */}
-      <section className="px-4 sm:px-6 pb-20">
-        <div className="max-w-5xl mx-auto">
-          <div
-            style={{ background: 'linear-gradient(135deg, #09111E 0%, #0C1D38 50%, #09111E 100%)' }}
-            className="border border-white/[0.06] rounded-2xl p-10 sm:p-16 text-center relative overflow-hidden"
-          >
-            <div aria-hidden className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 bg-[#00C4D4]/8 blur-3xl rounded-full pointer-events-none" />
-            <h2 className="relative text-3xl sm:text-4xl font-black tracking-tight mb-5 text-white leading-[1.1] max-w-2xl mx-auto text-balance">
-              Essaie, et compare toi-même.
-            </h2>
-            <p className="relative text-white/60 text-base mb-10 max-w-sm mx-auto">
-              Ta page de réservation en ligne en 10 minutes, {freeMonthsLabel()} si tu passes à
-              l&apos;année, sans carte bancaire en mensuel.
+      <section className="section">
+        <div className="w">
+          <p className="sur-titre"><span className="pt" />La question qui revient</p>
+          <h2 className="pg-h2">Pourquoi pas juste WhatsApp + Excel + Calendly, combinés ?</h2>
+          <div className="pg-texte">
+            <p>
+              Chaque outil pris séparément fonctionne. Le problème apparaît entre eux : un rendez-vous
+              pris sur Calendly n&apos;a pas le prix du véhicule, qui doit être recalculé à la main dans
+              Excel, pendant qu&apos;un détail se négocie encore sur WhatsApp. Rien ne se parle, donc
+              tout se recopie.
             </p>
-            <Link href="/signup" className="relative inline-block px-9 py-4 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#1651E8]/30">
-              Lancer mon mois gratuit
-            </Link>
-            <p className="relative text-xs text-white/25 mt-4">Sans engagement · Sans carte bancaire</p>
+            <p>
+              Sur la landing, on chiffre déjà ce que coûte la seule étape des réservations sur WhatsApp
+              :{' '}
+              <strong>un rendez-vous confirmé, c&apos;est 4 messages échangés</strong>{' '}
+              — multiplié par plusieurs clients chaque jour, ça absorbe du temps qui ne sert ni à laver
+              une voiture ni à en trouver une nouvelle. Ce temps de coordination entre outils qui ne se
+              parlent pas est le vrai coût, plus que le prix de chaque outil pris isolément.
+            </p>
+            <p>
+              C&apos;est l&apos;argument du tout-en-un : un seul endroit où le prix du véhicule, le
+              trajet, l&apos;agenda et la facture se déduisent les uns des autres, sans ressaisie.
+            </p>
           </div>
         </div>
       </section>
 
-      <Footer />
-    </div>
+      {/* ── FAQ ── */}
+      <section className="section">
+        <div className="w">
+          <p className="sur-titre"><span className="pt" />Questions</p>
+          <h2 className="pg-h2">Questions fréquentes</h2>
+          <div className="faq">
+            {faqItems.map(item => (
+              <details key={item.question}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA final ── */}
+      <section className="final">
+        <div className="w">
+          <h2 className="h2">Essaie, et compare toi-même.</h2>
+          <p className="chapo" style={{ marginInline: 'auto' }}>
+            Ta page de réservation en ligne en 10 minutes, {freeMonthsLabel()} si tu passes à
+            l&apos;année, sans carte bancaire en mensuel.
+          </p>
+          <div className="heros-cta">
+            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+          </div>
+          <p className="rassure">Sans engagement · Sans carte bancaire</p>
+        </div>
+      </section>
+    </Coque>
   )
 }

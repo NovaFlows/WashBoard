@@ -9,6 +9,7 @@ import { ContenuFeuille } from './feuilles'
 import { I, RESEAU } from './icones'
 import { EcranPlus } from './plus'
 import type { EcranDemo, Feuille, Reglages, Vue } from './types'
+import '../base.css'
 import './demo.css'
 
 export type ModeApp = 'tel' | 'dk'

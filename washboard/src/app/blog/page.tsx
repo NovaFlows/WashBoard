@@ -78,11 +78,8 @@ const SECONDARY_LABEL = 'Autres métiers mobiles'
 function ArticleRow({ article }: { article: Article }) {
   return (
     <li>
-      <Link
-        href={`/blog/${article.slug}`}
-        className="group block py-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 rounded-lg"
-      >
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-2 tabular-nums">
+      <Link href={`/blog/${article.slug}`}>
+        <p className="meta">
           <time dateTime={article.updatedAt}>
             {new Date(article.updatedAt).toLocaleDateString('fr-FR', {
               day: 'numeric', month: 'long', year: 'numeric',
@@ -90,12 +87,8 @@ function ArticleRow({ article }: { article: Article }) {
           </time>
           {' · '}{article.readingMinutes} min de lecture
         </p>
-        <h3 className="text-xl font-bold tracking-tight text-balance mb-2 group-hover:text-[#1651E8] dark:group-hover:text-[#6A9FFF] transition-colors">
-          {article.title}
-        </h3>
-        <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-          {article.description}
-        </p>
+        <h3>{article.title}</h3>
+        <p className="desc">{article.description}</p>
       </Link>
     </li>
   )
@@ -127,36 +120,26 @@ export default function BlogIndex() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <header className="mb-10">
-        <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mb-3">
-          Le blog
-        </p>
-        <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-balance mb-3">
+      <header className="bl-tete">
+        <p className="sur-titre"><span className="pt" />Le blog</p>
+        <h1 className="pr-h1">
           Lavage auto & detailing : les conseils du blog
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+        <p className="chapo">
           Ce que WashBoard apprend en travaillant avec des laveurs auto, des pros du detailing et du nettoyage de canapés et textiles à domicile : trouver des clients, fixer ses tarifs, organiser ses tournées, arrêter de perdre du temps sur l&apos;administratif. D&apos;autres métiers mobiles (vitres, ménage, piscines, extérieur) restent couverts, réunis plus bas dans une dernière rubrique.
         </p>
         {/* Accès direct à chaque pilier : sur mobile, la liste complète est longue. */}
-        <nav aria-label="Métiers" className="mt-6 flex flex-wrap gap-2">
+        <nav aria-label="Métiers" className="puces">
           {navItems.map(item => (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-[#1651E8]/10 hover:text-[#1651E8] dark:hover:text-[#6A9FFF] transition-colors"
-            >
-              {item.label}
-            </a>
+            <a key={item.id} href={`#${item.id}`}>{item.label}</a>
           ))}
         </nav>
       </header>
 
       {primaryGroups.map(g => (
-        <section key={g.theme} id={g.theme} className="mb-12 scroll-mt-20">
-          <h2 className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.18em] pb-3 border-b border-slate-200 dark:border-slate-800">
-            {g.label}
-          </h2>
-          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+        <section key={g.theme} id={g.theme} className="bl-rubrique">
+          <h2>{g.label}</h2>
+          <ul className="bl-liste">
             {g.articles.map(article => (
               <ArticleRow key={article.slug} article={article} />
             ))}
@@ -165,11 +148,9 @@ export default function BlogIndex() {
       ))}
 
       {secondaryArticles.length > 0 && (
-        <section id={SECONDARY_ID} className="mb-12 scroll-mt-20">
-          <h2 className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.18em] pb-3 border-b border-slate-200 dark:border-slate-800">
-            {SECONDARY_LABEL}
-          </h2>
-          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+        <section id={SECONDARY_ID} className="bl-rubrique">
+          <h2>{SECONDARY_LABEL}</h2>
+          <ul className="bl-liste">
             {secondaryArticles.map(article => (
               <ArticleRow key={article.slug} article={article} />
             ))}

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { GUIDE, searchGuide, normalize, entryText } from './guide'
+import { requiredPlanLabel } from './plan'
 
 const allEntries = GUIDE.flatMap(s => s.entries)
 const countEntries = (sections: typeof GUIDE) =>
@@ -100,6 +101,7 @@ describe('intégrité du contenu', () => {
       '/dashboard/clients', '/dashboard/factures', '/dashboard/parametres/tout',
       '/dashboard/chiffres/documents', '/dashboard/chiffres/depenses',
       '/dashboard/clients/publicites', '/dashboard/assistance',
+      '/dashboard/parametres/acompte', '/dashboard/parametres/fidelite', '/dashboard/parametres/promotions',
     ]
     const liens = allEntries.flatMap(e => [...e.answer.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map(m => m[1]))
     expect(liens.length).toBeGreaterThan(0)
@@ -150,5 +152,29 @@ describe('tolérance au pluriel', () => {
   it('ne tronque pas les mots trop courts', () => {
     // « as » ne doit pas devenir « a » et tout faire matcher.
     expect(searchGuide('as xyzzy').flatMap(s => s.entries).length).toBe(0)
+  })
+})
+
+describe('fonctionnalités de la grille du 18/10', () => {
+  it('l’acompte, la fidélité et les promotions ont leur réponse', () => {
+    const ids = allEntries.map(e => e.id)
+    for (const id of ['acompte', 'acompte-client', 'acompte-limites', 'fidelite', 'fidelite-client', 'promotions']) {
+      expect(ids).toContain(id)
+    }
+  })
+
+  it('une recherche courante mène à la bonne entrée', () => {
+    expect(searchGuide('acompte').flatMap(s => s.entries).map(e => e.id)).toContain('acompte')
+    expect(searchGuide('tampons').flatMap(s => s.entries).map(e => e.id)).toContain('fidelite')
+    expect(searchGuide('compte a rebours').flatMap(s => s.entries).map(e => e.id)).toContain('promotions')
+  })
+
+  it('le nom d’offre cité vient de plan.ts, pas d’une ancienne grille', () => {
+    // Avis, facturation et comptabilité sont passés du Pro au Starter le 2026-10-18.
+    const texte = (id: string) => allEntries.find(e => e.id === id)!.answer
+    expect(texte('avis')).toContain(`formule ${requiredPlanLabel('avis_email')}`)
+    expect(texte('facture-quand')).toContain(`formule ${requiredPlanLabel('facturation')}`)
+    expect(texte('compta')).toContain(`formule ${requiredPlanLabel('compta')}`)
+    expect(texte('creneaux-groupes')).toContain(`formule ${requiredPlanLabel('creneaux_intelligents')}`)
   })
 })

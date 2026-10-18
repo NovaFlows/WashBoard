@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('combien-gagne-un-laveur-auto-mobile')!
@@ -193,6 +194,12 @@ export default function Page() {
           est détaillé dans{' '}
           <A href="/blog/trouver-des-clients-laveur-auto-mobile">notre guide sur les canaux qui marchent</A>.
         </P>
+        <P>
+          Pour les particuliers, qui reviennent moins souvent, une carte de fidélité donne une
+          raison de rappeler le même laveur. Elle a un coût qu&apos;il faut calculer avant de la lancer :
+          une prestation offerte tous les dix tampons revient à environ 10 % de remise à terme. Voir{' '}
+          <A href="/blog/carte-de-fidelite-laveur-auto-mobile">le calcul complet</A>.
+        </P>
 
         <H2>Et pour dépasser ces chiffres ?</H2>
         <P>
@@ -223,9 +230,10 @@ export default function Page() {
           title="Voyez ce que rapporte vraiment chaque journée"
           secondary={lienPageMetier(article.theme)}
         >
-          WashBoard calcule votre chiffre d&apos;affaires par prestation et par jour, groupe vos
-          rendez-vous par secteur et relance vos clients récurrents. Vous savez où vous en êtes sans
-          attendre la fin du mois.
+          WashBoard suit vos recettes, vos dépenses et votre résultat mois par mois (dès la formule{' '}
+          {requiredPlanLabel('compta')}), relance vos clients qui ne reviennent pas et, en formule{' '}
+          {requiredPlanLabel('creneaux_intelligents')}, met en avant les créneaux proches de vos rendez-vous
+          déjà prévus. Vous savez où vous en êtes sans attendre la fin du mois.
         </Cta>
 
         <AlsoRead

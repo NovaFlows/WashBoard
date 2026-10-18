@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('nettoyage-canape-domicile-lancer-activite')!
@@ -215,8 +216,9 @@ export default function Page() {
         >
           WashBoard garde l&apos;historique de chaque client — quelle prestation, quelle date, quel
           montant — vous signale ceux qui ne sont pas revenus, et peut leur envoyer une relance
-          automatiquement. Vos clients réservent seuls sur votre lien, et la demande d&apos;avis
-          Google part après chaque prestation.
+          automatiquement (à partir de la formule {requiredPlanLabel('followup')}). Vos clients réservent seuls sur
+          votre lien, peuvent verser un acompte pour sécuriser le rendez-vous, et la demande
+          d&apos;avis Google part après chaque prestation.
         </Cta>
 
         <AlsoRead

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('organiser-ses-tournees-lavage-auto')!
@@ -42,7 +43,7 @@ const faq: FaqItem[] = [
   {
     question: 'Comment limiter les annulations de dernière minute ?',
     answer:
-      'Envoyez un message de rappel la veille : il réduit nettement les oublis et vous laisse le temps de replacer le créneau. Tenez une liste d’attente par secteur, et gardez un client professionnel (garage, concession) dans chaque zone, qui accepte souvent de vous prendre au pied levé.',
+      'Envoyez un message de rappel la veille : il réduit nettement les oublis et vous laisse le temps de replacer le créneau. Tenez une liste d’attente par secteur, gardez un client professionnel (garage, concession) dans chaque zone, qui accepte souvent de vous prendre au pied levé, et demandez un acompte sur les prestations longues : un client qui a payé d’avance oublie beaucoup moins son rendez-vous.',
   },
 ]
 
@@ -111,8 +112,9 @@ export default function Page() {
           créneau qui vous économise quarante minutes de route est une excellente affaire pour vous
           deux. C&apos;est exactement ce que{' '}
           <A href="/optimisation-tournee-lavage-auto">les créneaux groupés de WashBoard</A>{' '}
-          automatisent : le logiciel compare le trajet réel à vos rendez-vous du jour et met en avant
-          les horaires proches, avec la remise que vous avez réglée.
+          automatisent (formule {requiredPlanLabel('creneaux_intelligents')}) : le logiciel compare le trajet
+          réel à vos rendez-vous du jour et met en avant les horaires proches, avec la remise que
+          vous avez réglée.
         </P>
 
         <H2>Prévoir des durées réalistes</H2>
@@ -142,7 +144,7 @@ export default function Page() {
         <H2>Absorber les annulations sans perdre la journée</H2>
         <P>
           Une annulation la veille laisse un trou de deux heures au milieu d&apos;une journée bien
-          remplie. Trois réflexes limitent la casse :
+          remplie. Quatre réflexes limitent la casse :
         </P>
         <UL>
           <li>
@@ -156,6 +158,13 @@ export default function Page() {
           <li>
             <strong>Garder un client pro dans le secteur.</strong>{' '}Un garage ou une concession
             avec plusieurs véhicules en attente accepte souvent de vous prendre au pied levé.
+          </li>
+          <li>
+            <strong>Demander un acompte sur les prestations longues.</strong>{' '}Un client qui a
+            payé d&apos;avance pense à son rendez-vous, et un créneau qui reste impayé au-delà du
+            délai se libère plutôt que de rester bloqué. Le calcul, les montants et les pièges sont
+            détaillés dans{' '}
+            <A href="/blog/acompte-reservation-laveur-auto-mobile">notre guide sur l&apos;acompte à la réservation</A>.
           </li>
         </UL>
 
@@ -186,15 +195,18 @@ export default function Page() {
           title="Des tournées groupées, sans y penser"
           secondary={lienPageMetier(article.theme)}
         >
-          WashBoard regroupe automatiquement les rendez-vous par quartier, calcule les temps de
-          trajet entre deux prestations et ne propose au client que les créneaux réellement
-          tenables. Vous roulez moins, vous lavez plus.
+          WashBoard calcule le temps de trajet réel entre deux prestations et ne propose jamais au
+          client un horaire que la route rend impossible. Avec la formule{' '}
+          {requiredPlanLabel('creneaux_intelligents')}, il met aussi en avant les créneaux proches d&apos;un
+          rendez-vous déjà prévu, avec la remise que vous avez réglée. Vous roulez moins, vous lavez
+          plus.
         </Cta>
 
         <AlsoRead
           items={[
             { href: '/blog/combien-gagne-un-laveur-auto-mobile', label: 'Combien gagne un laveur auto mobile ? Revenus réels et simulation' },
             { href: '/blog/trouver-des-clients-laveur-auto-mobile', label: 'Comment trouver des clients quand on est laveur auto mobile' },
+            { href: '/blog/acompte-reservation-laveur-auto-mobile', label: 'Acompte à la réservation pour un laveur auto mobile : sans perdre de clients' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
             { href: '/blog/devenir-laveur-auto-mobile', label: 'Devenir laveur auto mobile : par où commencer' },
           ]}

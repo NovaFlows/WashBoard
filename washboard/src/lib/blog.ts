@@ -44,7 +44,7 @@ export const ARTICLES: Article[] = [
       'Le lavage de vitres est l’activité de nettoyage la plus simple à lancer et la plus récurrente : commerces, copropriétés, particuliers. Statut, matériel (perche, raclette, eau pure), tarifs au m² ou à l’heure, et comment remplir un planning de passages réguliers.',
     theme: 'vitres',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 9,
   },
   {
@@ -54,7 +54,7 @@ export const ARTICLES: Article[] = [
       'Canapés, matelas, tapis, sièges auto : une activité à forte marge qui se vend sur les photos avant/après. Matériel (injection-extraction), tarifs par pièce, temps par prestation et les erreurs qui abîment un tissu.',
     theme: 'textiles',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 8,
   },
   {
@@ -64,7 +64,7 @@ export const ARTICLES: Article[] = [
       'Combien facturer de l’heure, ce que change la déclaration Services à la personne (crédit d’impôt de 50 % pour le client, condition d’activité exclusive), et comment construire un planning de clients hebdomadaires qui tient.',
     theme: 'menage',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 9,
   },
   {
@@ -74,7 +74,7 @@ export const ARTICLES: Article[] = [
       'Un métier saisonnier qu’on peut lisser : contrats d’entretien mensuels, mise en route et hivernage, tournées par secteur. Ce qu’il faut savoir (chimie de l’eau, matériel, responsabilités), les tarifs pratiqués et comment vendre l’abonnement plutôt que l’intervention.',
     theme: 'piscine',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 9,
   },
   {
@@ -84,7 +84,7 @@ export const ARTICLES: Article[] = [
       'Le métier de laveur au sens strict : matériel (nettoyeur thermique, rotabuse, perche), tarifs au m² par surface, saisonnalité, ce qui se fait et ne se fait pas (toitures, bois, joints), et comment enchaîner les chantiers dans un même quartier.',
     theme: 'exterieur',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 9,
   },
   {
@@ -98,13 +98,33 @@ export const ARTICLES: Article[] = [
     readingMinutes: 8,
   },
   {
+    slug: 'carte-de-fidelite-laveur-auto-mobile',
+    theme: 'auto',
+    title: 'Carte de fidélité pour laveur auto mobile : faire revenir ses clients',
+    description:
+      'Combien de tampons, quelle récompense, ce que ça coûte vraiment : le calcul d’une carte de fidélité pour un laveur auto à domicile, ce qui marche, ce qui ne marche pas, et comment la mettre en place sans carton à perdre.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-18',
+    readingMinutes: 8,
+  },
+  {
+    slug: 'acompte-reservation-laveur-auto-mobile',
+    theme: 'auto',
+    title: 'Acompte à la réservation pour un laveur auto mobile : sans perdre de clients',
+    description:
+      'Rendez-vous manqués, créneaux bloqués pour rien : quand demander un acompte, combien, comment le faire payer (PayPal, Stripe, SumUp, Lydia, Wero, virement) et ce qui fait fuir les clients. Avec le calcul de ce que coûte un lapin.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-18',
+    readingMinutes: 8,
+  },
+  {
     slug: 'lavage-auto-sans-eau',
     theme: 'auto',
     title: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi',
     description:
       'Le lavage sans eau règle la question des eaux usées et permet d’intervenir partout. Principe, produits, limites (véhicule très sale, jantes), temps par voiture et argumentaire client.',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 8,
   },
   {
@@ -114,7 +134,7 @@ export const ARTICLES: Article[] = [
     description:
       'Chiffre d’affaires, charges, cotisations, revenu net : une simulation honnête sur 3 profils (débutant, installé, avec clients pros) et les trois leviers qui font vraiment monter le revenu.',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 9,
   },
   {
@@ -124,7 +144,7 @@ export const ARTICLES: Article[] = [
     description:
       'Zone de service au lieu d’une adresse, catégorie, photos, avis, réponses : le guide pas à pas pour qu’une fiche d’établissement Google amène des réservations de lavage à domicile.',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 8,
   },
   {
@@ -144,7 +164,7 @@ export const ARTICLES: Article[] = [
     description:
       'Les canaux qui remplissent vraiment un agenda de lavage auto à domicile : fiche Google, avis clients, zones groupées, clients pros et relance des anciens clients. Sans budget publicitaire.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 10,
   },
   {
@@ -154,7 +174,7 @@ export const ARTICLES: Article[] = [
     description:
       'Comment calculer un prix qui tient : temps réel par prestation, frais de déplacement, charges et cotisations. Avec une grille indicative et les erreurs qui plombent une marge.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 9,
   },
   {
@@ -164,7 +184,7 @@ export const ARTICLES: Article[] = [
     description:
       'Statut, assurance, matériel, réglementation sur l’eau, budget de départ : les étapes concrètes pour lancer une activité de lavage auto à domicile sans se tromper.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 11,
   },
   {
@@ -174,7 +194,7 @@ export const ARTICLES: Article[] = [
     description:
       'Les trajets entre deux rendez-vous mangent une à deux prestations par jour. Comment grouper ses créneaux par secteur, prévoir des durées réalistes et absorber les annulations.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-09-20',
+    updatedAt: '2026-10-18',
     readingMinutes: 8,
   },
 ]

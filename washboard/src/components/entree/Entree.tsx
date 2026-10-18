@@ -138,6 +138,8 @@ export function BarreActions({ children }: { children: React.ReactNode }) {
   return <div className="wb-entree-verre wb-entree-actions flex flex-col items-stretch gap-1.5">{children}</div>
 }
 
+export const BOUTON_PRINCIPAL = 'wb-entree-bouton min-h-[50px] w-full rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-color-accent)] px-4 text-base font-semibold text-[color:var(--v2-color-sur-accent)] disabled:opacity-35'
+
 export function BoutonPrincipal({ chargement, libelleChargement, className = '', children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   chargement?: boolean
   libelleChargement?: string
@@ -146,7 +148,7 @@ export function BoutonPrincipal({ chargement, libelleChargement, className = '',
     <button
       {...props}
       disabled={props.disabled || chargement}
-      className={`wb-entree-bouton min-h-[50px] w-full rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-color-accent)] px-4 text-base font-semibold text-[color:var(--v2-color-sur-accent)] disabled:opacity-35 ${className}`}
+      className={`${BOUTON_PRINCIPAL} ${className}`}
     >
       {chargement ? <span className="flex items-center justify-center gap-2"><Spinner />{libelleChargement}</span> : children}
     </button>

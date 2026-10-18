@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AppLaveur } from './AppLaveur'
 import { useDemo } from './etat'
 import type { EcranDemo } from './types'
+import '../base.css'
 import './demo.css'
 
 const LARGEUR_ECRAN = 1100

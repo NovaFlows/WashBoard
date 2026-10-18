@@ -69,6 +69,18 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, dès la formule Starter). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
   },
   {
+    q: 'Un client peut-il réserver plusieurs véhicules en une seule fois ?',
+    a: 'Oui. Il ajoute chaque véhicule à sa réservation, avec ses options propres. Le prix et la durée bloquée dans ton agenda suivent exactement ce qu\'il a choisi, véhicule par véhicule.',
+  },
+  {
+    q: 'Comment bloquer mes jours de congé ?',
+    a: 'Tu ajoutes une indisponibilité avec sa date de début et de fin dans tes horaires. Ces journées disparaissent aussitôt des créneaux proposés : personne ne peut réserver dessus.',
+  },
+  {
+    q: 'Un client peut-il annuler son rendez-vous tout seul ?',
+    a: 'Pas aujourd\'hui : sa page de confirmation n\'a pas de bouton d\'annulation, il te prévient directement. Tu annules alors le rendez-vous depuis ton agenda, et le créneau redevient immédiatement réservable. Si c\'est un particulier qui a réservé en ligne, il dispose en principe de 14 jours pour se rétracter : traite sa demande (message, appel) comme une annulation et regarde si l\'acompte doit lui être rendu. En cas de doute, fais relire tes conditions par un professionnel du droit.',
+  },
+  {
     q: 'Comment marche la carte de fidélité ?',
     a: 'Chaque prestation terminée ajoute un tampon (un par véhicule si tu le choisis). Au nombre de tampons que tu fixes, la récompense de ton choix, prestation offerte ou remise, s\'applique toute seule à la réservation suivante. Ton client reçoit un email à chaque tampon.',
   },
@@ -87,6 +99,14 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     q: 'Les clients peuvent payer en ligne ?',
     a: 'Le solde se règle sur place. Si tu veux, tu demandes un acompte à la réservation, payé par ton propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement). WashBoard n\'encaisse rien : l\'argent va directement chez toi.',
+  },
+  {
+    q: 'Que se passe-t-il si un client ne paie pas son acompte ?',
+    a: 'Tu choisis un délai pour le payer (2 h, 12 h, 24 h ou 48 h). Passé ce délai, une réservation encore en attente est annulée toute seule : le créneau est libéré et le client est prévenu par email. Si tu as déjà confirmé le rendez-vous, WashBoard ne l\'annule pas à ta place. Tu peux aussi ne fixer aucun délai.',
+  },
+  {
+    q: 'Puis-je faire une promotion sur mes prestations ?',
+    a: 'Oui, dès l\'offre gratuite. Tu fixes une remise en pourcentage ou en euros pendant une période, sur toutes tes prestations ou sur certaines. Un bandeau en haut de ta page de réservation l\'annonce, avec un compte à rebours si tu le souhaites. La remise s\'applique à toutes les réservations prises pendant la période, hors frais de déplacement.',
   },
   {
     q: 'Et la facturation électronique obligatoire en 2027 ?',
