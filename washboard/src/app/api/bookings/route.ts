@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { sendBookingRequest, sendWasherNotification, sendWasherBookingLocked } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
+import { estReservationDeTest } from '@/lib/e2e'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
@@ -673,8 +674,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     if (errMarque) logger.error('bookings.saisie_par_laveur.mark_failed', { bookingId: id }, errMarque)
   }
 
-  // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent)
-  if (washer && service) {
+  // Envoi emails (awaités — Vercel coupe les fire-and-forget avant qu'ils partent).
+  // Réservation des tests de bout en bout (`[E2E]` sur un serveur de test, lib/e2e.ts) :
+  // ni email ni notification — le compte de test est celui de l'équipe.
+  if (washer && service && !estReservationDeTest(bookingData.client_name)) {
     const emailJobs: Promise<unknown>[] = []
     // Pas d'adresse (rendez-vous pris par téléphone) : rien à envoyer au client.
     if (bookingData.client_email) emailJobs.push(

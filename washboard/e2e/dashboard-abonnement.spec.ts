@@ -3,6 +3,7 @@ import { expectNoAppError, hasWasherCredentials } from './helpers'
 import { PLAN_CARDS, yearlyPrice, formatEuros } from '../src/lib/plan'
 
 // Abonnement : offres, cycle de facturation, moyens de paiement.
+// Écran v2 « Mon offre » (2026-10-18) : c'est celui que reçoit tout ordinateur.
 // Les montants sont dérivés de `lib/plan.ts` (source unique) plutôt que
 // recopiés : un changement de tarif fait évoluer le test avec le produit, et
 // un écart entre l'affichage et la source devient un échec.
@@ -15,8 +16,8 @@ test.describe('Abonnement — offres', () => {
   test('la page se charge avec le statut et les offres', async ({ page }) => {
     await page.goto('/dashboard/abonnement')
     await expectNoAppError(page)
-    await expect(page.locator('text=Statut actuel').first()).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('text=Nos offres').first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Mon offre', level: 1 })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: 'Nos offres' })).toBeVisible()
   })
 
   test('chaque plan du catalogue est proposé', async ({ page }) => {
@@ -48,14 +49,14 @@ test.describe('Abonnement — offres', () => {
     await page.goto('/dashboard/abonnement')
     await expect(page.locator('text=Nos offres').first()).toBeVisible({ timeout: 15_000 })
 
-    // Les liens de paiement n'apparaissent que si l'abonnement n'est PAS actif :
-    // proposer de payer à quelqu'un qui a déjà payé serait une erreur de
-    // facturation. Le test vérifie donc la cohérence entre les deux, pas la
-    // présence inconditionnelle des boutons.
-    const estActif = await page.locator('text=Abonnement actif').first().isVisible().catch(() => false)
+    // Un client historique a déjà tout : lui proposer de payer serait une erreur de
+    // facturation, aucune carte ne porte donc de lien de paiement. Les autres ont un
+    // lien PayPal sur chaque offre payante qu'ils n'ont pas. Le test vérifie la
+    // cohérence entre les deux, pas la présence inconditionnelle des boutons.
+    const historique = await page.getByText('Inclus dans votre plan').first().isVisible().catch(() => false)
     const liensPaypal = page.locator('a[href*="paypal.me"]')
 
-    if (estActif) {
+    if (historique) {
       expect(await liensPaypal.count()).toBe(0)
     } else {
       expect(await liensPaypal.count()).toBeGreaterThan(0)
@@ -71,8 +72,8 @@ test.describe('Abonnement — offres', () => {
     await page.goto('/dashboard/abonnement')
     await expect(page.locator('text=Nos offres').first()).toBeVisible({ timeout: 15_000 })
     // Le laveur doit voir sur quelle offre il est, sinon il peut repayer un
-    // plan qu'il a déjà.
-    await expect(page.locator('text=Actuel').first()).toBeVisible({ timeout: 10_000 })
+    // plan qu'il a déjà. Client historique : toutes les offres sont « incluses ».
+    await expect(page.getByText(/^(Votre offre actuelle|Inclus dans votre plan)$/).first()).toBeVisible({ timeout: 10_000 })
   })
 
   test('la FAQ de l’abonnement est présente', async ({ page }) => {

@@ -21,7 +21,8 @@ test('Landing page se charge', async ({ page }) => {
 
 test('Page login — formulaire email + mot de passe', async ({ page }) => {
   await page.goto('/login')
-  await expect(page.getByText('Espace Laveur')).toBeVisible()
+  // Écran d'entrée v2 (2026-10-15) : « Content de te revoir » remplace « Espace Laveur ».
+  await expect(page.getByRole('heading', { name: 'Content de te revoir' })).toBeVisible()
   await expect(page.locator('input[type="email"]')).toBeVisible()
   await expect(page.locator('input[type="password"]')).toBeVisible()
   await expect(page.getByRole('button', { name: /se connecter/i })).toBeVisible()

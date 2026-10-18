@@ -34,13 +34,28 @@ test.describe('Administration — navigation', () => {
 })
 
 test.describe('Identité de la page client', () => {
-  test('le formulaire expose le message d’accueil et le site web', async ({ page }) => {
+  test('le site web est sur l’identité, le message d’accueil dans « Apparence de ma page »', async ({ page }) => {
+    // Le message d'accueil et l'URL du site alimentent la page publique (le site sert
+    // aussi à récupérer les avis clients). Depuis la v2, le message d'accueil, le logo
+    // et le fond se règlent dans « Apparence de ma page ».
     await page.goto('/dashboard/admin')
     await page.getByTestId('admin-tab-identite').click()
     await expectNoAppError(page)
-    // Le message d'accueil et l'URL du site sont les deux champs qui alimentent
-    // la page publique (le site sert aussi à récupérer les avis clients).
-    await expect(page.locator('textarea').first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByPlaceholder('https://monsite.fr')).toBeVisible({ timeout: 10_000 })
+
+    await page.goto('/dashboard/parametres/apparence')
+    await expectNoAppError(page)
+    const reglages = page.getByRole('region', { name: 'Réglages de la page' })
+    for (const ligne of [/^Logo/, /^Couleur de ma marque/, /^Mon site web/]) {
+      await expect(reglages.getByRole('button', { name: ligne })).toBeVisible({ timeout: 15_000 })
+    }
+    // Le message d'accueil et le fond n'habillent que la page personnalisée : avec la page
+    // par défaut, ils sont masqués. On ne bascule pas l'interrupteur, qui enregistre aussitôt.
+    const parDefaut = await page.getByRole('switch', { name: 'Page par défaut' }).isChecked()
+    if (!parDefaut) {
+      await expect(reglages.getByRole('button', { name: /^Message d’accueil/ })).toBeVisible()
+      await expect(reglages.getByRole('button', { name: /^Fond de la page/ })).toBeVisible()
+    }
   })
 
   test('toutes les sections de configuration sont rendues', async ({ page }) => {
@@ -52,9 +67,10 @@ test.describe('Identité de la page client', () => {
     // d'intervention, les créneaux intelligents et Google Agenda. Une section
     // qui disparaît (erreur de rendu conditionnel) rendrait un réglage
     // inatteignable sans aucun message d'erreur.
+    // Le fond de la page est passé dans « Apparence de ma page » (test ci-dessus).
     for (const section of [
       "Couleur de la marque",
-      "Fond de la page client",
+      'Présence en ligne',
       "Zone d'intervention",
       'Créneaux intelligents',
       'Google Agenda',

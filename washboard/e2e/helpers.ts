@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Response } from '@playwright/test'
 
 // ⚠️ Ce projet n'a PAS de séparation base dev / base prod (voir TODO.md) : les
 // tests E2E écrivent donc dans la vraie base. Deux garde-fous en conséquence :
@@ -45,4 +45,56 @@ export async function expectNoAppError(page: Page): Promise<void> {
   const { expect } = await import('@playwright/test')
   await expect(page.locator('text=Application error')).not.toBeVisible()
   await expect(page.locator('text=Internal Server Error')).not.toBeVisible()
+}
+
+/** Le parcours public de réservation, comme un vrai client, jusqu'au clic sur « Confirmer la
+ *  réservation ». Rend la réponse du `POST /api/bookings` : un refus du serveur (créneau pris,
+ *  hors zone, quota…) se lit alors en clair dans l'échec, au lieu d'un simple « confirmation
+ *  introuvable » comme dans la CI du 2026-10-17.
+ *
+ *  Partagé par `client-booking` et `dashboard-annulation`, qui le recopiaient chacun. */
+export async function reserverCommeClient(page: Page, client: { nom: string; email: string; telephone?: string }): Promise<Response> {
+  const { expect } = await import('@playwright/test')
+  await page.goto(`/book/${TEST_WASHER_SLUG}`)
+  await expectNoAppError(page)
+
+  // Prestation : véhicule par défaut, prestation et options réunis dans une carte.
+  const service = page.getByRole('radio').first()
+  await expect(service).toBeVisible({ timeout: 15_000 })
+  await service.check()
+  await page.getByTestId('booking-continue').click()
+
+  // Adresse, puis jour et horaire.
+  await expect(page.getByRole('heading', { name: 'Où et quand ?' })).toBeVisible({ timeout: 15_000 })
+  // La recherche d'adresse répond après la frappe : avec une clé Google (en local), des
+  // suggestions s'ouvrent alors et masquent les jours ; on choisit la première, comme un
+  // client. Sans clé (la CI), la réponse est vide et on continue. Attendre la RÉPONSE, et
+  // pas un délai fixe : une suggestion arrivée après le délai bloquait le clic suivant.
+  const recherche = page.waitForResponse(r => r.url().includes('/api/places/autocomplete'), { timeout: 10_000 }).catch(() => null)
+  await page.getByLabel('Adresse du lavage').fill('15 Rue du Général de Gaulle, Paris')
+  await recherche
+  const suggestion = page.getByRole('listitem').getByRole('button', { name: /Général de Gaulle/ }).first()
+  await suggestion.waitFor({ state: 'visible', timeout: 1_500 }).then(() => suggestion.dispatchEvent('mousedown')).catch(() => {})
+  await page.locator('[aria-label="Jours disponibles"] button').first().click()
+  const creneau = page.locator('#wb-section-2 .grid.grid-cols-3 button').first()
+  await expect(creneau).toBeVisible({ timeout: 15_000 })
+  await creneau.click()
+  await expect(page.getByTestId('booking-continue')).toBeEnabled({ timeout: 15_000 })
+  await page.getByTestId('booking-continue').click()
+
+  // Coordonnées et identification du véhicule.
+  await expect(page.getByRole('heading', { name: 'Vos coordonnées' })).toBeVisible({ timeout: 15_000 })
+  await page.getByLabel('Nom et prénom').fill(client.nom)
+  await page.getByLabel(/Email pour/).fill(client.email)
+  await page.getByLabel('Téléphone', { exact: true }).fill(client.telephone ?? '0600000000')
+  const modele = page.getByLabel('Modèle du véhicule')
+  if (await modele.isVisible()) await modele.fill('Peugeot 208 E2E')
+
+  const confirmer = page.getByRole('button', { name: 'Confirmer la réservation' })
+  await expect(confirmer).toBeEnabled({ timeout: 5_000 })
+  const [creation] = await Promise.all([
+    page.waitForResponse(r => r.url().endsWith('/api/bookings') && r.request().method() === 'POST', { timeout: 30_000 }),
+    confirmer.click(),
+  ])
+  return creation
 }
