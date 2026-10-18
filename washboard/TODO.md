@@ -7,7 +7,9 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-10-04 (sécurité `bookings` : bascule client admin faite par Ryan
+> Dernière mise à jour : 2026-10-18 (landing v2 en prod, bug de fuseau de la réservation
+> corrigé, toutes les pages publiques passées en DA v2 + contenu SEO mis à jour — PR #7 ;
+> points à trancher avec Alexandre dans « 🔍 Contenu & tarifs »). Avant : 2026-10-04 (sécurité `bookings` : bascule client admin faite par Ryan
 > et fusionnée sur master, REVOKE RLS toujours en attente ; nouvelle faille trouvée sur
 > `fusionner_clients`/`anonymiser_client`). Avant : 2026-09-21 (audit post-lancement : vitesse,
 > contraste, image de partage, CGU et acceptation des CGV). Avant : 2026-09-14 (réseaux sociaux,
@@ -26,12 +28,22 @@
 - [ ] **Refonte du site web.** Sujet à préciser — distinct de la refonte PWA déjà en
       cours (voir la section dédiée plus bas, « 🎨 Refonte 2026 ») : à confirmer si ça
       recouvre la même chose, la landing uniquement, ou autre chose encore.
+      *2026-10-18 : landing refaite de zéro dans la DA v2 (PR #5, en prod), puis toutes les
+      autres pages publiques (blog, pages métiers, comparatif, tournée, `/booking`, pages
+      légales, confirmation, mot de passe, hors-ligne, 404) passées dans la même DA (PR #7,
+      prête à fusionner). Reste : `public/hors-ligne.html` (voir 🟢 Polish).*
 - [ ] **Refonte de la page de réservation des laveurs** (`/book/[slug]`). Sujet à
       préciser.
 
 ---
 
 ## 🔴 Priorité haute
+
+- [ ] 2026-10-18 — **🔒 À VÉRIFIER (cyber) — carte de fidélité : peut-on voir les tampons
+      d'un autre client en tapant son numéro de téléphone ?** Soupçon soulevé pendant la
+      rédaction de l'article fidélité, pas encore vérifié dans le code ni en conditions
+      réelles. Si oui, c'est une fuite de données personnelles (nombre de passages chez un
+      laveur). Agent : `cyber`.
 
 - [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
       lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
@@ -742,7 +754,9 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 
 ### 📣 Landing page
 
-- [ ] **Mentionner le suivi des campagnes Meta (Ads)** — demande de Ryan,
+- [x] 2026-10-18 — **Mentionner le suivi des campagnes Meta (Ads)** — fait avec la
+      landing v2 : bloc « CRM et statistiques » de `ToutEnUn.tsx` (« Suivi de tes campagnes
+      Meta en Pro »). Demande initiale de Ryan,
       2026-10-05. La fonctionnalité existe déjà en dashboard
       (`/dashboard/clients/publicites`, derrière `hasFeature(washer, 'campagnes')`
       — suivi du pixel Meta, rattachement des réservations à une campagne) mais
@@ -3364,12 +3378,35 @@ rien à faire, mais que le projet reste globalement sain.
       juste en dessous, qui elle affiche le badge). Pas une erreur factuelle, un choix éditorial
       — à trancher avec `growth` : le dire clairement partout, ou laisser ces deux blocs vendre
       la fonction sans mentionner le palier.
+- [x] 2026-10-18 — **Contenu SEO remis à jour avec la grille du 18/10 (PR #7).** FAQ passée à
+      20 questions (JSON-LD), guide, comparatif, page tournée et 12 articles corrigés
+      (facturation et avis dès Starter, acompte/promotions/fidélité dès l'offre gratuite).
+      Nouvelles pages : `/facturation-laveur-auto`, articles « acompte à la réservation » et
+      « carte de fidélité » (image de partage + sitemap).
+- [ ] **À valider avec Alexandre : les fourchettes de prix citées dans les articles de blog**
+      (tarifs de lavage, revenus d'un laveur, coût d'un rendez-vous manqué). Rédigées par
+      `seo-geo` à partir de sources publiques, jamais confrontées au terrain.
+- [ ] **À trancher avec Alexandre : la FAQ dit publiquement qu'un client ne peut pas annuler
+      seul** (pas de bouton d'annulation sur sa page de confirmation, il prévient le laveur).
+      Vrai dans le code, mais c'est une limite affichée : la garder telle quelle, ou ajouter
+      un bouton d'annulation côté client.
+- [ ] **À trancher avec Alexandre : case « j'accepte les conditions » pour l'acompte.** Les
+      conditions de remboursement s'affichent bien avant la réservation (`EncartAcompte`,
+      étape coordonnées), mais le client n'a rien à cocher. Le `legal` le conseille comme
+      bonne pratique (preuve d'acceptation), sans obligation.
+- [ ] **Classes Tailwind en dur dans les props des pages métiers** (`text-[#1651E8]…` dans les
+      liens passés à `MetierPageTemplate`) : sans effet sous la DA v2, à retirer au calme.
+      Agent : `seo-geo`.
 - [x] 2026-10-01 — **Page `/optimisation-tournee-lavage-auto` : le titre disait « Deux
       mécanismes » alors que la section en liste trois** (le 3e, les frais de déplacement au
       trajet réel, est un vrai différenciateur, pas un oubli à retirer). Corrigé en « Trois
       mécanismes, un seul calcul de trajet réel ».
 
 ## 🟢 Polish / UX
+
+- [ ] 2026-10-18 — **`public/hors-ligne.html` encore dans l'ancienne DA** (accent `#2B59FF`,
+      police système). C'est l'écran réellement servi par le service worker sans réseau ; la
+      page `/hors-ligne` est passée en DA v2 mais pas ce fichier statique.
 
 - [x] ~~**Bouton désactivé indistinguable d'un bouton actif en thème sombre.**~~
       **Classé sans suite le 2026-09-06.** Relevé par `designer` en réunion d'équipe : le
