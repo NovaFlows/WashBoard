@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { SILHOUETTES, silhouettePour } from './silhouettesVehicules'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { TYPES_AVEC_SILHOUETTE, silhouettePour } from './silhouettesVehicules'
 import { VEHICLE_LABELS } from './vehicle-labels'
+
+const fichier = (url: string) => join(process.cwd(), 'public', decodeURIComponent(url.split('?')[0]))
 
 describe('silhouettes des véhicules', () => {
   it('chaque type de véhicule de l’app a sa silhouette', () => {
@@ -11,10 +15,13 @@ describe('silhouettes des véhicules', () => {
     expect(silhouettePour(null)).toBeNull()
     expect(silhouettePour('toString')).toBeNull()
   })
-  it('chaque silhouette tient dans son cadre et pose ses roues au sol', () => {
-    for (const [type, s] of Object.entries(SILHOUETTES)) {
-      expect(s.corps.length, type).toBeGreaterThan(0)
-      for (const r of s.roues) expect(Math.abs(r.cy + r.r - 380), type).toBeLessThanOrEqual(1)
+  it('les deux fichiers de chaque silhouette existent, dans le repère commun', () => {
+    for (const type of TYPES_AVEC_SILHOUETTE) {
+      const s = silhouettePour(type)!
+      for (const url of [s.face, s.contour]) {
+        expect(existsSync(fichier(url)), url).toBe(true)
+        expect(readFileSync(fichier(url), 'utf8')).toContain('viewBox="-20 -10 1040 420"')
+      }
     }
   })
 })

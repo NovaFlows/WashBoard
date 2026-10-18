@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import type { FormState } from './BookingForm'
 import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
-import SilhouetteVehicule3D from './SilhouetteVehicule3D'
+import SilhouetteVehicule3D, { prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 /** Prix d'une prestation ; barré avec le prix remisé quand une promotion la concerne. */
 function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
@@ -44,6 +44,9 @@ export default function StepPrestation({ services, categories, form, onChange, p
   // La silhouette : le dernier type touché, sinon le dernier de la liste (types mélangés).
   const typeAffiche = dernier && activeTypes.includes(dernier) ? dernier : activeTypes[activeTypes.length - 1] ?? null
   const avecSilhouettes = types.some(t => silhouettePour(t))
+  // Les silhouettes des véhicules proposés se chargent en fond : le premier clic n'attend pas.
+  const typesCle = types.join('|')
+  useEffect(() => { prechargerSilhouettes(typesCle.split('|')) }, [typesCle])
   /** Avant le choix du véhicule : le prix de départ de la prestation, tous types confondus. */
   const prixDepart = (s: Service) => Math.min(...s.vehicle_types.filter(t => types.includes(t)).map(t => vehiclePrice(s, t)))
 

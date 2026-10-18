@@ -6,7 +6,7 @@ import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
 import { hex } from '@/lib/colorUtils'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
-import SilhouetteVehicule3D from './SilhouetteVehicule3D'
+import SilhouetteVehicule3D, { prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 type Props = {
   services: Service[]
@@ -46,6 +46,8 @@ export default function StepService({ services, categories, selected, factureApr
   const [models,    setModels]    = useState<Record<string, string[]>>({})
   // Le dernier véhicule ajouté au panier : sa silhouette 3D s'anime (2026-10-18).
   const [dernier,   setDernier]   = useState<string | null>(null)
+  const typesProposes = services.flatMap(sv => sv.vehicle_types).join('|')
+  useEffect(() => { prechargerSilhouettes([...new Set(typesProposes.split('|'))]) }, [typesProposes])
 
   // Onglets : seules les catégories qui ont au moins une prestation.
   const tabs = useMemo(() => {
