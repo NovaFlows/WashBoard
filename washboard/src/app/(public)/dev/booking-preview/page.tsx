@@ -35,7 +35,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="test-config-15d2" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null, avisGoogle: null }} liste={{ nom: 'Brillance Mobile', slug: 'test-config-15d2', brandColor: '#7c3aed', plan: 'business', grandfathered: false }} />
   const washerId = '00000000-0000-4000-8000-000000000001'
   const category: ServiceCategory = { id: 'cars', washer_id: washerId, name: 'Voitures', display_order: 0,
-    types: [{ id: 'citadine', name: 'Citadine' }, { id: 'citadine_2p', name: 'Citadine 2p' }, { id: 'berline', name: 'Berline' }, { id: 'SUV', name: 'SUV' }, { id: 'monospace', name: 'Monospace' }, { id: '7places', name: '7 places' }, { id: 'utilitaire', name: 'Utilitaire' }, { id: '5d0c7f3e-2a41-4b8e-9c61-7e2f0a9b3d14', name: 'Moto' }, { id: '8a6e1b29-4c3d-4f5a-b7e8-1d2c3b4a5f60', name: 'Camion' }],
+    types: [{ id: 'citadine', name: 'Citadine' }, { id: 'citadine_2p', name: 'Citadine 2p' }, { id: 'berline', name: 'Berline' }, { id: 'SUV', name: 'SUV' }, { id: 'monospace', name: 'Monospace' }, { id: '7places', name: '7 places' }, { id: 'utilitaire', name: 'Utilitaire' }, { id: '5d0c7f3e-2a41-4b8e-9c61-7e2f0a9b3d14', name: 'Moto' }, { id: '8a6e1b29-4c3d-4f5a-b7e8-1d2c3b4a5f60', name: 'Camion' }, { id: 'camping-car', name: 'Camping-car' }],
   }
   const services: Service[] = [
     { id: '00000000-0000-4000-8000-000000000011', name: 'Extérieur', description: 'Carrosserie, jantes, vitres, séchage sans traces', price: 35, duration_minutes: 60, addons: [] },

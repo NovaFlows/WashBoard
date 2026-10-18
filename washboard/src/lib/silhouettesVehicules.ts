@@ -12,23 +12,23 @@
 // Le type se reconnaît à son identifiant (« moto », celui des modèles de catégorie) ou, à
 // défaut, à son nom : un type ajouté à la main dans une catégorie reçoit un identifiant au
 // hasard (FeuilleCategorieV2), et la « Moto » qu'Alexandre avait ajoutée ainsi n'affichait rien
-// (2026-10-19). Les autres (camping-car, scooter, vélo, en attente de photos) et les types sans
-// rapport (« Canapé ») n'affichent rien : `silhouettePour` rend `null`.
+// (2026-10-19). Le scooter et le vélo restent sans image (décision d'Alexandre, 2026-10-19), comme
+// les types sans rapport (« Canapé ») : `silhouettePour` rend `null`.
 
 import { VEHICLE_LABELS } from './vehicle-labels'
 
 export const TYPES_AVEC_SILHOUETTE = [
   'citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire',
-  'moto', 'camion', // ajoutés le 2026-10-19, photos d'Alexandre
+  'moto', 'camion', 'camping-car', // ajoutés le 2026-10-19, photos d'Alexandre
 ] as const
 type TypeAvecImage = (typeof TYPES_AVEC_SILHOUETTE)[number]
 
 /** À changer quand les fichiers changent : les navigateurs gardent les anciens en cache. */
-const VERSION = '2026-10-19a'
+const VERSION = '2026-10-19b'
 
 /** « Van / Utilitaire » → « van utilitaire » : minuscules, sans accents ni ponctuation. */
 const normaliser = (nom: string) =>
-  nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 /** Les noms qu'un laveur donne à ces véhicules, en plus de leurs libellés dans l'app. */
 const PAR_NOM = new Map<string, TypeAvecImage>([
@@ -43,6 +43,8 @@ const PAR_NOM = new Map<string, TypeAvecImage>([
   ['fourgon', 'utilitaire'], ['fourgonnette', 'utilitaire'], ['camionnette', 'utilitaire'],
   ['motos', 'moto'],
   ['camions', 'camion'], ['poids lourd', 'camion'], ['poids lourds', 'camion'],
+  ['camping cars', 'camping-car'], ['campingcar', 'camping-car'], ['camping', 'camping-car'],
+  ['fourgon amenage', 'camping-car'], ['van amenage', 'camping-car'], ['campervan', 'camping-car'],
 ])
 
 /** L'image du véhicule d'un type, reconnu à son identifiant ou à son nom, ou `null`. */

@@ -8,7 +8,7 @@ const fichier = (url: string) => join(process.cwd(), 'public', decodeURIComponen
 
 describe('images des véhicules', () => {
   it('chaque véhicule photographié a son image', () => {
-    for (const type of ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire', 'moto', 'camion']) {
+    for (const type of ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire', 'moto', 'camion', 'camping-car']) {
       expect(silhouettePour(type), type).not.toBeNull()
     }
   })
@@ -20,6 +20,8 @@ describe('images des véhicules', () => {
     expect(silhouettePour(auHasard, 'Fourgon')).toBe(silhouettePour('utilitaire'))
     expect(silhouettePour(auHasard, '4x4')).toBe(silhouettePour('SUV'))
     expect(silhouettePour(auHasard, 'Citadine 2 places')).toBe(silhouettePour('citadine_2p'))
+    expect(silhouettePour(auHasard, 'Camping-car')).toBe(silhouettePour('camping-car'))
+    expect(silhouettePour(auHasard, 'Fourgon aménagé')).toBe(silhouettePour('camping-car'))
     expect(silhouettePour(auHasard, 'Canapé')).toBeNull()
     expect(silhouettePour(auHasard, 'constructor')).toBeNull()
     // L'identifiant prime sur le nom.

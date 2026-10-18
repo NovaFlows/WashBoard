@@ -36,6 +36,8 @@ TYPES = [t for t in sys.argv[1:] if not t.startswith('--')]
 #   fond_blanc=False   photo sur un autre fond : pas de retrait du blanc sur les bords
 #   sol=y         la ligne du sol à la main, quand les roues ne se trouvent pas toutes seules
 #   rayon_min=r   roues plus petites que 6 % de la largeur de la photo (camion à grande caisse)
+#   sol='bas'     le sol au point le plus bas de la découpe (le bas des pneus)
+#   pente=deg     redresse une photo prise un peu de biais (roues pas à la même hauteur)
 PHOTOS = {
     '26.jpg': ('citadine', {}),
     '20.jpg': ('citadine_2p', {}),
@@ -48,6 +50,8 @@ PHOTOS = {
     # caisse photographié dehors.
     '29.png': ('moto', {'trous': False, 'fond_blanc': False}),
     '30.png': ('camion', {'fond_blanc': False, 'sol': 267}),
+    # Ajouté le 2026-10-19 : camping-car photographié dehors, roue avant 19 px plus haute.
+    '34.png': ('camping-car', {'fond_blanc': False, 'pente': -1.85, 'sol': 'bas'}),
 }
 
 
@@ -99,6 +103,8 @@ def fantome(gris):
 
 def traiter(fichier, nom, reglages, session):
     im = Image.open(os.path.join(IMAGES, fichier)).convert('RGB')
+    if 'pente' in reglages:
+        im = im.rotate(reglages['pente'], resample=Image.BICUBIC, fillcolor=(255, 255, 255))
     rgb = np.array(im).astype(np.float32)
     alpha = np.array(remove(im, session=session, only_mask=True, post_process_mask=False)).astype(np.float32) / 255
 
@@ -115,7 +121,11 @@ def traiter(fichier, nom, reglages, session):
 
     # Le sol : rien sous le bas des pneus (l'ombre portée de la photo).
     rs = roues(cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2GRAY), bouche, reglages.get('rayon_min', 0.06))
-    if 'sol' in reglages:
+    if reglages.get('sol') == 'bas':
+        sol = int(np.nonzero(bouche.any(axis=1))[0].max())
+        alpha[sol + 1:, :] = 0
+        print(f'  {nom}: sol {sol} (point le plus bas)')
+    elif 'sol' in reglages:
         alpha[reglages['sol'] + 1:, :] = 0
         print(f'  {nom}: sol {reglages["sol"]} (à la main)')
     elif len(rs) == 2:
