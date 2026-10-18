@@ -1,5 +1,5 @@
 /* Véhicule 3D de la page de réservation (SilhouetteVehicule3D.tsx) — même esprit que la carte de
-   fidélité : la vraie voiture, détourée de sa photo et passée en gris clair, sur une plaque épaisse (tranche visible de
+   fidélité : la vraie voiture, détourée de sa photo et passée en gris très pâle, sur une plaque épaisse (tranche visible de
    profil) qui fait un tour complet en apparaissant. Les images sont des WebP transparents
    (public/silhouettes/) ; le reflet est découpé à leur forme par un masque. Fichier à part de
    globals.css, sans `:has()` (piège Turbopack, mémoire du projet). */
@@ -14,15 +14,17 @@
 .wb-sv-objet { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
 .wb-sv-objet[data-cache="oui"] { opacity: 0; }
 
-/* La tranche : la voiture assombrie, empilée dans l'épaisseur. Les images sont déjà en gris
-   clair, toutes du même ton (scripts/silhouettes/decoupe.py). */
-.wb-sv-couche { position: absolute; inset: 0; width: 100%; height: 100%; filter: brightness(.72); user-select: none; }
-.dark .wb-sv-couche { filter: brightness(.42); }
+/* Les images sont déjà en « fantôme » gris très pâle, toutes du même ton
+   (scripts/silhouettes/decoupe.py) : la voiture choisie a exactement l'aspect de l'image
+   d'attente. En sombre, le même fantôme, assombri. */
+/* La tranche : la voiture un peu plus grise, empilée dans l'épaisseur. */
+.wb-sv-couche { position: absolute; inset: 0; width: 100%; height: 100%; filter: brightness(.9); user-select: none; }
+.dark .wb-sv-couche { filter: brightness(.13); }
 
 /* Les deux faces : une seule est visible à la fois, choisie par le script selon l'angle. */
 .wb-sv-face { position: absolute; inset: 0; }
 .wb-sv-dessin { display: block; width: 100%; height: 100%; user-select: none; }
-.dark .wb-sv-dessin { filter: brightness(.88); }
+.dark .wb-sv-dessin, .dark .wb-sv-attente { filter: brightness(.2); }
 .wb-sv-reflet {
   position: absolute;
   inset: 0;
@@ -37,17 +39,8 @@
   mix-blend-mode: soft-light;
 }
 
-/* Avant le choix : la même voiture grise, très estompée. */
-.wb-sv-attente {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  filter: grayscale(1) contrast(.7);
-  opacity: .14;
-  user-select: none;
-}
-.dark .wb-sv-attente { filter: grayscale(1) brightness(.7); opacity: .2; }
+/* Avant le choix : la citadine, immobile. */
+.wb-sv-attente { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
 
 .wb-sv-ombre {
   position: absolute;
@@ -56,11 +49,11 @@
   width: 78%;
   height: 16px;
   transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgba(20, 20, 30, .3), transparent);
+  background: radial-gradient(closest-side, rgba(20, 20, 30, .1), transparent);
   filter: blur(4px);
   pointer-events: none;
 }
-.dark .wb-sv-ombre { background: radial-gradient(closest-side, rgba(0, 0, 0, .6), transparent); }
+.dark .wb-sv-ombre { background: radial-gradient(closest-side, rgba(0, 0, 0, .35), transparent); }
 .wb-sv-nom {
   margin: 10px 0 0;
   text-align: center;

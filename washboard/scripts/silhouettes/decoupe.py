@@ -8,9 +8,10 @@
 #   (environnement à part : rembg tire numpy 2, qui casse les autres outils Python de la machine)
 #   venv/Scripts/python decoupe.py [--couleur] [type…]   →  public/silhouettes/<type>.webp
 #
-# Les voitures sortent en gris clair, toutes du même ton (demande d'Alexandre, 2026-10-18 :
-# « toutes les voitures sélectionnées dans ce type de forme grise », celle de l'image
-# d'attente) ; --couleur garde les couleurs des photos.
+# Les voitures sortent en « fantôme » gris très pâle, toutes du même ton : exactement l'aspect
+# de l'image d'attente avant le choix (demande d'Alexandre, 2026-10-18 : « toutes les voitures
+# sélectionnées dans ce type de forme grise », puis « c'est pas la même chose » devant un gris
+# plus soutenu) ; --couleur garde les couleurs des photos.
 #
 # Repère commun : 1040 × 420 px, voiture centrée, au plus 1000 × 370, roues posées sur y = 390.
 import os, sys
@@ -77,7 +78,14 @@ def en_gris(rgb, opaque):
     valeurs, premiers = np.unique(valeurs, return_index=True)
     par_rang = np.interp(lum, valeurs, np.interp(rangs[premiers], PARTS, GRIS))
     gris = np.clip(0.5 * recale + 0.5 * par_rang, 0, 1)
-    return np.repeat((gris * 255)[:, :, None], 3, axis=2)
+    return np.repeat((fantome(gris) * 255)[:, :, None], 3, axis=2)
+
+
+def fantome(gris):
+    """Le gris pâli comme l'était l'image d'attente : contraste à 70 %, puis posée à 14 %
+    d'opacité sur le blanc de la carte — mais opaque, pour que la tranche 3D ne se voie pas
+    au travers."""
+    return 1 - 0.14 * (1 - ((gris - 0.5) * 0.7 + 0.5))
 
 
 def traiter(fichier, nom, session):
