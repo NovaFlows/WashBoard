@@ -7,7 +7,10 @@
 /* ── Héros ── */
 .wb-vitrine .heros { padding-block: 56px 40px; overflow: hidden; }
 .wb-vitrine .heros .w { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 40px; align-items: center; }
-.wb-vitrine .h1 { font-size: clamp(44px, 6.4vw, 86px); font-weight: 650; font-stretch: 118%; letter-spacing: -.05em; line-height: .98; min-height: 2.96em; }
+.wb-vitrine .h1 { font-size: clamp(44px, 6.4vw, 86px); font-weight: 650; font-stretch: 118%; letter-spacing: -.05em; line-height: .98; }
+.wb-vitrine .h1-pile { display: grid; }
+.wb-vitrine .h1-pile > * { grid-area: 1 / 1; }
+.wb-vitrine .h1-fantome { visibility: hidden; pointer-events: none; }
 .wb-vitrine .h1 .hl { color: var(--accent); }
 .wb-vitrine .h1 .tl { display: block; transition: opacity .35s ease, transform .35s ease; }
 .wb-vitrine .h1 .tl.sort { opacity: 0; transform: translateY(-10px); }
@@ -22,7 +25,6 @@
 .wb-vitrine .scene-legende svg { flex: none; width: 52px; height: 24px; color: var(--gris-2); }
 @media (max-width: 980px) {
   .wb-vitrine .heros .w { grid-template-columns: 1fr; }
-  .wb-vitrine .h1 { min-height: 0; }
   .wb-vitrine .scene { height: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .wb-vitrine .scene .ecran-dk { display: none; }
   .wb-vitrine .scene .scene-tel { position: relative; right: auto; bottom: auto; }

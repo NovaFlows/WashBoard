@@ -33,10 +33,19 @@ export default function TitreRotatif() {
   }, [])
 
   const s = SLOGANS[i]
+  // Les slogans fantômes, invisibles et empilés dans la même cellule, donnent au
+  // bloc la hauteur du plus long à chaque largeur : la page ne bouge plus.
   return (
-    <h1 className="h1">
-      <span className={`tl${sort ? ' sort' : ''}`}>{s.pre}</span>{' '}
-      <span className={`tl hl${sort ? ' sort' : ''}`}>{s.hl}</span>
-    </h1>
+    <div className="h1-pile">
+      {SLOGANS.map(f => (
+        <div key={f.pre} className="h1 h1-fantome" aria-hidden="true">
+          <span className="tl">{f.pre}</span> <span className="tl hl">{f.hl}</span>
+        </div>
+      ))}
+      <h1 className="h1">
+        <span className={`tl${sort ? ' sort' : ''}`}>{s.pre}</span>{' '}
+        <span className={`tl hl${sort ? ' sort' : ''}`}>{s.hl}</span>
+      </h1>
+    </div>
   )
 }
