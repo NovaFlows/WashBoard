@@ -34,6 +34,7 @@ type Props = {
   lectureIncomplete: boolean
   zone: ZoneConfig
   adresseDeBase: string | null
+  silhouettesVehicules: boolean
   plafond: number | null
   offre: Plan
   /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */

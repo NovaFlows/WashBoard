@@ -21,6 +21,8 @@ type Props = {
   clientsProAutorises?: boolean
   onNext: (data: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number; is_professional: boolean; vehicles_detail?: VehicleItem[] }) => void
   accent?: string
+  /** Le véhicule choisi apparaît en 3D — réglage du laveur, affiché par défaut. */
+  vehicule3D?: boolean
 }
 
 // Images pour les types « voiture » historiques (résolus par id de type).
@@ -37,7 +39,7 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb' }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   // Panier : un compteur par type (permet de mélanger les types)
@@ -46,7 +48,7 @@ export default function StepService({ services, categories, selected, factureApr
   const [models,    setModels]    = useState<Record<string, string[]>>({})
   // Le dernier véhicule ajouté au panier : son image 3D s'anime (2026-10-18).
   const [dernier,   setDernier]   = useState<string | null>(null)
-  const imagesProposees = [...new Set(services.flatMap(sv => sv.vehicle_types.map(t => silhouettePour(t, typeInfo(sv, t).name)))
+  const imagesProposees = !vehicule3D ? '' : [...new Set(services.flatMap(sv => sv.vehicle_types.map(t => silhouettePour(t, typeInfo(sv, t).name)))
     .filter((u): u is string => !!u))].join('|')
   useEffect(() => { if (imagesProposees) prechargerSilhouettes(imagesProposees.split('|')) }, [imagesProposees])
 
@@ -317,7 +319,7 @@ export default function StepService({ services, categories, selected, factureApr
         <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs éléments, de types différents si besoin.</p>
-          {selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
+          {vehicule3D && selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
             return affiche && (

@@ -79,6 +79,8 @@ export type WasherPublic = {
    *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
    *  « oui » par erreur. */
   reservation_jour_meme?: boolean
+  /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
+  silhouettes_vehicules?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -338,6 +340,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             categories={categories}
             factureApresPrestation={washer.facturation_prete === true}
             clientsProAutorises={washer.clients_pro !== false}
+            vehicule3D={washer.silhouettes_vehicules !== false}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
               // Changer de prestation invalide les options de la précédente :

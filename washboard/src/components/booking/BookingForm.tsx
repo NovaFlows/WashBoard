@@ -94,6 +94,8 @@ export type WasherPublic = {
    *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
    *  « oui » par erreur. */
   reservation_jour_meme?: boolean
+  /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
+  silhouettes_vehicules?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -322,7 +324,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
             resume={resumePrestation(form, services)}
             onModifier={() => reouvrir(1)}
           >
-            <StepPrestation services={services} categories={categories} form={form} onChange={updatePrestation} promotion={promotion} />
+            <StepPrestation services={services} categories={categories} form={form} onChange={updatePrestation} promotion={promotion}
+              vehicule3D={washer.silhouettes_vehicules !== false} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
               {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}
