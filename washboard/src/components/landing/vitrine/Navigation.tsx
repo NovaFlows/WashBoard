@@ -19,6 +19,7 @@ export default function Navigation({ horsAccueil = false }: { horsAccueil?: bool
         <a className="marque" href={horsAccueil ? '/' : '#haut'}><Logo />WashBoard</a>
         <nav className="nav-liens" aria-label="Sections">
           {LIENS.map(l => <a key={l.href} href={prefixe + l.href}>{l.label}</a>)}
+          <Link href="/blog">Blog</Link>
         </nav>
         <div className="nav-droite">
           <BoutonTheme />
