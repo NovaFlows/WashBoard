@@ -5,6 +5,7 @@ import CarteFidelite3D from '@/components/fidelite/CarteFidelite3D'
 import { CompteARebours } from './composants'
 import { useDemo } from './etat'
 import { I, RESEAU } from './icones'
+import '../base.css'
 import './demo.css'
 
 const VEH: [string, number][] = [['Citadine', 0], ['Berline', 5], ['SUV', 10], ['Utilitaire', 20]]

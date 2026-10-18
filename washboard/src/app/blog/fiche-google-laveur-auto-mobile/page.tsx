@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('fiche-google-laveur-auto-mobile')!
@@ -249,7 +250,8 @@ export default function Page() {
         >
           WashBoard vous donne un lien de réservation à votre nom, à mettre sur votre fiche Google.
           Le client choisit son créneau et renseigne son véhicule, vous recevez la demande, et la
-          demande d&apos;avis part automatiquement après la prestation.
+          demande d&apos;avis part automatiquement après la prestation (à partir de la formule{' '}
+          {requiredPlanLabel('avis_email')}).
         </Cta>
 
         <AlsoRead

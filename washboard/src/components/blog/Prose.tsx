@@ -1,56 +1,35 @@
 import Link from 'next/link'
 import { THEME_LABEL, type Article } from '@/lib/blog'
+import FilAriane from '@/components/landing/vitrine/FilAriane'
 
-// Primitives de mise en forme partagées par tous les articles.
-// Le plugin Tailwind `typography` n'est pas installé : les classes `prose` ne
-// produisent rien dans ce projet, la mise en forme est donc explicite ici —
-// une seule fois, plutôt que recopiée dans chaque article.
+// Primitives de mise en forme partagées par tous les articles (refonte 2026 : mêmes jetons que
+// la landing). Les classes `pr-*` vivent dans landing/vitrine/pages.css, importé par la coque
+// (Coque.tsx) qui enveloppe le blog. Le plugin Tailwind `typography` n'est pas installé : la mise
+// en forme est donc explicite, une seule fois, plutôt que recopiée dans chaque article.
 
 export function H2({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-2xl font-black tracking-tight text-balance mt-12 mb-4 scroll-mt-20">
-      {children}
-    </h2>
-  )
+  return <h2 className="pr-h2">{children}</h2>
 }
 
 export function H3({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-lg font-bold tracking-tight text-balance mt-8 mb-3 scroll-mt-20">
-      {children}
-    </h3>
-  )
+  return <h3 className="pr-h3">{children}</h3>
 }
 
 export function P({ children }: { children: React.ReactNode }) {
-  return <p className="text-slate-700 dark:text-slate-300 leading-[1.75] mb-4">{children}</p>
+  return <p className="pr-p">{children}</p>
 }
 
 export function UL({ children }: { children: React.ReactNode }) {
-  return (
-    <ul className="list-disc pl-5 space-y-2 mb-5 text-slate-700 dark:text-slate-300 leading-[1.7] marker:text-slate-400 dark:marker:text-slate-600">
-      {children}
-    </ul>
-  )
+  return <ul className="pr-ul">{children}</ul>
 }
 
 /** Lien interne dans le corps du texte — le maillage contextuel pèse plus que les listes de fin d'article. */
 export function A({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={href} className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
-      {children}
-    </Link>
-  )
+  return <Link href={href} className="pr-a">{children}</Link>
 }
 
 export function Callout({ children }: { children: React.ReactNode }) {
-  return (
-    <aside className="my-7 p-5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-      <div className="text-[0.95rem] text-slate-700 dark:text-slate-300 leading-[1.7] [&>p:last-child]:mb-0">
-        {children}
-      </div>
-    </aside>
-  )
+  return <aside className="pr-note">{children}</aside>
 }
 
 /**
@@ -60,14 +39,9 @@ export function Callout({ children }: { children: React.ReactNode }) {
  */
 export function Summary({ items }: { items: string[] }) {
   return (
-    <aside
-      aria-label="En bref"
-      className="mb-10 p-5 rounded-xl bg-[#1651E8]/[0.04] dark:bg-[#6A9FFF]/[0.06] border border-[#1651E8]/15 dark:border-[#6A9FFF]/15"
-    >
-      <p className="text-xs font-black text-[#1651E8] dark:text-[#6A9FFF] uppercase tracking-[0.18em] mb-3">
-        En bref
-      </p>
-      <ul className="space-y-2 text-[0.95rem] text-slate-700 dark:text-slate-300 leading-[1.6] list-disc pl-5 marker:text-[#1651E8]/50 dark:marker:text-[#6A9FFF]/50">
+    <aside aria-label="En bref" className="pr-bref">
+      <p className="sur-titre"><span className="pt" />En bref</p>
+      <ul>
         {items.map(item => (
           <li key={item}>{item}</li>
         ))}
@@ -79,28 +53,18 @@ export function Summary({ items }: { items: string[] }) {
 /** Tableau simple — défile horizontalement sur mobile plutôt que d'élargir la page. */
 export function Table({ head, rows }: { head: string[]; rows: string[][] }) {
   return (
-    <div className="my-7 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-      <table className="w-full text-sm border-collapse">
+    // tabIndex : une zone qui défile doit être atteignable au clavier.
+    <div className="pr-tab" tabIndex={0} role="region" aria-label="Tableau de données">
+      <table>
         <thead>
-          <tr className="bg-slate-50 dark:bg-slate-900">
-            {head.map(h => (
-              <th key={h} className="text-left font-bold px-4 py-3 whitespace-nowrap border-b border-slate-200 dark:border-slate-800">
-                {h}
-              </th>
-            ))}
+          <tr>
+            {head.map(h => <th key={h} scope="col">{h}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className={i > 0 ? 'border-t border-slate-100 dark:border-slate-800/60' : ''}>
-              {row.map((cell, j) => (
-                <td
-                  key={j}
-                  className={`px-4 py-3 align-top text-slate-700 dark:text-slate-300 ${j > 0 ? 'tabular-nums whitespace-nowrap' : ''}`}
-                >
-                  {cell}
-                </td>
-              ))}
+            <tr key={i}>
+              {row.map((cell, j) => <td key={j}>{cell}</td>)}
             </tr>
           ))}
         </tbody>
@@ -112,21 +76,7 @@ export function Table({ head, rows }: { head: string[]; rows: string[][] }) {
 /** Fil d'Ariane visible — doublé en JSON-LD par ArticleJsonLd pour Google. */
 export function Breadcrumb({ current }: { current: string }) {
   return (
-    <nav aria-label="Fil d'Ariane" className="mb-6 text-xs text-slate-400 dark:text-slate-500">
-      <ol className="flex flex-wrap items-center gap-1.5">
-        <li>
-          <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Accueil</Link>
-        </li>
-        <li aria-hidden="true">/</li>
-        <li>
-          <Link href="/blog" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Blog</Link>
-        </li>
-        <li aria-hidden="true">/</li>
-        <li className="text-slate-500 dark:text-slate-400 truncate max-w-[60vw] sm:max-w-none" aria-current="page">
-          {current}
-        </li>
-      </ol>
-    </nav>
+    <FilAriane items={[{ label: 'Accueil', href: '/' }, { label: 'Blog', href: '/blog' }, { label: current }]} />
   )
 }
 
@@ -135,9 +85,9 @@ export function ArticleHeader({ article, intro }: { article: Article; intro: str
     new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
   const updated = article.updatedAt !== article.publishedAt
   return (
-    <header className="mb-10 pb-8 border-b border-slate-200 dark:border-slate-800">
+    <header className="pr-tete">
       <Breadcrumb current={article.title} />
-      <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 tabular-nums">
+      <p className="pr-meta">
         {updated ? (
           <>
             Mis à jour le <time dateTime={article.updatedAt}>{fmt(article.updatedAt)}</time>
@@ -147,10 +97,8 @@ export function ArticleHeader({ article, intro }: { article: Article; intro: str
         )}
         {' · '}{article.readingMinutes} min de lecture
       </p>
-      <h1 className="text-3xl sm:text-[2.6rem] font-black tracking-tight leading-[1.1] text-balance mb-4">
-        {article.title}
-      </h1>
-      <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{intro}</p>
+      <h1 className="pr-h1">{article.title}</h1>
+      <p className="pr-intro">{intro}</p>
     </header>
   )
 }
@@ -165,16 +113,13 @@ export type FaqItem = { question: string; answer: string }
  */
 export function Faq({ items }: { items: FaqItem[] }) {
   return (
-    <section className="mt-12">
+    <section className="pr-faq">
       <H2>Questions fréquentes</H2>
-      <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
+      <div className="faq">
         {items.map(item => (
-          <details key={item.question} className="group py-4">
-            <summary className="flex items-start justify-between gap-4 cursor-pointer list-none font-semibold text-slate-900 dark:text-slate-100 [&::-webkit-details-marker]:hidden">
-              <span>{item.question}</span>
-              <span aria-hidden="true" className="shrink-0 mt-0.5 text-slate-400 transition-transform group-open:rotate-45">+</span>
-            </summary>
-            <p className="mt-3 text-slate-700 dark:text-slate-300 leading-[1.7]">{item.answer}</p>
+          <details key={item.question}>
+            <summary>{item.question}</summary>
+            <p>{item.answer}</p>
           </details>
         ))}
       </div>
@@ -200,26 +145,14 @@ export function Cta({
   secondary?: { href: string; label: string }
 }) {
   return (
-    <div className="mt-12 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-      <h2 className="text-xl font-black tracking-tight mb-2">{title}</h2>
-      <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-5">{children}</p>
-      <div className="flex flex-wrap items-center gap-5">
-        <Link
-          href="/signup"
-          className="inline-block px-5 py-3 bg-[#1651E8] hover:bg-[#0F4ACC] text-white text-sm font-semibold rounded-xl transition-colors"
-        >
-          Lancer mon mois gratuit
-        </Link>
-        {secondary && (
-          <Link
-            href={secondary.href}
-            className="text-slate-500 dark:text-white/55 hover:text-slate-800 dark:hover:text-white text-sm font-medium transition-colors underline underline-offset-4"
-          >
-            {secondary.label}
-          </Link>
-        )}
+    <div className="pr-cta">
+      <h2>{title}</h2>
+      <p>{children}</p>
+      <div className="heros-cta">
+        <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+        {secondary && <Link href={secondary.href} className="pg-lien-doux">{secondary.label}</Link>}
       </div>
-      <p className="text-xs text-slate-400 mt-3">Sans engagement · Sans carte bancaire</p>
+      <p className="rassure">Sans engagement · Sans carte bancaire</p>
     </div>
   )
 }
@@ -227,19 +160,12 @@ export function Cta({
 /** Liens vers les autres articles — le maillage interne compte pour le référencement. */
 export function AlsoRead({ items }: { items: { href: string; label: string }[] }) {
   return (
-    <nav className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800">
-      <p className="text-xs font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.18em] mb-4">
-        À lire aussi
-      </p>
-      <ul className="space-y-3">
+    <nav className="pr-lire" aria-label="À lire aussi">
+      <p className="titre">À lire aussi</p>
+      <ul>
         {items.map(item => (
           <li key={item.href}>
-            <Link
-              href={item.href}
-              className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline leading-snug"
-            >
-              {item.label}
-            </Link>
+            <Link href={item.href} className="pr-a">{item.label}</Link>
           </li>
         ))}
       </ul>

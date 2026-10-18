@@ -3,6 +3,7 @@
 import { useSyncExternalStore, type CSSProperties } from 'react'
 import { variablesCarte } from '@/lib/carteFidelite'
 import '@/components/fidelite/carteFidelite3D.css'
+import '../base.css'
 import './demo.css'
 
 // ── Compte à rebours des promotions (fictif : fin dimanche 23 h 59) ──

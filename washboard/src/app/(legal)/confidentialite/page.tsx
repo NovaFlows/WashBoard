@@ -7,9 +7,9 @@ export const metadata: Metadata = {
 
 export default function Confidentialite() {
   return (
-    <article className="prose prose-slate dark:prose-invert max-w-none">
-      <h1 className="text-3xl font-extrabold tracking-tight mb-2">Politique de confidentialité</h1>
-      <p className="text-sm text-slate-400 mb-10">Dernière mise à jour : juillet 2026</p>
+    <article className="lg">
+      <h1>Politique de confidentialité</h1>
+      <p className="lg-maj">Dernière mise à jour : juillet 2026</p>
 
       <Section title="1. Responsable du traitement">
         <p>
@@ -23,20 +23,20 @@ export default function Confidentialite() {
       </Section>
 
       <Section title="2. Données collectées">
-        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2">2.1 Données des laveurs (utilisateurs du logiciel)</h3>
+        <h3>2.1 Données des laveurs (utilisateurs du logiciel)</h3>
         <ul>
           <li>Nom, prénom, email, numéro de téléphone</li>
           <li>Nom commercial et informations sur l&apos;activité (zone d&apos;intervention, prestations, tarifs)</li>
           <li>Données de connexion (email, mot de passe chiffré)</li>
           <li>Données comptables saisies (chiffre d&apos;affaires, dépenses)</li>
         </ul>
-        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">2.2 Données des clients des laveurs (via page de réservation)</h3>
+        <h3>2.2 Données des clients des laveurs (via page de réservation)</h3>
         <ul>
           <li>Nom, prénom, email, numéro de téléphone</li>
           <li>Adresse du lieu d&apos;intervention</li>
           <li>Détails de la réservation (service, véhicule, créneau, prix)</li>
         </ul>
-        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">2.3 Données de navigation</h3>
+        <h3>2.3 Données de navigation</h3>
         <ul>
           <li>Adresse IP (utilisée uniquement pour la protection anti-spam des formulaires)</li>
           <li>
@@ -52,14 +52,14 @@ export default function Confidentialite() {
       </Section>
 
       <Section title="3. Finalités du traitement">
-        <table className="w-full text-sm border-collapse">
+        <table>
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-700">
-              <th className="text-left py-2 pr-4 font-semibold text-slate-700 dark:text-slate-300">Finalité</th>
-              <th className="text-left py-2 font-semibold text-slate-700 dark:text-slate-300">Base légale</th>
+            <tr>
+              <th scope="col">Finalité</th>
+              <th scope="col">Base légale</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {[
               ['Gestion du compte laveur et accès au logiciel', 'Exécution du contrat'],
               ["Envoi des emails de confirmation de réservation", 'Exécution du contrat'],
@@ -69,8 +69,8 @@ export default function Confidentialite() {
               ["Suppression des comptes après résiliation (purge 30j)", 'Obligation légale / contrat'],
             ].map(([fin, base]) => (
               <tr key={fin}>
-                <td className="py-2 pr-4">{fin}</td>
-                <td className="py-2 text-slate-500">{base}</td>
+                <td>{fin}</td>
+                <td>{base}</td>
               </tr>
             ))}
           </tbody>
@@ -87,15 +87,15 @@ export default function Confidentialite() {
       </Section>
 
       <Section title="5. Sous-traitants (tiers destinataires)">
-        <table className="w-full text-sm border-collapse">
+        <table>
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-700">
-              <th className="text-left py-2 pr-4 font-semibold text-slate-700 dark:text-slate-300">Prestataire</th>
-              <th className="text-left py-2 pr-4 font-semibold text-slate-700 dark:text-slate-300">Rôle</th>
-              <th className="text-left py-2 font-semibold text-slate-700 dark:text-slate-300">Localisation</th>
+            <tr>
+              <th scope="col">Prestataire</th>
+              <th scope="col">Rôle</th>
+              <th scope="col">Localisation</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {[
               ['Supabase Inc.', 'Base de données (stockage des données)', 'UE (eu-west-1)'],
               ['Vercel Inc.', "Hébergement de l’application web", 'USA / CDN mondial'],
@@ -104,14 +104,14 @@ export default function Confidentialite() {
               ['Stripe Inc.', 'Paiement en ligne sécurisé', 'USA'],
             ].map(([p, r, l]) => (
               <tr key={p}>
-                <td className="py-2 pr-4 font-medium">{p}</td>
-                <td className="py-2 pr-4 text-slate-500">{r}</td>
-                <td className="py-2 text-slate-500">{l}</td>
+                <td>{p}</td>
+                <td>{r}</td>
+                <td>{l}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-3">
+        <p>
           Les transferts hors UE sont encadrés par les clauses contractuelles types de la Commission européenne ou
           le mécanisme EU-US Data Privacy Framework selon les prestataires.
         </p>
@@ -138,7 +138,7 @@ export default function Confidentialite() {
       </Section>
 
       <Section title="7. Cookies et traceurs">
-        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2">7.1 Sans consentement</h3>
+        <h3>7.1 Sans consentement</h3>
         <p>
           Ces éléments sont strictement nécessaires au service ou relèvent de la mesure
           d&apos;audience exemptée de consentement. Ils ne sont jamais partagés et ne servent
@@ -156,7 +156,7 @@ export default function Confidentialite() {
           </li>
         </ul>
 
-        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 mt-4">7.2 Avec votre consentement : le Pixel Meta</h3>
+        <h3>7.2 Avec votre consentement : le Pixel Meta</h3>
         <p>
           Certains prestataires font de la publicité sur Facebook et Instagram. Ceux-là
           peuvent activer le <strong>Pixel Meta</strong> sur leur propre page de réservation,
@@ -200,7 +200,6 @@ export default function Confidentialite() {
             href="https://www.facebook.com/privacy/policy"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline"
           >
             facebook.com/privacy/policy
           </a>.
@@ -227,16 +226,16 @@ export default function Confidentialite() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">{title}</h2>
-      <div className="text-slate-600 dark:text-slate-400 space-y-2 text-sm leading-relaxed">{children}</div>
+    <section>
+      <h2>{title}</h2>
+      <div className="lg-corps">{children}</div>
     </section>
   )
 }
 
 function Placeholder({ children }: { children: React.ReactNode }) {
   return (
-    <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1 rounded font-mono text-xs">
+    <span className="lg-ph">
       [{children}]
     </span>
   )

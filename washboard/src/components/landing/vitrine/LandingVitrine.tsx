@@ -14,6 +14,7 @@ import PiedDePage from './PiedDePage'
 import SectionDemo from './SectionDemo'
 import Tarifs from './Tarifs'
 import ToutEnUn from './ToutEnUn'
+import './base.css'
 import './vitrine.css'
 
 // Page d'accueil (refonte 2026). Un seul DemoProvider : le héros, la démo et la page de

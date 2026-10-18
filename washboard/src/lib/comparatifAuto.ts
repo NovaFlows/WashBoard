@@ -8,7 +8,7 @@ import { quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
 //
 // Une ligne qui dépend d'une offre la nomme via requiredPlanLabel() : la
 // ligne des avis disait « par email (et SMS en formule Pro) », ce qui laissait
-// croire l'email hors Pro alors que MIN_PLAN.avis_email vaut 'pro'.
+// croire l'email hors de l'offre qui l'ouvre (MIN_PLAN.avis_email, aujourd'hui Starter).
 
 export const besoinsHead = [
   'Besoin',
@@ -45,14 +45,14 @@ export const besoinsRows: string[][] = [
   [
     'Acompte à la réservation',
     'À réclamer par message',
-    'Possible sur certains outils, souvent en option payante',
+    'Dépend de l’outil et de son offre',
     'Oui, payé par ton propre lien de paiement : WashBoard n’encaisse rien',
   ],
   [
     'Facturation conforme (SIRET, TVA, numérotation continue)',
     'Non — à refaire à part',
     'Non',
-    `Oui, générée et envoyée automatiquement (formule ${requiredPlanLabel('facturation')})`,
+    `Oui, créée automatiquement à la fin du rendez-vous, envoyée par email aux clients professionnels (dès la formule ${requiredPlanLabel('facturation')})`,
   ],
   [
     'Carte de fidélité',

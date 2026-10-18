@@ -34,14 +34,18 @@ import type { FaqItem } from '@/components/blog/Prose'
 //   clientProfile.ts (daysSinceLastVisit)
 // - relance automatique par email/SMS, délai réglable (90 jours par défaut,
 //   de 1 à 730) : src/lib/relances.ts, src/types/index.ts
-//   (followup_delay_days), src/app/api/washer/route.ts (bornes), réservée à
-//   la formule Pro : src/lib/plan.ts (MIN_PLAN.followup)
-// - avis Google (email et SMS, 150 SMS/mois) réservés à la formule Pro :
+//   (followup_delay_days), src/app/api/washer/route.ts (bornes), ouverte dès
+//   la formule Starter : src/lib/plan.ts (MIN_PLAN.followup)
+// - avis Google (email et SMS : 30/mois en Starter, 150 en Pro) dès Starter :
 //   src/lib/plan.ts (MIN_PLAN, SMS_QUOTA), src/lib/email/index.ts (demande
 //   d'avis après « Terminé »)
 // - créneaux intelligents réservés à la formule Pro, frais de déplacement
 //   ouverts dès l'offre gratuite : src/lib/plan.ts (MIN_PLAN)
 // - multi-laveurs réservé à la formule Business : src/lib/plan.ts (MIN_PLAN)
+// - acompte à la réservation (paiement par le lien du laveur, rien encaissé par
+//   WashBoard, annulation automatique d'une réservation encore « en attente »
+//   dont l'acompte n'est pas réglé à temps), ouvert dès l'offre gratuite :
+//   src/lib/acompte.ts, src/app/api/cron/acomptes/, src/lib/plan.ts
 // - prix des formules : src/lib/plan.ts (PLAN_CARDS), jamais recopiés
 //
 // Ce qui n'est PAS affirmé faute de preuve dans le code : aucune fonction de
@@ -107,6 +111,10 @@ const fonctionnalites: MetierFeature[] = [
     desc: `Quand un client saisit son adresse, WashBoard compare le temps de trajet réel à tes rendez-vous déjà prévus ce jour-là et, en formule ${requiredPlanLabel('creneaux_intelligents')}, met en avant les horaires proches de l’un d’eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un quart d’heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que le trajet rendrait injoignable.`,
   },
   {
+    titre: 'Un acompte contre les rendez-vous qui sautent',
+    desc: 'Te déplacer avec ton matériel d’injection-extraction chez un client qui a oublié le rendez-vous, c’est un créneau perdu. Tu peux demander un acompte à la réservation — une somme fixe ou un pourcentage, avec le délai pour le payer et tes conditions de remboursement affichés avant qu’il réserve. Il paie par ton propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement) : WashBoard n’encaisse rien. Inclus dès l’offre gratuite.',
+  },
+  {
     titre: 'Une fiche client qui sait qui relancer',
     desc: `WashBoard garde l’historique de chaque client — quelle pièce, quelle date, quel montant — et calcule depuis combien de temps il n’est pas revenu. Un canapé ne se salit pas tous les mois : en formule ${requiredPlanLabel('followup')}, une relance automatique part au bout du délai que tu choisis toi-même, 90 jours par défaut, réglable jusqu’à deux ans.`,
   },
@@ -144,6 +152,11 @@ const faqItems: FaqItem[] = [
     question: 'Comment WashBoard aide-t-il face à un client qui ne revient qu’une ou deux fois par an ?',
     answer:
       `WashBoard garde l’historique de chaque client et calcule depuis combien de temps il n’est pas revenu. En formule ${requiredPlanLabel('followup')}, une relance automatique par email ou SMS part au bout du délai que tu règles toi-même — 90 jours par défaut, jusqu’à deux ans. C’est ce qui rappelle un client à qui personne ne pense de lui-même.`,
+  },
+  {
+    question: 'Puis-je demander un acompte pour un nettoyage de canapé ?',
+    answer:
+      'Oui, dès l’offre gratuite. Tu fixes le montant (fixe ou en pourcentage), le délai laissé au client pour payer et si l’acompte est remboursable en cas d’annulation. Il paie par ton propre lien — PayPal, Stripe, SumUp, Lydia, Wero ou virement — et WashBoard n’encaisse rien. Si le délai est dépassé sur une réservation encore en attente, elle est annulée et le créneau libéré.',
   },
   {
     question: 'Combien coûte WashBoard pour un professionnel du nettoyage de canapés ?',

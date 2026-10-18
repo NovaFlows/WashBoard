@@ -22,14 +22,25 @@ import type { FaqItem } from '@/components/blog/Prose'
 //   configurable) : src/app/api/slots/smart/route.ts, src/lib/slots.ts,
 //   src/components/dashboard/admin/IdentiteForm.tsx
 // - multi-laveurs réservé à la formule Business : src/lib/plan.ts (MIN_PLAN)
-// - avis Google (email et SMS, 150 SMS/mois) et créneaux intelligents
-//   réservés à la formule Pro, frais de déplacement ouverts dès l'offre
+// - avis Google (email et SMS), facturation et relances dès Starter (30 SMS
+//   par mois, 150 en Pro), créneaux intelligents réservés au Pro, frais de
+//   déplacement, acompte, promotions et carte de fidélité ouverts dès l'offre
 //   gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
+// - acompte (montant fixe ou %, délai pour payer, annulation automatique d'une
+//   réservation encore « en attente », paiement par le lien du laveur, rien
+//   encaissé par WashBoard) : src/lib/acompte.ts, src/app/api/cron/acomptes/
+// - carte de fidélité (tampons, récompense au choix appliquée automatiquement,
+//   email « Votre tampon est arrivé ») : src/lib/fidelite.ts,
+//   src/lib/fideliteServeur.ts
+// - promotions (bandeau, compte à rebours, remise hors déplacement) :
+//   src/lib/promotion.ts
+// - facture créée à « Terminé », envoyée par email aux seuls clients pros :
+//   src/lib/facture.ts (doitEnvoyerFactureAuClient)
 // - prix des formules : src/lib/plan.ts (PLAN_CARDS), jamais recopiés
 
 const title = 'Logiciel de gestion pour laveur auto mobile | WashBoard'
 const description =
-  'Le logiciel pour laveur auto mobile : prix et durée par prestation, frais de déplacement automatiques, créneaux au temps de trajet réel, agenda et facturation. Un mois offert, sans carte bancaire.'
+  'Le logiciel pour laveur auto mobile : prix et durée par prestation, frais de déplacement automatiques, créneaux au temps de trajet réel, acompte, carte de fidélité, agenda et facturation. Un mois offert, sans carte bancaire.'
 const url = `${SITE_URL}/logiciel-lavage-auto`
 
 export const metadata: Metadata = {
@@ -112,6 +123,50 @@ const fonctionnalites: MetierFeature[] = [
     desc: 'Seul, tu vois tes disponibilités telles quelles. En formule Business, tu indiques la taille de ton équipe et tes absences : WashBoard accepte autant de rendez-vous en même temps que tu as de laveurs disponibles.',
   },
   {
+    titre: 'Un acompte pour sécuriser le créneau',
+    desc: (
+      <>
+        Tu fixes un acompte (une somme ou un pourcentage), le délai laissé au client pour le payer et
+        tes conditions de remboursement, affichées avant qu&apos;il réserve. Il paie avec ton propre
+        lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement) : WashBoard n&apos;encaisse rien, l&apos;argent
+        arrive chez toi. Si le délai est dépassé et que tu n&apos;avais pas confirmé, le créneau est
+        libéré tout seul. Inclus dès l&apos;offre gratuite — voir{' '}
+        <Link href="/blog/acompte-reservation-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+          comment demander un acompte sans perdre de clients
+        </Link>.
+      </>
+    ),
+  },
+  {
+    titre: 'Une carte de fidélité et des promotions',
+    desc: (
+      <>
+        Chaque prestation terminée ajoute un tampon sur la carte de ton client ; au nombre que tu
+        as fixé, la récompense de ton choix (prestation offerte, remise en % ou en €) s&apos;applique
+        toute seule à sa réservation suivante, et il reçoit un email à chaque tampon. Pour un coup
+        de boost ponctuel, une promotion avec bandeau et compte à rebours s&apos;affiche en haut de ta
+        page de réservation. Les deux sont inclus dès l&apos;offre gratuite — voir{' '}
+        <Link href="/blog/carte-de-fidelite-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+          comment faire revenir ses clients avec une carte de fidélité
+        </Link>.
+      </>
+    ),
+  },
+  {
+    titre: 'Une facture conforme à chaque prestation',
+    desc: (
+      <>
+        En formule {requiredPlanLabel('facturation')}, la facture est créée automatiquement quand tu
+        marques le rendez-vous « Terminé », avec les mentions obligatoires (SIRET, TVA) et une
+        numérotation continue. Elle part par email à tes clients professionnels ; un particulier la
+        retrouve depuis le lien de sa confirmation de réservation. Détails sur{' '}
+        <Link href="/facturation-laveur-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+          la facturation du laveur auto
+        </Link>.
+      </>
+    ),
+  },
+  {
     titre: 'Des avis Google après chaque lavage',
     desc: (
       <>
@@ -150,6 +205,16 @@ const faqItems: FaqItem[] = [
     question: 'Puis-je gérer plusieurs véhicules dans une même réservation ?',
     answer:
       'Oui. Un client peut réserver plusieurs véhicules en une fois, et choisir des options différentes pour chacun : le prix et la durée bloquée dans ton agenda suivent ce qui a été choisi véhicule par véhicule, pas une moyenne appliquée à toute la commande.',
+  },
+  {
+    question: 'Puis-je demander un acompte à mes clients avec WashBoard ?',
+    answer:
+      'Oui, dès l’offre gratuite. Tu choisis le montant (fixe ou en pourcentage), le délai pour payer et si l’acompte est remboursable. Le client paie avec ton propre lien — PayPal, Stripe, SumUp, Lydia, Wero ou virement : WashBoard n’encaisse rien, l’argent va directement chez toi. Une réservation encore en attente dont l’acompte n’est pas réglé à temps est annulée toute seule et le créneau est libéré.',
+  },
+  {
+    question: 'Existe-t-il une carte de fidélité pour un laveur auto ?',
+    answer:
+      'Oui, dès l’offre gratuite. Chaque prestation terminée donne un tampon à ton client (un par véhicule si tu préfères). Quand il atteint le nombre que tu as fixé, la récompense de ton choix — prestation offerte, remise en % ou en € — s’applique automatiquement à sa réservation suivante, et il reçoit un email « Votre tampon est arrivé » à chaque passage.',
   },
   {
     question: 'Combien coûte WashBoard pour un laveur auto mobile ?',

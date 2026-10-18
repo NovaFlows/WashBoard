@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devenir-laveur-auto-mobile')!
@@ -218,9 +219,10 @@ export default function Page() {
           title="Être organisé dès le premier client"
           secondary={lienPageMetier(article.theme)}
         >
-          Une page de réservation à votre nom, un agenda qui se remplit seul, les demandes
-          d&apos;avis envoyées automatiquement. WashBoard s&apos;occupe de l&apos;administratif
-          pendant que vous lavez.
+          Une page de réservation à votre nom, un acompte et une carte de fidélité si vous le
+          souhaitez, les demandes d&apos;avis Google envoyées automatiquement et la facture créée à
+          la fin de chaque rendez-vous (à partir de la formule {requiredPlanLabel('facturation')}).
+          WashBoard s&apos;occupe de l&apos;administratif pendant que vous lavez.
         </Cta>
 
         <AlsoRead

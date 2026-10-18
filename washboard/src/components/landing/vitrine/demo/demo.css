@@ -3,27 +3,6 @@
    (vitrine-v2.html) : mêmes noms de classes, car la section « journée » les réutilise.
    Thème : le site met la classe `dark` sur <html>, d'où `.dark .wb-vitrine`. */
 
-.wb-vitrine {
-  --fond: #F6F5F3; --surface: #FFFFFF; --surface-2: #FBFAF8; --encre: #16161A; --gris: #6B6B76; --gris-2: #9A9AA4;
-  --filet: rgba(22, 22, 26, .10); --filet-2: rgba(22, 22, 26, .06);
-  --accent: #306090; --sur-accent: #FFFFFF; --accent-doux: rgba(48, 96, 144, .10);
-  --vert: #127A4B; --ambre: #9A5B00; --rouge: #B3261E; --vert-doux: rgba(18, 122, 75, .10);
-  --verre-a: rgba(255, 255, 255, .62); --verre-b: rgba(255, 255, 255, .34); --verre-bord: rgba(255, 255, 255, .7); --verre-arete: rgba(255, 255, 255, .92);
-  --ombre: 0 30px 60px -24px rgba(22, 22, 26, .28), 0 8px 20px -10px rgba(22, 22, 26, .14);
-  --chassis: #1C1C21; --aura: rgba(48, 96, 144, .09);
-  --f: var(--font-archivo), "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-.dark .wb-vitrine {
-  --fond: #18181D; --surface: #212128; --surface-2: #26262E; --encre: #F2F2F5; --gris: #A8A8B2; --gris-2: #76767F;
-  --filet: rgba(255, 255, 255, .11); --filet-2: rgba(255, 255, 255, .065);
-  --accent: #7FAAD8; --sur-accent: #111114; --accent-doux: rgba(127, 170, 216, .14);
-  --vert: #4CC690; --ambre: #E6AA52; --rouge: #F28078; --vert-doux: rgba(76, 198, 144, .14);
-  --verre-a: rgba(33, 33, 40, .72); --verre-b: rgba(33, 33, 40, .48); --verre-bord: rgba(255, 255, 255, .12); --verre-arete: rgba(255, 255, 255, .14);
-  --ombre: 0 30px 60px -24px rgba(0, 0, 0, .6), 0 8px 20px -10px rgba(0, 0, 0, .4);
-  --aura: rgba(127, 170, 216, .10);
-  color-scheme: dark;
-}
-
 /* Remise à plat des boutons dans les appareils (sans toucher au reste de la page) */
 :where(.wb-vitrine) :where(.tel, .dk, .demo-grille) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 :where(.wb-vitrine) button { cursor: pointer; }
@@ -51,13 +30,6 @@
 
 /* ── Reprise de la maquette ── */
 .wb-vitrine .demo-grille{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:48px;margin-top:44px;align-items:start}
-.wb-vitrine .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:13px;font-weight:650;font-size:15px;text-decoration:none;white-space:nowrap;transition:transform .15s ease,box-shadow .2s ease}
-.wb-vitrine .btn:active{transform:scale(.98)}
-.wb-vitrine .btn svg{width:17px;height:17px;flex:none}
-.wb-vitrine .btn-accent{background:var(--accent);color:var(--sur-accent);box-shadow:0 8px 20px -10px var(--accent)}
-.wb-vitrine .btn-encre{background:var(--encre);color:var(--fond)}
-.wb-vitrine .btn-ligne{border:1px solid var(--filet);background:var(--surface)}
-.wb-vitrine .btn-petit{height:38px;padding:0 14px;font-size:14px;border-radius:11px}
 .wb-vitrine .badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:6px;border:1px solid var(--filet);font-size:11px;font-weight:650;letter-spacing:.02em;color:var(--gris);vertical-align:2px}
 .wb-vitrine .badge-new{border-color:transparent;background:var(--vert-doux);color:var(--vert)}
 .wb-vitrine .segment{display:inline-flex;padding:4px;border-radius:999px;background:var(--surface);border:1px solid var(--filet)}

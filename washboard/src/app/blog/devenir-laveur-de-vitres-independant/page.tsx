@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devenir-laveur-de-vitres-independant')!
@@ -246,8 +247,9 @@ export default function Page() {
         >
           Avec WashBoard, vos commerces et vos particuliers sont dans le même agenda, chaque client
           a sa fiche avec l&apos;historique de ses passages et une alerte quand il n&apos;est pas
-          revenu, et les particuliers réservent seuls sur votre lien — avec une remise quand ils
-          choisissent un créneau à côté d&apos;un passage déjà prévu. Vous lavez, on tient la liste.
+          revenu, et les particuliers réservent seuls sur votre lien — avec, en formule{' '}
+          {requiredPlanLabel('creneaux_intelligents')}, une remise possible quand ils choisissent un créneau à côté d&apos;un
+          passage déjà prévu. Vous lavez, on tient la liste.
         </Cta>
 
         <AlsoRead

@@ -23,6 +23,11 @@
 // Restent volontairement des « onglet » : ceux du NAVIGATEUR, qui n'ont rien à
 // voir avec la navigation de WashBoard.
 
+// Les noms d'offre cités dans les réponses viennent de plan.ts (MIN_PLAN, SMS_QUOTA) : la
+// grille a bougé le 2026-10-18 (comptabilité, facturation, avis et relances passés au Starter),
+// et un nom d'offre écrit en dur dans une réponse était déjà devenu faux.
+import { quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
+
 export type GuideEntry = {
   id: string
   question: string
@@ -101,6 +106,34 @@ export const GUIDE: GuideSection[] = [
           "Cela se règle à deux endroits. Votre adresse de départ et vos frais de déplacement sont dans [votre profil](/dashboard/parametres#profil). Le rayon que vous acceptez est dans [votre zone d'intervention](/dashboard/admin#zone) — vous pouvez le définir à vol d'oiseau, par la route, ou par départements. Une adresse hors zone est refusée automatiquement, avant même que le client ne choisisse un créneau.",
         keywords: ['zone', 'rayon', 'perimetre', 'distance', 'deplacement', 'frais', 'km'],
       },
+      {
+        id: 'acompte',
+        question: 'Comment demander un acompte à la réservation ?',
+        answer:
+          "Dans [votre acompte](/dashboard/parametres/acompte), sur toutes les formules, y compris Découverte. Vous l'activez, puis vous choisissez : le montant (une somme fixe ou un pourcentage du total), le délai laissé au client pour payer (2 h, 12 h, 24 h ou 48 h, ou aucun délai), et si l'acompte est remboursé quand le client annule — jusqu'à combien d'heures avant le rendez-vous. Ces conditions sont affichées au client AVANT qu'il réserve. Il faut aussi au moins un moyen de paiement : un lien PayPal, Stripe, SumUp, Lydia ou autre, un virement (IBAN) ou Wero. WashBoard n'encaisse rien : le client paie directement chez vous, par votre propre lien, et le reste se règle sur place.",
+        keywords: ['acompte', 'arrhes', 'paiement', 'payer', 'avance', 'no show', 'lapin', 'paypal', 'stripe', 'sumup', 'lydia', 'wero', 'virement', 'iban', 'remboursement'],
+      },
+      {
+        id: 'acompte-client',
+        question: 'Que se passe-t-il quand un client doit payer un acompte ?',
+        answer:
+          "Le client lit vos conditions avant de réserver, puis, une fois la réservation envoyée, il voit un bouton par moyen de paiement que vous avez renseigné (le virement et Wero ne s'affichent qu'à ce moment-là, jamais sur la page publique). Vous recevez la réservation « en attente ». Quand l'argent est arrivé chez vous, ouvrez la fiche du rendez-vous et touchez « Acompte reçu » : WashBoard ne peut pas le deviner, puisqu'il ne voit pas votre compte. Si le délai que vous avez fixé est dépassé et que la réservation est encore en attente, elle est annulée toute seule : le créneau est libéré, le client reçoit un email et, si vos notifications sont activées, vous en êtes prévenu. Si vous avez déjà confirmé le rendez-vous, WashBoard ne l'annule pas à votre place.",
+        keywords: ['acompte', 'recu', 'non paye', 'impaye', 'annule', 'annulation automatique', 'delai', 'creneau libere', 'confirmer'],
+      },
+      {
+        id: 'acompte-limites',
+        question: 'Mon acompte en pourcentage ne correspond pas au lien de paiement',
+        answer:
+          "C'est le cas limite à connaître. Seul un lien PayPal.me reçoit le montant automatiquement, calculé pour chaque réservation. Un lien Stripe, SumUp ou Lydia a son montant fixé quand vous le créez dans leur application : avec un acompte en pourcentage, il ne suivra donc pas le prix de chaque réservation. Pour ces moyens de paiement, préférez un acompte d'une somme fixe, égale à celle de votre lien. Par ailleurs, le remboursement d'un acompte annulé se fait de votre côté, depuis votre compte de paiement : WashBoard n'a pas l'argent et ne peut pas le rendre.",
+        keywords: ['acompte', 'pourcentage', 'montant', 'lien', 'paypal', 'stripe', 'sumup', 'rembourser', 'remboursement'],
+      },
+      {
+        id: 'promotions',
+        question: 'Comment lancer une promotion avec un compte à rebours ?',
+        answer:
+          "Dans [vos promotions](/dashboard/parametres/promotions), sur toutes les formules. Vous donnez un nom, une remise en pourcentage (90 % au plus) ou en euros, une date de début et de fin, et les prestations concernées — toutes, ou seulement certaines. Un bandeau s'affiche en haut de votre page de réservation : vous réglez son texte, sa couleur, et vous choisissez d'y montrer ou non un compte à rebours jusqu'à la fin. La remise s'applique aux réservations PRISES pendant la période, pas aux rendez-vous qui tombent dedans, et jamais aux frais de déplacement. Une seule promotion peut être active à la fois : deux périodes ne peuvent pas se chevaucher. Sur une page personnalisée, les prix pleins s'affichent pendant le choix et la remise apparaît au récapitulatif.",
+        keywords: ['promotion', 'promo', 'remise', 'reduction', 'bandeau', 'compte a rebours', 'soldes', 'offre speciale', 'saint valentin'],
+      },
     ],
   },
   {
@@ -154,7 +187,7 @@ export const GUIDE: GuideSection[] = [
         id: 'creneaux-groupes',
         question: 'À quoi servent les créneaux groupés ?',
         answer:
-          "Quand un client réserve dans un secteur où vous avez déjà un rendez-vous, WashBoard lui propose en priorité les horaires qui vous évitent un trajet. Vous pouvez accorder une petite remise sur ces créneaux depuis [vos automatismes clients](/dashboard/admin#creneaux) pour encourager le regroupement : vous roulez moins et vous casez plus de rendez-vous dans la journée.",
+          `Disponible à partir de la formule ${requiredPlanLabel('creneaux_intelligents')}. Quand un client réserve dans un secteur où vous avez déjà un rendez-vous, WashBoard lui propose en priorité les horaires qui vous évitent un trajet. Vous pouvez accorder une petite remise sur ces créneaux depuis [vos automatismes clients](/dashboard/admin#creneaux) pour encourager le regroupement : vous roulez moins et vous casez plus de rendez-vous dans la journée.`,
         keywords: ['creneau', 'groupe', 'zone', 'tournee', 'trajet', 'optimisation', 'remise'],
       },
     ],
@@ -193,10 +226,24 @@ export const GUIDE: GuideSection[] = [
         keywords: ['menu', 'options', 'modifier', 'tache', 'rappel', 'doublon', 'fusionner', 'rgpd', 'export', 'exporter', 'anonymiser', 'effacement', 'supprimer donnees', 'vehicule'],
       },
       {
+        id: 'fidelite',
+        question: 'Comment mettre en place une carte de fidélité ?',
+        answer:
+          "Dans [votre carte de fidélité](/dashboard/parametres/fidelite), sur toutes les formules, y compris Découverte. Vous l'activez, puis vous choisissez le nombre de tampons nécessaires (5, 8, 10 ou 12 sont proposés, ou le nombre de votre choix entre 2 et 30) et la récompense : une prestation offerte, une remise en pourcentage ou une remise en euros. Pour une prestation offerte, vous décidez si les options et les frais de déplacement sont offerts aussi ; une remise, elle, porte sur la prestation et ses options, jamais sur le déplacement. Un tampon correspond à une prestation terminée — ou à un tampon par véhicule si vous activez cette option : une réservation de trois véhicules en donne alors trois. Vous réglez aussi l'allure de la carte (couleur, finition, logo ou initiale) avec un aperçu sous les yeux.",
+        keywords: ['fidelite', 'carte', 'tampon', 'tampons', 'recompense', 'fideliser', 'prestation offerte', 'remise', 'client regulier'],
+      },
+      {
+        id: 'fidelite-client',
+        question: 'Que voit mon client avec la carte de fidélité, et comment sont comptés les tampons ?',
+        answer:
+          "À la réservation, son tampon apparaît « en attente » sur l'écran de confirmation. Il ne compte vraiment que lorsque vous marquez le rendez-vous « Terminé » : le client reçoit alors un email « Votre tampon est arrivé », avec le lien vers sa carte. Il la retrouve sur sa page personnelle, et sur votre page de réservation dès qu'il a tapé ses coordonnées. Une fois la carte pleine, la récompense s'applique toute seule à sa réservation suivante, et le prix est recalculé par WashBoard : vous n'avez rien à saisir. Quelques règles : une récompense par réservation ; une réservation annulée ne donne aucun tampon, et si elle avait utilisé une récompense, celle-ci est rendue ; le client est reconnu par son numéro de téléphone (écrit avec ou sans espaces, avec +33 ou 0, c'est la même carte), à défaut par son email. Vous pouvez ajouter ou retirer un tampon à la main depuis sa fiche dans [Clients](/dashboard/clients). Une limite connue : si vous repassez un rendez-vous de « Terminé » à un autre statut puis à nouveau « Terminé », l'email du tampon repart une deuxième fois.",
+        keywords: ['fidelite', 'carte', 'tampon', 'email', 'telephone', 'recompense', 'annulation', 'ajuster', 'retirer', 'client'],
+      },
+      {
         id: 'avis',
         question: 'Comment demander des avis Google automatiquement ?',
         answer:
-          "Dans [vos avis Google](/dashboard/parametres#avis). Collez le lien vers votre fiche, choisissez le canal (email ou SMS) et le délai après le rendez-vous. La demande part ensuite toute seule dès que vous marquez un rendez-vous terminé. Le jour même fonctionne mieux : l'effet « tout propre » est encore frais.",
+          `Dans [vos avis Google](/dashboard/parametres#avis), à partir de la formule ${requiredPlanLabel('avis_email')}. Collez le lien vers votre fiche, choisissez le canal (email ou SMS) et le délai après le rendez-vous. La demande part ensuite toute seule dès que vous marquez un rendez-vous terminé. Le jour même fonctionne mieux : l'effet « tout propre » est encore frais. Côté SMS : ${quotaSmsEnClair()}.`,
         keywords: ['avis', 'google', 'etoiles', 'note', 'reputation', 'sms'],
       },
       {
@@ -245,7 +292,7 @@ export const GUIDE: GuideSection[] = [
         id: 'facture-quand',
         question: 'Quand mes factures sont-elles créées ?',
         answer:
-          "Automatiquement, au moment où vous marquez un rendez-vous « Terminé ». Vous n'avez rien à faire de plus. Si vos informations de facturation sont incomplètes, le rendez-vous passe quand même en terminé mais aucune facture n'est créée : le client reçoit un simple récapitulatif. Une fois les informations complétées, vous pourrez émettre la facture manquante depuis la fiche du rendez-vous, avec le bouton « Émettre la facture ». Toutes vos factures se retrouvent au même endroit : [vos factures](/dashboard/factures).",
+          `Automatiquement, au moment où vous marquez un rendez-vous « Terminé », à partir de la formule ${requiredPlanLabel('facturation')}. Vous n'avez rien à faire de plus. Si vos informations de facturation sont incomplètes, le rendez-vous passe quand même en terminé mais aucune facture n'est créée : le client reçoit un simple récapitulatif. Une fois les informations complétées, vous pourrez émettre la facture manquante depuis la fiche du rendez-vous, avec le bouton « Émettre la facture ». Toutes vos factures se retrouvent au même endroit : [vos factures](/dashboard/factures).`,
         keywords: ['facture', 'quand', 'automatique', 'emettre', 'termine', 'recapitulatif'],
       },
       {
@@ -287,7 +334,7 @@ export const GUIDE: GuideSection[] = [
         id: 'compta',
         question: 'Où voir mon chiffre d’affaires ?',
         answer:
-          "Dans [vos chiffres](/dashboard/compta) : recettes, dépenses et résultat, mois par mois. Seuls les rendez-vous marqués « terminé » sont comptés, d'où l'importance de tenir votre agenda à jour.",
+          `Dans [vos chiffres](/dashboard/compta) : recettes, dépenses et résultat, mois par mois, à partir de la formule ${requiredPlanLabel('compta')}. Seuls les rendez-vous marqués « terminé » sont comptés, d'où l'importance de tenir votre agenda à jour.`,
         keywords: ['ca', 'chiffre', 'revenu', 'compta', 'depense', 'benefice', 'resultat'],
       },
       {

@@ -10,13 +10,16 @@ const LIENS = [
   { href: '#faq', label: 'FAQ' },
 ]
 
-export default function Navigation() {
+// Hors de l'accueil, les ancres et le logo repartent vers la page d'accueil.
+export default function Navigation({ horsAccueil = false }: { horsAccueil?: boolean }) {
+  const prefixe = horsAccueil ? '/' : ''
   return (
     <header className="nav">
       <div className="w">
-        <a className="marque" href="#haut"><Logo />WashBoard</a>
+        <a className="marque" href={horsAccueil ? '/' : '#haut'}><Logo />WashBoard</a>
         <nav className="nav-liens" aria-label="Sections">
-          {LIENS.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
+          {LIENS.map(l => <a key={l.href} href={prefixe + l.href}>{l.label}</a>)}
+          <Link href="/blog">Blog</Link>
         </nav>
         <div className="nav-droite">
           <BoutonTheme />

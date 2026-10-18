@@ -53,11 +53,11 @@ function hrefMetier(theme: Theme): string | undefined {
 //   de réservation, qui sert d'abord le récapitulatif puis la facture une
 //   fois émise : src/components/booking/StepConfirmation.tsx (lien
 //   /api/bookings/[id]/pdf), src/app/api/bookings/[id]/pdf/route.ts
-// - avis Google (email et SMS, 150 SMS/mois), créneaux intelligents et
-//   facturation réservés à la formule Pro, frais de déplacement ouverts dès
+// - avis Google (email et SMS), facturation et relances dès Starter,
+//   créneaux intelligents réservés au Pro, frais de déplacement ouverts dès
 //   l'offre gratuite : src/lib/plan.ts (MIN_PLAN, SMS_QUOTA)
-// - relance automatique des clients qui ne reviennent pas, réservée à la
-//   formule Pro : src/lib/relances.ts, src/lib/plan.ts (MIN_PLAN.followup)
+// - relance automatique des clients qui ne reviennent pas, ouverte dès la
+//   formule Starter : src/lib/relances.ts, src/lib/plan.ts (MIN_PLAN.followup)
 // - prix des formules : src/lib/plan.ts (PLAN_CARDS), jamais recopiés
 //
 // Ce qui n'est PAS affirmé faute de preuve dans le code, à dessein : aucun

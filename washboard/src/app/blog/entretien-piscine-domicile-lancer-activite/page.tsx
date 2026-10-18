@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('entretien-piscine-domicile-lancer-activite')!
@@ -254,8 +255,8 @@ export default function Page() {
           secondary={lienPageMetier(article.theme)}
         >
           Avec WashBoard, chaque client a sa fiche avec l&apos;historique de tous ses passages et
-          leur montant, la facture s&apos;envoie depuis votre téléphone, et votre chiffre
-          d&apos;affaires se lit par mois pour suivre la saison. Les nouveaux clients réservent
+          leur montant, la facture est créée à la fin de chaque rendez-vous (à partir de la formule{' '}
+          {requiredPlanLabel('facturation')}), et votre chiffre d&apos;affaires se lit par mois pour suivre la saison. Les nouveaux clients réservent
           leur rattrapage d&apos;eau verte sur votre lien, sans vous appeler.
         </Cta>
 

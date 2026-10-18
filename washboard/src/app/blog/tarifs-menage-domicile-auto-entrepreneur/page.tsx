@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
+import { requiredPlanLabel } from '@/lib/plan'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('tarifs-menage-domicile-auto-entrepreneur')!
@@ -244,8 +245,9 @@ export default function Page() {
           secondary={lienPageMetier(article.theme)}
         >
           Avec WashBoard, vous voyez votre semaine en un coup d&apos;œil, chaque client a sa fiche
-          et son historique, la facture s&apos;envoie en un clic, et un nouveau client réserve seul
-          dans les créneaux que vous ouvrez — avec une remise s&apos;il choisit un créneau proche
+          et son historique, la facture est créée à la fin de chaque rendez-vous (à partir de la
+          formule {requiredPlanLabel('facturation')}), et un nouveau client réserve seul dans les créneaux que vous ouvrez —
+          avec, en formule {requiredPlanLabel('creneaux_intelligents')}, une remise possible s&apos;il choisit un créneau proche
           d&apos;un rendez-vous déjà prévu dans son quartier.
         </Cta>
 

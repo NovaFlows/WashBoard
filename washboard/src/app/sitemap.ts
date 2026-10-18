@@ -47,6 +47,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${SITE_URL}/facturation-laveur-auto`,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
       url: `${SITE_URL}/optimisation-tournee-lavage-auto`,
       changeFrequency: 'monthly',
       priority: 0.8,

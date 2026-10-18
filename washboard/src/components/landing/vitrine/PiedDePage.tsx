@@ -21,13 +21,14 @@ const COLONNES = [
   ] },
 ]
 
-export default function PiedDePage() {
+export default function PiedDePage({ horsAccueil = false }: { horsAccueil?: boolean }) {
+  const prefixe = horsAccueil ? '/' : ''
   return (
     <footer className="pied">
       <div className="w">
         <div className="pied-grille">
           <div>
-            <a className="marque" href="#haut" style={{ padding: 0 }}><Logo />WashBoard</a>
+            <a className="marque" href={horsAccueil ? '/' : '#haut'} style={{ padding: 0 }}><Logo />WashBoard</a>
             <p style={{ marginTop: 12, maxWidth: '34ch' }}>Le logiciel de gestion des laveurs auto mobiles, du detailing et du nettoyage de canapés à domicile.</p>
             <div className="pied-social">
               {SOCIAL_LINKS.map(s => (
@@ -39,13 +40,13 @@ export default function PiedDePage() {
             <div key={col.titre}>
               <p className="pied-titre">{col.titre}</p>
               {col.liens.map(l => l.href.startsWith('#')
-                ? <a key={l.href} href={l.href}>{l.label}</a>
+                ? <a key={l.href} href={prefixe + l.href}>{l.label}</a>
                 : <Link key={l.href} href={l.href}>{l.label}</Link>)}
             </div>
           ))}
         </div>
         <div className="pied-bas">
-          <span>© 2026 WashBoard · Les démos de cette page utilisent des données fictives.</span>
+          <span>© 2026 WashBoard{horsAccueil ? '' : ' · Les démos de cette page utilisent des données fictives.'}</span>
           <a href="https://novaflows.fr/realisations" target="_blank" rel="noopener noreferrer">Conçu par NovaFlows</a>
         </div>
       </div>
