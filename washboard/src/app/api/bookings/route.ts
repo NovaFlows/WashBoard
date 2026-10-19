@@ -162,7 +162,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // qu'on ne peut pas lire — et si le pari est perdu, c'est la réservation
     // entière qui échoue, pas seulement l'attribution.
     utm_campaign, utm_content,
-    // Contrôlée ci-dessous, mais sans colonne en base : ne pas l’envoyer à l’insertion.
+    // Écrite seulement avec un acompte (plus bas), jamais recopiée telle quelle.
     acompte_accepte,
     ...bookingData
   } = cleanData
@@ -634,7 +634,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       // une colonne absente ferait échouer TOUTES les réservations.
       ...(promotion ? { promotion_id: promotion.id, promo_remise: promotion.remise } : {}),
       // Même prudence : les colonnes d'acompte ne partent que s'il y a un acompte à demander.
-      ...(acompte ? { acompte_montant: acompte.montant, acompte_statut: 'en_attente', acompte_echeance: acompte.echeance } : {}),
+      ...(acompte ? { acompte_montant: acompte.montant, acompte_statut: 'en_attente', acompte_echeance: acompte.echeance, acompte_accepte: true } : {}),
       ...(fidelite && fidelite.remise > 0 ? { fidelite_remise: fidelite.remise } : {}),
     },
     p_capacity: isOwner ? null : capacite,
