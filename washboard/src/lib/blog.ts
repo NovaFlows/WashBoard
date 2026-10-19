@@ -120,19 +120,9 @@ export const ARTICLES: Article[] = [
   {
     slug: 'devis-lavage-auto-domicile',
     theme: 'auto',
-    title: 'Faire un devis de lavage auto à domicile : modèle, mentions obligatoires et durée de validité',
+    title: 'Faire un devis de lavage auto à domicile : quand, quoi écrire, modèle à recopier',
     description:
-      'Un devis est-il obligatoire pour laver une voiture ? Quelles mentions y faire figurer, quelle durée de validité choisir, un modèle à recopier, et ce qui ne marche pas : le devis flou, le « à partir de », le prix changé après accord.',
-    publishedAt: '2026-10-18',
-    updatedAt: '2026-10-18',
-    readingMinutes: 9,
-  },
-  {
-    slug: 'micro-entreprise-laveur-auto-mobile',
-    theme: 'auto',
-    title: 'Micro-entreprise pour laveur auto mobile : code APE, cotisations, démarches',
-    description:
-      'Code APE du lavage de véhicules, taux de cotisations, plafond de chiffre d’affaires, seuils de la franchise de TVA, Acre et démarches en ligne : les chiffres de la micro-entreprise pour un laveur auto, avec la source officielle et sa date.',
+      'Quand un devis vaut la peine pour un laveur auto, ce qu’il doit dire pour éviter les malentendus, quelle durée de validité choisir, un modèle à recopier, et ce qui ne marche pas : le devis flou, le « à partir de », le prix changé après accord.',
     publishedAt: '2026-10-18',
     updatedAt: '2026-10-18',
     readingMinutes: 9,

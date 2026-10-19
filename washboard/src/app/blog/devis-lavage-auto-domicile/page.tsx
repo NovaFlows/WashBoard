@@ -4,7 +4,7 @@ import { lienPageMetier } from '@/lib/metiers'
 import { PLAN_CARDS, requiredPlan, requiredPlanLabel } from '@/lib/plan'
 import { VALIDITE_DEVIS_JOURS } from '@/lib/documents'
 import { tarifOffre } from '@/lib/resumeOffres'
-import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
+import { H2, P, UL, A, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devis-lavage-auto-domicile')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -32,19 +32,14 @@ export const metadata: Metadata = {
 
 const faq: FaqItem[] = [
   {
-    question: 'Un devis est-il obligatoire pour laver une voiture à domicile ?',
-    answer:
-      'Pas d’après la liste de Service-Public : le lavage de véhicules ne figure pas parmi les activités pour lesquelles un devis est obligatoire (bâtiment, déménagement, location de voiture, services à la personne et quelques autres). Cette fiche date de 2022 : si vous exercez aussi une autre activité, vérifiez-la pour celle-là. En pratique, un devis reste la meilleure protection dès que le prix n’est pas celui d’une prestation standard.',
-  },
-  {
     question: 'Quelle durée de validité mettre sur un devis de lavage auto ?',
     answer:
-      `Aucun texte ne la fixe pour le lavage auto : elle est libre, mais elle doit figurer sur le devis. Un mois est un repère courant, et c’est ${VALIDITE_DEVIS_JOURS} jours dans WashBoard par défaut. Raccourcissez-la si vos prix ou votre planning bougent vite, allongez-la pour un contrat saisonnier.`,
+      `Elle doit figurer sur le devis, sinon votre prix vous engage sans limite. Un mois est un repère courant, et c’est ${VALIDITE_DEVIS_JOURS} jours dans WashBoard par défaut. Raccourcissez-la si vos prix ou votre planning bougent vite, allongez-la pour un contrat saisonnier.`,
   },
   {
-    question: 'Quelles mentions mettre sur un devis de lavage auto ?',
+    question: 'Que faut-il écrire sur un devis de lavage auto ?',
     answer:
-      'La date, vos coordonnées complètes (nom légal, SIRET, adresse), celles du client, le lieu de la prestation, le détail ligne par ligne, les totaux hors taxes et toutes taxes comprises, la durée de validité et la mention de franchise de TVA si vous en bénéficiez. Aucune liste n’est imposée au lavage auto : celle-ci reprend ce que Service-Public exige dans les secteurs où le devis est obligatoire.',
+      'La date et un numéro, vos coordonnées, celles du client et le lieu de la prestation, le détail ligne par ligne (ce qui est inclus, et ce qui ne l’est pas), le total et la durée de validité. Plus le détail est précis, moins il y a de discussion devant la voiture.',
   },
   {
     question: 'Un devis accepté doit-il être signé ?',
@@ -65,13 +60,13 @@ export default function Page() {
       <article>
         <ArticleHeader
           article={article}
-          intro="« Ça ferait combien ? » est la question qui précède presque toute prestation qui sort de l’ordinaire. Un devis écrit répond avant que le malentendu naisse. Voici ce qu’il doit contenir, ce que la loi impose (ou pas) à un laveur auto, quelle durée de validité choisir, et un modèle à recopier."
+          intro="« Ça ferait combien ? » est la question qui précède presque toute prestation qui sort de l’ordinaire. Un devis écrit répond avant que le malentendu naisse. Voici quand il vaut la peine, ce qu’il doit dire, quelle durée de validité choisir, et un modèle à recopier."
         />
 
         <Summary
           items={[
-            'Aucun texte n’impose un devis pour laver une voiture, mais il protège dès que le prix sort de votre grille : véhicule très sale, plusieurs véhicules, client professionnel.',
-            'Pas de liste officielle de mentions pour le lavage auto : reprenez celles des secteurs où le devis est obligatoire (date, coordonnées, détail, HT et TTC, validité).',
+            'Un devis sert dès que le prix sort de votre grille : véhicule très sale, plusieurs véhicules, client professionnel.',
+            'Il doit dire précisément ce qui est inclus (et ce qui ne l’est pas), le total et jusqu’à quand le prix tient.',
             `La durée de validité est libre mais indispensable : ${VALIDITE_DEVIS_JOURS} jours est un bon point de départ, plus court si vos prix bougent.`,
             'Un devis vaut ce que vaut sa précision : « lavage complet » sans contenu ne protège de rien.',
             'Ce qui ne marche pas : le devis flou, le devis sans date de fin, le devis qu’on ne relance jamais et le prix qu’on change après accord.',
@@ -104,33 +99,10 @@ export default function Page() {
           <A href="/blog/tarifs-lavage-auto-domicile">comment fixer vos tarifs</A>).
         </P>
 
-        <H2>Ce que la loi impose à un laveur auto (et ce qu&apos;elle n&apos;impose pas)</H2>
+        <H2>Ce qu&apos;un bon devis contient</H2>
         <P>
-          Service-Public tient la liste des activités pour lesquelles un devis est obligatoire :
-          travaux et dépannage du bâtiment, déménagement, location de voiture, optique, appareillage
-          auditif, services à la personne, produits pour compenser la perte d&apos;autonomie,
-          chirurgie esthétique et prestations funéraires. Le lavage de véhicules n&apos;y figure pas
-          (fiche « Devis obligatoire : activités concernées », vérifiée le 9 septembre 2022). Autre
-          rappel de Service-Public : un devis n&apos;engage les parties qu&apos;une fois accepté
-          (fiche « Tout savoir sur la facturation », vérifiée le 7 août 2026).
-        </P>
-        <P>
-          Deux points valent d&apos;être connus. Le premier : cette liste est ancienne, et si vous
-          cumulez le lavage avec une autre activité (ménage à domicile, par exemple), la règle de
-          cette autre activité s&apos;applique pour elle. Le second : un micro-entrepreneur immatriculé
-          comme entreprise artisanale doit indiquer son assurance professionnelle quand elle est
-          obligatoire, avec les coordonnées de l&apos;assureur et la couverture géographique du
-          contrat, sur le devis comme sur la facture (fiche « Documents commerciaux d&apos;une
-          micro-entreprise », vérifiée le 8 décembre 2025). Reste à savoir si votre activité est
-          artisanale : le guichet des formalités vous le dit à l&apos;immatriculation, et c&apos;est
-          une question à poser avant de rédiger votre premier modèle.
-        </P>
-
-        <H2>Les mentions à faire figurer</H2>
-        <P>
-          Comme aucune liste n&apos;est imposée au lavage auto, le plus sûr est de reprendre celle
-          que Service-Public exige là où le devis est obligatoire (le bâtiment, par exemple) : elle
-          est de bon sens et un client, un comptable ou un juge s&apos;y retrouvent.
+          Un devis sert à ce que vous et votre client parliez de la même chose. Chaque ligne du
+          tableau ci-dessous évite un malentendu précis.
         </P>
         <Table
           head={['Mention', 'Pourquoi elle compte']}
@@ -139,27 +111,14 @@ export default function Page() {
             ['Vos coordonnées : nom légal, SIRET, adresse, téléphone', 'Identifier qui s’engage. Un devis sans SIRET ressemble à une annonce.'],
             ['Coordonnées du client et lieu de la prestation', 'Éviter la confusion entre deux adresses ou deux véhicules.'],
             ['Détail ligne par ligne : prestation, quantité, prix unitaire', 'C’est ce qui sépare « lavage complet » de ce que vous faites vraiment.'],
-            ['Total hors taxes et toutes taxes comprises', 'Obligatoire dans les listes officielles. En franchise de TVA, les deux totaux sont identiques.'],
+            ['Le total', 'Un seul chiffre final, celui que le client paiera, déplacement compris.'],
             ['Durée de validité', 'Jusqu’à quand votre prix tient. Sans elle, vous restez engagé sans limite.'],
-            ['Mention de franchise de TVA, si vous en bénéficiez', 'Voir l’encadré ci-dessous : la formule change en septembre 2026.'],
-            ['Assurance professionnelle, si vous êtes artisan et qu’elle est obligatoire', 'Exigée sur le devis comme sur la facture dans ce cas.'],
+            ['Ce qui n’est pas inclus', 'Tapis, coffre, poils d’animaux : dites-le avant, pas devant la voiture.'],
           ]}
         />
-        <Callout>
-          <p>
-            <strong>Franchise de TVA :</strong>{' '}la mention « TVA non applicable, art. 293 B du CGI »
-            est remplacée à compter du 1er septembre 2026 par « TVA non applicable, art. L. 223 et s.
-            du CIBS » (code des impositions sur les biens et services). L&apos;ancienne référence reste
-            tolérée jusqu&apos;au 31 décembre 2027, d&apos;après la fiche « Documents commerciaux d&apos;une
-            micro-entreprise » de Service-Public (vérifiée le 8 décembre 2025). Reprenez la nouvelle
-            formule sur vos prochains documents.
-          </p>
-        </Callout>
-
         <H2>La durée de validité : combien mettre</H2>
         <P>
-          Aucun texte ne la fixe pour un lavage auto. Elle est libre, mais elle doit exister : un
-          devis sans date de fin vous engage sur votre prix aussi longtemps que le client voudra
+          Elle doit exister : un devis sans date de fin vous engage sur votre prix aussi longtemps que le client voudra
           bien le garder dans sa messagerie. Les repères ci-dessous sont indicatifs, pas des règles :
         </P>
         <UL>
@@ -183,7 +142,7 @@ export default function Page() {
             ['Client', 'Mme Martin, 4 allée du Parc, 95800 Cergy, Peugeot 308 grise'],
             ['Lieu et date', 'Au domicile du client, date à convenir'],
             ['Lignes', 'Lavage complet intérieur et extérieur : 1 × 70,00 €. Traitement des poils d’animaux : 1 × 25,00 €. Déplacement : 1 × 10,00 €'],
-            ['Total', 'Total TTC : 105,00 €. TVA non applicable (franchise en base)'],
+            ['Total', 'Total : 105,00 €'],
             ['Conditions', 'Paiement le jour de la prestation. Annulation sans frais jusqu’à 24 h avant.'],
             ['Accord', 'Date, signature et mention « Bon pour accord » du client'],
           ]}
@@ -267,7 +226,6 @@ export default function Page() {
           items={[
             { href: '/facturation-laveur-auto', label: 'Facturation pour laveur auto mobile : SIRET, TVA, numérotation' },
             { href: '/blog/lavage-flotte-vehicules-entreprise', label: 'Laver pour les entreprises : flottes, concessions, loueurs, auto-écoles' },
-            { href: '/blog/micro-entreprise-laveur-auto-mobile', label: 'Micro-entreprise pour laveur auto mobile : code APE, cotisations, démarches' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },
           ]}
         />

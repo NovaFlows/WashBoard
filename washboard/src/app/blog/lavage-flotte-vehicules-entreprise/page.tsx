@@ -3,7 +3,7 @@ import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
 import { PLAN_CARDS, requiredPlan, requiredPlanLabel } from '@/lib/plan'
 import { tarifOffre } from '@/lib/resumeOffres'
-import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
+import { H2, P, UL, A, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('lavage-flotte-vehicules-entreprise')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -25,7 +25,6 @@ const offreFacturation = PLAN_CARDS.find(c => c.key === requiredPlan('facturatio
 // - fiche entreprise (sites, contacts, délai de paiement convenu, devis en attente, factures
 //   impayées), version mobile : components/dashboard/FicheEntrepriseV2.tsx
 // - une facture par rendez-vous ; pas de facture mensuelle regroupée (aucune trace dans le code)
-// Règles de droit et chiffres : Service-Public, pages citées dans le texte.
 
 export const metadata: Metadata = {
   title: `${article.title} | WashBoard`,
@@ -51,19 +50,9 @@ const faq: FaqItem[] = [
       'Allez sur place, aux heures creuses, et demandez la personne qui s’occupe des véhicules : responsable d’agence, chef d’atelier, gérant. Proposez de laver gratuitement ou à prix réduit un seul véhicule, laissez un devis écrit avec un tarif par véhicule et par passage, et rappelez quelques jours plus tard. Le travail se voit immédiatement : c’est votre meilleur argument.',
   },
   {
-    question: 'Comment facturer une entreprise quand on est en micro-entreprise ?',
-    answer:
-      'Comme n’importe quel client professionnel, avec les mentions obligatoires : numéro de facture unique et continu, date de la prestation, votre identité avec la mention « EI » et votre SIREN, l’identité du client, le détail des prestations, les totaux, la date de règlement, le taux des pénalités de retard et l’indemnité de 40 €. Si vous êtes en franchise de TVA, ajoutez la mention de franchise (Service-Public, vérifiée en décembre 2025).',
-  },
-  {
-    question: 'Quel délai de paiement une entreprise peut-elle imposer ?',
-    answer:
-      'Le délai de principe est de 30 jours. Les parties peuvent en convenir un autre, dans la limite de 60 jours à compter de l’émission de la facture ou de 45 jours fin de mois (Service-Public, page vérifiée le 7 août 2026). Les pénalités de retard ne peuvent pas être inférieures à trois fois le taux de l’intérêt légal, et l’indemnité forfaitaire de recouvrement est de 40 € par facture impayée.',
-  },
-  {
     question: 'Faut-il un contrat pour laver les véhicules d’une entreprise ?',
     answer:
-      'Aucune règle ne l’impose pour le lavage auto, mais un écrit vous protège des deux côtés dès que le travail est récurrent : périmètre, fréquence, prix hors taxes, délai de paiement, durée et préavis. Pour un engagement important, faites-le relire par un professionnel du droit.',
+      'Un écrit vous protège des deux côtés dès que le travail est récurrent : périmètre, fréquence, prix hors taxes, délai de paiement, durée et préavis. Un devis accepté suffit souvent.',
   },
   {
     question: 'Mon client professionnel reçoit-il sa facture par email avec WashBoard ?',
@@ -87,7 +76,7 @@ export default function Page() {
             'Le client professionnel vaut le détour pour une raison simple : plusieurs véhicules au même endroit, donc moins de trajet par véhicule lavé.',
             'Chaque cible achète pour une raison différente : l’image (auto-école), la rotation (loueur), la vente (concession), l’utilité (flotte de service). Parlez de la sienne.',
             'Chiffrez par véhicule et par passage, hors taxes, avec une remise de volume que vous avez calculée, pas devinée.',
-            'Délai de paiement : 30 jours par défaut, 60 jours au plus à compter de l’émission de la facture selon Service-Public. Ne le laissez pas flotter.',
+            'Mettez-vous d’accord sur le délai de paiement avant le premier lavage, pas à la première facture.',
             'Ce qui ne marche pas : brader l’entrée, dépendre d’un seul client, travailler sans écrit et sans assurance adaptée.',
           ]}
         />
@@ -96,7 +85,7 @@ export default function Page() {
           Les clients professionnels sont déjà évoqués dans{' '}
           <A href="/blog/trouver-des-clients-laveur-auto-mobile">comment trouver des clients quand on est laveur auto mobile</A>.
           Cet article va plus loin sur ce qui change vraiment avec eux : la façon de les approcher, de
-          les chiffrer, de les facturer et de ne pas se retrouver dépendant d&apos;un seul.
+          les chiffrer, de se faire payer et de ne pas se retrouver dépendant d&apos;un seul.
         </P>
 
         <H2>Qui démarcher, et pourquoi chacun achète</H2>
@@ -155,8 +144,7 @@ export default function Page() {
 
         <H2>Un contrat, ou au moins un écrit</H2>
         <P>
-          Aucune règle n&apos;impose un contrat pour laver des voitures, mais dès que le travail est
-          récurrent, ne vous passez pas d&apos;un écrit (un devis accepté suffit souvent, un contrat
+          Dès que le travail est récurrent, ne vous passez pas d&apos;un écrit (un devis accepté suffit souvent, un contrat
           court mieux encore). Il doit dire :
         </P>
         <UL>
@@ -165,53 +153,21 @@ export default function Page() {
           <li>le prix hors taxes par véhicule et par passage, et ce qui est facturé en plus ;</li>
           <li>l&apos;accès à l&apos;eau, à l&apos;électricité, et les créneaux autorisés ;</li>
           <li>l&apos;annulation et les intempéries : qui décale, qui facture ;</li>
-          <li>le délai de paiement et les pénalités de retard ;</li>
+          <li>le délai de paiement ;</li>
           <li>la durée et le préavis de résiliation, dans les deux sens ;</li>
           <li>la responsabilité en cas de dommage, et l&apos;assurance qui la couvre (voir <A href="/blog/assurance-laveur-auto-mobile">quelle assurance pour un laveur auto mobile</A>).</li>
         </UL>
-        <P>
-          Pour un contrat engageant sur plusieurs mois, faites-le relire par un professionnel du droit :
-          cet article donne un plan, pas un modèle juridique.
-        </P>
 
-        <H2>Facturer : ce qui change avec une entreprise</H2>
+        <H2>Se faire payer : ce qui change avec une entreprise</H2>
         <P>
-          Une facture à un particulier doit déjà être correcte. À une entreprise, elle sert de pièce
-          comptable : on la lui réclamera, on la contrôlera, on la rangera. D&apos;après Service-Public
-          (fiche « Documents commerciaux d&apos;une micro-entreprise », vérifiée le 8 décembre 2025),
-          elle comporte notamment :
+          Une entreprise ne paie pas en main propre à la fin du lavage : elle paie sur facture, souvent
+          plus tard, et la range dans sa comptabilité. Trois habitudes évitent d&apos;attendre :
         </P>
         <UL>
-          <li>une date d&apos;émission et un numéro unique, dans une séquence chronologique continue ;</li>
-          <li>la date de la prestation ;</li>
-          <li>votre identité, avec la mention « Entrepreneur individuel » ou « EI », votre adresse et votre SIREN ;</li>
-          <li>l&apos;identité du client ;</li>
-          <li>le détail de chaque ligne : quantité, prix unitaire hors taxes, taux de TVA ou mention d&apos;exonération ;</li>
-          <li>les totaux hors taxes et toutes taxes comprises ;</li>
-          <li>la date de règlement, et le taux des pénalités de retard avec l&apos;indemnité forfaitaire de 40 € due par un client professionnel.</li>
+          <li><strong>Convenez du délai à l&apos;avance</strong>{' '}et écrivez-le sur le devis, plutôt que de le découvrir à la première relance.</li>
+          <li><strong>Facturez le jour même</strong>, avec sa raison sociale et le détail par véhicule : une facture incomplète revient, et repart en bas de la pile.</li>
+          <li><strong>Demandez à qui l&apos;envoyer</strong>{' '}: le responsable d&apos;agence qui vous a fait venir n&apos;est pas toujours celui qui paie.</li>
         </UL>
-        <P>
-          Les délais de paiement entre professionnels sont encadrés (fiche Service-Public sur les délais de
-          paiement entre professionnels, vérifiée le 7 août 2026) : 30 jours par défaut à compter de la réalisation de la
-          prestation, et au plus 60 jours à compter de l&apos;émission de la facture ou 45 jours fin de mois si c&apos;est
-          convenu. Le taux de pénalités ne peut pas être inférieur à trois fois le taux de l&apos;intérêt
-          légal, et l&apos;indemnité de recouvrement est de 40 € par facture impayée. À partir du
-          1er septembre 2027, les micro-entreprises devront ajouter quatre mentions : le SIREN du client,
-          l&apos;adresse de livraison si elle diffère, la nature de l&apos;opération et l&apos;option pour la
-          taxe d&apos;après les débits le cas échéant.
-        </P>
-        <Callout>
-          <p>
-            <strong>Franchise de TVA et clients professionnels :</strong>{' '}un client assujetti
-            récupère généralement la TVA qu&apos;on lui facture. Pour lui, un concurrent à 100 € hors
-            taxes (120 € avec TVA) et vous à 100 € en franchise reviennent au même : ne baissez pas
-            votre prix en pensant compenser. À l&apos;inverse, le jour où vous facturez la TVA, vos
-            clients professionnels ne voient pas de différence, mais vos particuliers paient 20 % de
-            plus à prix hors taxes égal. Si votre chiffre d&apos;affaires approche des seuils de la
-            franchise, lisez{' '}
-            <A href="/blog/micro-entreprise-laveur-auto-mobile">micro-entreprise pour laveur auto mobile</A>.
-          </p>
-        </Callout>
 
         <H2>Ce qui ne marche pas</H2>
         <UL>
@@ -283,7 +239,7 @@ export default function Page() {
         <AlsoRead
           items={[
             { href: '/blog/trouver-des-clients-laveur-auto-mobile', label: 'Comment trouver des clients quand on est laveur auto mobile' },
-            { href: '/blog/devis-lavage-auto-domicile', label: 'Faire un devis de lavage auto à domicile : modèle, mentions, durée de validité' },
+            { href: '/blog/devis-lavage-auto-domicile', label: 'Faire un devis de lavage auto à domicile : quand, quoi écrire, modèle à recopier' },
             { href: '/blog/carte-de-fidelite-laveur-auto-mobile', label: 'Carte de fidélité pour laveur auto mobile : faire revenir ses clients' },
             { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
           ]}
