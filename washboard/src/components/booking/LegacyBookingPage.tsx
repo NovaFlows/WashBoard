@@ -94,6 +94,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
             </div>
           ) : (
             <div className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element -- logo statique, taille gérée par CSS */}
               <img
                 src="/LogoWashBoard.png"
                 alt=""

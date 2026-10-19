@@ -95,6 +95,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
       setChargementErreur('Impossible de charger vos promotions. Vérifiez votre connexion.')
     }
   }, [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { void charger() }, [charger])
 
   const maj = (champs: Partial<Brouillon>) => setBrouillon(b => (b ? { ...b, ...champs } : b))

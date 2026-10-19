@@ -122,6 +122,7 @@ export default function StepSlot({
   useEffect(() => {
     if (!active || debouncedAddress.trim().length <= 5) return
     let stale = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- début de la vérification de zone (requête réseau)
     setFetchingZone(true)
     setZoneAllowed(false)
     setZoneMessage(null)
@@ -135,6 +136,7 @@ export default function StepSlot({
 
   useEffect(() => {
     if (!active || !hasTravelFee || debouncedAddress.trim().length <= 5 || (travelFeeMode === 'previous' && !(selectedDate && selectedTime))) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estimation des frais liée à l'adresse et au créneau
       setTravelFeeEstimate(null)
       setFetchingTravelFee(false)
       return
@@ -157,6 +159,7 @@ export default function StepSlot({
   useEffect(() => {
     if (!active || !selectedDate || debouncedAddress.trim().length <= 5) return
     let stale = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- début du chargement des fenêtres de trajet (requête réseau)
     setFetchingSmarts(true)
     setRequestError(null)
     fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${toDateStr(selectedDate)}`)
@@ -238,6 +241,7 @@ export default function StepSlot({
   // on le désélectionne pour éviter qu'un client valide un RDV physiquement impossible.
   useEffect(() => {
     if (selectedTime && !fetchingSmarts && !slotsForDay.includes(selectedTime)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- créneau désélectionné quand il devient infaisable
       setSelectedTime(null)
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps

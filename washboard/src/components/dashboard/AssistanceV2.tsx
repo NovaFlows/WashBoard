@@ -143,10 +143,13 @@ function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, 
   const [texteFil, setTexteFil] = useState('')
   const [texteNouvelle, setTexteNouvelle] = useState('')
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- texte restitué après un envoi en échec
   useEffect(() => { if (erreurFil) setTexteFil(erreurFil.texte) }, [erreurFil])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- texte restitué après un envoi en échec
   useEffect(() => { if (erreurNouvelle) setTexteNouvelle(erreurNouvelle.texte) }, [erreurNouvelle])
   useEffect(() => { fin.current?.scrollIntoView({ block: 'end' }) }, [filOuvert?.messages.length])
   // Une question envoyée fait basculer `feuille` sur son fil, dont le composer repart vide.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- composer vidé quand la feuille bascule sur le fil
   useEffect(() => { if (feuille?.quoi === 'fil') setTexteFil('') }, [feuille])
 
   if (feuille?.quoi === 'fil' && filOuvert) {
@@ -243,6 +246,7 @@ export default function AssistanceV2({ liste }: Props) {
     if (!loaded || lienAppliqué.current) return
     lienAppliqué.current = true
     if (filParam && threads.some(t => t.id === filParam)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- ouverture du fil du lien ?fil= une fois les fils chargés
       setFeuille({ quoi: 'fil', id: filParam })
       ouvrirFil(filParam)
     }
@@ -254,6 +258,7 @@ export default function AssistanceV2({ liste }: Props) {
   useEffect(() => {
     if (!sendError) return
     if (feuille?.quoi === 'fil' && feuille.id === sendError.threadId && !threads.some(t => t.id === sendError.threadId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- retour au champ de saisie quand le fil optimiste disparaît
       setFeuille({ quoi: 'nouvelle' })
     }
   }, [sendError, threads, feuille])

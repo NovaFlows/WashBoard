@@ -58,6 +58,7 @@ export default function SupportPanel({
   // À chaque ouverture, on repart de l'écran adapté à l'état courant.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- écran remis à l'état adapté à chaque ouverture
       setVue(threads.length === 0 ? { type: 'nouvelle' } : { type: 'liste' })
       setVientDenvoyer(false)
     }

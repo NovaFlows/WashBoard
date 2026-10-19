@@ -1,13 +1,13 @@
 'use client'
 
 import { useTheme } from './ThemeProvider'
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
+
+const abonnementVide = () => () => {}
 
 export function ThemeToggle({ large, nav, header }: { large?: boolean; nav?: boolean; header?: boolean }) {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
+  const mounted = useSyncExternalStore(abonnementVide, () => true, () => false)
   if (!mounted) return <div className={header ? 'w-9 h-9 sm:w-10 sm:h-10' : large ? 'w-12 h-12' : 'w-9 h-9'} />
 
   const isDark = theme === 'dark'

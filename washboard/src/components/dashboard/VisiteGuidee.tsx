@@ -307,6 +307,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
   // mise à jour, pas un re-rendu de plus qu'avant.
   const [etatRect, setEtatRect] = useState<{ rect: DOMRect | null; instantane: boolean }>({ rect: null, instantane: false })
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- rectangle de la cible synchronisé avec le DOM
     if (!cible) { setEtatRect({ rect: null, instantane: true }); return }
     return surligner(cible, !v2, (r, instantane) => setEtatRect({ rect: r, instantane }))
   }, [cible, pathname, v2])
@@ -420,6 +421,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
   // l'effet juste en dessous, qui s'en sert.
   const coteDejaVerifieRef = useRef(false)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- côté de la carte recalculé quand la cible change
     if (!rect) { setCoteCarte('centre'); coteDejaVerifieRef.current = false; return }
     if (!instantane) { setCoteCarte(decidreCote(rect)); coteDejaVerifieRef.current = false }
   }, [rect, instantane])
@@ -528,6 +530,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
   const [etatInteractif, setEtatInteractif] = useState<'attente' | 'deja_fait' | 'vient_de_reussir'>('attente')
   useEffect(() => {
     const cle = etapeActuelle?.interactif
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- état de l'étape interactif synchronisé avec l'avancement
     if (!cle) { setEtatInteractif('attente'); return }
     if (dejaSatisfait) { setEtatInteractif('deja_fait'); return }
     setEtatInteractif('attente')
@@ -560,8 +563,10 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
   // repropose de continuer s'il veut ». Pas besoin d'un second geste pour
   // voir la confirmation « Fait ✓ » avant l'avance automatique (ci-dessus).
   const [reduite, setReduite] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carte dépliée à chaque nouvelle étape
   useEffect(() => { setReduite(false) }, [etape])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carte dépliée quand l'action réussit
     if (etatInteractif === 'vient_de_reussir') setReduite(false)
   }, [etatInteractif])
 

@@ -133,6 +133,7 @@ export function Sidebar({ isOpen, onClose, unreadSupportCount, estEquipeSupport,
         {/* Header sidebar */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo statique, taille gérée par CSS */}
             <img src="/LogoWashBoard.png" alt="WashBoard" className="w-8 h-8 object-contain" />
             <span className="font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">WashBoard</span>
           </div>

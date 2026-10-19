@@ -50,6 +50,7 @@ export default function Chiffres({ betaRefonte, ...props }: Props) {
   useEffect(() => {
     const pwa = isDesignMobile()
     const bureau = estEcranRail() && bureauAutorise(betaRefonte)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- média lu au montage, évité au rendu serveur (hydratation)
     setStatut(pwa || bureau ? 'v2' : 'v1')
     // Décidé une seule fois, au montage (voir le commentaire plus haut) : `betaRefonte` est une
     // prop stable pour la durée de vie de la page (venue du serveur), pas une raison de

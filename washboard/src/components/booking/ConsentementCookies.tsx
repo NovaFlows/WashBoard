@@ -51,6 +51,7 @@ export default function ConsentementCookies({ pixelId, slug }: {
 
   useEffect(() => {
     const lu = lireRegistre()
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- choix lu dans le navigateur au montage (hydratation)
     setRegistre(lu)
     setVisible(doitDemander(pixelId, lu, slug))
     if (peutChargerPixel(pixelId, lu, slug)) chargerPixel(pixelId!)

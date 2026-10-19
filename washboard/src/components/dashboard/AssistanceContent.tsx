@@ -37,6 +37,7 @@ export default function AssistanceContent() {
     applique.current = true
 
     if (filParam && threads.some(t => t.id === filParam)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- ouverture du fil du lien ?fil= une fois les fils chargés
       setVue({ type: 'fil', id: filParam })
       ouvrirFil(filParam)
       return

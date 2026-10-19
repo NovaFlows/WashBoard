@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import PublicitesV2, { type PublicitesProps } from '@/components/dashboard/PublicitesV2'
@@ -21,16 +21,16 @@ import PublicitesV2, { type PublicitesProps } from '@/components/dashboard/Publi
 // ferait clignoter un écran au mauvais format sur le site.
 //
 // `estV2` est déjà réactif (`useSyncExternalStore`, voir useDashboardV2.ts) : seul `verifie`
-// reste un état, pour ne rediriger qu'une fois le premier rendu client passé.
+// est faux au rendu serveur et vrai ensuite, pour ne rediriger qu'une fois le premier rendu client passé.
+const abonnementVide = () => () => {}
+
 export default function Publicites({ betaRefonte, ...props }: PublicitesProps & {
   /** `washer.beta_refonte` — voir `useDashboardV2.ts`. */
   betaRefonte?: boolean | null
 }) {
   const router = useRouter()
   const estV2 = useDashboardV2(betaRefonte)
-  const [verifie, setVerifie] = useState(false)
-
-  useEffect(() => { setVerifie(true) }, [])
+  const verifie = useSyncExternalStore(abonnementVide, () => true, () => false)
 
   useEffect(() => {
     if (verifie && !estV2) router.replace('/dashboard/crm?onglet=campagnes')

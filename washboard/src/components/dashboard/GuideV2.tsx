@@ -123,6 +123,7 @@ export default function GuideV2({ liste }: Props) {
   useEffect(() => {
     const ancre = window.location.hash.slice(1)
     if (!ancre) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre d'URL lue au montage
     setOuvertes([ancre])
     const t = requestAnimationFrame(() =>
       requestAnimationFrame(() => document.getElementById(ancre)?.scrollIntoView({ block: 'start' })),

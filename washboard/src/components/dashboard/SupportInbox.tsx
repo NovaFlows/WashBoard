@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
 import { ChevronDown, ChevronLeft, CheckCircle2, RotateCcw, Send, AlertCircle, X, Archive, ArchiveRestore, Undo2 } from 'lucide-react'
 import { formatSupportDate, type SupportConversationEquipe } from '@/lib/support'
@@ -65,6 +65,8 @@ function trierConversations(liste: SupportConversationEquipe[]): SupportConversa
   })
 }
 
+const abonnementVide = () => () => {}
+
 function ConversationRow({
   conv,
   ouverte,
@@ -101,8 +103,7 @@ function ConversationRow({
   // glissement, un doigt si). Évaluée après le montage seulement : `window`
   // n'existe pas côté serveur, et une valeur différente entre le rendu
   // serveur et le premier rendu client casserait l'hydratation.
-  const [peutGlisser, setPeutGlisser] = useState(false)
-  useEffect(() => setPeutGlisser(estClavierTactile()), [])
+  const peutGlisser = useSyncExternalStore(abonnementVide, estClavierTactile, () => false)
   const x = useMotionValue(0)
   const rangeeRef = useRef<HTMLDivElement>(null)
 
@@ -121,6 +122,7 @@ function ConversationRow({
 
   // Une réponse qui échoue ne doit pas faire perdre ce qui a été écrit.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- texte restitué après un envoi en échec
     if (erreur) setTexte(erreur.texte)
   }, [erreur])
 

@@ -354,6 +354,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     if (!rdv) return
     rdvApplique.current = true
     const d = new Date(rdv.scheduled_at)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- navigation vers le rendez-vous du lien ?rdv= une fois chargé
     setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
     openBooking(rdv)
   }, [rdvParam, bookings, openBooking])

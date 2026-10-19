@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import MessagesAutomatiquesV2, { type MessagesAutomatiquesProps } from '@/components/dashboard/MessagesAutomatiquesV2'
@@ -20,9 +20,11 @@ import MessagesAutomatiquesV2, { type MessagesAutomatiquesProps } from '@/compon
 //
 // `estV2` vient déjà d'un hook réactif (`useSyncExternalStore`, voir useDashboardV2.ts) : pas
 // besoin de le recopier dans un état local à chaque changement (ce que faisait l'ancienne
-// version avec `isPwaStandalone()` nu) — seul `verifie` reste un état, pour ne déclencher la
+// version avec `isPwaStandalone()` nu) — seul `verifie` est faux au rendu serveur et vrai ensuite, pour ne déclencher la
 // redirection qu'une fois le premier rendu client passé (jamais pendant le rendu serveur, où
 // `estV2` vaut toujours faux).
+const abonnementVide = () => () => {}
+
 export default function MessagesAutomatiques({ betaRefonte, ...props }: MessagesAutomatiquesProps & {
   /** `washer.beta_refonte` — garde-fou temporaire du cas « site, grand écran » (voir
    *  `useDashboardV2.ts`). Sans effet dans la PWA, où v2 s'affiche sans condition. */
@@ -30,9 +32,7 @@ export default function MessagesAutomatiques({ betaRefonte, ...props }: Messages
 }) {
   const router = useRouter()
   const estV2 = useDashboardV2(betaRefonte)
-  const [verifie, setVerifie] = useState(false)
-
-  useEffect(() => { setVerifie(true) }, [])
+  const verifie = useSyncExternalStore(abonnementVide, () => true, () => false)
 
   useEffect(() => {
     if (verifie && !estV2) router.replace('/dashboard/parametres/tout#avis')
