@@ -174,7 +174,7 @@ export const ARTICLES: Article[] = [
     description:
       'Comment calculer un prix qui tient : temps réel par prestation, frais de déplacement, charges et cotisations. Avec une grille indicative et les erreurs qui plombent une marge.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 9,
   },
   {
