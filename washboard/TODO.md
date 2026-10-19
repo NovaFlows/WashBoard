@@ -374,7 +374,7 @@
       Fait par Ryan, en lecture seule, sur www.washboard.fr et le code à jour. **15 points
       déjà en place, 5 restent.** Ordre prévu par Ryan : la vitesse d'abord (session
       suivante).
-  - [ ] **1. Vitesse de chargement.** Mesuré en 4G lente, sur un téléphone moyen (CPU ×4) :
+  - [x] 2026-10-19 (remesuré en prod : LCP 2,2–2,5 s en 4G lente, TTFB 0,2–0,5 s ; les 2,3 s = démarrage à froid Vercel ; Ryan : on laisse) — **1. Vitesse de chargement.** Mesuré en 4G lente, sur un téléphone moyen (CPU ×4) :
         blog LCP 1,3 s (très bon), accueil LCP 2,3 s (bon), **page de réservation LCP 3,1 s,
         dont 2,3 s d'attente du serveur (TTFB)** — c'est la page que voient les clients des
         laveurs. Une seule mesure : la refaire d'abord pour écarter un démarrage à froid.
@@ -3328,6 +3328,19 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🔍 Contenu & tarifs (SEO-GEO)
 
+- [ ] **Emails refaits dans la DA 2026 — branche LOCALE `design/emails-da`, NON poussée (2026-10-19).**
+      Gabarit commun (`lib/email/gabarit.ts`), 20 emails, zéro emoji (garde `gabarit.test.ts`), icônes
+      PNG dessinées dans `public/email/`, relecture `designer`. tsc/eslint/vitest/build verts. En
+      attente de la validation de Ryan sur captures. À trancher : titre de la relance (« Un message de
+      <laveur> », seul texte changé), doublons du reçu (nom/téléphone, encadré « Justificatif »), bouton
+      vers la page de réservation dans l’email d’annulation d’acompte (lien non fourni à la fonction),
+      pastilles de couleur des offres (PLAN_COULEURS, cyan/violet hérités) dans « Quatre offres ».
+      Les icônes ne s’affichent qu’une fois `public/email/` déployé.
+- [ ] **À voir avec Alexandre : créneaux intelligents introuvables en démo sur ordinateur (2026-10-19).**
+      Ils sont dans Clients › Automatismes, tout en bas de la page ; plus rien dans Prestations ni
+      Réglages. Des collègues ne les ont pas trouvés devant un prospect. Proposer une entrée visible
+      (Prestations et prix, à côté de la zone d’intervention).
+
 > Suite de la revue du 2026-10-01 (`seo-geo`, Opus) : blog + FAQ + pages pilier passés en revue
 > suite au recentrage à 4 offres (Découverte/Starter/Pro/Business). Plusieurs vrais bugs de
 > contenu trouvés et corrigés (prix de Business publié dans le JSON-LD alors qu'il est sur
@@ -3353,7 +3366,7 @@ rien à faire, mais que le projet reste globalement sain.
       depuis le 2026-09-01 selon Service-Public (ancienne mention tolérée jusqu’au 31/12/2027).
       Imprimée dans `FacturePDF.tsx:203`, `email/index.ts:317`, `confirmation/[id]/page.tsx:145`,
       `FacturationCard.tsx:209`. Agent : `dev` (+ relecture `legal`).
-- [ ] **Avis Google sans email** : le commentaire du cron dit qu’un rendez-vous sans email part
+- [x] 2026-10-19 (PR #14 : programmé aussi par SMS au téléphone, même règle que la relance) — **Avis Google sans email** : le commentaire du cron dit qu’un rendez-vous sans email part
       par SMS, mais `bookings/[id]/route.ts:211` exige un email pour programmer l’avis. À trancher
       (code ou commentaire). Agent : `dev`.
 - [ ] **Facture automatique : « paiement comptant le jour de la prestation » imprimé pour tous,
@@ -3363,7 +3376,7 @@ rien à faire, mais que le projet reste globalement sain.
       seul** (pas de bouton d'annulation sur sa page de confirmation, il prévient le laveur).
       Vrai dans le code, mais c'est une limite affichée : la garder telle quelle, ou ajouter
       un bouton d'annulation côté client.
-- [ ] **Classes Tailwind en dur dans les props des pages métiers** (`text-[#1651E8]…` dans les
+- [x] 2026-10-19 (retirées partout, + ancien bleu des emails remplacé par #306090) — **Classes Tailwind en dur dans les props des pages métiers** (`text-[#1651E8]…` dans les
       liens passés à `MetierPageTemplate`) : sans effet sous la DA v2, à retirer au calme.
       Agent : `seo-geo`.
 - [x] 2026-10-01 — **Page `/optimisation-tournee-lavage-auto` : le titre disait « Deux
