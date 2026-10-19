@@ -381,7 +381,7 @@
         Sur l'accueil, **CLS 0,155** (seuil 0,1) : le contenu bouge pendant le chargement.
         PageSpeed Insights n'a pas pu être utilisé (quota Google épuisé ce jour-là).
         Agent : `dev`.
-  - [ ] **2. Contraste des couleurs** — remesuré le 2026-10-19 (axe-core, WCAG AA, mode clair).
+  - [x] 2026-10-19 — **2. Contraste des couleurs** (fin : gris clair des pages publiques `#9A9AA4` → `#6E6E78`, sombre `#76767F` → `#8E8E98`, badge « Nouveau » en `#0F6E43`, libellés de la colonne WashBoard du comparatif mobile ; axe-core : 0 défaut sur accueil, comparatif, pages métiers, blog, clair et sombre, 1280 et 390 px) — remesuré le 2026-10-19 (axe-core, WCAG AA, mode clair).
         Corrigé le même jour : les titres de la landing (2e moitié en bleu, `.h2 .doux`), l'aide
         sous le téléphone à l'inscription, les titres des étapes repliées de la réservation.
         Restent (non demandés) : sur la landing, les étapes inactives de la frise « Journée »
