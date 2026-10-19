@@ -162,6 +162,8 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // qu'on ne peut pas lire — et si le pari est perdu, c'est la réservation
     // entière qui échoue, pas seulement l'attribution.
     utm_campaign, utm_content,
+    // Contrôlée ci-dessous, mais sans colonne en base : ne pas l’envoyer à l’insertion.
+    acompte_accepte,
     ...bookingData
   } = cleanData
   const id = randomUUID()
@@ -591,7 +593,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Preuve d'acceptation (conseil du `legal`, décision d'Alexandre le 2026-10-19) : une
   // réservation avec acompte n'existe que si le client a coché les conditions. Une page ouverte
   // avant la mise en ligne de la case ne l'envoie pas : d'où le « rechargez la page ».
-  if (acompte && bookingData.acompte_accepte !== true) {
+  if (acompte && acompte_accepte !== true) {
     return Response.json({ error: 'Cochez la case pour accepter les conditions de l’acompte (rechargez la page si elle n’apparaît pas).' }, { status: 400 })
   }
 
