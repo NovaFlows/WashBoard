@@ -884,6 +884,8 @@ describe('POST /api/bookings — acompte', () => {
     expect(reserv.acompte_montant).toBe(18) // 30 % de 60
     expect(reserv.acompte_statut).toBe('en_attente')
     expect(typeof reserv.acompte_echeance).toBe('string')
+    // Pas de colonne acompte_accepte en base : l’envoyer fait échouer toute la réservation (42703).
+    expect(reserv).not.toHaveProperty('acompte_accepte')
     expect(body.data.acompte.montant).toBe(18)
     expect(body.data.acompte.liens).toEqual([
       { cle: 'paypal', libelle: 'PayPal', url: 'https://paypal.me/eclat/18.00EUR', montantExact: true },
