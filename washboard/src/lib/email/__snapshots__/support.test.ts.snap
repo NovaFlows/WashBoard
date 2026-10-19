@@ -20,6 +20,8 @@ a{color:#306090}
 .wb-carte{padding:28px 20px!important}
 .wb-titre{font-size:24px!important}
 .wb-col{display:block!important;width:100%!important;padding:0 0 16px!important;border:0!important}
+.wb-bouton{width:100%!important}
+.wb-bouton a{display:block!important;text-align:center!important}
 }
 </style>
 <!--[if mso]><style>body,table,td,p,a,h1,div,span,li{font-family:Arial,Helvetica,sans-serif!important}</style><![endif]-->
@@ -39,8 +41,8 @@ a{color:#306090}
 <h1 class="wb-titre" style="margin:0 0 8px;font-family:'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:27px;line-height:1.12;font-weight:700;letter-spacing:-0.025em;font-stretch:108%;color:#16161A;">Nouvelle réponse</h1>
 <p style="margin:0 0 24px;font-family:'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#6B6B76;">L&apos;équipe WashBoard a répondu à votre question</p>
 <p style="margin:0 0 24px;font-family:'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#6B6B76;">À propos de : <strong style="color:#16161A;">{TITRE}</strong></p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:0;"><tr>
-<td style="border-radius:13px;background:#306090;"><a href="https://app.test/dashboard/assistance?fil={ID}" target="_blank" style="display:inline-block;padding:15px 26px;font-family:'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;border-radius:13px;">Voir la réponse →</a></td>
+<table role="presentation" class="wb-bouton" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:0;"><tr>
+<td align="center" style="border-radius:13px;background:#306090;"><a href="https://app.test/dashboard/assistance?fil={ID}" target="_blank" style="display:inline-block;padding:15px 26px;font-family:'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;border-radius:13px;">Voir la réponse →</a></td>
 </tr></table>
 <p style="margin:16px 0 0;font-family:'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#6E6E78;">Connectez-vous à votre tableau de bord pour la lire.</p>
 </td></tr>

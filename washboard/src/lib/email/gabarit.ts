@@ -23,13 +23,18 @@ export const COULEUR = {
 
 export const POLICE = `'Archivo',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif`
 
+/** Chiffres à recopier (références, IBAN, code) : une seule pile partout, jamais Courier seul. */
+export const MONO = `'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono','Courier New',monospace`
+
 // Répétée sur chaque bloc de texte : Outlook n'hérite pas la police dans les tables imbriquées.
 const F = `font-family:${POLICE};`
 
 const FONDS = {
   ambre: { trait: COULEUR.ambre, fond: '#FAF5EE' },
   rouge: { trait: COULEUR.rouge, fond: '#FBF2F1' },
-  info: { trait: COULEUR.accent, fond: '#F2F5F9' },
+  // Information sans urgence. Pas de bleu : dans un email au nom de WashBoard, le bouton est
+  // le seul élément d'accent ; dans un email au nom du laveur, le bleu n'est pas sa couleur.
+  neutre: { trait: COULEUR.encre, fond: COULEUR.papier },
 } as const
 
 /** Page complète : papier, en-tête, carte de 600 px au plus, pied. */
@@ -59,6 +64,8 @@ a{color:${COULEUR.accent}}
 .wb-carte{padding:28px 20px!important}
 .wb-titre{font-size:24px!important}
 .wb-col{display:block!important;width:100%!important;padding:0 0 16px!important;border:0!important}
+.wb-bouton{width:100%!important}
+.wb-bouton a{display:block!important;text-align:center!important}
 }
 </style>
 <!--[if mso]><style>body,table,td,p,a,h1,div,span,li{font-family:Arial,Helvetica,sans-serif!important}</style><![endif]-->
@@ -128,11 +135,12 @@ export function paragraphe(html: string, { ton = 'encre', marge = '0 0 16px', st
 }
 
 /** Bouton : sombre dans les emails au nom du laveur (comme le tampon), accent dans ceux
- *  au nom de WashBoard — le bleu est la couleur de WashBoard, pas celle du laveur. */
+ *  au nom de WashBoard — le bleu est la couleur de WashBoard, pas celle du laveur. Pleine
+ *  largeur sous 480 px. */
 export function bouton(libelle: string, href: string, variante: 'sombre' | 'accent', marge = '8px 0 0'): string {
   const fond = variante === 'sombre' ? COULEUR.encre : COULEUR.accent
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:${marge};"><tr>
-<td style="border-radius:13px;background:${fond};"><a href="${href}" target="_blank" style="display:inline-block;padding:15px 26px;${F}font-size:15px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;border-radius:13px;">${libelle}</a></td>
+  return `<table role="presentation" class="wb-bouton" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:${marge};"><tr>
+<td align="center" style="border-radius:13px;background:${fond};"><a href="${href}" target="_blank" style="display:inline-block;padding:15px 26px;${F}font-size:15px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;border-radius:13px;">${libelle}</a></td>
 </tr></table>`
 }
 

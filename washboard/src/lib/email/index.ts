@@ -7,7 +7,7 @@ import { assistanceThreadUrl } from '@/lib/supportMapping'
 import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
 import { teintesCarte } from '@/lib/carteFidelite'
 import {
-  COULEUR, POLICE, page, enteteWashBoard, enteteLaveur, iconeTitre, titre, paragraphe,
+  COULEUR, POLICE, MONO, page, enteteWashBoard, enteteLaveur, iconeTitre, titre, paragraphe,
   bouton, boutonEnLigne, details, encadre, bloc, etiquette, type LigneDetail,
 } from './gabarit'
 
@@ -46,7 +46,7 @@ function vehiclesHtml(items: VehicleItem[]): string {
 
 /** Petit encadré blanc à l'intérieur d'un bloc papier (moyens de paiement de l'acompte). */
 function sousBloc(html: string): string {
-  return `<div style="margin-top:10px;padding:12px 14px;background:${COULEUR.carte};border:1px solid ${COULEUR.filet};border-radius:10px;font-size:13.5px;color:${COULEUR.encre};line-height:1.6;">${html}</div>`
+  return `<div style="margin-top:10px;padding:12px 14px;background:${COULEUR.carte};border:1px solid ${COULEUR.filet};border-radius:10px;font-family:${POLICE};font-size:13.5px;color:${COULEUR.encre};line-height:1.6;">${html}</div>`
 }
 
 // ── Email 1 : accusé de réception (statut pending) ────────────────────────
@@ -106,9 +106,9 @@ Envoyez ${formatEuros(params.acompte.montant)} € avec Wero, depuis l’applica
 ${params.acompte.wero.lien ? `<br>${boutonEnLigne('Payer avec Wero', escapeHtml(params.acompte.wero.lien))}` : ''}`) : ''}
 ${params.acompte.virement ? sousBloc(`<strong>Par virement</strong><br>
 Titulaire : ${escapeHtml(params.acompte.virement.titulaire)}<br>
-IBAN : <span style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.iban)}</span><br>
+IBAN : <span style="font-family:${MONO};">${escapeHtml(params.acompte.virement.iban)}</span><br>
 Montant : ${formatEuros(params.acompte.montant)} €<br>
-Libellé à indiquer : <strong style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.reference)}</strong>`) : ''}
+Libellé à indiquer : <strong style="font-family:${MONO};">${escapeHtml(params.acompte.virement.reference)}</strong>`) : ''}
 ${params.acompte.liens.map(l => boutonEnLigne(`Payer avec ${escapeHtml(l.libelle)}`, escapeHtml(l.url))).join('')}`) : ''
 
   const fidelite = params.fidelite ? bloc(`
@@ -124,14 +124,14 @@ ${params.acompte.liens.map(l => boutonEnLigne(`Payer avec ${escapeHtml(l.libelle
       titre: 'Demande reçue',
       entete: enteteLaveur(escapeHtml(params.washerName)),
       contenu: `
-${titre({ icone: iconeTitre(base, 'horloge'), texte: 'Demande reçue', sousTitre: `En attente de confirmation par ${escapeHtml(params.washerName)}` })}
+${titre({ texte: 'Demande reçue', sousTitre: `En attente de confirmation par ${escapeHtml(params.washerName)}` })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { marge: '0 0 8px' })}
 ${paragraphe(`Votre demande de réservation a bien été reçue. <strong>${escapeHtml(params.washerName)}</strong> va la confirmer dans les plus brefs délais.
 Vous recevrez un email avec votre reçu dès que c&apos;est accepté.`, { marge: '0 0 20px' })}
 ${details(lignes)}
 ${acompte}
 ${fidelite}
-${paragraphe(`Référence de votre demande : <strong style="font-family:'Courier New',monospace;color:${COULEUR.encre};">${ref}</strong>`, { ton: 'gris', marge: '0' })}`,
+${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};color:${COULEUR.encre};">${ref}</strong>`, { ton: 'gris', marge: '0' })}`,
       pied: 'Ce message est un accusé de réception automatique. Votre reçu vous sera envoyé à la confirmation.',
     }),
   })
@@ -218,7 +218,7 @@ ${colonne('Date d&apos;émission', `<p style="margin:0;font-size:14px;font-weigh
       <p style="margin:0 0 4px;font-size:15px;font-weight:700;line-height:1.4;color:${COULEUR.encre};">${escapeHtml(params.serviceName)}${vehicleLabel}</p>
       <p style="margin:0 0 2px;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${formattedDate} à ${time}</p>
       <p style="margin:0;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${escapeHtml(params.address)}</p>
-      ${optimise ? `<p style="margin:8px 0 0;font-size:12.5px;font-weight:600;color:${COULEUR.accent};">${etoileCreneau(appUrl, '')} Créneau optimisé (-${discount}€)</p>` : ''}
+      ${optimise ? `<p style="margin:8px 0 0;font-size:12.5px;font-weight:600;color:${COULEUR.encre};">${etoileCreneau(appUrl, '')} Créneau optimisé (-${discount}€)</p>` : ''}
     </td>
     <td style="padding:16px 0;vertical-align:top;text-align:right;white-space:nowrap;border-bottom:1px solid ${COULEUR.filet};">
       ${optimise
@@ -231,13 +231,13 @@ ${colonne('Date d&apos;émission', `<p style="margin:0;font-size:14px;font-weigh
     <td colspan="2" style="padding:10px 0;font-size:12.5px;font-style:italic;color:${COULEUR.grisPetit};">TVA non applicable — art. 293 B du CGI</td>
   </tr>
   <tr>
-    <td style="padding:14px 12px 0 0;border-top:2px solid ${COULEUR.encre};font-size:13px;font-weight:700;letter-spacing:.04em;color:${COULEUR.encre};">TOTAL À RÉGLER SUR PLACE</td>
+    <td style="padding:14px 12px 0 0;border-top:2px solid ${COULEUR.encre};font-size:12.5px;font-weight:700;line-height:1.35;letter-spacing:.06em;color:${COULEUR.encre};">TOTAL À RÉGLER SUR PLACE</td>
     <td style="padding:12px 0 0;border-top:2px solid ${COULEUR.encre};text-align:right;white-space:nowrap;font-size:24px;font-weight:700;letter-spacing:-0.02em;font-stretch:108%;color:${COULEUR.encre};">${finalPriceStr}€</td>
   </tr>
 </table>
 ${paragraphe('Mode de règlement : paiement comptant sur place', { ton: 'petit', marge: '10px 0 24px', style: 'text-align:right;' })}
 ${params.notes ? bloc(`${etiquette('Notes du client', '0 0 4px')}<p style="margin:0;font-size:14px;line-height:1.5;font-style:italic;color:${COULEUR.encre};">${escapeHtml(params.notes)}</p>`) : ''}
-${encadre(`<strong>Justificatif de prestation — facture</strong><br><span style="font-weight:400;color:${COULEUR.gris};">Ce document fait office de reçu de prestation de service. Référence : <strong style="color:${COULEUR.encre};">${ref}</strong> · Émis le ${today}</span>`, 'info')}
+${encadre(`<strong>Justificatif de prestation — facture</strong><br><span style="font-weight:400;color:${COULEUR.gris};">Ce document fait office de reçu de prestation de service. Référence : <strong style="color:${COULEUR.encre};">${ref}</strong> · Émis le ${today}</span>`, 'neutre')}
 ${bouton('Télécharger la confirmation PDF', pdfUrl, 'sombre', '0')}`
 
   return resend.emails.send({
@@ -248,7 +248,7 @@ ${bouton('Télécharger la confirmation PDF', pdfUrl, 'sombre', '0')}`
       titre: 'Reçu de réservation',
       entete: enteteLaveur(nom, `Prestataire de nettoyage et d'entretien à domicile${tel ? `<br>${tel}` : ''}`),
       contenu,
-      pied: 'Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Réservation de prestations à domicile',
+      pied: 'Ce reçu a été généré automatiquement par WashBoard · Réservation de prestations à domicile',
     }),
   })
 }
@@ -269,12 +269,12 @@ export async function sendFollowupEmail(params: SendFollowupEmailParams) {
     to: params.to,
     subject: `Un message de ${escapeHtml(params.washerName)}`,
     html: page({
-      titre: 'Message de votre laveur',
+      titre: `Un message de ${escapeHtml(params.washerName)}`,
       entete: enteteLaveur(escapeHtml(params.washerName)),
       contenu: `
-${titre({ texte: 'Message de votre laveur' })}
+${titre({ texte: `Un message de ${escapeHtml(params.washerName)}` })}
 ${paragraphe(escapeHtml(params.message), { marge: '0', style: 'white-space:pre-line;line-height:1.7;' })}`,
-      pied: `Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
     }),
   })
 }
@@ -303,10 +303,10 @@ ${titre({ texte: 'Merci pour votre confiance !', sousTitre: `Comment s'est pass�
 ${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { marge: '0 0 8px' })}
 ${paragraphe(`Votre véhicule est tout propre ? On espère que vous êtes satisfait·e !
 Un petit avis Google aiderait énormément <strong>${escapeHtml(params.washerName)}</strong> — ça prend moins d'une minute.`, { marge: '0 0 22px' })}
-<img src="${base}/email/etoiles.png" width="164" height="28" alt="" style="display:block;border:0;margin:0 0 22px;">
+<img src="${base}/email/etoiles.png" width="144" height="24" alt="" style="display:block;border:0;margin:0 0 24px;">
 ${bouton('Laisser un avis Google', escapeHtml(params.reviewUrl), 'sombre', '0')}
 ${paragraphe('Merci beaucoup pour votre soutien', { ton: 'gris', marge: '20px 0 0' })}`,
-      pied: `Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
     }),
   })
 }
@@ -341,7 +341,7 @@ ${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { mar
 ${paragraphe(`Merci pour votre confiance. Vous trouverez ci-dessous la facture de la prestation réalisée par
 <strong>${escapeHtml(params.washerName)}</strong>.`, { marge: '0 0 24px' })}
 ${bouton('Télécharger la facture (PDF)', escapeHtml(url), 'sombre', '0')}`,
-      pied: `Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
     }),
   })
 }
@@ -394,11 +394,11 @@ ${paragraphe(devis
   ? `Voici le devis demandé à <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`
   : `Merci pour votre confiance. Voici la facture de <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`, { marge: '0 0 20px' })}
 ${devis && params.valableJusquau
-  ? encadre(`Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.`, 'info', '0 0 20px')
+  ? encadre(`Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.`, 'neutre', '0 0 20px')
   : ''}
 ${paragraphe('Le PDF est joint à ce message.', { ton: 'gris', marge: '0 0 16px' })}
 ${bouton(`Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne`, escapeHtml(url), 'sombre', '0')}`,
-      pied: `Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
     }),
   })
 }
@@ -483,15 +483,16 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
     ? vehiclesHtml(params.vehiclesDetail)
     : (escapeHtml(formatVehicle(params.vehicleType, params.vehicleCount)) || null)
 
+  // Ordre de lecture du laveur entre deux prestations : quand, où, qui, quoi.
   const lignes: LigneDetail[] = [
+    { libelle: 'Date', valeur: `${formattedDate} à ${time}` },
+    { libelle: 'Adresse', valeur: escapeHtml(params.address) },
     { libelle: 'Client', valeur: escapeHtml(params.clientName) },
-    { libelle: 'Email', valeur: `<a href="mailto:${escapeHtml(params.clientEmail)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientEmail)}</a>` },
     { libelle: 'Téléphone', valeur: `<a href="tel:${escapeHtml(params.clientPhone)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientPhone)}</a>` },
+    { libelle: 'Email', valeur: `<a href="mailto:${escapeHtml(params.clientEmail)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientEmail)}</a>` },
     { libelle: 'Prestation', valeur: escapeHtml(params.serviceName) },
     ...(vehicleContent3 ? [{ libelle: 'Véhicule(s)', valeur: vehicleContent3 }] : []),
     ...(params.selectedAddons?.length ? [{ libelle: 'Options', valeur: escapeHtml(params.selectedAddons.map(a => a.label).join(' · ')) }] : []),
-    { libelle: 'Date', valeur: `${formattedDate} à ${time}` },
-    { libelle: 'Adresse', valeur: escapeHtml(params.address) },
     { libelle: 'Montant', fort: true, valeur: `${priceStr}€` },
   ]
 
@@ -561,12 +562,12 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
         titre: 'Votre mois d&apos;essai est terminé',
         entete: enteteWashBoard(url),
         contenu: `
-${titre({ texte: 'Votre mois d&apos;essai est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois d&apos;essai est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
 ${paragraphe(`Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
 réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.`, { marge: '0 0 20px' })}
 ${encadre(`En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
-gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.`, 'info', '0 0 20px')}
+gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.`, 'neutre', '0 0 20px')}
 ${paragraphe(`Dès que votre activité dépasse ce rythme, passez à la formule qui vous va :
 <strong>Starter à ${formatEuros(PLAN_PRICES.starter)}€/mois</strong> (${BOOKING_QUOTA.starter} réservations),
 ou <strong>Pro à ${formatEuros(PLAN_PRICES.pro)}€/mois</strong> (réservations illimitées, comptabilité, avis Google, relances).`, { marge: '0 0 24px' })}
@@ -746,12 +747,12 @@ export async function sendEmailConfirmation({ to, washerName, code }: {
       titre: 'Confirme ton adresse email',
       entete: enteteWashBoard(origineImages()),
       contenu: `
-${titre({ texte: 'Confirme ton adresse email', sousTitre: 'Dernière étape avant d&apos;accéder à ton tableau de bord' })}
+${titre({ icone: iconeTitre(origineImages(), 'enveloppe'), texte: 'Confirme ton adresse email', sousTitre: 'Dernière étape avant d&apos;accéder à ton tableau de bord' })}
 ${paragraphe(salutation, { marge: '0 0 8px' })}
 ${paragraphe('Ton compte WashBoard est créé. Pour l&apos;activer, entre ce code dans l&apos;application :', { marge: '0 0 20px' })}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:0 0 20px;"><tr>
 <td style="background:${COULEUR.papier};border:1px solid ${COULEUR.filet};border-radius:12px;padding:16px 26px;">
-<span style="font-size:32px;font-weight:700;letter-spacing:8px;color:${COULEUR.encre};font-family:'SF Mono',Consolas,'Courier New',monospace;">${codeEchappe}</span>
+<span style="font-size:32px;font-weight:700;letter-spacing:8px;color:${COULEUR.encre};font-family:${MONO};">${codeEchappe}</span>
 </td>
 </tr></table>
 ${paragraphe('Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.', { ton: 'petit', marge: '0' })}`,
@@ -786,7 +787,7 @@ export async function sendNouvellesOffres({ to, washerName, appUrl }: {
       titre: 'Quatre offres, une seule idée',
       entete: enteteWashBoard(url),
       contenu: `
-${titre({ texte: 'Quatre offres, une seule idée', sousTitre: 'Payer pour ce qu&apos;on utilise vraiment' })}
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Quatre offres, une seule idée', sousTitre: 'Payer pour ce qu&apos;on utilise vraiment' })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
 ${paragraphe(`WashBoard passe de 2 à 4 offres. Rien ne change pour vous aujourd&apos;hui :
 votre accès actuel reste exactement le même, au même tarif. Ce qui change,
@@ -825,7 +826,7 @@ ${paragraphe(`Venez essayer la nouvelle version de WashBoard : une application q
 sur votre téléphone, plus rapide et pensée pour une journée sur la route — agenda,
 clients et chiffres repensés pour s&apos;utiliser d&apos;une main, entre deux rendez-vous.`, { marge: '0 0 20px' })}
 ${encadre(`Vos données sont les mêmes, rien à reconfigurer — c&apos;est le même compte, juste une
-autre façon d&apos;y accéder.`, 'info')}
+autre façon d&apos;y accéder.`, 'neutre')}
 ${bouton('Installer l&apos;application →', `${url}/dashboard/guide#guide-application`, 'accent', '0')}
 ${paragraphe('Le site reste disponible normalement si vous préférez', { ton: 'petit', marge: '16px 0 0' })}`,
       pied: QUESTIONS,
@@ -860,7 +861,7 @@ l&apos;application sur votre téléphone. Ce qui change :`, { marge: '0 0 10px' 
   <li>une recherche et des filtres dans vos devis et factures.</li>
 </ul>
 ${encadre(`Une visite guidée vous présente tout à votre prochaine connexion sur ordinateur.
-Vos données sont les mêmes, rien à reconfigurer.`, 'info')}
+Vos données sont les mêmes, rien à reconfigurer.`, 'neutre')}
 ${bouton('Découvrir le nouveau design →', `${url}/dashboard`, 'accent', '0')}
 ${paragraphe('Vous pourrez revoir la visite à tout moment : Plus › Réglages › Guide d&apos;utilisation', { ton: 'petit', marge: '16px 0 0' })}`,
       pied: QUESTIONS,
@@ -888,10 +889,12 @@ export async function sendAnnulationAcompte({ to, clientName, washerName, schedu
       titre: 'Réservation annulée',
       entete: enteteLaveur(escapeHtml(washerName)),
       contenu: `
-${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 14px' })}
+${titre({ texte: 'Réservation annulée' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
 ${paragraphe(`Votre réservation avec <strong>${escapeHtml(washerName)}</strong> du ${jour} à ${heure} a été annulée :
 l’acompte n’a pas été réglé dans le délai indiqué au moment de réserver.`, { marge: '0 0 14px' })}
 ${paragraphe('Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.', { marge: '0' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
     }),
   })
 }
