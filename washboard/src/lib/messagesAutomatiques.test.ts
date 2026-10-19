@@ -3,7 +3,7 @@ import {
   libelleCanal, libelleDelaiAvis, libelleDelaiRelance, blocageAvis, avisActif, relanceActive, nombreActifs,
   lienAvisValide, jourRelatif, momentAvis, momentRelance, nomAffiche, relancesPrevues, apercuRelance,
   messagesProgrammes, messagesPartis, relanceEstPartie, aReserveDepuis, messageRelanceSuggere, texteSmsAvis,
-  nouvelleEcheance,
+  nouvelleEcheance, avisJoignable,
   type ReglagesMessages, type RdvMessage, type ContexteMessages,
 } from './messagesAutomatiques'
 
@@ -372,5 +372,20 @@ describe('décaler ou annuler un message programmé', () => {
       followup_enabled: true, followup_delay_days: 30, followup_message: 'Coucou {{nom}}' }
     const [ligne] = messagesProgrammes(reglages, { smsAutorise: true }, [r], MAINTENANT)
     expect(ligne.rdvId).toBe(r.id)
+  })
+})
+
+describe('avisJoignable', () => {
+  it('email : joignable quel que soit le canal', () => {
+    expect(avisJoignable({ client_email: 'a@b.fr', client_phone: null }, 'email')).toBe(true)
+    expect(avisJoignable({ client_email: 'a@b.fr', client_phone: null }, 'sms')).toBe(true)
+  })
+  it('téléphone seul : joignable seulement si le laveur envoie par SMS', () => {
+    expect(avisJoignable({ client_email: null, client_phone: '0611223344' }, 'sms')).toBe(true)
+    expect(avisJoignable({ client_email: '  ', client_phone: '0611223344' }, 'email')).toBe(false)
+    expect(avisJoignable({ client_email: null, client_phone: '0611223344' }, null)).toBe(false)
+  })
+  it('ni email ni téléphone : jamais joignable', () => {
+    expect(avisJoignable({ client_email: '', client_phone: '' }, 'sms')).toBe(false)
   })
 })
