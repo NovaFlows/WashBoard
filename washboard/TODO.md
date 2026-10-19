@@ -3373,7 +3373,7 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟢 Polish / UX
 
-- [ ] 2026-10-18 — **`public/hors-ligne.html` encore dans l'ancienne DA** (accent `#2B59FF`,
+- [x] 2026-10-19 (Archivo mise en cache par le service worker v4, bleu #306090) — **`public/hors-ligne.html` encore dans l'ancienne DA** (accent `#2B59FF`,
       police système). C'est l'écran réellement servi par le service worker sans réseau ; la
       page `/hors-ligne` est passée en DA v2 mais pas ce fichier statique.
 
@@ -3483,7 +3483,7 @@ rien à faire, mais que le projet reste globalement sain.
 
 > Base locale = base de prod (même projet Supabase) au 2026-06-29.
 
-- [ ] **`GRANT DELETE ON public.booking_funnel_events TO service_role;` manquant.**
+- [x] 2026-10-19 (constaté : une suppression service_role sur la table répond 204) — **`GRANT DELETE ON public.booking_funnel_events TO service_role;` manquant.**
       Constaté le 2026-09-14 en supprimant trois comptes de test : « permission denied for
       table booking_funnel_events ». Conséquence : la purge RGPD quotidienne
       (`api/cron/purge-accounts`, statistiques de visite de plus de 13 mois) échoue à chaque

@@ -14,7 +14,8 @@
 // v3 : écran hors ligne autonome (`/hors-ligne.html`, mis en cache à l'installation). Avant, le
 // repli visait la page `/hors-ligne` de l'application, jamais mise en cache : sans réseau, au
 // lancement, l'iPhone restait sur un écran noir (constaté par Alexandre le 2026-09-26).
-const VERSION = 'washboard-v3'
+// v4 : police Archivo mise en cache pour l'écran hors ligne (nouvelle DA).
+const VERSION = 'washboard-v4'
 const HORS_LIGNE = '/hors-ligne.html'
 
 const FICHIERS_FIXES = [
@@ -23,6 +24,8 @@ const FICHIERS_FIXES = [
   '/icon-512.png',
   '/apple-touch-icon.png',
   '/LogoWashBoard.png',
+  '/og/archivo-500.ttf',
+  '/og/archivo-800.ttf',
 ]
 
 self.addEventListener('install', event => {
