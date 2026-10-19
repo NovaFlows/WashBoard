@@ -64,6 +64,9 @@ export function Reseau() {
   )
 }
 
+/** Le vrai logo (le W et sa microfibre bleue, envoyé par Alexandre le 2026-10-19), à la place
+ *  de l'imitation dessinée en CSS. Décoratif : le nom « WashBoard » le suit toujours. */
 export function Logo() {
-  return <span className="logo" aria-hidden><b>W</b><i /></span>
+  // eslint-disable-next-line @next/next/no-img-element -- image statique de 128 px, affichée à 30
+  return <img className="logo" src="/logo-washboard-128.png" alt="" width={30} height={30} aria-hidden />
 }

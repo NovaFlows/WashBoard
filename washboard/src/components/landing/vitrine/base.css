@@ -68,9 +68,7 @@ html:has(.wb-vitrine) { scroll-behavior: smooth; scroll-padding-top: 84px; }
   border-bottom: 1px solid var(--verre-bord); box-shadow: inset 0 1px 0 var(--verre-arete), 0 6px 24px -12px rgba(22, 22, 26, .18); }
 .wb-vitrine .nav .w { display: flex; align-items: center; gap: 28px; height: 64px; }
 .wb-vitrine .marque { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; font-stretch: 108%; font-size: 19px; letter-spacing: -.02em; }
-.wb-vitrine .logo { width: 30px; height: 30px; border-radius: 8px; background: #0B0B0D; display: grid; place-items: center; flex: none; position: relative; overflow: hidden; }
-.wb-vitrine .logo b { font-family: Georgia, "Times New Roman", serif; color: #fff; font-weight: 400; font-size: 19px; line-height: 1; transform: translateX(-2px); }
-.wb-vitrine .logo i { position: absolute; right: 3px; top: 5px; width: 11px; height: 15px; border-radius: 3px 6px 4px 6px; background: linear-gradient(160deg, #6E9FD0, #2E5E93); transform: rotate(14deg); }
+.wb-vitrine .logo { width: 30px; height: 30px; border-radius: 8px; background: #000; display: block; flex: none; object-fit: cover; }
 .wb-vitrine .nav-liens { display: flex; gap: 22px; margin-left: 8px; }
 .wb-vitrine .nav-liens a { text-decoration: none; color: var(--gris); font-size: 15px; font-weight: 550; }
 .wb-vitrine .nav-liens a:hover { color: var(--encre); }
@@ -95,7 +93,10 @@ html:has(.wb-vitrine) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 .wb-vitrine .sur-titre { font-size: 14px; font-weight: 550; color: var(--gris); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wb-vitrine .sur-titre .pt { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .wb-vitrine .h2 { font-size: clamp(32px, 4.4vw, 54px); font-weight: 650; font-stretch: 112%; letter-spacing: -.04em; line-height: 1.02; }
-.wb-vitrine .h2 .doux { color: var(--gris-2); }
+/* La 2e moitié des titres, dans le bleu du titre principal (`.h1 .hl`) plutôt qu'en gris clair :
+   le gris faisait 2,55:1 sur le papier, sous le minimum de 3:1 (essai demandé par Alexandre,
+   2026-10-19). */
+.wb-vitrine .h2 .doux { color: var(--accent); }
 .wb-vitrine .chapo { font-size: clamp(17px, 1.6vw, 19px); color: var(--gris); max-width: 58ch; margin-top: 18px; line-height: 1.55; }
 .wb-vitrine .section { padding-block: clamp(72px, 9vw, 120px); border-top: 1px solid var(--filet); }
 .wb-vitrine .rassure { margin-top: 16px; font-size: 14px; color: var(--gris); }

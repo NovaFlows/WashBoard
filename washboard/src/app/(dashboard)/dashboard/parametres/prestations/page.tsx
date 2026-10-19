@@ -32,8 +32,9 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 // affichée à gauche sur grand écran (`ListeReglagesV2.tsx`) — DashboardShell en avait déjà
 // besoin lui-même (`slug={washer.slug}` plus bas) et ne le recevait pas : même requête,
 // une colonne de plus.
+// `silhouettes_vehicules` : l'interrupteur « Afficher la silhouette du véhicule » (2026-10-19).
 const COLONNES =
-  'id, name, slug, zone_config, base_address, ' +
+  'id, name, slug, zone_config, base_address, silhouettes_vehicules, ' +
   'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, subscription_ends_at, created_at'
 
 export default async function PrestationsPage() {
@@ -77,6 +78,7 @@ export default async function PrestationsPage() {
           offre={planEffectif(washer)}
           zone={washer.zone_config ?? null}
           adresseDeBase={washer.base_address ?? null}
+          silhouettesVehicules={washer.silhouettes_vehicules !== false}
           // Liste « Plus », pour la colonne de gauche sur grand écran : `servicesCount` et
           // `resumeHoraires` sont RECALCULÉS à partir de ce que cette page lit déjà pour son
           // propre contenu (`services`, `availabilities`) — aucune requête de plus.

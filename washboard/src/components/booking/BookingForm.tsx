@@ -94,6 +94,8 @@ export type WasherPublic = {
    *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
    *  « oui » par erreur. */
   reservation_jour_meme?: boolean
+  /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
+  silhouettes_vehicules?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -194,7 +196,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
     setSlotVersion(v => v + 1)
   }
 
-  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string }) {
+  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string; acompte_accepte?: boolean }) {
     setLoading(true)
     setError(null)
     if (contactData.notes) updateForm({ notes: contactData.notes })
@@ -322,7 +324,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
             resume={resumePrestation(form, services)}
             onModifier={() => reouvrir(1)}
           >
-            <StepPrestation services={services} categories={categories} form={form} onChange={updatePrestation} promotion={promotion} />
+            <StepPrestation services={services} categories={categories} form={form} onChange={updatePrestation} promotion={promotion}
+              vehicule3D={washer.silhouettes_vehicules !== false} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
               {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}
@@ -558,10 +561,10 @@ function SectionCard({
       : 'border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900')
   }>
     {etat !== 'open' && <div className="min-h-[58px] px-4 py-2 flex items-center gap-3">
-      <span aria-hidden="true" className={'shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-xs ' + (etat === 'done' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'border border-zinc-300 text-zinc-500')}>
+      <span aria-hidden="true" className={'shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-xs ' + (etat === 'done' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'border border-zinc-300 text-zinc-600 dark:text-zinc-400')}>
         {etat === 'done' ? '✓' : numero}
       </span>
-      <div className="min-w-0 flex-1"><p className={etat === 'done' ? 'text-xs text-zinc-500' : 'text-sm text-zinc-500 font-medium'}>{titre}</p>
+      <div className="min-w-0 flex-1"><p className={etat === 'done' ? 'text-xs text-zinc-600 dark:text-zinc-400' : 'text-sm text-zinc-600 dark:text-zinc-400 font-medium'}>{titre}</p>
         {etat === 'done' && <p className="text-sm truncate">{resume}</p>}</div>
       {etat === 'done' && <button type="button" aria-label={`Modifier : ${titre}`} aria-expanded={false} aria-controls={id + '-content'} onClick={onModifier} className="text-sm underline underline-offset-2 min-h-11">Modifier</button>}
     </div>}

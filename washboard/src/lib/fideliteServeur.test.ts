@@ -11,8 +11,8 @@ const { apparenceCarte, cleFideliteDepuisCrm, prevenirTampon } = await import('.
 const JETON = 'a1b2c3d4e5f60718293a4b5c6d7e8f901234'
 const REGLAGES = { actif: true, tampons: 10, recompense: 'offerte', valeur: 0, couleur: '#0F7A55' }
 
-function admin({ carte = { jeton: JETON, ajustement: 0 } as Record<string, unknown> | null, terminees = 7, telephone = null as string | null, vehicules = 1 } = {}) {
-  const reservations = Array.from({ length: terminees }, () => ({ status: 'done', fidelite_remise: null, vehicle_count: vehicules, client_email: 'nadia@example.com', client_phone: telephone }))
+function admin({ carte = { jeton: JETON, ajustement: 0 } as Record<string, unknown> | null, terminees = 7, telephone = null as string | null, vehicules = 1, email = 'nadia@example.com' } = {}) {
+  const reservations = Array.from({ length: terminees }, (_, i) => ({ id: `r${i}`, status: 'done', fidelite_remise: null, vehicle_count: vehicules, client_email: email, client_phone: telephone }))
   return {
     from: () => {
       const b: Record<string, unknown> = {}
@@ -29,7 +29,7 @@ function admin({ carte = { jeton: JETON, ajustement: 0 } as Record<string, unkno
 }
 
 const LAVEUR = { id: 'w1', name: 'Éclat Mobile', brand_color: '#1D4ED8', plan: 'pro', fidelite: REGLAGES }
-const RESA = { client_email: 'Nadia@example.com', client_phone: null, client_name: 'Nadia' }
+const RESA = { id: 'r-actuelle', client_email: 'Nadia@example.com', client_phone: null, client_name: 'Nadia' }
 
 beforeEach(() => { vi.clearAllMocks() })
 
@@ -42,9 +42,16 @@ describe('prevenirTampon', () => {
       tampons: 7, requis: 10, complete: false, couleur: '#0F7A55',
     }))
   })
-  it('reconnaît le client par son téléphone, même avec une autre adresse email', async () => {
-    await prevenirTampon(admin({ telephone: '06 12 34 56 78' }), LAVEUR, { ...RESA, client_email: 'nouvelle@adresse.fr', client_phone: '+33612345678' })
-    expect(sendTamponFidelite).toHaveBeenCalledWith(expect.objectContaining({ to: 'nouvelle@adresse.fr', tampons: 7 }))
+  it('reconnaît le client par son téléphone, écrit autrement, avec le même email', async () => {
+    await prevenirTampon(admin({ telephone: '06 12 34 56 78' }), LAVEUR, { ...RESA, client_phone: '+33612345678' })
+    expect(sendTamponFidelite).toHaveBeenCalledWith(expect.objectContaining({ to: 'Nadia@example.com', tampons: 7 }))
+  })
+  it('un email jamais vu sur ce numéro : rien ne part (ce seraient les tampons d’un autre)', async () => {
+    expect(await prevenirTampon(admin({ telephone: '06 12 34 56 78' }), LAVEUR, { ...RESA, client_email: 'nouvelle@adresse.fr', client_phone: '+33612345678' })).toBe(false)
+    expect(sendTamponFidelite).not.toHaveBeenCalled()
+  })
+  it('première prestation sur un numéro neuf : le lien part', async () => {
+    expect(await prevenirTampon(admin({ terminees: 0 }), LAVEUR, RESA)).toBe(true)
   })
   it('un tampon par véhicule : le lien fait frapper autant de tampons', async () => {
     const laveur = { ...LAVEUR, fidelite: { ...REGLAGES, tampon_par_vehicule: true } }

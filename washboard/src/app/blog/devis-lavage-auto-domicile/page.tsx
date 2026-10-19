@@ -141,8 +141,8 @@ export default function Page() {
             ['Prestataire', 'Dupont Lavage EI, SIRET 123 456 789 00012, 12 rue des Lilas, 95000 Cergy, 06 00 00 00 00'],
             ['Client', 'Mme Martin, 4 allée du Parc, 95800 Cergy, Peugeot 308 grise'],
             ['Lieu et date', 'Au domicile du client, date à convenir'],
-            ['Lignes', 'Lavage complet intérieur et extérieur : 1 × 70,00 €. Traitement des poils d’animaux : 1 × 25,00 €. Déplacement : 1 × 10,00 €'],
-            ['Total', 'Total : 105,00 €'],
+            ['Lignes', 'Lavage complet intérieur et extérieur : 1 × 90,00 €. Traitement des poils d’animaux : 1 × 25,00 €. Déplacement : 1 × 10,00 €'],
+            ['Total', 'Total : 125,00 €'],
             ['Conditions', 'Paiement le jour de la prestation. Annulation sans frais jusqu’à 24 h avant.'],
             ['Accord', 'Date, signature et mention « Bon pour accord » du client'],
           ]}

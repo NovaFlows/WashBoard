@@ -28,7 +28,7 @@ const faq: FaqItem[] = [
   {
     question: 'Quel est le prix moyen d’un lavage auto à domicile ?',
     answer:
-      'En France, un lavage extérieur à domicile se facture généralement entre 25 et 45 €, un intérieur entre 35 et 60 €, et un lavage complet entre 55 et 95 € pour une citadine ou une berline. Un nettoyage en profondeur (plusieurs heures) va de 120 à 250 €. Comptez 30 à 50 % de plus pour un SUV, un monospace ou un utilitaire.',
+      'En France, un lavage extérieur à domicile se facture généralement entre 45 et 65 €, un intérieur entre 55 et 80 €, et un lavage complet entre 75 et 115 € pour une citadine ou une berline. Un nettoyage en profondeur (plusieurs heures) va de 140 à 270 €. Comptez 30 à 50 % de plus pour un SUV, un monospace ou un utilitaire.',
   },
   {
     question: 'Combien facturer de l’heure en lavage auto mobile ?',
@@ -61,7 +61,7 @@ export default function Page() {
           items={[
             'Raisonnez à l’heure facturée, pas à la prestation : chronométrez-vous trajet compris sur dix prestations.',
             'Votre prix couvre votre temps, les consommables, l’amortissement du matériel, vos cotisations (≈ 21–22 % en micro-entreprise) et le temps non facturé.',
-            'Fourchettes courantes en France : 25–45 € l’extérieur, 35–60 € l’intérieur, 55–95 € le complet, +30 à 50 % pour SUV et utilitaires.',
+            'Fourchettes courantes en France : 45–65 € l’extérieur, 55–80 € l’intérieur, 75–115 € le complet, +30 à 50 % pour SUV et utilitaires.',
             'Prévoyez le déplacement : zone incluse ou supplément au-delà, mais jamais rien.',
             'Agenda plein trois semaines à l’avance = le moment d’augmenter.',
           ]}
@@ -78,8 +78,8 @@ export default function Page() {
         <H2>Commencez par le temps réel, pas par le prix</H2>
         <P>
           L&apos;erreur classique est de raisonner à la prestation. Raisonnez à l&apos;heure. Une
-          prestation à 35 € qui vous prend deux heures avec le trajet vous rapporte moins qu&apos;une
-          prestation à 25 € bouclée en quarante minutes chez un client au coin de la rue.
+          prestation à 55 € qui vous prend deux heures avec le trajet vous rapporte moins qu&apos;une
+          prestation à 45 € bouclée en quarante minutes chez un client au coin de la rue.
         </P>
         <P>
           Chronométrez-vous sur vos dix prochaines prestations, trajet compris. La plupart des
@@ -129,12 +129,12 @@ export default function Page() {
         <Table
           head={['Prestation', 'Durée', 'Fourchette']}
           rows={[
-            ['Lavage extérieur', '40 – 60 min', '25 – 45 €'],
-            ['Lavage intérieur', '60 – 90 min', '35 – 60 €'],
-            ['Lavage complet (int. + ext.)', '1 h 30 – 2 h 30', '55 – 95 €'],
-            ['Nettoyage en profondeur', '3 – 5 h', '120 – 250 €'],
-            ['Rénovation de sièges', '1 – 2 h', '60 – 120 €'],
-            ['Traitement céramique', '4 – 8 h', '250 – 700 €'],
+            ['Lavage extérieur', '40 – 60 min', '45 – 65 €'],
+            ['Lavage intérieur', '60 – 90 min', '55 – 80 €'],
+            ['Lavage complet (int. + ext.)', '1 h 30 – 2 h 30', '75 – 115 €'],
+            ['Nettoyage en profondeur', '3 – 5 h', '140 – 270 €'],
+            ['Rénovation de sièges', '1 – 2 h', '80 – 140 €'],
+            ['Traitement céramique', '4 – 8 h', '270 – 720 €'],
           ]}
         />
 

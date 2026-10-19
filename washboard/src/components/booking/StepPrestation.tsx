@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import type { FormState } from './BookingForm'
 import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
+import { silhouettePour } from '@/lib/silhouettesVehicules'
+import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 /** Prix d'une prestation ; barré avec le prix remisé quand une promotion la concerne. */
 function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
@@ -18,23 +20,40 @@ function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
   )
 }
 
-export default function StepPrestation({ services, categories, form, onChange, promotion = null }: {
+export default function StepPrestation({ services, categories, form, onChange, promotion = null, vehicule3D = true }: {
   services: Service[]
   categories: ServiceCategory[]
   form: FormState
   onChange: (data: FormState) => void
   /** Promotion en cours : le prix des prestations concernées s'affiche barré, avec le prix remisé. */
   promotion?: PromotionPublique | null
+  /** Le véhicule choisi apparaît en 3D — réglage du laveur, affiché par défaut. Éteint : ni
+   *  image ni préchargement. */
+  vehicule3D?: boolean
 }) {
   const [category, setCategory] = useState<string | null>(services[0]?.category_id ?? null)
   const catalogue = services.filter(s => s.category_id === category)
   const types = [...new Set(catalogue.flatMap(s => s.vehicle_types))]
   const service = services.find(s => s.id === form.service_id)
   const label = (type: string) => categories.find(c => c.id === category)?.types.find(t => t.id === type)?.name ?? VEHICLE_LABELS[type] ?? type
-  const vehicles = form.vehicles_detail?.length ? form.vehicles_detail : types[0] ? [{ type: types[0], count: 1, unit_price: 0, label: label(types[0]), addons: [] }] : []
+  // Aucun véhicule présélectionné (demande d'Alexandre, 2026-10-18) : le client choisit, et sa
+  // voiture apparaît en 3D. Seule exception, un catalogue à un seul type : il n'y a rien à choisir.
+  const vehicles = form.vehicles_detail?.length ? form.vehicles_detail : types.length === 1 ? [{ type: types[0], count: 1, unit_price: 0, label: label(types[0]), addons: [] }] : []
   const activeTypes = [...new Set(vehicles.map(v => v.type))]
   const [mixed, setMixed] = useState(activeTypes.length > 1)
+  const [dernier, setDernier] = useState<string | null>(null)
   const visible = catalogue.filter(s => activeTypes.every(t => s.vehicle_types.includes(t)))
+  const sansVehicule = vehicles.length === 0
+  // La voiture affichée : le dernier type touché, sinon le dernier de la liste (types mélangés).
+  const typeAffiche = dernier && activeTypes.includes(dernier) ? dernier : activeTypes[activeTypes.length - 1] ?? null
+  // Un type a son image s'il est reconnu à son identifiant ou à son nom (lib/silhouettesVehicules).
+  const images = vehicule3D ? types.map(t => silhouettePour(t, label(t))).filter((u): u is string => !!u) : []
+  const avecSilhouettes = images.length > 0
+  // Les images des véhicules proposés se chargent en fond : le premier clic n'attend pas.
+  const imagesCle = [...new Set(images)].join('|')
+  useEffect(() => { if (imagesCle) prechargerSilhouettes(imagesCle.split('|')) }, [imagesCle])
+  /** Avant le choix du véhicule : le prix de départ de la prestation, tous types confondus. */
+  const prixDepart = (s: Service) => Math.min(...s.vehicle_types.filter(t => types.includes(t)).map(t => vehiclePrice(s, t)))
 
   function change(nextVehicles: VehicleItem[], nextService = service) {
     const compatible = nextService && nextVehicles.every(v => nextService.vehicle_types.includes(v.type)) ? nextService : undefined
@@ -62,8 +81,12 @@ export default function StepPrestation({ services, categories, form, onChange, p
         {categories.find(c => c.id === id)?.name ?? 'Autres'}
       </button>)}
     </div>}
+    {avecSilhouettes && typeAffiche && <ApparitionVehicule>
+      <SilhouetteVehicule3D key={typeAffiche} type={typeAffiche} nom={label(typeAffiche)} />
+    </ApparitionVehicule>}
     <div className="wb-booking-chips" aria-label="Type de véhicule">
       {types.map(type => <button key={type} type="button" aria-pressed={activeTypes.includes(type)} onClick={() => {
+        setDernier(type)
         if (mixed) count(type, vehicles.filter(v => v.type === type).length ? 0 : 1)
         else if (activeTypes.length !== 1 || activeTypes[0] !== type) change([{ type, count: 1, unit_price: 0, addons: [] }])
       }}>{label(type)}</button>)}
@@ -79,17 +102,21 @@ export default function StepPrestation({ services, categories, form, onChange, p
     {vehicles.length > 1 && !mixed && types.length > 1 && <button type="button" className="text-xs underline mb-3" onClick={() => setMixed(true)}>Mes véhicules sont de types différents</button>}
     <div className="flex items-baseline justify-between gap-3 mt-6 mb-2">
       <h3 className="font-semibold">La prestation</h3>
-      <span className="text-xs text-zinc-500">Prix pour {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : 'véhicules'}</span>
+      <span className="text-xs text-zinc-500">{sansVehicule
+        ? 'Prix selon votre véhicule'
+        : <>Prix pour {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : 'véhicules'}</>}</span>
     </div>
     <div className="divide-y divide-zinc-200/70 dark:divide-zinc-700">
       {visible.map(s => <div key={s.id} className="py-4">
         <label className="flex items-start gap-3 cursor-pointer">
-          <input type="radio" name="booking-service" className="wb-booking-radio" checked={service?.id === s.id}
+          <input type="radio" name="booking-service" className="wb-booking-radio" checked={service?.id === s.id} disabled={sansVehicule}
             onChange={() => change(vehicles.map(v => ({ ...v, addons: [] })), s)} />
           <span className="flex-1 min-w-0">
-            <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span><PrixPrestation prix={vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0)} remise={remisePromotion(promotion, s.id, vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))} /></span>
+            <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span>{sansVehicule
+              ? <span className="whitespace-nowrap font-normal text-zinc-500">dès {formatPrice(prixDepart(s))}</span>
+              : <PrixPrestation prix={vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0)} remise={remisePromotion(promotion, s.id, vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))} />}</span>
             {s.description && <span className="block text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{s.description}</span>}
-            <span className="block text-xs text-zinc-500 mt-2">Environ {formatDureeFr(s.duration_minutes * vehicles.length)} sur place</span>
+            <span className="block text-xs text-zinc-500 mt-2">Environ {formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length))} sur place</span>
           </span>
         </label>
         {service?.id === s.id && s.addons.length > 0 && <div className="ml-8 mt-5">

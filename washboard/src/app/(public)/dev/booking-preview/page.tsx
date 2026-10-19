@@ -22,8 +22,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string }> }) {
-  const { mode, etape, promo, scenario, couleur, tampons } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons, acompte } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -35,7 +35,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="test-config-15d2" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null, avisGoogle: null }} liste={{ nom: 'Brillance Mobile', slug: 'test-config-15d2', brandColor: '#7c3aed', plan: 'business', grandfathered: false }} />
   const washerId = '00000000-0000-4000-8000-000000000001'
   const category: ServiceCategory = { id: 'cars', washer_id: washerId, name: 'Voitures', display_order: 0,
-    types: [{ id: 'citadine', name: 'Citadine' }, { id: 'berline', name: 'Berline' }, { id: 'SUV', name: 'SUV' }, { id: 'utilitaire', name: 'Utilitaire' }],
+    types: [{ id: 'citadine', name: 'Citadine' }, { id: 'citadine_2p', name: 'Citadine 2p' }, { id: 'berline', name: 'Berline' }, { id: 'SUV', name: 'SUV' }, { id: 'monospace', name: 'Monospace' }, { id: '7places', name: '7 places' }, { id: 'utilitaire', name: 'Utilitaire' }, { id: '5d0c7f3e-2a41-4b8e-9c61-7e2f0a9b3d14', name: 'Moto' }, { id: '8a6e1b29-4c3d-4f5a-b7e8-1d2c3b4a5f60', name: 'Camion' }, { id: 'camping-car', name: 'Camping-car' }],
   }
   const services: Service[] = [
     { id: '00000000-0000-4000-8000-000000000011', name: 'Extérieur', description: 'Carrosserie, jantes, vitres, séchage sans traces', price: 35, duration_minutes: 60, addons: [] },
@@ -71,7 +71,9 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     <main className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
       <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], clients_pro: true, facturation_prete: true }}
         services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
-        disponibilites={{ bookings: [], unavailabilities: [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion} />
+        disponibilites={{ bookings: [], unavailabilities: [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
+        // ?acompte=1 : un laveur qui demande 30 % d'acompte (case des conditions à cocher).
+        acompte={acompte === '1' ? { type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/demo' }, delai_heures: 48, remboursable: true, remboursement_heures: 48, virementPropose: true, weroPropose: false } : null} />
     </main>
   </div></>
 }

@@ -7,7 +7,7 @@ import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { remisePromotion } from '@/lib/promotion'
-import { cleFidelite, etatCarte, fideliteActive, phraseCarte, remiseFidelite, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
+import { carteVisible, cleFidelite, etatCarte, fideliteActive, phraseCarte, remiseFidelite, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
 import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte, type Carte } from '@/lib/fideliteServeur'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
@@ -58,6 +58,9 @@ const BookingSchema = z.object({
   company_name:    z.string().optional(),
   siret:           z.string().regex(/^\d{14}$/, 'SIRET invalide').optional(),
   billing_address: z.string().optional(),
+  // Le client a coché « j'accepte les conditions de l'acompte » (2026-10-19) : exigé quand
+  // un acompte est demandé, voir plus bas.
+  acompte_accepte: z.boolean().optional(),
   vehicles_detail: z.array(z.object({
     type:       z.string(),
     count:      z.number().int().min(1),
@@ -547,7 +550,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         assurerCarte(supabase, bookingData.washer_id, cle),
         reservationsDuClient(supabase, bookingData.washer_id, cle),
       ])
-      if (carte && reservations) {
+      // Carte montrée et récompense appliquée seulement si l'email va avec le numéro
+      // (`carteVisible`, 2026-10-19) : réserver avec le numéro d'un autre ne lui prend plus son
+      // lavage offert, et ne renvoie ni sa carte ni son lien.
+      if (carte && reservations && carteVisible(reservations, bookingData.client_email)) {
         const etat = etatCarte(reservations, carte.ajustement, reglages.tampons, reglages.tampon_par_vehicule)
         // La promotion porte sur prestation + options : on la retire d'abord de la prestation.
         const prestationApresPromo = Math.max(0, prix_vehicules - (promotion?.remise ?? 0))
@@ -581,6 +587,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       const montantAcompteDu = reglages ? montantAcompte(reglages, finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0)) : 0
       if (reglages && montantAcompteDu > 0) acompte = { montant: montantAcompteDu, echeance: echeanceAcompte(reglages), reglages }
     }
+  }
+  // Preuve d'acceptation (conseil du `legal`, décision d'Alexandre le 2026-10-19) : une
+  // réservation avec acompte n'existe que si le client a coché les conditions. Une page ouverte
+  // avant la mise en ligne de la case ne l'envoie pas : d'où le « rechargez la page ».
+  if (acompte && bookingData.acompte_accepte !== true) {
+    return Response.json({ error: 'Cochez la case pour accepter les conditions de l’acompte (rechargez la page si elle n’apparaît pas).' }, { status: 400 })
   }
 
   // L'événement Google Agenda est créé uniquement à la confirmation du RDV

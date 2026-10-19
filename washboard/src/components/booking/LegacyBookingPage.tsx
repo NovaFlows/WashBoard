@@ -16,7 +16,7 @@ import type { AcomptePublic } from '@/lib/acompte'
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
 type Props = {
- washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
+ washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme' | 'silhouettes_vehicules'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
  promotion?: PromotionPublique | null
@@ -147,6 +147,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
+            silhouettes_vehicules: washer.silhouettes_vehicules !== false,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,
             // Réserver en tant qu'entreprise demande le suivi qui va avec —

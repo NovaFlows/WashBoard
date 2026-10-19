@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesFideliteSchema, cleFidelite, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, numeroStable, partiesOffertes, phraseCarte, recompenseCourte, remiseFidelite, tamponsPour } from './fidelite'
+import { ReglagesFideliteSchema, carteVisible, cleFidelite, etatCarte, fideliteActive, jetonValide, libelleRecompense, nouveauJeton, numeroStable, partiesOffertes, phraseCarte, recompenseCourte, remiseFidelite, tamponsPour } from './fidelite'
 
 const fait = (n: number) => Array.from({ length: n }, () => ({ status: 'done' }))
 
@@ -66,6 +66,24 @@ describe('client reconnu par son téléphone', () => {
     expect(cleFidelite('Nadia@Example.com', '')).toBe('nadia@example.com')
     expect(cleFidelite(null, null)).toBe('')
     expect(numeroStable('12')).toBeNull()
+  })
+})
+
+describe('carte montrée seulement si l’email va avec le numéro (fuite fermée le 2026-10-19)', () => {
+  const fait = (client_email: string | null, status = 'done') => ({ status, client_email })
+  it('numéro neuf : sa carte ne porte que les siens', () => {
+    expect(carteVisible([], 'qui@importe.fr')).toBe(true)
+  })
+  it('email d’une prestation terminée sur ce numéro, à la casse et aux espaces près', () => {
+    expect(carteVisible([fait('nadia@example.com')], ' Nadia@Example.com ')).toBe(true)
+  })
+  it('le numéro d’un autre avec un autre email : non', () => {
+    expect(carteVisible([fait('nadia@example.com')], 'curieux@exemple.fr')).toBe(false)
+    expect(carteVisible([fait('nadia@example.com')], '')).toBe(false)
+    expect(carteVisible([fait('nadia@example.com')], null)).toBe(false)
+  })
+  it('un email vu seulement sur une réservation pas terminée ne suffit pas', () => {
+    expect(carteVisible([fait('nadia@example.com'), fait('curieux@exemple.fr', 'pending'), fait('curieux@exemple.fr', 'cancelled')], 'curieux@exemple.fr')).toBe(false)
   })
 })
 

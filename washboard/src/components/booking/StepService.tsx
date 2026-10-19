@@ -5,6 +5,8 @@ import { Clock, Check, User, Building2 } from 'lucide-react'
 import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
 import { hex } from '@/lib/colorUtils'
+import { silhouettePour } from '@/lib/silhouettesVehicules'
+import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 type Props = {
   services: Service[]
@@ -19,6 +21,8 @@ type Props = {
   clientsProAutorises?: boolean
   onNext: (data: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number; is_professional: boolean; vehicles_detail?: VehicleItem[] }) => void
   accent?: string
+  /** Le véhicule choisi apparaît en 3D — réglage du laveur, affiché par défaut. */
+  vehicule3D?: boolean
 }
 
 // Images pour les types « voiture » historiques (résolus par id de type).
@@ -35,13 +39,18 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb' }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   // Panier : un compteur par type (permet de mélanger les types)
   const [basket,    setBasket]    = useState<Record<string, number>>({})
   // Modèle (texte libre) par véhicule : un tableau par type, aligné sur le compteur
   const [models,    setModels]    = useState<Record<string, string[]>>({})
+  // Le dernier véhicule ajouté au panier : son image 3D s'anime (2026-10-18).
+  const [dernier,   setDernier]   = useState<string | null>(null)
+  const imagesProposees = !vehicule3D ? '' : [...new Set(services.flatMap(sv => sv.vehicle_types.map(t => silhouettePour(t, typeInfo(sv, t).name)))
+    .filter((u): u is string => !!u))].join('|')
+  useEffect(() => { if (imagesProposees) prechargerSilhouettes(imagesProposees.split('|')) }, [imagesProposees])
 
   // Onglets : seules les catégories qui ont au moins une prestation.
   const tabs = useMemo(() => {
@@ -120,10 +129,12 @@ export default function StepService({ services, categories, selected, factureApr
     setServiceId('')
     setBasket({})
     setModels({})
+    setDernier(null)
   }
 
   function setVehicleCount(type: string, count: number) {
     const clamped = Math.min(99, Math.max(0, count))
+    if (clamped > (basket[type] ?? 0)) setDernier(type)
     setBasket(prev => {
       if (clamped <= 0) { const next = { ...prev }; delete next[type]; return next }
       return { ...prev, [type]: clamped }
@@ -308,6 +319,15 @@ export default function StepService({ services, categories, selected, factureApr
         <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs éléments, de types différents si besoin.</p>
+          {vehicule3D && selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
+            const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
+            const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
+            return affiche && (
+              <ApparitionVehicule>
+                <SilhouetteVehicule3D key={affiche} type={affiche} nom={typeInfo(selectedService, affiche).name} />
+              </ApparitionVehicule>
+            )
+          })()}
           <div className="space-y-2">
             {selectedService.vehicle_types.map(type => {
               const info  = typeInfo(selectedService, type)

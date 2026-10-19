@@ -339,7 +339,6 @@
 .wb-vitrine .tel-ecran.clair .etat{color:#fff}
 .wb-vitrine .mini-n{display:flex;gap:9px;align-items:center;padding:10px 12px;border-radius:16px;background:var(--surface);box-shadow:0 0 0 1px var(--filet-2);font-size:12px;line-height:1.35}
 .wb-vitrine .mini-n .logo{width:28px;height:28px;border-radius:7px;flex:none}
-.wb-vitrine .mini-n .logo b{font-size:16px}
 @keyframes wbd-frappe{0%{transform:scale(2.4) rotate(-25deg);opacity:0}60%{transform:scale(.9)}100%{transform:none;opacity:1}}
 
 /* Feuille fermée : invisible et hors du parcours clavier, mais son contenu reste pendant qu'elle redescend */
@@ -348,9 +347,7 @@
 
 
 /* Valeurs de base du logo et du rail (les titres de page n'en dépendent pas) */
-.wb-vitrine .rail .logo, .wb-vitrine .mini-n .logo { width: 30px; height: 30px; border-radius: 8px; background: #0B0B0D; display: grid; place-items: center; flex: none; position: relative; overflow: hidden; }
-.wb-vitrine .rail .logo b, .wb-vitrine .mini-n .logo b { font-family: Georgia, "Times New Roman", serif; color: #fff; font-weight: 400; font-size: 19px; line-height: 1; transform: translateX(-2px); }
-.wb-vitrine .rail .logo i, .wb-vitrine .mini-n .logo i { position: absolute; right: 3px; top: 5px; width: 11px; height: 15px; border-radius: 3px 6px 4px 6px; background: linear-gradient(160deg, #6E9FD0, #2E5E93); transform: rotate(14deg); }
+.wb-vitrine .rail .logo { width: 30px; height: 30px; border-radius: 8px; flex: none; }
 .wb-vitrine .rail .marque { display: flex; align-items: center; font-weight: 650; font-stretch: 108%; letter-spacing: -.02em; }
 
 .wb-vitrine .tel-ecran.clair .etat { color: #fff; }

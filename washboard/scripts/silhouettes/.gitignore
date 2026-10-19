@@ -1,0 +1,5 @@
+# Photos de presse et découpes : non versionnées.
+photos/
+decoupe/
+venv/
+__pycache__/

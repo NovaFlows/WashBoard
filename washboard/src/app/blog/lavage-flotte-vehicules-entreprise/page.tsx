@@ -131,12 +131,12 @@ export default function Page() {
         </P>
         <P>
           Calculez votre remise au lieu de l&apos;accorder à l&apos;oreille. Exemple chiffré, prix et
-          durées indicatifs, à remplacer par les vôtres : un lavage extérieur à 40 € pour un particulier,
+          durées indicatifs, à remplacer par les vôtres : un lavage extérieur à 55 € pour un particulier,
           dans la fourchette des{' '}
           <A href="/blog/tarifs-lavage-auto-domicile">tarifs du lavage auto à domicile</A>, une
           quarantaine de minutes de travail. Pour six véhicules au même endroit, il n&apos;y a plus de
-          trajet entre deux prestations : une remise de 10 % ramène chaque véhicule à 36 €, soit 216 €
-          pour environ quatre heures de lavage, un peu plus de 50 € de l&apos;heure avant charges.
+          trajet entre deux prestations : une remise de 10 % ramène chaque véhicule à 49,50 €, soit 297 €
+          pour environ quatre heures de lavage, environ 74 € de l&apos;heure avant charges.
           Si ce chiffre est supérieur à ce que vous gagnez chez les particuliers trajets compris,
           la remise est tenable. S&apos;il est inférieur, ce n&apos;est pas un tarif de volume, c&apos;est
           une perte.
