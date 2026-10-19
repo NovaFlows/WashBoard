@@ -884,8 +884,7 @@ describe('POST /api/bookings — acompte', () => {
     expect(reserv.acompte_montant).toBe(18) // 30 % de 60
     expect(reserv.acompte_statut).toBe('en_attente')
     expect(typeof reserv.acompte_echeance).toBe('string')
-    // Pas de colonne acompte_accepte en base : l’envoyer fait échouer toute la réservation (42703).
-    expect(reserv).not.toHaveProperty('acompte_accepte')
+    expect(reserv.acompte_accepte).toBe(true)
     expect(body.data.acompte.montant).toBe(18)
     expect(body.data.acompte.liens).toEqual([
       { cle: 'paypal', libelle: 'PayPal', url: 'https://paypal.me/eclat/18.00EUR', montantExact: true },
@@ -904,8 +903,9 @@ describe('POST /api/bookings — acompte', () => {
 
   it('acompte désactivé ou réglages abîmés : aucune colonne d’acompte envoyée', async () => {
     avecWasher({ acompte: { ...ACOMPTE, actif: false } })
-    await poster({})
+    await poster({ acompte_accepte: true })
     expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_montant')
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('acompte_accepte')
     rpcAppels.length = 0
     avecWasher({ acompte: { ...ACOMPTE, liens: { stripe: 'pas un lien' } } })
     const { body } = await poster({})
