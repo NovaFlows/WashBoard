@@ -31,7 +31,7 @@
 /* ── Reprise de la maquette ── */
 .wb-vitrine .demo-grille{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:48px;margin-top:44px;align-items:start}
 .wb-vitrine .badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:6px;border:1px solid var(--filet);font-size:11px;font-weight:650;letter-spacing:.02em;color:var(--gris);vertical-align:2px}
-.wb-vitrine .badge-new{border-color:transparent;background:var(--vert-doux);color:var(--vert)}
+.wb-vitrine .badge-new{border-color:transparent;background:var(--vert-doux);color:var(--vert-texte)}
 .wb-vitrine .segment{display:inline-flex;padding:4px;border-radius:999px;background:var(--surface);border:1px solid var(--filet)}
 .wb-vitrine .segment button{height:38px;padding:0 18px;border-radius:999px;font-weight:600;font-size:14px;color:var(--gris);display:flex;align-items:center;gap:7px}
 .wb-vitrine .segment button svg{width:16px;height:16px}

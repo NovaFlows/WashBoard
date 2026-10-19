@@ -82,6 +82,8 @@
 .wb-vitrine .cb-cell { position: relative; font-size: 15px; line-height: 1.5; color: var(--gris); padding: 4px 0; }
 .wb-vitrine .cb-cell:last-child { color: var(--encre); font-weight: 550; background: var(--accent-doux); padding: 10px 12px; margin-top: 6px; border-radius: 8px; }
 .wb-vitrine .cb-cell .lib { display: block; font-size: 13px; font-weight: 600; color: var(--gris); margin-bottom: 2px; }
+/* Sur le fond teinté de la colonne WashBoard, le gris passe sous 4,5:1. */
+.wb-vitrine .cb-cell:last-child .lib { color: var(--encre); opacity: .72; }
 @media (min-width: 640px) {
   .wb-vitrine .cb-tete, .wb-vitrine .cb-ligne { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; }
   .wb-vitrine .cb-tete { border-bottom: 1px solid var(--filet); }

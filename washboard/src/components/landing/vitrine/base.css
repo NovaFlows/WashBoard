@@ -4,20 +4,20 @@
    `dark` posée sur <html>. */
 
 .wb-vitrine {
-  --fond: #F6F5F3; --surface: #FFFFFF; --surface-2: #FBFAF8; --encre: #16161A; --gris: #6B6B76; --gris-2: #9A9AA4;
+  --fond: #F6F5F3; --surface: #FFFFFF; --surface-2: #FBFAF8; --encre: #16161A; --gris: #6B6B76; --gris-2: #6E6E78;
   --filet: rgba(22, 22, 26, .10); --filet-2: rgba(22, 22, 26, .06);
   --accent: #306090; --sur-accent: #FFFFFF; --accent-doux: rgba(48, 96, 144, .10);
-  --vert: #127A4B; --ambre: #9A5B00; --rouge: #B3261E; --vert-doux: rgba(18, 122, 75, .10);
+  --vert: #127A4B; --ambre: #9A5B00; --rouge: #B3261E; --vert-doux: rgba(18, 122, 75, .10); --vert-texte: #0F6E43;
   --verre-a: rgba(255, 255, 255, .62); --verre-b: rgba(255, 255, 255, .34); --verre-bord: rgba(255, 255, 255, .7); --verre-arete: rgba(255, 255, 255, .92);
   --ombre: 0 30px 60px -24px rgba(22, 22, 26, .28), 0 8px 20px -10px rgba(22, 22, 26, .14);
   --chassis: #1C1C21; --aura: rgba(48, 96, 144, .09);
   --f: var(--font-archivo), "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 .dark .wb-vitrine {
-  --fond: #18181D; --surface: #212128; --surface-2: #26262E; --encre: #F2F2F5; --gris: #A8A8B2; --gris-2: #76767F;
+  --fond: #18181D; --surface: #212128; --surface-2: #26262E; --encre: #F2F2F5; --gris: #A8A8B2; --gris-2: #8E8E98;
   --filet: rgba(255, 255, 255, .11); --filet-2: rgba(255, 255, 255, .065);
   --accent: #7FAAD8; --sur-accent: #111114; --accent-doux: rgba(127, 170, 216, .14);
-  --vert: #4CC690; --ambre: #E6AA52; --rouge: #F28078; --vert-doux: rgba(76, 198, 144, .14);
+  --vert: #4CC690; --ambre: #E6AA52; --rouge: #F28078; --vert-doux: rgba(76, 198, 144, .14); --vert-texte: #4CC690;
   --verre-a: rgba(33, 33, 40, .72); --verre-b: rgba(33, 33, 40, .48); --verre-bord: rgba(255, 255, 255, .12); --verre-arete: rgba(255, 255, 255, .14);
   --ombre: 0 30px 60px -24px rgba(0, 0, 0, .6), 0 8px 20px -10px rgba(0, 0, 0, .4);
   --aura: rgba(127, 170, 216, .10);
