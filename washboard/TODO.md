@@ -7,7 +7,9 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-10-18 (landing v2 en prod, bug de fuseau de la réservation
+> Dernière mise à jour : 2026-10-19 (3 priorités faites ; fuite de la carte de fidélité confirmée
+> dans le code ; contraste remesuré ; +20 € sur les prix du marché ; case des conditions de
+> l'acompte ; points déjà faits sortis de la liste). Avant : 2026-10-18 (landing v2 en prod, bug de fuseau de la réservation
 > corrigé, toutes les pages publiques passées en DA v2 + contenu SEO mis à jour — PR #7 ;
 > points à trancher avec Alexandre dans « 🔍 Contenu & tarifs »). Avant : 2026-10-04 (sécurité `bookings` : bascule client admin faite par Ryan
 > et fusionnée sur master, REVOKE RLS toujours en attente ; nouvelle faille trouvée sur
@@ -21,19 +23,9 @@
 
 ## 🎯 Priorités d'Alexandre — 3 sujets importants (2026-10-02)
 
-> Désignés par Alexandre comme importants, pas encore détaillés — à préciser avec lui
-> avant de lancer quoi que ce soit dessus.
+> Les trois sujets (SMS, refonte du site, refonte de la page de réservation) sont FAITS,
+> confirmé par Alexandre le 2026-10-19 (voir « ✅ Fait »).
 
-- [ ] **SMS.** Sujet à préciser.
-- [ ] **Refonte du site web.** Sujet à préciser — distinct de la refonte PWA déjà en
-      cours (voir la section dédiée plus bas, « 🎨 Refonte 2026 ») : à confirmer si ça
-      recouvre la même chose, la landing uniquement, ou autre chose encore.
-      *2026-10-18 : landing refaite de zéro dans la DA v2 (PR #5, en prod), puis toutes les
-      autres pages publiques (blog, pages métiers, comparatif, tournée, `/booking`, pages
-      légales, confirmation, mot de passe, hors-ligne, 404) passées dans la même DA (PR #7,
-      prête à fusionner). Reste : `public/hors-ligne.html` (voir 🟢 Polish).*
-- [ ] **Refonte de la page de réservation des laveurs** (`/book/[slug]`). Sujet à
-      préciser.
 
 ---
 
@@ -44,6 +36,14 @@
       rédaction de l'article fidélité, pas encore vérifié dans le code ni en conditions
       réelles. Si oui, c'est une fuite de données personnelles (nombre de passages chez un
       laveur). Agent : `cyber`.
+      **Vérifié dans le code le 2026-10-19 : OUI.** `POST /api/fidelite/apercu` (public, sans
+      compte) rend le nombre de tampons de n'importe quel numéro tapé à l'étape « Vos
+      coordonnées » (limite : 30 demandes / 10 min par adresse IP), sans nom ni coordonnées — on
+      apprend qu'un numéro est client du laveur et combien de fois il est venu. Plus gênant :
+      `POST /api/bookings` applique d'office la récompense disponible du numéro saisi :
+      réserver avec le numéro d'un autre lui prend son lavage offert. Correctif proposé à
+      Alexandre, pas encore décidé : ne montrer la carte et n'appliquer la récompense que si le
+      téléphone ET l'email (ou le nom) correspondent à une réservation passée.
 
 - [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
       lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
@@ -368,13 +368,6 @@
       projection en lignes d'encaissement par `encaissementsDesFactures` (`chiffresArgent.ts`).
       Elles comptent au jour de la PRESTATION, pas au jour du paiement — comme un rendez-vous
       clôturé en retard, qui compte le jour de son créneau.
-- [ ] **La liste `/dashboard/factures` ignore les factures écrites à la main** — et c'est le
-      trou comptable qui reste. Les deux sortes partagent LE MÊME compteur : une suite réelle
-      peut être `F-00014` (rendez-vous), `F-00015` et `F-00016` (à la main), `F-00017`
-      (rendez-vous), alors que la liste n'affiche que les premières et les dernières. Une suite
-      de factures ne peut pas avoir de trous. À faire : y ajouter les documents de genre
-      `facture` (avec leur PDF, `/api/documents/:id/pdf`) pour que la suite se relise d'un bout
-      à l'autre. Écran encore v1 : à traiter en même temps que sa refonte.
 
 - [x] 2026-10-04 — **Quota Supabase : désamorcé par le passage en offre Pro.** Alerte vue le
       2026-09-14 : « Organization exceeded its quota... Projects will be restricted from 05 Oct,
@@ -401,25 +394,20 @@
         Sur l'accueil, **CLS 0,155** (seuil 0,1) : le contenu bouge pendant le chargement.
         PageSpeed Insights n'a pas pu être utilisé (quota Google épuisé ce jour-là).
         Agent : `dev`.
-  - [ ] **2. Contraste des couleurs.** axe-core, WCAG AA, mode clair : 6 à 12 éléments en
-        échec par page publique. Cause principale : `text-slate-400` (#90a1b9) sur fond
-        blanc = **2,63:1** (minimum 4,5:1) — pied de page, dates d'articles, petites
-        mentions, liens légaux. Aussi `#62748e` sur fonds bleutés (4,3:1) et l'onglet actif
-        de la page de réservation (`#0ea5e9` sur `#ecf8fd`, 2,56:1). `/signup` et `/login`
-        passent. Lié à « Accessibilité » dans 🟢 Polish. Agent : `designer`.
-  - [ ] **3. Image de prévisualisation de la page d'accueil.** Le blog (une image par
-        article) et les pages de réservation (logo du laveur) en ont une ; **l'accueil
-        n'a ni `og:image` ni `twitter:image`**, alors que `twitter:card` vaut
-        `summary_large_image`. C'est le lien le plus partagé. Ajouter
-        `src/app/opengraph-image.tsx` sur le modèle de `src/app/blog/opengraph-image.tsx`.
-        Agent : `designer` pour le visuel.
+  - [ ] **2. Contraste des couleurs** — REMESURÉ le 2026-10-19 (axe-core, WCAG AA, mode clair,
+        mobile + ordinateur, sur www.washboard.fr) après le passage en DA v2 : blog, CGV,
+        `/login` et `/booking` sans aucun échec. Restent :
+        - landing : le gris clair `#9a9aa4` sur le fond papier `#f6f5f3` (2,55:1) — 2e moitié
+          grise des titres de section (« Pas des messages. », « On gère le reste. »…, minimum
+          3:1 en gros texte) et étapes inactives de la frise « Journée » (heures et phrases,
+          minimum 4,5:1) ; badge « Nouveau » vert sur vert clair 4,31:1 ;
+        - pages métiers (`/logiciel-lavage-auto`, `/facturation-laveur-auto`,
+          `/meilleur-logiciel-lavage-auto`) : numéros « 01 02 03 » dans le même gris ;
+        - `/signup` : aide sous le téléphone (`#898991` sur blanc, 3,47:1) ;
+        - page de réservation : titres des étapes repliées « Où et quand » et « Vos coordonnées »
+          (`#71717b` sur `#f6f5f3`, 4,43:1, juste sous 4,5).
+        Agent : `designer`.
   - [ ] **4. CGU.** Pas de page. Ryan : à faire. Agent : `legal`.
-  - [ ] **5. Acceptation des CGV à l'inscription.** Les CGV existent, mais `/signup` ne
-        demande pas de les accepter (ni la politique de confidentialité) : sans trace
-        d'acceptation, elles sont difficilement opposables à un laveur en cas de litige
-        (impayé, résiliation contestée). Case à cocher + date d'acceptation enregistrée.
-        À faire avec le point 4 (une seule case pour CGU et CGV). Agents : `legal` pour le
-        texte, `dev`, relecture `cyber` (ça touche l'inscription).
   - Détails mineurs relevés : `/login`, `/signup` et la page 404 reprennent le titre de
     l'accueil ; `robots.txt` bloque `/register`, qui n'existe pas (la route est `/signup`) ;
     `/confidentialite` ne cite pas la mesure d'audience (Vercel Analytics, sans cookie) ;
@@ -779,7 +767,7 @@ expliquer). Nouvelles idées à ajouter ICI au fil de l'eau, plutôt que dans
 
 ### 📖 Guide / tuto
 
-- [ ] 2026-10-08 — **Tuto PWA, FUSIONNÉ dans la visite guidée du tableau de
+- [x] 2026-10-18 (fusionné dans master, `3d2fd96`) — 2026-10-08 — **Tuto PWA, FUSIONNÉ dans la visite guidée du tableau de
       bord — sur `feat/tuto-pwa`, poussée, preview Vercel vérifiée, PAS ENCORE
       MERGÉE sur `master`.** Demande de Ryan, 2026-10-05, puis très largement
       recadrée en cours de route (2026-10-07/08) : la première version
@@ -3372,30 +3360,15 @@ rien à faire, mais que le projet reste globalement sain.
       réelles : un compte rétrogradé sous Pro qui avait activé les avis pourrait continuer à en
       envoyer. Rien d'urgent (pas de signalement client), à prendre quand `dev` a du temps.
       Agent : `dev`.
-- [ ] **À décider : deux blocs de la landing ne précisent pas qu'ils sont réservés à la formule
-      Pro.** L'encart « La facturation, sans outil en plus » et la section « Créneaux groupés »
-      ne disent pas qu'il s'agit de fonctions Pro (contrairement à la grille « Et tout le reste »
-      juste en dessous, qui elle affiche le badge). Pas une erreur factuelle, un choix éditorial
-      — à trancher avec `growth` : le dire clairement partout, ou laisser ces deux blocs vendre
-      la fonction sans mentionner le palier.
 - [x] 2026-10-18 — **Contenu SEO remis à jour avec la grille du 18/10 (PR #7).** FAQ passée à
       20 questions (JSON-LD), guide, comparatif, page tournée et 12 articles corrigés
       (facturation et avis dès Starter, acompte/promotions/fidélité dès l'offre gratuite).
       Nouvelles pages : `/facturation-laveur-auto`, articles « acompte à la réservation » et
       « carte de fidélité » (image de partage + sitemap).
-- [ ] **À valider avec Alexandre : les prix du MARCHÉ cités dans les articles de blog** (pas
-      les tarifs WashBoard, qui viennent tous de `plan.ts`). Ex. « Tarifs lavage auto à domicile » :
-      extérieur 25–45 €, intérieur 35–60 €, complet 55–95 €, profondeur 120–250 €, taux horaire
-      35–45 €/h minimum. Tirés de sources publiques par `seo-geo` : Alexandre, au contact des
-      laveurs, confirme que ça colle au terrain.
 - [ ] **À trancher avec Alexandre : la FAQ dit publiquement qu'un client ne peut pas annuler
       seul** (pas de bouton d'annulation sur sa page de confirmation, il prévient le laveur).
       Vrai dans le code, mais c'est une limite affichée : la garder telle quelle, ou ajouter
       un bouton d'annulation côté client.
-- [ ] **À trancher avec Alexandre : case « j'accepte les conditions » pour l'acompte.** Les
-      conditions de remboursement s'affichent bien avant la réservation (`EncartAcompte`,
-      étape coordonnées), mais le client n'a rien à cocher. Le `legal` le conseille comme
-      bonne pratique (preuve d'acceptation), sans obligation.
 - [ ] **Classes Tailwind en dur dans les props des pages métiers** (`text-[#1651E8]…` dans les
       liens passés à `MetierPageTemplate`) : sans effet sous la DA v2, à retirer au calme.
       Agent : `seo-geo`.
@@ -3461,6 +3434,26 @@ rien à faire, mais que le projet reste globalement sain.
 ---
 
 ## ✅ Fait
+
+- [x] 2026-10-19 — **Les 3 priorités d'Alexandre du 2026-10-02** (SMS, refonte du site, refonte
+      de la page de réservation) : faites, confirmé par Alexandre.
+- [x] 2026-10-05 — **La liste `/dashboard/factures` affiche aussi les factures écrites à la main**
+      (`d44d9c5`, avec leur PDF) : la suite des numéros se relit sans trou. Constaté le 2026-10-19.
+- [x] 2026-10-19 (constaté) — **Image de partage de la page d'accueil** : `src/app/opengraph-image.tsx`
+      est en production (`og:image` et `twitter:image`, 1200 × 630).
+- [x] 2026-10-01 — **Acceptation des CGV à l'inscription** : case obligatoire, date et IP tracées
+      (`d5e8954`). Constaté le 2026-10-19.
+- [x] 2026-10-19 — **Landing : facturation dès Starter.** Les blocs « Facturation » et « Créneaux
+      groupés » affichent leur offre (badge Starter / Pro). Vérifié dans le code : `facturation` et
+      `compta` à `starter` dans `MIN_PLAN`, tous les contrôles passent par `hasFeature` ; les
+      devis et factures à la main exigent les infos de facturation, enregistrables dès Starter.
+- [x] 2026-10-19 — **Prix du marché de l'article « Tarifs lavage auto à domicile » : +20 € sur
+      chaque fourchette** (décision d'Alexandre) : extérieur 45–65, intérieur 55–80, complet 75–115,
+      profondeur 140–270, sièges 80–140, céramique 270–720 € ; exemple du texte 55 € / 45 €. Le taux
+      horaire plancher (35–45 €/h) n'a pas bougé.
+- [x] 2026-10-19 — **Acompte : case « J'ai lu et j'accepte les conditions de l'acompte »**
+      obligatoire (page classique et page personnalisée) ; l'API refuse aussi une réservation avec
+      acompte sans elle (400).
 
 - [x] 2026-07-01 — **Modèle de véhicule par le client** : à la réservation, un champ
       texte libre optionnel par véhicule (ex. « Peugeot 208 grise »). Stocké dans
