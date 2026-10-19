@@ -10,8 +10,8 @@ import { formatPrice } from '@/lib/pricing'
 export type ApercuFidelite = { progression: number; requis: number; disponibles: number; remise: number; offerte: boolean; offert?: string | null; phrase: string }
 export type PrixApercu = { prestation: number; options: number; deplacement: number }
 
-/** Demande l'aperçu au serveur ~0,6 s après la dernière frappe, quand l'email ou le
- *  téléphone est complet. Ne fait rien si le laveur n'a pas de carte de fidélité. */
+/** Demande l'aperçu au serveur ~0,6 s après la dernière frappe, quand l'email ET le
+ *  téléphone sont complets. Ne fait rien si le laveur n'a pas de carte de fidélité. */
 export function useApercuFidelite(washerId: string, actif: boolean) {
   const [apercu, setApercu] = useState<ApercuFidelite | null>(null)
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -22,7 +22,8 @@ export function useApercuFidelite(washerId: string, actif: boolean) {
     if (!actif) return
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     const telOk = telephone.replace(/\D/g, '').length >= 10
-    if (!emailOk && !telOk) { setApercu(null); derniere.current = ''; return }
+    // Les deux, toujours : le serveur ne montre la carte que si l'email va avec le numéro.
+    if (!emailOk || !telOk) { setApercu(null); derniere.current = ''; return }
     const signature = `${email.trim().toLowerCase()}|${telephone.replace(/\D/g, '')}|${prix.prestation}|${prix.options}|${prix.deplacement}`
     if (signature === derniere.current) return
     if (minuteur.current) clearTimeout(minuteur.current)

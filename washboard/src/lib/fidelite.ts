@@ -58,6 +58,23 @@ export function fideliteActive(brut: unknown): ReglagesFidelite | null {
 }
 
 export type ReservationCarte = { status: string; fidelite_remise?: number | null; vehicle_count?: number | null }
+/** Une réservation du client telle que lue en base, avec de quoi le reconnaître (`carteVisible`). */
+export type ReservationClient = ReservationCarte & { id?: string; client_email?: string | null; client_phone?: string | null }
+
+/** La carte suit le téléphone, mais ne se MONTRE au client (aperçu, confirmation, email « Votre
+ *  tampon est arrivé ») et sa récompense ne s'applique que si l'email tapé est celui d'une
+ *  prestation TERMINÉE sur ce numéro, ou si le numéro n'a encore aucune autre réservation (sa
+ *  carte ne porte alors que les siens). Fuite fermée le 2026-10-19 (décision d'Alexandre) :
+ *  n'importe qui pouvait taper le numéro d'un autre pour voir ses tampons, ou réserver avec
+ *  et lui prendre son lavage offert. « Terminée » et pas « réservée » : deux réservations
+ *  bidon d'affilée suffisaient sinon à se faire reconnaître. Un client qui change d'email
+ *  voit une carte vierge le temps d'une prestation ; ses tampons restent sur son numéro.
+ *  `autres` : les réservations du numéro, SANS celle qu'on est en train de traiter. */
+export function carteVisible(autres: readonly ReservationClient[], email: string | null | undefined): boolean {
+  if (autres.length === 0) return true
+  const e = email?.trim().toLowerCase()
+  return !!e && autres.some(r => r.status === 'done' && r.client_email?.trim().toLowerCase() === e)
+}
 
 /** Les tampons qu'apporte une réservation terminée : un, ou un par véhicule si le laveur l'a choisi. */
 export function tamponsPour(r: Pick<ReservationCarte, 'vehicle_count'>, parVehicule: boolean | undefined): number {

@@ -914,8 +914,9 @@ describe('POST /api/bookings — acompte', () => {
 
 describe('POST /api/bookings — carte de fidélité', () => {
   const FIDELITE = { actif: true, tampons: 10, recompense: 'pourcentage', valeur: 50 }
-  // La carte suit le téléphone (2026-10-18) : mêmes chiffres écrits autrement, autre email.
-  const termines = (n: number, vehicle_count = 1) => Array.from({ length: n }, () => ({ status: 'done', fidelite_remise: null, vehicle_count, client_email: 'ancienne@adresse.fr', client_phone: '06 12 34 56 78' }))
+  // La carte suit le téléphone (2026-10-18), mêmes chiffres écrits autrement ; elle ne se montre
+  // que si l'email va avec le numéro (2026-10-19) : ici le même, à la casse près.
+  const termines = (n: number, vehicle_count = 1, client_email = 'Client@Test.fr') => Array.from({ length: n }, () => ({ status: 'done', fidelite_remise: null, vehicle_count, client_email, client_phone: '06 12 34 56 78' }))
 
   it('carte pleine : applique la récompense, la trace et renvoie la carte', async () => {
     avecWasher({ fidelite: FIDELITE })
@@ -945,6 +946,28 @@ describe('POST /api/bookings — carte de fidélité', () => {
     const { body } = await poster({ client_email: 'client@test.fr' })
     expect(body.data.fidelite.etat).toMatchObject({ progression: 8, requis: 10 })
     expect(body.data.fidelite.gain).toBe(1)
+  })
+
+  it('le numéro d’un autre, avec un autre email : ni sa récompense, ni sa carte', async () => {
+    avecWasher({ fidelite: FIDELITE })
+    plan.tables.fidelite_cartes = { data: { jeton: 'd'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: termines(10, 1, 'la-vraie-cliente@exemple.fr'), error: null }
+    const { res, body } = await poster({ client_email: 'client@test.fr' })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv).not.toHaveProperty('fidelite_remise')
+    expect(reserv.booked_price).toBe(60)
+    expect(body.data).not.toHaveProperty('fidelite')
+  })
+
+  it('un email vu seulement sur une réservation pas encore faite ne suffit pas', async () => {
+    // Sinon deux réservations bidon d'affilée suffiraient à se faire reconnaître.
+    avecWasher({ fidelite: FIDELITE })
+    plan.tables.fidelite_cartes = { data: { jeton: 'e'.repeat(36), ajustement: 0 }, error: null }
+    plan.tables.bookings = { data: [...termines(10, 1, 'la-vraie-cliente@exemple.fr'), { status: 'pending', fidelite_remise: null, vehicle_count: 1, client_email: 'client@test.fr', client_phone: '0612345678' }], error: null }
+    const { body } = await poster({ client_email: 'client@test.fr' })
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('fidelite_remise')
+    expect(body.data).not.toHaveProperty('fidelite')
   })
 
   it('sans carte de fidélité chez le laveur : rien ne change', async () => {

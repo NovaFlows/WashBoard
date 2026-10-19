@@ -7,7 +7,7 @@ import { formatHeure, FUSEAU } from '@/lib/dateUtils'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { remisePromotion } from '@/lib/promotion'
-import { cleFidelite, etatCarte, fideliteActive, phraseCarte, remiseFidelite, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
+import { carteVisible, cleFidelite, etatCarte, fideliteActive, phraseCarte, remiseFidelite, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
 import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte, type Carte } from '@/lib/fideliteServeur'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
@@ -550,7 +550,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         assurerCarte(supabase, bookingData.washer_id, cle),
         reservationsDuClient(supabase, bookingData.washer_id, cle),
       ])
-      if (carte && reservations) {
+      // Carte montrée et récompense appliquée seulement si l'email va avec le numéro
+      // (`carteVisible`, 2026-10-19) : réserver avec le numéro d'un autre ne lui prend plus son
+      // lavage offert, et ne renvoie ni sa carte ni son lien.
+      if (carte && reservations && carteVisible(reservations, bookingData.client_email)) {
         const etat = etatCarte(reservations, carte.ajustement, reglages.tampons, reglages.tampon_par_vehicule)
         // La promotion porte sur prestation + options : on la retire d'abord de la prestation.
         const prestationApresPromo = Math.max(0, prix_vehicules - (promotion?.remise ?? 0))

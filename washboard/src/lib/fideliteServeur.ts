@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { logger } from '@/lib/logger'
-import { cleFidelite, etatCarte, fideliteActive, nouveauJeton, numeroStable, phraseCarte, recompenseCourte, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationCarte } from '@/lib/fidelite'
+import { carteVisible, cleFidelite, etatCarte, fideliteActive, nouveauJeton, numeroStable, phraseCarte, recompenseCourte, tamponsPour, type EtatCarte, type ReglagesFidelite, type ReservationClient } from '@/lib/fidelite'
 import { couleurCarte, numeroCarte, type ApparenceCarte } from '@/lib/carteFidelite'
 import { hasFeature, SITE_URL_FALLBACK, type AbonnementInfo } from '@/lib/plan'
 import { urlVersionnee } from '@/lib/themes'
@@ -14,12 +14,13 @@ import { sendTamponFidelite } from '@/lib/email'
 // Table absente (migration pas encore passée) : tout rend `null`, la réservation et les pages
 // fonctionnent comme si le laveur n'avait pas de carte.
 
-type Reservation = ReservationCarte & { client_email: string | null; client_phone: string | null }
+type Reservation = ReservationClient & { client_email: string | null; client_phone: string | null }
 
-/** Les réservations d'un client chez un laveur, reconnues par `cleFidelite` (téléphone d'abord). */
-export async function reservationsDuClient(admin: SupabaseClient, washerId: string, cle: string): Promise<ReservationCarte[] | null> {
+/** Les réservations d'un client chez un laveur, reconnues par `cleFidelite` (téléphone d'abord).
+ *  Avant de MONTRER la carte au client, passer par `carteVisible` (lib/fidelite.ts). */
+export async function reservationsDuClient(admin: SupabaseClient, washerId: string, cle: string): Promise<ReservationClient[] | null> {
   if (!cle) return []
-  let requete = admin.from('bookings').select('status, fidelite_remise, vehicle_count, client_email, client_phone').eq('washer_id', washerId)
+  let requete = admin.from('bookings').select('id, status, fidelite_remise, vehicle_count, client_email, client_phone').eq('washer_id', washerId)
   // Filtrer en base au plus près, puis appliquer exactement la règle de `cleFidelite`. Un
   // numéro s'écrit avec ou sans espaces, points ou indicatif : on cherche ses 6 derniers
   // chiffres dans cet ordre, quoi qu'il y ait entre eux.
@@ -110,7 +111,7 @@ export function apparenceCarte(laveur: LaveurCarte, reglages: ReglagesFidelite, 
 export async function prevenirTampon(
   admin: SupabaseClient,
   laveur: LaveurCarte & { id: string; fidelite?: unknown },
-  reservation: { client_email: string | null; client_phone: string | null; client_name: string | null; vehicle_count?: number | null },
+  reservation: { id: string; client_email: string | null; client_phone: string | null; client_name: string | null; vehicle_count?: number | null },
 ): Promise<boolean> {
   const reglages = fideliteActive(laveur.fidelite)
   const email = reservation.client_email?.trim()
@@ -120,8 +121,12 @@ export async function prevenirTampon(
     // Créée au besoin : un client venu avant que le laveur lance sa carte a droit à la sienne.
     const carte = await assurerCarte(admin, laveur.id, cle)
     if (!carte) return false
-    const etat = await etatDuClient(admin, laveur.id, cle, reglages.tampons, carte.ajustement, reglages.tampon_par_vehicule)
-    if (!etat) return false
+    const reservations = await reservationsDuClient(admin, laveur.id, cle)
+    if (!reservations) return false
+    // Le lien de la carte part à l'email de CETTE réservation : seulement s'il est déjà connu
+    // sur ce numéro (`carteVisible`), sans quoi on enverrait les tampons d'un autre.
+    if (!carteVisible(reservations.filter(r => r.id !== reservation.id), email)) return false
+    const etat = etatCarte(reservations, carte.ajustement, reglages.tampons, reglages.tampon_par_vehicule)
     const complete = etat.disponibles > 0
     const nouveaux = tamponsPour(reservation, reglages.tampon_par_vehicule)
     await sendTamponFidelite({
