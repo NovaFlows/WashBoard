@@ -115,6 +115,16 @@ export function blocageAvis(r: ReglagesMessages, ctx: ContexteMessages): 'lien' 
   return null
 }
 
+/** Le client a-t-il de quoi recevoir la demande d'avis ? Un email, ou un téléphone quand le
+ *  laveur envoie par SMS — même règle que la relance (`api/cron/send-followups`). Sans ça, un
+ *  rendez-vous saisi avec le seul téléphone n'était jamais programmé. */
+export function avisJoignable(
+  b: { client_email?: string | null; client_phone?: string | null },
+  canal: string | null | undefined,
+): boolean {
+  return nonVide(b.client_email) || ((canal ?? 'email') === 'sms' && nonVide(b.client_phone))
+}
+
 /** La demande d'avis est-elle réellement en marche ? */
 export const avisActif = (r: ReglagesMessages, ctx: ContexteMessages): boolean =>
   !!r.review_enabled && blocageAvis(r, ctx) === null

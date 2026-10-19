@@ -230,6 +230,18 @@ describe('PATCH /api/bookings/[id] — client de lecture et d’écriture', () =
     for (const e of ecritures) expect(e.filtres).toMatchObject({ id: 'c', washer_id: 'washer-1' })
   })
 
+  it('programme l’avis par SMS pour un client saisi sans email, pas par email', async () => {
+    const AVIS = { review_enabled: true, google_review_url: 'https://g.page/r/x', review_delay_hours: 3 }
+    plan.booking = { ...plan.booking, client_email: null }
+    plan.washer = { ...WASHER, ...AVIS, review_channel: 'sms' }
+    await PATCH(requete({ status: 'done' }), { params })
+    expect(ecritures.some(e => 'review_request_at' in e.valeurs)).toBe(true)
+    ecritures.length = 0
+    plan.washer = { ...WASHER, ...AVIS, review_channel: 'email' }
+    await PATCH(requete({ status: 'done' }), { params })
+    expect(ecritures.some(e => 'review_request_at' in e.valeurs)).toBe(false)
+  })
+
   it('filtre aussi la programmation de la demande d’avis', async () => {
     plan.washer = { ...WASHER, review_enabled: true, google_review_url: 'https://g.page/r/x', review_delay_hours: 3 }
     await PATCH(requete({ status: 'done' }), { params })

@@ -11,6 +11,7 @@ import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouille
 import { genererJetonReservation } from '@/lib/bookingToken'
 import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/cloture'
 import { prevenirTampon } from '@/lib/fideliteServeur'
+import { avisJoignable } from '@/lib/messagesAutomatiques'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -209,7 +210,7 @@ export async function PATCH(
 
     // Suivi client : planifier la demande d'avis Google (envoi différé par le cron)
     if (status === 'done' && washer.review_enabled && washer.google_review_url
-        && booking.client_email && !booking.review_request_sent_at) {
+        && avisJoignable(booking, washer.review_channel) && !booking.review_request_sent_at) {
       const delayMs = Math.max(0, Number(washer.review_delay_hours ?? 3)) * 3_600_000
       // Sans cette date, le cron ne demandera jamais l'avis.
       const { error: errAvis } = await admin
