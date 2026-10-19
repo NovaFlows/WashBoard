@@ -878,7 +878,7 @@ describe('POST /api/bookings — acompte', () => {
 
   it('calcule l’acompte sur le total, le trace et renvoie le lien de paiement', async () => {
     avecWasher({ acompte: ACOMPTE })
-    const { res, body } = await poster({})
+    const { res, body } = await poster({ acompte_accepte: true })
     expect(res.status).toBe(201)
     const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
     expect(reserv.acompte_montant).toBe(18) // 30 % de 60
@@ -889,6 +889,15 @@ describe('POST /api/bookings — acompte', () => {
       { cle: 'paypal', libelle: 'PayPal', url: 'https://paypal.me/eclat/18.00EUR', montantExact: true },
       { cle: 'sumup', libelle: 'SumUp', url: 'https://sumup.me/eclat', montantExact: false },
     ])
+  })
+
+  it('refuse une réservation avec acompte dont les conditions ne sont pas cochées', async () => {
+    avecWasher({ acompte: ACOMPTE })
+    const { res, body } = await poster({})
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/conditions de l’acompte/)
+    expect(rpcAppels).toHaveLength(0)
+    expect((await poster({ acompte_accepte: false })).res.status).toBe(400)
   })
 
   it('acompte désactivé ou réglages abîmés : aucune colonne d’acompte envoyée', async () => {

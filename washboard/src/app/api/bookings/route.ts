@@ -58,6 +58,9 @@ const BookingSchema = z.object({
   company_name:    z.string().optional(),
   siret:           z.string().regex(/^\d{14}$/, 'SIRET invalide').optional(),
   billing_address: z.string().optional(),
+  // Le client a coché « j'accepte les conditions de l'acompte » (2026-10-19) : exigé quand
+  // un acompte est demandé, voir plus bas.
+  acompte_accepte: z.boolean().optional(),
   vehicles_detail: z.array(z.object({
     type:       z.string(),
     count:      z.number().int().min(1),
@@ -581,6 +584,12 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       const montantAcompteDu = reglages ? montantAcompte(reglages, finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0)) : 0
       if (reglages && montantAcompteDu > 0) acompte = { montant: montantAcompteDu, echeance: echeanceAcompte(reglages), reglages }
     }
+  }
+  // Preuve d'acceptation (conseil du `legal`, décision d'Alexandre le 2026-10-19) : une
+  // réservation avec acompte n'existe que si le client a coché les conditions. Une page ouverte
+  // avant la mise en ligne de la case ne l'envoie pas : d'où le « rechargez la page ».
+  if (acompte && bookingData.acompte_accepte !== true) {
+    return Response.json({ error: 'Cochez la case pour accepter les conditions de l’acompte (rechargez la page si elle n’apparaît pas).' }, { status: 400 })
   }
 
   // L'événement Google Agenda est créé uniquement à la confirmation du RDV

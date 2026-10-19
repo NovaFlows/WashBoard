@@ -22,8 +22,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string }> }) {
-  const { mode, etape, promo, scenario, couleur, tampons } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons, acompte } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -71,7 +71,9 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     <main className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
       <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], clients_pro: true, facturation_prete: true }}
         services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
-        disponibilites={{ bookings: [], unavailabilities: [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion} />
+        disponibilites={{ bookings: [], unavailabilities: [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
+        // ?acompte=1 : un laveur qui demande 30 % d'acompte (case des conditions à cocher).
+        acompte={acompte === '1' ? { type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/demo' }, delai_heures: 48, remboursable: true, remboursement_heures: 48, virementPropose: true, weroPropose: false } : null} />
     </main>
   </div></>
 }

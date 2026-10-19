@@ -196,7 +196,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
     setSlotVersion(v => v + 1)
   }
 
-  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string }) {
+  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string; acompte_accepte?: boolean }) {
     setLoading(true)
     setError(null)
     if (contactData.notes) updateForm({ notes: contactData.notes })

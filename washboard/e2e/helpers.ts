@@ -92,6 +92,9 @@ export async function reserverCommeClient(page: Page, client: { nom: string; ema
   await page.getByLabel('Téléphone', { exact: true }).fill(client.telephone ?? '0600000000')
   const modele = page.getByLabel('Modèle du véhicule')
   if (await modele.isVisible()) await modele.fill('Peugeot 208 E2E')
+  // Laveur qui demande un acompte : la case des conditions est obligatoire (2026-10-19).
+  const conditionsAcompte = page.getByLabel(/j’accepte les conditions de l’acompte/)
+  if (await conditionsAcompte.isVisible()) await conditionsAcompte.check()
 
   const confirmer = page.getByRole('button', { name: 'Confirmer la réservation' })
   await expect(confirmer).toBeEnabled({ timeout: 5_000 })

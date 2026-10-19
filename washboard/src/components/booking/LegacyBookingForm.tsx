@@ -203,7 +203,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
     setForm(prev => ({ ...prev, ...data }))
   }
 
-  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string }) {
+  async function submitBooking(contactData: Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & { notes?: string; hp?: string; acompte_accepte?: boolean }) {
     setLoading(true)
     setError(null)
     if (contactData.notes) updateForm({ notes: contactData.notes })

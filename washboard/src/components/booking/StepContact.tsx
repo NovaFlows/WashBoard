@@ -18,6 +18,7 @@ type Props = {
     siret?: string
     billing_address?: string
     hp?: string
+    acompte_accepte?: boolean
   }) => void
   onBack: () => void
   accent?: string
@@ -57,7 +58,10 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
 
   const proFieldsValid = !isProfessional || (companyName.trim().length >= 2 && siretValid)
 
-  const canSubmit = name.trim() && email.includes('@') && phoneValid && proFieldsValid
+  // Case « j'accepte les conditions de l'acompte » (2026-10-19) : obligatoire dès qu'un acompte
+  // est demandé, le serveur la vérifie aussi.
+  const [acompteAccepte, setAcompteAccepte] = useState(false)
+  const canSubmit = name.trim() && email.includes('@') && phoneValid && proFieldsValid && (!acompte || acompteAccepte)
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
   const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
@@ -229,7 +233,13 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
       )}
 
       {fidelite && <div className="mb-4">{fidelite}</div>}
-      {acompte && <div className="mb-4"><EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} /></div>}
+      {acompte && <div className="mb-4">
+        <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} />
+        <label className="mt-3 flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+          <input type="checkbox" checked={acompteAccepte} onChange={e => setAcompteAccepte(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300" />
+          <span>J’ai lu et j’accepte les conditions de l’acompte.</span>
+        </label>
+      </div>}
 
       <div className="flex gap-3">
         <button
