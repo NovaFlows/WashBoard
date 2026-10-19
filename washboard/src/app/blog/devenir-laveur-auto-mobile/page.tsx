@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
 import { requiredPlanLabel } from '@/lib/plan'
-import { H2, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
+import { H2, P, UL, A, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('devenir-laveur-auto-mobile')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -26,14 +26,9 @@ export const metadata: Metadata = {
 
 const faq: FaqItem[] = [
   {
-    question: 'Quel statut pour devenir laveur auto mobile ?',
-    answer:
-      'La micro-entreprise (auto-entrepreneur) dans la quasi-totalité des cas : création gratuite en ligne, comptabilité réduite à un livre de recettes, et aucune cotisation tant que vous ne facturez rien. Le lavage de véhicules relève de la prestation de services, ce qui détermine le taux de cotisations et le plafond de chiffre d’affaires.',
-  },
-  {
     question: 'Faut-il un diplôme pour laver des voitures à domicile ?',
     answer:
-      'Non. Aucun diplôme ni autorisation particulière n’est exigé pour exercer le lavage auto à domicile. En revanche, une assurance responsabilité civile professionnelle couvrant les biens confiés est indispensable, et les règles sur les eaux de lavage s’appliquent dès la première prestation.',
+      'Non, le métier s’apprend en pratiquant. Ce qui compte, c’est le geste (ne pas rayer, ne pas laisser de traces), le temps tenu par prestation et la qualité du premier résultat montré au client.',
   },
   {
     question: 'Quel budget pour se lancer en lavage auto mobile ?',
@@ -41,14 +36,14 @@ const faq: FaqItem[] = [
       'Comptez entre 650 et 2 500 € de matériel selon que vous travaillez avec ou sans eau : aspirateur eau et poussière (150–400 €), nettoyeur haute pression ou pulvérisateurs (150–600 €), cuve à eau (100–400 €), produits de départ (150–300 €), microfibres et brosses (100–200 €), plus un groupe électrogène en option (200–600 €). Démarrez léger et réinvestissez ce que vous gagnez.',
   },
   {
-    question: 'A-t-on le droit de laver une voiture dans la rue ?',
+    question: 'Avec ou sans eau : que choisir pour démarrer ?',
     answer:
-      'Dans la plupart des communes, non : le lavage sur la voie publique est interdit, et les eaux chargées en détergents ne doivent pas partir au caniveau. Trois solutions en règle : le lavage sans eau ou à faible consommation, le lavage sur terrain privé avec l’accord du propriétaire, ou un système de récupération des eaux usées. Renseignez-vous en mairie.',
+      'Le lavage sans eau est le plus souple : il s’exécute au pulvérisateur et à la microfibre, sur un parking d’entreprise ou devant chez le client, sans cuve ni évacuation. L’eau (nettoyeur haute pression, cuve) donne de meilleurs résultats sur les véhicules très sales, mais demande plus de matériel et de logistique.',
   },
   {
-    question: 'Quelle assurance pour un laveur auto mobile ?',
+    question: 'Comment trouver ses premiers clients ?',
     answer:
-      'Une responsabilité civile professionnelle incluant explicitement la garantie « biens confiés ». C’est cette clause qui couvre les dommages causés au véhicule lui-même (rayure, produit qui marque un cuir, élément de finition abîmé). Une RC pro standard sans cette extension ne couvre pas la voiture que vous êtes en train de laver.',
+      'Créez votre fiche Google avant la première prestation, demandez un avis après chaque lavage, et groupez vos rendez-vous par quartier pour que le bouche-à-oreille reste local.',
   },
 ]
 
@@ -59,70 +54,31 @@ export default function Page() {
       <article>
         <ArticleHeader
           article={article}
-          intro="Le lavage auto à domicile est l'une des activités les plus accessibles à lancer : peu de capital, pas de local, une demande réelle. Ce qui fait la différence, ce sont quelques décisions prises au départ."
+          intro="Le lavage auto à domicile est l'une des activités les plus accessibles à lancer : peu de capital, pas de local, une demande réelle. Ce qui fait la différence, ce sont quelques décisions prises au départ : la méthode de lavage, le matériel, les premiers clients."
         />
 
         <Summary
           items={[
-            'Aucun diplôme requis : la micro-entreprise suffit pour démarrer seul, sans cotisation tant qu’on ne facture rien.',
-            'Une RC pro avec la garantie « biens confiés » est indispensable — c’est elle qui couvre la voiture du client.',
-            'Laver dans la rue est interdit dans la plupart des communes : sans eau, terrain privé ou récupération des eaux.',
+            'Aucun diplôme requis : le métier s’apprend en pratiquant, et la qualité du premier lavage fait le reste.',
+            'Avec ou sans eau : le sans-eau est le plus souple pour démarrer, l’eau demande plus de matériel.',
             'Budget matériel de départ : 650 à 2 500 € selon la méthode. Commencez léger, réinvestissez.',
             'Créez votre fiche Google avant la première prestation, et demandez un avis dès la première.',
           ]}
         />
 
         <P>
-          Se lancer ne demande ni diplôme ni autorisation particulière. C&apos;est une force — et
-          c&apos;est aussi pourquoi beaucoup démarrent mal : sans assurance adaptée, sans savoir ce
-          que la loi impose sur les eaux de lavage, et avec du matériel choisi au hasard. Voici
-          l&apos;ordre dans lequel prendre les choses.
+          Se lancer ne demande ni diplôme ni gros capital. C&apos;est une force — et c&apos;est aussi
+          pourquoi beaucoup démarrent mal : avec du matériel choisi au hasard, sans méthode de
+          lavage claire et sans stratégie pour les premiers clients. Voici l&apos;ordre dans lequel
+          prendre les choses. Pour le statut et les démarches, renseignez-vous auprès des
+          organismes officiels : ici, on parle du métier.
         </P>
 
-        <H2>1. Le statut : la micro-entreprise dans la quasi-totalité des cas</H2>
+        <H2>1. Avec ou sans eau : choisir sa méthode</H2>
         <P>
-          Pour démarrer seul, la micro-entreprise est le régime adapté : création gratuite en ligne,
-          comptabilité réduite à un livre de recettes, et surtout aucune cotisation si vous ne
-          facturez rien. Vous déclarez votre chiffre d&apos;affaires chaque mois ou chaque
-          trimestre, et vous payez un pourcentage dessus.
+          C&apos;est la spécificité du métier, et elle conditionne tout le reste : le matériel, les
+          endroits où vous pouvez travailler, le temps par voiture. Trois manières de travailler :
         </P>
-        <P>
-          Le lavage de véhicules relève de la <strong>prestation de services</strong>, avec le code
-          APE correspondant au lavage automobile. Ce détail compte : le taux de cotisations et le
-          plafond de chiffre d&apos;affaires diffèrent de ceux de la vente de marchandises.
-        </P>
-        <Callout>
-          <p>
-            Les taux de cotisations, les plafonds et les exonérations de début d&apos;activité
-            changent régulièrement. Vérifiez les chiffres en vigueur sur le site officiel de
-            l&apos;URSSAF au moment où vous vous lancez plutôt que de vous fier à un article — y
-            compris celui-ci.
-          </p>
-        </Callout>
-
-        <H2>2. L&apos;assurance : le point que personne ne doit sauter</H2>
-        <P>
-          Vous manipulez le bien le plus cher de vos clients après leur logement. Une rayure sur une
-          carrosserie foncée, un produit qui marque un cuir, un nettoyeur qui décolle un
-          élément de finition : ça arrive, même en travaillant proprement.
-        </P>
-        <P>
-          Il vous faut une <strong>responsabilité civile professionnelle</strong> qui couvre
-          explicitement les <strong>biens confiés</strong>. C&apos;est cette clause qui prend en
-          charge les dommages causés au véhicule lui-même. Une RC pro standard sans cette extension
-          ne couvrira pas la voiture que vous êtes en train de laver — vérifiez-le noir sur blanc
-          avant de signer. Les autres garanties et les exclusions à repérer sont détaillées dans{' '}
-          <A href="/blog/assurance-laveur-auto-mobile">quelle assurance pour un laveur auto mobile</A>.
-        </P>
-
-        <H2>3. L&apos;eau : la contrainte que la plupart découvrent trop tard</H2>
-        <P>
-          C&apos;est la spécificité du métier, et la source des mauvaises surprises. Laver un
-          véhicule sur la voie publique est interdit dans la plupart des communes, et les eaux de
-          lavage chargées en détergents et en hydrocarbures ne doivent pas partir dans les
-          caniveaux, qui rejoignent souvent le milieu naturel sans traitement.
-        </P>
-        <P>Trois manières de travailler en règle :</P>
         <UL>
           <li>
             <strong>Le lavage sans eau ou à faible consommation.</strong>{' '}Des produits appliqués
@@ -131,22 +87,22 @@ export default function Page() {
             client sans contrainte d&apos;évacuation.
           </li>
           <li>
-            <strong>Le lavage sur terrain privé</strong>{' '}avec l&apos;accord du propriétaire, quand
-            les eaux s&apos;infiltrent sur une surface perméable.
+            <strong>Le lavage avec eau chez le client</strong>{' '}quand il dispose d&apos;un
+            espace adapté (cour, garage, terrain) et d&apos;un point d&apos;eau.
           </li>
           <li>
             <strong>Un système de récupération</strong>{' '}des eaux usées, plus lourd à mettre en
-            place mais nécessaire si vous voulez travailler au nettoyeur haute pression partout.
+            place mais utile si vous voulez travailler au nettoyeur haute pression à plusieurs
+            endroits.
           </li>
         </UL>
         <P>
-          Les règles précises dépendent de votre commune : renseignez-vous en mairie. Beaucoup de
-          laveurs mobiles font le choix du{' '}
-          <A href="/blog/lavage-auto-sans-eau">lavage sans eau</A>{' '}justement pour
-          s&apos;affranchir de cette question, et en font un argument écologique auprès des clients.
+          Beaucoup de laveurs mobiles font le choix du{' '}
+          <A href="/blog/lavage-auto-sans-eau">lavage sans eau</A>{' '}pour simplifier la logistique,
+          et en font un argument écologique auprès des clients.
         </P>
 
-        <H2>4. Le matériel : commencer léger</H2>
+        <H2>2. Le matériel : commencer léger</H2>
         <P>
           La tentation est d&apos;acheter un équipement complet avant le premier client. C&apos;est
           l&apos;inverse qu&apos;il faut faire : démarrez avec le minimum viable, et réinvestissez
@@ -173,7 +129,7 @@ export default function Page() {
           considérablement les endroits où vous pouvez travailler.
         </P>
 
-        <H2>5. Trouver les premiers clients</H2>
+        <H2>3. Trouver les premiers clients</H2>
         <P>
           Avant même votre première prestation, créez votre <strong>fiche d&apos;établissement
           Google</strong>. C&apos;est gratuit, et c&apos;est ce que consultent les gens qui
@@ -227,7 +183,6 @@ export default function Page() {
 
         <AlsoRead
           items={[
-            { href: '/blog/assurance-laveur-auto-mobile', label: 'Quelle assurance pour un laveur auto mobile' },
             { href: '/blog/lavage-auto-sans-eau', label: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi' },
             { href: '/blog/combien-gagne-un-laveur-auto-mobile', label: 'Combien gagne un laveur auto mobile ? Revenus réels et simulation' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },

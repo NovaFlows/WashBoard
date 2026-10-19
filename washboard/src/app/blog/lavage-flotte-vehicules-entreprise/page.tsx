@@ -77,7 +77,7 @@ export default function Page() {
             'Chaque cible achète pour une raison différente : l’image (auto-école), la rotation (loueur), la vente (concession), l’utilité (flotte de service). Parlez de la sienne.',
             'Chiffrez par véhicule et par passage, hors taxes, avec une remise de volume que vous avez calculée, pas devinée.',
             'Mettez-vous d’accord sur le délai de paiement avant le premier lavage, pas à la première facture.',
-            'Ce qui ne marche pas : brader l’entrée, dépendre d’un seul client, travailler sans écrit et sans assurance adaptée.',
+            'Ce qui ne marche pas : brader l’entrée, dépendre d’un seul client, travailler sans écrit, facturer tard.',
           ]}
         />
 
@@ -155,7 +155,7 @@ export default function Page() {
           <li>l&apos;annulation et les intempéries : qui décale, qui facture ;</li>
           <li>le délai de paiement ;</li>
           <li>la durée et le préavis de résiliation, dans les deux sens ;</li>
-          <li>la responsabilité en cas de dommage, et l&apos;assurance qui la couvre (voir <A href="/blog/assurance-laveur-auto-mobile">quelle assurance pour un laveur auto mobile</A>).</li>
+          <li>la responsabilité en cas de dommage, et qui la prend en charge.</li>
         </UL>
 
         <H2>Se faire payer : ce qui change avec une entreprise</H2>
