@@ -335,7 +335,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
     ${notesBox2}
 
     <!-- Encart facture -->
-    <div style="margin:0 40px 24px;background:#eff6ff;border-left:4px solid #3b82f6;padding:14px 18px;border-radius:0 6px 6px 0;">
+    <div style="margin:0 40px 24px;background:#EEF3F8;border-left:4px solid #3b82f6;padding:14px 18px;border-radius:0 6px 6px 0;">
       <p style="margin:0 0 3px;font-size:12px;color:#1e40af;font-weight:700;">Justificatif de prestation — facture</p>
       <p style="margin:0;font-size:12px;color:#3b82f6;">Ce document fait office de reçu de prestation de service. Référence : <strong>${ref}</strong> · Émis le ${today}</p>
     </div>
@@ -343,7 +343,7 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
     <!-- Bouton PDF -->
     <div style="padding:0 40px 28px;text-align:center;">
       <a href="${pdfUrl}"
-         style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;letter-spacing:0.3px;">
+         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;letter-spacing:0.3px;">
         Télécharger la confirmation PDF
       </a>
     </div>
@@ -380,8 +380,8 @@ export async function sendFollowupEmail(params: SendFollowupEmailParams) {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#1651E8;padding:28px 40px;">
-      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Message de votre laveur</p>
+    <div style="background:#306090;padding:28px 40px;">
+      <p style="margin:0;color:#D4E1EE;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Message de votre laveur</p>
       <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
     </div>
     <div style="padding:32px 40px;">
@@ -417,9 +417,9 @@ export async function sendReviewRequest(params: SendReviewRequestParams) {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#2563eb;padding:28px 40px;text-align:center;">
+    <div style="background:#306090;padding:28px 40px;text-align:center;">
       <h1 style="margin:0 0 6px;color:#ffffff;font-size:21px;font-weight:800;">Merci pour votre confiance !</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Comment s'est passé votre lavage avec ${escapeHtml(params.washerName)} ?</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">Comment s'est passé votre lavage avec ${escapeHtml(params.washerName)} ?</p>
     </div>
     <div style="padding:32px 40px;text-align:center;">
       <p style="margin:0 0 8px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
@@ -429,7 +429,7 @@ export async function sendReviewRequest(params: SendReviewRequestParams) {
       </p>
       <div style="font-size:30px;letter-spacing:4px;margin-bottom:24px;">⭐⭐⭐⭐⭐</div>
       <a href="${escapeHtml(params.reviewUrl)}" target="_blank"
-         style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">
+         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">
         Laisser un avis Google
       </a>
       <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;">Merci beaucoup pour votre soutien 🙏</p>
@@ -470,8 +470,8 @@ export async function sendFacture(params: SendFactureParams) {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#1651E8;padding:28px 40px;">
-      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Facture ${escapeHtml(params.numero)}</p>
+    <div style="background:#306090;padding:28px 40px;">
+      <p style="margin:0;color:#D4E1EE;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Facture ${escapeHtml(params.numero)}</p>
       <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
     </div>
     <div style="padding:32px 40px;">
@@ -481,7 +481,7 @@ export async function sendFacture(params: SendFactureParams) {
         <strong>${escapeHtml(params.washerName)}</strong>.
       </p>
       <a href="${escapeHtml(url)}"
-         style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
+         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
         Télécharger la facture (PDF)
       </a>
     </div>
@@ -538,8 +538,8 @@ export async function sendDocument(params: SendDocumentParams) {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#1651E8;padding:28px 40px;">
-      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">${titre} ${escapeHtml(params.numero)}</p>
+    <div style="background:#306090;padding:28px 40px;">
+      <p style="margin:0;color:#D4E1EE;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">${titre} ${escapeHtml(params.numero)}</p>
       <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
     </div>
     <div style="padding:32px 40px;">
@@ -550,11 +550,11 @@ export async function sendDocument(params: SendDocumentParams) {
           : `Merci pour votre confiance. Voici la facture de <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`}
       </p>
       ${devis && params.valableJusquau
-        ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.6;background:#f8fafc;border-left:3px solid #1651E8;padding:10px 14px;">Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.</p>`
+        ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.6;background:#f8fafc;border-left:3px solid #306090;padding:10px 14px;">Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.</p>`
         : ''}
       <p style="margin:0 0 16px;font-size:13px;color:#475569;">Le PDF est joint à ce message.</p>
       <a href="${escapeHtml(url)}"
-         style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
+         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
         Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne
       </a>
     </div>
@@ -638,7 +638,7 @@ export async function sendWasherBookingLocked({ to, washerName, scheduledAt, app
         et toutes les suivantes avec.
       </p>
       <div style="text-align:center;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#1651E8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Débloquer cette réservation →
         </a>
       </div>
@@ -685,9 +685,9 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#2563eb;padding:28px 40px;">
+    <div style="background:#306090;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réservation 🎉</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Un client vient de faire une demande sur votre page WashBoard</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">Un client vient de faire une demande sur votre page WashBoard</p>
     </div>
     <div style="padding:28px 40px;">
       <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.washerName)}</strong>,</p>
@@ -698,11 +698,11 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Email</td>
-          <td style="padding:10px 16px;font-weight:600;"><a href="mailto:${escapeHtml(params.clientEmail)}" style="color:#2563eb;">${escapeHtml(params.clientEmail)}</a></td>
+          <td style="padding:10px 16px;font-weight:600;"><a href="mailto:${escapeHtml(params.clientEmail)}" style="color:#306090;">${escapeHtml(params.clientEmail)}</a></td>
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Téléphone</td>
-          <td style="padding:10px 16px;font-weight:600;"><a href="tel:${escapeHtml(params.clientPhone)}" style="color:#2563eb;">${escapeHtml(params.clientPhone)}</a></td>
+          <td style="padding:10px 16px;font-weight:600;"><a href="tel:${escapeHtml(params.clientPhone)}" style="color:#306090;">${escapeHtml(params.clientPhone)}</a></td>
         </tr>
         <tr style="border-bottom:1px solid #e2e8f0;">
           <td style="padding:10px 16px;color:#64748b;">Prestation</td>
@@ -725,7 +725,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
       </table>
       ${notesBox3}
       <div style="margin-top:24px;text-align:center;">
-        <a href="${dashboardUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;">
+        <a href="${dashboardUrl}" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;">
           Voir dans WashBoard
         </a>
       </div>
@@ -773,7 +773,7 @@ export async function sendTrialReminder({ to, washerName, trialEndsAt, appUrl }:
         </p>
       </div>
       <div style="text-align:center;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Activer mon abonnement →
         </a>
       </div>
@@ -808,9 +808,9 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#2563eb;padding:28px 40px;">
+    <div style="background:#306090;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Votre mois d&apos;essai est terminé</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Rien ne s&apos;arrête — à vous de choisir la suite</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">Rien ne s&apos;arrête — à vous de choisir la suite</p>
     </div>
     <div style="padding:32px 40px;">
       <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
@@ -818,8 +818,8 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
         Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
         réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.
       </p>
-      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#1d4ed8;font-weight:600;">
+      <div style="background:#EEF3F8;border-left:4px solid #306090;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#24496E;font-weight:600;">
           En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
           gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.
         </p>
@@ -830,7 +830,7 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
         ou <strong>Pro à ${formatEuros(PLAN_PRICES.pro)}€/mois</strong> (réservations illimitées, comptabilité, avis Google, relances).
       </p>
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Choisir ma formule →
         </a>
       </div>
@@ -869,7 +869,7 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
         </p>
       </div>
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Activer mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
         </a>
       </div>
@@ -916,7 +916,7 @@ export async function sendSubReminder({ to, washerName, endsAt, appUrl }: {
         </p>
       </div>
       <div style="text-align:center;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Renouveler mon abonnement →
         </a>
       </div>
@@ -961,7 +961,7 @@ export async function sendSubExpired({ to, washerName, appUrl }: {
         </p>
       </div>
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Renouveler mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
         </a>
       </div>
@@ -1002,16 +1002,16 @@ export async function sendSupportReply({ to, titreQuestion, questionId, appUrl }
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#2563eb;padding:28px 40px;">
+    <div style="background:#306090;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réponse 💬</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">L&apos;équipe WashBoard a répondu à votre question</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">L&apos;équipe WashBoard a répondu à votre question</p>
     </div>
     <div style="padding:32px 40px;">
       <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
         À propos de : <strong style="color:#0f172a;">${escapeHtml(titreQuestion)}</strong>
       </p>
       <div style="text-align:center;">
-        <a href="${url}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Voir la réponse →
         </a>
       </div>
@@ -1063,7 +1063,7 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
         </p>
       </div>
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Régulariser mon compte →
         </a>
       </div>
@@ -1104,9 +1104,9 @@ export async function sendEmailConfirmation({ to, washerName, code }: {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#2563eb;padding:28px 40px;">
+    <div style="background:#306090;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Confirme ton adresse email</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Dernière étape avant d&apos;accéder à ton tableau de bord</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">Dernière étape avant d&apos;accéder à ton tableau de bord</p>
     </div>
     <div style="padding:32px 40px;">
       <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">${salutation}</p>
@@ -1114,8 +1114,8 @@ export async function sendEmailConfirmation({ to, washerName, code }: {
         Ton compte WashBoard est créé. Pour l&apos;activer, entre ce code dans l&apos;application :
       </p>
       <div style="text-align:center;margin-bottom:8px;">
-        <div style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 28px;">
-          <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#2563eb;font-family:'SF Mono',Consolas,monospace;">${codeEchappe}</span>
+        <div style="display:inline-block;background:#EEF3F8;border:1px solid #D4E1EE;border-radius:12px;padding:16px 28px;">
+          <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#306090;font-family:'SF Mono',Consolas,monospace;">${codeEchappe}</span>
         </div>
       </div>
       <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
@@ -1152,9 +1152,9 @@ export async function sendNouvellesOffres({ to, washerName, appUrl }: {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#1651e8;padding:28px 40px;">
+    <div style="background:#306090;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Quatre offres, une seule idée 🚗</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Payer pour ce qu&apos;on utilise vraiment</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">Payer pour ce qu&apos;on utilise vraiment</p>
     </div>
     <div style="padding:32px 40px;">
       <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
@@ -1194,7 +1194,7 @@ export async function sendNouvellesOffres({ to, washerName, appUrl }: {
         </tr>
       </table>
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Voir le détail des offres →
         </a>
       </div>
@@ -1224,9 +1224,9 @@ export async function sendAnnoncePwa({ to, washerName, appUrl }: {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#1651e8;padding:28px 40px;">
+    <div style="background:#306090;padding:28px 40px;">
       <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">WashBoard évolue 🚀</h1>
-      <p style="margin:0;color:#bfdbfe;font-size:13px;">Une nouvelle version, pensée pour le téléphone</p>
+      <p style="margin:0;color:#D4E1EE;font-size:13px;">Une nouvelle version, pensée pour le téléphone</p>
     </div>
     <div style="padding:32px 40px;">
       <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
@@ -1235,14 +1235,14 @@ export async function sendAnnoncePwa({ to, washerName, appUrl }: {
         sur votre téléphone, plus rapide et pensée pour une journée sur la route — agenda,
         clients et chiffres repensés pour s&apos;utiliser d&apos;une main, entre deux rendez-vous.
       </p>
-      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#1d4ed8;font-weight:600;">
+      <div style="background:#EEF3F8;border-left:4px solid #306090;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#24496E;font-weight:600;">
           Vos données sont les mêmes, rien à reconfigurer — c&apos;est le même compte, juste une
           autre façon d&apos;y accéder.
         </p>
       </div>
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/guide#guide-application" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
+        <a href="${url}/dashboard/guide#guide-application" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
           Installer l&apos;application →
         </a>
       </div>

@@ -183,7 +183,7 @@ export default function Page() {
             C&apos;est exactement ce que fait WashBoard : un lien personnalisé à mettre dans votre
             fiche Google, votre bio Instagram et vos messages. Le client réserve seul, sans créer de
             compte, et vous recevez la demande.{' '}
-            <Link href="/signup" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+            <Link href="/signup">
               Essai gratuit d&apos;un mois
             </Link>
             , sans carte bancaire.

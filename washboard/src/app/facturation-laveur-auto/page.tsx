@@ -90,7 +90,7 @@ const fonctionnalites: MetierFeature[] = [
         prix reste valable ({VALIDITE_DEVIS_JOURS} jours proposés). Il part par email avec son PDF, ou par WhatsApp. Tu
         notes la réponse du client, accepté ou refusé, et un devis accepté se transforme en facture
         d’un tap, sans rien retaper. Les étapes complètes sont dans{' '}
-        <Link href="/blog/devis-lavage-auto-domicile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/blog/devis-lavage-auto-domicile">
           notre guide du devis de lavage auto
         </Link>.
       </>
@@ -110,7 +110,7 @@ const fonctionnalites: MetierFeature[] = [
       <>
         Les prestations terminées alimentent tes recettes, et tu y ajoutes tes dépenses (carburant,
         produits, matériel) : le résultat se lit mois par mois, dans la même formule. Voir le{' '}
-        <Link href="/logiciel-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/logiciel-lavage-auto">
           logiciel complet pour laveur auto mobile
         </Link>.
       </>

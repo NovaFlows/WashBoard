@@ -67,7 +67,7 @@ const problemes: MetierProblem[] = [
       <>
         Un simple embouteillage entre deux adresses peut coûter une prestation entière sur la journée
         — voir notre article sur{' '}
-        <Link href="/blog/organiser-ses-tournees-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/blog/organiser-ses-tournees-lavage-auto">
           l&apos;organisation des tournées
         </Link>.
       </>
@@ -89,7 +89,7 @@ const fonctionnalites: MetierFeature[] = [
         véhicule choisi par le client — citadine, berline, SUV, utilitaire — pour ne plus sous-facturer
         les plus grands. C&apos;est l&apos;un des écarts les plus nets avec un simple outil de prise de
         rendez-vous généraliste — voir notre{' '}
-        <Link href="/meilleur-logiciel-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/meilleur-logiciel-lavage-auto">
           comparatif des outils de gestion pour laveur auto
         </Link>.
       </>
@@ -112,7 +112,7 @@ const fonctionnalites: MetierFeature[] = [
         met en avant les horaires proches de l&apos;un d&apos;eux, avec une remise si tu en as réglé une — le seuil se règle dans tes paramètres, un
         quart d&apos;heure par défaut. Même sans remise, WashBoard ne propose jamais un horaire que
         le trajet rendrait injoignable — voir notre page sur{' '}
-        <Link href="/optimisation-tournee-lavage-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/optimisation-tournee-lavage-auto">
           l&apos;optimisation de tournée
         </Link>.
       </>
@@ -131,7 +131,7 @@ const fonctionnalites: MetierFeature[] = [
         lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement) : WashBoard n&apos;encaisse rien, l&apos;argent
         arrive chez toi. Si le délai est dépassé et que tu n&apos;avais pas confirmé, le créneau est
         libéré tout seul. Inclus dès l&apos;offre gratuite — voir{' '}
-        <Link href="/blog/acompte-reservation-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/blog/acompte-reservation-laveur-auto-mobile">
           comment demander un acompte sans perdre de clients
         </Link>.
       </>
@@ -146,7 +146,7 @@ const fonctionnalites: MetierFeature[] = [
         toute seule à sa réservation suivante, et il reçoit un email à chaque tampon. Pour un coup
         de boost ponctuel, une promotion avec bandeau et compte à rebours s&apos;affiche en haut de ta
         page de réservation. Les deux sont inclus dès l&apos;offre gratuite — voir{' '}
-        <Link href="/blog/carte-de-fidelite-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/blog/carte-de-fidelite-laveur-auto-mobile">
           comment faire revenir ses clients avec une carte de fidélité
         </Link>.
       </>
@@ -160,7 +160,7 @@ const fonctionnalites: MetierFeature[] = [
         marques le rendez-vous « Terminé », avec les mentions obligatoires (SIRET, TVA) et une
         numérotation continue. Elle part par email à tes clients professionnels ; un particulier la
         retrouve depuis le lien de sa confirmation de réservation. Détails sur{' '}
-        <Link href="/facturation-laveur-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/facturation-laveur-auto">
           la facturation du laveur auto
         </Link>{' '}et sur{' '}
         <Link href="/blog/devis-lavage-auto-domicile">la façon de rédiger un devis</Link>.
@@ -174,7 +174,7 @@ const fonctionnalites: MetierFeature[] = [
         En formule {requiredPlanLabel('avis_email')}, une demande d&apos;avis part automatiquement dès
         qu&apos;un rendez-vous passe en « Terminé », par email ou par SMS ({quotaSmsEnClair()}). Pour un laveur auto,
         ce sont ces avis qui remplissent une{' '}
-        <Link href="/blog/fiche-google-laveur-auto-mobile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/blog/fiche-google-laveur-auto-mobile">
           fiche Google
         </Link>{' '}
         et l&apos;agenda de la semaine suivante.

@@ -85,7 +85,7 @@ const problemes: MetierProblem[] = [
       <>
         Meubles à déplacer, sol à protéger, client présent pour montrer les taches : l&apos;intervention
         se cale sur son emploi du temps à lui — et rien ne revient de lui-même, voir notre article sur{' '}
-        <Link href="/blog/nettoyage-canape-domicile-lancer-activite" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+        <Link href="/blog/nettoyage-canape-domicile-lancer-activite">
           lancer l&apos;activité
         </Link>.
       </>
