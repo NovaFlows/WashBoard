@@ -117,6 +117,7 @@ export default function LegacyStepSlot({
   // Vérification de zone dès que l'adresse change (sans attendre la date)
   useEffect(() => {
     if (debouncedAddress.trim().length <= 5) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- état de zone réinitialisé quand l'adresse change
       setZoneAllowed(true)
       setZoneMessage(null)
       setTravelFeeEstimate(null)
@@ -144,6 +145,7 @@ export default function LegacyStepSlot({
     const slotReady    = !!(selectedDate && selectedTime)
 
     if (!hasTravelFee || !addressReady || (needsSlot && !slotReady)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estimation des frais liée à l'adresse et au créneau
       setTravelFeeEstimate(null)
       return
     }
@@ -163,6 +165,7 @@ export default function LegacyStepSlot({
 
   useEffect(() => {
     if (!selectedDate || debouncedAddress.trim().length <= 5) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fenêtres de trajet liées à l'adresse et à la date
       setSmartWindows([])
       setBookingConstraints([])
       return
@@ -268,6 +271,7 @@ export default function LegacyStepSlot({
   // on le désélectionne pour éviter qu'un client valide un RDV physiquement impossible.
   useEffect(() => {
     if (selectedTime && slotsForDay.length > 0 && !slotsForDay.includes(selectedTime)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- créneau désélectionné quand il devient infaisable
       setSelectedTime(null)
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps

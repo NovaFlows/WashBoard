@@ -18,6 +18,7 @@ export default function BandeauPromotion({ promo }: { promo: PromotionPublique }
   // du serveur et celle du visiteur différeraient d'une seconde et React le signalerait.
   const [maintenant, setMaintenant] = useState<Date | null>(null)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- heure lue côté client uniquement (hydratation)
     setMaintenant(new Date())
     const t = setInterval(() => setMaintenant(new Date()), 1000)
     return () => clearInterval(t)

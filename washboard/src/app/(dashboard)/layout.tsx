@@ -3,7 +3,6 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
-import { COLONNE_INCONNUE } from '@/lib/compterPrestations'
 import { COOKIE_REPORT } from '@/lib/veilleReport'
 import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
 

@@ -161,10 +161,10 @@ function ContourChargement({ actif }: { actif: boolean }) {
   // reprend à sa position et termine son tour.
   useEffect(() => {
     if (!chargement || Date.now() - chargement.debut > PEREMPTION_MS) { chargement = null; return }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reprise du trait de chargement à l'arrivée d'une page
     setDecalageDepart(100 - chargement.progres)
     setPhase('depart')
     return terminer(chargement.debut)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, à l'arrivée
   }, [])
 
   // Cette barre est remplacée (nouvelle page) en plein chargement : on retient où en est le trait.
@@ -179,6 +179,7 @@ function ContourChargement({ actif }: { actif: boolean }) {
   useEffect(() => {
     if (actif) {
       chargement = { debut: Date.now(), progres: 0 }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- départ du trait synchronisé avec la navigation
       setDecalageDepart(100)
       setPhase('depart')
       // Deux images d'écart : le départ (trait à zéro) doit être peint avant que la

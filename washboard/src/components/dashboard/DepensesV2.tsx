@@ -123,6 +123,7 @@ export default function DepensesV2() {
     else setErreur(r.message)
   }, [debut, fin])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { void charger() }, [charger])
 
   const chargerRecurrents = useCallback(async () => {
@@ -130,6 +131,7 @@ export default function DepensesV2() {
     if (r.ok) setRecurrents(r.data)
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { void chargerRecurrents() }, [chargerRecurrents])
 
   const total = depenses ? totalDepenses(depenses) : 0

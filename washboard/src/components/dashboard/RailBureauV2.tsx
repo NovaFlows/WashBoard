@@ -191,6 +191,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
           pas la paire société/personne de la maquette, que le schéma ne porte pas. */}
       <div className="flex items-center gap-2.5 px-1.5 pb-[18px] pt-1 max-[1023px]:justify-center max-[1023px]:px-0">
         <span className="block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[9px]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo statique, taille gérée par CSS */}
           <img src="/LogoWashBoard.png" alt="" className="h-full w-full object-cover" />
         </span>
         <span className={`min-w-0 leading-[1.15] ${COMPACT_MASQUE}`}>

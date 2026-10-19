@@ -23,6 +23,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // L'état initial reflète la classe déjà posée par le serveur (depuis le cookie).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- thème lu depuis la classe posée par le serveur (hydratation)
     setThemeState(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
   }, [])
 

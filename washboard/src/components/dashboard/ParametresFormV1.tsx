@@ -62,6 +62,7 @@ export default function ParametresFormV1({ washer, email }: Props) {
   const [tab, setTab] = useState<Tab>('general')
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre d'URL lue au montage (hydratation)
     if (ANCRES_ONGLET_CLIENT.includes(window.location.hash.slice(1))) setTab('client')
   }, [])
 

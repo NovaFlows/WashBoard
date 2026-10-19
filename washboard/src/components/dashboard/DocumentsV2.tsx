@@ -500,6 +500,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
     else setErreur(r.message)
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { void charger() }, [charger])
 
   /** Une action sur le document ouvert.

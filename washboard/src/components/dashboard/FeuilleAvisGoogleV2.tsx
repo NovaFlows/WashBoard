@@ -51,6 +51,7 @@ export default function FeuilleAvisGoogleV2({ avisGoogle, onEnregistrer, onClose
       setApercu(null)
     }
   }, [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { chargerApercu() }, [chargerApercu])
 
   async function valider(e: React.FormEvent) {

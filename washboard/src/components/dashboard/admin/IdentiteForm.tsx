@@ -31,6 +31,7 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
       {/* Fond — photo ou dégradé */}
       <div className="absolute inset-0" style={{ background: theme.gradient }} />
       {theme.photo && (
+        // eslint-disable-next-line @next/next/no-img-element -- photo de thème, URL externe
         <img
           src={`${theme.photo}&w=300&q=60`}
           alt={theme.name}
@@ -100,6 +101,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
       setAvisApercu(null)
     }
   }, [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { chargerAvisApercu() }, [chargerAvisApercu])
 
   // Zone d'intervention
@@ -332,6 +334,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         <div className="flex items-center gap-5">
           <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
             {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- logo du laveur (Supabase Storage)
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
             ) : (
               <span className="text-3xl font-bold text-slate-400">{washer.name.charAt(0).toUpperCase()}</span>
@@ -474,6 +477,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             : 'border-dashed border-slate-200 dark:border-slate-700'
         }`}>
           {isCustomTheme(bgTheme) && bgTheme && (
+            // eslint-disable-next-line @next/next/no-img-element -- fond personnalisé envoyé par le laveur
             <img src={bgTheme} alt="Fond personnalisé" className="w-14 h-10 rounded-lg object-cover shrink-0" />
           )}
           <div className="flex-1 min-w-0">
@@ -622,6 +626,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800">
           <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0">
             {logoUrl
+              // eslint-disable-next-line @next/next/no-img-element -- logo du laveur (Supabase Storage)
               ? <img src={logoUrl} alt="" className="w-full h-full object-contain" />
               : <span className="font-bold text-slate-500">{washer.name.charAt(0).toUpperCase()}</span>
             }

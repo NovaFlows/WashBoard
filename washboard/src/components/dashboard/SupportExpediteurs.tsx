@@ -36,6 +36,7 @@ export default function SupportExpediteurs() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { charger() }, [charger])
 
   async function decider(id: string, decision: 'approuve' | 'refuse') {

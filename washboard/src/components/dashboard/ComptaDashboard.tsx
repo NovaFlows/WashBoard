@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getMondayOf } from '@/lib/dateUtils'
 import { CATEGORIES_DEPENSE } from '@/lib/depenses'
 import { formatPrice } from '@/lib/pricing'
 import {
@@ -93,6 +92,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
     if (res.ok) { const j = await res.json(); setRecurring(j.recurring ?? []) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
   useEffect(() => { fetchRecurring() }, [fetchRecurring])
 
   async function addRecurring(e: React.FormEvent) {

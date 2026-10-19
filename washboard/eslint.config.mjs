@@ -23,6 +23,12 @@ const eslintConfig = defineConfig([
       // Décision assumée : patterns fetch-on-mount / sync DOM légitimes.
       // Conservé en avertissement (visible) sans bloquer le build / la CI.
       "react-hooks/set-state-in-effect": "warn",
+      // Le préfixe `_` marque une valeur écartée exprès (déstructuration, paramètre d'API).
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        varsIgnorePattern: "^_",
+        argsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+      }],
     },
   },
 ]);

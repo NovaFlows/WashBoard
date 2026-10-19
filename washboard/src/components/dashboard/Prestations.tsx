@@ -58,6 +58,7 @@ export default function Prestations({ betaRefonte, ...props }: Props) {
   useEffect(() => {
     const pwa = isDesignMobile()
     const bureau = estEcranRail() && bureauAutorise(betaRefonte)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- média lu au montage, évité au rendu serveur (hydratation)
     setStatut(pwa || bureau ? 'v2' : 'v1')
   }, [betaRefonte])
 

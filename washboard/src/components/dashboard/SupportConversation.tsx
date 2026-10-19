@@ -188,6 +188,7 @@ function Composer({ onEnvoyer, placeholder, erreur, onDismissErreur }: {
   // pas à retaper — surtout gênant pour qui vient de décrire un problème en
   // détail.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- texte restitué après un envoi en échec
     if (erreur) setTexte(erreur.texte)
   }, [erreur])
 

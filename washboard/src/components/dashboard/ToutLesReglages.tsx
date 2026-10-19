@@ -32,6 +32,7 @@ export default function ToutLesReglages({ children }: { children: ReactNode }) {
   const [statut, setStatut] = useState<Statut>('verification')
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- média lu au montage, évité au rendu serveur (hydratation)
     setStatut(isDesignMobile() ? 'pwa' : 'site')
   }, [])
 

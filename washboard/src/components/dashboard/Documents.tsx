@@ -37,6 +37,7 @@ export default function Documents({ prestations, nomLaveur, betaRefonte }: {
   useEffect(() => {
     const pwa = isDesignMobile()
     const bureau = estEcranRail() && bureauAutorise(betaRefonte)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- média lu au montage, évité au rendu serveur (hydratation)
     setStatut(pwa || bureau ? 'pwa-ou-bureau' : 'site')
   }, [betaRefonte])
 

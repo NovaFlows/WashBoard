@@ -161,6 +161,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
     if (!rdv) return
     rdvApplique.current = true
     const d = new Date(rdv.scheduled_at)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- navigation vers le rendez-vous du lien ?rdv= une fois chargé
     setCurrent(new Date(d.getFullYear(), d.getMonth(), 1))
     setWeekStart(getWeekStart(d))
     setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))

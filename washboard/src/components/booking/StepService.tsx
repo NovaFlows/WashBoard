@@ -343,6 +343,7 @@ export default function StepService({ services, categories, selected, factureApr
                   }
                 >
                   {info.img && (
+                    // eslint-disable-next-line @next/next/no-img-element -- illustration de prestation, URL externe
                     <img src={info.img} alt={info.name} className="w-12 h-12 object-contain shrink-0 opacity-80" />
                   )}
                   <div className="flex-1">

@@ -147,6 +147,7 @@ export function FeuilleFilV2({
   const fin = useRef<HTMLDivElement>(null)
 
   // Un envoi qui échoue ne fait pas perdre ce qui a été écrit.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- texte restitué après un envoi en échec
   useEffect(() => { if (erreur) setTexte(erreur.texte) }, [erreur])
 
   // Toujours sur le dernier message : à l'ouverture et à chaque nouveau.

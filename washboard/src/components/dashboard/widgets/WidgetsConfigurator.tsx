@@ -42,6 +42,7 @@ export function WidgetsConfigurator({ visibles }: { visibles: WidgetKey[] }) {
   // était fermé (un autre onglet, par exemple).
   useEffect(() => {
     if (!ouvert) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resynchronisation avec les props quand le panneau est fermé
       setOrdre(ordreInitial)
       setCoches(new Set(visibles))
     }
