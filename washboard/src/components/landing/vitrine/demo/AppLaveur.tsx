@@ -7,6 +7,7 @@ import { EcranAgenda, EcranAuj, EcranChiffres, EcranClients, EcranDocs } from '.
 import { tousClients, useDemo } from './etat'
 import { ContenuFeuille } from './feuilles'
 import { I, RESEAU } from './icones'
+import { Logo } from '../Icones'
 import { EcranPlus } from './plus'
 import type { EcranDemo, Feuille, Reglages, Vue } from './types'
 import '../base.css'
@@ -51,7 +52,7 @@ function Rail({ c }: { c: Ctrl }) {
   )
   return (
     <aside className="rail">
-      <div className="marque"><span className="logo"><b>W</b><i /></span><div>WashBoard<small>Julien Roussel</small></div></div>
+      <div className="marque"><Logo /><div>WashBoard<small>Julien Roussel</small></div></div>
       <button className="nouveau" onClick={() => c.ouvrir({ t: 'nouveau' })}>{I.plus}Nouveau</button>
       {b('auj', 'maison', 'Aujourd’hui')}
       {b('agenda', 'agenda', 'Agenda')}

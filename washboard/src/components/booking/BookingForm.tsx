@@ -561,10 +561,10 @@ function SectionCard({
       : 'border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900')
   }>
     {etat !== 'open' && <div className="min-h-[58px] px-4 py-2 flex items-center gap-3">
-      <span aria-hidden="true" className={'shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-xs ' + (etat === 'done' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'border border-zinc-300 text-zinc-500')}>
+      <span aria-hidden="true" className={'shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-xs ' + (etat === 'done' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'border border-zinc-300 text-zinc-600 dark:text-zinc-400')}>
         {etat === 'done' ? '✓' : numero}
       </span>
-      <div className="min-w-0 flex-1"><p className={etat === 'done' ? 'text-xs text-zinc-500' : 'text-sm text-zinc-500 font-medium'}>{titre}</p>
+      <div className="min-w-0 flex-1"><p className={etat === 'done' ? 'text-xs text-zinc-600 dark:text-zinc-400' : 'text-sm text-zinc-600 dark:text-zinc-400 font-medium'}>{titre}</p>
         {etat === 'done' && <p className="text-sm truncate">{resume}</p>}</div>
       {etat === 'done' && <button type="button" aria-label={`Modifier : ${titre}`} aria-expanded={false} aria-controls={id + '-content'} onClick={onModifier} className="text-sm underline underline-offset-2 min-h-11">Modifier</button>}
     </div>}

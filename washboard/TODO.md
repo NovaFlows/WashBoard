@@ -31,19 +31,6 @@
 
 ## 🔴 Priorité haute
 
-- [ ] 2026-10-18 — **🔒 À VÉRIFIER (cyber) — carte de fidélité : peut-on voir les tampons
-      d'un autre client en tapant son numéro de téléphone ?** Soupçon soulevé pendant la
-      rédaction de l'article fidélité, pas encore vérifié dans le code ni en conditions
-      réelles. Si oui, c'est une fuite de données personnelles (nombre de passages chez un
-      laveur). Agent : `cyber`.
-      **Vérifié dans le code le 2026-10-19 : OUI.** `POST /api/fidelite/apercu` (public, sans
-      compte) rend le nombre de tampons de n'importe quel numéro tapé à l'étape « Vos
-      coordonnées » (limite : 30 demandes / 10 min par adresse IP), sans nom ni coordonnées — on
-      apprend qu'un numéro est client du laveur et combien de fois il est venu. Plus gênant :
-      `POST /api/bookings` applique d'office la récompense disponible du numéro saisi :
-      réserver avec le numéro d'un autre lui prend son lavage offert. Correctif proposé à
-      Alexandre, pas encore décidé : ne montrer la carte et n'appliquer la récompense que si le
-      téléphone ET l'email (ou le nom) correspondent à une réservation passée.
 
 - [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
       lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
@@ -394,19 +381,12 @@
         Sur l'accueil, **CLS 0,155** (seuil 0,1) : le contenu bouge pendant le chargement.
         PageSpeed Insights n'a pas pu être utilisé (quota Google épuisé ce jour-là).
         Agent : `dev`.
-  - [ ] **2. Contraste des couleurs** — REMESURÉ le 2026-10-19 (axe-core, WCAG AA, mode clair,
-        mobile + ordinateur, sur www.washboard.fr) après le passage en DA v2 : blog, CGV,
-        `/login` et `/booking` sans aucun échec. Restent :
-        - landing : le gris clair `#9a9aa4` sur le fond papier `#f6f5f3` (2,55:1) — 2e moitié
-          grise des titres de section (« Pas des messages. », « On gère le reste. »…, minimum
-          3:1 en gros texte) et étapes inactives de la frise « Journée » (heures et phrases,
-          minimum 4,5:1) ; badge « Nouveau » vert sur vert clair 4,31:1 ;
-        - pages métiers (`/logiciel-lavage-auto`, `/facturation-laveur-auto`,
-          `/meilleur-logiciel-lavage-auto`) : numéros « 01 02 03 » dans le même gris ;
-        - `/signup` : aide sous le téléphone (`#898991` sur blanc, 3,47:1) ;
-        - page de réservation : titres des étapes repliées « Où et quand » et « Vos coordonnées »
-          (`#71717b` sur `#f6f5f3`, 4,43:1, juste sous 4,5).
-        Agent : `designer`.
+  - [ ] **2. Contraste des couleurs** — remesuré le 2026-10-19 (axe-core, WCAG AA, mode clair).
+        Corrigé le même jour : les titres de la landing (2e moitié en bleu, `.h2 .doux`), l'aide
+        sous le téléphone à l'inscription, les titres des étapes repliées de la réservation.
+        Restent (non demandés) : sur la landing, les étapes inactives de la frise « Journée »
+        (`#9a9aa4` sur `#f6f5f3`, 2,55:1) et le badge « Nouveau » (4,31:1) ; sur les pages
+        métiers, les numéros « 01 02 03 » (même gris). Agent : `designer`.
   - [ ] **4. CGU.** Pas de page. Ryan : à faire. Agent : `legal`.
   - Détails mineurs relevés : `/login`, `/signup` et la page 404 reprennent le titre de
     l'accueil ; `robots.txt` bloque `/register`, qui n'existe pas (la route est `/signup`) ;
@@ -3435,6 +3415,14 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-19 — **🔒 Fuite de la carte de fidélité fermée** : la carte suit le téléphone
+      mais ne se montre (aperçu, confirmation, email « Votre tampon est arrivé ») et sa
+      récompense ne s'applique que si l'email tapé est celui d'une prestation TERMINÉE sur ce
+      numéro, ou si le numéro n'a aucune autre réservation (`carteVisible`, lib/fidelite.ts).
+      Avant : n'importe qui voyait les tampons d'un numéro tapé à l'étape coordonnées, et
+      pouvait réserver avec pour prendre le lavage offert de son titulaire.
+- [x] 2026-10-19 — **Landing : vrai logo** (le W et sa microfibre, `public/logo-washboard-128.png`)
+      à la place de l'imitation dessinée en CSS, dans l'en-tête, le pied de page et les démos.
 - [x] 2026-10-19 — **Les 3 priorités d'Alexandre du 2026-10-02** (SMS, refonte du site, refonte
       de la page de réservation) : faites, confirmé par Alexandre.
 - [x] 2026-10-05 — **La liste `/dashboard/factures` affiche aussi les factures écrites à la main**

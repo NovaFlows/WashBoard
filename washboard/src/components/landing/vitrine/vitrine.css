@@ -71,7 +71,6 @@
 .wb-vitrine .notif p { margin: 2px 0 0; opacity: .92; }
 .wb-vitrine .notif .logo, .wb-vitrine .mini-n .logo { width: 36px; height: 36px; border-radius: 9px; flex: none; }
 .wb-vitrine .mini-n .logo { width: 28px; height: 28px; border-radius: 7px; }
-.wb-vitrine .mini-n .logo b { font-size: 16px; }
 .wb-vitrine .tel-ecran.clair .etat { color: #fff; }
 .wb-vitrine .sms { gap: 8px; }
 .wb-vitrine .sms-tete { text-align: center; font-size: 12px; color: var(--gris); margin-bottom: 8px; }

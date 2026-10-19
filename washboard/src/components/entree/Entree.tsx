@@ -126,7 +126,7 @@ export function Champ({ id, label, aide, children }: { id: string; label: string
     <div className="group flex flex-col gap-0.5 py-[11px]">
       <label htmlFor={id} className="text-xs font-medium text-[color:var(--v2-color-gris)] transition-colors group-focus-within:text-[color:var(--v2-color-accent)]">{label}</label>
       {children}
-      {aide && <span className="text-xs text-[color:var(--v2-color-gris)] opacity-80">{aide}</span>}
+      {aide && <span className="text-xs text-[color:var(--v2-color-gris)]">{aide}</span>}
     </div>
   )
 }
