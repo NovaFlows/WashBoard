@@ -13,7 +13,8 @@
 // lit maintenant `freeMonthsLabel()` : le jour où la formule change, la
 // réponse change avec elle.
 
-import { BOOKING_QUOTA, freeMonthsLabel, PLAN_CARDS, requiredPlanLabel } from '@/lib/plan'
+import { BOOKING_QUOTA, freeMonthsLabel, PLAN_CARDS, quotaSmsEnClair, requiredPlanLabel } from '@/lib/plan'
+import { VALIDITE_DEVIS_JOURS } from '@/lib/documents'
 import { tarifOffre } from '@/lib/resumeOffres'
 
 export type FaqItem = { q: string; a: string }
@@ -65,6 +66,10 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui, par email à chaque réservation. Et si tu installes WashBoard sur ton téléphone, aussi en notification (en bêta).',
   },
   {
+    q: 'Mes rendez-vous se synchronisent-ils avec Google Agenda ?',
+    a: `Dans un seul sens : de WashBoard vers ton Google Agenda. Tu connectes d'abord ton compte Google (depuis l'Agenda de WashBoard ou tes réglages). Ensuite, chaque rendez-vous que tu confirmes est ajouté à ton agenda principal, avec le client, son téléphone, l'adresse et le prix. Si tu le déplaces dans WashBoard, l'événement suit ; une fois le rendez-vous terminé, son titre le dit ; si tu l'annules, l'événement est supprimé. Dans l'autre sens, rien : un événement que tu crées ou déplaces directement dans Google Agenda n'apparaît pas dans WashBoard et ne bloque aucun créneau de ta page de réservation. Tes congés et absences se posent donc dans WashBoard.`,
+  },
+  {
     q: 'Je peux utiliser WashBoard uniquement depuis mon téléphone ?',
     a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, dès la formule Starter). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
   },
@@ -83,6 +88,10 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     q: 'Comment marche la carte de fidélité ?',
     a: 'Chaque prestation terminée ajoute un tampon (un par véhicule si tu le choisis). Au nombre de tampons que tu fixes, la récompense de ton choix, prestation offerte ou remise, s\'applique toute seule à la réservation suivante. Ton client reçoit un email à chaque tampon.',
+  },
+  {
+    q: 'Comment demander des avis Google à mes clients ?',
+    a: `Dès la formule ${requiredPlanLabel('avis_email')}. Tu colles le lien de ta fiche Google dans tes réglages, tu choisis le canal, email ou SMS, et le délai après le rendez-vous. La demande part ensuite toute seule quand tu marques le rendez-vous « Terminé ». Les emails ne sont pas comptés ; côté SMS, ${quotaSmsEnClair()}, et au-delà la demande du mois n'est pas envoyée. Un client que tu as marqué « ne plus contacter » ne reçoit rien. WashBoard envoie la demande, mais le client reste libre de laisser ou non un avis.`,
   },
   {
     q: 'Que se passe-t-il après le mois gratuit ?',
@@ -109,8 +118,16 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui, dès l\'offre gratuite. Tu fixes une remise en pourcentage ou en euros pendant une période, sur toutes tes prestations ou sur certaines. Un bandeau en haut de ta page de réservation l\'annonce, avec un compte à rebours si tu le souhaites. La remise s\'applique à toutes les réservations prises pendant la période, hors frais de déplacement.',
   },
   {
+    q: 'Puis-je faire un devis ou une facture sans rendez-vous ?',
+    a: `Oui, dès la formule ${requiredPlanLabel('facturation')}. Dans « Devis et factures », sur la version mobile de WashBoard, tu choisis le client, tu écris les lignes et le total, sans passer par une réservation : utile pour chiffrer un travail avant de t'engager, ou facturer un client arrivé par le bouche-à-oreille. Un devis porte une date de validité (${VALIDITE_DEVIS_JOURS} jours proposés, que tu peux changer). Il part par email avec le PDF en pièce jointe, ou par WhatsApp, et tu notes la réponse du client : accepté ou refusé. Un devis accepté se transforme en facture d'un tap, sans tout retaper. Il faut que tes informations de facturation (nom légal, SIRET, adresse) soient renseignées.`,
+  },
+  {
     q: 'Et la facturation électronique obligatoire en 2027 ?',
     a: 'À partir du 1ᵉʳ septembre 2027, deux choses changent. Si tu factures des entreprises, tes factures devront être transmises dans un format électronique via une plateforme agréée par l\'État — tes factures WashBoard ont déjà toutes les mentions obligatoires, on travaille sur ce raccordement, sans engagement de date pour l\'instant. Si tu ne factures que des particuliers (le cas de la plupart des laveurs), tu n\'as pas ce format à produire, mais tu devras transmettre à l\'administration un résumé périodique de tes ventes — c\'est l\'e-reporting, et la franchise de TVA n\'en dispense pas. WashBoard n\'y est pas raccordé aujourd\'hui ; on te dira où on en est bien avant l\'échéance.',
+  },
+  {
+    q: 'Puis-je exporter mes réservations et mes factures ?',
+    a: `Tes réservations, oui, depuis le site sur ordinateur : dans la page CRM (dès la formule ${requiredPlanLabel('crm')}), le bouton « Exporter Excel » télécharge un fichier avec la liste des réservations (client, prestation, prix, date, adresse, statut) et une feuille de synthèse, pour la période et le type de clients affichés. Tes factures se téléchargent une par une, en PDF, depuis la liste des factures, que tu filtres par année et par mois. Il n'existe pas aujourd'hui d'export groupé des factures : le ZIP sert seulement à importer d'anciennes factures. Pour un client précis, « Exporter ses données » dans le menu de sa fiche te donne un fichier texte avec tout ce que tu sais de lui.`,
   },
   {
     q: 'Et mes données ?',

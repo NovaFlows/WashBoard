@@ -133,9 +133,7 @@ export default function Page() {
             <strong>Le test sur zone cachée n&apos;est pas optionnel.</strong>{' '}Chaque tissu réagit
             différemment : un velours qui s&apos;auréole, une microfibre qui perd sa couleur, une
             laine qui feutre. Le test prend deux minutes derrière un coussin ; la décoloration d&apos;un
-            canapé à 2 000 € prend une seconde et vous coûte sa valeur. Votre RC pro doit couvrir
-            les <A href="/blog/assurance-laveur-auto-mobile">biens confiés</A> — vérifiez que les
-            dommages « par produit » ne sont pas exclus.
+            canapé à 2 000 € prend une seconde et vous coûte sa valeur.
           </p>
         </Callout>
 
@@ -223,10 +221,9 @@ export default function Page() {
 
         <AlsoRead
           items={[
-            { href: '/blog/tarifs-menage-domicile-auto-entrepreneur', label: 'Ménage à domicile en auto-entrepreneur : tarifs, crédit d’impôt et clients réguliers' },
+            { href: '/blog/tarifs-menage-domicile-auto-entrepreneur', label: 'Ménage à domicile en indépendant : tarifs, planning et clients réguliers' },
             { href: '/blog/devenir-laveur-auto-mobile', label: 'Devenir laveur auto mobile : par où commencer' },
             { href: '/blog/fiche-google-laveur-auto-mobile', label: 'Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels' },
-            { href: '/blog/assurance-laveur-auto-mobile', label: 'Quelle assurance pour un laveur auto mobile' },
           ]}
         />
       </article>

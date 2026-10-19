@@ -3345,6 +3345,20 @@ rien à faire, mais que le projet reste globalement sain.
       (facturation et avis dès Starter, acompte/promotions/fidélité dès l'offre gratuite).
       Nouvelles pages : `/facturation-laveur-auto`, articles « acompte à la réservation » et
       « carte de fidélité » (image de partage + sitemap).
+- [ ] **À valider avec Alexandre : exemples chiffrés des articles du lot SEO 1 (2026-10-19)** —
+      modèle de devis (complet 90 €, poils d’animaux 25 €, déplacement 10 €), alignés sur les fourchettes relevées de 20 € le 19/10, repères de validité
+      (1 mois / 1-2 semaines / 2-3 mois), exemple flotte (extérieur 55 €, −10 %, 6 véhicules = 297 €).
+      Tous marqués indicatifs.
+- [ ] **Mention de franchise de TVA : « art. 293 B du CGI » → « art. L. 223 et s. du CIBS »**
+      depuis le 2026-09-01 selon Service-Public (ancienne mention tolérée jusqu’au 31/12/2027).
+      Imprimée dans `FacturePDF.tsx:203`, `email/index.ts:317`, `confirmation/[id]/page.tsx:145`,
+      `FacturationCard.tsx:209`. Agent : `dev` (+ relecture `legal`).
+- [ ] **Avis Google sans email** : le commentaire du cron dit qu’un rendez-vous sans email part
+      par SMS, mais `bookings/[id]/route.ts:211` exige un email pour programmer l’avis. À trancher
+      (code ou commentaire). Agent : `dev`.
+- [ ] **Facture automatique : « paiement comptant le jour de la prestation » imprimé pour tous,
+      clients pros compris.** L’article flottes le présente comme une limite ; à décider avec
+      Alexandre (délai de paiement configurable pour les pros ?).
 - [ ] **À trancher avec Alexandre : la FAQ dit publiquement qu'un client ne peut pas annuler
       seul** (pas de bouton d'annulation sur sa page de confirmation, il prévient le laveur).
       Vrai dans le code, mais c'est une limite affichée : la garder telle quelle, ou ajouter

@@ -1,7 +1,7 @@
 import { getArticle, THEME_LABEL } from '@/lib/blog'
 import { renderOgImage, OG_SIZE, OG_CONTENT_TYPE } from '@/lib/ogImage'
 
-const article = getArticle('assurance-laveur-auto-mobile')!
+const article = getArticle('devis-lavage-auto-domicile')!
 
 export const size = OG_SIZE
 export const contentType = OG_CONTENT_TYPE

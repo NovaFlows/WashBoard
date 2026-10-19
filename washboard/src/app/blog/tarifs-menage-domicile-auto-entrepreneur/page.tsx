@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
 import { lienPageMetier } from '@/lib/metiers'
 import { requiredPlanLabel } from '@/lib/plan'
-import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
+import { H2, H3, P, UL, A, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
 
 const article = getArticle('tarifs-menage-domicile-auto-entrepreneur')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -30,24 +30,9 @@ export const metadata: Metadata = {
 
 const faq: FaqItem[] = [
   {
-    question: 'Quel tarif horaire pour du ménage à domicile en auto-entrepreneur ?',
+    question: 'Quel tarif horaire pour du ménage à domicile en indépendant ?',
     answer:
-      'Un indépendant en ménage à domicile facture le plus souvent entre 22 et 32 € TTC de l’heure en 2026, davantage en grande ville ou pour des prestations spécifiques (remise en état, fin de location, après travaux : 30 à 45 €). En dessous de 20 €, une fois les cotisations (environ 21 à 22 %) et les trajets déduits, le revenu horaire passe sous le SMIC.',
-  },
-  {
-    question: 'Un auto-entrepreneur peut-il faire bénéficier ses clients du crédit d’impôt de 50 % ?',
-    answer:
-      'Oui, à condition de déclarer son activité de Services à la personne (SAP) auprès de l’administration, via la plateforme NOVA. Le client peut alors déduire 50 % des sommes payées de son impôt sur le revenu, dans la limite des plafonds en vigueur (12 000 € de dépenses par an dans le cas général, majorables). La déclaration impose en contrepartie une activité exclusivement consacrée aux services à la personne auprès des particuliers.',
-  },
-  {
-    question: 'Que signifie la condition d’activité exclusive des Services à la personne ?',
-    answer:
-      'Une structure déclarée SAP ne peut exercer que des activités de la liste des services à la personne (ménage, repassage, vitres chez le particulier, jardinage, garde d’enfants…), uniquement chez des particuliers. Une micro-entreprise déclarée ne peut donc pas facturer en parallèle des bureaux, des commerces ou du lavage de véhicules. Si vous voulez cumuler, il faut choisir : renoncer à la déclaration, ou séparer les activités dans deux structures.',
-  },
-  {
-    question: 'Faut-il un agrément pour faire du ménage à domicile ?',
-    answer:
-      'Non. L’agrément n’est obligatoire que pour les activités auprès de publics fragiles (garde d’enfants de moins de trois ans, assistance aux personnes âgées ou handicapées). Le ménage, le repassage et le lavage de vitres chez le particulier relèvent de la simple déclaration, facultative, qui ouvre l’avantage fiscal au client.',
+      'Un indépendant en ménage à domicile facture le plus souvent entre 22 et 32 € de l’heure en 2026, davantage en grande ville ou pour des prestations spécifiques (remise en état, fin de location, après travaux : 30 à 45 €). En dessous de 20 €, une fois les cotisations (environ 21 à 22 %) et les trajets déduits, le revenu horaire passe sous le SMIC.',
   },
   {
     question: 'Combien de clients faut-il pour vivre du ménage à domicile ?',
@@ -63,14 +48,13 @@ export default function Page() {
       <article>
         <ArticleHeader
           article={article}
-          intro="Le ménage à domicile est le métier de service le plus demandé en France et l'un des plus mal payés — parce que la plupart des indépendants fixent leur prix par rapport aux plateformes, pas par rapport à leurs coûts. Voici comment tarifer, ce que change vraiment le crédit d'impôt, et comment construire un planning de clients hebdomadaires qui tient."
+          intro="Le ménage à domicile est le métier de service le plus demandé en France et l'un des plus mal payés — parce que la plupart des indépendants fixent leur prix par rapport aux plateformes, pas par rapport à leurs coûts. Voici comment tarifer et comment construire un planning de clients hebdomadaires qui tient."
         />
 
         <Summary
           items={[
-            'Tarif courant pour un indépendant : 22 à 32 € TTC de l’heure, 30 à 45 € pour une remise en état ou une fin de location.',
-            'La déclaration Services à la personne permet au client de récupérer 50 % en crédit d’impôt — ce qui divise par deux son coût réel et justifie votre tarif.',
-            'En contrepartie, la déclaration impose une activité exclusive : particuliers uniquement, pas de bureaux, pas de lavage auto dans la même structure.',
+            'Tarif courant pour un indépendant : 22 à 32 € de l’heure, 30 à 45 € pour une remise en état ou une fin de location.',
+            'Ce qui fait rester un client : la fiabilité (même personne, même créneau) plutôt que le prix le plus bas.',
             'Le revenu tient sur des clients réguliers (hebdomadaires ou bi-mensuels) regroupés par secteur, pas sur des interventions ponctuelles.',
             '12 à 15 clients réguliers de 2 à 3 heures font un temps plein.',
           ]}
@@ -80,48 +64,12 @@ export default function Page() {
           Dans le ménage, la concurrence est partout : plateformes, particuliers employeurs en
           CESU, sociétés de services, travail non déclaré. Un indépendant ne gagne pas sur le prix.
           Il gagne sur la fiabilité (la même personne, au même créneau, chaque semaine) et sur la
-          simplicité pour le client (une réservation, une facture, un crédit d&apos;impôt
-          automatique). Tout ce qui suit sert ces deux points.
+          simplicité pour le client (une réservation, une facture). Tout ce qui suit sert ces deux
+          points. Pour le statut et les démarches, renseignez-vous auprès des organismes
+          officiels : ici, on parle du métier.
         </P>
 
-        <H2>1. Le statut et la question qui décide de tout : déclarer ou non</H2>
-        <P>
-          La micro-entreprise est le régime naturel pour démarrer. Vous facturez vos clients comme
-          prestataire (vous n&apos;êtes pas leur salarié, contrairement au CESU) et vous payez vos
-          cotisations sur ce que vous encaissez. Jusque-là, rien de spécifique au ménage.
-        </P>
-        <P>
-          La spécificité, c&apos;est la <strong>déclaration Services à la personne</strong> (SAP).
-          Elle est facultative, gratuite, se fait en ligne sur la plateforme NOVA, et elle change
-          l&apos;économie de votre activité : vos clients peuvent déduire <strong>50 % de ce
-          qu&apos;ils vous paient</strong> de leur impôt sur le revenu, dans les plafonds en
-          vigueur. Une heure facturée 28 € leur revient à 14 €. Vous facturez au prix juste, ils
-          paient le prix d&apos;une plateforme.
-        </P>
-        <Callout>
-          <p>
-            <strong>La contrepartie : l&apos;activité exclusive.</strong>{' '}Une structure déclarée
-            ne peut exercer que des activités de services à la personne, chez des particuliers.
-            Pas de bureaux, pas de commerces, pas de <A href="/blog/devenir-laveur-auto-mobile">lavage auto</A>,
-            même occasionnellement. Si vous voulez cumuler, il faut deux structures ou renoncer
-            à la déclaration. Cette règle et les plafonds évoluent : vérifiez-les sur
-            servicesalapersonne.gouv.fr avant de choisir.
-          </p>
-        </Callout>
-        <P>
-          Faut-il déclarer ? Si votre clientèle est faite de particuliers pour du ménage, du
-          repassage et des vitres, presque toujours oui : c&apos;est l&apos;argument commercial le
-          plus fort du métier, et l&apos;avance immédiate de crédit d&apos;impôt (le client ne paie
-          que sa moitié, l&apos;URSSAF vous verse le reste) supprime même l&apos;avance de
-          trésorerie de son côté. Si vous visez aussi des bureaux ou des locations saisonnières
-          (des professionnels, donc), la déclaration vous ferme ces portes.
-        </P>
-        <P>
-          Pas besoin d&apos;<strong>agrément</strong>, en revanche : il n&apos;est exigé que pour
-          les publics fragiles (enfants de moins de trois ans, personnes âgées ou handicapées).
-        </P>
-
-        <H2>2. Les tarifs : partir des coûts, pas des plateformes</H2>
+        <H2>1. Les tarifs : partir des coûts, pas des plateformes</H2>
         <P>
           Le tarif « de référence » que tout le monde a en tête vient des plateformes, qui
           affichent 15 à 20 € de l&apos;heure au client en reversant nettement moins à
@@ -132,15 +80,15 @@ export default function Page() {
           facturées.
         </P>
         <Table
-          head={['Prestation', 'Tarif courant (TTC)', 'Remarque']}
+          head={['Prestation', 'Tarif courant', 'Remarque']}
           rows={[
             ['Ménage régulier (hebdo, bi-mensuel)', '22 – 32 € / h', 'Le cœur de l’activité'],
             ['Ménage ponctuel', '28 – 38 € / h', 'Pas de récurrence : plus cher'],
             ['Repassage', '22 – 30 € / h', 'Souvent couplé au ménage'],
             ['Remise en état, fin de location', '30 – 45 € / h ou forfait', 'Sur devis après visite ou photos'],
             ['Nettoyage après travaux', '35 – 50 € / h', 'Matériel et produits spécifiques'],
-            ['Location saisonnière (entre deux locataires)', 'Forfait 60 – 150 €', 'Pro : incompatible avec la déclaration SAP'],
-            ['Vitres chez le particulier', '30 – 45 € / h', 'Activité SAP, souvent en complément'],
+            ['Location saisonnière (entre deux locataires)', 'Forfait 60 – 150 €', 'Clientèle pro : se facture par rotation'],
+            ['Vitres chez le particulier', '30 – 45 € / h', 'Souvent en complément'],
           ]}
         />
         <P>Trois règles qui protègent la marge :</P>
@@ -161,7 +109,7 @@ export default function Page() {
           </li>
         </UL>
 
-        <H2>3. Construire un planning qui tient</H2>
+        <H2>2. Construire un planning qui tient</H2>
         <P>
           Le ménage est le métier du nettoyage le plus récurrent qui soit : chaque client revient
           chaque semaine, à la même heure. C&apos;est un immense avantage, à une condition :
@@ -197,16 +145,14 @@ export default function Page() {
           <li>
             <strong>Les clés</strong>{' '}: un registre (quel client, quelle clé, remise quand), pas
             de nom ni d&apos;adresse sur le porte-clés, et une clause dans vos conditions. La
-            perte d&apos;une clé est le sinistre le plus fréquent du métier — votre RC pro doit
-            couvrir le remplacement d&apos;une serrure.
+            perte d&apos;une clé est le sinistre le plus fréquent du métier.
           </li>
         </UL>
 
-        <H2>4. Trouver les premiers clients réguliers</H2>
+        <H2>3. Trouver les premiers clients réguliers</H2>
         <UL>
           <li>
-            <strong>La fiche Google</strong>, avec « Service de ménage » en catégorie et la mention
-            du crédit d&apos;impôt dans la description. Voir{' '}
+            <strong>La fiche Google</strong>, avec « Service de ménage » en catégorie. Voir{' '}
             <A href="/blog/fiche-google-laveur-auto-mobile">comment configurer sa fiche Google</A> :
             tout s&apos;applique, à la catégorie près.
           </li>
@@ -227,13 +173,12 @@ export default function Page() {
           </li>
         </UL>
 
-        <H2>5. Ce qui fait rester un client</H2>
+        <H2>4. Ce qui fait rester un client</H2>
         <P>
           Dans le ménage, on ne perd presque jamais un client sur le prix. On le perd sur un
           créneau raté, un oubli, un changement d&apos;intervenant, une facture qui n&apos;arrive
           pas. La fiabilité se construit avec des outils simples : la confirmation du créneau la
-          veille, la facture envoyée le jour même, l&apos;attestation fiscale annuelle transmise
-          en janvier sans qu&apos;on vous la demande. Ce sont des tâches de cinq minutes, à faire
+          veille, la facture envoyée le jour même. Ce sont des tâches de cinq minutes, à faire
           pour chaque client, chaque semaine — c&apos;est pour ça qu&apos;elles sont oubliées, et
           c&apos;est pour ça qu&apos;on les automatise.
         </P>

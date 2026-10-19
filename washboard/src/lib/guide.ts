@@ -320,7 +320,7 @@ export const GUIDE: GuideSection[] = [
         id: 'documents-manuels',
         question: 'Puis-je faire un devis ou une facture sans rendez-vous derrière ?',
         answer:
-          "Oui, depuis [devis et factures](/dashboard/chiffres/documents) — le bouton le plus rapide pour ça, c'est le rond bleu en bas de l'écran, visible partout dans l'application. C'est différent des factures automatiques : celles-ci partent toutes seules quand vous terminez un rendez-vous, alors qu'ici c'est vous qui choisissez le client (ou qui le créez à la volée), les lignes et le total, sans passer par une réservation — utile sur le terrain, pour chiffrer une demande avant de s'engager. Un devis accepté se transforme en facture d'un tap, sans tout retaper. Les deux suivent la même numérotation que le reste de vos documents.",
+          "Oui, depuis [devis et factures](/dashboard/chiffres/documents) — le bouton le plus rapide pour ça, c'est le rond bleu en bas de l'écran, visible partout dans l'application. C'est différent des factures automatiques : celles-ci partent toutes seules quand vous terminez un rendez-vous, alors qu'ici c'est vous qui choisissez le client (ou qui le créez à la volée), les lignes et le total, sans passer par une réservation — utile sur le terrain, pour chiffrer une demande avant de s'engager. Un devis accepté se transforme en facture d'un tap, sans tout retaper. La facture prend le numéro suivant de vos factures, à la suite de celles des réservations ; les devis ont leur propre numérotation.",
         keywords: ['devis', 'manuel', 'sans rendez-vous', 'sur place', 'terrain', 'creer facture'],
       },
     ],

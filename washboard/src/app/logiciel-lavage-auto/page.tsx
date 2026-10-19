@@ -162,7 +162,8 @@ const fonctionnalites: MetierFeature[] = [
         retrouve depuis le lien de sa confirmation de réservation. Détails sur{' '}
         <Link href="/facturation-laveur-auto" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
           la facturation du laveur auto
-        </Link>.
+        </Link>{' '}et sur{' '}
+        <Link href="/blog/devis-lavage-auto-domicile">la façon de rédiger un devis</Link>.
       </>
     ),
   },

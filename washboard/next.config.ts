@@ -81,6 +81,23 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 31536000,
   },
 
+  // Articles « assurance » retirés du blog (hors périmètre) : redirections
+  // permanentes vers l'article le plus proche pour garder les liens entrants.
+  async redirects() {
+    return [
+      {
+        source: '/blog/assurance-laveur-auto-mobile',
+        destination: '/blog/devenir-laveur-auto-mobile',
+        permanent: true,
+      },
+      {
+        source: '/blog/assurance-nettoyage-haute-pression',
+        destination: '/blog/nettoyage-haute-pression-terrasses-facades-toitures',
+        permanent: true,
+      },
+    ]
+  },
+
   async headers() {
     return [
       { source: '/:path*', headers: ENTETES_COMMUNS },

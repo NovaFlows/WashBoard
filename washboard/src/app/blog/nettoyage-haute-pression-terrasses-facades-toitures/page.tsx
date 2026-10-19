@@ -42,7 +42,7 @@ const faq: FaqItem[] = [
   {
     question: 'Peut-on nettoyer une toiture au nettoyeur haute pression ?',
     answer:
-      'C’est fortement déconseillé sur la plupart des toitures : la haute pression casse les tuiles fragilisées, décape la surface des tuiles béton, fait remonter l’eau sous les tuiles et arrache les mousses avec le grain. Les professionnels sérieux démoussent par brossage ou basse pression, puis appliquent un traitement anti-mousse et, souvent, un hydrofuge. Le travail en toiture exige en outre un équipement de sécurité en hauteur et une assurance qui le couvre.',
+      'C’est fortement déconseillé sur la plupart des toitures : la haute pression casse les tuiles fragilisées, décape la surface des tuiles béton, fait remonter l’eau sous les tuiles et arrache les mousses avec le grain. Les professionnels sérieux démoussent par brossage ou basse pression, puis appliquent un traitement anti-mousse et, souvent, un hydrofuge. Le travail en toiture est en outre le plus risqué du métier (chute) : beaucoup de laveurs choisissent de ne pas le proposer.',
   },
   {
     question: 'Quel nettoyeur haute pression pour un professionnel ?',
@@ -50,9 +50,9 @@ const faq: FaqItem[] = [
       'Un nettoyeur thermique de 150 à 250 bars et 600 à 1 000 litres par heure, à moteur essence ou diesel, pour être autonome en électricité chez le client : 800 à 3 000 €. On y ajoute un nettoyeur de surface (cloche rotative, 100 à 400 €) pour les terrasses, une rotabuse, une perche télescopique et des lances de différentes longueurs. Les modèles électriques grand public ne tiennent pas un usage quotidien.',
   },
   {
-    question: 'Faut-il une autorisation pour utiliser des produits anti-mousse professionnels ?',
+    question: 'Comment ne pas abîmer le support en nettoyant ?',
     answer:
-      'Les traitements anti-mousse et algicides sont des produits biocides. Selon leur catégorie, leur achat et leur utilisation par un professionnel peuvent exiger le certificat Certibiocide, dont les règles ont été renforcées ces dernières années. Vérifiez la catégorie du produit sur sa fiche et les obligations en vigueur avant d’en faire une prestation courante ; à défaut, tenez-vous aux produits accessibles sans certificat.',
+      'Adaptez la pression au matériau : basse pression, buse large et brossage dans le sens du fil pour le bois, nettoyeur de surface pour ne pas vider les joints de dalles, test sur un angle bas avant de traiter un enduit, et pas de haute pression sur les tuiles. Bâchez et prévenez les voisins : les projections portent à dix mètres.',
   },
 ]
 
@@ -68,7 +68,7 @@ export default function Page() {
 
         <Summary
           items={[
-            'Trois familles de surfaces : terrasses et sols (le volume), façades et murs (le panier moyen), toitures (le risque, à ne pas prendre sans équipement et assurance dédiés).',
+            'Trois familles de surfaces : terrasses et sols (le volume), façades et murs (le panier moyen), toitures (le risque, que beaucoup de laveurs choisissent de ne pas proposer).',
             'Tarifs courants : 5 à 15 € le m² de terrasse, 10 à 30 € le m² de façade, minimum de déplacement de 80 à 150 €.',
             'Matériel : nettoyeur thermique 150–250 bars, nettoyeur de surface, rotabuse, perche — 1 500 à 4 000 € pour un kit complet.',
             'La pression abîme autant qu’elle nettoie : le bois, les joints, les tuiles et les enduits se traitent à basse pression ou à la brosse.',
@@ -106,8 +106,7 @@ export default function Page() {
           C&apos;est la prestation la plus demandée sur Google et la plus dangereuse à deux
           titres : pour vous (chute) et pour le client (tuiles cassées, infiltrations). Le
           démoussage sérieux se fait par brossage et traitement, pas au jet ; il exige un
-          équipement de sécurité en hauteur (harnais, ligne de vie ou échafaudage) et une
-          assurance qui couvre explicitement le travail en toiture. Beaucoup de laveurs
+          équipement de sécurité en hauteur (harnais, ligne de vie ou échafaudage). Beaucoup de laveurs
           indépendants font le choix de ne pas la proposer au démarrage, et de renvoyer vers un
           couvreur. C&apos;est un choix raisonnable.
         </P>
@@ -133,12 +132,11 @@ export default function Page() {
         </P>
         <Callout>
           <p>
-            <strong>Sur les produits.</strong>{' '}Anti-mousse, algicides, traitements curatifs sont
-            des biocides, et leur usage professionnel est encadré : selon la catégorie du produit,
-            un certificat (Certibiocide) peut être exigé pour l&apos;acheter et l&apos;appliquer.
-            Lisez la fiche de chaque produit, vérifiez les règles en vigueur, et respectez les
-            distances aux plantations, aux points d&apos;eau et aux voisins. Un massif brûlé se
-            voit huit jours plus tard et coûte plus cher que la prestation.
+            <strong>Sur les produits.</strong>{' '}Anti-mousse, algicides et traitements curatifs
+            sont des produits agressifs pour les plantes. Lisez la fiche de chaque produit,
+            respectez les dosages et les temps de pose, et gardez des distances avec les
+            plantations, les points d&apos;eau et les voisins. Un massif brûlé se voit huit jours
+            plus tard et coûte plus cher que la prestation.
           </p>
         </Callout>
 
@@ -208,10 +206,7 @@ export default function Page() {
         </UL>
         <P>
           Les photos avant, pendant et après, prises systématiquement, sont votre protection en cas
-          de litige et votre publicité entière. Votre RC pro doit couvrir les biens confiés et
-          les dommages aux tiers, avec un plafond cohérent avec une façade ou une toiture — les
-          points à vérifier, propres au travail en hauteur et sous pression, sont détaillés dans{' '}
-          <A href="/blog/assurance-nettoyage-haute-pression">notre article sur l&apos;assurance</A>.
+          de litige et votre publicité entière.
         </P>
 
         <H2>5. La saison et la tournée</H2>
@@ -278,7 +273,6 @@ export default function Page() {
 
         <AlsoRead
           items={[
-            { href: '/blog/assurance-nettoyage-haute-pression', label: 'Quelle assurance pour le nettoyage haute pression : terrasses, façades, toitures' },
             { href: '/blog/entretien-piscine-domicile-lancer-activite', label: 'Entretien de piscines à domicile : lancer une activité qui tourne toute l’année' },
             { href: '/blog/devenir-laveur-de-vitres-independant', label: 'Devenir laveur de vitres indépendant : tarifs, matériel, clients' },
             { href: '/blog/tarifs-lavage-auto-domicile', label: 'Quels tarifs pratiquer en lavage auto à domicile' },

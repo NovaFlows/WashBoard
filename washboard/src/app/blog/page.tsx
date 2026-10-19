@@ -123,7 +123,7 @@ export default function BlogIndex() {
       <header className="bl-tete">
         <p className="sur-titre"><span className="pt" />Le blog</p>
         <h1 className="pr-h1">
-          Lavage auto & detailing : les conseils du blog
+          Lavage auto & detailing&nbsp;: les conseils du blog
         </h1>
         <p className="chapo">
           Ce que WashBoard apprend en travaillant avec des laveurs auto, des pros du detailing et du nettoyage de canapés et textiles à domicile : trouver des clients, fixer ses tarifs, organiser ses tournées, arrêter de perdre du temps sur l&apos;administratif. D&apos;autres métiers mobiles (vitres, ménage, piscines, extérieur) restent couverts, réunis plus bas dans une dernière rubrique.

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SITE_URL } from '@/lib/blog'
 import { requiredPlanLabel } from '@/lib/plan'
+import { VALIDITE_DEVIS_JOURS } from '@/lib/documents'
 import { resumeOffres } from '@/lib/resumeOffres'
 import MetierPageTemplate, { type MetierFeature, type MetierProblem } from '@/components/metiers/MetierPageTemplate'
 import type { FaqItem } from '@/components/blog/Prose'
@@ -29,7 +30,15 @@ import type { FaqItem } from '@/components/blog/Prose'
 // - facturation électronique 2027 : même position que src/lib/faq.ts, pas de
 //   raccordement à une plateforme agréée aujourd'hui, aucune date promise
 //
-// Non affirmé : aucun devis (non confirmé), aucune plateforme agréée raccordée.
+// - devis écrit à la main, sans rendez-vous : émis numéroté, validité obligatoire
+//   (30 jours proposés, modifiable), envoi par email avec PDF joint ou WhatsApp,
+//   réponse du client notée à la main (accepté / refusé), « Bon pour accord » sur le PDF,
+//   transformation en facture d'un tap : src/lib/documents.ts, src/app/api/documents/route.ts,
+//   src/app/api/documents/[id]/{route,envoyer,facturer}/route.ts. Même offre que la facture
+//   (DocumentsV2.tsx : peut('facturation')). L'écran de création est dans la version mobile
+//   (et le site en grand écran avec la bêta), pas sur le site classique : Documents.tsx.
+//
+// Non affirmé : aucune plateforme agréée raccordée, pas de signature électronique du client.
 
 const title = 'Logiciel de facturation pour laveur auto mobile | WashBoard'
 const description =
@@ -73,6 +82,21 @@ const fonctionnalites: MetierFeature[] = [
     desc: 'Les factures se suivent (F-00001, F-00002…) sans trou ni doublon. Si tu facturais déjà avant, tu peux reprendre ta propre numérotation en indiquant le numéro de la prochaine facture ; il ne peut jamais reculer.',
   },
   {
+    titre: 'Des devis, sans rendez-vous derrière',
+    desc: (
+      <>
+        Un travail à chiffrer avant de dire oui (remise en état, tapis, flotte d’une entreprise) ?
+        Tu écris le devis depuis ton téléphone : client, lignes, total et date jusqu’à laquelle ton
+        prix reste valable ({VALIDITE_DEVIS_JOURS} jours proposés). Il part par email avec son PDF, ou par WhatsApp. Tu
+        notes la réponse du client, accepté ou refusé, et un devis accepté se transforme en facture
+        d’un tap, sans rien retaper. Les étapes complètes sont dans{' '}
+        <Link href="/blog/devis-lavage-auto-domicile" className="font-semibold text-[#1651E8] dark:text-[#6A9FFF] hover:underline">
+          notre guide du devis de lavage auto
+        </Link>.
+      </>
+    ),
+  },
+  {
     titre: 'Envoyée à tes clients pros, retrouvable par les particuliers',
     desc: 'Quand le client a réservé en tant que professionnel, sa facture lui part par email à la clôture du rendez-vous. Un particulier ne reçoit pas d’envoi séparé : sa facture existe dans ton espace, et il la retrouve depuis le lien de sa confirmation de réservation.',
   },
@@ -114,6 +138,11 @@ const faqItems: FaqItem[] = [
     question: 'Peut-on reprendre ma numérotation actuelle ?',
     answer:
       'Oui : tu renseignes le numéro de ta prochaine facture avant d’émettre la première. Ce numéro ne peut pas reculer, WashBoard refuse une valeur inférieure à une facture déjà émise.',
+  },
+  {
+    question: 'Puis-je faire un devis, et le transformer en facture ?',
+    answer:
+      `Oui, dès la formule ${requiredPlanLabel('facturation')}. Tu écris le devis depuis la version mobile de WashBoard, sans rendez-vous derrière, avec une date de validité (${VALIDITE_DEVIS_JOURS} jours proposés, modifiable). Il part par email avec le PDF en pièce jointe, ou par WhatsApp. Le client le retourne daté et signé avec la mention « Bon pour accord » ; tu notes sa réponse, accepté ou refusé. Un devis accepté se transforme en facture d’un tap : le client, les lignes et la remise sont repris tels quels, et la facture prend le numéro suivant de ta suite. Il n’y a pas de signature électronique dans WashBoard : la réponse est notée par toi.`,
   },
   {
     question: 'Et la facturation électronique obligatoire en 2027 ?',

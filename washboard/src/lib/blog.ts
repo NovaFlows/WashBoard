@@ -41,10 +41,10 @@ export const ARTICLES: Article[] = [
     slug: 'devenir-laveur-de-vitres-independant',
     title: 'Devenir laveur de vitres indépendant : tarifs, matériel, clients',
     description:
-      'Le lavage de vitres est l’activité de nettoyage la plus simple à lancer et la plus récurrente : commerces, copropriétés, particuliers. Statut, matériel (perche, raclette, eau pure), tarifs au m² ou à l’heure, et comment remplir un planning de passages réguliers.',
+      'Le lavage de vitres est l’activité de nettoyage la plus simple à lancer et la plus récurrente : commerces, copropriétés, particuliers. Matériel (perche, raclette, eau pure), tarifs au m² ou à l’heure, et comment remplir un planning de passages réguliers.',
     theme: 'vitres',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 9,
   },
   {
@@ -54,27 +54,27 @@ export const ARTICLES: Article[] = [
       'Canapés, matelas, tapis, sièges auto : une activité à forte marge qui se vend sur les photos avant/après. Matériel (injection-extraction), tarifs par pièce, temps par prestation et les erreurs qui abîment un tissu.',
     theme: 'textiles',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 8,
   },
   {
     slug: 'tarifs-menage-domicile-auto-entrepreneur',
-    title: 'Ménage à domicile en auto-entrepreneur : tarifs, crédit d’impôt et clients réguliers',
+    title: 'Ménage à domicile en indépendant : tarifs, planning et clients réguliers',
     description:
-      'Combien facturer de l’heure, ce que change la déclaration Services à la personne (crédit d’impôt de 50 % pour le client, condition d’activité exclusive), et comment construire un planning de clients hebdomadaires qui tient.',
+      'Combien facturer de l’heure, comment fixer ses minimums, construire un planning par secteur, et trouver des clients hebdomadaires qui restent.',
     theme: 'menage',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 9,
   },
   {
     slug: 'entretien-piscine-domicile-lancer-activite',
     title: 'Entretien de piscines à domicile : lancer une activité qui tourne toute l’année',
     description:
-      'Un métier saisonnier qu’on peut lisser : contrats d’entretien mensuels, mise en route et hivernage, tournées par secteur. Ce qu’il faut savoir (chimie de l’eau, matériel, responsabilités), les tarifs pratiqués et comment vendre l’abonnement plutôt que l’intervention.',
+      'Un métier saisonnier qu’on peut lisser : contrats d’entretien mensuels, mise en route et hivernage, tournées par secteur. Ce qu’il faut savoir (chimie de l’eau, matériel), les tarifs pratiqués et comment vendre l’abonnement plutôt que l’intervention.',
     theme: 'piscine',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 9,
   },
   {
@@ -84,18 +84,8 @@ export const ARTICLES: Article[] = [
       'Le métier de laveur au sens strict : matériel (nettoyeur thermique, rotabuse, perche), tarifs au m² par surface, saisonnalité, ce qui se fait et ne se fait pas (toitures, bois, joints), et comment enchaîner les chantiers dans un même quartier.',
     theme: 'exterieur',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 9,
-  },
-  {
-    slug: 'assurance-nettoyage-haute-pression',
-    title: 'Quelle assurance pour le nettoyage haute pression : terrasses, façades, toitures',
-    description:
-      'RC pro et biens confiés élargis au bâtiment, autorisation de voirie pour l’échafaudage, garantie décennale, prévoyance en l’absence de régime accident du travail pour les indépendants : ce qu’il faut vérifier avant un chantier en hauteur.',
-    theme: 'exterieur',
-    publishedAt: '2026-09-27',
-    updatedAt: '2026-09-27',
-    readingMinutes: 8,
   },
   {
     slug: 'carte-de-fidelite-laveur-auto-mobile',
@@ -118,13 +108,33 @@ export const ARTICLES: Article[] = [
     readingMinutes: 8,
   },
   {
+    slug: 'devis-lavage-auto-domicile',
+    theme: 'auto',
+    title: 'Faire un devis de lavage auto à domicile : quand, quoi écrire, modèle à recopier',
+    description:
+      'Quand un devis vaut la peine pour un laveur auto, ce qu’il doit dire pour éviter les malentendus, quelle durée de validité choisir, un modèle à recopier, et ce qui ne marche pas : le devis flou, le « à partir de », le prix changé après accord.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-18',
+    readingMinutes: 9,
+  },
+  {
+    slug: 'lavage-flotte-vehicules-entreprise',
+    theme: 'auto',
+    title: 'Laver pour les entreprises : flottes, concessions, loueurs, auto-écoles — démarcher et se faire payer',
+    description:
+      'Comment approcher une concession, un loueur, une auto-école ou une flotte d’entreprise, les chiffrer par véhicule, cadrer la relation par écrit et se faire payer sans attendre. Avec ce qui ne marche pas.',
+    publishedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
+    readingMinutes: 10,
+  },
+  {
     slug: 'lavage-auto-sans-eau',
     theme: 'auto',
     title: 'Lavage auto sans eau : comment ça marche, pour qui, avec quoi',
     description:
       'Le lavage sans eau règle la question des eaux usées et permet d’intervenir partout. Principe, produits, limites (véhicule très sale, jantes), temps par voiture et argumentaire client.',
     publishedAt: '2026-09-20',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 8,
   },
   {
@@ -146,16 +156,6 @@ export const ARTICLES: Article[] = [
     publishedAt: '2026-09-20',
     updatedAt: '2026-10-18',
     readingMinutes: 8,
-  },
-  {
-    slug: 'assurance-laveur-auto-mobile',
-    theme: 'auto',
-    title: 'Quelle assurance pour un laveur auto mobile',
-    description:
-      'RC pro, garantie biens confiés, véhicule à usage professionnel, matériel : ce qu’il faut vraiment couvrir quand on lave des voitures à domicile, les exclusions à vérifier et les bons réflexes en cas de dommage.',
-    publishedAt: '2026-09-20',
-    updatedAt: '2026-09-20',
-    readingMinutes: 7,
   },
   {
     slug: 'trouver-des-clients-laveur-auto-mobile',
@@ -182,9 +182,9 @@ export const ARTICLES: Article[] = [
     theme: 'auto',
     title: 'Devenir laveur auto mobile : par où commencer',
     description:
-      'Statut, assurance, matériel, réglementation sur l’eau, budget de départ : les étapes concrètes pour lancer une activité de lavage auto à domicile sans se tromper.',
+      'Avec ou sans eau, matériel, budget de départ, premiers clients et erreurs coûteuses : les étapes concrètes pour lancer une activité de lavage auto à domicile sans se tromper.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-10-19',
     readingMinutes: 11,
   },
   {

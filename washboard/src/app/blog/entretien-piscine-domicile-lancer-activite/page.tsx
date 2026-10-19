@@ -35,11 +35,6 @@ const faq: FaqItem[] = [
       'Un contrat d’entretien régulier se facture le plus souvent 80 à 200 € par mois en saison pour un passage hebdomadaire ou bi-mensuel (analyse et équilibrage de l’eau, nettoyage du bassin, des skimmers et du filtre, vérification du matériel), produits en supplément ou inclus selon la formule. Une mise en route de printemps coûte 150 à 300 €, un hivernage 150 à 350 €, un passage ponctuel 60 à 120 €.',
   },
   {
-    question: 'Faut-il un diplôme pour entretenir des piscines ?',
-    answer:
-      'Non pour l’entretien courant (nettoyage, équilibrage de l’eau, hivernage, mise en route), qui n’est pas une activité réglementée. Des formations existent (CAP, BP métiers de la piscine, formations courtes des fabricants de produits) et sont un vrai atout pour la crédibilité et pour éviter les erreurs de dosage. Les interventions sur l’installation électrique ou hydraulique et la construction relèvent de professionnels qualifiés et assurés pour cela.',
-  },
-  {
     question: 'Comment lisser une activité d’entretien de piscine sur l’année ?',
     answer:
       'En vendant un abonnement annuel réglé en douze mensualités plutôt que des passages en saison : le client paie la même somme chaque mois, vous avez du revenu en hiver, et l’hivernage et la mise en route sont inclus. En complément, l’hiver sert aux hivernages actifs, aux petites réparations, au remplacement de matériel, et à un second métier comme le nettoyage de terrasses ou le lavage auto.',
@@ -47,7 +42,7 @@ const faq: FaqItem[] = [
   {
     question: 'Quels sont les principaux risques du métier ?',
     answer:
-      'Un mauvais dosage qui abîme un liner ou rend l’eau impropre à la baignade, un matériel endommagé (pompe qui tourne à sec, filtre mal remonté), et la manipulation de produits chimiques (chlore, acide) qui exige des précautions de stockage, de transport et de mélange. Une RC pro couvrant les biens confiés et les dommages par produit est indispensable, et le compte-rendu écrit de chaque passage (valeurs mesurées, produits ajoutés) est votre meilleure protection.',
+      'Un mauvais dosage qui abîme un liner ou rend l’eau impropre à la baignade, un matériel endommagé (pompe qui tourne à sec, filtre mal remonté), et la manipulation de produits chimiques (chlore, acide) qui exige des précautions de stockage, de transport et de mélange. Le compte-rendu écrit de chaque passage (valeurs mesurées, produits ajoutés) est votre meilleure protection en cas de litige.',
   },
   {
     question: 'Combien de piscines peut-on entretenir par jour ?',
@@ -70,7 +65,7 @@ export default function Page() {
           items={[
             'Le cœur du métier : un passage hebdomadaire ou bi-mensuel d’avril à octobre — analyse de l’eau, équilibrage, nettoyage, vérification du matériel.',
             'Tarifs courants : 80 à 200 € par mois en contrat, 150 à 300 € la mise en route, 150 à 350 € l’hivernage.',
-            'Pas de diplôme obligatoire pour l’entretien, mais une formation courte évite les erreurs de dosage qui coûtent un liner.',
+            'Une formation courte sur le traitement de l’eau évite les erreurs de dosage qui coûtent un liner.',
             'L’activité est saisonnière : l’abonnement annuel en douze mensualités et un second métier d’hiver la lissent.',
             'Le revenu vient de la densité : 8 à 12 passages par jour en secteur groupé, 5 ou 6 en dispersé.',
           ]}
@@ -102,35 +97,27 @@ export default function Page() {
         </P>
         <Callout>
           <p>
-            <strong>Ce que vous ne faites pas sans qualification et assurance dédiées</strong> :
+            <strong>Ce qui n’est pas de l’entretien</strong> :
             intervenir sur l&apos;électricité (coffret, pompe à chaleur, électrolyseur), modifier
-            l&apos;hydraulique, réparer une fuite de structure, ou construire. Votre RC pro
-            d&apos;entretien ne couvre pas ces travaux. Le bon réflexe est de diagnostiquer,
+            l&apos;hydraulique, réparer une fuite de structure, ou construire. Le bon réflexe est de diagnostiquer,
             d&apos;orienter vers un pisciniste installateur, et de garder le client pour
             l&apos;entretien.
           </p>
         </Callout>
 
-        <H2>2. Les compétences et le cadre</H2>
+        <H2>2. Les compétences à acquérir</H2>
         <P>
-          L&apos;entretien de piscine n&apos;est pas réglementé : la micro-entreprise suffit pour
-          démarrer, comme pour{' '}
-          <A href="/blog/devenir-laveur-auto-mobile">les autres métiers du nettoyage à domicile</A>.
-          Mais c&apos;est le métier de cette famille où l&apos;erreur coûte le plus cher : un pH mal
-          corrigé sur un liner, un surdosage de chlore sur un revêtement, un filtre remonté à
-          l&apos;envers. Trois choses à mettre en place avant le premier contrat :
+          C&apos;est le métier de la famille des nettoyages à domicile où l&apos;erreur coûte le
+          plus cher : un pH mal corrigé sur un liner, un surdosage de chlore sur un revêtement, un
+          filtre remonté à l&apos;envers. Deux choses à mettre en place avant le premier contrat
+          (pour le statut et les démarches, renseignez-vous auprès des organismes officiels : ici,
+          on parle du métier) :
         </P>
         <UL>
           <li>
             <strong>Une formation courte</strong>{' '}sur le traitement de l&apos;eau. Les fabricants
             de produits et les distributeurs en proposent, parfois gratuitement. Quelques jours
             qui vous évitent des mois d&apos;apprentissage sur les piscines des clients.
-          </li>
-          <li>
-            <strong>Une RC pro</strong>{' '}couvrant les biens confiés <em>et</em> les dommages par
-            produit, avec un plafond cohérent avec le coût d&apos;un liner (plusieurs milliers
-            d&apos;euros). Les points à vérifier sont les mêmes que dans{' '}
-            <A href="/blog/assurance-laveur-auto-mobile">notre article sur l&apos;assurance</A>.
           </li>
           <li>
             <strong>Les règles de manipulation des produits</strong>{' '}: jamais de mélange (chlore
@@ -264,7 +251,6 @@ export default function Page() {
           items={[
             { href: '/blog/nettoyage-haute-pression-terrasses-facades-toitures', label: 'Nettoyage haute pression à domicile : terrasses, façades, toitures' },
             { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
-            { href: '/blog/assurance-laveur-auto-mobile', label: 'Quelle assurance pour un laveur auto mobile' },
             { href: '/blog/fiche-google-laveur-auto-mobile', label: 'Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels' },
           ]}
         />
