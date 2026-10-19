@@ -75,7 +75,7 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
             </div>
             <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages)}</p>
             <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">
-              {reglages.tampon_par_vehicule ? 'Un tampon par véhicule lavé' : 'Un tampon par prestation terminée'}. Réservez avec le même numéro de téléphone pour qu’il compte. Touchez la carte pour la retourner.
+              {reglages.tampon_par_vehicule ? 'Un tampon par véhicule lavé' : 'Un tampon par prestation terminée'}. Réservez avec le même numéro de téléphone et le même email pour qu’il compte. Touchez la carte pour la retourner.
             </p>
           </>
         ) : (
