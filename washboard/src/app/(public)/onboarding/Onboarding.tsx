@@ -9,7 +9,7 @@ import { PHRASE_SLUG_INVALIDE, generateSlug, slugValide } from '@/lib/slug'
 import { enregistrerSlug } from '@/lib/lienReservation'
 import { enregistrerProfil } from '@/lib/profilApi'
 import { appeler } from '@/lib/prestationsApi'
-import { QUESTIONS_FACULTATIVES, QUESTIONS_OBLIGATOIRES, SOURCES_ACQUISITION, questionsObligatoiresRepondues, type ProfilActivite, type QuestionActivite, type SourceAcquisition } from '@/lib/onboarding'
+import { PRECISION_SOURCE_MAX, QUESTIONS_FACULTATIVES, QUESTIONS_OBLIGATOIRES, SOURCES_ACQUISITION, questionsObligatoiresRepondues, type ProfilActivite, type QuestionActivite, type SourceAcquisition } from '@/lib/onboarding'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { estImageAcceptee } from '@/lib/apparence'
 import { retirerLeFond } from '@/hooks/retirerLeFond'
@@ -160,6 +160,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
   // Étapes 4 et 5 — l'activité, puis comment as-tu connu WashBoard.
   const [source, setSource] = useState<SourceAcquisition | null>(null)
+  const [precisionSource, setPrecisionSource] = useState('')
   const [profil, setProfil] = useState<ProfilActivite>({})
   const [derniere, setDerniere] = useState<string | null>(null)
   function choisirReponse(q: QuestionActivite, valeur: string) {
@@ -278,7 +279,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
     e.preventDefault()
     setErreur(null)
     setEnvoi(true)
-    const r = await appeler('enregistrer', 'POST', '/api/washer/onboarding', { acquisition_source: source ?? undefined, profil_activite: profil })
+    const r = await appeler('enregistrer', 'POST', '/api/washer/onboarding', { acquisition_source: source ?? undefined, source_precision: source === 'autre' ? precisionSource : undefined, profil_activite: profil })
     setEnvoi(false)
     if (!r.ok) { setErreur(r.message); return }
     allerA(PRET)
@@ -538,6 +539,13 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                   )
                 })}
               </div>
+              {source === 'autre' && (
+                <div className="mt-3">
+                  <label htmlFor="source-precision" className="sr-only">Où as-tu connu WashBoard ?</label>
+                  <input id="source-precision" value={precisionSource} onChange={e => setPrecisionSource(e.target.value)}
+                    maxLength={PRECISION_SOURCE_MAX} disabled={envoi} placeholder="Précise si tu veux (facultatif)" className={SAISIE} />
+                </div>
+              )}
             </fieldset>
 
             {erreur && (

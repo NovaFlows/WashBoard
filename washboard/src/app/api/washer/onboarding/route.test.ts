@@ -59,7 +59,7 @@ describe('POST /api/washer/onboarding', () => {
   })
 
   it('refuse une réponse hors liste ou un corps illisible', async () => {
-    for (const corps of [{ acquisition_source: 'facebook' }, { acquisition_source: 'Google' }, 'pas du json']) {
+    for (const corps of [{ acquisition_source: 'linkedin' }, { acquisition_source: 'Google' }, 'pas du json']) {
       expect((await envoyer(corps)).status).toBe(400)
     }
     expect(ecritures).toHaveLength(0)
@@ -73,6 +73,19 @@ describe('POST /api/washer/onboarding', () => {
     expect(typeof ecritures[0].valeurs.onboarding_complete_at).toBe('string')
     expect(ecritures[0].filtres).toContainEqual(['eq', 'user_id', 'u-1'])
     expect(ecritures[0].filtres).toContainEqual(['is', 'onboarding_complete_at', null])
+  })
+
+  it('nouvelles sources (2026-10-20) et précision libre de « Autre », rangée avec le profil', async () => {
+    for (const source of ['facebook', 'ia', 'bouche_a_oreille', 'demarchage']) expect((await envoyer({ acquisition_source: source })).status).toBe(200)
+    ecritures.length = 0
+    await envoyer({ acquisition_source: 'autre', source_precision: '  Un salon   pro à Lyon ', profil_activite: { equipe: '2' } })
+    expect(ecritures[0].valeurs.acquisition_source).toBe('autre')
+    expect(ecritures[1].valeurs.profil_activite).toEqual({ equipe: '2', source_precision: 'Un salon pro à Lyon' })
+  })
+
+  it('une précision envoyée avec une autre source que « Autre » est ignorée', async () => {
+    await envoyer({ acquisition_source: 'google', source_precision: 'ne doit pas rester', profil_activite: { equipe: '1' } })
+    expect(ecritures[1].valeurs.profil_activite).toEqual({ equipe: '1' })
   })
 
   it('source facultative : sans elle, termine l’onboarding sans écrire de source', async () => {

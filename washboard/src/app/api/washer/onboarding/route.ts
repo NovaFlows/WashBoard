@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError, errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { estSourceAcquisition, nettoyerProfilActivite } from '@/lib/onboarding'
+import { CLE_PRECISION_SOURCE, estSourceAcquisition, nettoyerPrecisionSource, nettoyerProfilActivite } from '@/lib/onboarding'
 import { logger } from '@/lib/logger'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 
@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
   }
 
   const profil = nettoyerProfilActivite(corps?.profil_activite)
+  // « Autre » : ce que le laveur a précisé, s'il l'a fait (2026-10-20).
+  const precision = source === 'autre' ? nettoyerPrecisionSource(corps?.source_precision) : null
+  if (precision) profil[CLE_PRECISION_SOURCE] = precision
   if (Object.keys(profil).length > 0) {
     const { error: erreurProfil } = await supabase
       .from('washers')

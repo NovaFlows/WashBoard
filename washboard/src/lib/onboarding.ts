@@ -9,13 +9,31 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from './logger'
 import { migrationEnAttente } from './migrationEnAttente'
 
+// Facebook, IA, bouche-à-oreille et démarchage ajoutés le 2026-10-20 (Alexandre), avec une
+// précision libre pour « Autre » : Clean'LI avait répondu « Autre » sans qu'on sache d'où.
 export const SOURCES_ACQUISITION = [
   { valeur: 'instagram', libelle: 'Instagram' },
   { valeur: 'tiktok', libelle: 'TikTok' },
+  { valeur: 'facebook', libelle: 'Facebook' },
   { valeur: 'google', libelle: 'Google' },
+  { valeur: 'ia', libelle: 'IA (ChatGPT…)' },
   { valeur: 'recommandation', libelle: 'Recommandation' },
+  { valeur: 'bouche_a_oreille', libelle: 'Bouche-à-oreille' },
+  { valeur: 'demarchage', libelle: 'Démarchage' },
   { valeur: 'autre', libelle: 'Autre' },
 ] as const
+
+/** La précision tapée sous « Autre », rangée avec les réponses sur l'activité
+ *  (`profil_activite.source_precision`) : pas de colonne de plus. */
+export const CLE_PRECISION_SOURCE = 'source_precision'
+export const PRECISION_SOURCE_MAX = 80
+
+/** Texte libre nettoyé (espaces, longueur), ou `null` s'il ne reste rien. */
+export function nettoyerPrecisionSource(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.replace(/\s+/g, ' ').trim().slice(0, PRECISION_SOURCE_MAX)
+  return t || null
+}
 
 export type SourceAcquisition = (typeof SOURCES_ACQUISITION)[number]['valeur']
 
