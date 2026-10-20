@@ -6,6 +6,22 @@ import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
 import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
 import { teintesCarte } from '@/lib/carteFidelite'
+import {
+  COULEUR, POLICE, MONO, page, enteteWashBoard, enteteLaveur, iconeTitre, titre, paragraphe,
+  bouton, boutonEnLigne, details, encadre, bloc, etiquette, type LigneDetail,
+} from './gabarit'
+
+/** Origine des images (logo, icônes) pour les emails qui ne reçoivent pas `appUrl`. */
+function origineImages(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+}
+
+const QUESTIONS = 'Des questions ? Écrivez-nous à novaflows.pro@gmail.com'
+
+/** L'étoile du créneau optimisé (l'ancien caractère étoile), dessinée. */
+function etoileCreneau(base: string, alt: string): string {
+  return `<img src="${base}/email/etoile.png" width="14" height="14" alt="${alt}" style="display:inline-block;vertical-align:-2px;border:0;">`
+}
 
 function formatVehicle(type?: string, count?: number): string | null {
   if (!type) return null
@@ -17,14 +33,20 @@ function formatVehicle(type?: string, count?: number): string | null {
   return count && count > 1 ? `${label} ×${count}` : label
 }
 
-function vehiclesHtml(items: VehicleItem[], rightAlign = false): string {
-  const align = rightAlign ? 'text-align:right;' : ''
+// Type, modèles et options arrivent tels que le client les a envoyés au formulaire de
+// réservation : échappés ici, sinon un modèle « <a href=…> » partait en lien cliquable.
+function vehiclesHtml(items: VehicleItem[]): string {
   return items.map(v => {
     const label = formatVehicle(v.type, v.count) ?? v.type
     const mdls  = (v.models ?? []).filter(Boolean)
-    const sub   = mdls.length ? `<br/><span style="font-size:13px;color:#1e40af;font-weight:700;">${mdls.join(' · ')}</span>` : ''
-    return `<span style="display:block;${align}">${label}${sub}</span>`
+    const sub   = mdls.length ? `<br/><span style="font-size:13px;color:${COULEUR.gris};font-weight:500;">${escapeHtml(mdls.join(' · '))}</span>` : ''
+    return `<span style="display:block;">${escapeHtml(label)}${sub}</span>`
   }).join('')
+}
+
+/** Petit encadré blanc à l'intérieur d'un bloc papier (moyens de paiement de l'acompte). */
+function sousBloc(html: string): string {
+  return `<div style="margin-top:10px;padding:12px 14px;background:${COULEUR.carte};border:1px solid ${COULEUR.filet};border-radius:10px;font-family:${POLICE};font-size:13.5px;color:${COULEUR.encre};line-height:1.6;">${html}</div>`
 }
 
 // ── Email 1 : accusé de réception (statut pending) ────────────────────────
@@ -52,6 +74,7 @@ type SendRequestParams = {
 
 export async function sendBookingRequest(params: SendRequestParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
+  const base = origineImages()
 
   const date         = new Date(params.scheduledAt)
   const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -61,111 +84,56 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const finalPrice    = params.isSmartSlot && discount > 0 ? Math.max(0, params.servicePrice - discount) : params.servicePrice
   const priceStr      = Number.isInteger(finalPrice) ? String(finalPrice) : finalPrice.toFixed(2)
   const vehicleContent1 = params.vehiclesDetail?.length
-    ? vehiclesHtml(params.vehiclesDetail, true)
-    : (formatVehicle(params.vehicleType, params.vehicleCount) ?? null)
-  const vehicleRow1 = vehicleContent1
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Véhicule(s)</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${vehicleContent1}</td></tr>`
-    : ''
-  const addonsRow1 = params.selectedAddons?.length
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Options</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${params.selectedAddons.map(a => a.label).join(' · ')}</td></tr>`
-    : ''
-  const notesRow1 = params.notes
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Notes</td><td style="padding:10px 16px;font-size:12px;color:#475569;line-height:1.5;font-style:italic;">${escapeHtml(params.notes)}</td></tr>`
-    : ''
+    ? vehiclesHtml(params.vehiclesDetail)
+    : (escapeHtml(formatVehicle(params.vehicleType, params.vehicleCount)) || null)
+
+  const lignes: LigneDetail[] = [
+    { libelle: 'Prestation', valeur: escapeHtml(params.serviceName) },
+    ...(vehicleContent1 ? [{ libelle: 'Véhicule(s)', valeur: vehicleContent1 }] : []),
+    ...(params.selectedAddons?.length ? [{ libelle: 'Options', valeur: escapeHtml(params.selectedAddons.map(a => a.label).join(' · ')) }] : []),
+    { libelle: 'Date', valeur: formattedDate },
+    { libelle: 'Heure', valeur: time },
+    { libelle: 'Adresse', valeur: escapeHtml(params.address) },
+    ...(params.notes ? [{ libelle: 'Notes', gauche: true, valeur: `<span style="font-size:13px;font-weight:400;font-style:italic;color:${COULEUR.gris};">${escapeHtml(params.notes)}</span>` }] : []),
+    { libelle: 'Montant estimé', fort: true, valeur: `${priceStr}€${params.isSmartSlot && discount > 0 ? ` ${etoileCreneau(base, 'créneau optimisé')}` : ''} <span style="font-weight:400;color:${COULEUR.gris};">(sur place)</span>` },
+  ]
+
+  const acompte = params.acompte ? bloc(`
+<p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${COULEUR.encre};">Acompte à régler : ${formatEuros(params.acompte.montant)} €</p>
+${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13.5px;color:${COULEUR.gris};line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
+${params.acompte.wero ? sousBloc(`<strong>Par Wero</strong><br>
+Envoyez ${formatEuros(params.acompte.montant)} € avec Wero, depuis l’application de votre banque, au <strong>${escapeHtml(params.acompte.wero.telephone)}</strong>.
+${params.acompte.wero.lien ? `<br>${boutonEnLigne('Payer avec Wero', escapeHtml(params.acompte.wero.lien))}` : ''}`) : ''}
+${params.acompte.virement ? sousBloc(`<strong>Par virement</strong><br>
+Titulaire : ${escapeHtml(params.acompte.virement.titulaire)}<br>
+IBAN : <span style="font-family:${MONO};">${escapeHtml(params.acompte.virement.iban)}</span><br>
+Montant : ${formatEuros(params.acompte.montant)} €<br>
+Libellé à indiquer : <strong style="font-family:${MONO};">${escapeHtml(params.acompte.virement.reference)}</strong>`) : ''}
+${params.acompte.liens.map(l => boutonEnLigne(`Payer avec ${escapeHtml(l.libelle)}`, escapeHtml(l.url))).join('')}`) : ''
+
+  const fidelite = params.fidelite ? bloc(`
+<p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${COULEUR.encre};">Votre carte de fidélité : ${params.fidelite.progression} / ${params.fidelite.requis}</p>
+<p style="margin:0 0 10px;font-size:13.5px;color:${COULEUR.gris};line-height:1.5;">${escapeHtml(params.fidelite.phrase)}</p>
+<a href="${escapeHtml(params.fidelite.url)}" style="font-size:14px;font-weight:700;color:${COULEUR.encre};">Voir ma carte</a>`) : ''
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Demande reçue — en attente de confirmation (Réf. ${ref})`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-
-    <!-- Header -->
-    <div style="background:#f59e0b;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Demande reçue ⏳</h1>
-      <p style="margin:0;color:#fef3c7;font-size:13px;">En attente de confirmation par ${escapeHtml(params.washerName)}</p>
-    </div>
-
-    <!-- Body -->
-    <div style="padding:28px 40px;">
-      <p style="margin:0 0 6px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre demande de réservation a bien été reçue. <strong>${escapeHtml(params.washerName)}</strong> va la confirmer dans les plus brefs délais.
-        Vous recevrez un email avec votre reçu dès que c&apos;est accepté.
-      </p>
-
-      <!-- Récapitulatif -->
-      <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;font-size:13px;">
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Prestation</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${escapeHtml(params.serviceName)}</td>
-        </tr>
-        ${vehicleRow1}
-        ${addonsRow1}
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Date</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${formattedDate}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Heure</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${time}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Adresse</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;text-align:right;">${escapeHtml(params.address)}</td>
-        </tr>
-        ${notesRow1}
-        <tr>
-          <td style="padding:10px 16px;color:#64748b;">Montant estimé</td>
-          <td style="padding:10px 16px;font-weight:700;color:#0f172a;text-align:right;">${priceStr}€${params.isSmartSlot && discount > 0 ? ' ★' : ''} <span style="font-weight:400;color:#94a3b8;">(sur place)</span></td>
-        </tr>
-      </table>
-
-      ${params.acompte ? `
-      <!-- Acompte -->
-      <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
-        <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Acompte à régler : ${formatEuros(params.acompte.montant)} €</p>
-        ${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
-        ${params.acompte.wero ? `<div style="margin-top:10px;padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;line-height:1.6;">
-          <strong>Par Wero</strong><br>
-          Envoyez ${formatEuros(params.acompte.montant)} € avec Wero, depuis l’application de votre banque, au <strong>${escapeHtml(params.acompte.wero.telephone)}</strong>.
-          ${params.acompte.wero.lien ? `<br><a href="${escapeHtml(params.acompte.wero.lien)}" style="display:inline-block;margin-top:8px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;">Payer avec Wero</a>` : ''}
-        </div>` : ''}
-        ${params.acompte.virement ? `<div style="margin-top:10px;padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;line-height:1.6;">
-          <strong>Par virement</strong><br>
-          Titulaire : ${escapeHtml(params.acompte.virement.titulaire)}<br>
-          IBAN : <span style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.iban)}</span><br>
-          Montant : ${formatEuros(params.acompte.montant)} €<br>
-          Libellé à indiquer : <strong style="font-family:'Courier New',monospace;">${escapeHtml(params.acompte.virement.reference)}</strong>
-        </div>` : ''}
-        ${params.acompte.liens.map(l => `<a href="${escapeHtml(l.url)}" style="display:inline-block;margin:10px 8px 0 0;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;">Payer avec ${escapeHtml(l.libelle)}</a>`).join('')}
-      </div>` : ''}
-
-      ${params.fidelite ? `
-      <!-- Carte de fidélité -->
-      <div style="margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
-        <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Votre carte de fidélité : ${params.fidelite.progression} / ${params.fidelite.requis}</p>
-        <p style="margin:0 0 10px;font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(params.fidelite.phrase)}</p>
-        <a href="${escapeHtml(params.fidelite.url)}" style="font-size:13px;font-weight:700;color:#0f172a;">Voir ma carte</a>
-      </div>` : ''}
-
-      <!-- Référence -->
-      <div style="margin-top:20px;padding:12px 16px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;">
-        <p style="margin:0;font-size:12px;color:#92400e;">Référence de votre demande : <strong style="font-family:'Courier New',monospace;">${ref}</strong></p>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Ce message est un accusé de réception automatique. Votre reçu vous sera envoyé à la confirmation.</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Demande reçue',
+      entete: enteteLaveur(escapeHtml(params.washerName)),
+      contenu: `
+${titre({ texte: 'Demande reçue', sousTitre: `En attente de confirmation par ${escapeHtml(params.washerName)}` })}
+${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre demande de réservation a bien été reçue. <strong>${escapeHtml(params.washerName)}</strong> va la confirmer dans les plus brefs délais.
+Vous recevrez un email avec votre reçu dès que c&apos;est accepté.`, { marge: '0 0 20px' })}
+${details(lignes)}
+${acompte}
+${fidelite}
+${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};color:${COULEUR.encre};">${ref}</strong>`, { ton: 'gris', marge: '0' })}`,
+      pied: 'Ce message est un accusé de réception automatique. Votre reçu vous sera envoyé à la confirmation.',
+    }),
   })
 }
 
@@ -221,141 +189,67 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
         return mdls.length ? `${lbl} (${mdls.join(', ')})` : lbl
       }).join(', ')
     : (formatVehicle(params.vehicleType, params.vehicleCount) ?? '')
-  const vehicleLabel = vehicleStr ? ` — ${vehicleStr}` : ''
-  const notesBox2    = params.notes
-    ? `<div style="margin:0 40px 20px;background:#fefce8;border-left:4px solid #fbbf24;padding:12px 16px;border-radius:0 6px 6px 0;">
-        <p style="margin:0 0 2px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Notes du client</p>
-        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${escapeHtml(params.notes)}</p>
-      </div>`
-    : ''
+  const vehicleLabel = vehicleStr ? ` — ${escapeHtml(vehicleStr)}` : ''
+  const optimise     = params.isSmartSlot && discount > 0
+  const nom          = escapeHtml(params.washerName)
+  const tel          = params.washerPhone ? escapeHtml(params.washerPhone) : ''
+
+  const colonne = (libelle: string, corps: string, separe: boolean) =>
+    `<td class="wb-col" width="33%" style="width:33%;padding:0 12px 0 ${separe ? '14px' : '0'};vertical-align:top;${separe ? `border-left:1px solid ${COULEUR.filet};` : ''}">
+${etiquette(libelle, '0 0 6px')}
+${corps}
+</td>`
+
+  const contenu = `
+${titre({ surtitre: `Réf. ${ref}`, texte: 'Reçu de prestation de service' })}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:4px 0 26px;"><tr>
+${colonne('Prestataire', `<p style="margin:0;font-size:14px;font-weight:700;color:${COULEUR.encre};">${nom}</p>${tel ? `<p style="margin:3px 0 0;font-size:13px;color:${COULEUR.gris};">${tel}</p>` : ''}`, false)}
+${colonne('Client', `<p style="margin:0;font-size:14px;font-weight:700;color:${COULEUR.encre};">${escapeHtml(params.clientName)}</p><p style="margin:3px 0 0;font-size:13px;color:${COULEUR.gris};word-break:break-all;">${escapeHtml(params.clientEmail)}</p>`, true)}
+${colonne('Date d&apos;émission', `<p style="margin:0;font-size:14px;font-weight:600;color:${COULEUR.encre};">${today}</p>`, true)}
+</tr></table>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:${POLICE};">
+  <tr>
+    <td style="padding:0 0 8px;border-bottom:1px solid ${COULEUR.filet};">${etiquette('Désignation', '0')}</td>
+    <td style="padding:0 0 8px;border-bottom:1px solid ${COULEUR.filet};text-align:right;white-space:nowrap;">${etiquette('Montant TTC', '0')}</td>
+  </tr>
+  <tr>
+    <td style="padding:16px 12px 16px 0;vertical-align:top;border-bottom:1px solid ${COULEUR.filet};">
+      <p style="margin:0 0 4px;font-size:15px;font-weight:700;line-height:1.4;color:${COULEUR.encre};">${escapeHtml(params.serviceName)}${vehicleLabel}</p>
+      <p style="margin:0 0 2px;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${formattedDate} à ${time}</p>
+      <p style="margin:0;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${escapeHtml(params.address)}</p>
+      ${optimise ? `<p style="margin:8px 0 0;font-size:12.5px;font-weight:600;color:${COULEUR.encre};">${etoileCreneau(appUrl, '')} Créneau optimisé (-${discount}€)</p>` : ''}
+    </td>
+    <td style="padding:16px 0;vertical-align:top;text-align:right;white-space:nowrap;border-bottom:1px solid ${COULEUR.filet};">
+      ${optimise
+        ? `<p style="margin:0 0 2px;font-size:13px;color:${COULEUR.grisPetit};text-decoration:line-through;">${basePriceStr}€</p>
+      <p style="margin:0;font-size:15px;font-weight:700;color:${COULEUR.encre};">${finalPriceStr}€</p>`
+        : `<p style="margin:0;font-size:15px;font-weight:700;color:${COULEUR.encre};">${finalPriceStr}€</p>`}
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="padding:10px 0;font-size:12.5px;font-style:italic;color:${COULEUR.grisPetit};">TVA non applicable — art. 293 B du CGI</td>
+  </tr>
+  <tr>
+    <td style="padding:14px 12px 0 0;border-top:2px solid ${COULEUR.encre};font-size:12.5px;font-weight:700;line-height:1.35;letter-spacing:.06em;color:${COULEUR.encre};">TOTAL À RÉGLER SUR PLACE</td>
+    <td style="padding:12px 0 0;border-top:2px solid ${COULEUR.encre};text-align:right;white-space:nowrap;font-size:24px;font-weight:700;letter-spacing:-0.02em;font-stretch:108%;color:${COULEUR.encre};">${finalPriceStr}€</td>
+  </tr>
+</table>
+${paragraphe('Mode de règlement : paiement comptant sur place', { ton: 'petit', marge: '10px 0 24px', style: 'text-align:right;' })}
+${params.notes ? bloc(`${etiquette('Notes du client', '0 0 4px')}<p style="margin:0;font-size:14px;line-height:1.5;font-style:italic;color:${COULEUR.encre};">${escapeHtml(params.notes)}</p>`) : ''}
+${encadre(`<strong>Justificatif de prestation — facture</strong><br><span style="font-weight:400;color:${COULEUR.gris};">Ce document fait office de reçu de prestation de service. Référence : <strong style="color:${COULEUR.encre};">${ref}</strong> · Émis le ${today}</span>`, 'neutre')}
+${bouton('Télécharger la confirmation PDF', pdfUrl, 'sombre', '0')}`
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Reçu de réservation #${ref} — ${escapeHtml(params.washerName)}`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reçu de réservation</title>
-</head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:600px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-
-    <!-- Barre supérieure -->
-    <div style="background:#0f172a;padding:10px 32px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="color:#94a3b8;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:700;">Reçu de prestation de service</span>
-      <span style="color:#475569;font-size:11px;font-family:'Courier New',monospace;font-weight:600;">Réf. ${ref}</span>
-    </div>
-
-    <!-- En-tête prestataire -->
-    <div style="padding:28px 40px 20px;display:flex;justify-content:space-between;align-items:flex-start;">
-      <div>
-        <h1 style="margin:0 0 3px;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">${escapeHtml(params.washerName)}</h1>
-        <p style="margin:0;color:#64748b;font-size:13px;">Prestataire de nettoyage et d'entretien à domicile</p>
-        ${params.washerPhone ? `<p style="margin:3px 0 0;color:#64748b;font-size:13px;">${escapeHtml(params.washerPhone)}</p>` : ''}
-      </div>
-      <div style="text-align:right;">
-        <p style="margin:0 0 2px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;">Date d'émission</p>
-        <p style="margin:0;font-size:13px;color:#475569;font-weight:600;">${today}</p>
-      </div>
-    </div>
-
-    <!-- Ligne séparatrice -->
-    <div style="margin:0 40px;border-top:2px solid #e2e8f0;"></div>
-
-    <!-- Blocs Prestataire / Client -->
-    <table style="width:100%;border-collapse:collapse;">
-      <tr>
-        <td style="padding:20px 40px;width:50%;vertical-align:top;">
-          <p style="margin:0 0 8px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:700;">Prestataire</p>
-          <p style="margin:0;font-size:14px;color:#0f172a;font-weight:700;">${escapeHtml(params.washerName)}</p>
-          ${params.washerPhone ? `<p style="margin:3px 0 0;font-size:13px;color:#64748b;">${escapeHtml(params.washerPhone)}</p>` : ''}
-        </td>
-        <td style="padding:20px 40px;width:50%;vertical-align:top;border-left:1px solid #f1f5f9;">
-          <p style="margin:0 0 8px;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:700;">Client</p>
-          <p style="margin:0;font-size:14px;color:#0f172a;font-weight:700;">${escapeHtml(params.clientName)}</p>
-          <p style="margin:3px 0 0;font-size:13px;color:#64748b;">${escapeHtml(params.clientEmail)}</p>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Tableau de prestation -->
-    <div style="margin:0 40px 24px;">
-      <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:13px;">
-
-        <!-- En-tête tableau -->
-        <thead>
-          <tr style="background:#f8fafc;">
-            <th style="padding:10px 16px;text-align:left;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;border-bottom:1px solid #e2e8f0;">Désignation</th>
-            <th style="padding:10px 16px;text-align:right;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Montant TTC</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <!-- Ligne prestation -->
-          <tr>
-            <td style="padding:16px;border-bottom:1px solid #f1f5f9;vertical-align:top;">
-              <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#0f172a;">${escapeHtml(params.serviceName)}${vehicleLabel}</p>
-              <p style="margin:0 0 2px;font-size:12px;color:#64748b;">${formattedDate} à ${time}</p>
-              <p style="margin:0;font-size:12px;color:#64748b;">${escapeHtml(params.address)}</p>
-              ${params.isSmartSlot && discount > 0 ? `<p style="margin:6px 0 0;font-size:11px;color:#d97706;font-weight:600;">★ Créneau optimisé (-${discount}€)</p>` : ''}
-            </td>
-            <td style="padding:16px;border-bottom:1px solid #f1f5f9;text-align:right;vertical-align:top;white-space:nowrap;">
-              ${params.isSmartSlot && discount > 0
-                ? `<p style="margin:0 0 2px;font-size:12px;color:#94a3b8;text-decoration:line-through;">${basePriceStr}€</p>
-                   <p style="margin:0;font-size:15px;font-weight:700;color:#d97706;">${finalPriceStr}€</p>`
-                : `<p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">${finalPriceStr}€</p>`
-              }
-            </td>
-          </tr>
-
-          <!-- TVA -->
-          <tr style="background:#f8fafc;">
-            <td style="padding:8px 16px;font-size:11px;color:#94a3b8;font-style:italic;">TVA non applicable — art. 293 B du CGI</td>
-            <td style="padding:8px 16px;"></td>
-          </tr>
-        </tbody>
-
-        <!-- Total -->
-        <tfoot>
-          <tr style="background:#0f172a;">
-            <td style="padding:14px 16px;font-size:14px;font-weight:700;color:#ffffff;">TOTAL À RÉGLER SUR PLACE</td>
-            <td style="padding:14px 16px;text-align:right;font-size:18px;font-weight:800;color:#ffffff;white-space:nowrap;">${finalPriceStr}€</td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <!-- Mode de règlement -->
-      <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;text-align:right;">Mode de règlement : paiement comptant sur place</p>
-    </div>
-
-    ${notesBox2}
-
-    <!-- Encart facture -->
-    <div style="margin:0 40px 24px;background:#EEF3F8;border-left:4px solid #3b82f6;padding:14px 18px;border-radius:0 6px 6px 0;">
-      <p style="margin:0 0 3px;font-size:12px;color:#1e40af;font-weight:700;">Justificatif de prestation — facture</p>
-      <p style="margin:0;font-size:12px;color:#3b82f6;">Ce document fait office de reçu de prestation de service. Référence : <strong>${ref}</strong> · Émis le ${today}</p>
-    </div>
-
-    <!-- Bouton PDF -->
-    <div style="padding:0 40px 28px;text-align:center;">
-      <a href="${pdfUrl}"
-         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;letter-spacing:0.3px;">
-        Télécharger la confirmation PDF
-      </a>
-    </div>
-
-    <!-- Pied de page -->
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Réservation de prestations à domicile</p>
-    </div>
-
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Reçu de réservation',
+      entete: enteteLaveur(nom, `Prestataire de nettoyage et d'entretien à domicile${tel ? `<br>${tel}` : ''}`),
+      contenu,
+      pied: 'Ce reçu a été généré automatiquement par WashBoard · Réservation de prestations à domicile',
+    }),
   })
 }
 
@@ -373,26 +267,15 @@ export async function sendFollowupEmail(params: SendFollowupEmailParams) {
   return resend.emails.send({
     from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
     to: params.to,
-    subject: `Un message de ${escapeHtml(params.washerName)} 👋`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <p style="margin:0;color:#D4E1EE;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Message de votre laveur</p>
-      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;line-height:1.7;white-space:pre-line;">${escapeHtml(params.message)}</p>
-    </div>
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    subject: `Un message de ${escapeHtml(params.washerName)}`,
+    html: page({
+      titre: `Un message de ${escapeHtml(params.washerName)}`,
+      entete: enteteLaveur(escapeHtml(params.washerName)),
+      contenu: `
+${titre({ texte: `Un message de ${escapeHtml(params.washerName)}` })}
+${paragraphe(escapeHtml(params.message), { marge: '0', style: 'white-space:pre-line;line-height:1.7;' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
+    }),
   })
 }
 
@@ -406,40 +289,25 @@ type SendReviewRequestParams = {
 
 export async function sendReviewRequest(params: SendReviewRequestParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
+  const base = origineImages()
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
-    subject: `Votre avis compte pour ${escapeHtml(params.washerName)} ⭐`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;text-align:center;">
-      <h1 style="margin:0 0 6px;color:#ffffff;font-size:21px;font-weight:800;">Merci pour votre confiance !</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">Comment s'est passé votre lavage avec ${escapeHtml(params.washerName)} ?</p>
-    </div>
-    <div style="padding:32px 40px;text-align:center;">
-      <p style="margin:0 0 8px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre véhicule est tout propre ? On espère que vous êtes satisfait·e !
-        Un petit avis Google aiderait énormément <strong>${escapeHtml(params.washerName)}</strong> — ça prend moins d'une minute.
-      </p>
-      <div style="font-size:30px;letter-spacing:4px;margin-bottom:24px;">⭐⭐⭐⭐⭐</div>
-      <a href="${escapeHtml(params.reviewUrl)}" target="_blank"
-         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">
-        Laisser un avis Google
-      </a>
-      <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;">Merci beaucoup pour votre soutien 🙏</p>
-    </div>
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    subject: `Votre avis compte pour ${escapeHtml(params.washerName)}`,
+    html: page({
+      titre: 'Merci pour votre confiance !',
+      entete: enteteLaveur(escapeHtml(params.washerName)),
+      contenu: `
+${titre({ texte: 'Merci pour votre confiance !', sousTitre: `Comment s'est passé votre lavage avec ${escapeHtml(params.washerName)} ?` })}
+${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre véhicule est tout propre ? On espère que vous êtes satisfait·e !
+Un petit avis Google aiderait énormément <strong>${escapeHtml(params.washerName)}</strong> — ça prend moins d'une minute.`, { marge: '0 0 22px' })}
+<img src="${base}/email/etoiles.png" width="144" height="24" alt="" style="display:block;border:0;margin:0 0 24px;">
+${bouton('Laisser un avis Google', escapeHtml(params.reviewUrl), 'sombre', '0')}
+${paragraphe('Merci beaucoup pour votre soutien', { ton: 'gris', marge: '20px 0 0' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
+    }),
   })
 }
 
@@ -464,33 +332,17 @@ export async function sendFacture(params: SendFactureParams) {
     from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Facture ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <p style="margin:0;color:#D4E1EE;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Facture ${escapeHtml(params.numero)}</p>
-      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 12px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-        Merci pour votre confiance. Vous trouverez ci-dessous la facture de la prestation réalisée par
-        <strong>${escapeHtml(params.washerName)}</strong>.
-      </p>
-      <a href="${escapeHtml(url)}"
-         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
-        Télécharger la facture (PDF)
-      </a>
-    </div>
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: `Facture ${escapeHtml(params.numero)}`,
+      entete: enteteLaveur(escapeHtml(params.washerName)),
+      contenu: `
+${titre({ texte: `Facture ${escapeHtml(params.numero)}` })}
+${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Merci pour votre confiance. Vous trouverez ci-dessous la facture de la prestation réalisée par
+<strong>${escapeHtml(params.washerName)}</strong>.`, { marge: '0 0 24px' })}
+${bouton('Télécharger la facture (PDF)', escapeHtml(url), 'sombre', '0')}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
+    }),
   })
 }
 
@@ -523,47 +375,31 @@ export async function sendDocument(params: SendDocumentParams) {
   const appUrl = params.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const url = `${appUrl}/api/documents/${params.documentId}/pdf`
   const devis = params.genre === 'devis'
-  const titre = devis ? 'Devis' : 'Facture'
+  const titreDoc = devis ? 'Devis' : 'Facture'
   const montant = `${params.montantTtc.toFixed(2).replace('.', ',')} €`
 
   return resend.emails.send({
     from: `${escapeHtml(params.washerName)} via WashBoard <noreply@washboard.fr>`,
     to: params.to,
     ...(params.washerEmail ? { replyTo: params.washerEmail } : {}),
-    subject: `${titre} ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
+    subject: `${titreDoc} ${escapeHtml(params.numero)} — ${escapeHtml(params.washerName)}`,
     ...(params.piece ? { attachments: [{ filename: params.piece.nom, content: params.piece.contenu }] } : {}),
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <p style="margin:0;color:#D4E1EE;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">${titre} ${escapeHtml(params.numero)}</p>
-      <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;font-weight:800;">${escapeHtml(params.washerName)}</h1>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 12px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.clientName)}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        ${devis
-          ? `Voici le devis demandé à <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`
-          : `Merci pour votre confiance. Voici la facture de <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`}
-      </p>
-      ${devis && params.valableJusquau
-        ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.6;background:#f8fafc;border-left:3px solid #306090;padding:10px 14px;">Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.</p>`
-        : ''}
-      <p style="margin:0 0 16px;font-size:13px;color:#475569;">Le PDF est joint à ce message.</p>
-      <a href="${escapeHtml(url)}"
-         style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:8px;">
-        Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne
-      </a>
-    </div>
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Message envoyé via <strong>WashBoard</strong> pour le compte de ${escapeHtml(params.washerName)}</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: `${titreDoc} ${escapeHtml(params.numero)}`,
+      entete: enteteLaveur(escapeHtml(params.washerName)),
+      contenu: `
+${titre({ texte: `${titreDoc} ${escapeHtml(params.numero)}` })}
+${paragraphe(`Bonjour <strong>${escapeHtml(params.clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(devis
+  ? `Voici le devis demandé à <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`
+  : `Merci pour votre confiance. Voici la facture de <strong>${escapeHtml(params.washerName)}</strong>, d'un montant de <strong>${montant}</strong>.`, { marge: '0 0 20px' })}
+${devis && params.valableJusquau
+  ? encadre(`Ce prix reste valable jusqu'au <strong>${escapeHtml(params.valableJusquau)}</strong>. Pour l'accepter, répondez simplement à cet email.`, 'neutre', '0 0 20px')
+  : ''}
+${paragraphe('Le PDF est joint à ce message.', { ton: 'gris', marge: '0 0 16px' })}
+${bouton(`Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne`, escapeHtml(url), 'sombre', '0')}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(params.washerName)}`,
+    }),
   })
 }
 
@@ -616,37 +452,20 @@ export async function sendWasherBookingLocked({ to, washerName, scheduledAt, app
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Nouvelle réservation — ${jour}`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
-    <div style="background:#0B1828;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réservation</h1>
-      <p style="margin:0;color:#94a3b8;font-size:13px;">Elle dépasse votre offre actuelle</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(washerName)}</strong>,</p>
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:22px;">
-        <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;">${jourTitre}</p>
-        <p style="margin:0;font-size:14px;color:#64748b;">Client masqué par votre offre</p>
-      </div>
-      <p style="margin:0 0 22px;font-size:14px;color:#475569;line-height:1.6;">
-        Son nom, son téléphone, son adresse et l'heure du rendez-vous sont masqués : cette réservation
-        dépasse ce que votre offre affiche ce mois-ci. Changez d'offre pour la débloquer —
-        et toutes les suivantes avec.
-      </p>
-      <div style="text-align:center;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Débloquer cette réservation →
-        </a>
-      </div>
-      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Nouvelle réservation',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'cadenas'), texte: 'Nouvelle réservation', sousTitre: 'Elle dépasse votre offre actuelle' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 18px' })}
+${bloc(`<p style="margin:0 0 4px;font-size:19px;font-weight:700;letter-spacing:-0.01em;color:${COULEUR.encre};">${jourTitre}</p>
+<p style="margin:0;font-size:14px;color:${COULEUR.gris};">Client masqué par votre offre</p>`, '0 0 20px')}
+${paragraphe(`Son nom, son téléphone, son adresse et l'heure du rendez-vous sont masqués : cette réservation
+dépasse ce que votre offre affiche ce mois-ci. Changez d'offre pour la débloquer —
+et toutes les suivantes avec.`, { marge: '0 0 24px' })}
+${bouton('Débloquer cette réservation →', `${url}/dashboard/abonnement`, 'accent', '0')}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -658,84 +477,40 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const time          = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
-  const dashboardUrl  = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'}/dashboard`
+  const base          = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  const dashboardUrl  = `${base}/dashboard`
   const vehicleContent3 = params.vehiclesDetail?.length
     ? vehiclesHtml(params.vehiclesDetail)
-    : (formatVehicle(params.vehicleType, params.vehicleCount) ?? null)
-  const vehicleRow3 = vehicleContent3
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;vertical-align:top;">Véhicule(s)</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;">${vehicleContent3}</td></tr>`
-    : ''
-  const addonsRow3 = params.selectedAddons?.length
-    ? `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:10px 16px;color:#64748b;">Options</td><td style="padding:10px 16px;font-weight:600;color:#0f172a;">${params.selectedAddons.map(a => a.label).join(' · ')}</td></tr>`
-    : ''
-  const notesBox3 = params.notes
-    ? `<div style="margin-top:20px;background:#fefce8;border-left:4px solid #fbbf24;padding:14px 16px;border-radius:0 6px 6px 0;">
-        <p style="margin:0 0 4px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Notes du client</p>
-        <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;font-style:italic;">${escapeHtml(params.notes)}</p>
-      </div>`
-    : ''
+    : (escapeHtml(formatVehicle(params.vehicleType, params.vehicleCount)) || null)
+
+  // Ordre de lecture du laveur entre deux prestations : quand, où, qui, quoi.
+  const lignes: LigneDetail[] = [
+    { libelle: 'Date', valeur: `${formattedDate} à ${time}` },
+    { libelle: 'Adresse', valeur: escapeHtml(params.address) },
+    { libelle: 'Client', valeur: escapeHtml(params.clientName) },
+    { libelle: 'Téléphone', valeur: `<a href="tel:${escapeHtml(params.clientPhone)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientPhone)}</a>` },
+    { libelle: 'Email', valeur: `<a href="mailto:${escapeHtml(params.clientEmail)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientEmail)}</a>` },
+    { libelle: 'Prestation', valeur: escapeHtml(params.serviceName) },
+    ...(vehicleContent3 ? [{ libelle: 'Véhicule(s)', valeur: vehicleContent3 }] : []),
+    ...(params.selectedAddons?.length ? [{ libelle: 'Options', valeur: escapeHtml(params.selectedAddons.map(a => a.label).join(' · ')) }] : []),
+    { libelle: 'Montant', fort: true, valeur: `${priceStr}€` },
+  ]
 
   return resend.emails.send({
     from: `WashBoard <noreply@washboard.fr>`,
     to: params.to,
     subject: `Nouvelle réservation — ${escapeHtml(params.clientName)} (Réf. ${ref})`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réservation 🎉</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">Un client vient de faire une demande sur votre page WashBoard</p>
-    </div>
-    <div style="padding:28px 40px;">
-      <p style="margin:0 0 20px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(params.washerName)}</strong>,</p>
-      <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;font-size:13px;">
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Client</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${escapeHtml(params.clientName)}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Email</td>
-          <td style="padding:10px 16px;font-weight:600;"><a href="mailto:${escapeHtml(params.clientEmail)}" style="color:#306090;">${escapeHtml(params.clientEmail)}</a></td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Téléphone</td>
-          <td style="padding:10px 16px;font-weight:600;"><a href="tel:${escapeHtml(params.clientPhone)}" style="color:#306090;">${escapeHtml(params.clientPhone)}</a></td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Prestation</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${escapeHtml(params.serviceName)}</td>
-        </tr>
-        ${vehicleRow3}
-        ${addonsRow3}
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Date</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${formattedDate} à ${time}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 16px;color:#64748b;">Adresse</td>
-          <td style="padding:10px 16px;font-weight:600;color:#0f172a;">${escapeHtml(params.address)}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 16px;color:#64748b;">Montant</td>
-          <td style="padding:10px 16px;font-weight:700;color:#0f172a;">${priceStr}€</td>
-        </tr>
-      </table>
-      ${notesBox3}
-      <div style="margin-top:24px;text-align:center;">
-        <a href="${dashboardUrl}" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:8px;">
-          Voir dans WashBoard
-        </a>
-      </div>
-    </div>
-    <div style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#94a3b8;">Réf. <strong>${ref}</strong> · WashBoard</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Nouvelle réservation',
+      entete: enteteWashBoard(base),
+      contenu: `
+${titre({ icone: iconeTitre(base, 'calendrier'), texte: 'Nouvelle réservation', sousTitre: 'Un client vient de faire une demande sur votre page WashBoard' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(params.washerName)}</strong>,`, { marge: '0 0 12px' })}
+${details(lignes)}
+${params.notes ? bloc(`${etiquette('Notes du client', '0 0 4px')}<p style="margin:0;font-size:14px;line-height:1.5;font-style:italic;color:${COULEUR.encre};">${escapeHtml(params.notes)}</p>`, '0 0 24px') : ''}
+${bouton('Voir dans WashBoard', dashboardUrl, 'accent', '0')}`,
+      pied: `Réf. <strong>${ref}</strong> · WashBoard`,
+    }),
   })
 }
 
@@ -751,37 +526,18 @@ export async function sendTrialReminder({ to, washerName, trialEndsAt, appUrl }:
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Votre essai gratuit se termine dans 3 jours — WashBoard`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#f59e0b;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Plus que 3 jours ⏳</h1>
-      <p style="margin:0;color:#fef3c7;font-size:13px;">Votre essai gratuit WashBoard se termine bientôt</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre période d&apos;essai gratuit se termine le <strong>${date}</strong>.
-        Pour continuer à utiliser WashBoard sans interruption, activez votre abonnement avant cette date.
-      </p>
-      <div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">
-          Après expiration, vous avez encore 30 jours pour régulariser avant que votre page de réservation soit suspendue.
-        </p>
-      </div>
-      <div style="text-align:center;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Activer mon abonnement →
-        </a>
-      </div>
-      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Plus que 3 jours',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'sablier'), texte: 'Plus que 3 jours', sousTitre: 'Votre essai gratuit WashBoard se termine bientôt' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre période d&apos;essai gratuit se termine le <strong>${date}</strong>.
+Pour continuer à utiliser WashBoard sans interruption, activez votre abonnement avant cette date.`, { marge: '0 0 20px' })}
+${encadre('Après expiration, vous avez encore 30 jours pour régulariser avant que votre page de réservation soit suspendue.', 'ambre')}
+${bouton('Activer mon abonnement →', `${url}/dashboard/abonnement`, 'accent', '0')}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -802,44 +558,23 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
       from: 'WashBoard <noreply@washboard.fr>',
       to,
       subject: `Votre mois d'essai est terminé — quelle formule vous va ?`,
-      html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Votre mois d&apos;essai est terminé</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">Rien ne s&apos;arrête — à vous de choisir la suite</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
-        réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.
-      </p>
-      <div style="background:#EEF3F8;border-left:4px solid #306090;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#24496E;font-weight:600;">
-          En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
-          gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.
-        </p>
-      </div>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Dès que votre activité dépasse ce rythme, passez à la formule qui vous va :
-        <strong>Starter à ${formatEuros(PLAN_PRICES.starter)}€/mois</strong> (${BOOKING_QUOTA.starter} réservations),
-        ou <strong>Pro à ${formatEuros(PLAN_PRICES.pro)}€/mois</strong> (réservations illimitées, comptabilité, avis Google, relances).
-      </p>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Choisir ma formule →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Sans engagement · Vous pouvez rester sur Découverte aussi longtemps que vous voulez</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+      html: page({
+        titre: 'Votre mois d&apos;essai est terminé',
+        entete: enteteWashBoard(url),
+        contenu: `
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois d&apos;essai est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
+réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.`, { marge: '0 0 20px' })}
+${encadre(`En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
+gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.`, 'neutre', '0 0 20px')}
+${paragraphe(`Dès que votre activité dépasse ce rythme, passez à la formule qui vous va :
+<strong>Starter à ${formatEuros(PLAN_PRICES.starter)}€/mois</strong> (${BOOKING_QUOTA.starter} réservations),
+ou <strong>Pro à ${formatEuros(PLAN_PRICES.pro)}€/mois</strong> (réservations illimitées, comptabilité, avis Google, relances).`, { marge: '0 0 24px' })}
+${bouton('Choisir ma formule →', `${url}/dashboard/abonnement`, 'accent', '0')}
+${paragraphe('Sans engagement · Vous pouvez rester sur Découverte aussi longtemps que vous voulez', { ton: 'petit', marge: '16px 0 0' })}`,
+        pied: QUESTIONS,
+      }),
     })
   }
 
@@ -847,38 +582,19 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Votre essai gratuit a expiré — WashBoard`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#ef4444;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Essai expiré 🔴</h1>
-      <p style="margin:0;color:#fecaca;font-size:13px;">Votre période d&apos;essai gratuit est terminée</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre essai gratuit WashBoard est arrivé à son terme. Votre dashboard reste accessible,
-        mais votre page de réservation sera suspendue dans <strong>30 jours</strong> si vous n&apos;activez pas votre abonnement.
-      </p>
-      <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#b91c1c;font-weight:600;">
-          Sans abonnement actif, vos clients ne pourront plus réserver en ligne dans 30 jours.
-        </p>
-      </div>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Activer mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Essai expiré',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'alerte'), texte: 'Essai expiré', sousTitre: 'Votre période d&apos;essai gratuit est terminée' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre essai gratuit WashBoard est arrivé à son terme. Votre dashboard reste accessible,
+mais votre page de réservation sera suspendue dans <strong>30 jours</strong> si vous n&apos;activez pas votre abonnement.`, { marge: '0 0 20px' })}
+${encadre('Sans abonnement actif, vos clients ne pourront plus réserver en ligne dans 30 jours.', 'rouge')}
+${bouton(`Activer mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →`, `${url}/dashboard/abonnement`, 'accent', '0')}
+${paragraphe('PayPal ou virement · Activation sous 24h · Sans engagement', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -894,37 +610,18 @@ export async function sendSubReminder({ to, washerName, endsAt, appUrl }: {
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Votre abonnement WashBoard se termine dans 3 jours`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#f59e0b;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Renouvellement dans 3 jours ⏳</h1>
-      <p style="margin:0;color:#fef3c7;font-size:13px;">Votre abonnement WashBoard arrive à échéance</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre abonnement WashBoard se termine le <strong>${date}</strong>.
-        Pour continuer à recevoir des réservations sans interruption, renouvelez votre paiement avant cette date.
-      </p>
-      <div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">
-          Effectuez votre paiement par PayPal ou virement — activation sous 24h ouvrées.
-        </p>
-      </div>
-      <div style="text-align:center;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Renouveler mon abonnement →
-        </a>
-      </div>
-      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Renouvellement dans 3 jours',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'sablier'), texte: 'Renouvellement dans 3 jours', sousTitre: 'Votre abonnement WashBoard arrive à échéance' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre abonnement WashBoard se termine le <strong>${date}</strong>.
+Pour continuer à recevoir des réservations sans interruption, renouvelez votre paiement avant cette date.`, { marge: '0 0 20px' })}
+${encadre('Effectuez votre paiement par PayPal ou virement — activation sous 24h ouvrées.', 'ambre')}
+${bouton('Renouveler mon abonnement →', `${url}/dashboard/abonnement`, 'accent', '0')}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -939,38 +636,19 @@ export async function sendSubExpired({ to, washerName, appUrl }: {
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Votre abonnement WashBoard a expiré`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#ef4444;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Abonnement expiré 🔴</h1>
-      <p style="margin:0;color:#fecaca;font-size:13px;">Votre abonnement WashBoard est arrivé à échéance</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Votre abonnement WashBoard est expiré. Votre page de réservation sera suspendue
-        dans <strong>30 jours</strong> si vous ne renouvelez pas votre paiement.
-      </p>
-      <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#b91c1c;font-weight:600;">
-          Sans renouvellement, vos clients ne pourront plus réserver en ligne dans 30 jours.
-        </p>
-      </div>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Renouveler mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h · Sans engagement</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Abonnement expiré',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'alerte'), texte: 'Abonnement expiré', sousTitre: 'Votre abonnement WashBoard est arrivé à échéance' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre abonnement WashBoard est expiré. Votre page de réservation sera suspendue
+dans <strong>30 jours</strong> si vous ne renouvelez pas votre paiement.`, { marge: '0 0 20px' })}
+${encadre('Sans renouvellement, vos clients ne pourront plus réserver en ligne dans 30 jours.', 'rouge')}
+${bouton(`Renouveler mon abonnement — à partir de ${formatEuros(PLAN_PRICES.starter)}€/mois →`, `${url}/dashboard/abonnement`, 'accent', '0')}
+${paragraphe('PayPal ou virement · Activation sous 24h · Sans engagement', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -990,36 +668,22 @@ export async function sendSupportReply({ to, titreQuestion, questionId, appUrl }
   to: string; titreQuestion: string; questionId: string; appUrl?: string
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const url = `${appUrl ?? trustedOrigin(null)}${assistanceThreadUrl(questionId)}`
+  const base = appUrl ?? trustedOrigin(null)
+  const url = `${base}${assistanceThreadUrl(questionId)}`
 
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Réponse de l'équipe WashBoard`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Nouvelle réponse 💬</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">L&apos;équipe WashBoard a répondu à votre question</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        À propos de : <strong style="color:#0f172a;">${escapeHtml(titreQuestion)}</strong>
-      </p>
-      <div style="text-align:center;">
-        <a href="${url}" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Voir la réponse →
-        </a>
-      </div>
-      <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Connectez-vous à votre tableau de bord pour la lire.</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Nouvelle réponse',
+      entete: enteteWashBoard(base),
+      contenu: `
+${titre({ icone: iconeTitre(base, 'bulle'), texte: 'Nouvelle réponse', sousTitre: 'L&apos;équipe WashBoard a répondu à votre question' })}
+${paragraphe(`À propos de : <strong style="color:${COULEUR.encre};">${escapeHtml(titreQuestion)}</strong>`, { ton: 'gris', marge: '0 0 24px' })}
+${bouton('Voir la réponse →', url, 'accent', '0')}
+${paragraphe('Connectez-vous à votre tableau de bord pour la lire.', { ton: 'petit', marge: '16px 0 0' })}`,
+    }),
   })
 }
 
@@ -1035,44 +699,25 @@ export async function sendGraceEndingWarning({ to, washerName, cutoffDate, appUr
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Dans 5 jours vous perdez l'accès complet à WashBoard`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#ef4444;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Dernier rappel avant coupure ⚠️</h1>
-      <p style="margin:0;color:#fecaca;font-size:13px;">Il vous reste 5 jours pour régulariser</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Vous avez déjà bénéficié d&apos;un mois complet de délai de grâce depuis la fin de votre abonnement.
-        Le <strong>${date}</strong>, si votre situation n&apos;est pas régularisée, votre accès à WashBoard sera
-        <strong>entièrement coupé</strong> :
-      </p>
-      <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#475569;line-height:1.8;">
-        <li>Accès à votre tableau de bord</li>
-        <li>Page de réservation en ligne</li>
-        <li>Réception de nouvelles réservations</li>
-      </ul>
-      <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#b91c1c;font-weight:600;">
-          Réglez votre retard dès maintenant, ou contactez-nous pour prendre vos dispositions.
-        </p>
-      </div>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Régulariser mon compte →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">PayPal ou virement · Activation sous 24h</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Dernier rappel avant coupure',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'alerte'), texte: 'Dernier rappel avant coupure', sousTitre: 'Il vous reste 5 jours pour régulariser' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Vous avez déjà bénéficié d&apos;un mois complet de délai de grâce depuis la fin de votre abonnement.
+Le <strong>${date}</strong>, si votre situation n&apos;est pas régularisée, votre accès à WashBoard sera
+<strong>entièrement coupé</strong> :`, { marge: '0 0 10px' })}
+<ul style="margin:0 0 22px;padding-left:20px;font-family:${POLICE};font-size:15px;color:${COULEUR.encre};line-height:1.8;">
+  <li>Accès à votre tableau de bord</li>
+  <li>Page de réservation en ligne</li>
+  <li>Réception de nouvelles réservations</li>
+</ul>
+${encadre('Réglez votre retard dès maintenant, ou contactez-nous pour prendre vos dispositions.', 'rouge')}
+${bouton('Régulariser mon compte →', `${url}/dashboard/abonnement`, 'accent', '0')}
+${paragraphe('PayPal ou virement · Activation sous 24h', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -1098,33 +743,20 @@ export async function sendEmailConfirmation({ to, washerName, code }: {
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: 'Confirme ton adresse email — WashBoard',
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Confirme ton adresse email</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">Dernière étape avant d&apos;accéder à ton tableau de bord</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">${salutation}</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-        Ton compte WashBoard est créé. Pour l&apos;activer, entre ce code dans l&apos;application :
-      </p>
-      <div style="text-align:center;margin-bottom:8px;">
-        <div style="display:inline-block;background:#EEF3F8;border:1px solid #D4E1EE;border-radius:12px;padding:16px 28px;">
-          <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#306090;font-family:'SF Mono',Consolas,monospace;">${codeEchappe}</span>
-        </div>
-      </div>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
-        Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.
-      </p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Confirme ton adresse email',
+      entete: enteteWashBoard(origineImages()),
+      contenu: `
+${titre({ icone: iconeTitre(origineImages(), 'enveloppe'), texte: 'Confirme ton adresse email', sousTitre: 'Dernière étape avant d&apos;accéder à ton tableau de bord' })}
+${paragraphe(salutation, { marge: '0 0 8px' })}
+${paragraphe('Ton compte WashBoard est créé. Pour l&apos;activer, entre ce code dans l&apos;application :', { marge: '0 0 20px' })}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:0 0 20px;"><tr>
+<td style="background:${COULEUR.papier};border:1px solid ${COULEUR.filet};border-radius:12px;padding:16px 26px;">
+<span style="font-size:32px;font-weight:700;letter-spacing:8px;color:${COULEUR.encre};font-family:${MONO};">${codeEchappe}</span>
+</td>
+</tr></table>
+${paragraphe('Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.', { ton: 'petit', marge: '0' })}`,
+    }),
   })
 }
 
@@ -1142,68 +774,34 @@ export async function sendNouvellesOffres({ to, washerName, appUrl }: {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
 
+  const offre = (couleur: string, nom: string, prix: string, detail: string) => ({
+    libelle: `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${couleur};margin-right:8px;vertical-align:1px;"></span><strong style="color:${COULEUR.encre};">${nom}</strong> <span style="color:${COULEUR.encre};">— ${prix}</span>`,
+    valeur: `<span style="font-weight:400;color:${COULEUR.gris};">${detail}</span>`,
+  })
+
   return resend.emails.send({
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `Nouveau chez WashBoard : 4 offres, dont une gratuite`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Quatre offres, une seule idée 🚗</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">Payer pour ce qu&apos;on utilise vraiment</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        WashBoard passe de 2 à 4 offres. Rien ne change pour vous aujourd&apos;hui :
-        votre accès actuel reste exactement le même, au même tarif. Ce qui change,
-        c&apos;est le choix disponible pour la suite.
-      </p>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.decouverte};margin-right:8px;"></span>
-            <strong>Découverte</strong> — gratuite
-          </td>
-          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.decouverte} résa/mois</td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.starter};margin-right:8px;"></span>
-            <strong>Starter</strong> — ${formatEuros(PLAN_PRICES.starter)}€/mois
-          </td>
-          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">${BOOKING_QUOTA.starter} résa/mois, page perso, CRM</td>
-        </tr>
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.pro};margin-right:8px;"></span>
-            <strong>Pro</strong> — ${formatEuros(PLAN_PRICES.pro)}€/mois
-          </td>
-          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">résa illimitées, compta, avis Google</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 0;font-size:13px;color:#0f172a;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PLAN_COULEURS.business};margin-right:8px;"></span>
-            <strong>Business</strong> — ${formatEuros(PLAN_PRICES.business)}€/mois
-          </td>
-          <td style="padding:10px 0;font-size:13px;color:#64748b;text-align:right;">3 laveurs inclus, planning collectif</td>
-        </tr>
-      </table>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/abonnement" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Voir le détail des offres →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Aucune action requise · Vous restez sur votre offre actuelle si vous ne changez rien</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Quatre offres, une seule idée',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Quatre offres, une seule idée', sousTitre: 'Payer pour ce qu&apos;on utilise vraiment' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`WashBoard passe de 2 à 4 offres. Rien ne change pour vous aujourd&apos;hui :
+votre accès actuel reste exactement le même, au même tarif. Ce qui change,
+c&apos;est le choix disponible pour la suite.`, { marge: '0 0 16px' })}
+${details([
+  offre(PLAN_COULEURS.decouverte, 'Découverte', 'gratuite', `${BOOKING_QUOTA.decouverte} résa/mois`),
+  offre(PLAN_COULEURS.starter, 'Starter', `${formatEuros(PLAN_PRICES.starter)}€/mois`, `${BOOKING_QUOTA.starter} résa/mois, page perso, CRM`),
+  offre(PLAN_COULEURS.pro, 'Pro', `${formatEuros(PLAN_PRICES.pro)}€/mois`, 'résa illimitées, compta, avis Google'),
+  offre(PLAN_COULEURS.business, 'Business', `${formatEuros(PLAN_PRICES.business)}€/mois`, '3 laveurs inclus, planning collectif'),
+])}
+${bouton('Voir le détail des offres →', `${url}/dashboard/abonnement`, 'accent', '0')}
+${paragraphe('Aucune action requise · Vous restez sur votre offre actuelle si vous ne changez rien', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -1218,46 +816,26 @@ export async function sendAnnoncePwa({ to, washerName, appUrl }: {
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: `WashBoard évolue — venez essayer la nouvelle version`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">WashBoard évolue 🚀</h1>
-      <p style="margin:0;color:#D4E1EE;font-size:13px;">Une nouvelle version, pensée pour le téléphone</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#0f172a;">Bonjour <strong>${washerName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">
-        Venez essayer la nouvelle version de WashBoard : une application que vous installez
-        sur votre téléphone, plus rapide et pensée pour une journée sur la route — agenda,
-        clients et chiffres repensés pour s&apos;utiliser d&apos;une main, entre deux rendez-vous.
-      </p>
-      <div style="background:#EEF3F8;border-left:4px solid #306090;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#24496E;font-weight:600;">
-          Vos données sont les mêmes, rien à reconfigurer — c&apos;est le même compte, juste une
-          autre façon d&apos;y accéder.
-        </p>
-      </div>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard/guide#guide-application" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Installer l&apos;application →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Le site reste disponible normalement si vous préférez</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'WashBoard évolue',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'telephone'), texte: 'WashBoard évolue', sousTitre: 'Une nouvelle version, pensée pour le téléphone' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Venez essayer la nouvelle version de WashBoard : une application que vous installez
+sur votre téléphone, plus rapide et pensée pour une journée sur la route — agenda,
+clients et chiffres repensés pour s&apos;utiliser d&apos;une main, entre deux rendez-vous.`, { marge: '0 0 20px' })}
+${encadre(`Vos données sont les mêmes, rien à reconfigurer — c&apos;est le même compte, juste une
+autre façon d&apos;y accéder.`, 'neutre')}
+${bouton('Installer l&apos;application →', `${url}/dashboard/guide#guide-application`, 'accent', '0')}
+${paragraphe('Le site reste disponible normalement si vous préférez', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
 // Annonce du nouveau design ordinateur (2026-10-12) — envoyée une seule fois à tous les laveurs
-// par `/api/admin/annoncer-bureau-2026`. Même gabarit que `sendAnnoncePwa`, aux couleurs de la
-// nouvelle version (bleu du logo #306090).
+// par `/api/admin/annoncer-bureau-2026`. Même gabarit que `sendAnnoncePwa`.
 export async function sendAnnonceBureau({ to, washerName, appUrl }: {
   to: string; washerName: string; appUrl?: string
 }) {
@@ -1268,45 +846,26 @@ export async function sendAnnonceBureau({ to, washerName, appUrl }: {
     from: 'WashBoard <noreply@washboard.fr>',
     to,
     subject: 'WashBoard a un nouveau design sur ordinateur',
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f6f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e7e5e0;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-    <div style="background:#306090;padding:28px 40px;">
-      <h1 style="margin:0 0 4px;color:#ffffff;font-size:20px;font-weight:800;">Un nouveau design sur ordinateur 💻</h1>
-      <p style="margin:0;color:#d6e4f2;font-size:13px;">Le même WashBoard que sur votre téléphone, sur grand écran</p>
-    </div>
-    <div style="padding:32px 40px;">
-      <p style="margin:0 0 16px;font-size:15px;color:#16161a;">Bonjour <strong>${escapeHtml(washerName)}</strong>,</p>
-      <p style="margin:0 0 18px;font-size:14px;color:#55555c;line-height:1.6;">
-        Le tableau de bord sur ordinateur a été entièrement refait, avec le même design que
-        l&apos;application sur votre téléphone. Ce qui change :
-      </p>
-      <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#55555c;line-height:1.7;">
-        <li>un menu à gauche : Aujourd&apos;hui, Agenda, Clients, Chiffres, Plus et vos Documents ;</li>
-        <li>la liste et la fiche côte à côte : vous passez d&apos;un client ou d&apos;un rendez-vous à l&apos;autre sans rien fermer ;</li>
-        <li>l&apos;agenda en vue semaine et mois ;</li>
-        <li>une recherche et des filtres dans vos devis et factures.</li>
-      </ul>
-      <div style="background:#eef3f8;border-left:4px solid #306090;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#24486c;font-weight:600;line-height:1.5;">
-          Une visite guidée vous présente tout à votre prochaine connexion sur ordinateur.
-          Vos données sont les mêmes, rien à reconfigurer.
-        </p>
-      </div>
-      <div style="text-align:center;margin-bottom:16px;">
-        <a href="${url}/dashboard" style="display:inline-block;background:#306090;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;">
-          Découvrir le nouveau design →
-        </a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#8a8a90;text-align:center;">Vous pourrez revoir la visite à tout moment : Plus › Réglages › Guide d&apos;utilisation</p>
-      <p style="margin:16px 0 0;font-size:12px;color:#8a8a90;text-align:center;">Des questions ? Écrivez-nous à novaflows.pro@gmail.com</p>
-    </div>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Un nouveau design sur ordinateur',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'ordinateur'), texte: 'Un nouveau design sur ordinateur', sousTitre: 'Le même WashBoard que sur votre téléphone, sur grand écran' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Le tableau de bord sur ordinateur a été entièrement refait, avec le même design que
+l&apos;application sur votre téléphone. Ce qui change :`, { marge: '0 0 10px' })}
+<ul style="margin:0 0 22px;padding-left:20px;font-family:${POLICE};font-size:15px;color:${COULEUR.encre};line-height:1.7;">
+  <li style="margin-bottom:4px;">un menu à gauche : Aujourd&apos;hui, Agenda, Clients, Chiffres, Plus et vos Documents ;</li>
+  <li style="margin-bottom:4px;">la liste et la fiche côte à côte : vous passez d&apos;un client ou d&apos;un rendez-vous à l&apos;autre sans rien fermer ;</li>
+  <li style="margin-bottom:4px;">l&apos;agenda en vue semaine et mois ;</li>
+  <li>une recherche et des filtres dans vos devis et factures.</li>
+</ul>
+${encadre(`Une visite guidée vous présente tout à votre prochaine connexion sur ordinateur.
+Vos données sont les mêmes, rien à reconfigurer.`, 'neutre')}
+${bouton('Découvrir le nouveau design →', `${url}/dashboard`, 'accent', '0')}
+${paragraphe('Vous pourrez revoir la visite à tout moment : Plus › Réglages › Guide d&apos;utilisation', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
   })
 }
 
@@ -1326,23 +885,17 @@ export async function sendAnnulationAcompte({ to, clientName, washerName, schedu
     from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
     to,
     subject: `Réservation annulée : acompte non réglé`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:24px 16px;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;padding:28px 32px;">
-    <p style="margin:0 0 14px;font-size:15px;color:#0f172a;">Bonjour <strong>${escapeHtml(clientName)}</strong>,</p>
-    <p style="margin:0 0 14px;font-size:14px;color:#475569;line-height:1.6;">
-      Votre réservation avec <strong>${escapeHtml(washerName)}</strong> du ${jour} à ${heure} a été annulée :
-      l’acompte n’a pas été réglé dans le délai indiqué au moment de réserver.
-    </p>
-    <p style="margin:0;font-size:14px;color:#475569;line-height:1.6;">
-      Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.
-    </p>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: 'Réservation annulée',
+      entete: enteteLaveur(escapeHtml(washerName)),
+      contenu: `
+${titre({ texte: 'Réservation annulée' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre réservation avec <strong>${escapeHtml(washerName)}</strong> du ${jour} à ${heure} a été annulée :
+l’acompte n’a pas été réglé dans le délai indiqué au moment de réserver.`, { marge: '0 0 14px' })}
+${paragraphe('Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.', { marge: '0' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
+    }),
   })
 }
 
@@ -1367,7 +920,7 @@ export async function sendTamponFidelite({ to, clientName, washerName, url, nouv
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const t = teintesCarte(couleur)
-  const titre = complete ? 'Votre carte est complète' : nouveaux > 1 ? `Vos ${nouveaux} tampons sont arrivés` : 'Votre tampon est arrivé'
+  const titreCarte = complete ? 'Votre carte est complète' : nouveaux > 1 ? `Vos ${nouveaux} tampons sont arrivés` : 'Votre tampon est arrivé'
   const ronds = Array.from({ length: requis }, (_, i) => {
     if (i >= tampons) return `<span style="display:inline-block;box-sizing:border-box;width:18px;height:18px;border-radius:9px;border:2px solid rgba(255,255,255,.42);margin:0 6px 6px 0;"></span>`
     const dernier = complete && i === requis - 1
@@ -1378,31 +931,27 @@ export async function sendTamponFidelite({ to, clientName, washerName, url, nouv
     from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
     to,
     subject: complete ? `Votre carte de fidélité ${washerName} est complète` : nouveaux > 1 ? `Vos ${nouveaux} tampons ${washerName} sont arrivés` : `Votre tampon ${washerName} est arrivé`,
-    html: `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:28px 16px;background:#F6F5F3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#16161A;">
-  <div style="max-width:460px;margin:0 auto;">
-    ${clientName ? `<p style="margin:0 0 6px;font-size:14px;color:#6B6B76;">Bonjour ${escapeHtml(clientName)},</p>` : ''}
-    <h1 style="margin:0 0 18px;font-size:28px;line-height:1.08;font-weight:800;letter-spacing:-0.02em;color:#16161A;">${titre}</h1>
-    <div style="border-radius:18px;padding:22px 22px 16px;background-color:${t.base};background-image:linear-gradient(135deg,${t.clair} 0%,${t.base} 48%,${t.sombre} 100%);color:${t.texte};">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-        <tr>
-          <td style="vertical-align:top;">
-            <div style="font-size:19px;font-weight:800;line-height:1.1;color:${t.texte};">${escapeHtml(washerName)}</div>
-            <div style="margin-top:4px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${t.texteDoux};">Carte de fidélité</div>
-          </td>
-          <td style="vertical-align:top;text-align:right;white-space:nowrap;font-size:26px;font-weight:800;line-height:1;color:${t.texte};">${tampons}/${requis}</td>
-        </tr>
-      </table>
-      <div style="margin-top:18px;line-height:0;font-size:0;">${ronds}</div>
-    </div>
-    <p style="margin:18px 0 22px;font-size:15px;line-height:1.5;color:#16161A;">${escapeHtml(phrase)}</p>
-    <a href="${escapeHtml(url)}" style="display:inline-block;background:#16161A;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;padding:15px 26px;border-radius:14px;">${complete ? 'Voir ma carte' : nouveaux > 1 ? 'Voir mes tampons' : 'Voir mon tampon'}</a>
-    <p style="margin:28px 0 0;font-size:11.5px;line-height:1.5;color:#9A9AA4;">Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}.</p>
-  </div>
-</body>
-</html>`.trim(),
+    html: page({
+      titre: titreCarte,
+      entete: enteteLaveur(escapeHtml(washerName)),
+      contenu: `
+${clientName ? paragraphe(`Bonjour ${escapeHtml(clientName)},`, { ton: 'gris', marge: '0 0 6px' }) : ''}
+${titre({ texte: titreCarte })}
+<div style="border-radius:18px;padding:22px 22px 16px;background-color:${t.base};background-image:linear-gradient(135deg,${t.clair} 0%,${t.base} 48%,${t.sombre} 100%);color:${t.texte};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr>
+      <td style="vertical-align:top;font-family:${POLICE};">
+        <div style="font-size:19px;font-weight:800;line-height:1.1;color:${t.texte};">${escapeHtml(washerName)}</div>
+        <div style="margin-top:4px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${t.texteDoux};">Carte de fidélité</div>
+      </td>
+      <td style="vertical-align:top;text-align:right;white-space:nowrap;font-family:${POLICE};font-size:26px;font-weight:800;line-height:1;color:${t.texte};">${tampons}/${requis}</td>
+    </tr>
+  </table>
+  <div style="margin-top:18px;line-height:0;font-size:0;">${ronds}</div>
+</div>
+${paragraphe(escapeHtml(phrase), { marge: '20px 0 22px', style: 'line-height:1.5;' })}
+${bouton(complete ? 'Voir ma carte' : nouveaux > 1 ? 'Voir mes tampons' : 'Voir mon tampon', escapeHtml(url), 'sombre', '0')}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}.`,
+    }),
   })
 }
