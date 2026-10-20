@@ -3328,7 +3328,7 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🔍 Contenu & tarifs (SEO-GEO)
 
-- [ ] **Emails refaits dans la DA 2026 — branche LOCALE `design/emails-da`, NON poussée (2026-10-19).**
+- [x] 2026-10-20 — EN PRODUCTION (PR #15, validée par Ryan ; icônes servies, vérifié) — **Emails refaits dans la DA 2026.** Restent ouverts ci-dessous : doublons du reçu, bouton dans l’annulation d’acompte, pastilles des offres.
       Gabarit commun (`lib/email/gabarit.ts`), 20 emails, zéro emoji (garde `gabarit.test.ts`), icônes
       PNG dessinées dans `public/email/`, relecture `designer`. tsc/eslint/vitest/build verts. En
       attente de la validation de Ryan sur captures. À trancher : titre de la relance (« Un message de
