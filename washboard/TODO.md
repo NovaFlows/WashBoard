@@ -3442,6 +3442,11 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-21 — **Deux comptes de test supprimés** à la demande d'Alexandre : SpotAutoTest
+      (`spotautotest`, spotifypren1234@gmail.com, 13/10) et SpotTest (`spottest`,
+      wolffree100@gmail.com, 15/10), 0 réservation. Vérifié dans les 21 tables qui portent un
+      `washer_id` : aucune ligne restante ; logo retiré ; 22 comptes de connexion = 22 fiches,
+      aucun compte fantôme dans un sens ni dans l'autre.
 - [x] 2026-10-21 — **Les 5 pages de présentation sans compte supprimées** à la demande d'Alexandre
       (`is_preview`, jamais reprises par une inscription, 0 réservation) : Auto Fresh 92 (`demo`),
       Clean by Didi, URHUS AUTO, YH MOTORS, CLEAN STORMING, avec leurs logos et fonds. Les liens
