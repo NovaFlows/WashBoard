@@ -1,0 +1,56 @@
+name: Surveillance des visites du dépôt
+
+# Toutes les heures : si le dépôt a eu plus de 3 visiteurs uniques sur les 14 derniers jours,
+# ouvre une alerte qui mentionne l'équipe (GitHub prévient par email et sur l'appli).
+# Une seule alerte ouverte à la fois : rien n'est recréé tant que la précédente n'est pas fermée.
+# Les statistiques de trafic exigent un accès administrateur : secret TRAFIC_TOKEN, jeton
+# « fine-grained » limité à ce dépôt avec « Administration : lecture » et « Issues : écriture ».
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.TRAFIC_TOKEN }}
+      DEPOT: ${{ github.repository }}
+      SEUIL: "3"
+      TITRE: "Alerte : visiteurs inhabituels sur le dépôt"
+    steps:
+      - name: Lire le trafic et alerter
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Secret TRAFIC_TOKEN absent : surveillance inactive."
+            exit 0
+          fi
+          vues=$(gh api "repos/$DEPOT/traffic/views")
+          uniques=$(echo "$vues" | jq '.uniques')
+          echo "Visiteurs uniques sur 14 jours : $uniques (seuil $SEUIL)"
+          [ "$uniques" -gt "$SEUIL" ] || exit 0
+
+          deja=$(gh issue list --repo "$DEPOT" --state open --search "\"$TITRE\" in:title" --json number --jq 'length')
+          if [ "$deja" -gt 0 ]; then
+            echo "Alerte déjà ouverte."
+            exit 0
+          fi
+
+          jours=$(echo "$vues" | jq -r '.views[] | select(.count > 0) | "| \(.timestamp[0:10]) | \(.count) | \(.uniques) |"')
+          pages=$(gh api "repos/$DEPOT/traffic/popular/paths" --jq '.[] | "- \(.path) — \(.count) vues, \(.uniques) visiteurs"')
+          sources=$(gh api "repos/$DEPOT/traffic/popular/referrers" --jq '.[] | "- \(.referrer) — \(.count) vues, \(.uniques) visiteurs"')
+          corps=$(printf '%s\n' \
+            "@alexandrebha @RyanCYtech @Ry955" \
+            "" \
+            "**$uniques visiteurs uniques** sur les 14 derniers jours (seuil : $SEUIL)." \
+            "" \
+            "| Jour | Vues | Visiteurs |" "|---|---|---|" "$jours" \
+            "" "**Pages vues**" "${pages:-- aucune}" \
+            "" "**Provenance**" "${sources:-- aucune}" \
+            "" "Fermer cette alerte réarme la surveillance.")
+          gh issue create --repo "$DEPOT" --title "$TITRE" --body "$corps"
