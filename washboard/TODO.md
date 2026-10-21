@@ -3442,6 +3442,10 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-22 — **Comptes de test de l'inscription par SMS supprimés** à la demande d'Alexandre :
+      « nj » (`nj-3d71`, wolffree100@gmail.com) et « SpotAuto » (`spotauto-d772`,
+      spotifypren1234@gmail.com), créés le 2026-10-21, aucune donnée. Vérifié : 0 ligne dans les
+      21 tables liées, 0 code SMS en attente, 22 comptes de connexion = 22 fiches, aucun fantôme.
 - [x] 2026-10-21 — **Deux comptes de test supprimés** à la demande d'Alexandre : SpotAutoTest
       (`spotautotest`, spotifypren1234@gmail.com, 13/10) et SpotTest (`spottest`,
       wolffree100@gmail.com, 15/10), 0 réservation. Vérifié dans les 21 tables qui portent un
