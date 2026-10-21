@@ -3442,6 +3442,11 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-22 — **Deux comptes supprimés** à la demande d'Alexandre : « SportAutoTest »
+      (`sportautotest-abc0`, test de l'inscription par SMS du 2026-10-21) et « Faty's hair »
+      (`faty-s-hair-2c88`, inscrit le 2026-09-01, une seule connexion, 0 prestation, 0 réservation).
+      Vérifié : 0 ligne restante dans les 21 tables liées, 21 comptes de connexion = 21 fiches.
+      Branche `feat/inscription-sms` supprimée (fusionnée), et son réglage Vercel de test retiré.
 - [x] 2026-10-22 — **Comptes de test de l'inscription par SMS supprimés** à la demande d'Alexandre :
       « nj » (`nj-3d71`, wolffree100@gmail.com) et « SpotAuto » (`spotauto-d772`,
       spotifypren1234@gmail.com), créés le 2026-10-21, aucune donnée. Vérifié : 0 ligne dans les
