@@ -83,6 +83,9 @@ export type Washer = {
   // « éteint », jamais une erreur. Même convention que `dashboard_widgets`
   // un peu plus haut.
   beta_refonte?: boolean | null
+  /** Dernière fois que le laveur a ouvert son tableau de bord (`SuiviConnexion`, au plus une
+   *  fois par demi-heure), pour l'équipe. `null` : jamais depuis le 2026-10-21. */
+  derniere_connexion_le?: string | null
 }
 
 export type ServiceAddon = {

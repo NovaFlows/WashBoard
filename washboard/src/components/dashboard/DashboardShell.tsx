@@ -25,6 +25,7 @@ import { useEcranRail } from '@/hooks/useEcranRail'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { DesignV2Context } from '@/components/dashboard/DesignV2Context'
 import SuiviPwa from '@/components/dashboard/SuiviPwa'
+import SuiviConnexion from '@/components/dashboard/SuiviConnexion'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -840,6 +841,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const pageContent = (
     <DesignV2Context.Provider value={estV2}>
       <SuiviPwa />
+      <SuiviConnexion />
       <SupportBadgesContext.Provider value={supportBadges}>
         <OffreContext.Provider value={offreCourante}>
           {children}

@@ -3442,6 +3442,14 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-21 — **Les 5 pages de présentation sans compte supprimées** à la demande d'Alexandre
+      (`is_preview`, jamais reprises par une inscription, 0 réservation) : Auto Fresh 92 (`demo`),
+      Clean by Didi, URHUS AUTO, YH MOTORS, CLEAN STORMING, avec leurs logos et fonds. Les liens
+      envoyés à ces prospects en septembre ne mènent plus nulle part. 24 comptes laveurs restants.
+- [x] 2026-10-21 — **Dernière connexion de chaque laveur** : `washers.derniere_connexion_le`
+      (colonne créée le jour même), notée à l'ouverture du tableau de bord, au plus une fois par
+      demi-heure et par appareil (`SuiviConnexion`, `api/washer/connexion`). Pas d'écran pour
+      l'instant : se lit en base.
 - [x] 2026-10-21 — **Compte fantaisiste supprimé à la demande d'Alexandre** : « merci pour les
       travaux » (`merci-pour-les-travaux-66b3`), inscrit le 2026-10-20 à 0 h 35 depuis TikTok, logo
       mème, numéro non attribué, 0 prestation, 0 réservation. Même procédure que la purge RGPD
