@@ -3442,6 +3442,11 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-21 — **Compte fantaisiste supprimé à la demande d'Alexandre** : « merci pour les
+      travaux » (`merci-pour-les-travaux-66b3`), inscrit le 2026-10-20 à 0 h 35 depuis TikTok, logo
+      mème, numéro non attribué, 0 prestation, 0 réservation. Même procédure que la purge RGPD
+      (dépenses, questions support, logo, factures importées, puis compte de connexion en cascade).
+      Vérifié après : aucune ligne ni fichier restant, 29 comptes laveurs.
 - [x] 2026-10-19 — **🔒 Fuite de la carte de fidélité fermée** : la carte suit le téléphone
       mais ne se montre (aperçu, confirmation, email « Votre tampon est arrivé ») et sa
       récompense ne s'applique que si l'email tapé est celui d'une prestation TERMINÉE sur ce
