@@ -10,10 +10,8 @@ import {
 
 type Message = { type: 'ok' | 'erreur'; texte: string } | null
 
-// Mesurée via `generateLink` (`lib/confirmationEmail.ts`), pas documentée
-// ailleurs : la longueur de l'OTP email est un réglage du tableau de bord
-// Supabase, pas du code.
-const LONGUEUR_CODE = 8
+// Le code arrive par SMS depuis le 2026-10-21 (`lib/codeSms`), plus par email : 6 chiffres.
+const LONGUEUR_CODE = 6
 
 async function appeler(url: string, corps: Record<string, string>): Promise<{ ok: boolean; erreur: string | null }> {
   try {
@@ -30,11 +28,11 @@ async function appeler(url: string, corps: Record<string, string>): Promise<{ ok
   }
 }
 
-// « Un email vient de partir, attends X s » n'est pas une erreur : l'inscrit
+// « Un SMS vient de partir, attends X s » n'est pas une erreur : l'inscrit
 // n'a rien fait de mal, il a juste redemandé un peu tôt. Un message rouge lui
 // ferait croire à un problème de sa part — traitement neutre à la place.
 function estPatience(texte: string) {
-  return texte.startsWith('Un email vient de partir')
+  return texte.startsWith('Un SMS vient de partir')
 }
 
 function Alerte({ message }: { message: NonNullable<Message> }) {
@@ -54,7 +52,7 @@ function CasesCode({ code, onChange, desactive, valide }: { code: string; onChan
   const [focus, setFocus] = useState(false)
   return (
     <div className="relative">
-      <div className="grid grid-cols-8 gap-1.5 sm:gap-2" aria-hidden>
+      <div className="grid grid-cols-6 gap-2 sm:gap-2.5" aria-hidden>
         {Array.from({ length: LONGUEUR_CODE }, (_, i) => {
           const actif = focus && (i === code.length || (i === LONGUEUR_CODE - 1 && code.length === LONGUEUR_CODE))
           return (
@@ -70,7 +68,7 @@ function CasesCode({ code, onChange, desactive, valide }: { code: string; onChan
       </div>
       <input
         id="code-confirmation"
-        aria-label="Code de confirmation"
+        aria-label="Code reçu par SMS"
         type="text"
         inputMode="numeric"
         pattern="[0-9]*"
@@ -89,8 +87,10 @@ function CasesCode({ code, onChange, desactive, valide }: { code: string; onChan
   )
 }
 
-export default function VerifierEmail({ email, lienInvalide }: {
+export default function VerifierEmail({ email, finTelephone, lienInvalide }: {
   email: string | null
+  /** Les deux derniers chiffres du numéro, posés par /signup ; absents depuis /login. */
+  finTelephone: string | null
   lienInvalide: boolean
 }) {
   const router = useRouter()
@@ -141,7 +141,7 @@ export default function VerifierEmail({ email, lienInvalide }: {
     setCode('')
     const { ok, erreur } = await appeler('/api/auth/resend-confirmation', { email })
     setMessage(ok
-      ? { type: 'ok', texte: 'Code renvoyé. Il peut mettre une minute à arriver.' }
+      ? { type: 'ok', texte: 'Code renvoyé par SMS. Il peut mettre une minute à arriver.' }
       : { type: 'erreur', texte: erreur! })
     setEnvoi(false)
   }
@@ -168,11 +168,11 @@ export default function VerifierEmail({ email, lienInvalide }: {
     return (
       <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/login' }}>
         <div className="flex flex-col gap-5">
-          <TitreEntree titre="Confirme ton email" />
+          <TitreEntree titre="Confirme ton inscription" />
           {avertissementLien}
           <p className="text-sm text-[color:var(--v2-color-gris)]">
             Aucune inscription en attente à afficher. Connecte-toi avec ton email et ton mot de passe :
-            si ton adresse reste à confirmer, tu reviendras sur cette page.
+            si ton inscription reste à confirmer, tu reviendras sur cette page.
           </p>
           <BarreActions>
             <Link
@@ -196,17 +196,19 @@ export default function VerifierEmail({ email, lienInvalide }: {
     <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/signup' }}>
       <div className="flex flex-col gap-5">
         <TitreEntree
-          titre="Confirme ton email"
-          sousTitre={<>On vient d’envoyer un code à {LONGUEUR_CODE} chiffres à <strong className="break-all font-semibold text-[color:var(--v2-color-encre)]">{email}</strong>.</>}
+          titre="Confirme ton numéro"
+          sousTitre={<>On vient d’envoyer un code à {LONGUEUR_CODE} chiffres par SMS {finTelephone
+            ? <>au numéro finissant par <strong className="font-semibold text-[color:var(--v2-color-encre)]">{finTelephone}</strong></>
+            : 'au numéro donné à l’inscription'}.</>}
         />
         {avertissementLien}
 
         <form onSubmit={e => { e.preventDefault(); void verifier(code) }} noValidate className="flex flex-col gap-3">
           <CasesCode code={code} onChange={saisir} desactive={verification} valide={verification} />
           <p className="text-[13px] text-[color:var(--v2-color-gris)]">
-            Rien reçu ? Regarde dans tes courriers indésirables, puis{' '}
+            Rien reçu au bout d’une minute ?{' '}
             <button type="button" onClick={renvoyer} disabled={occupe} className="underline underline-offset-2 disabled:opacity-40">
-              {envoi ? 'envoi…' : 'renvoie le code'}
+              {envoi ? 'envoi…' : 'Renvoie le code'}
             </button>.
           </p>
           {message && <Alerte message={message} />}
@@ -223,7 +225,7 @@ export default function VerifierEmail({ email, lienInvalide }: {
                 disabled={occupe}
                 className={LIEN_DISCRET}
               >
-                Mauvaise adresse ? Recommencer l’inscription
+                Mauvais numéro ? Recommencer l’inscription
               </button>
             </BarreActions>
           ) : null}
@@ -232,7 +234,7 @@ export default function VerifierEmail({ email, lienInvalide }: {
         {confirmerRecommencer && (
           <form onSubmit={recommencer} noValidate className="flex flex-col gap-3">
             <p className="text-sm text-[color:var(--v2-color-gris)]">
-              Ton inscription en attente sera supprimée, et tu pourras t’inscrire à nouveau avec la bonne adresse.
+              Ton inscription en attente sera supprimée, et tu pourras t’inscrire à nouveau avec le bon numéro.
             </p>
             <GroupeChamps>
               <Champ id="mot-de-passe-recommencer" label="Confirme ton mot de passe pour supprimer ce compte">

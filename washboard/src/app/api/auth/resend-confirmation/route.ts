@@ -3,16 +3,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { isTrustedOrigin } from '@/lib/appOrigin'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { envoyerCodeConfirmation } from '@/lib/confirmationEmail'
+import { envoyerCodeSms, phraseEnvoi, telephoneMasque } from '@/lib/codeSms'
 import { trouverCompteParEmail } from '@/lib/compteParEmail'
 
-// « Renvoyer l'email » depuis /verifier-email, pour l'adresse affichée sur la
-// page. Pas de session à ce stade : Supabase la refuse tant que l'email n'est
-// pas confirmé.
+// « Renvoyer le code » depuis /verifier-email, pour l'inscription dont l'adresse est affichée
+// sur la page. Pas de session à ce stade : le compte n'est pas encore confirmé.
 //
-// Chaque appel envoie un vrai email depuis noreply@washboard.fr vers une
-// adresse fournie par l'appelant : plafonné par IP et par adresse. Compteurs
-// en mémoire, donc par instance — compromis assumé pour rester simple.
+// Depuis le 2026-10-21 le code part par SMS, au numéro donné à l'inscription (`lib/codeSms`,
+// qui porte aussi les plafonds par compte et le plafond global). Plafonné en plus ici par IP
+// et par adresse. Compteurs en mémoire, donc par instance — compromis assumé.
 
 const HEURE_MS = 60 * 60 * 1000
 const IP_MAX_PAR_HEURE = 5
@@ -39,10 +38,10 @@ export async function POST(req: NextRequest) {
   const parAdresse = rateLimit(`confirm-resend-mail:${email.toLowerCase()}`, EMAIL_MAX_PAR_HEURE, HEURE_MS)
   if (!parAdresse.ok) {
     const minutes = Math.ceil(parAdresse.retryAfter / 60)
-    // Préfixe « Un email vient de partir » : /verifier-email l'affiche comme
+    // Préfixe « Un SMS vient de partir » : /verifier-email l'affiche comme
     // une simple attente, pas comme une erreur.
     return NextResponse.json({
-      error: `Un email vient de partir. Attends ${minutes} min avant d'en redemander un, et regarde dans tes courriers indésirables.`,
+      error: `Un SMS vient de partir. Attends ${minutes} min avant d'en redemander un.`,
       retryAfter: parAdresse.retryAfter,
     }, { status: 429 })
   }
@@ -67,23 +66,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Aucune inscription en attente pour cette adresse. Vérifie-la, ou inscris-toi.' }, { status: 404 })
   }
   if (compte.email_confirmed_at) {
-    return NextResponse.json({ error: 'Ton email est déjà confirmé. Tu peux te connecter.', confirme: true }, { status: 409 })
+    return NextResponse.json({ error: 'Ton inscription est déjà confirmée. Tu peux te connecter.', confirme: true }, { status: 409 })
   }
 
-  // Le nom ne sert qu'à la formule de politesse : une lecture ratée ne doit pas
-  // empêcher l'envoi, mais elle reste tracée.
   const { data: fiches, error: erreurFiche } = await admin
-    .from('washers').select('name').eq('user_id', compte.id).limit(1)
-  if (erreurFiche) logger.warn('auth.resend_confirmation.washer_read_failed', { userId: compte.id }, erreurFiche)
-  const washerName = (fiches?.[0] as { name?: string } | undefined)?.name ?? null
-
-  const envoye = await envoyerCodeConfirmation(admin, {
-    userId: compte.id,
-    email: compte.email ?? email,
-    washerName,
-  })
-  if (!envoye) {
-    return NextResponse.json({ error: 'L\'envoi a échoué. Réessaie dans quelques instants.' }, { status: 502 })
+    .from('washers').select('phone').eq('user_id', compte.id).limit(1)
+  if (erreurFiche) {
+    logger.error('auth.resend_confirmation.washer_read_failed', { userId: compte.id }, erreurFiche)
+    return NextResponse.json({ error: INDISPONIBLE }, { status: 503 })
   }
-  return NextResponse.json({ success: true })
+  const telephone = (fiches?.[0] as { phone?: string | null } | undefined)?.phone ?? ''
+
+  const envoi = await envoyerCodeSms(admin, { userId: compte.id, telephone })
+  if (!envoi.ok) {
+    const statut = envoi.raison === 'attente' ? 429 : envoi.raison === 'panne' ? 502 : 400
+    return NextResponse.json({ error: phraseEnvoi(envoi), ...(envoi.raison === 'attente' ? { retryAfter: envoi.secondes } : {}) }, { status: statut })
+  }
+  return NextResponse.json({ success: true, telephone: telephoneMasque(telephone) })
 }

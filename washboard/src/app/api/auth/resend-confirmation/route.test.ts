@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-// « Renvoyer l'email » : identifié par l'adresse seule. Ce qui compte : ne
-// jamais appeler `generateLink` sur une adresse sans compte (Supabase en
-// créerait un), ni sur un compte confirmé, et tenir les plafonds.
+// « Renvoyer le code » (par SMS depuis le 2026-10-21) : identifié par l'adresse seule. Ce qui
+// compte : rien n'est envoyé pour une adresse sans compte ni pour un compte confirmé, le code
+// part au numéro de la fiche, et les plafonds tiennent. Ceux du SMS lui-même (60 s entre deux
+// envois, 5 par compte, plafond global) sont testés dans lib/codeSms.test.ts.
 
 type Reponse = { data?: unknown; error?: unknown }
 
@@ -19,7 +20,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }))
 const { envoyerLien, trouverCompte } = vi.hoisted(() => ({ envoyerLien: vi.fn(), trouverCompte: vi.fn() }))
-vi.mock('@/lib/confirmationEmail', () => ({ envoyerCodeConfirmation: envoyerLien }))
+vi.mock('@/lib/codeSms', async () => ({ ...(await vi.importActual<object>('@/lib/codeSms')), envoyerCodeSms: envoyerLien }))
 vi.mock('@/lib/compteParEmail', () => ({ trouverCompteParEmail: trouverCompte }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
@@ -46,20 +47,19 @@ const compte = (extra: Record<string, unknown> = {}) => ({ id: ID, email: 'test@
 
 beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_APP_URL', ORIGINE)
-  plan = { compte: compte(), fiches: { data: [{ name: 'Kooki Clean' }], error: null } }
+  plan = { compte: compte(), fiches: { data: [{ phone: '0611223344' }], error: null } }
   trouverCompte.mockReset().mockImplementation(async () => plan.compte)
-  envoyerLien.mockReset().mockResolvedValue(true)
+  envoyerLien.mockReset().mockResolvedValue({ ok: true })
 })
 afterEach(() => { vi.unstubAllEnvs() })
 
 describe('POST /api/auth/resend-confirmation', () => {
-  it('renvoie le code au compte en attente de cette adresse', async () => {
+  it('renvoie le code par SMS au numéro du compte en attente de cette adresse', async () => {
     const res = await POST(requete({ email: '  test@exemple.fr ' }))
     expect(res.status).toBe(200)
+    expect((await res.json()).telephone).toBe('06 •• •• •• 44')
     expect(trouverCompte).toHaveBeenCalledWith(expect.anything(), 'test@exemple.fr')
-    expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), {
-      userId: ID, email: 'test@exemple.fr', washerName: 'Kooki Clean',
-    })
+    expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), { userId: ID, telephone: '0611223344' })
   })
 
   it('refuse une requête venue d’un autre site ou sans JSON', async () => {
@@ -95,15 +95,24 @@ describe('POST /api/auth/resend-confirmation', () => {
     expect(envoyerLien).not.toHaveBeenCalled()
   })
 
-  it('nom illisible : l’email part quand même, sans nom', async () => {
+  it('fiche illisible : 503, sans envoyer de SMS à l’aveugle', async () => {
     plan.fiches = { data: null, error: { message: 'base indisponible' } }
-    expect((await POST(requete())).status).toBe(200)
-    expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ washerName: null }))
+    expect((await POST(requete())).status).toBe(503)
+    expect(envoyerLien).not.toHaveBeenCalled()
   })
 
   it('signale un envoi raté au lieu de prétendre l’avoir fait', async () => {
-    envoyerLien.mockResolvedValue(false)
+    envoyerLien.mockResolvedValue({ ok: false, raison: 'panne' })
     expect((await POST(requete())).status).toBe(502)
+  })
+
+  it('code redemandé trop tôt : 429 avec l’attente, affichée comme telle', async () => {
+    envoyerLien.mockResolvedValue({ ok: false, raison: 'attente', secondes: 42 })
+    const res = await POST(requete())
+    expect(res.status).toBe(429)
+    const corps = await res.json()
+    expect(corps.error).toMatch(/^Un SMS vient de partir/)
+    expect(corps.retryAfter).toBe(42)
   })
 
   it('3 renvois par heure et par adresse, puis une attente affichée comme telle', async () => {
@@ -112,7 +121,7 @@ describe('POST /api/auth/resend-confirmation', () => {
     const res = await POST(requete({ email: email.toUpperCase() }))
     expect(res.status).toBe(429)
     const corps = await res.json()
-    expect(corps.error).toMatch(/^Un email vient de partir/)
+    expect(corps.error).toMatch(/^Un SMS vient de partir/)
     expect(corps.retryAfter).toBeGreaterThan(0)
     expect(envoyerLien).toHaveBeenCalledTimes(3)
   })

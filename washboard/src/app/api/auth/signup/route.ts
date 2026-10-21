@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { envoyerCodeConfirmation } from '@/lib/confirmationEmail'
+import { envoyerCodeSms, estMobileFrancais } from '@/lib/codeSms'
 import { PLAN_ESSAI } from '@/lib/plan'
 import { generateSlug } from '@/lib/slug'
 
@@ -49,6 +49,14 @@ export async function POST(request: NextRequest) {
   if (!telephone) {
     return NextResponse.json(
       { error: 'Numéro de téléphone invalide (format attendu : 06 12 34 56 78)' },
+      { status: 400 },
+    )
+  }
+  // Le code de confirmation part par SMS (2026-10-21) : il faut un mobile, et français — les
+  // numéros étrangers sont la porte d'entrée de la fraude aux SMS (voir `lib/codeSms`).
+  if (!estMobileFrancais(telephone)) {
+    return NextResponse.json(
+      { error: 'Il faut un numéro de mobile (06 ou 07) : le code de confirmation arrive par SMS.' },
       { status: 400 },
     )
   }
@@ -199,17 +207,14 @@ export async function POST(request: NextRequest) {
   logger.info('signup.washer_created', { userId: authData.user.id })
 
   // La reprise de l'aperçu prospect et la notification de l'équipe attendent
-  // la confirmation de l'email (voir `app/auth/confirm/route.ts`) : avant, le
-  // compte peut encore être supprimé par « recommencer l'inscription », et une
-  // page déjà reprise partirait avec lui.
+  // la confirmation (voir `api/auth/confirm-code`) : avant, le compte peut
+  // encore être supprimé par « recommencer l'inscription », et une page déjà
+  // reprise partirait avec lui.
   //
+  // Le code part par SMS depuis le 2026-10-21 (`lib/codeSms`), plus par email.
   // Un envoi raté ne fait pas échouer l'inscription : le compte existe, et
   // /verifier-email propose de renvoyer le code.
-  await envoyerCodeConfirmation(supabase, {
-    userId: authData.user.id,
-    email: email.trim(),
-    washerName: name.trim(),
-  })
+  await envoyerCodeSms(supabase, { userId: authData.user.id, telephone })
 
   return NextResponse.json({ success: true })
 }

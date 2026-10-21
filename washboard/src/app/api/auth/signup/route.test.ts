@@ -50,9 +50,10 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
-// La génération et l'envoi du lien sont testés dans lib/confirmationEmail.test.ts.
+// Le code part par SMS depuis le 2026-10-21 ; sa génération, son envoi et ses plafonds sont
+// testés dans lib/codeSms.test.ts. `estMobileFrancais` reste le vrai.
 const { envoyerLien } = vi.hoisted(() => ({ envoyerLien: vi.fn() }))
-vi.mock('@/lib/confirmationEmail', () => ({ envoyerCodeConfirmation: envoyerLien }))
+vi.mock('@/lib/codeSms', async () => ({ ...(await vi.importActual<object>('@/lib/codeSms')), envoyerCodeSms: envoyerLien }))
 
 const { POST } = await import('./route')
 
@@ -96,7 +97,7 @@ beforeEach(() => {
     suppressionErreur: null,
   }
   envoyerLien.mockReset()
-  envoyerLien.mockResolvedValue(true)
+  envoyerLien.mockResolvedValue({ ok: true })
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -242,24 +243,30 @@ describe('POST /api/auth/signup — acceptation des CGV', () => {
   })
 })
 
-describe('POST /api/auth/signup — confirmation de l’email', () => {
+describe('POST /api/auth/signup — confirmation par SMS', () => {
   it('crée le compte NON confirmé', async () => {
     await inscrire()
     expect(comptesCrees[0]).toMatchObject({ email: 'test@exemple.fr', email_confirm: false })
   })
 
-  it('envoie le code de confirmation au compte créé', async () => {
-    await inscrire({ name: ' Kooki Clean ' })
-    expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), {
-      userId: ID_COMPTE,
-      email: 'test@exemple.fr',
-      washerName: 'Kooki Clean',
-    })
+  it('envoie le code par SMS au numéro du compte créé', async () => {
+    await inscrire({ name: ' Kooki Clean ', phone: '06 11 22 33 44' })
+    expect(envoyerLien).toHaveBeenCalledWith(expect.anything(), { userId: ID_COMPTE, telephone: NUMERO_NORMAL })
+  })
+
+  it('refuse un numéro qui n’est pas un mobile français, avant de créer quoi que ce soit', async () => {
+    for (const phone of ['01 23 45 67 89', '09 87 65 43 21']) {
+      const { res, body } = await inscrire({ phone })
+      expect(res.status).toBe(400)
+      expect(body.error).toMatch(/mobile/)
+    }
+    expect(comptesCrees).toHaveLength(0)
+    expect(envoyerLien).not.toHaveBeenCalled()
   })
 
   it('un envoi raté ne fait PAS échouer l’inscription', async () => {
     // Le compte existe : /verifier-email propose de renvoyer le code.
-    envoyerLien.mockResolvedValue(false)
+    envoyerLien.mockResolvedValue({ ok: false, raison: 'panne' })
     const { res, body } = await inscrire()
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
