@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import VerifierEmail from './VerifierEmail'
 
 export const metadata: Metadata = {
-  title: 'Confirme ton email | WashBoard',
+  title: 'Confirme ton inscription | WashBoard',
   robots: { index: false },
 }
 
@@ -15,11 +15,13 @@ export const metadata: Metadata = {
 // un compte connecté mais non confirmé serait renvoyé de /login vers
 // /dashboard (voir `proxy.ts`), puis ici — une boucle.
 export default async function VerifierEmailPage({ searchParams }: {
-  searchParams: Promise<{ lien?: string | string[]; email?: string | string[] }>
+  searchParams: Promise<{ lien?: string | string[]; email?: string | string[]; tel?: string | string[] }>
 }) {
-  const { lien, email } = await searchParams
+  const { lien, email, tel } = await searchParams
   const adresse = typeof email === 'string' ? email.trim() : ''
   const valide = adresse.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)
 
-  return <VerifierEmail email={valide ? adresse : null} lienInvalide={lien === 'invalide'} />
+  // Deux chiffres au plus (« le numéro finissant par 78 ») : rien d'autre ne s'affiche.
+  const finTelephone = typeof tel === 'string' && /^\d{2}$/.test(tel) ? tel : null
+  return <VerifierEmail email={valide ? adresse : null} finTelephone={finTelephone} lienInvalide={lien === 'invalide'} />
 }
