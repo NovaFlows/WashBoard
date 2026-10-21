@@ -76,7 +76,7 @@ export default function SignupPage() {
           <Champ id="email" label="Email">
             <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="toi@exemple.fr" autoComplete="email" className={SAISIE} />
           </Champ>
-          <Champ id="phone" label="Téléphone" aide="Un code de confirmation t’arrive par SMS. Il sert aussi à te joindre en cas de souci.">
+          <Champ id="phone" label="Téléphone" aide={<>Un code de confirmation t’arrive par SMS.<br />Il sert aussi à te joindre en cas de souci.</>}>
             <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="06 12 34 56 78" autoComplete="tel" className={SAISIE} />
           </Champ>
           <Champ id="password" label="Mot de passe">
