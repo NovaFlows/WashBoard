@@ -23,7 +23,7 @@ export default function Navigation({ horsAccueil = false }: { horsAccueil?: bool
         </nav>
         <div className="nav-droite">
           <BoutonTheme />
-          <Link className="lien-discret" href="/login">Se connecter</Link>
+          <Link className="lien-discret" href="/login"><span className="long">Se connecter</span><span className="court">Connexion</span></Link>
           <Link className="btn btn-accent btn-petit" href="/signup">Essayer<span className="long">&nbsp;gratuitement</span></Link>
         </div>
       </div>

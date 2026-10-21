@@ -82,11 +82,20 @@ html:has(.wb-vitrine) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 .dark .wb-vitrine .theme-btn .ico-lune { display: none; }
 @media (max-width: 980px) { .wb-vitrine .nav-liens { display: none; } }
 .wb-vitrine .nav .btn-accent { gap: 0; }
+/* Sur téléphone, la connexion reste visible (Alexandre, 2026-10-22 : elle était masquée,
+   seul « Essayer » restait) : libellé court « Connexion », zone tactile de 38 px. Sous
+   420 px, c'est le bouton de thème qui cède sa place — le thème suit alors le téléphone. */
+.wb-vitrine .nav .court { display: none; }
 @media (max-width: 520px) {
-  .wb-vitrine .nav .lien-discret { display: none; }
+  .wb-vitrine .nav .lien-discret { display: inline-flex; align-items: center; height: 38px; padding: 0 4px; font-size: 14px; }
   .wb-vitrine .nav .btn-accent { padding: 0 14px; }
   .wb-vitrine .nav .long { display: none; }
+  .wb-vitrine .nav .court { display: inline; }
   .wb-vitrine .nav .w { gap: 14px; }
+  .wb-vitrine .nav-droite { gap: 8px; }
+}
+@media (max-width: 420px) {
+  .wb-vitrine .nav .theme-btn { display: none; }
 }
 
 /* ── Typo de page ── */
