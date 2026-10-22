@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesAcompteSchema, acompteActif, conditionsAcompte, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, moyensPaiement, versPublic, virementPour, weroPour } from './acompte'
+import { ReglagesAcompteSchema, acompteActif, rappelAcompteDu, conditionsAcompte, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, moyensPaiement, versPublic, virementPour, weroPour } from './acompte'
 
 const base = { actif: true, type: 'pourcentage' as const, valeur: 30, liens: { sumup: 'https://sumup.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
@@ -97,5 +97,60 @@ describe('Wero', () => {
   it('refuse un numéro invalide et un QR code qui n’est pas un QR code Wero', () => {
     expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, wero: { telephone: '123' } }).success).toBe(false)
     expect(ReglagesAcompteSchema.safeParse({ ...base, liens: {}, wero: { telephone: '0612345678', lien: 'https://exemple.fr/arnaque' } }).success).toBe(false)
+  })
+})
+
+describe('rappel avant l’échéance', () => {
+  const H = 3600_000
+  const CREE = new Date('2026-10-22T08:00:00.000Z')
+  // `created_at` est posé en base un peu après le calcul de l'échéance : le délai réel mesure
+  // quelques millisecondes de moins que celui réglé par le laveur.
+  const reservation = (delaiH: number) => ({ creeLe: new Date(CREE.getTime() + 350).toISOString(), echeance: new Date(CREE.getTime() + delaiH * H).toISOString(), rappelLe: null })
+  const a = (h: number) => new Date(CREE.getTime() + h * H)
+  const du = (delaiH: number, apresH: number, extra: Partial<Parameters<typeof rappelAcompteDu>[0]> = {}) =>
+    rappelAcompteDu({ ...reservation(delaiH), maintenant: a(apresH), ...extra })
+
+  it('délai de 2 h : un rappel 1 h avant (avance minimale)', () => {
+    expect(du(2, 0.99)).toBe(false)
+    expect(du(2, 1)).toBe(true)
+    expect(du(2, 1.5)).toBe(true)
+  })
+  it('délai de 24 h : 6 h avant (25 %)', () => {
+    expect(du(24, 17.9)).toBe(false)
+    expect(du(24, 18)).toBe(true)
+    expect(du(24, 23.5)).toBe(true)
+  })
+  it('délai de 168 h : 12 h avant (avance maximale)', () => {
+    expect(du(168, 155.9)).toBe(false)
+    expect(du(168, 156)).toBe(true)
+  })
+  it('jamais pour un délai trop court', () => {
+    expect(du(1, 0.5)).toBe(false)
+    expect(du(1, 0.9)).toBe(false)
+  })
+  it('jamais une fois l’échéance passée, ni dans les 15 dernières minutes', () => {
+    expect(du(24, 24)).toBe(false)
+    expect(du(24, 30)).toBe(false)
+    expect(du(24, 24 - 0.25)).toBe(false)
+    expect(du(24, 24 - 0.26)).toBe(true)
+  })
+  it('un seul rappel : jamais si un rappel est déjà noté', () => {
+    expect(du(24, 20, { rappelLe: a(18).toISOString() })).toBe(false)
+  })
+  it('jamais sans dates exploitables', () => {
+    expect(du(24, 20, { echeance: null })).toBe(false)
+    expect(du(24, 20, { creeLe: undefined })).toBe(false)
+    expect(du(24, 20, { echeance: 'pas une date' })).toBe(false)
+  })
+  it('le fuseau d’écriture des dates est sans effet', () => {
+    // Mêmes instants, écrits en UTC ou en heure de Paris (UTC+2 en octobre).
+    const paris = { creeLe: '2026-10-22T10:00:00.350+02:00', echeance: '2026-10-23T10:00:00+02:00', rappelLe: null }
+    for (const h of [17.9, 18, 23.5, 24]) {
+      expect(rappelAcompteDu({ ...paris, maintenant: a(h) })).toBe(du(24, h))
+    }
+  })
+  it('par défaut, à l’instant présent', () => {
+    const maintenant = Date.now()
+    expect(rappelAcompteDu({ creeLe: new Date(maintenant - 20 * H), echeance: new Date(maintenant + 2 * H), rappelLe: null })).toBe(true)
   })
 })

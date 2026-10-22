@@ -11,7 +11,7 @@ vi.mock('resend', () => ({
 const ID = '6f1c2a4e-1b2c-4d5e-8f90-123456789abc'
 const QUAND = '2026-10-24T12:00:00.000Z'
 
-// Les 20 emails, avec leurs variantes. Règle de Ryan (2026-10-19) : aucun emoji, ni dans
+// Les 21 emails, avec leurs variantes. Règle de Ryan (2026-10-19) : aucun emoji, ni dans
 // l'objet ni dans le corps — un pictogramme utile est une image dessinée (public/email/).
 async function tousLesEmails() {
   const m = await import('./index')
@@ -27,6 +27,8 @@ async function tousLesEmails() {
     () => m.sendDocument({ ...client, genre: 'devis', numero: 'D-1', documentId: ID, montantTtc: 10, valableJusquau: '1er novembre', appUrl: 'https://app.test' }),
     () => m.sendDocument({ ...client, genre: 'facture', numero: 'F-2', documentId: ID, montantTtc: 10, appUrl: 'https://app.test' }),
     () => m.sendAnnulationAcompte({ ...client, scheduledAt: QUAND }),
+    () => m.sendAnnulationAcompte({ ...client, scheduledAt: QUAND, lienReservation: 'https://app.test/book/malo' }),
+    () => m.sendRappelAcompte({ ...client, scheduledAt: QUAND, echeance: QUAND, bookingId: ID, acompte: { montant: 10, liens: [{ libelle: 'PayPal', url: 'https://p.test' }], virement: { titulaire: 't', iban: 'FR76', reference: 'r' }, wero: { telephone: '06', lien: 'https://w.test' } } }),
     () => m.sendTamponFidelite({ to: 'c@test.fr', clientName: 'Julie M.', washerName: 'Malo Lavage', url: 'https://app.test/f', tampons: 8, requis: 8, complete: true, phrase: 'p', couleur: '#306090' }),
     () => m.sendWasherNotification({ ...laveur, ...resa, clientName: 'Julie M.', clientEmail: 'c@test.fr', clientPhone: '06', bookedPrice: 40 }),
     () => m.sendWasherBookingLocked({ ...laveur, scheduledAt: QUAND }),

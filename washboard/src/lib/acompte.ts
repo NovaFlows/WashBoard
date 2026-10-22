@@ -150,6 +150,37 @@ export function echeanceAcompte(r: Pick<ReglagesAcompte, 'delai_heures'>, depuis
   return r.delai_heures ? new Date(depuis.getTime() + r.delai_heures * 3600_000).toISOString() : null
 }
 
+const HEURE_MS = 3600_000
+
+/** Avance maximale du rappel : le cron ne lit que les échéances des 12 prochaines heures. */
+export const AVANCE_MAX_RAPPEL_MS = 12 * HEURE_MS
+
+/** Le rappel de paiement de l'acompte est-il dû à `maintenant` ? Un seul rappel, envoyé
+ *  25 % du délai total avant l'échéance, entre 1 h et 12 h avant : 2 h → 1 h avant,
+ *  24 h → 6 h avant, 48 h et plus → 12 h avant. */
+export function rappelAcompteDu({ creeLe, echeance, rappelLe, maintenant = new Date() }: {
+  creeLe: string | Date | null | undefined
+  echeance: string | Date | null | undefined
+  rappelLe: string | Date | null | undefined
+  maintenant?: Date
+}): boolean {
+  if (rappelLe || !creeLe || !echeance) return false
+  const debut = new Date(creeLe).getTime()
+  const fin = new Date(echeance).getTime()
+  const t = maintenant.getTime()
+  if (![debut, fin, t].every(Number.isFinite)) return false
+  // `created_at` est posé à l'insertion, un peu après le calcul de l'échéance : un délai de
+  // 2 h mesure en base quelques millisecondes de moins. Arrondi à la minute, il redevient
+  // celui réglé par le laveur ; et comme ces délais sont des heures entières, le seuil à
+  // 1 h 30 sépare 1 h (pas de rappel) de 2 h (un rappel) sans dépendre de cet écart.
+  const total = Math.round((fin - debut) / 60_000) * 60_000
+  if (total < 1.5 * HEURE_MS) return false
+  const avance = Math.min(Math.max(total * 0.25, HEURE_MS), AVANCE_MAX_RAPPEL_MS)
+  // Moins de 15 min avant l'échéance (cron en retard), le rappel arriverait en même temps
+  // que l'annulation : il n'apprendrait rien au client.
+  return t >= fin - avance && t < fin - 15 * 60_000
+}
+
 function heures(h: number): string {
   return h > 48 && h % 24 === 0 ? `${h / 24} jours` : `${h} h`
 }

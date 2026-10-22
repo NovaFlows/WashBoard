@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import type { VehicleItem } from '@/types'
 import { escapeHtml } from '@/lib/escapeHtml'
+import { formatPhone } from '@/lib/phone'
 import { FUSEAU } from '@/lib/dateUtils'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
@@ -49,6 +50,26 @@ function sousBloc(html: string): string {
   return `<div style="margin-top:10px;padding:12px 14px;background:${COULEUR.carte};border:1px solid ${COULEUR.filet};border-radius:10px;font-family:${POLICE};font-size:13.5px;color:${COULEUR.encre};line-height:1.6;">${html}</div>`
 }
 
+/** Ce qui est dû à titre d'acompte et comment le payer (voir lib/acompte.ts). */
+type AcompteDu = { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; wero?: { telephone: string; lien: string | null } | null }
+
+/** Bloc acompte commun à « Demande reçue » et au rappel avant l'échéance : montant, lignes
+ *  d'explication (texte brut, échappé ici), puis les moyens de paiement du laveur. */
+function blocAcompte(a: AcompteDu, lignes: string[]): string {
+  return bloc(`
+<p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${COULEUR.encre};">Acompte à régler : ${formatEuros(a.montant)} €</p>
+${lignes.map(c => `<p style="margin:0 0 4px;font-size:13.5px;color:${COULEUR.gris};line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
+${a.wero ? sousBloc(`<strong>Par Wero</strong><br>
+Envoyez ${formatEuros(a.montant)} € avec Wero, depuis l’application de votre banque, au <strong style="white-space:nowrap;">${escapeHtml(a.wero.telephone)}</strong>.
+${a.wero.lien ? `<br>${boutonEnLigne('Payer avec Wero', escapeHtml(a.wero.lien))}` : ''}`) : ''}
+${a.virement ? sousBloc(`<strong>Par virement</strong><br>
+Titulaire : ${escapeHtml(a.virement.titulaire)}<br>
+IBAN : <span style="font-family:${MONO};">${escapeHtml(a.virement.iban)}</span><br>
+Montant : ${formatEuros(a.montant)} €<br>
+Libellé à indiquer : <strong style="font-family:${MONO};">${escapeHtml(a.virement.reference)}</strong>`) : ''}
+${a.liens.map(l => boutonEnLigne(`Payer avec ${escapeHtml(l.libelle)}`, escapeHtml(l.url))).join('')}`)
+}
+
 // ── Email 1 : accusé de réception (statut pending) ────────────────────────
 type SendRequestParams = {
   to: string
@@ -69,7 +90,7 @@ type SendRequestParams = {
   /** Carte de fidélité du client chez ce laveur (lib/fidelite.ts). */
   fidelite?: { url: string; progression: number; requis: number; phrase: string }
   /** Acompte demandé par le laveur, payé par SON lien (voir lib/acompte.ts). */
-  acompte?: { montant: number; liens: { libelle: string; url: string }[]; virement?: { titulaire: string; iban: string; reference: string } | null; wero?: { telephone: string; lien: string | null } | null; conditions: string[] }
+  acompte?: AcompteDu & { conditions: string[] }
 }
 
 export async function sendBookingRequest(params: SendRequestParams) {
@@ -98,18 +119,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
     { libelle: 'Montant estimé', fort: true, valeur: `${priceStr}€${params.isSmartSlot && discount > 0 ? ` ${etoileCreneau(base, 'créneau optimisé')}` : ''} <span style="font-weight:400;color:${COULEUR.gris};">(sur place)</span>` },
   ]
 
-  const acompte = params.acompte ? bloc(`
-<p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${COULEUR.encre};">Acompte à régler : ${formatEuros(params.acompte.montant)} €</p>
-${params.acompte.conditions.map(c => `<p style="margin:0 0 4px;font-size:13.5px;color:${COULEUR.gris};line-height:1.5;">${escapeHtml(c)}</p>`).join('')}
-${params.acompte.wero ? sousBloc(`<strong>Par Wero</strong><br>
-Envoyez ${formatEuros(params.acompte.montant)} € avec Wero, depuis l’application de votre banque, au <strong>${escapeHtml(params.acompte.wero.telephone)}</strong>.
-${params.acompte.wero.lien ? `<br>${boutonEnLigne('Payer avec Wero', escapeHtml(params.acompte.wero.lien))}` : ''}`) : ''}
-${params.acompte.virement ? sousBloc(`<strong>Par virement</strong><br>
-Titulaire : ${escapeHtml(params.acompte.virement.titulaire)}<br>
-IBAN : <span style="font-family:${MONO};">${escapeHtml(params.acompte.virement.iban)}</span><br>
-Montant : ${formatEuros(params.acompte.montant)} €<br>
-Libellé à indiquer : <strong style="font-family:${MONO};">${escapeHtml(params.acompte.virement.reference)}</strong>`) : ''}
-${params.acompte.liens.map(l => boutonEnLigne(`Payer avec ${escapeHtml(l.libelle)}`, escapeHtml(l.url))).join('')}`) : ''
+  const acompte = params.acompte ? blocAcompte(params.acompte, params.acompte.conditions) : ''
 
   const fidelite = params.fidelite ? bloc(`
 <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${COULEUR.encre};">Votre carte de fidélité : ${params.fidelite.progression} / ${params.fidelite.requis}</p>
@@ -871,11 +881,13 @@ ${paragraphe('Vous pourrez revoir la visite à tout moment : Plus › Réglages 
 
 /** Réservation annulée faute d'acompte réglé dans le délai choisi par le laveur
  *  (`api/cron/acomptes`, voir lib/acompte.ts). */
-export async function sendAnnulationAcompte({ to, clientName, washerName, scheduledAt }: {
+export async function sendAnnulationAcompte({ to, clientName, washerName, scheduledAt, lienReservation }: {
   to: string
   clientName: string
   washerName: string
   scheduledAt: string
+  /** Page de réservation du laveur (`/book/<slug>`) ; sans elle, pas de bouton. */
+  lienReservation?: string | null
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const date = new Date(scheduledAt)
@@ -893,7 +905,51 @@ ${titre({ texte: 'Réservation annulée' })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
 ${paragraphe(`Votre réservation avec <strong>${escapeHtml(washerName)}</strong> du ${jour} à ${heure} a été annulée :
 l’acompte n’a pas été réglé dans le délai indiqué au moment de réserver.`, { marge: '0 0 14px' })}
-${paragraphe('Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.', { marge: '0' })}`,
+${paragraphe('Si vous souhaitez toujours ce lavage, vous pouvez réserver un nouveau créneau depuis la même page.', { marge: '0' })}
+${lienReservation ? bouton('Réserver un nouveau créneau', escapeHtml(lienReservation), 'sombre', '22px 0 0') : ''}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
+    }),
+  })
+}
+
+/** Rappel avant l'échéance de l'acompte, une seule fois (`api/cron/acomptes`, règle dans
+ *  `rappelAcompteDu`). Les moyens de paiement sont ceux de « Demande reçue », relus dans les
+ *  réglages actuels du laveur. */
+export async function sendRappelAcompte({ to, clientName, washerName, washerPhone, scheduledAt, echeance, bookingId, acompte }: {
+  to: string
+  clientName: string
+  washerName: string
+  /** Pour que le client qui a déjà payé puisse le dire au laveur avant l'échéance. */
+  washerPhone?: string | null
+  scheduledAt: string
+  echeance: string
+  bookingId: string
+  acompte: AcompteDu
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const rdv = new Date(scheduledAt)
+  const jourRdv = rdv.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heureRdv = rdv.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const fin = new Date(echeance)
+  const jourFin = fin.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heureFin = fin.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const avant = `avant le ${jourFin} à ${heureFin}`
+  const ref = bookingId.slice(0, 8).toUpperCase()
+  return resend.emails.send({
+    from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: `Rappel : acompte à régler ${avant} — ${washerName}`,
+    html: page({
+      titre: 'Acompte à régler',
+      entete: enteteLaveur(escapeHtml(washerName)),
+      contenu: `
+${titre({ texte: 'Acompte à régler', sousTitre: `Avant le ${jourFin} à ${heureFin} (heure de Paris)` })}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Votre réservation avec <strong>${escapeHtml(washerName)}</strong> du ${jourRdv} à ${heureRdv} attend encore le règlement de l’acompte.
+Sans paiement enregistré ${avant}, elle sera annulée automatiquement et le créneau libéré.`, { marge: '0 0 20px' })}
+${blocAcompte(acompte, [])}
+${paragraphe(`Si vous avez déjà payé, prévenez <strong>${escapeHtml(washerName)}</strong>${washerPhone?.trim() ? ` au <strong style="white-space:nowrap;">${escapeHtml(formatPhone(washerPhone))}</strong>` : ''} avant cette échéance : les paiements sont notés à la main, et un paiement non noté à temps entraîne l’annulation de la réservation.`, { ton: 'gris', marge: '0 0 16px' })}
+${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};color:${COULEUR.encre};">${ref}</strong>`, { ton: 'gris', marge: '0' })}`,
       pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
     }),
   })
