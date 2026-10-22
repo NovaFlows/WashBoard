@@ -10,12 +10,12 @@ export default function CGV() {
   return (
     <article className="lg">
       <h1>Conditions Générales de Vente</h1>
-      <p className="lg-maj">Dernière mise à jour : juillet 2026</p>
+      <p className="lg-maj">Dernière mise à jour : octobre 2026</p>
 
       <Section title="1. Objet">
         <p>
           Les présentes Conditions Générales de Vente (ci-après « CGV ») régissent les relations contractuelles entre
-          <strong> <Placeholder>NOM LÉGAL</Placeholder></strong> (ci-après « WashBoard ») et tout professionnel souscrivant
+          <strong> NovaFlows SAS</strong> (ci-après « WashBoard ») et tout professionnel souscrivant
           à l&apos;abonnement au logiciel <strong>WashBoard</strong> accessible sur washboard.fr (ci-après « le Client »).
         </p>
         <p>

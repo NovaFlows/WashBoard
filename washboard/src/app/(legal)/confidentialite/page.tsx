@@ -9,16 +9,16 @@ export default function Confidentialite() {
   return (
     <article className="lg">
       <h1>Politique de confidentialité</h1>
-      <p className="lg-maj">Dernière mise à jour : juillet 2026</p>
+      <p className="lg-maj">Dernière mise à jour : octobre 2026</p>
 
       <Section title="1. Responsable du traitement">
         <p>
           Le responsable du traitement des données personnelles collectées via washboard.fr est :
         </p>
         <ul>
-          <li><strong>Dénomination :</strong> <Placeholder>NOM LÉGAL</Placeholder></li>
+          <li><strong>Dénomination :</strong> NovaFlows SAS</li>
           <li><strong>Email :</strong> novaflows.pro@gmail.com</li>
-          <li><strong>Adresse :</strong> <Placeholder>ADRESSE COMPLÈTE</Placeholder></li>
+          <li><strong>Adresse :</strong> <Placeholder>ADRESSE DU SIÈGE</Placeholder></li>
         </ul>
       </Section>
 

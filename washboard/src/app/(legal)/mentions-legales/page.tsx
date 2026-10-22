@@ -9,15 +9,18 @@ export default function MentionsLegales() {
   return (
     <article className="lg">
       <h1>Mentions légales</h1>
-      <p className="lg-maj">Dernière mise à jour : juillet 2026</p>
+      <p className="lg-maj">Dernière mise à jour : octobre 2026</p>
 
       <Section title="1. Éditeur du site">
         <p>Le site <strong>washboard.fr</strong> est édité par :</p>
         <ul>
-          <li><strong>Dénomination :</strong> <Placeholder>NOM LÉGAL / RAISON SOCIALE</Placeholder></li>
-          <li><strong>Forme juridique :</strong> <Placeholder>FORME JURIDIQUE</Placeholder></li>
-          <li><strong>SIRET :</strong> <Placeholder>SIRET</Placeholder></li>
-          <li><strong>Adresse :</strong> <Placeholder>ADRESSE COMPLÈTE</Placeholder></li>
+          <li><strong>Dénomination :</strong> NovaFlows</li>
+          <li><strong>Forme juridique :</strong> société par actions simplifiée (SAS)</li>
+          <li><strong>Activité :</strong> conception et édition de logiciels en ligne (SaaS)</li>
+          <li><strong>Capital social :</strong> <Placeholder>MONTANT</Placeholder> €</li>
+          <li><strong>Siège social :</strong> <Placeholder>ADRESSE DU SIÈGE</Placeholder></li>
+          <li><strong>Immatriculation :</strong> RCS <Placeholder>VILLE</Placeholder> <Placeholder>SIREN</Placeholder></li>
+          <li><strong>N° de TVA intracommunautaire :</strong> <Placeholder>FR…</Placeholder></li>
           <li><strong>Email :</strong> novaflows.pro@gmail.com</li>
         </ul>
         <p><strong>Directeur de la publication :</strong> Alexandre Bouharira-Thelliez</p>
