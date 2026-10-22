@@ -163,6 +163,8 @@ export type Booking = {
   acompte_montant?: number | null
   acompte_statut?: 'en_attente' | 'recu' | null
   acompte_echeance?: string | null
+  /** Rappel de paiement envoyé au client (api/cron/acomptes), une seule fois. */
+  acompte_rappel_le?: string | null
 }
 
 export type Unavailability = {
