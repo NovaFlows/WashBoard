@@ -52,7 +52,7 @@ describe('sendRappelAcompte', () => {
     await sendRappelAcompte({ ...client, scheduledAt: RDV, echeance: ECHEANCE, bookingId: ID, acompte })
     const { from, subject } = envoi()
     expect(from).toBe('Malo Lavage via WashBoard <noreply@washboard.fr>')
-    expect(subject).toBe('Acompte à régler avant le jeudi 22 octobre à 14:00 — Malo Lavage')
+    expect(subject).toBe('Rappel : acompte à régler avant le jeudi 22 octobre à 14:00 — Malo Lavage')
   })
 
   it('montant, conséquence, mêmes moyens de paiement que « Demande reçue », déjà payé', async () => {
@@ -61,15 +61,23 @@ describe('sendRappelAcompte', () => {
     const { html } = envoi()
     expect(html).toContain('Acompte à régler : 12,50 €')
     expect(html).toContain('samedi 24 octobre à 10:00')
-    expect(html).toContain('elle sera annulée automatiquement')
+    expect(html).toContain('Sans paiement enregistré avant le jeudi 22 octobre à 14:00, elle sera annulée automatiquement')
     expect(html).toContain('href="https://paypal.me/malolavage/12.50EUR"')
     expect(html).toContain('FR76 3000 6000 0112 3456 7890 189')
     expect(html).toContain('WB-6F1C2A4E')
     expect(html).toContain('06 12 34 56 78')
     expect(html).toContain('href="https://share.weropay.eu/p/1/c/abc"')
-    expect(html).toContain('Si vous avez déjà payé, ignorez ce message')
+    // Un client qui a payé sans que ce soit noté sera annulé : on ne lui dit pas d’ignorer.
+    expect(html).not.toContain('ignorez')
+    expect(html).toContain('Si vous avez déjà payé, prévenez <strong>Malo Lavage</strong> avant cette échéance')
     // Boutons de paiement sombres : le bleu est la couleur de WashBoard, pas celle du laveur.
     expect(html).not.toContain('background:#306090')
+  })
+
+  it('donne le numéro du laveur au client qui a déjà payé, quand il est connu', async () => {
+    const { sendRappelAcompte } = await import('./index')
+    await sendRappelAcompte({ ...client, washerPhone: '0698765432', scheduledAt: RDV, echeance: ECHEANCE, bookingId: ID, acompte })
+    expect(envoi().html).toMatch(/prévenez <strong>Malo Lavage<\/strong> au <strong[^>]*>06 98 76 54 32<\/strong> avant cette échéance/)
   })
 
   it('échappe ce que le laveur et le client ont saisi', async () => {

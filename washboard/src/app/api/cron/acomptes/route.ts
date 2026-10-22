@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 }
 
 type Admin = ReturnType<typeof createAdminClient>
-type Laveur = { name: string; reglages: ReglagesAcompte | null }
+type Laveur = { name: string; phone: string | null; reglages: ReglagesAcompte | null }
 
 // Étape séparée de l'annulation : tant que la colonne `acompte_rappel_le` n'existe pas en base,
 // elle s'arrête sans rien envoyer, et l'annulation ci-dessus continue de tourner normalement.
@@ -129,10 +129,10 @@ async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | 
     if (!(montant > 0)) continue
 
     if (!laveurs.has(b.washer_id)) {
-      const { data, error: errLaveur } = await admin.from('washers').select('name, acompte').eq('id', b.washer_id).maybeSingle()
+      const { data, error: errLaveur } = await admin.from('washers').select('name, phone, acompte').eq('id', b.washer_id).maybeSingle()
       if (errLaveur) logger.error('cron.acomptes.rappel_washer_read_failed', { washerId: b.washer_id }, errLaveur)
       const reglages = data ? ReglagesAcompteSchema.safeParse(data.acompte) : null
-      laveurs.set(b.washer_id, data ? { name: data.name as string, reglages: reglages?.success ? reglages.data : null } : null)
+      laveurs.set(b.washer_id, data ? { name: data.name as string, phone: (data.phone as string | null) ?? null, reglages: reglages?.success ? reglages.data : null } : null)
     }
     const laveur = laveurs.get(b.washer_id)
     if (!laveur) { echecs++; continue }
@@ -165,7 +165,7 @@ async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | 
 
     try {
       const { error: errEnvoi } = await sendRappelAcompte({
-        to: b.client_email, clientName: b.client_name, washerName: laveur.name, scheduledAt: b.scheduled_at,
+        to: b.client_email, clientName: b.client_name, washerName: laveur.name, washerPhone: laveur.phone, scheduledAt: b.scheduled_at,
         echeance: b.acompte_echeance, bookingId: b.id, acompte,
       })
       if (errEnvoi) throw errEnvoi
