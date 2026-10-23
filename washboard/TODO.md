@@ -31,6 +31,13 @@
 
 ## 🔴 Priorité haute
 
+- [ ] 2026-10-23 — **4 vulnérabilités npm dans les OUTILS DE TEST** (1 haute, 3 moyennes :
+      `vite` via `launch-editor`, `vitest`/`@vitest/mocker`). Jamais déployées : seulement sur
+      les postes et dans la CI. Correctif : `vitest` et `@vitest/coverage-v8` en 4.1.12 — mais
+      `npm install`/`npm audit fix` plantent chez nous (« Cannot read properties of null
+      (reading 'edgesOut') », bogue de npm 10.9.2), à refaire avec un npm plus récent ou un
+      `package-lock.json` régénéré. Priorité basse en réalité, rangé ici pour ne pas l'oublier.
+
 
 - [x] 2026-10-04 — **🔒 SÉCURITÉ, CORRIGÉ — la policy RLS de `bookings` laissait un laveur
       lire/écrire TOUTES les colonnes de ses propres réservations en interrogeant Supabase
@@ -3442,6 +3449,15 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-10-23 — **🔒 2 vulnérabilités npm CRITIQUES corrigées en production** (priorité de la
+      réunion du jour) : `next` 16.3.8 → **16.4.3** (RCE sans compte via l'API d'optimisation
+      d'images avec des SVG, GHSA-2464-fhr4-w9xw ; RCE via `use cache` et tableaux typés,
+      GHSA-673q-mjm6-r5xr ; déni de service par les Server Actions, GHSA-p3m5-59mp-jv5r) et
+      `@sentry/nextjs` 10.75.1 → **10.76.2** (contournement du middleware par la route tunnel,
+      GHSA-mchm-gjx6-7h55). `npm audit --omit=dev` : 0. Même version majeure, aucun correctif
+      maison à préserver (le « Next.js modifié » n'est que la note d'AGENTS.md sur Next 16).
+      Vérifié : tsc, lint, 2 760 tests, `next build` (Turbopack, CSS intact), et toute la suite
+      e2e sur le build de production en local (151 réussis, 10 ignorés comme d'habitude).
 - [x] 2026-10-22 — **Deux comptes supprimés** à la demande d'Alexandre : « SportAutoTest »
       (`sportautotest-abc0`, test de l'inscription par SMS du 2026-10-21) et « Faty's hair »
       (`faty-s-hair-2c88`, inscrit le 2026-09-01, une seule connexion, 0 prestation, 0 réservation).
