@@ -3335,7 +3335,15 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🔍 Contenu & tarifs (SEO-GEO)
 
-- [x] 2026-10-20 — EN PRODUCTION (PR #15, validée par Ryan ; icônes servies, vérifié) — **Emails refaits dans la DA 2026.** Restent ouverts : bouton dans l’annulation d’acompte, pastilles des offres. Doublons du reçu : Ryan laisse tel quel (2026-10-20).
+- [x] 2026-10-25 — **Acompte : rappel au client avant l’échéance + bouton « Réserver un nouveau créneau »
+      dans l’email d’annulation (PR #16, en production).** Un seul rappel à 25 % du délai (1 h – 12 h
+      avant), idempotent (`bookings.acompte_rappel_le`, SQL exécuté par Alexandre), mêmes moyens de
+      paiement que « Demande reçue ». Texte relu par `legal` : « prévenez <laveur> au <numéro> » au lieu
+      de « ignorez ce message ». Vérifié : simulation réelle sur le compte équipe (réservation, rappel
+      non doublé, annulation), réservation de test supprimée. Premier vrai rappel à surveiller en prod.
+      Conseillé par `legal` : vérifier que les CGV laveur autorisent l’envoi d’emails en son nom.
+
+- [x] 2026-10-20 — EN PRODUCTION (PR #15, validée par Ryan ; icônes servies, vérifié) — **Emails refaits dans la DA 2026.** Reste ouvert : pastilles des offres. Bouton dans l’annulation d’acompte : fait (PR #16). Doublons du reçu : Ryan laisse tel quel (2026-10-20).
       Gabarit commun (`lib/email/gabarit.ts`), 20 emails, zéro emoji (garde `gabarit.test.ts`), icônes
       PNG dessinées dans `public/email/`, relecture `designer`. tsc/eslint/vitest/build verts. En
       attente de la validation de Ryan sur captures. À trancher : titre de la relance (« Un message de
