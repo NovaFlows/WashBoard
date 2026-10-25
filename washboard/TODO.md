@@ -31,7 +31,7 @@
 
 ## 🔴 Priorité haute
 
-- [ ] 2026-10-23 — **4 vulnérabilités npm dans les OUTILS DE TEST** (1 haute, 3 moyennes :
+- [x] 2026-10-25 (PR #17 : vitest 4.1.12, vite 8.3.5 ; + zod 4.6.7, faille haute en prod sur la validation des routes, corrigée. Reste zod@3 embarqué par @imgly/background-removal, côté navigateur, non exploitable) — 2026-10-23 — **4 vulnérabilités npm dans les OUTILS DE TEST** (1 haute, 3 moyennes :
       `vite` via `launch-editor`, `vitest`/`@vitest/mocker`). Jamais déployées : seulement sur
       les postes et dans la CI. Correctif : `vitest` et `@vitest/coverage-v8` en 4.1.12 — mais
       `npm install`/`npm audit fix` plantent chez nous (« Cannot read properties of null
