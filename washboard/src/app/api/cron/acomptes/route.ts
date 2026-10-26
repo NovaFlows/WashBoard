@@ -15,8 +15,10 @@ import { logger } from '@/lib/logger'
 // sans avoir reçu l'acompte a fait son choix, on ne le défait pas à sa place (et l'événement
 // de son agenda Google resterait orphelin).
 //
-// Planification : cron-job.org, toutes les 15 minutes. Mode test : ?test=1&washer=<id> — limité
-// à ce laveur, et le rappel part sans attendre son heure (toujours une seule fois).
+// Planification : cron-job.org, toutes les 15 minutes. Mode test : ?test=1&washer=<id> — annulation
+// limitée à ce laveur. Le rappel exige en plus &booking=<id> : il part sans attendre son heure, et
+// seulement pour cette réservation (sinon, tous les clients en attente du laveur le recevraient
+// en avance et ne l'auraient plus au bon moment).
 export async function GET(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest) {
     .eq('acompte_statut', 'en_attente')
     .eq('status', 'pending')
     .lt('acompte_echeance', maintenant)
+    .order('acompte_echeance')
     .limit(200)
   if (test.enabled) requete = requete.eq('washer_id', test.washerId)
   const { data: expirees, error } = await requete
@@ -82,7 +85,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const rappel = await envoyerRappels(admin, instant, test.enabled ? test.washerId : null)
+  const bookingTest = request.nextUrl.searchParams.get('booking')
+  const rappel = test.enabled && !bookingTest
+    ? { envoyes: 0, echecs: 0, enAttente: false }
+    : await envoyerRappels(admin, instant, test.enabled && bookingTest ? { washerId: test.washerId, bookingId: bookingTest } : null)
   echecs += rappel.echecs
 
   logger.info('cron.acomptes.done', { annulees, rappels: rappel.envoyes, echecs })
@@ -95,9 +101,17 @@ export async function GET(request: NextRequest) {
 type Admin = ReturnType<typeof createAdminClient>
 type Laveur = { name: string; phone: string | null; reglages: ReglagesAcompte | null }
 
+// Refus Resend qu'un nouvel essai ne changera pas : adresse refusée, ou clé d'idempotence déjà
+// utilisée avec un autre contenu (le rappel est déjà parti, réglages du laveur modifiés depuis).
+const ECHECS_DEFINITIFS = new Set(['validation_error', 'invalid_idempotent_request'])
+
+function echecDefinitif(e: unknown): boolean {
+  return !!e && typeof e === 'object' && ECHECS_DEFINITIFS.has((e as { name?: unknown }).name as string)
+}
+
 // Étape séparée de l'annulation : tant que la colonne `acompte_rappel_le` n'existe pas en base,
 // elle s'arrête sans rien envoyer, et l'annulation ci-dessus continue de tourner normalement.
-async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | null): Promise<{ envoyes: number; echecs: number; enAttente: boolean }> {
+async function envoyerRappels(admin: Admin, instant: Date, cibleTest: { washerId: string; bookingId: string } | null): Promise<{ envoyes: number; echecs: number; enAttente: boolean }> {
   const maintenant = instant.toISOString()
   let requete = admin
     .from('bookings')
@@ -107,14 +121,21 @@ async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | 
     .is('acompte_rappel_le', null)
     .not('client_email', 'is', null)
     .gt('acompte_echeance', maintenant)
+    .gt('scheduled_at', maintenant)
+    .order('acompte_echeance')
     .limit(200)
-  requete = washerTest
-    ? requete.eq('washer_id', washerTest)
+  requete = cibleTest
+    ? requete.eq('washer_id', cibleTest.washerId).eq('id', cibleTest.bookingId)
     : requete.lte('acompte_echeance', new Date(instant.getTime() + AVANCE_MAX_RAPPEL_MS).toISOString())
   const { data: aRappeler, error } = await requete
 
   if (error) {
-    if (migrationEnAttente(error)) return { envoyes: 0, echecs: 0, enAttente: true }
+    if (migrationEnAttente(error)) {
+      // La colonne existe en production : ce cas signale une régression du schéma, pas un
+      // déploiement en cours. Sans ce log, les rappels s'arrêteraient sans aucune trace.
+      logger.warn('cron.acomptes.rappel_migration_en_attente', {}, error)
+      return { envoyes: 0, echecs: 0, enAttente: true }
+    }
     logger.error('cron.acomptes.rappel_read_failed', {}, error)
     return { envoyes: 0, echecs: 1, enAttente: false }
   }
@@ -124,7 +145,7 @@ async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | 
   let echecs = 0
   for (const b of aRappeler ?? []) {
     if (!b.client_email?.trim()) continue
-    if (!washerTest && !rappelAcompteDu({ creeLe: b.created_at, echeance: b.acompte_echeance, rappelLe: b.acompte_rappel_le, maintenant: instant })) continue
+    if (!cibleTest && !rappelAcompteDu({ creeLe: b.created_at, echeance: b.acompte_echeance, rappelLe: b.acompte_rappel_le, maintenant: instant })) continue
     const montant = Number(b.acompte_montant)
     if (!(montant > 0)) continue
 
@@ -159,6 +180,7 @@ async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | 
       .eq('acompte_statut', 'en_attente')
       .is('acompte_rappel_le', null)
       .gt('acompte_echeance', maintenant)
+      .gt('scheduled_at', maintenant)
       .select('id')
     if (errPris) { echecs++; logger.error('cron.acomptes.rappel_mark_failed', { bookingId: b.id }, errPris); continue }
     if (!pris?.length) continue
@@ -173,6 +195,8 @@ async function envoyerRappels(admin: Admin, instant: Date, washerTest: string | 
     } catch (e) {
       echecs++
       logger.error('cron.acomptes.rappel_email_failed', { bookingId: b.id }, e)
+      // Refus définitif : la marque reste, sinon le même refus reviendrait tous les quarts d'heure.
+      if (echecDefinitif(e)) continue
       // Le rappel n'est pas parti : on rend la main au passage suivant plutôt que de le
       // croire envoyé.
       const { error: errRetour } = await admin

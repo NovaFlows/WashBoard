@@ -74,6 +74,12 @@ describe('sendRappelAcompte', () => {
     expect(html).not.toContain('background:#306090')
   })
 
+  it('clé d’idempotence propre à la réservation : un nouvel essai ne double pas l’envoi', async () => {
+    const { sendRappelAcompte } = await import('./index')
+    await sendRappelAcompte({ ...client, scheduledAt: RDV, echeance: ECHEANCE, bookingId: ID, acompte })
+    expect(sendMock.mock.calls.at(-1)![1]).toEqual({ idempotencyKey: `acompte-rappel/${ID}` })
+  })
+
   it('donne le numéro du laveur au client qui a déjà payé, quand il est connu', async () => {
     const { sendRappelAcompte } = await import('./index')
     await sendRappelAcompte({ ...client, washerPhone: '0698765432', scheduledAt: RDV, echeance: ECHEANCE, bookingId: ID, acompte })

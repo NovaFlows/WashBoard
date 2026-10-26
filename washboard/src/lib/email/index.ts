@@ -935,6 +935,8 @@ export async function sendRappelAcompte({ to, clientName, washerName, washerPhon
   const heureFin = fin.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
   const avant = `avant le ${jourFin} à ${heureFin}`
   const ref = bookingId.slice(0, 8).toUpperCase()
+  // Clé d'idempotence : un envoi livré mais signalé en échec (réseau) est réessayé au passage
+  // suivant du cron ; Resend reconnaît la clé (24 h) et n'envoie pas une seconde fois.
   return resend.emails.send({
     from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
     to,
@@ -952,7 +954,7 @@ ${paragraphe(`Si vous avez déjà payé, prévenez <strong>${escapeHtml(washerNa
 ${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};color:${COULEUR.encre};">${ref}</strong>`, { ton: 'gris', marge: '0' })}`,
       pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
     }),
-  })
+  }, { idempotencyKey: `acompte-rappel/${bookingId}` })
 }
 
 /** « Votre tampon est arrivé » : envoyé quand le laveur marque la prestation terminée
