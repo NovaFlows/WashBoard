@@ -7,7 +7,7 @@
 >   la déplacer en bas dans « ✅ Fait »).
 > - Toute nouvelle tâche découverte → l'ajouter dans la bonne section.
 >
-> Dernière mise à jour : 2026-10-19 (3 priorités faites ; fuite de la carte de fidélité confirmée
+> Dernière mise à jour : 2026-10-28 (question de l'acompte cochée : construit, PR #16 et #18). Avant : 2026-10-19 (3 priorités faites ; fuite de la carte de fidélité confirmée
 > dans le code ; contraste remesuré ; +20 € sur les prix du marché ; case des conditions de
 > l'acompte ; points déjà faits sortis de la liste). Avant : 2026-10-18 (landing v2 en prod, bug de fuseau de la réservation
 > corrigé, toutes les pages publiques passées en DA v2 + contenu SEO mis à jour — PR #7 ;
@@ -3151,7 +3151,9 @@ rien à faire, mais que le projet reste globalement sain.
     confirmation. Pour une prestation de plus de 25 €, le laveur doit la remettre au
     client : l'email le ferait pour lui. Option envisagée : un réglage « toujours /
     seulement les pros ». Alexandre demande à Kookii Clean si c'est utile.
-  - [ ] **Question ouverte (Alexandre, 2026-09-15) : demander un acompte à la
+  - [x] 2026-10-28 — **Tranché et construit : voie (b), le laveur affiche ses propres moyens de paiement (PayPal, Wero, virement), WashBoard demande, relance et annule (PR #16, #18).**
+    Question d'origine conservée ci-dessous.
+  - **Question ouverte (Alexandre, 2026-09-15) : demander un acompte à la
     réservation ?** But : limiter les rendez-vous où le client n'est pas là et le laveur
     s'est déplacé pour rien. Rien à construire avant décision. Points à trancher :
     - **Hors V1 aujourd'hui** : le CLAUDE.md exclut le paiement en ligne. Deux voies :
