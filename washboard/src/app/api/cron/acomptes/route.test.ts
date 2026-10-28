@@ -14,7 +14,9 @@ let washers: Ligne[]
 let sansColonneRappel: boolean
 /** Ce qui se passe juste avant chaque écriture sur `bookings` (changement concurrent simulé). */
 let avantEcriture: ((valeurs: Ligne) => void) | null
-let rappelEchoue: boolean
+/** Erreur renvoyée par Resend pour le rappel (null : envoi réussi). */
+let erreurRappel: { name: string; message: string } | null
+let tentativesRappel: number
 
 type Filtre = (l: Ligne) => boolean
 
@@ -37,6 +39,7 @@ function builder(table: string) {
   b.lt = (c: string, v: unknown) => { colonnes.push(c); filtres.push(l => l[c] != null && date(l[c]) < date(v)); return b }
   b.gt = (c: string, v: unknown) => { colonnes.push(c); filtres.push(l => l[c] != null && date(l[c]) > date(v)); return b }
   b.lte = (c: string, v: unknown) => { colonnes.push(c); filtres.push(l => l[c] != null && date(l[c]) <= date(v)); return b }
+  b.order = () => b
   b.limit = () => b
   b.maybeSingle = () => { unique = true; return b }
 
@@ -72,7 +75,8 @@ const notifications: Ligne[] = []
 vi.mock('@/lib/email', () => ({
   sendAnnulationAcompte: async (p: Ligne) => { annulations.push(p); return { data: { id: 'e' }, error: null } },
   sendRappelAcompte: async (p: Ligne) => {
-    if (rappelEchoue) return { data: null, error: { name: 'application_error', message: 'Resend indisponible' } }
+    tentativesRappel++
+    if (erreurRappel) return { data: null, error: erreurRappel }
     rappels.push(p)
     return { data: { id: 'e' }, error: null }
   },
@@ -110,7 +114,8 @@ beforeEach(() => {
   washers = [{ id: 'w1', name: 'Malo Lavage', slug: 'malo-lavage', acompte: REGLAGES }]
   sansColonneRappel = false
   avantEcriture = null
-  rappelEchoue = false
+  erreurRappel = null
+  tentativesRappel = 0
   annulations.length = 0
   rappels.length = 0
   notifications.length = 0
@@ -170,16 +175,60 @@ describe('GET /api/cron/acomptes — rappel avant l’échéance', () => {
     expect(bookings[0].acompte_rappel_le).toBeNull()
   })
 
+  it('pas encore l’heure : réservation lue (échéance sous 12 h) mais rappel pas dû', async () => {
+    // Délai de 12 h, rappel 3 h avant : à 11 h de l'échéance, rien ne part.
+    bookings = [aRappeler({ created_at: dans(-1), acompte_echeance: dans(11) })]
+    expect((await appel()).rappels).toBe(0)
+    expect(rappels).toHaveLength(0)
+    expect(bookings[0].acompte_rappel_le).toBeNull()
+  })
+
+  it('passage concurrent : un rappel déjà marqué entre la lecture et l’écriture ne repart pas', async () => {
+    bookings = [aRappeler()]
+    const autrePassage = dans(-0.01)
+    avantEcriture = (v) => { if ('acompte_rappel_le' in v) bookings[0].acompte_rappel_le = autrePassage }
+    expect((await appel()).rappels).toBe(0)
+    expect(rappels).toHaveLength(0)
+    expect(bookings[0].acompte_rappel_le).toBe(autrePassage)
+  })
+
+  it('rendez-vous passé : aucun rappel, écarté dès la lecture', async () => {
+    bookings = [aRappeler({ scheduled_at: dans(-1) })]
+    let ecritures = 0
+    avantEcriture = () => { ecritures++ }
+    expect((await appel()).rappels).toBe(0)
+    expect(rappels).toHaveLength(0)
+    expect(ecritures).toBe(0)
+  })
+
+  it('rendez-vous passé entre la lecture et l’écriture : aucun rappel', async () => {
+    bookings = [aRappeler()]
+    avantEcriture = () => { bookings[0].scheduled_at = dans(-1) }
+    expect((await appel()).rappels).toBe(0)
+    expect(rappels).toHaveLength(0)
+    expect(bookings[0].acompte_rappel_le).toBeNull()
+  })
+
   it('un envoi raté n’est pas compté comme envoyé : le passage suivant réessaie', async () => {
     bookings = [aRappeler()]
-    rappelEchoue = true
+    erreurRappel = { name: 'application_error', message: 'Resend indisponible' }
     const rate = await appel()
     expect(rate).toMatchObject({ ok: false, rappels: 0, echecs: 1 })
     expect(bookings[0].acompte_rappel_le).toBeNull()
 
-    rappelEchoue = false
+    erreurRappel = null
     expect((await appel()).rappels).toBe(1)
     expect(rappels).toHaveLength(1)
+  })
+
+  it('adresse refusée par Resend : la marque reste, pas de nouvel essai au passage suivant', async () => {
+    bookings = [aRappeler()]
+    erreurRappel = { name: 'validation_error', message: 'Invalid `to` field.' }
+    expect(await appel()).toMatchObject({ ok: false, rappels: 0, echecs: 1 })
+    expect(bookings[0].acompte_rappel_le).toEqual(expect.any(String))
+
+    expect(await appel()).toMatchObject({ ok: true, rappels: 0, echecs: 0 })
+    expect(tentativesRappel).toBe(1)
   })
 
   it('colonne absente : l’annulation fonctionne, aucun rappel', async () => {
@@ -193,15 +242,33 @@ describe('GET /api/cron/acomptes — rappel avant l’échéance', () => {
     expect(rappels).toHaveLength(0)
   })
 
-  it('mode test : limité au laveur, sans attendre l’heure du rappel, toujours une seule fois', async () => {
+  it('colonne absente : l’arrêt des rappels laisse une trace dans les logs', async () => {
+    sansColonneRappel = true
+    bookings = [aRappeler()]
+    await appel()
+    const logs = vi.mocked(console.error).mock.calls.map(c => JSON.parse(c[0] as string) as { level: string; event: string })
+    expect(logs).toContainEqual(expect.objectContaining({ level: 'warn', event: 'cron.acomptes.rappel_migration_en_attente' }))
+  })
+
+  it('mode test : le rappel ne part que pour la réservation désignée, sans attendre son heure, une seule fois', async () => {
     washers.push({ id: 'w2', name: 'Autre', slug: 'autre', acompte: REGLAGES })
     bookings = [
       aRappeler({ created_at: dans(-1), acompte_echeance: dans(23) }),
+      aRappeler({ id: 'b-meme-laveur' }),
       aRappeler({ id: 'b-autre', washer_id: 'w2' }),
     ]
-    expect((await appel('?test=1&washer=w1')).rappels).toBe(1)
-    expect((await appel('?test=1&washer=w1')).rappels).toBe(0)
+    const cible = `?test=1&washer=w1&booking=${bookings[0].id}`
+    expect((await appel(cible)).rappels).toBe(1)
+    expect((await appel(cible)).rappels).toBe(0)
     expect(rappels).toHaveLength(1)
+    expect(bookings[1].acompte_rappel_le).toBeNull()
+    expect(bookings[2].acompte_rappel_le).toBeNull()
+  })
+
+  it('mode test sans réservation désignée : annulation du laveur seulement, aucun rappel', async () => {
+    bookings = [expiree(), aRappeler()]
+    expect(await appel('?test=1&washer=w1')).toMatchObject({ annulees: 1, rappels: 0 })
+    expect(rappels).toHaveLength(0)
     expect(bookings[1].acompte_rappel_le).toBeNull()
   })
 })
