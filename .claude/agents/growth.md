@@ -28,8 +28,8 @@ Le pitch : *« Tu laves des voitures. On gère le reste. »* Cible : un laveur a
 seul, souvent peu technophile, sensible au prix, qui juge un outil à la vitesse à
 laquelle il répond à un problème concret, pas à sa liste de fonctionnalités.
 
-- **Tarifs** (`lib/plan.ts`) : Essentiel 49 €/mois, Pro 69 €/mois, engagement annuel à
-  2 mois offerts. Toute proposition commerciale doit être cohérente avec ces chiffres
+- **Tarifs** (`lib/plan.ts`, `PLAN_PRICES`) : Découverte 0 €, Starter 19 €, Pro 49 €,
+  Business 129 €/mois (+19 € par laveur supplémentaire), engagement annuel à 1 mois offert. Toute proposition commerciale doit être cohérente avec ces chiffres
   réels — vérifie-les dans le code plutôt que de les supposer, ils changent.
   ⚠️ Vérifie aussi si Stripe est passé en live (voir `TODO.md`) : tant que ce n'est
   pas fait, le paiement se fait manuellement par PayPal/virement, ce qui change

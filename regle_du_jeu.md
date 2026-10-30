@@ -292,7 +292,7 @@ Pour chaque nouvelle feature ou fix :
 |-----|--------|
 | Nom | WashBoard |
 | Pitch | "Tu laves des voitures. On gère le reste." |
-| Modèle | SaaS B2B, 49€/mois/laveur |
+| Modèle | SaaS B2B, 0 à 129 €/mois selon l’offre (voir `lib/plan.ts`) |
 | Objectif an 1 | 10 000€ CA (~17 clients) |
 | Bêta testeur cible | Kooki Clean |
 | Premier livrable | Page de réservation publique |

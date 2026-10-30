@@ -273,7 +273,9 @@
       déjà facturée + une 7ᵉ témoin sans facture — exécuté en local, les deux assertions
       passent (la facturée reste en clair, la témoin reste masquée), nettoyage vérifié (plus
       aucune trace en base après coup).
-- [ ] **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
+- [-] **NON RETENU — décision de Ryan le 2026-10-30 : « on ne le fera pas ». Ne plus le remonter
+      dans les réunions ni le proposer.** Point d'origine conservé pour mémoire :
+      **⚖️ `anonymiser_client` (droit à l'effacement) laisse des données personnelles derrière
       elle**, relevé par `cyber` le 2026-10-04 en relisant la fonction pour le correctif
       ci-dessus. **Analyse `legal` reçue le 2026-10-04, rien codé ni poussé — gros sujet,
       à reprendre à tête reposée plutôt qu'en fin de session.** Décision de Ryan : on

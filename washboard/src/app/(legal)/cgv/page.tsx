@@ -171,11 +171,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   )
 }
-
-function Placeholder({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="lg-ph">
-      [{children}]
-    </span>
-  )
-}

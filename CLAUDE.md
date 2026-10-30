@@ -3,7 +3,7 @@
 ## Continuité Claude Code / Codex
 Lire `AGENTS.md` et `PROJECT_CONTEXT.md` à la racine pour les consignes communes et l'état de reprise. Après un travail significatif, actualiser cette mémoire partagée ; mettre à jour ce fichier lorsque le contexte durable du projet change.
 
-SaaS B2B pour laveurs auto mobiles. Abonnement 49€/mois. Pitch : "Tu laves des voitures. On gère le reste."
+SaaS B2B pour laveurs auto mobiles. Abonnement de 0 à 129 €/mois selon l’offre (Découverte 0 €, Starter 19 €, Pro 49 €, Business 129 €). Pitch : "Tu laves des voitures. On gère le reste."
 
 ## Stack
 - **Frontend + Backend :** Next.js (App Router)
