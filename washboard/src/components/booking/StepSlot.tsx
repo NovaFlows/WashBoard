@@ -298,7 +298,7 @@ export default function StepSlot({
           {l === 'domicile' ? 'À domicile' : 'En centre auto'}
         </button>)}
       </div>
-      {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">Le laveur se déplace chez vous : des frais de déplacement s’ajoutent selon la distance.</p>}
+      {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>}
     </div>}
     {auCentre && centre ? <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-3">
       <p className="text-sm font-medium">Rendez-vous au centre auto</p>

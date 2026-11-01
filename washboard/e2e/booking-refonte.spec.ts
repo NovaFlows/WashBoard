@@ -83,7 +83,7 @@ test('centre auto : domicile par défaut, centre sans adresse ni frais ni remise
   await fixture(page, '/dev/booking-preview?centre=1')
   await chooseService(page)
   await expect(page.getByRole('radio', { name: 'À domicile' })).toBeChecked()
-  await expect(page.getByText(/des frais de déplacement s’ajoutent selon la distance/)).toBeVisible()
+  await expect(page.getByText(/des frais de déplacement peuvent s’ajouter selon la distance/)).toBeVisible()
   await expect(page.getByLabel('Adresse du lavage')).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('centre-01-domicile.png'), scale: 'css' })
   await page.getByRole('radio', { name: 'En centre auto' }).click()
