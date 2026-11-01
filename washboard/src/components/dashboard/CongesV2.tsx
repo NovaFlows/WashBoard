@@ -5,8 +5,8 @@ import { Minus, Plus } from 'lucide-react'
 import type { Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
 import type { AjoutConge } from '@/hooks/useConges'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
-import { Constat } from '@/components/dashboard/PrestationsUiV2'
-import { erreurPeriode } from '@/lib/horaires'
+import { Constat, Interrupteur } from '@/components/dashboard/PrestationsUiV2'
+import { HEURES_CHOIX, MOTIFS_BLOCAGE, erreurBlocage, plageBloquee } from '@/lib/horaires'
 
 // Congés / indisponibilités, présentation v2 — réservée à la PWA installée
 // (voir CalendrierDashboardV2.tsx). Passe 7, sous-lot 3. La logique (états,
@@ -21,8 +21,6 @@ import { erreurPeriode } from '@/lib/horaires'
 // encre/gris parce que l'ambre seul, sur le fond sombre, n'atteint pas un
 // contraste lisible pour du texte courant.
 
-const MOTIFS = ['Vacances', 'Formation', 'Congé maladie', 'Jour férié']
-
 function jourLisible(iso: string, avecAnnee: boolean): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -31,18 +29,20 @@ function jourLisible(iso: string, avecAnnee: boolean): string {
   })
 }
 
-/** « 12 août » ou « 12 août → 19 août » — même format que la fenêtre de
- *  suppression de v1 (`→`), l'année en plus quand on le demande. */
-export function libellePeriode(u: Pick<Unavailability, 'start_date' | 'end_date'>, avecAnnee = false): string {
-  return u.start_date === u.end_date
+/** « 12 août », « 12 août → 19 août » ou « 9 novembre · 8h–12h » — même format
+ *  que la fenêtre de suppression de v1 (`→`), l'année en plus quand on le demande. */
+export function libellePeriode(u: Pick<Unavailability, 'start_date' | 'end_date' | 'start_time' | 'end_time'>, avecAnnee = false): string {
+  const jours = u.start_date === u.end_date
     ? jourLisible(u.start_date, avecAnnee)
     : `${jourLisible(u.start_date, false)} → ${jourLisible(u.end_date, avecAnnee)}`
+  const plage = plageBloquee(u)
+  return plage ? `${jours} · ${plage}` : jours
 }
 
 /** Qui est concerné — rien à dire pour un laveur seul. */
 function detailEquipe(u: Unavailability, teamSize: number, complet: boolean): string | null {
   if (teamSize <= 1) return null
-  return complet ? 'Toute l’équipe' : `${u.team_members_off} / ${teamSize} laveurs · capacité réduite`
+  return complet || u.team_members_off >= teamSize ? 'Toute l’équipe' : `${u.team_members_off} / ${teamSize} laveurs · capacité réduite`
 }
 
 function Point() {
@@ -129,12 +129,15 @@ export function CongesAVenir({
 }
 
 /** Feuille « Bloquer une période » — mêmes champs, mêmes règles que la fenêtre
- *  de v1 (dates, motif rapide ou libre, nombre de laveurs si équipe > 1). */
+ *  de v1 (un jour et une plage horaire, ou des jours entiers ; motif rapide ou
+ *  libre ; nombre de laveurs si équipe > 1). */
 export function FeuilleAjoutConge({
   form,
   setForm,
   teamSize,
   saving,
+  erreur,
+  avis,
   onSave,
   onClose,
 }: {
@@ -142,6 +145,10 @@ export function FeuilleAjoutConge({
   setForm: Dispatch<SetStateAction<AjoutConge | null>>
   teamSize: number
   saving: boolean
+  /** Refus du serveur, sinon la feuille resterait ouverte sans un mot. */
+  erreur?: string | null
+  /** Rendez-vous déjà pris sur la période (ils restent maintenus). */
+  avis?: string | null
   onSave: () => void
   onClose: () => void
 }) {
@@ -150,15 +157,18 @@ export function FeuilleAjoutConge({
   // Présentation seulement : `useConges.saveUnavail` (partagé avec le site) ne
   // dit rien quand le serveur refuse des dates incohérentes — la feuille
   // resterait ouverte sans un mot. On grise donc le bouton et on dit pourquoi.
-  const erreurDates = erreurPeriode(form.start, form.end)
+  const erreurDates = erreurBlocage(form)
   return (
     <Feuille
       titre="Bloquer une période"
-      sousTitre="Plus aucune réservation ne sera possible sur ces jours."
+      sousTitre={form.journee
+        ? 'Plus aucune réservation ne sera possible sur ces jours.'
+        : 'Aucune réservation sur cette plage. Le reste de la journée reste ouvert.'}
       onClose={onClose}
       pied={
         <div>
-          {erreurDates && <div className="mb-3"><Constat ton="rouge" role="alert">{erreurDates}</Constat></div>}
+          {(erreurDates || erreur) && <div className="mb-3"><Constat ton="rouge" role="alert">{erreurDates ?? erreur}</Constat></div>}
+          {!erreurDates && avis && <div className="mb-3"><Constat ton="ambre" role="status">{avis}</Constat></div>}
           <div className="flex gap-2.5">
             <button
               type="button"
@@ -182,6 +192,46 @@ export function FeuilleAjoutConge({
       }
     >
       <div className="space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className={`text-[15px] ${corpsFort}`}>Toute la journée</p>
+          <Interrupteur
+            actif={form.journee}
+            enCours={false}
+            libelle="Toute la journée"
+            onClick={() => setForm(m => (m ? { ...m, journee: !m.journee, end: m.start } : m))}
+          />
+        </div>
+
+        {!form.journee && (
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="conge-le" className={ETIQUETTE}>Le</label>
+              <input
+                id="conge-le"
+                type="date"
+                value={form.start}
+                onChange={e => setForm(m => (m ? { ...m, start: e.target.value, end: e.target.value } : m))}
+                className={CHAMP}
+              />
+            </div>
+            <div className="flex gap-3">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="conge-de" className={ETIQUETTE}>De</label>
+                <select id="conge-de" value={form.debut} onChange={e => setForm(m => (m ? { ...m, debut: e.target.value } : m))} className={`${CHAMP} tabular-nums`}>
+                  {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div className="min-w-0 flex-1">
+                <label htmlFor="conge-a" className={ETIQUETTE}>À</label>
+                <select id="conge-a" value={form.fin} onChange={e => setForm(m => (m ? { ...m, fin: e.target.value } : m))} className={`${CHAMP} tabular-nums`}>
+                  {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {form.journee && (
         <div className="flex gap-3">
           <div className="min-w-0 flex-1">
             <label htmlFor="conge-du" className={ETIQUETTE}>Du</label>
@@ -205,11 +255,12 @@ export function FeuilleAjoutConge({
             />
           </div>
         </div>
+        )}
 
         <div>
           <p className={ETIQUETTE}>Motif (facultatif)</p>
           <div className="flex flex-wrap gap-2">
-            {MOTIFS.map(p => {
+            {MOTIFS_BLOCAGE.map(p => {
               const actif = form.label === p
               return (
                 <button
