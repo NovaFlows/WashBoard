@@ -48,7 +48,13 @@ export function resumeCentreAuto(brut: unknown): string {
   return 'Oui · page : à domicile et en centre auto'
 }
 
-export const LIBELLE_LIEU: Record<Lieu, string> = {
-  domicile: 'À domicile',
-  centre: 'En centre auto',
+/** Intitulé de l'adresse d'un rendez-vous (emails, reçu, agenda) : au centre, c'est celle
+ *  du laveur, pas celle du client. Toute autre valeur (colonne absente) vaut domicile. */
+export function libelleAdresse(lieu: unknown): string {
+  return lieu === 'centre' ? 'Au centre auto' : 'Adresse'
+}
+
+/** L'adresse précédée de « Centre auto · » quand le client vient au centre. */
+export function adresseAvecLieu(adresse: string, lieu: unknown): string {
+  return lieu === 'centre' ? `Centre auto · ${adresse}` : adresse
 }

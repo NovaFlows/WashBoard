@@ -50,6 +50,8 @@ export type Booking = {
   client_email: string
   client_phone: string
   address: string
+  /** 'centre' : au centre auto du laveur (lib/centreAuto.ts). */
+  lieu?: 'domicile' | 'centre' | null
   lat: number | null
   lng: number | null
   scheduled_at: string

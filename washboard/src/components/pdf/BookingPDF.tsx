@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { adresseAvecLieu } from '@/lib/centreAuto'
 
 const s = StyleSheet.create({
   page:        { backgroundColor: '#ffffff', fontFamily: 'Helvetica', fontSize: 10, color: '#0f172a', padding: 0 },
@@ -41,6 +42,7 @@ type Props = {
     client_email: string
     client_phone: string | null
     address: string
+    lieu?: string | null
     scheduled_at: string
     is_smart_slot: boolean
     smart_discount: number
@@ -147,7 +149,7 @@ export default function BookingPDF({ booking }: Props) {
                 <Text style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>{unitStr}€/véhicule × {count}</Text>
               )}
               <Text style={s.subText}>{formattedDate} à {time}</Text>
-              <Text style={s.subText}>{booking.address}</Text>
+              <Text style={s.subText}>{adresseAvecLieu(booking.address, booking.lieu)}</Text>
               {booking.is_smart_slot && discount > 0 && (
                 <Text style={{ fontSize: 9, color: '#d97706', fontFamily: 'Helvetica-Bold', marginTop: 4 }}>
                   ★ Créneau optimisé (remise de {discount}€)

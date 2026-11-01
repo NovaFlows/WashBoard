@@ -995,6 +995,8 @@ describe('POST /api/bookings — centre auto', () => {
     expect(reserv.is_smart_slot).toBe(false)
     expect(reserv.smart_discount).toBe(0)
     expect(computeTravelFee).not.toHaveBeenCalled()
+    expect(sendBookingRequest).toHaveBeenCalledWith(expect.objectContaining({ lieu: 'centre', address: CENTRE.adresse }))
+    expect(sendWasherNotification).toHaveBeenCalledWith(expect.objectContaining({ lieu: 'centre' }))
   })
 
   it('refuse le centre chez un laveur qui ne le propose pas', async () => {

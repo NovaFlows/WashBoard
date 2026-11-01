@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesCentreAutoSchema, centreAutoPublic, lieuAccepte, lieuParDefaut, resumeCentreAuto } from './centreAuto'
+import { ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, libelleAdresse, lieuAccepte, lieuParDefaut, resumeCentreAuto } from './centreAuto'
 
 const adresse = '12 rue des Lilas, 93100 Montreuil'
 
@@ -46,5 +46,17 @@ describe('réglages', () => {
   it('résumé de la ligne « Centre auto »', () => {
     expect(resumeCentreAuto(null)).toBe('Non')
     expect(resumeCentreAuto({ actif: true, adresse, lieux: 'les_deux' })).toBe('Oui · page : à domicile et en centre auto')
+  })
+})
+
+describe('affichage après la réservation', () => {
+  it('le client et le laveur savent que le rendez-vous est au centre', () => {
+    expect(libelleAdresse('centre')).toBe('Au centre auto')
+    expect(adresseAvecLieu(adresse, 'centre')).toBe(`Centre auto · ${adresse}`)
+  })
+  it('à domicile, ou colonne absente : rien ne change', () => {
+    expect(libelleAdresse('domicile')).toBe('Adresse')
+    expect(libelleAdresse(undefined)).toBe('Adresse')
+    expect(adresseAvecLieu(adresse, null)).toBe(adresse)
   })
 })
