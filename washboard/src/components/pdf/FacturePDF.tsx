@@ -124,7 +124,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             <Text style={s.etiquette}>Facturé à</Text>
             {client.entreprise ? <Text style={s.fort}>{client.entreprise}</Text> : null}
             <Text style={client.entreprise ? {} : s.fort}>{client.nom}</Text>
-            <Text>{client.adresseFacturation}</Text>
+            {client.adresseFacturation ? <Text>{client.adresseFacturation}</Text> : null}
             {client.siren ? <Text>SIREN {client.siren}</Text> : null}
             {client.email ? <Text style={{ color: GRIS }}>{client.email}</Text> : null}
             {client.telephone ? <Text style={{ color: GRIS }}>{client.telephone}</Text> : null}

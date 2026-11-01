@@ -159,6 +159,26 @@ describe('construireFacture', () => {
     expect(f.client.adresseFacturation).toBe('1 rue de la Démo, 75000 Paris')
   })
 
+  it('au centre auto : pas l’adresse du centre comme adresse du client, lieu « Centre auto »', () => {
+    const f = construireFacture(reservation({ lieu: 'centre', address: '8 avenue Foch, 69006 Lyon' }), vendeur())
+    expect(f.client.adresseFacturation).toBe('')
+    expect(f.prestation.lieu).toBe('Centre auto · 8 avenue Foch, 69006 Lyon')
+  })
+
+  it('au centre auto, un client professionnel garde son adresse de facturation', () => {
+    const f = construireFacture(reservation({
+      lieu: 'centre', address: '8 avenue Foch, 69006 Lyon',
+      is_professional: true, company_name: 'Flotte Démo SAS', billing_address: '3 place de la Démo, 33000 Bordeaux',
+    }), vendeur())
+    expect(f.client.adresseFacturation).toBe('3 place de la Démo, 33000 Bordeaux')
+  })
+
+  it('à domicile : lieu de la prestation inchangé', () => {
+    const f = construireFacture(reservation({ lieu: 'domicile' }), vendeur())
+    expect(f.prestation.lieu).toBe('1 rue de la Démo, 75000 Paris')
+    expect(f.client.adresseFacturation).toBe('1 rue de la Démo, 75000 Paris')
+  })
+
   it('client professionnel : raison sociale, SIREN tiré du SIRET, adresse de facturation', () => {
     const f = construireFacture(reservation({
       is_professional: true, company_name: 'Flotte Démo SAS', siret: '123 456 789 00007',
