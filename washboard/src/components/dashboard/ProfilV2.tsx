@@ -14,9 +14,11 @@ import {
 } from '@/components/dashboard/FeuillesReglagesV2'
 import { useOffre } from '@/components/dashboard/OffreContext'
 import { requiredPlanLabel } from '@/lib/plan'
+import FeuilleCentreAutoV2 from '@/components/dashboard/FeuilleCentreAutoV2'
+import { ReglagesCentreAutoSchema, resumeCentreAuto, type ReglagesCentreAuto } from '@/lib/centreAuto'
 import FeuilleFacturationV2 from '@/components/dashboard/FeuilleFacturationV2'
 import { FeuilleEmailV2, FeuilleMotDePasseV2 } from '@/components/dashboard/FeuillesConnexionV2'
-import { actionCompte, enregistrerProfil, type ChampsProfil } from '@/lib/profilApi'
+import { actionCompte, enregistrerCentreAuto, enregistrerProfil, type ChampsProfil } from '@/lib/profilApi'
 import {
   resumeAdresseDepart, resumeEmail, resumeEquipe, resumeFacturation, resumeFraisDeplacement, resumeNomEntreprise,
   resumeTelephone,
@@ -46,10 +48,10 @@ import type { Washer } from '@/types'
 // depuis la PWA : `/parametres/tout` y renvoie ici (voir `ToutLesReglages.tsx`).
 
 type Feuille =
-  | 'nom' | 'telephone' | 'adresse' | 'deplacement' | 'equipe' | 'facturation' | 'email' | 'motDePasse'
+  | 'nom' | 'telephone' | 'adresse' | 'deplacement' | 'centre' | 'equipe' | 'facturation' | 'email' | 'motDePasse'
   | 'pause' | 'suppression' | null
 
-export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer; email: string; peutEquipe: boolean }) {
+export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null }: { washer: Washer; email: string; peutEquipe: boolean; centreAuto?: unknown }) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
   const { peut } = useOffre()
@@ -65,6 +67,18 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
   )
 
   const fermer = () => setFeuille(null)
+  const [centre, setCentre] = useState<ReglagesCentreAuto | null>(() => {
+    const r = ReglagesCentreAutoSchema.safeParse(centreAuto)
+    return r.success ? r.data : null
+  })
+
+  async function enregistrerCentre(r: ReglagesCentreAuto): Promise<string | null> {
+    const res = await enregistrerCentreAuto(r)
+    if (!res.ok) return res.message
+    setCentre(r)
+    router.refresh()
+    return null
+  }
 
   /** Enregistre, met la fiche à jour, et rend `null` — ou la phrase d'échec, affichée dans la
    *  feuille, qui reste alors ouverte avec la saisie. */
@@ -143,6 +157,7 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
             <Ligne label="Téléphone" valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
             <Ligne label="Adresse de départ" valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
             <Ligne label="Frais de déplacement" valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
+            <Ligne label="Centre auto" valeur={resumeCentreAuto(centre)} onClick={() => setFeuille('centre')} />
             <Ligne
               label="Nombre de laveurs"
               valeur={equipe.texte}
@@ -233,6 +248,14 @@ export default function ProfilV2({ washer, email, peutEquipe }: { washer: Washer
           paliers={paliers}
           mode={fiche.travel_fee_mode ?? 'base'}
           onEnregistrer={champs => enregistrer(champs)}
+          onClose={fermer}
+        />
+      )}
+      {feuille === 'centre' && (
+        <FeuilleCentreAutoV2
+          reglages={centre}
+          adresseDeBase={fiche.base_address ?? null}
+          onEnregistrer={enregistrerCentre}
           onClose={fermer}
         />
       )}

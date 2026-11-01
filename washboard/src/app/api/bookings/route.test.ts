@@ -978,3 +978,46 @@ describe('POST /api/bookings — carte de fidélité', () => {
     expect(body.data).not.toHaveProperty('fidelite')
   })
 })
+
+describe('POST /api/bookings — centre auto', () => {
+  const CENTRE = { actif: true, adresse: '8 avenue Foch, 89000 Auxerre', lieux: 'les_deux' }
+
+  it('au centre : adresse du centre en base, ni zone, ni déplacement, ni remise de trajet', async () => {
+    const { computeTravelFee } = vi.mocked(await import('@/lib/travelFee'))
+    computeTravelFee.mockClear()
+    avecWasher({ centre_auto: CENTRE, zone_config: { enabled: true, type: 'departments', departments: ['75'] } })
+    const { res } = await poster({ lieu: 'centre', address: '1 rue Inventée, 75001 Paris', is_smart_slot: true, smart_discount: 10 })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.address).toBe(CENTRE.adresse)
+    expect(reserv.lieu).toBe('centre')
+    expect(reserv.travel_fee).toBe(0)
+    expect(reserv.is_smart_slot).toBe(false)
+    expect(reserv.smart_discount).toBe(0)
+    expect(computeTravelFee).not.toHaveBeenCalled()
+  })
+
+  it('refuse le centre chez un laveur qui ne le propose pas', async () => {
+    const { res } = await poster({ lieu: 'centre' })
+    expect(res.status).toBe(409)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('centre seulement : refuse le domicile au client, l’accepte du laveur dans son agenda', async () => {
+    avecWasher({ centre_auto: { ...CENTRE, lieux: 'centre' } })
+    const refus = await poster({})
+    expect(refus.res.status).toBe(409)
+    expect(refus.body.error).toMatch(/centre auto/)
+
+    plan.session = { id: 'user-1' }
+    const { res } = await poster({ saisie_par_laveur: true })
+    expect(res.status).toBe(201)
+  })
+
+  it('à domicile : la colonne lieu n’est jamais envoyée (valeur par défaut en base)', async () => {
+    avecWasher({ centre_auto: CENTRE })
+    const { res } = await poster({})
+    expect(res.status).toBe(201)
+    expect(rpcAppels[0].args.p_booking).not.toHaveProperty('lieu')
+  })
+})

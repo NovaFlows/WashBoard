@@ -12,6 +12,7 @@ import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
+import { centreAutoPublic, lieuAccepte } from '@/lib/centreAuto'
 import { effectiveTeamSize } from '@/lib/slots'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
@@ -45,6 +46,9 @@ const BookingSchema = z.object({
   vehicle_count:   z.number().int().min(1).max(99).optional().default(1),
   booked_price:    z.number().min(0).optional(),
   address:         z.string().min(5),
+  // Au centre auto du laveur (lib/centreAuto.ts) : l'adresse envoyée est alors remplacée par
+  // celle du centre, lue en base.
+  lieu:            z.enum(['domicile', 'centre']).optional().default('domicile'),
   scheduled_at:    z.string().datetime(),
   client_name:     z.string().min(2),
   // Vide autorisé, mais seulement pour un rendez-vous saisi par le laveur dans son agenda
@@ -150,7 +154,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
 
   const {
-    vehicle_type, vehicle_count, is_smart_slot, smart_discount,
+    vehicle_type, vehicle_count, is_smart_slot: smartDemande, smart_discount: remiseSmartDemandee,
+    // Vérifié contre les réglages du laveur plus bas, jamais recopié tel quel.
+    lieu,
     // Le prix envoyé par le client est extrait puis délibérément IGNORÉ : il
     // reste accepté pour ne pas casser les clients existants, mais le montant
     // enregistré est recalculé plus bas depuis le catalogue.
@@ -258,6 +264,31 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // formulaire public (BookingForm), même rempli par un laveur connecté sur
   // sa propre page.
   const isOwner = !!authUser && washer?.user_id === authUser.id && bookingData.saisie_par_laveur === true
+
+  // ── Lieu : à domicile ou au centre auto (lib/centreAuto.ts) ───────────────
+  //
+  // Lu à part de la fiche : sans la colonne, tout reste « à domicile », comme avant. Au
+  // centre, l'adresse du rendez-vous est celle du centre en base, jamais celle envoyée ; ni
+  // zone, ni frais de déplacement, ni remise de trajet.
+  const { data: ficheCentre, error: errCentre } = await supabase
+    .from('washers').select('centre_auto').eq('id', bookingData.washer_id).maybeSingle()
+  if (errCentre && !migrationEnAttente(errCentre)) logger.error('bookings.centre_auto.read_failed', { washerId: bookingData.washer_id }, errCentre)
+  const centre = errCentre ? null : centreAutoPublic(ficheCentre?.centre_auto)
+  const auCentre = lieu === 'centre'
+  // Le laveur qui saisit lui-même un rendez-vous peut le mettre à domicile même s'il ne le
+  // propose plus ; le centre, lui, exige une adresse de centre.
+  if (auCentre ? !centre : !lieuAccepte(centre, 'domicile') && !isOwner) {
+    logger.warn('bookings.rejected.lieu', { washerId: bookingData.washer_id, lieu })
+    return Response.json(
+      { error: auCentre
+        ? 'Ce prestataire ne reçoit pas en centre auto. Merci de recharger la page.'
+        : 'Ce prestataire reçoit uniquement dans son centre auto. Merci de recharger la page.' },
+      { status: 409 },
+    )
+  }
+  if (auCentre && centre) bookingData.address = centre.adresse
+  const is_smart_slot = auCentre ? false : smartDemande
+  const smart_discount = auCentre ? 0 : remiseSmartDemandee
   // La page publique exige toujours un email : c'est par lui que le client reçoit sa demande.
   if (!bookingData.client_email && !isOwner) {
     return Response.json({ error: 'Email du client requis' }, { status: 400 })
@@ -431,7 +462,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     }
 
-    const zone = await verdictZone(
+    const zone = auCentre ? { allowed: true as const } : await verdictZone(
       washer?.zone_config as ZoneConfig | null,
       bookingData.address,
       getMapsApiKey(),
@@ -462,7 +493,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
 
   // Calcul des frais de déplacement (mode base ou RDV précédent)
-  const computed_travel_fee = bookingData.address
+  const computed_travel_fee = auCentre ? 0 : bookingData.address
     ? await computeTravelFee(admin, bookingData.washer_id, bookingData.address, bookingData.scheduled_at)
     : (travel_fee ?? 0)
 
@@ -630,6 +661,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       vehicles_detail:  vehicles_detail ?? null,
       selected_addons:  selected_addons ?? [],
       travel_fee:       computed_travel_fee,
+      // Seulement au centre : à domicile, la valeur par défaut de la colonne suffit, et une
+      // colonne pas encore créée ne fait pas échouer les réservations à domicile.
+      ...(auCentre ? { lieu: 'centre' } : {}),
       // Seulement quand une remise s'applique : la fonction SQL insère chaque clé reçue,
       // une colonne absente ferait échouer TOUTES les réservations.
       ...(promotion ? { promotion_id: promotion.id, promo_remise: promotion.remise } : {}),

@@ -206,6 +206,8 @@ export type BookingFormData = {
   travel_fee?: number
   travel_fee_tiers?: { max_minutes: number; fee: number }[]
   address: string
+  /** À domicile (par défaut) ou au centre auto du laveur (lib/centreAuto.ts). */
+  lieu?: 'domicile' | 'centre'
   scheduled_at: string
   client_name: string
   client_email: string
