@@ -6,6 +6,7 @@ import { dayKey, isSameDay } from '@/lib/calendarLayout'
 import { cleMois, colonnePremierJour, compterActifsParJour, plageDeMois, pointsRendezVous, semainesDuMois } from '@/lib/vueMois'
 import { police, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import type { Booking, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
+import { journeeBloquee } from '@/lib/slots'
 
 // Vue « mois » de l'agenda v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboardV2.tsx, qui la rend ; le site reste en v1, décision
@@ -343,7 +344,7 @@ function BlocMois({
                 estAujourdhui={isSameDay(jour, aujourdhui)}
                 estAffiche={isSameDay(jour, jourAffiche)}
                 rendezVous={compte.get(dayKey(jour)) ?? 0}
-                enConge={getUnavail(jour) !== null}
+                enConge={journeeBloquee(getUnavail(jour))}
                 onChoisir={onChoisir}
               />
             )

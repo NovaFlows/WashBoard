@@ -3,6 +3,7 @@
 import { type Dispatch, type SetStateAction, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toDateStr } from '@/lib/dateUtils'
+import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
 import type { Booking, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
 
@@ -83,10 +84,10 @@ export function useRendezVousFiche({
     const newEnd      = new Date(newStart.getTime() + durationMin * 60_000)
     const dayStr      = editDate
 
-    // Capacité de l'équipe ce jour-là (congés partiels)
-    const dayUnavail    = unavailabilities.find(u => u.start_date <= dayStr && dayStr <= u.end_date)
-    const effectiveTeam = Math.max(0, teamSize - (dayUnavail?.team_members_off ?? 0))
-    if (effectiveTeam === 0) { setRescheduleErr("Toute l'équipe est en congés ce jour-là"); return }
+    // Capacité de l'équipe sur ce créneau (congés partiels, plages horaires bloquées)
+    const effectiveTeam = capaciteCreneau(teamSize, unavailabilities, dayStr, editTime, durationMin)
+    if (effectiveTeamSize(teamSize, unavailabilities, dayStr) === 0) { setRescheduleErr("Toute l'équipe est en congés ce jour-là"); return }
+    if (effectiveTeam === 0) { setRescheduleErr('Cette plage horaire est bloquée dans tes disponibilités'); return }
 
     // RDV qui se chevauchent (hors le RDV courant et les annulés)
     const overlapping = bookings.filter(b => {

@@ -67,7 +67,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
   const grandEcran = useGrandEcran()
   const { plages } = h
   const {
-    unavails, addModal, setAddModal, delModal, setDelModal, uSaving,
+    unavails, addModal, setAddModal, delModal, setDelModal, uSaving, uErreur,
     openAddModal, isFullyUnavailable, saveUnavail, deleteUnavail,
   } = useConges({ initialUnavailabilities: unavailabilities, teamSize })
 
@@ -316,6 +316,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
           setForm={setAddModal}
           teamSize={teamSize}
           saving={uSaving}
+          erreur={uErreur}
           onSave={saveUnavail}
           onClose={() => setAddModal(null)}
         />

@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import type { Availability, Unavailability } from '@/types'
+import { HEURES_CHOIX, MOTIFS_BLOCAGE, erreurBlocage, plageBloquee } from '@/lib/horaires'
+import { corpsBlocage } from '@/hooks/useConges'
 
 const DAYS       = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-const PRESETS    = ['Vacances', 'Formation', 'Congé maladie', 'Jour férié']
 
 function toDateInput(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -78,16 +79,21 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
   const [uEnd,            setUEnd]            = useState(toDateInput(new Date()))
   const [uLabel,          setULabel]          = useState('')
   const [uTeamMembersOff, setUTeamMembersOff] = useState(teamSize)
+  const [uJournee,        setUJournee]        = useState(false)
+  const [uDebut,          setUDebut]          = useState('08:00')
+  const [uFin,            setUFin]            = useState('12:00')
   const [uLoading,        setULoading]        = useState(false)
   const [uErr,            setUErr]            = useState<string | null>(null)
 
   async function addUnavail() {
-    if (uStart > uEnd) { setUErr('La date de fin doit être après la date de début'); return }
+    const form = { start: uStart, end: uEnd, label: uLabel, team_members_off: uTeamMembersOff, journee: uJournee, debut: uDebut, fin: uFin }
+    const erreur = erreurBlocage(form)
+    if (erreur) { setUErr(erreur); return }
     setULoading(true); setUErr(null)
     const res = await fetch('/api/unavailabilities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ start_date: uStart, end_date: uEnd, label: uLabel, team_members_off: uTeamMembersOff }),
+      body: JSON.stringify(corpsBlocage(form)),
     })
     const json = await res.json()
     if (!res.ok) { setUErr(json.error ?? 'Erreur'); setULoading(false); return }
@@ -232,22 +238,47 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
 
         {/* Formulaire */}
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 space-y-3 mb-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div>
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Du</p>
-              <input type="date" value={uStart} onChange={e => setUStart(e.target.value)} className={inputClass} />
+          <label className="flex items-center gap-2 cursor-pointer w-fit">
+            <input type="checkbox" role="switch" checked={uJournee} onChange={() => { setUJournee(v => !v); setUEnd(uStart) }} className="h-4 w-4 accent-orange-500" />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Toute la journée</span>
+          </label>
+          {uJournee ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <div>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Du</p>
+                <input type="date" value={uStart} onChange={e => setUStart(e.target.value)} className={inputClass} />
+              </div>
+              <div className="text-slate-400 mt-5">→</div>
+              <div>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Au</p>
+                <input type="date" value={uEnd} onChange={e => setUEnd(e.target.value)} min={uStart} className={inputClass} />
+              </div>
             </div>
-            <div className="text-slate-400 mt-5">→</div>
-            <div>
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Au</p>
-              <input type="date" value={uEnd} onChange={e => setUEnd(e.target.value)} min={uStart} className={inputClass} />
+          ) : (
+            <div className="flex items-end gap-3 flex-wrap">
+              <div>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Le</p>
+                <input type="date" aria-label="Le" value={uStart} onChange={e => { setUStart(e.target.value); setUEnd(e.target.value) }} className={inputClass} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">De</p>
+                <select aria-label="De" value={uDebut} onChange={e => setUDebut(e.target.value)} className={`${inputClass} tabular-nums`}>
+                  {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">À</p>
+                <select aria-label="À" value={uFin} onChange={e => setUFin(e.target.value)} className={`${inputClass} tabular-nums`}>
+                  {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Motif (optionnel)</p>
             <div className="flex gap-1.5 flex-wrap mb-2">
-              {PRESETS.map(p => (
+              {MOTIFS_BLOCAGE.map(p => (
                 <button
                   key={p}
                   type="button"
@@ -303,7 +334,7 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
 
           <button onClick={addUnavail} disabled={uLoading}
             className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
-            {uLoading ? 'Ajout...' : '+ Bloquer cette période'}
+            {uLoading ? 'Ajout...' : uJournee ? '+ Bloquer cette période' : '+ Bloquer cette plage'}
           </button>
         </div>
 
@@ -337,7 +368,9 @@ export default function DisponibilitesManager({ availabilities: initial, unavail
 
 function UnavailRow({ u, onDelete, muted, teamSize }: { u: Unavailability; onDelete: (id: string) => void; muted?: boolean; teamSize?: number }) {
   const single = u.start_date === u.end_date
-  const label  = single ? fmtDate(u.start_date) : `${fmtDate(u.start_date)} → ${fmtDate(u.end_date)}`
+  const jours  = single ? fmtDate(u.start_date) : `${fmtDate(u.start_date)} → ${fmtDate(u.end_date)}`
+  const plage  = plageBloquee(u)
+  const label  = plage ? `${jours} · ${plage}` : jours
   const off    = u.team_members_off ?? 1
   return (
     <div className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border ${muted ? 'border-slate-100 dark:border-slate-800 opacity-50' : 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20'}`}>

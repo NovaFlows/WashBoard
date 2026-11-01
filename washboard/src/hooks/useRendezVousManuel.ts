@@ -5,6 +5,7 @@ import { effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
+import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
 import type { Booking, Unavailability, ServiceFull, Category } from '@/components/dashboard/CalendrierDashboardV1'
 
 export const VEHICLE_TYPES = [
@@ -165,12 +166,15 @@ export function useRendezVousManuel({
     const selectedEnd   = new Date(selectedStart.getTime() + durationMs)
     const dayStr        = manualModal.date
 
-    // Taille d'équipe effective en tenant compte des congés partiels
-    const dayUnavail    = unavailabilities.find(u => u.start_date <= dayStr && dayStr <= u.end_date)
-    const effectiveTeam = Math.max(0, teamSize - (dayUnavail?.team_members_off ?? 0))
+    // Taille d'équipe effective : congés partiels et plages horaires bloquées
+    const effectiveTeam = capaciteCreneau(teamSize, unavailabilities, dayStr, manualModal.time, durationMs / 60_000)
 
-    if (effectiveTeam === 0) {
+    if (effectiveTeamSize(teamSize, unavailabilities, dayStr) === 0) {
       setManualErr("Impossible — toute l'équipe est en congés ce jour-là")
+      return
+    }
+    if (effectiveTeam === 0) {
+      setManualErr('Impossible — cette plage horaire est bloquée dans tes disponibilités')
       return
     }
 

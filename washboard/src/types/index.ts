@@ -174,6 +174,9 @@ export type Unavailability = {
   end_date: string
   label: string | null
   team_members_off: number
+  /** Plage horaire bloquée (heure de Paris) ; null = toute la journée. Absentes avant la migration. */
+  start_time?: string | null
+  end_time?: string | null
   created_at: string
 }
 

@@ -520,6 +520,54 @@ describe('POST /api/bookings — capacité et concurrence (H4)', () => {
     expect(rpcAppels[0].args.p_capacity).toBe(1)
   })
 
+  // CRENEAU = vendredi 11/09/2026 à 10h (Paris), 60 min.
+  it('refuse un créneau dans une plage horaire bloquée, avec un message qui l explique', async () => {
+    plan.tables.unavailabilities = { data: [
+      { start_date: '2026-09-11', end_date: '2026-09-11', team_members_off: 1, start_time: '09:00:00', end_time: '12:00:00' },
+    ], error: null }
+    const { res, body } = await poster()
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/pas disponible sur ce créneau/)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('refuse un rendez-vous qui déborde sur la plage bloquée', async () => {
+    plan.tables.unavailabilities = { data: [
+      { start_date: '2026-09-11', end_date: '2026-09-11', team_members_off: 1, start_time: '10:30:00', end_time: '12:00:00' },
+    ], error: null }
+    const { res } = await poster()
+    expect(res.status).toBe(409)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('accepte le même jour hors de la plage bloquée', async () => {
+    plan.tables.unavailabilities = { data: [
+      { start_date: '2026-09-11', end_date: '2026-09-11', team_members_off: 1, start_time: '14:00:00', end_time: '17:00:00' },
+    ], error: null }
+    const { res } = await poster()
+    expect(res.status).toBe(201)
+    expect(rpcAppels[0].args.p_capacity).toBe(1)
+  })
+
+  it('équipe : une plage bloquée pour un laveur réduit la capacité du créneau', async () => {
+    avecWasher({ team_size: 2 })
+    plan.tables.unavailabilities = { data: [
+      { start_date: '2026-09-11', end_date: '2026-09-11', team_members_off: 1, start_time: '09:00:00', end_time: '12:00:00' },
+    ], error: null }
+    const { res } = await poster()
+    expect(res.status).toBe(201)
+    expect(rpcAppels[0].args.p_capacity).toBe(1)
+  })
+
+  it('le laveur qui saisit lui-même un rendez-vous peut l ajouter sur sa plage bloquée', async () => {
+    plan.utilisateur = null; plan.session = { id: 'user-1' }
+    plan.tables.unavailabilities = { data: [
+      { start_date: '2026-09-11', end_date: '2026-09-11', team_members_off: 1, start_time: '09:00:00', end_time: '12:00:00' },
+    ], error: null }
+    const { res } = await poster({ saisie_par_laveur: true })
+    expect(res.status).toBe(201)
+  })
+
   it('traduit un créneau plein en refus clair, pas en erreur serveur', async () => {
     plan.rpc = { data: null, error: { message: 'SLOT_TAKEN' } }
     const { res, body } = await poster()
