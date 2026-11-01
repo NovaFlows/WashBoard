@@ -5,17 +5,11 @@ import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashbo
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import AdresseV2 from '@/components/dashboard/AdresseV2'
-import { ReglagesCentreAutoSchema, type LieuxProposes, type ReglagesCentreAuto } from '@/lib/centreAuto'
+import { CHOIX_LIEUX, ReglagesCentreAutoSchema, type LieuxProposes, type ReglagesCentreAuto } from '@/lib/centreAuto'
 
 // « Centre auto » de « Mon profil » : le laveur qui a un local choisit ce que sa page de
 // réservation propose (à domicile, en centre auto, ou les deux). Enregistré par
 // PUT /api/washer/centre-auto.
-
-const CHOIX_LIEUX: { valeur: LieuxProposes; libelle: string; detail: string }[] = [
-  { valeur: 'les_deux', libelle: 'Les deux', detail: 'Le client choisit. « À domicile » est coché par défaut.' },
-  { valeur: 'domicile', libelle: 'À domicile seulement', detail: 'Votre page reste comme aujourd’hui.' },
-  { valeur: 'centre', libelle: 'En centre auto seulement', detail: 'Le client vient à votre centre. Pas de frais de déplacement.' },
-]
 
 export default function FeuilleCentreAutoV2({
   reglages, adresseDeBase, onEnregistrer, onClose,

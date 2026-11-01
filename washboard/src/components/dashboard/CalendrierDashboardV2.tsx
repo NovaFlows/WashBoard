@@ -259,7 +259,7 @@ function plageHeuresSemaine(joursActifs: Booking[][]): { debut: number; fin: num
   return { debut, fin: Math.max(fin, debut + 1) }
 }
 
-export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, centreAuto = null, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
   // Passe « bureau » (2026-10-06, Alexandre, 2026-10-03) : au-delà de `SEUIL_GRAND_ECRAN_PX`
   // (1024px, `grandEcran.ts`), même hook que ClientsViewV2.tsx/AccueilV2.tsx — pas un seuil
   // inventé en double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc
@@ -307,7 +307,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     openManualModal, updateManual, submitManualBooking,
     serviceTypes,
   } = useRendezVousManuel({
-    bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId,
+    bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId, centreAuto,
     onCree: b => {
       const d = new Date(b.scheduled_at)
       setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
@@ -827,6 +827,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         <RendezVousManuelV2
           form={manualModal}
           setForm={setManualModal}
+          centreAuto={centreAuto}
           services={services}
           serviceTypes={serviceTypes}
           updateManual={updateManual}
@@ -1143,6 +1144,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         <RendezVousManuelV2
           form={manualModal}
           setForm={setManualModal}
+          centreAuto={centreAuto}
           services={services}
           serviceTypes={serviceTypes}
           updateManual={updateManual}

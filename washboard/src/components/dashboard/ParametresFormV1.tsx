@@ -9,11 +9,13 @@ import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
 import { hasFeature, requiredPlanLabel } from '@/lib/plan'
 import { SectionVerrouillee } from '@/components/dashboard/SectionVerrouillee'
-import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, type LucideIcon } from 'lucide-react'
+import { User, Star, Mail, Lock, Link2, Palette, Hourglass, PauseCircle, AlertTriangle, Warehouse, type LucideIcon } from 'lucide-react'
 import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
 import { FacturationCard } from '@/components/dashboard/FacturationCard'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
+import { CHOIX_LIEUX, ReglagesCentreAutoSchema, type LieuxProposes } from '@/lib/centreAuto'
+import { enregistrerCentreAuto } from '@/lib/profilApi'
 
 // Réglages, présentation v1 — le site (navigateur classique, mobile ou
 // ordinateur) affiche ce contenu SANS EXCEPTION, décision d'Alexandre du
@@ -451,6 +453,8 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
           <SaveButton loading={profileLoading} />
         </form>
       </Card>
+
+      <CarteCentreAuto adresseDeBase={washer.base_address ?? ''} inputClass={inputClass} labelClass={labelClass} />
 
       {/* Facturation — informations portées sur les factures aux clients */}
       <SectionVerrouillee verrouille={!canFacturer} planLabel={requiredPlanLabel('facturation')}>
@@ -1072,6 +1076,103 @@ function ClientTab({ washer }: { washer: Washer }) {
         </Link>
       </Card>
     </div>
+  )
+}
+
+/* ── Centre auto : mêmes réglages que la feuille v2 (FeuilleCentreAutoV2), même route ── */
+function CarteCentreAuto({ adresseDeBase, inputClass, labelClass }: { adresseDeBase: string; inputClass: string; labelClass: string }) {
+  const [charge, setCharge] = useState(false)
+  const [indisponible, setIndisponible] = useState(false)
+  const [actif, setActif] = useState(false)
+  const [adresse, setAdresse] = useState('')
+  const [lieux, setLieux] = useState<LieuxProposes>('les_deux')
+  const [enCours, setEnCours] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    let annule = false
+    fetch('/api/washer/centre-auto')
+      .then(r => r.json())
+      .then((json: { centre_auto?: unknown; enAttente?: boolean }) => {
+        if (annule) return
+        if (json.enAttente) { setIndisponible(true); return }
+        const r = ReglagesCentreAutoSchema.safeParse(json.centre_auto)
+        if (r.success) { setActif(r.data.actif); setAdresse(r.data.adresse); setLieux(r.data.lieux) }
+      })
+      .catch(() => {})
+      .finally(() => { if (!annule) setCharge(true) })
+    return () => { annule = true }
+  }, [])
+
+  async function enregistrer(e: React.FormEvent) {
+    e.preventDefault()
+    if (enCours) return
+    const saisie = ReglagesCentreAutoSchema.safeParse({ actif, adresse, lieux })
+    if (!saisie.success) { setMsg({ ok: false, text: saisie.error.issues[0]?.message ?? 'Réglages invalides.' }); return }
+    setEnCours(true)
+    const res = await enregistrerCentreAuto(saisie.data)
+    setEnCours(false)
+    setMsg(res.ok ? { ok: true, text: 'Centre auto enregistré' } : { ok: false, text: res.message })
+  }
+
+  if (!charge || indisponible) return null
+
+  return (
+    <Card id="centre-auto" title="Centre auto" icon={Warehouse}>
+      <form onSubmit={enregistrer} noValidate className="space-y-4">
+        <div>
+          <label className={labelClass}>Avez-vous un centre auto ?</label>
+          <div className="flex gap-2">
+            {([true, false] as const).map(v => (
+              <button key={String(v)} type="button" aria-pressed={actif === v} onClick={() => { setActif(v); setMsg(null) }}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                  actif === v
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                }`}>
+                {v ? 'Oui' : 'Non'}
+              </button>
+            ))}
+          </div>
+          {!actif && <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Vous vous déplacez chez vos clients, votre page reste comme aujourd’hui.</p>}
+        </div>
+
+        {actif && (
+          <>
+            <div>
+              <label className={labelClass}>Adresse du centre</label>
+              <AddressAutocomplete value={adresse} onChange={v => { setAdresse(v); setMsg(null) }} placeholder="12 rue de la Paix, 75001 Paris" className={inputClass} />
+              {adresseDeBase && adresse !== adresseDeBase && (
+                <button type="button" onClick={() => setAdresse(adresseDeBase)} className="mt-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                  Reprendre mon adresse de départ
+                </button>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>Sur votre page de réservation</label>
+              <div className="flex flex-col gap-2">
+                {CHOIX_LIEUX.map(c => (
+                  <label key={c.valeur}
+                    className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      lieux === c.valeur
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}>
+                    <input type="radio" name="centre_auto_lieux" value={c.valeur} checked={lieux === c.valeur} onChange={() => setLieux(c.valeur)} className="mt-0.5 accent-blue-600" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{c.libelle}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{c.detail}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        <Feedback msg={msg} />
+        <SaveButton loading={enCours} />
+      </form>
+    </Card>
   )
 }
 

@@ -39,6 +39,12 @@ export function lieuParDefaut(centre: CentreAutoPublic | null): Lieu {
   return centre && !centre.domicile ? 'centre' : 'domicile'
 }
 
+export const CHOIX_LIEUX: { valeur: LieuxProposes; libelle: string; detail: string }[] = [
+  { valeur: 'les_deux', libelle: 'Les deux', detail: 'Le client choisit. « À domicile » est coché par défaut.' },
+  { valeur: 'domicile', libelle: 'À domicile seulement', detail: 'Votre page reste comme aujourd’hui.' },
+  { valeur: 'centre', libelle: 'En centre auto seulement', detail: 'Le client vient à votre centre. Pas de frais de déplacement.' },
+]
+
 /** Ligne de la feuille « Mon profil ». */
 export function resumeCentreAuto(brut: unknown): string {
   const r = ReglagesCentreAutoSchema.safeParse(brut)

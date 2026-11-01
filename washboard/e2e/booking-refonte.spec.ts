@@ -163,6 +163,7 @@ test('échec de vérification de zone, reprise et affichage sombre sans déborde
 test('petit écran, types différents, puis affichage ordinateur', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 740 })
   await fixture(page)
+  await page.getByLabel('Type de véhicule').getByRole('button', { name: 'Citadine', exact: true }).click()
   await page.getByRole('radio', { name: /^Intérieur/ }).check()
   await page.getByRole('button', { name: 'Ajouter un véhicule (citadine)', exact: true }).click()
   await page.getByRole('button', { name: 'Mes véhicules sont de types différents' }).click()
