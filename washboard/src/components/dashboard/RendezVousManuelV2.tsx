@@ -233,15 +233,14 @@ export default function RendezVousManuelV2({
           {centreAuto && (
             <div>
               <p className={ETIQUETTE} id="rdvm-lieu-label">Lieu</p>
-              <div className="flex gap-2.5" role="radiogroup" aria-labelledby="rdvm-lieu-label">
+              <div className="flex gap-2.5" role="group" aria-labelledby="rdvm-lieu-label">
                 {(['domicile', 'centre'] as const).map(l => {
                   const actif = form.lieu === l
                   return (
                     <button
                       key={l}
                       type="button"
-                      role="radio"
-                      aria-checked={actif}
+                      aria-pressed={actif}
                       onClick={() => updateManual('lieu', l)}
                       className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} transition-transform active:scale-[.97] ${
                         actif

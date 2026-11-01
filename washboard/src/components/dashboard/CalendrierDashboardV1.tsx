@@ -1032,8 +1032,8 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                   </div>
                   {centreAuto && (
                     <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Lieu</label>
-                      <div className="flex gap-2">
+                      <p id="rdv-manuel-lieu" className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Lieu</p>
+                      <div className="flex gap-2" role="group" aria-labelledby="rdv-manuel-lieu">
                         {(['domicile', 'centre'] as const).map(l => (
                           <button key={l} type="button" onClick={() => updateManual('lieu', l)} aria-pressed={manualModal.lieu === l}
                             className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${

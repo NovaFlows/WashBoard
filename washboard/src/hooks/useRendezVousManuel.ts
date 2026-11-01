@@ -227,8 +227,8 @@ export function useRendezVousManuel({
         // RDV qui finit juste avant le nouveau
         if (bEnd <= newStart && newStart - bEnd < WINDOW_MS) {
           const gapMin = Math.round((newStart - bEnd) / 60_000)
-          if (manualModal.lat && b.lat && b.lng) {
-            const km      = haversineKm(b.lat, b.lng, manualModal.lat, manualModal.lng!)
+          if (lat && lng && b.lat && b.lng) {
+            const km      = haversineKm(b.lat, b.lng, lat, lng)
             const travelMin = estimateTravelMinutes(km)
             if (travelMin > gapMin) {
               warning = `RDV précédent se termine à ${new Date(bEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
@@ -243,8 +243,8 @@ export function useRendezVousManuel({
         // RDV qui commence juste après le nouveau
         if (bStart >= newEnd && bStart - newEnd < WINDOW_MS) {
           const gapMin = Math.round((bStart - newEnd) / 60_000)
-          if (manualModal.lat && b.lat && b.lng) {
-            const km      = haversineKm(manualModal.lat, manualModal.lng!, b.lat, b.lng)
+          if (lat && lng && b.lat && b.lng) {
+            const km      = haversineKm(lat, lng, b.lat, b.lng)
             const travelMin = estimateTravelMinutes(km)
             if (travelMin > gapMin) {
               warning = `RDV suivant débute à ${new Date(bStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`

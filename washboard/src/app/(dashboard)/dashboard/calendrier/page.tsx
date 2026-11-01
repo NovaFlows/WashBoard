@@ -10,6 +10,7 @@ import { infosFacturationManquantes } from '@/lib/facture'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
 import { centreAutoPublic } from '@/lib/centreAuto'
+import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 
 export default async function CalendrierPage() {
@@ -60,7 +61,8 @@ export default async function CalendrierPage() {
   if (bookingsError) logger.error('calendrier.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
 
   // Lu à part, comme sur la page de réservation : colonne absente = à domicile seulement.
-  const { data: ficheCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
+  const { data: ficheCentre, error: errCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
+  if (errCentre && !migrationEnAttente(errCentre)) logger.error('calendrier.centre_auto.read_failed', { washerId: washer.id }, errCentre)
   const centreAuto = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)
 
   // ── Réservations au-delà du quota : visibles, mais muettes ──────────────
