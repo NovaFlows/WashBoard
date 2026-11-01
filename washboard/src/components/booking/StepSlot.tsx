@@ -256,15 +256,16 @@ export default function StepSlot({
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
+  // Le créneau avantageux récompense un trajet évité : jamais proposé au centre.
+  const fenetresAvantageuses = auCentre ? [] : smartWindows
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : []
   // Montrer les premières heures et jusqu'à deux créneaux avantageux sans
   // imposer une longue grille ; toutes les autres heures restent accessibles.
   const shownSlots = [...new Set([...smartSlotsInDay.slice(0, 2), ...slotsForDay])].slice(0, visibleSlots).sort()
   const addressReady = auCentre || (address.trim().length > 5 && address === debouncedAddress)
   const zoneOk = auCentre || zoneAllowed
   const busy = (!auCentre && (fetchingZone || fetchingTravelFee)) || fetchingSmarts || !addressReady
-  // Le créneau avantageux récompense un trajet évité : il n'a pas de sens au centre.
-  const isSmart = !auCentre && !!(selectedDate && selectedTime && isSlotInWindows(selectedTime, selectedDate, smartWindows))
+  const isSmart = !!(selectedDate && selectedTime && isSlotInWindows(selectedTime, selectedDate, fenetresAvantageuses))
   const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
   const fee = auCentre ? 0 : hasTravelFee ? travelFeeEstimate ?? undefined : 0
   const canContinue = !!(selectedDate && selectedTime && slotsForDay.includes(selectedTime) && addressReady && zoneOk && !busy && !requestError && fee !== undefined)
@@ -335,7 +336,7 @@ export default function StepSlot({
           <h3 className="text-sm font-medium mb-3">Heure d’arrivée</h3>
           {fetchingSmarts ? <p role="status" className="text-sm text-zinc-500">Recherche des créneaux disponibles…</p> : requestError ? <p role="alert" className="text-sm text-red-600">{requestError} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p> : <>
             <div className="grid grid-cols-3 gap-2">{shownSlots.map(slot => {
-              const smart = isSlotInWindows(slot, selectedDate, smartWindows)
+              const smart = isSlotInWindows(slot, selectedDate, fenetresAvantageuses)
               const amount = smart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
               const chosen = selectedTime === slot
               return <button key={slot} type="button" aria-pressed={chosen} onClick={() => setSelectedTime(slot)} className={'min-h-[52px] rounded-xl border text-sm font-medium ' + (chosen ? 'bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : amount > 0 ? 'border-emerald-600/60 text-zinc-900 dark:text-zinc-100' : 'border-zinc-300 dark:border-zinc-700')}>

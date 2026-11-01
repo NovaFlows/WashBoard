@@ -15,6 +15,7 @@ import EncartFidelite from '@/components/booking/EncartFidelite'
 import CarteApresReservation from '@/components/booking/CarteApresReservation'
 import CarteFidelite3D, { type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
 import EncartAcompte from '@/components/booking/EncartAcompte'
+import CentreAutoDemo from './CentreAutoDemo'
 import type { PromotionPublique } from '@/lib/promotion'
 
 // Fin de la promotion d'exemple, calculée au chargement du module et non pendant le rendu
@@ -22,8 +23,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string }> }) {
-  const { mode, etape, promo, scenario, couleur, tampons, acompte } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -44,6 +45,8 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     { id: '00000000-0000-4000-8000-000000000013', name: 'Complet', description: 'Intérieur et extérieur en une seule visite', price: 75, duration_minutes: 120, addons: [] },
   ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 } }))
   if (mode === 'promotions') return <PromotionsV2 slug="demo" services={services.map(s => ({ id: s.id, name: s.name }))} liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
+  // ?mode=centre-auto : la feuille « Centre auto » de Mon profil.
+  if (mode === 'centre-auto') return <CentreAutoDemo />
   if (mode === 'acompte') return <AcompteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'fidelite') return <FideliteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} marque="#7c3aed" />
   // La carte en 3D seule (`?scenario=reservation|tampon|consultation&couleur=0F7A55&tampons=7`).
@@ -69,7 +72,9 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     {promotion && <BandeauPromotion promo={promotion} />}
     <BookingHero name="Brillance Mobile" message="Lavage auto à domicile par Karim, à Lyon et alentours. Trois questions et c’est réservé." accent="#2563eb" personalized whatsappHref="https://wa.me/33000000000" />
     <main className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
-      <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], clients_pro: true, facturation_prete: true }}
+      {/* ?centre=1 : centre auto et domicile (avec frais de déplacement) ; ?centre=2 : centre seulement. */}
+      <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: centre ? '12 rue Mercière, 69002 Lyon' : null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: centre ? [{ max_minutes: 30, fee: 10 }] : [], clients_pro: true, facturation_prete: true,
+        centre_auto: centre ? { adresse: '8 avenue Foch, 69006 Lyon', domicile: centre === '1' } : null }}
         services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
         disponibilites={{ bookings: [], unavailabilities: [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
         // ?acompte=1 : un laveur qui demande 30 % d'acompte (case des conditions à cocher).

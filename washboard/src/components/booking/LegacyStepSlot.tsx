@@ -186,8 +186,7 @@ export default function LegacyStepSlot({
     fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(adresseRdv.trim())}&date=${dateStr}`)
       .then(r => r.json())
       .then(data => {
-        // Le créneau avantageux récompense un trajet évité : pas au centre.
-        setSmartWindows(auCentre ? [] : data.smartWindows ?? [])
+        setSmartWindows(data.smartWindows ?? [])
         setBookingConstraints(data.bookingConstraints ?? [])
         setSmartDiscountType(data.discountType ?? 'fixed')
         setSmartDiscountValue(data.discountValue ?? 0)
@@ -286,8 +285,10 @@ export default function LegacyStepSlot({
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
-  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, smartWindows)) : slotsForDay
+  // Le créneau avantageux récompense un trajet évité : jamais proposé au centre.
+  const fenetresAvantageuses = auCentre ? [] : smartWindows
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : []
+  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : slotsForDay
 
   const smartPrice = computeSmartPrice(servicePrice, { type: smartDiscountType, value: smartDiscountValue })
   const smartPriceStr = Number.isInteger(smartPrice) ? String(smartPrice) : smartPrice.toFixed(2)
@@ -296,7 +297,7 @@ export default function LegacyStepSlot({
 
   function handleNext() {
     if (!selectedDate || !selectedTime || (!auCentre && !address)) return
-    const isSmart = !auCentre && isSlotInWindows(selectedTime, selectedDate, smartWindows)
+    const isSmart = isSlotInWindows(selectedTime, selectedDate, fenetresAvantageuses)
     const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
     onNext({
       scheduled_at: debutCreneauIso(selectedTime, selectedDate),
