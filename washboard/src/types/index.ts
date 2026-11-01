@@ -140,6 +140,8 @@ export type Booking = {
   client_email: string
   client_phone: string
   address: string
+  /** 'centre' : au centre auto du laveur (lib/centreAuto.ts) ; absent avant la migration. */
+  lieu?: 'domicile' | 'centre' | null
   lat: number | null
   lng: number | null
   scheduled_at: string
@@ -209,6 +211,8 @@ export type BookingFormData = {
   travel_fee?: number
   travel_fee_tiers?: { max_minutes: number; fee: number }[]
   address: string
+  /** À domicile (par défaut) ou au centre auto du laveur (lib/centreAuto.ts). */
+  lieu?: 'domicile' | 'centre'
   scheduled_at: string
   client_name: string
   client_email: string

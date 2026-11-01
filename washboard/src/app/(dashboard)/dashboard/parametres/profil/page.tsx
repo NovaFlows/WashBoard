@@ -35,6 +35,8 @@ export default async function ProfilPage() {
   if (!user) redirect('/login')
 
   const washer = await washerDuUtilisateur(supabase, user.id, 'profil', COLONNES)
+  // Lu à part de la fiche (lib/centreAuto.ts) : tant que la colonne n'existe pas, l'écran s'ouvre quand même.
+  const { data: ficheCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
@@ -44,6 +46,7 @@ export default async function ProfilPage() {
         // Décidé côté serveur : le plan ne doit pas se deviner dans le navigateur.
         peutEquipe={hasFeature(washer, 'multi_laveurs')}
         betaRefonte={washer.beta_refonte}
+        centreAuto={(ficheCentre as { centre_auto?: unknown } | null)?.centre_auto ?? null}
       />
     </DashboardShell>
   )

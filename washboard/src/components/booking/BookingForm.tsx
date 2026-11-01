@@ -17,6 +17,7 @@ import './booking.css'
 import StepSlot from './StepSlot'
 import ContactDetails from './ContactDetails'
 import StepConfirmation from './StepConfirmation'
+import type { CentreAutoPublic } from '@/lib/centreAuto'
 
 // Trois cartes, options intégrées et une seule action dans la barre fixe.
 // Les étapes restent montées quand elles sont repliées pour préserver la saisie.
@@ -110,6 +111,8 @@ export type WasherPublic = {
    *  pas — plutôt que de le montrer barré, ce qui ferait porter au CLIENT le
    *  refus d'une limite qui n'est pas la sienne. */
   clients_pro?: boolean
+  /** Centre auto (lib/centreAuto.ts) : son adresse, et si le domicile reste proposé. */
+  centre_auto?: CentreAutoPublic | null
   // (les autres champs de `Washer` n'ont rien a faire dans le navigateur)
 }
 
@@ -385,6 +388,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
               <StepSlot
                 key={slotVersion}
                 initialAddress={form.address}
+                centre={washer.centre_auto ?? null}
+                initialLieu={form.lieu}
                 active={section === 2}
                 actionTarget={section === 2 ? actionTarget : null}
                 onDraft={updateForm}
@@ -509,7 +514,9 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 <div className="flex justify-between gap-3"><span>{selectedService?.name} · {v.label ?? v.type}</span><span>{formatPrice(v.unit_price * v.count)}</span></div>
                 {(v.addons ?? []).map(a => <div key={a.id} className="flex justify-between gap-3 text-zinc-500 mt-2"><span>{a.label}</span><span>+{formatPrice(a.price)}</span></div>)}
               </div>)}
-              <div className="flex justify-between gap-3"><span>Déplacement</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : 'À confirmer avec l’adresse'}</span></div>
+              {form.lieu === 'centre'
+                ? <div className="flex justify-between gap-3"><span>En centre auto</span><span>Pas de déplacement</span></div>
+                : <div className="flex justify-between gap-3"><span>Déplacement</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : 'À confirmer avec l’adresse'}</span></div>}
               {!!form.smart_discount && <div className="flex justify-between text-emerald-700"><span>Créneau avantageux</span><span>−{formatPrice(form.smart_discount)}</span></div>}
               {remise > 0 && promotion && <div className="flex justify-between text-emerald-700"><span>Promotion {promotion.nom}</span><span>−{formatPrice(remise)}</span></div>}
               {remiseFidelite > 0 && <div className="flex justify-between text-emerald-700"><span>Récompense fidélité</span><span>−{formatPrice(remiseFidelite)}</span></div>}

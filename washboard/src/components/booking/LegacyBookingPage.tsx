@@ -15,6 +15,7 @@ import type { AcomptePublic } from '@/lib/acompte'
 
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
+import type { CentreAutoPublic } from '@/lib/centreAuto'
 type Props = {
  washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme' | 'silhouettes_vehicules'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
@@ -22,9 +23,10 @@ type Props = {
  promotion?: PromotionPublique | null
  acompte?: AcomptePublic | null
  fideliteProposee?: boolean
+ centreAuto?: CentreAutoPublic | null
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false}: Props) {
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false, centreAuto = null}: Props) {
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -170,6 +172,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
           promotion={promotion}
           acompte={acompte}
           fideliteProposee={fideliteProposee}
+          centreAuto={centreAuto}
         />
 
         {(washer.website_url || washer.google_place_id) && (

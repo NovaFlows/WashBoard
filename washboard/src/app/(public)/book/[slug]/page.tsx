@@ -14,6 +14,7 @@ import { prestationsAffichees } from '@/lib/prestation'
 import { COLONNES_PROMOTION, versPublique, type Promotion } from '@/lib/promotion'
 import { acompteActif, versPublic as versPublicAcompte } from '@/lib/acompte'
 import { fideliteActive } from '@/lib/fidelite'
+import { centreAutoPublic } from '@/lib/centreAuto'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
@@ -160,7 +161,7 @@ export default async function BookingPage({ params }: Props) {
   // cette page, la majorité venait de l'appel externe vers le site du laveur
   // (voir plus bas).
   const maintenantIso = new Date().toISOString()
-  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }] = await Promise.all([
+  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }, { data: ficheCentre }] = await Promise.all([
     admin
       .from('services')
       .select('*')
@@ -210,6 +211,13 @@ export default async function BookingPage({ params }: Props) {
       .select('fidelite')
       .eq('id', washer.id)
       .maybeSingle(),
+    // Centre auto (lib/centreAuto.ts), à part lui aussi : sans la colonne, la page reste
+    // « à domicile seulement », comme avant.
+    admin
+      .from('washers')
+      .select('centre_auto')
+      .eq('id', washer.id)
+      .maybeSingle(),
   ])
   // Seuls les champs d'affichage partent vers le navigateur (pas l'id ni les dates de début).
   const promotion = promoEnCours ? versPublique(promoEnCours as Promotion) : null
@@ -217,6 +225,7 @@ export default async function BookingPage({ params }: Props) {
   const acompte = reglagesAcompte ? versPublicAcompte(reglagesAcompte) : null
   // Carte de fidélité : cherchée à partir des coordonnées du client (BookingForm).
   const fideliteProposee = !!fideliteActive((ficheFidelite as { fidelite?: unknown } | null)?.fidelite)
+  const centreAuto = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)
 
   // ── Identité visuelle : réservée aux offres payantes ────────────────────
   //
@@ -249,7 +258,7 @@ export default async function BookingPage({ params }: Props) {
   if (bookingPageMode(washer.booking_page_mode) === 'custom') {
     return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
-      promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} />
+      promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} centreAuto={centreAuto} />
   }
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
@@ -301,6 +310,7 @@ export default async function BookingPage({ params }: Props) {
             // Réserver en tant qu'entreprise demande le suivi qui va avec —
             // fiche société, facture, relance. L'offre gratuite ne l'a pas.
             clients_pro: hasFeature(washer, 'crm'),
+            centre_auto: centreAuto,
           }}
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à

@@ -30,6 +30,7 @@ import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTa
 import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import { semainesDuMois, compterActifsParJour, pointsRendezVous } from '@/lib/vueMois'
+import { adresseAvecLieu } from '@/lib/centreAuto'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -258,7 +259,7 @@ function plageHeuresSemaine(joursActifs: Booking[][]): { debut: number; fin: num
   return { debut, fin: Math.max(fin, debut + 1) }
 }
 
-export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
+export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, centreAuto = null, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
   // Passe « bureau » (2026-10-06, Alexandre, 2026-10-03) : au-delà de `SEUIL_GRAND_ECRAN_PX`
   // (1024px, `grandEcran.ts`), même hook que ClientsViewV2.tsx/AccueilV2.tsx — pas un seuil
   // inventé en double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc
@@ -306,7 +307,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     openManualModal, updateManual, submitManualBooking,
     serviceTypes,
   } = useRendezVousManuel({
-    bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId,
+    bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId, centreAuto,
     onCree: b => {
       const d = new Date(b.scheduled_at)
       setDayDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
@@ -826,6 +827,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         <RendezVousManuelV2
           form={manualModal}
           setForm={setManualModal}
+          centreAuto={centreAuto}
           services={services}
           serviceTypes={serviceTypes}
           updateManual={updateManual}
@@ -1142,6 +1144,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         <RendezVousManuelV2
           form={manualModal}
           setForm={setManualModal}
+          centreAuto={centreAuto}
           services={services}
           serviceTypes={serviceTypes}
           updateManual={updateManual}
@@ -1249,7 +1252,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
 function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; onOuvrir: () => void; estompe: boolean }) {
   const statut = STATUT[statutAffiche(b)]
-  const ville = villeDepuisAdresse(b.address)
+  const ville = b.lieu === 'centre' ? 'Centre auto' : villeDepuisAdresse(b.address)
   return (
     <div className="flex items-start gap-3">
       <div className="w-10 shrink-0 flex flex-col items-end pt-3 gap-0.5">
@@ -1515,7 +1518,7 @@ function DetailRendezVous({
 
           <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
 
-          <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{b.address}</p>
+          <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{adresseAvecLieu(b.address, b.lieu)}</p>
           {adresse && (
             <button
               type="button"
@@ -1926,7 +1929,7 @@ function FicheRdvBureauV2({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
-        {adresse && <p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{adresse}</p>}
+        {adresse && <p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{adresseAvecLieu(adresse, b.lieu)}</p>}
 
         {(adresse || b.client_phone) && (
           <div className="mt-3 flex gap-2.5">

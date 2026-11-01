@@ -7,6 +7,7 @@
 // appelé depuis la feuille elle-même (voir `FeuilleConnexionV2`).
 
 import { appeler, type ResultatApi } from '@/lib/prestationsApi'
+import type { ReglagesCentreAuto } from '@/lib/centreAuto'
 
 export type ChampsProfil = Partial<{
   name: string
@@ -35,6 +36,12 @@ export type ChampsProfil = Partial<{
  *  nommé reste tel quel en base. */
 export async function enregistrerProfil(champs: ChampsProfil): Promise<ResultatApi<null>> {
   const r = await appeler('enregistrer', 'PATCH', '/api/washer', champs)
+  return r.ok ? { ok: true, data: null } : r
+}
+
+/** Réglages « centre auto » (`PUT /api/washer/centre-auto`, colonne à part de la fiche). */
+export async function enregistrerCentreAuto(reglages: ReglagesCentreAuto): Promise<ResultatApi<null>> {
+  const r = await appeler('enregistrer', 'PUT', '/api/washer/centre-auto', reglages)
   return r.ok ? { ok: true, data: null } : r
 }
 

@@ -27,6 +27,8 @@ type Props = {
   washer: Washer
   email: string
   peutEquipe: boolean
+  /** `washers.centre_auto` brut (lib/centreAuto.ts). */
+  centreAuto?: unknown
   /** `washer.beta_refonte` — garde-fou temporaire du cas « site, grand écran ». */
   betaRefonte?: boolean | null
 }

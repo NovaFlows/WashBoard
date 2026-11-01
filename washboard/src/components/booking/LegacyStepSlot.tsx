@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
@@ -34,7 +35,9 @@ type Props = {
    *  de demain) ne doit pas changer sous les pieds d'un laveur qui n'a rien
    *  demandé. */
   reservationJourMeme?: boolean
-  onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
+  /** Centre auto du laveur (lib/centreAuto.ts) ; absent = à domicile seulement. */
+  centre?: CentreAutoPublic | null
+  onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   onBack: () => void
   accent?: string
 }
@@ -67,9 +70,12 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function LegacyStepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
+  const [lieu,              setLieu]              = useState<Lieu>(() => lieuParDefaut(centre))
+  // Au centre, l'adresse est celle du laveur : ni zone à vérifier, ni déplacement à facturer.
+  const auCentre = lieu === 'centre' && !!centre
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
   const [address,           setAddress]           = useState('')
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
@@ -116,7 +122,7 @@ export default function LegacyStepSlot({
 
   // Vérification de zone dès que l'adresse change (sans attendre la date)
   useEffect(() => {
-    if (debouncedAddress.trim().length <= 5) {
+    if (auCentre || debouncedAddress.trim().length <= 5) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- état de zone réinitialisé quand l'adresse change
       setZoneAllowed(true)
       setZoneMessage(null)
@@ -134,7 +140,7 @@ export default function LegacyStepSlot({
         }
       })
       .catch(() => { setZoneAllowed(true); setZoneMessage(null) })
-  }, [debouncedAddress, washerId])
+  }, [debouncedAddress, washerId, auCentre])
 
   // Calcul des frais de déplacement estimés
   // Mode 'base'     → dès que l'adresse est saisie
@@ -144,7 +150,7 @@ export default function LegacyStepSlot({
     const needsSlot    = travelFeeMode === 'previous'
     const slotReady    = !!(selectedDate && selectedTime)
 
-    if (!hasTravelFee || !addressReady || (needsSlot && !slotReady)) {
+    if (auCentre || !hasTravelFee || !addressReady || (needsSlot && !slotReady)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- estimation des frais liée à l'adresse et au créneau
       setTravelFeeEstimate(null)
       return
@@ -161,10 +167,13 @@ export default function LegacyStepSlot({
       .then((data: { fee: number }) => setTravelFeeEstimate(data.fee))
       .catch(() => setTravelFeeEstimate(null))
       .finally(() => setFetchingTravelFee(false))
-  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode])
+  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, auCentre])
+
+  // Adresse du rendez-vous : celle du centre, ou celle tapée par le client.
+  const adresseRdv = auCentre && centre ? centre.adresse : debouncedAddress
 
   useEffect(() => {
-    if (!selectedDate || debouncedAddress.trim().length <= 5) {
+    if (!selectedDate || adresseRdv.trim().length <= 5) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- fenêtres de trajet liées à l'adresse et à la date
       setSmartWindows([])
       setBookingConstraints([])
@@ -174,7 +183,7 @@ export default function LegacyStepSlot({
     const pad = (n: number) => String(n).padStart(2, '0')
     const dateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`
     setFetchingSmarts(true)
-    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${dateStr}`)
+    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(adresseRdv.trim())}&date=${dateStr}`)
       .then(r => r.json())
       .then(data => {
         setSmartWindows(data.smartWindows ?? [])
@@ -184,7 +193,7 @@ export default function LegacyStepSlot({
       })
       .catch(() => { setSmartWindows([]); setBookingConstraints([]) })
       .finally(() => setFetchingSmarts(false))
-  }, [selectedDate, debouncedAddress, washerId])
+  }, [selectedDate, adresseRdv, washerId, auCentre])
 
   const availableDaysOfWeek = availabilities.map(a => a.day_of_week)
 
@@ -275,25 +284,34 @@ export default function LegacyStepSlot({
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
-  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, smartWindows)) : slotsForDay
+  // Le créneau avantageux récompense un trajet évité : jamais proposé au centre.
+  const fenetresAvantageuses = auCentre ? [] : smartWindows
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : []
+  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : slotsForDay
 
   const smartPrice = computeSmartPrice(servicePrice, { type: smartDiscountType, value: smartDiscountValue })
   const smartPriceStr = Number.isInteger(smartPrice) ? String(smartPrice) : smartPrice.toFixed(2)
 
-  const canContinue = selectedDate && selectedTime && address.trim().length > 5 && zoneAllowed
+  const canContinue = selectedDate && selectedTime && (auCentre || (address.trim().length > 5 && zoneAllowed))
 
   function handleNext() {
-    if (!selectedDate || !selectedTime || !address) return
-    const isSmart = isSlotInWindows(selectedTime, selectedDate, smartWindows)
+    if (!selectedDate || !selectedTime || (!auCentre && !address)) return
+    const isSmart = isSlotInWindows(selectedTime, selectedDate, fenetresAvantageuses)
     const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
     onNext({
       scheduled_at: debutCreneauIso(selectedTime, selectedDate),
-      address,
+      address: auCentre && centre ? centre.adresse : address,
+      lieu: auCentre ? 'centre' : 'domicile',
       is_smart_slot: isSmart,
       smart_discount: discount,
-      travel_fee: travelFeeEstimate ?? undefined,
+      travel_fee: auCentre ? 0 : travelFeeEstimate ?? undefined,
     })
+  }
+
+  function choisirLieu(l: Lieu) {
+    if (l === lieu) return
+    setLieu(l)
+    setSelectedTime(null)
   }
 
   return (
@@ -301,6 +319,32 @@ export default function LegacyStepSlot({
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez un créneau</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Où et quand souhaitez-vous être lavé ?</p>
 
+      {centre && centre.domicile && (
+        <div className="mb-5">
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Lieu du lavage">
+            {(['domicile', 'centre'] as const).map(l => (
+              <button
+                key={l} type="button" role="radio" aria-checked={lieu === l} onClick={() => choisirLieu(l)}
+                className={'min-h-11 rounded-xl border text-sm font-semibold transition-colors ' + (lieu === l ? 'text-white border-transparent' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300')}
+                style={lieu === l ? { backgroundColor: accent } : undefined}
+              >
+                {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+              </button>
+            ))}
+          </div>
+          {!auCentre && hasTravelFee && (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>
+          )}
+        </div>
+      )}
+
+      {auCentre && centre ? (
+        <div className="mb-5 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3">
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Rendez-vous au centre auto</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{centre.adresse}</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">Pas de frais de déplacement</p>
+        </div>
+      ) : (
       <div className="mb-5">
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Adresse du véhicule</label>
         <AddressAutocomplete
@@ -328,8 +372,9 @@ export default function LegacyStepSlot({
           </div>
         )}
       </div>
+      )}
 
-      {zoneMessage && (
+      {!auCentre && zoneMessage && (
         <div className="mb-4 flex items-start gap-2 px-3 py-2.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
           <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>

@@ -6,6 +6,7 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
+import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 import type { Booking, Unavailability, ServiceFull, Category } from '@/components/dashboard/CalendrierDashboardV1'
 
 export const VEHICLE_TYPES = [
@@ -31,6 +32,8 @@ export type ManualBooking = {
   client_email: string
   client_phone: string
   address: string
+  /** 'centre' : au centre auto du laveur, à son adresse (lib/centreAuto.ts). */
+  lieu: Lieu
   lat: number | null
   lng: number | null
   is_professional: boolean
@@ -39,6 +42,17 @@ export type ManualBooking = {
   billing_address: string
   notes: string
   status: 'pending' | 'confirmed'
+}
+
+/** Lieu et adresse envoyés pour un rendez-vous saisi par le laveur. Au centre, l'adresse est
+ *  celle du centre (le serveur l'impose de toute façon), sans coordonnées. Sans centre
+ *  proposé, toujours à domicile. */
+export function lieuDuRendezVous(
+  m: Pick<ManualBooking, 'lieu' | 'address' | 'lat' | 'lng'>,
+  centreAuto: CentreAutoPublic | null,
+): { lieu: Lieu; address: string; lat: number | null; lng: number | null } {
+  if (m.lieu === 'centre' && centreAuto) return { lieu: 'centre', address: centreAuto.adresse, lat: null, lng: null }
+  return { lieu: 'domicile', address: m.address, lat: m.lat, lng: m.lng }
 }
 
 /**
@@ -65,6 +79,7 @@ export function useRendezVousManuel({
   services,
   categories,
   washerId,
+  centreAuto = null,
   onCree,
 }: {
   bookings: Booking[]
@@ -74,6 +89,8 @@ export function useRendezVousManuel({
   services: ServiceFull[]
   categories: Category[]
   washerId: string
+  /** Centre auto proposé sur la page de réservation : `null` = à domicile seulement. */
+  centreAuto?: CentreAutoPublic | null
   /** Appelé une fois, après l'ajout du rendez-vous à la liste (jamais en cas
    *  d'erreur ni d'avertissement de faisabilité en attente). Facultatif : v1
    *  ne le passe pas, son comportement reste donc strictement celui d'avant.
@@ -105,7 +122,7 @@ export function useRendezVousManuel({
       booked_price: services[0]?.price ?? 0,
       date: toDateStr(now),
       time: `${String(now.getHours()).padStart(2, '0')}:00`,
-      client_name: '', client_email: '', client_phone: '', address: '', lat: null, lng: null,
+      client_name: '', client_email: '', client_phone: '', address: '', lieu: lieuParDefaut(centreAuto), lat: null, lng: null,
       is_professional: false, company_name: '', siret: '', billing_address: '',
       notes: '', status: 'confirmed',
     }
@@ -153,7 +170,9 @@ export function useRendezVousManuel({
     // Email facultatif : un rendez-vous pris par téléphone n'en a pas toujours. Sans lui, le
     // client ne reçoit simplement aucun email (confirmation, facture, avis, relance par email).
     if (!manualModal.client_phone.trim()) { setManualErr('Téléphone du client requis'); return }
-    if (!manualModal.address.trim()) { setManualErr('Adresse requise'); return }
+    const { lieu, address, lat, lng } = lieuDuRendezVous(manualModal, centreAuto)
+    const auCentre = lieu === 'centre'
+    if (!auCentre && !address.trim()) { setManualErr('Adresse requise'); return }
     if (!manualModal.service_id) { setManualErr('Sélectionnez une prestation'); return }
     if (manualModal.is_professional && manualModal.siret && !/^\d{14}$/.test(manualModal.siret)) {
       setManualErr('Le SIRET doit contenir exactement 14 chiffres'); return
@@ -208,8 +227,8 @@ export function useRendezVousManuel({
         // RDV qui finit juste avant le nouveau
         if (bEnd <= newStart && newStart - bEnd < WINDOW_MS) {
           const gapMin = Math.round((newStart - bEnd) / 60_000)
-          if (manualModal.lat && b.lat && b.lng) {
-            const km      = haversineKm(b.lat, b.lng, manualModal.lat, manualModal.lng!)
+          if (lat && lng && b.lat && b.lng) {
+            const km      = haversineKm(b.lat, b.lng, lat, lng)
             const travelMin = estimateTravelMinutes(km)
             if (travelMin > gapMin) {
               warning = `RDV précédent se termine à ${new Date(bEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
@@ -224,8 +243,8 @@ export function useRendezVousManuel({
         // RDV qui commence juste après le nouveau
         if (bStart >= newEnd && bStart - newEnd < WINDOW_MS) {
           const gapMin = Math.round((bStart - newEnd) / 60_000)
-          if (manualModal.lat && b.lat && b.lng) {
-            const km      = haversineKm(manualModal.lat, manualModal.lng!, b.lat, b.lng)
+          if (lat && lng && b.lat && b.lng) {
+            const km      = haversineKm(lat, lng, b.lat, b.lng)
             const travelMin = estimateTravelMinutes(km)
             if (travelMin > gapMin) {
               warning = `RDV suivant débute à ${new Date(bStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
@@ -269,13 +288,14 @@ export function useRendezVousManuel({
           label:      typeName(manualModal.service_id, manualModal.vehicle_type),
         }],
         booked_price:    manualModal.booked_price,
-        address:         manualModal.address,
+        address,
+        ...(auCentre ? { lieu: 'centre' } : {}),
         scheduled_at,
         client_name:     manualModal.client_name,
         client_email:    manualModal.client_email.trim(),
         client_phone:    manualModal.client_phone,
-        lat:             manualModal.lat ?? undefined,
-        lng:             manualModal.lng ?? undefined,
+        lat:             lat ?? undefined,
+        lng:             lng ?? undefined,
         is_professional: manualModal.is_professional,
         company_name:    manualModal.company_name || undefined,
         siret:           manualModal.siret || undefined,
@@ -294,9 +314,10 @@ export function useRendezVousManuel({
       client_name:  manualModal.client_name,
       client_email: manualModal.client_email,
       client_phone: manualModal.client_phone,
-      address:      manualModal.address,
-      lat:          manualModal.lat,
-      lng:          manualModal.lng,
+      address,
+      lieu,
+      lat,
+      lng,
       scheduled_at,
       status:       manualModal.status,
       notes:        manualModal.notes || null,

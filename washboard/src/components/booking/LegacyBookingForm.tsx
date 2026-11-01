@@ -15,6 +15,7 @@ import { conditionsAcompte, montantAcompte, moyensPaiement, type AcomptePublic }
 import type { AcompteDu } from './EncartAcompte'
 import type { FideliteDue } from './CarteApresReservation'
 import EncartFidelite, { useApercuFidelite } from './EncartFidelite'
+import type { CentreAutoPublic } from '@/lib/centreAuto'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
 // (voir migration 003 booking_funnel_events).
@@ -56,6 +57,8 @@ type Props = {
   acompte?: AcomptePublic | null
   /** Le laveur propose une carte de fidélité (lib/fidelite.ts, EncartFidelite). */
   fideliteProposee?: boolean
+  /** Centre auto du laveur (lib/centreAuto.ts) ; absent = à domicile seulement. */
+  centreAuto?: CentreAutoPublic | null
 }
 
 /** Rendez-vous à venir et congés, chargés à la demande.
@@ -101,7 +104,7 @@ export type WasherPublic = {
 export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
-export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null, acompte = null, fideliteProposee = false }: Props) {
+export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null, acompte = null, fideliteProposee = false, centreAuto = null }: Props) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -425,6 +428,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
             travelFeeMode={washer.travel_fee_mode ?? 'base'}
             reservationJourMeme={washer.reservation_jour_meme === true}
+            centre={centreAuto}
             onNext={(data) => { updateForm(data); setStep(4) }}
             onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}

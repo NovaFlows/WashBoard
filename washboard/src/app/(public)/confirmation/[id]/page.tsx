@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import './recu.css'
+import { adresseAvecLieu } from '@/lib/centreAuto'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -125,7 +126,7 @@ export default async function ConfirmationPage({ params }: Props) {
                   {booking.vehicle_type && <span> — {booking.vehicle_type}</span>}
                 </p>
                 <p className="petit">{formattedDate} à {time}</p>
-                <p className="petit">{booking.address}</p>
+                <p className="petit">{adresseAvecLieu(booking.address, booking.lieu)}</p>
                 {booking.is_smart_slot && discount > 0 && (
                   <p className="promo">★ Créneau optimisé (remise de {discount}€)</p>
                 )}

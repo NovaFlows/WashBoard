@@ -196,6 +196,7 @@ export async function PATCH(
         isSmartSlot:   booking.is_smart_slot,
         smartDiscount: Number(booking.smart_discount ?? 0),
         address:       booking.address,
+        lieu:          booking.lieu ?? null,
         scheduledAt:   booking.scheduled_at,
         bookingId:     booking.id,
         jeton:         genererJetonReservation(booking.id),

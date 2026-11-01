@@ -9,6 +9,8 @@ import { logger } from '@/lib/logger'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
+import { centreAutoPublic } from '@/lib/centreAuto'
+import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 
 export default async function CalendrierPage() {
@@ -57,6 +59,11 @@ export default async function CalendrierPage() {
   // Sans trace, un calendrier vide ou incomplet ne se distinguerait pas d'un
   // calendrier sans rendez-vous.
   if (bookingsError) logger.error('calendrier.bookings.fetch_failed', { washerId: washer.id }, bookingsError)
+
+  // Lu à part, comme sur la page de réservation : colonne absente = à domicile seulement.
+  const { data: ficheCentre, error: errCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
+  if (errCentre && !migrationEnAttente(errCentre)) logger.error('calendrier.centre_auto.read_failed', { washerId: washer.id }, errCentre)
+  const centreAuto = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)
 
   // ── Réservations au-delà du quota : visibles, mais muettes ──────────────
   //
@@ -116,6 +123,7 @@ export default async function CalendrierPage() {
           services={services ?? []}
           categories={categories ?? []}
           washerId={washer.id}
+          centreAuto={centreAuto}
           facturationPrete={infosFacturationManquantes(washer).length === 0}
           // Un booléen, jamais le jeton : tout ce qui passe ici est sérialisé dans la page.
           googleAgendaConnecte={!!washer.google_refresh_token}

@@ -53,7 +53,7 @@ export function resumeCreneau(form: FormeResumee): string {
   const date = new Date(form.scheduled_at)
   const jour = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: FUSEAU })
   const heure = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: FUSEAU })
-  const adresse = form.address ? `, ${form.address}` : ''
+  const adresse = form.lieu === 'centre' ? ', en centre auto' : form.address ? `, ${form.address}` : ''
   return `${jour} à ${heure}${adresse}`
 }
 

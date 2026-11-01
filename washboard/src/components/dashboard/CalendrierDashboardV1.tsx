@@ -18,6 +18,7 @@ import { useRendezVousManuel, VEHICLE_TYPES } from '@/hooks/useRendezVousManuel'
 import { useConges, rendezVousTouches, avisRendezVousTouches } from '@/hooks/useConges'
 import { estJourneeEntiere, minutesDepuisMinuit } from '@/lib/slots'
 import { toDateStr } from '@/lib/dateUtils'
+import type { CentreAutoPublic } from '@/lib/centreAuto'
 import { HEURES_CHOIX, MOTIFS_BLOCAGE, erreurBlocage, plageBloquee } from '@/lib/horaires'
 
 // Calendrier, présentation v1 — c'est ce que voit tout visiteur du SITE,
@@ -53,6 +54,8 @@ export type Booking = {
   client_email: string
   client_phone: string
   address: string
+  /** 'centre' : au centre auto du laveur (lib/centreAuto.ts). */
+  lieu?: 'domicile' | 'centre' | null
   lat: number | null
   lng: number | null
   scheduled_at: string
@@ -109,9 +112,9 @@ export type Unavailability = { id: string; start_date: string; end_date: string;
 // catégorie) et ManualBooking (forme du formulaire d'ajout manuel) vivent
 // maintenant dans `@/hooks/useRendezVousManuel` — sous-lot 3, voir plus haut.
 
-export type CalendrierProps = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string; facturationPrete: boolean; googleAgendaConnecte: boolean; joursMasques?: string[]; masquees?: { id: string; scheduled_at: string }[]; offreDeblocage?: string }
+export type CalendrierProps = { bookings: Booking[]; unavailabilities: Unavailability[]; teamSize: number; services: ServiceFull[]; categories: Category[]; washerId: string; centreAuto?: CentreAutoPublic | null; facturationPrete: boolean; googleAgendaConnecte: boolean; joursMasques?: string[]; masquees?: { id: string; scheduled_at: string }[]; offreDeblocage?: string }
 
-export default function CalendrierDashboardV1({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId, facturationPrete, masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
+export default function CalendrierDashboardV1({ bookings: initial, unavailabilities: initialUnavail, teamSize, services, categories, washerId, centreAuto = null, facturationPrete, masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
   // serviceTypes/typeName viennent maintenant de useRendezVousManuel (plus bas).
   const today = new Date()
   const [view,        setView]        = useState<'month' | 'week' | 'day'>('month')
@@ -194,7 +197,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
     setOverrideFeasibility,
     openManualModal, updateManual, submitManualBooking,
     serviceTypes,
-  } = useRendezVousManuel({ bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId })
+  } = useRendezVousManuel({ bookings, setBookings, unavailabilities: unavails, teamSize, services, categories, washerId, centreAuto })
 
   const grid     = buildGrid(current.getFullYear(), current.getMonth())
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
@@ -1027,16 +1030,37 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Adresse d&apos;intervention *</label>
-                    <AddressAutocomplete
-                      value={manualModal.address}
-                      onChange={v => updateManual('address', v)}
-                      onSelectWithCoords={(label, lat, lng) => setManualModal(m => m ? { ...m, address: label, lat, lng } : m)}
-                      placeholder="12 rue de la Paix, 75001 Paris"
-                      className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                  {centreAuto && (
+                    <div>
+                      <p id="rdv-manuel-lieu" className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Lieu</p>
+                      <div className="flex gap-2" role="group" aria-labelledby="rdv-manuel-lieu">
+                        {(['domicile', 'centre'] as const).map(l => (
+                          <button key={l} type="button" onClick={() => updateManual('lieu', l)} aria-pressed={manualModal.lieu === l}
+                            className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                              manualModal.lieu === l
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
+                                : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                            }`}>
+                            {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {centreAuto && manualModal.lieu === 'centre' ? (
+                    <p className="text-sm text-slate-600 dark:text-slate-300">Au centre auto · {centreAuto.adresse}</p>
+                  ) : (
+                    <div>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Adresse d&apos;intervention *</label>
+                      <AddressAutocomplete
+                        value={manualModal.address}
+                        onChange={v => updateManual('address', v)}
+                        onSelectWithCoords={(label, lat, lng) => setManualModal(m => m ? { ...m, address: label, lat, lng } : m)}
+                        placeholder="12 rue de la Paix, 75001 Paris"
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

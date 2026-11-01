@@ -1,4 +1,5 @@
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { adresseAvecLieu } from '@/lib/centreAuto'
 
 /** Factures des laveurs à leurs clients.
  *
@@ -195,6 +196,8 @@ export type ReservationFacturable = {
   client_name: string
   client_email: string
   address: string
+  /** 'centre' : `address` est celle du centre auto du laveur, pas celle du client. */
+  lieu?: string | null
   scheduled_at: string
   is_professional: boolean | null
   company_name: string | null
@@ -316,9 +319,11 @@ export function construireFacture(r: ReservationFacturable, v: VendeurFacturable
       professionnel: pro,
       entreprise: pro ? r.company_name?.trim() || null : null,
       siren: /^\d{9}$/.test(sirenClient) ? sirenClient : null,
-      adresseFacturation: (pro && r.billing_address?.trim()) || r.address,
+      // Au centre auto, l'adresse du rendez-vous est celle du laveur : on ne connaît pas celle
+      // du client, mieux vaut aucune adresse qu'une fausse.
+      adresseFacturation: (pro && r.billing_address?.trim()) || (r.lieu === 'centre' ? '' : r.address),
     },
-    prestation: { date: r.scheduled_at, lieu: r.address, nature: 'Prestation de services' },
+    prestation: { date: r.scheduled_at, lieu: adresseAvecLieu(r.address, r.lieu), nature: 'Prestation de services' },
     lignes,
     remiseTtc,
     totaux: totauxFacture(brut - remiseTtc, regime, taux),

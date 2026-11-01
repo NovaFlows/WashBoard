@@ -19,6 +19,7 @@ import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '@/lib/plan'
 import type { JourSemaine } from '@/lib/semaineAccueil'
+import { adresseAvecLieu } from '@/lib/centreAuto'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -168,6 +169,7 @@ export type RdvAccueil = {
   client_name: string
   client_phone: string | null
   address: string | null
+  lieu?: 'domicile' | 'centre' | null
   lat: number | null
   lng: number | null
   scheduled_at: string
@@ -814,7 +816,7 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
           <div className="h-px bg-[color:var(--v2-filet)]" />
           <p className={`flex items-center gap-[9px] px-[18px] py-3 text-[14px] ${corpsFort}`}>
             <MapPin size={16} strokeWidth={1.75} className="shrink-0 text-[color:var(--v2-color-gris)]" aria-hidden />
-            <span className="min-w-0 flex-1">{adresse}</span>
+            <span className="min-w-0 flex-1">{adresseAvecLieu(adresse, b.lieu)}</span>
           </p>
         </>
       )}

@@ -3,6 +3,7 @@ import type { VehicleItem } from '@/types'
 import { escapeHtml } from '@/lib/escapeHtml'
 import { formatPhone } from '@/lib/phone'
 import { FUSEAU } from '@/lib/dateUtils'
+import { adresseAvecLieu, libelleAdresse } from '@/lib/centreAuto'
 import { trustedOrigin } from '@/lib/appOrigin'
 import { assistanceThreadUrl } from '@/lib/supportMapping'
 import { PLAN_PRICES, BOOKING_QUOTA, PLAN_COULEURS, formatEuros } from '@/lib/plan'
@@ -80,6 +81,8 @@ type SendRequestParams = {
   isSmartSlot?: boolean
   smartDiscount?: number
   address: string
+  /** 'centre' : le client vient au centre auto du laveur (lib/centreAuto.ts). */
+  lieu?: string | null
   scheduledAt: string
   bookingId: string
   vehicleType?: string
@@ -114,7 +117,7 @@ export async function sendBookingRequest(params: SendRequestParams) {
     ...(params.selectedAddons?.length ? [{ libelle: 'Options', valeur: escapeHtml(params.selectedAddons.map(a => a.label).join(' · ')) }] : []),
     { libelle: 'Date', valeur: formattedDate },
     { libelle: 'Heure', valeur: time },
-    { libelle: 'Adresse', valeur: escapeHtml(params.address) },
+    { libelle: libelleAdresse(params.lieu), valeur: escapeHtml(params.address) },
     ...(params.notes ? [{ libelle: 'Notes', gauche: true, valeur: `<span style="font-size:13px;font-weight:400;font-style:italic;color:${COULEUR.gris};">${escapeHtml(params.notes)}</span>` }] : []),
     { libelle: 'Montant estimé', fort: true, valeur: `${priceStr}€${params.isSmartSlot && discount > 0 ? ` ${etoileCreneau(base, 'créneau optimisé')}` : ''} <span style="font-weight:400;color:${COULEUR.gris};">(sur place)</span>` },
   ]
@@ -163,6 +166,7 @@ type SendConfirmationParams = {
   isSmartSlot?: boolean
   smartDiscount?: number
   address: string
+  lieu?: string | null
   scheduledAt: string
   bookingId: string
   /** Jeton d'accès au PDF (voir bookingToken). Requis et non optionnel : un appel qui
@@ -227,7 +231,7 @@ ${colonne('Date d&apos;émission', `<p style="margin:0;font-size:14px;font-weigh
     <td style="padding:16px 12px 16px 0;vertical-align:top;border-bottom:1px solid ${COULEUR.filet};">
       <p style="margin:0 0 4px;font-size:15px;font-weight:700;line-height:1.4;color:${COULEUR.encre};">${escapeHtml(params.serviceName)}${vehicleLabel}</p>
       <p style="margin:0 0 2px;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${formattedDate} à ${time}</p>
-      <p style="margin:0;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${escapeHtml(params.address)}</p>
+      <p style="margin:0;font-size:13px;line-height:1.5;color:${COULEUR.gris};">${escapeHtml(adresseAvecLieu(params.address, params.lieu))}</p>
       ${optimise ? `<p style="margin:8px 0 0;font-size:12.5px;font-weight:600;color:${COULEUR.encre};">${etoileCreneau(appUrl, '')} Créneau optimisé (-${discount}€)</p>` : ''}
     </td>
     <td style="padding:16px 0;vertical-align:top;text-align:right;white-space:nowrap;border-bottom:1px solid ${COULEUR.filet};">
@@ -427,6 +431,7 @@ type SendWasherNotificationParams = {
   notes?: string
   selectedAddons?: Array<{ label: string; price: number }>
   address: string
+  lieu?: string | null
   scheduledAt: string
   bookedPrice: number
   bookingId: string
@@ -496,7 +501,7 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   // Ordre de lecture du laveur entre deux prestations : quand, où, qui, quoi.
   const lignes: LigneDetail[] = [
     { libelle: 'Date', valeur: `${formattedDate} à ${time}` },
-    { libelle: 'Adresse', valeur: escapeHtml(params.address) },
+    { libelle: libelleAdresse(params.lieu), valeur: escapeHtml(params.address) },
     { libelle: 'Client', valeur: escapeHtml(params.clientName) },
     { libelle: 'Téléphone', valeur: `<a href="tel:${escapeHtml(params.clientPhone)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientPhone)}</a>` },
     { libelle: 'Email', valeur: `<a href="mailto:${escapeHtml(params.clientEmail)}" style="color:${COULEUR.accent};">${escapeHtml(params.clientEmail)}</a>` },

@@ -4,6 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { ServiceFull } from '@/components/dashboard/CalendrierDashboardV1'
 import { VEHICLE_TYPES, type ManualBooking } from '@/hooks/useRendezVousManuel'
+import type { CentreAutoPublic } from '@/lib/centreAuto'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 
 // Ajout d'un rendez-vous à la main, présentation v2 — réservée à la PWA
@@ -39,6 +40,7 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
 export default function RendezVousManuelV2({
   form,
   setForm,
+  centreAuto = null,
   services,
   serviceTypes,
   updateManual,
@@ -52,6 +54,8 @@ export default function RendezVousManuelV2({
 }: {
   form: ManualBooking
   setForm: Dispatch<SetStateAction<ManualBooking | null>>
+  /** Centre auto du laveur : `null` = à domicile seulement, pas de choix du lieu. */
+  centreAuto?: CentreAutoPublic | null
   services: ServiceFull[]
   serviceTypes: (serviceId: string) => { id: string; name: string }[]
   updateManual: <K extends keyof ManualBooking>(key: K, value: ManualBooking[K]) => void
@@ -226,16 +230,46 @@ export default function RendezVousManuelV2({
               className={CHAMP}
             />
           </Champ>
-          <div role="group" aria-labelledby="rdvm-adresse-label">
-            <p id="rdvm-adresse-label" className={ETIQUETTE}>Adresse d’intervention *</p>
-            <AddressAutocomplete
-              value={form.address}
-              onChange={v => updateManual('address', v)}
-              onSelectWithCoords={(label, lat, lng) => setForm(m => (m ? { ...m, address: label, lat, lng } : m))}
-              placeholder="12 rue de la Paix, 75001 Paris"
-              className={CHAMP}
-            />
-          </div>
+          {centreAuto && (
+            <div>
+              <p className={ETIQUETTE} id="rdvm-lieu-label">Lieu</p>
+              <div className="flex gap-2.5" role="group" aria-labelledby="rdvm-lieu-label">
+                {(['domicile', 'centre'] as const).map(l => {
+                  const actif = form.lieu === l
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      aria-pressed={actif}
+                      onClick={() => updateManual('lieu', l)}
+                      className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} transition-transform active:scale-[.97] ${
+                        actif
+                          ? 'border-[color:var(--v2-color-encre)] text-[color:var(--v2-color-encre)]'
+                          : 'border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]'
+                      }`}
+                      style={PRESSION}
+                    >
+                      {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {centreAuto && form.lieu === 'centre' ? (
+            <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>Au centre auto · {centreAuto.adresse}</p>
+          ) : (
+            <div role="group" aria-labelledby="rdvm-adresse-label">
+              <p id="rdvm-adresse-label" className={ETIQUETTE}>Adresse d’intervention *</p>
+              <AddressAutocomplete
+                value={form.address}
+                onChange={v => updateManual('address', v)}
+                onSelectWithCoords={(label, lat, lng) => setForm(m => (m ? { ...m, address: label, lat, lng } : m))}
+                placeholder="12 rue de la Paix, 75001 Paris"
+                className={CHAMP}
+              />
+            </div>
+          )}
         </section>
 
         <section className="border-t border-[color:var(--v2-filet)] pt-3">

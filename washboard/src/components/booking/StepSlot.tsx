@@ -8,6 +8,7 @@ import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiv
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
+import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -35,11 +36,14 @@ type Props = {
    *  de demain) ne doit pas changer sous les pieds d'un laveur qui n'a rien
    *  demandé. */
   reservationJourMeme?: boolean
-  onNext: (data: { scheduled_at: string; address: string; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
+  /** Centre auto du laveur (lib/centreAuto.ts) ; absent = à domicile seulement. */
+  centre?: CentreAutoPublic | null
+  initialLieu?: Lieu
+  onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   initialAddress?: string
   active: boolean
   actionTarget: HTMLElement | null
-  onDraft: (data: { address: string; scheduled_at?: string; travel_fee?: number; is_smart_slot: boolean; smart_discount: number }) => void
+  onDraft: (data: { address: string; lieu: Lieu; scheduled_at?: string; travel_fee?: number; is_smart_slot: boolean; smart_discount: number }) => void
   accent?: string
 }
 
@@ -70,11 +74,14 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
-  const [address,           setAddress]           = useState(initialAddress)
+  const [lieu,              setLieu]              = useState<Lieu>(() => (centre && initialLieu ? initialLieu : lieuParDefaut(centre)))
+  // Au centre, l'adresse est celle du laveur : ni zone à vérifier, ni déplacement à facturer.
+  const auCentre = lieu === 'centre' && !!centre
+  const [address,           setAddress]           = useState(centre && initialAddress === centre.adresse ? '' : initialAddress)
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
   const [zoneAllowed,       setZoneAllowed]       = useState(true)
   const [zoneMessage,       setZoneMessage]       = useState<string | null>(null)
@@ -120,7 +127,7 @@ export default function StepSlot({
 
   // Ignorer les anciennes réponses : adresse/date modifiées pendant une requête.
   useEffect(() => {
-    if (!active || debouncedAddress.trim().length <= 5) return
+    if (!active || auCentre || debouncedAddress.trim().length <= 5) return
     let stale = false
     // eslint-disable-next-line react-hooks/set-state-in-effect -- début de la vérification de zone (requête réseau)
     setFetchingZone(true)
@@ -132,10 +139,10 @@ export default function StepSlot({
       .catch(() => { if (!stale) { setZoneAllowed(false); setZoneMessage('Impossible de vérifier cette adresse. Réessayez.') } })
       .finally(() => { if (!stale) setFetchingZone(false) })
     return () => { stale = true }
-  }, [debouncedAddress, washerId, active, retry])
+  }, [debouncedAddress, washerId, active, auCentre, retry])
 
   useEffect(() => {
-    if (!active || !hasTravelFee || debouncedAddress.trim().length <= 5 || (travelFeeMode === 'previous' && !(selectedDate && selectedTime))) {
+    if (!active || auCentre || !hasTravelFee || debouncedAddress.trim().length <= 5 || (travelFeeMode === 'previous' && !(selectedDate && selectedTime))) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- estimation des frais liée à l'adresse et au créneau
       setTravelFeeEstimate(null)
       setFetchingTravelFee(false)
@@ -154,15 +161,18 @@ export default function StepSlot({
       .catch(() => { if (!stale) setTravelFeeEstimate(null) })
       .finally(() => { if (!stale) setFetchingTravelFee(false) })
     return () => { stale = true }
-  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, active, retry])
+  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, active, auCentre, retry])
+
+  // Adresse du rendez-vous : celle du centre, ou celle tapée par le client (après la pause de saisie).
+  const adresseRdv = auCentre && centre ? centre.adresse : debouncedAddress
 
   useEffect(() => {
-    if (!active || !selectedDate || debouncedAddress.trim().length <= 5) return
+    if (!active || !selectedDate || adresseRdv.trim().length <= 5) return
     let stale = false
     // eslint-disable-next-line react-hooks/set-state-in-effect -- début du chargement des fenêtres de trajet (requête réseau)
     setFetchingSmarts(true)
     setRequestError(null)
-    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}&date=${toDateStr(selectedDate)}`)
+    fetch(`/api/slots/smart?washer_id=${washerId}&address=${encodeURIComponent(adresseRdv.trim())}&date=${toDateStr(selectedDate)}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(data => { if (!stale) {
         setSmartWindows(data.smartWindows ?? [])
@@ -173,7 +183,7 @@ export default function StepSlot({
       .catch(() => { if (!stale) { setSmartWindows([]); setBookingConstraints([]); setRequestError('Impossible de vérifier les horaires. Réessayez.') } })
       .finally(() => { if (!stale) setFetchingSmarts(false) })
     return () => { stale = true }
-  }, [selectedDate, debouncedAddress, washerId, active, retry])
+  }, [selectedDate, adresseRdv, washerId, active, retry])
 
   const availableDaysOfWeek = availabilities.map(a => a.day_of_week)
 
@@ -245,42 +255,67 @@ export default function StepSlot({
     }
   }, [slotsForDay]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, smartWindows)) : []
+  // Le créneau avantageux récompense un trajet évité : jamais proposé au centre.
+  const fenetresAvantageuses = auCentre ? [] : smartWindows
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : []
   // Montrer les premières heures et jusqu'à deux créneaux avantageux sans
   // imposer une longue grille ; toutes les autres heures restent accessibles.
   const shownSlots = [...new Set([...smartSlotsInDay.slice(0, 2), ...slotsForDay])].slice(0, visibleSlots).sort()
-  const addressReady = address.trim().length > 5 && address === debouncedAddress
-  const busy = fetchingZone || fetchingTravelFee || fetchingSmarts || !addressReady
-  const isSmart = !!(selectedDate && selectedTime && isSlotInWindows(selectedTime, selectedDate, smartWindows))
+  const addressReady = auCentre || (address.trim().length > 5 && address === debouncedAddress)
+  const zoneOk = auCentre || zoneAllowed
+  const busy = (!auCentre && (fetchingZone || fetchingTravelFee)) || fetchingSmarts || !addressReady
+  const isSmart = !!(selectedDate && selectedTime && isSlotInWindows(selectedTime, selectedDate, fenetresAvantageuses))
   const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
-  const fee = hasTravelFee ? travelFeeEstimate ?? undefined : 0
-  const canContinue = !!(selectedDate && selectedTime && slotsForDay.includes(selectedTime) && addressReady && zoneAllowed && !busy && !requestError && fee !== undefined)
+  const fee = auCentre ? 0 : hasTravelFee ? travelFeeEstimate ?? undefined : 0
+  const canContinue = !!(selectedDate && selectedTime && slotsForDay.includes(selectedTime) && addressReady && zoneOk && !busy && !requestError && fee !== undefined)
   const scheduledAt = selectedDate && selectedTime ? (() => {
     return debutCreneauIso(selectedTime, selectedDate)
   })() : undefined
+  const adresseEnvoyee = auCentre && centre ? centre.adresse : address
   useEffect(() => {
-    if (active) onDraft({ address, scheduled_at: canContinue ? scheduledAt : undefined, travel_fee: addressReady ? fee : undefined,
+    if (active) onDraft({ address: adresseEnvoyee, lieu: auCentre ? 'centre' : 'domicile', scheduled_at: canContinue ? scheduledAt : undefined, travel_fee: addressReady ? fee : undefined,
       is_smart_slot: addressReady && isSmart, smart_discount: addressReady ? discount : 0 })
-  }, [active, address, addressReady, scheduledAt, canContinue, fee, isSmart, discount, onDraft])
+  }, [active, adresseEnvoyee, auCentre, addressReady, scheduledAt, canContinue, fee, isSmart, discount, onDraft])
+
+  function choisirLieu(l: Lieu) {
+    if (l === lieu) return
+    setLieu(l)
+    setSelectedTime(null)
+  }
 
   const days: Date[] = []
   for (let d = new Date(premierJour); d <= dernierJour; d.setDate(d.getDate() + 1)) {
     if (estReservable(d)) days.push(new Date(d))
   }
   const hourLabel = (time: string) => time.replace(':00', ' h').replace(':', ' h ')
-  const actionLabel = !addressReady ? 'Indiquez votre adresse' : busy ? 'Vérification en cours…' : !zoneAllowed ? 'Vérifiez votre adresse' : !selectedDate ? 'Choisissez un jour' : !selectedTime ? 'Choisissez une heure' : canContinue ? 'Continuer' : 'Vérifiez le créneau'
+  const actionLabel = !addressReady ? 'Indiquez votre adresse' : busy ? 'Vérification en cours…' : !zoneOk ? 'Vérifiez votre adresse' : !selectedDate ? 'Choisissez un jour' : !selectedTime ? 'Choisissez une heure' : canContinue ? 'Continuer' : 'Vérifiez le créneau'
   return <div>
     <h2 className="wb-booking-title">Où et quand ?</h2>
+    {centre && centre.domicile && <div className="mb-4">
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Lieu du lavage">
+        {(['domicile', 'centre'] as const).map(l => <button key={l} type="button" role="radio" aria-checked={lieu === l} onClick={() => choisirLieu(l)}
+          className={'min-h-12 rounded-xl border text-sm font-semibold ' + (lieu === l ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
+          {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+        </button>)}
+      </div>
+      {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>}
+    </div>}
+    {auCentre && centre ? <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-3">
+      <p className="text-sm font-medium">Rendez-vous au centre auto</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">{centre.adresse}</p>
+      <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2">● Pas de frais de déplacement</p>
+    </div> : <>
     <label htmlFor="booking-address" className="block text-sm font-medium mb-2">Adresse du lavage</label>
     <AddressAutocomplete id="booking-address" value={address} onChange={value => { setAddress(value); setSelectedTime(null) }}
       placeholder="Numéro, rue, ville" allowGeolocation
       className="w-full min-h-12 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-3 bg-white dark:bg-zinc-900 outline-none focus:border-zinc-500" />
     {!addressReady && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-6 mb-3">Les créneaux et le prix exact s’affichent dès que l’adresse est indiquée : les frais de déplacement en dépendent.</p>}
+    </>}
     {addressReady && <>
-      {fetchingZone ? <p role="status" className="text-sm text-zinc-500 mt-3">Vérification de votre adresse…</p>
+      {!auCentre && (fetchingZone ? <p role="status" className="text-sm text-zinc-500 mt-3">Vérification de votre adresse…</p>
         : zoneMessage ? <p role="alert" className="text-sm text-red-600 mt-3">{zoneMessage} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p>
-        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">● Dans le secteur du laveur{fee === 0 ? ' : déplacement compris' : fee !== undefined ? ' · déplacement ' + fee + ' €' : ''}</p>}
-      {zoneAllowed && <>
+        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">● Dans le secteur du laveur{fee === 0 ? ' : déplacement compris' : fee !== undefined ? ' · déplacement ' + fee + ' €' : ''}</p>)}
+      {zoneOk && <>
         <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">Jour</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? 'Fermer le calendrier' : 'Calendrier'}</button></div>
         <div className="flex gap-2 overflow-x-auto pb-2 snap-x" aria-label="Jours disponibles">
           {days.map(day => <button key={toDateStr(day)} type="button" aria-label={day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={!!selectedDate && memeJour(day, selectedDate)}
@@ -300,7 +335,7 @@ export default function StepSlot({
           <h3 className="text-sm font-medium mb-3">Heure d’arrivée</h3>
           {fetchingSmarts ? <p role="status" className="text-sm text-zinc-500">Recherche des créneaux disponibles…</p> : requestError ? <p role="alert" className="text-sm text-red-600">{requestError} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p> : <>
             <div className="grid grid-cols-3 gap-2">{shownSlots.map(slot => {
-              const smart = isSlotInWindows(slot, selectedDate, smartWindows)
+              const smart = isSlotInWindows(slot, selectedDate, fenetresAvantageuses)
               const amount = smart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
               const chosen = selectedTime === slot
               return <button key={slot} type="button" aria-pressed={chosen} onClick={() => setSelectedTime(slot)} className={'min-h-[52px] rounded-xl border text-sm font-medium ' + (chosen ? 'bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : amount > 0 ? 'border-emerald-600/60 text-zinc-900 dark:text-zinc-100' : 'border-zinc-300 dark:border-zinc-700')}>
@@ -315,6 +350,6 @@ export default function StepSlot({
         </div>}
       </>}
     </>}
-    <BookingAction target={actionTarget} accent={accent} disabled={!canContinue} onClick={() => { if (canContinue && scheduledAt) onNext({ scheduled_at: scheduledAt, address, is_smart_slot: isSmart, smart_discount: discount, travel_fee: fee }) }}>{actionLabel}</BookingAction>
+    <BookingAction target={actionTarget} accent={accent} disabled={!canContinue} onClick={() => { if (canContinue && scheduledAt) onNext({ scheduled_at: scheduledAt, address: adresseEnvoyee, lieu: auCentre ? 'centre' : 'domicile', is_smart_slot: isSmart, smart_discount: discount, travel_fee: fee }) }}>{actionLabel}</BookingAction>
   </div>
 }

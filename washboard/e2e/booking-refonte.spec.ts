@@ -1,13 +1,14 @@
 import { test, expect, type Page } from '@playwright/test'
 
 // Contrat UI sur données fictives. Aucun appel à une base ni création de réservation réelle.
-async function fixture(page: Page) {
+async function fixture(page: Page, chemin = '/dev/booking-preview') {
   await page.clock.setFixedTime(new Date('2026-10-03T10:00:00+02:00'))
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url())
     let body: unknown = {}
     if (url.pathname === '/api/zone/check') body = { allowed: true }
     if (url.pathname === '/api/places/autocomplete') body = { suggestions: [] }
+    if (url.pathname === '/api/travel-fee') body = { fee: 10 }
     if (url.pathname === '/api/slots/smart') {
       const date = url.searchParams.get('date')!
       body = { smartWindows: [{ start: `${date}T14:00:00+02:00`, end: `${date}T14:30:00+02:00` }], bookingConstraints: [], discountType: 'fixed', discountValue: 10 }
@@ -15,11 +16,13 @@ async function fixture(page: Page) {
     if (url.pathname === '/api/bookings') body = { data: { id: '00000000-0000-4000-8000-000000000099', booked_price: 75 } }
     await route.fulfill({ json: body })
   })
-  await page.goto('/dev/booking-preview')
+  await page.goto(chemin)
   await expect(page.getByRole('heading', { name: 'Que faut-il laver ?' })).toBeVisible()
 }
 
 async function chooseService(page: Page) {
+  // Le véhicule d'abord : les prestations restent désactivées tant qu'il n'est pas choisi.
+  await page.getByLabel('Type de véhicule').getByRole('button', { name: 'Citadine', exact: true }).click()
   await page.getByRole('radio', { name: /^Intérieur/ }).check()
   await page.getByRole('checkbox', { name: /Shampoing/ }).check()
   await expect(page.locator('.wb-booking-footer')).toContainText('75€')
@@ -74,6 +77,57 @@ test('parcours mobile, prix en direct, retour et confirmation', async ({ page },
   expect(errors).toEqual([])
 })
 
+test('centre auto : domicile par défaut, centre sans adresse ni frais ni remise de trajet', async ({ page }, testInfo) => {
+  const errors: string[] = []
+  page.on('pageerror', e => errors.push(e.message))
+  await fixture(page, '/dev/booking-preview?centre=1')
+  await chooseService(page)
+  await expect(page.getByRole('radio', { name: 'À domicile' })).toBeChecked()
+  await expect(page.getByText(/des frais de déplacement peuvent s’ajouter selon la distance/)).toBeVisible()
+  await expect(page.getByLabel('Adresse du lavage')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('centre-01-domicile.png'), scale: 'css' })
+  await page.getByRole('radio', { name: 'En centre auto' }).click()
+  await expect(page.getByLabel('Adresse du lavage')).not.toBeVisible()
+  await expect(page.getByText('8 avenue Foch, 69006 Lyon')).toBeVisible()
+  await page.getByRole('button', { name: /dimanche 4 octobre/i }).click()
+  // Pas de remise de créneau avantageux au centre : aucun horaire n'affiche « −10 ».
+  await expect(page.getByRole('button', { name: /−10/ })).toHaveCount(0)
+  await page.getByRole('button', { name: /^10 h$/ }).click()
+  await expect(page.locator('.wb-booking-footer')).toContainText('75€')
+  await page.screenshot({ path: testInfo.outputPath('centre-02-centre.png'), scale: 'css' })
+  await page.getByTestId('booking-continue').click()
+  await expect(page.getByRole('region', { name: 'Où et quand' })).toContainText('en centre auto')
+  await page.getByLabel('Nom et prénom').fill('Client Démo')
+  await page.getByLabel('Téléphone', { exact: true }).fill('0612345678')
+  await page.getByLabel(/Email pour/).fill('client@example.test')
+  await page.getByLabel('Modèle du véhicule').fill('Peugeot 208 grise')
+  const request = page.waitForRequest(r => new URL(r.url()).pathname === '/api/bookings' && r.method() === 'POST')
+  await page.getByTestId('booking-continue').click()
+  const payload = (await request).postDataJSON()
+  expect(payload).toMatchObject({ lieu: 'centre', address: '8 avenue Foch, 69006 Lyon', travel_fee: 0, is_smart_slot: false, smart_discount: 0 })
+  await expect(page.getByRole('heading', { name: 'Réservation envoyée !' })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('centre-03-confirmation.png'), fullPage: true })
+  expect(errors).toEqual([])
+})
+
+test('centre auto seulement : aucun choix, adresse du centre affichée d’office', async ({ page }, testInfo) => {
+  await fixture(page, '/dev/booking-preview?centre=2')
+  await chooseService(page)
+  await expect(page.getByRole('radio', { name: 'À domicile' })).toHaveCount(0)
+  await expect(page.getByText('Rendez-vous au centre auto')).toBeVisible()
+  await expect(page.getByLabel('Adresse du lavage')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('centre-04-seul.png'), scale: 'css' })
+})
+
+test('feuille Centre auto de Mon profil', async ({ page }, testInfo) => {
+  await page.goto('/dev/booking-preview?mode=centre-auto')
+  await expect(page.getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: /^Les deux/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.screenshot({ path: testInfo.outputPath('centre-05-reglage.png'), scale: 'css' })
+  await page.getByRole('button', { name: 'Non' }).click()
+  await expect(page.getByText('Adresse du centre')).toHaveCount(0)
+})
+
 test('options par véhicule et changement de prestation invalident le créneau', async ({ page }) => {
   await fixture(page)
   await chooseService(page)
@@ -109,6 +163,7 @@ test('échec de vérification de zone, reprise et affichage sombre sans déborde
 test('petit écran, types différents, puis affichage ordinateur', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 740 })
   await fixture(page)
+  await page.getByLabel('Type de véhicule').getByRole('button', { name: 'Citadine', exact: true }).click()
   await page.getByRole('radio', { name: /^Intérieur/ }).check()
   await page.getByRole('button', { name: 'Ajouter un véhicule (citadine)', exact: true }).click()
   await page.getByRole('button', { name: 'Mes véhicules sont de types différents' }).click()
