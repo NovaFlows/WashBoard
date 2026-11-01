@@ -7,13 +7,15 @@ import { CalendarX2, ChevronLeft, ChevronRight, Mail, Navigation, Phone, Plus, U
 import MoisV2 from '@/components/dashboard/MoisV2'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
 import { toDateStr } from '@/lib/dateUtils'
+import { estJourneeEntiere, journeeBloquee, minutesDepuisMinuit } from '@/lib/slots'
+import { plageBloquee } from '@/lib/horaires'
 import { dayKey, formatHeure, isSameDay } from '@/lib/calendarLayout'
 import { villeDepuisAdresse } from '@/lib/adresse'
 import { doitDemanderConfirmation, montantPrevu, statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel } from '@/hooks/useRendezVousManuel'
-import { useConges } from '@/hooks/useConges'
+import { useConges, rendezVousTouches, avisRendezVousTouches } from '@/hooks/useConges'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import LigneAcompteV2 from '@/components/dashboard/LigneAcompteV2'
@@ -289,7 +291,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     unavails,
     addModal, setAddModal,
     delModal, setDelModal,
-    uSaving,
+    uSaving, uErreur,
     getUnavail, openAddModal, isFullyUnavailable, saveUnavail, deleteUnavail,
   } = useConges({ initialUnavailabilities, teamSize })
 
@@ -447,7 +449,9 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   }, [actifs, trajets])
   const totalPrix = useMemo(() => actifs.reduce((s, b) => s + montant(b), 0), [actifs])
 
-  const congeDuJour = getUnavail(dayDate)
+  const blocagesDuJour = unavails
+    .filter(u => u.start_date <= toDateStr(dayDate) && toDateStr(dayDate) <= u.end_date)
+    .sort((a, b) => Number(!estJourneeEntiere(a)) - Number(!estJourneeEntiere(b)) || (a.start_time ?? '').localeCompare(b.start_time ?? ''))
   const auJourdhui = toDateStr(today)
   const congesAVenir = useMemo(
     () => unavails.filter(u => u.end_date >= auJourdhui).sort((a, b) => a.start_date.localeCompare(b.start_date)),
@@ -584,14 +588,15 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               decalageBandeau={decalageBandeau}
             />
 
-            {congeDuJour && (
+            {blocagesDuJour.map(u => (
               <BandeauConge
-                conge={congeDuJour}
+                key={u.id}
+                conge={u}
                 teamSize={teamSize}
-                complet={isFullyUnavailable(congeDuJour)}
-                onSupprimer={() => setDelModal(congeDuJour)}
+                complet={isFullyUnavailable(u)}
+                onSupprimer={() => setDelModal(u)}
               />
-            )}
+            ))}
 
             {/* Patron liste/fiche à côté, déjà livré par ClientsViewV2.tsx — repris tel quel
                 plutôt que d'en inventer un autre (demande explicite de cette passe) : une
@@ -753,6 +758,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
             byDate={byDate}
             getUnavail={getUnavail}
             isFullyUnavailable={isFullyUnavailable}
+            unavails={unavails}
             dayDate={dayDate}
             today={today}
             trajetEntre={trajetEntre}
@@ -840,6 +846,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           setForm={setAddModal}
           teamSize={teamSize}
           saving={uSaving}
+          erreur={uErreur}
+          avis={avisRendezVousTouches(rendezVousTouches(addModal, bookings), addModal.journee)}
           onSave={saveUnavail}
           onClose={() => setAddModal(null)}
         />
@@ -929,7 +937,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           {weekDays.map((d, i) => {
             const actif = d.getFullYear() === dayDate.getFullYear() && d.getMonth() === dayDate.getMonth() && d.getDate() === dayDate.getDate()
             const estJourReel = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
-            const enConge = getUnavail(d) !== null
+            const enConge = journeeBloquee(getUnavail(d))
             return (
               <button
                 key={dayKey(d)}
@@ -976,14 +984,15 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         </button>
       )}
 
-      {congeDuJour && (
+      {blocagesDuJour.map(u => (
         <BandeauConge
-          conge={congeDuJour}
+          key={u.id}
+          conge={u}
           teamSize={teamSize}
-          complet={isFullyUnavailable(congeDuJour)}
-          onSupprimer={() => setDelModal(congeDuJour)}
+          complet={isFullyUnavailable(u)}
+          onSupprimer={() => setDelModal(u)}
         />
-      )}
+      ))}
 
       {jour.length === 0 && masqueesDuJour.length === 0 ? (
         <p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] text-center py-10`}>
@@ -1153,6 +1162,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           setForm={setAddModal}
           teamSize={teamSize}
           saving={uSaving}
+          erreur={uErreur}
+          avis={avisRendezVousTouches(rendezVousTouches(addModal, bookings), addModal.journee)}
           onSave={saveUnavail}
           onClose={() => setAddModal(null)}
         />
@@ -1696,7 +1707,7 @@ function BandeauSemaineBureauV2({
       {weekDays.map((d, i) => {
         const actif = isSameDay(d, dayDate)
         const estJourReel = isSameDay(d, today)
-        const enConge = getUnavail(d) !== null
+        const enConge = journeeBloquee(getUnavail(d))
         return (
           <button
             key={dayKey(d)}
@@ -2070,13 +2081,15 @@ function FicheRdvBureauV2({
  *  multiplié par sept les appels à `/api/trajet` (Google Distance Matrix, facturé) à chaque
  *  ouverture de cet onglet, pour un gain que l'onglet Jour donne déjà sur le jour qui compte. */
 function GrilleSemaineV2({
-  weekDays, byDate, getUnavail, isFullyUnavailable, dayDate, today, trajetEntre,
+  weekDays, byDate, getUnavail, isFullyUnavailable, unavails, dayDate, today, trajetEntre,
   onOuvrirJour, onOuvrirRdv,
 }: {
   weekDays: Date[]
   byDate: Map<string, Booking[]>
   getUnavail: (d: Date) => Unavailability | null
   isFullyUnavailable: (u: Unavailability) => boolean
+  /** Pour dessiner les plages horaires bloquées (8h–12h « Autre activité »). */
+  unavails: Unavailability[]
   dayDate: Date
   today: Date
   trajetEntre: (a: Booking, b: Booking) => Trajet
@@ -2145,6 +2158,23 @@ function GrilleSemaineV2({
                 {heures.map(h => (
                   <div key={h} aria-hidden className="absolute inset-x-0 border-t border-[color:var(--v2-filet)]" style={{ top: `${pct(h)}%` }} />
                 ))}
+                {!ferme && unavails
+                  .filter(u => !estJourneeEntiere(u) && u.start_date <= toDateStr(d) && toDateStr(d) <= u.end_date)
+                  .map(u => {
+                    const top = Math.max(0, pct(minutesDepuisMinuit(u.start_time!) / 60))
+                    const bas = Math.min(100, pct(minutesDepuisMinuit(u.end_time!) / 60))
+                    if (bas <= top) return null
+                    return (
+                      <span
+                        key={u.id}
+                        className={`absolute inset-x-0 overflow-hidden px-1.5 py-1 text-[10px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                        style={{ top: `${top}%`, height: `${bas - top}%`, background: 'color-mix(in srgb, var(--v2-color-ambre) 10%, transparent)' }}
+                      >
+                        <span className="block truncate">{u.label ?? 'Indisponible'}</span>
+                        <span className="block truncate tabular-nums">{plageBloquee(u)}</span>
+                      </span>
+                    )
+                  })}
                 {ferme ? (
                   <span className={`absolute inset-0 flex items-center justify-center text-[11px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
                     Fermé

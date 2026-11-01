@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
@@ -19,7 +19,7 @@ function embedDuration(services: EmbedService): number {
   return dm ?? 60
 }
 
-type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
+type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number | null; start_time?: string | null; end_time?: string | null }
 
 type Props = {
   availabilities: Availability[]
@@ -222,7 +222,6 @@ export default function StepSlot({
   const moisMax = new Date(dernierJour.getFullYear(), dernierJour.getMonth(), 1)
   const moisPrecedentPossible = moisAffiche > moisMin
   const moisSuivantPossible   = moisAffiche < moisMax
-  const effectiveTeamSize = selectedDate ? getEffectiveTeamSize(selectedDate) : teamSize
 
   const overlapBookings = existingBookings.map(b => ({
     scheduled_at: b.scheduled_at,
@@ -239,7 +238,7 @@ export default function StepSlot({
         // Sans effet un jour futur (jamais « passé ») ; retire les horaires du
         // matin quand le jour même est réservable et qu'il est déjà l'après-midi.
         .filter(slot => !slotEstPasse(slot, selectedDate))
-        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
+        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < capaciteCreneau(teamSize, unavailabilities, toDateStr(selectedDate), slot, serviceDuration))
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []
 

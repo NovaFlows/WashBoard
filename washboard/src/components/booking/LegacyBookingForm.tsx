@@ -28,7 +28,7 @@ const FUNNEL_STEP_NAMES: Record<number, FunnelStep> = {
 }
 
 type ExistingBooking = { scheduled_at: string; vehicle_count: number | null; selected_addons?: { duration_minutes?: number }[] | null; services: { duration_minutes: number } | null }
-type Unavailability  = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
+type Unavailability  = { id: string; start_date: string; end_date: string; team_members_off?: number | null; start_time?: string | null; end_time?: string | null }
 
 type Props = {
   // Volontairement PAS le `Washer` complet.

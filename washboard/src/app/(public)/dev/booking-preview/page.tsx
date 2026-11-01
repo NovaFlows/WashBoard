@@ -76,7 +76,8 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
       <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: centre ? '12 rue Mercière, 69002 Lyon' : null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: centre ? [{ max_minutes: 30, fee: 10 }] : [], clients_pro: true, facturation_prete: true,
         centre_auto: centre ? { adresse: '8 avenue Foch, 69006 Lyon', domicile: centre === '1' } : null }}
         services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
-        disponibilites={{ bookings: [], unavailabilities: [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
+        // ?scenario=plage-bloquee : « Autre activité » le dimanche 4 octobre 2026 de 9h à 12h.
+        disponibilites={{ bookings: [], unavailabilities: scenario === 'plage-bloquee' ? [{ id: 'u-1', start_date: '2026-10-04', end_date: '2026-10-04', team_members_off: 1, start_time: '09:00:00', end_time: '12:00:00' }] : [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
         // ?acompte=1 : un laveur qui demande 30 % d'acompte (case des conditions à cocher).
         acompte={acompte === '1' ? { type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/demo' }, delai_heures: 48, remboursable: true, remboursement_heures: 48, virementPropose: true, weroPropose: false } : null} />
     </main>

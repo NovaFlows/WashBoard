@@ -13,7 +13,8 @@ import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { centreAutoPublic, lieuAccepte } from '@/lib/centreAuto'
-import { effectiveTeamSize } from '@/lib/slots'
+import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
+import { lireBlocages } from '@/lib/blocagesServeur'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
@@ -366,10 +367,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Capacité du jour : nombre de laveurs, moins les absences. Nécessaire même
   // pour une réservation saisie par le laveur, car c'est elle que la fonction
   // de réservation atomique compare au nombre de rendez-vous qui se chevauchent.
-  const { data: unavs, error: unavsErr } = await admin
-    .from('unavailabilities')
-    .select('start_date, end_date, team_members_off')
-    .eq('washer_id', bookingData.washer_id)
+  const { data: unavs, error: unavsErr } = await lireBlocages(admin, bookingData.washer_id)
 
   // Une lecture en echec donnerait `unavs = null`, donc « aucun conge », donc
   // une capacite pleine : on accepterait des RDV pendant les absences du laveur.
@@ -385,7 +383,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
 
   const dateStr  = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
-  const capacite = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
+  const heureStr = new Date(bookingData.scheduled_at).toLocaleTimeString('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const capaciteJour = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
+  // Plage horaire bloquée par le laveur (8h-12h « Autre activité »…) : comptée sur toute la durée du rendez-vous.
+  const capacite = capaciteCreneau(washer?.team_size ?? 1, unavs ?? [], dateStr, heureStr, dureeMinutes)
 
   // ── Le moment et le lieu demandés sont-ils réservables ? ─────────────────
   //
@@ -427,11 +428,21 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     }
 
-    if (capacite === 0) {
+    if (capaciteJour === 0) {
       // Le dire explicitement, sinon le client réessaie tous les horaires du
       // même jour et se heurte au même refus sans jamais comprendre pourquoi.
       return Response.json(
         { error: 'Le prestataire est absent ce jour-là. Merci de choisir une autre date.' },
+        { status: 409 },
+      )
+    }
+
+    if (capacite === 0) {
+      logger.warn('bookings.rejected.plage_bloquee', {
+        washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, dureeMinutes,
+      })
+      return Response.json(
+        { error: 'Le prestataire n\'est pas disponible sur ce créneau. Merci de choisir un autre horaire.' },
         { status: 409 },
       )
     }

@@ -5,7 +5,7 @@ import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
-import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
+import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
 
@@ -18,7 +18,7 @@ function embedDuration(services: EmbedService): number {
   return dm ?? 60
 }
 
-type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number | null }
+type UnavailabilityItem = { id: string; start_date: string; end_date: string; team_members_off?: number | null; start_time?: string | null; end_time?: string | null }
 
 type Props = {
   availabilities: Availability[]
@@ -251,7 +251,6 @@ export default function LegacyStepSlot({
   const jourPrecedent = montrerCalendrier ? null : jourVoisin(-1)
   const jourSuivant   = montrerCalendrier ? null : jourVoisin(1)
 
-  const effectiveTeamSize = selectedDate ? getEffectiveTeamSize(selectedDate) : teamSize
 
   const overlapBookings = existingBookings.map(b => ({
     scheduled_at: b.scheduled_at,
@@ -268,7 +267,7 @@ export default function LegacyStepSlot({
         // Sans effet un jour futur (jamais « passé ») ; retire les horaires du
         // matin quand le jour même est réservable et qu'il est déjà l'après-midi.
         .filter(slot => !slotEstPasse(slot, selectedDate))
-        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < effectiveTeamSize)
+        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < capaciteCreneau(teamSize, unavailabilities, toDateStr(selectedDate), slot, serviceDuration))
         .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
     : []
 
@@ -334,7 +333,7 @@ export default function LegacyStepSlot({
             ))}
           </div>
           {!auCentre && hasTravelFee && (
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Le laveur se déplace chez vous : des frais de déplacement s’ajoutent selon la distance.</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>
           )}
         </div>
       )}

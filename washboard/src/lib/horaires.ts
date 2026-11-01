@@ -233,6 +233,24 @@ export function erreurPeriode(debut: string, fin: string): string | null {
   return null
 }
 
+export const ERREUR_JOUR_MANQUANT = 'Choisissez le jour.'
+
+/** Motifs proposés d'un toucher dans « Bloquer une période ». */
+export const MOTIFS_BLOCAGE = ['Autre activité', 'Vacances', 'Formation', 'Congé maladie', 'Jour férié']
+
+/** Contrôle complet de la feuille : une période de jours entiers, ou un jour
+ *  avec une plage horaire. */
+export function erreurBlocage(f: { start: string; end: string; journee: boolean; debut: string; fin: string }): string | null {
+  if (f.journee) return erreurPeriode(f.start, f.end)
+  if (!f.start) return ERREUR_JOUR_MANQUANT
+  return erreurPlage(f.debut, f.fin)
+}
+
+/** « 8h–12h » pour une plage bloquée, `null` pour une journée entière. */
+export function plageBloquee(u: { start_time?: string | null; end_time?: string | null }): string | null {
+  return u.start_time && u.end_time ? libellePlage({ start_time: u.start_time, end_time: u.end_time }) : null
+}
+
 // ── Un seul appel à la fois ──────────────────────────────────────────────────
 
 /** Enveloppe une action asynchrone : tant qu'un appel est en cours, les suivants

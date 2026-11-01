@@ -104,12 +104,71 @@ export function joursDureeIncompatible(
   return resultats.sort((a, b) => a.day_of_week - b.day_of_week)
 }
 
-export type DayUnavailability = { start_date: string; end_date: string; team_members_off?: number | null }
+/** Absence sur une ou plusieurs dates. Avec `start_time`/`end_time` (heure de
+ *  Paris), elle ne bloque que cette plage, chaque jour de la période ; sans,
+ *  toute la journée. Les heures sont absentes avant la migration. */
+export type DayUnavailability = {
+  start_date: string
+  end_date: string
+  team_members_off?: number | null
+  start_time?: string | null
+  end_time?: string | null
+}
 
-/** Capacité effective un jour donné = nb de laveurs − absences couvrant ce jour. */
+/** "08:00" ou "08:00:00" → minutes depuis minuit. */
+export function minutesDepuisMinuit(heure: string): number {
+  const [h, m] = heure.split(':').map(Number)
+  return h * 60 + (m || 0)
+}
+
+export function estJourneeEntiere(u: Pick<DayUnavailability, 'start_time' | 'end_time'>): boolean {
+  return !u.start_time || !u.end_time
+}
+
+/** Absence sur toute la journée (point « congé » des calendriers) ; une plage horaire n'en est pas une. */
+export function journeeBloquee(u: Pick<DayUnavailability, 'start_time' | 'end_time'> | null): boolean {
+  return u !== null && estJourneeEntiere(u)
+}
+
+/** Laveurs disponibles ce jour-là. Sans `plage`, seule l'absence sur la
+ *  journée entière compte (la première, comme l'agenda) ; avec `plage`
+ *  ([début, fin[ en minutes, heure de Paris), s'y ajoutent les plages horaires
+ *  qui la chevauchent : mieux vaut un créneau en moins qu'un rendez-vous de trop. */
+export function capaciteDisponible(
+  teamSize: number,
+  unavailabilities: DayUnavailability[],
+  dateStr: string,
+  plage?: { debut: number; fin: number },
+): number {
+  const duJour = unavailabilities.filter(u => u.start_date <= dateStr && dateStr <= u.end_date)
+  const journee = duJour.find(estJourneeEntiere)
+  let absents = journee ? journee.team_members_off ?? 1 : 0
+  if (plage) {
+    for (const u of duJour) {
+      if (estJourneeEntiere(u)) continue
+      const debut = minutesDepuisMinuit(u.start_time!)
+      const fin = minutesDepuisMinuit(u.end_time!)
+      if (plage.debut < fin && plage.fin > debut) absents += u.team_members_off ?? 1
+    }
+  }
+  return Math.max(0, teamSize - absents)
+}
+
+/** Capacité effective un jour donné = nb de laveurs − absences sur la journée entière. */
 export function effectiveTeamSize(teamSize: number, unavailabilities: DayUnavailability[], dateStr: string): number {
-  const u = unavailabilities.find(x => x.start_date <= dateStr && dateStr <= x.end_date)
-  return u ? Math.max(0, teamSize - (u.team_members_off ?? 1)) : teamSize
+  return capaciteDisponible(teamSize, unavailabilities, dateStr)
+}
+
+/** Capacité pendant un créneau "HH:MM" de `dureeMin` minutes. */
+export function capaciteCreneau(
+  teamSize: number,
+  unavailabilities: DayUnavailability[],
+  dateStr: string,
+  slotTime: string,
+  dureeMin: number,
+): number {
+  const debut = minutesDepuisMinuit(slotTime)
+  return capaciteDisponible(teamSize, unavailabilities, dateStr, { debut, fin: debut + dureeMin })
 }
 
 export type BookingInterval = { startMs: number; durationMin: number }

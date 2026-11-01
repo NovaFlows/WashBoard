@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   generateSlots, countOverlaps, countConflicts, isSlotInWindows,
-  isSlotFeasible, effectiveTeamSize, dureeIncompatible, joursDureeIncompatible,
+  isSlotFeasible, effectiveTeamSize, capaciteCreneau, dureeIncompatible, joursDureeIncompatible,
   slotEstPasse, derniereLocalisation, debutCreneauIso,
 } from './slots'
 import { instantParis } from './dateUtils'
@@ -119,6 +119,46 @@ describe('effectiveTeamSize — capacité un jour donné', () => {
   })
   it('team_members_off par défaut = 1 si absent', () => {
     expect(effectiveTeamSize(2, [{ start_date: dayStr, end_date: dayStr }], dayStr)).toBe(1)
+  })
+})
+
+describe('plage horaire bloquée — lundi 8h-12h (vitres pour une entreprise)', () => {
+  const lundi = '2026-11-09'
+  const vitres = [{ start_date: lundi, end_date: lundi, team_members_off: 1, start_time: '08:00:00', end_time: '12:00:00' }]
+  it('la journée reste ouverte à la réservation', () => {
+    expect(effectiveTeamSize(1, vitres, lundi)).toBe(1)
+  })
+  it('aucun créneau qui chevauche 8h-12h', () => {
+    expect(capaciteCreneau(1, vitres, lundi, '08:00', 60)).toBe(0)
+    expect(capaciteCreneau(1, vitres, lundi, '11:30', 60)).toBe(0)
+    // 7h + 2h déborde sur la plage
+    expect(capaciteCreneau(1, vitres, lundi, '07:00', 120)).toBe(0)
+  })
+  it('bornes exclusives : fini à 8h ou commencé à 12h, c’est libre', () => {
+    expect(capaciteCreneau(1, vitres, lundi, '07:00', 60)).toBe(1)
+    expect(capaciteCreneau(1, vitres, lundi, '12:00', 90)).toBe(1)
+  })
+  it('les autres jours ne changent pas', () => {
+    expect(capaciteCreneau(1, vitres, '2026-11-16', '09:00', 60)).toBe(1)
+  })
+  it('équipe : un laveur pris sur la plage, les autres restent réservables', () => {
+    expect(capaciteCreneau(2, vitres, lundi, '09:00', 60)).toBe(1)
+  })
+  it('absences cumulées : jamais un rendez-vous de trop', () => {
+    const conges = [...vitres, { start_date: lundi, end_date: lundi, team_members_off: 1 }]
+    expect(capaciteCreneau(2, conges, lundi, '09:00', 60)).toBe(0)
+    expect(capaciteCreneau(2, conges, lundi, '14:00', 60)).toBe(1)
+  })
+  it('deux journées entières qui se recouvrent : la première compte, comme l’agenda', () => {
+    const conges = [
+      { start_date: '2026-11-01', end_date: '2026-11-10', team_members_off: 1 },
+      { start_date: lundi, end_date: lundi, team_members_off: 1 },
+    ]
+    expect(effectiveTeamSize(3, conges, lundi)).toBe(2)
+  })
+  it('sans heures (avant la migration) : toute la journée, comme avant', () => {
+    const journee = [{ start_date: lundi, end_date: lundi, team_members_off: 1, start_time: null, end_time: null }]
+    expect(capaciteCreneau(1, journee, lundi, '14:00', 60)).toBe(0)
   })
 })
 

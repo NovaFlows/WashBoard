@@ -15,7 +15,10 @@ import ConfirmerCloture from '@/components/dashboard/ConfirmerCloture'
 import { doitDemanderConfirmation } from '@/lib/cloture'
 import { useRendezVousFiche } from '@/hooks/useRendezVousFiche'
 import { useRendezVousManuel, VEHICLE_TYPES } from '@/hooks/useRendezVousManuel'
-import { useConges } from '@/hooks/useConges'
+import { useConges, rendezVousTouches, avisRendezVousTouches } from '@/hooks/useConges'
+import { estJourneeEntiere, minutesDepuisMinuit } from '@/lib/slots'
+import { toDateStr } from '@/lib/dateUtils'
+import { HEURES_CHOIX, MOTIFS_BLOCAGE, erreurBlocage, plageBloquee } from '@/lib/horaires'
 
 // Calendrier, présentation v1 — c'est ce que voit tout visiteur du SITE,
 // mobile ou ordinateur : la refonte 2026 (agenda du jour, temps de route
@@ -89,8 +92,20 @@ const HOUR_START  = 7
 const HOUR_END    = 20
 const HOUR_H      = 64 // px per hour slot
 
+/** « 8h–12h », « 1/2 » ou « 8h–12h · 1/2 » : un blocage qui ne ferme pas la journée. */
+function detailBlocage(u: Unavailability, teamSize: number): string {
+  return [plageBloquee(u), teamSize > 1 ? `${u.team_members_off}/${teamSize}` : null].filter(Boolean).join(' · ')
+}
 
-export type Unavailability = { id: string; start_date: string; end_date: string; label: string | null; team_members_off: number }
+/** Position verticale d'une plage bloquée dans la grille du jour (bornée aux heures affichées). */
+function positionPlage(u: Unavailability): { top: number; height: number } {
+  const debut = Math.max(HOUR_START * 60, minutesDepuisMinuit(u.start_time!))
+  const fin = Math.min(HOUR_END * 60, minutesDepuisMinuit(u.end_time!))
+  return { top: (debut / 60 - HOUR_START) * HOUR_H, height: Math.max(0, (fin - debut) / 60 * HOUR_H) }
+}
+
+
+export type Unavailability = { id: string; start_date: string; end_date: string; label: string | null; team_members_off: number; start_time?: string | null; end_time?: string | null }
 
 // VEHICLE_TYPES (repli de type de véhicule quand une prestation n'a pas de
 // catégorie) et ManualBooking (forme du formulaire d'ajout manuel) vivent
@@ -119,7 +134,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
     unavails,
     addModal, setAddModal,
     delModal, setDelModal,
-    uSaving,
+    uSaving, uErreur,
     getUnavail, openAddModal, isFullyUnavailable, saveUnavail, deleteUnavail,
   } = useConges({ initialUnavailabilities: initialUnavail, teamSize })
 
@@ -207,6 +222,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
   const dayLabel  = dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const dayBkgsForView = byDate.get(dayKey(dayDate)) ?? []
   const unavailDay = getUnavail(dayDate)
+  const plagesBloqueesDuJour = unavails.filter(u => !estJourneeEntiere(u) && u.start_date <= toDateStr(dayDate) && toDateStr(dayDate) <= u.end_date)
   // Réservations au-delà du quota, ce jour précis : sans heure (jamais
   // chargée, voir CarteVerrouillee), donc rangées à part de la grille
   // horaire plutôt que placées à une position inventée — même règle que la
@@ -361,7 +377,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                           onClick={e => { e.stopPropagation(); setDelModal(unavail) }}
                           className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-orange-100 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
                         >
-                          {unavail.label ?? 'Partiel'} {unavail.team_members_off}/{teamSize}
+                          {unavail.label ?? 'Partiel'} {detailBlocage(unavail, teamSize)}
                         </button>
                       )}
                       {visible.map(b => (
@@ -464,7 +480,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                           className="absolute top-0 left-0 right-0 z-10 bg-orange-100/90 dark:bg-orange-950/50 border-b border-orange-200 dark:border-orange-800 px-1 py-0.5 flex items-center justify-center gap-1 hover:bg-orange-200/90 dark:hover:bg-orange-950/70 transition-colors"
                         >
                           <span className="text-[9px] font-semibold text-orange-600 dark:text-orange-400 truncate">
-                            {unavail.label ?? 'Partiel'} {unavail.team_members_off}/{teamSize}
+                            {unavail.label ?? 'Partiel'} {detailBlocage(unavail, teamSize)}
                           </span>
                         </button>
                       )
@@ -541,7 +557,20 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                 className={`relative ${isSameDay(dayDate, today) ? 'bg-blue-50/40 dark:bg-blue-950/10' : ''}`}
                 style={{ height: (HOUR_END - HOUR_START) * HOUR_H }}
               >
-                {unavailDay && (
+                {plagesBloqueesDuJour.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => setDelModal(u)}
+                    className="absolute left-0 right-0 z-10 bg-orange-50/90 dark:bg-orange-950/40 border-y border-orange-200 dark:border-orange-800 px-4 py-1.5 flex items-start justify-between overflow-hidden hover:bg-orange-100/90 dark:hover:bg-orange-950/60 transition-colors"
+                    style={positionPlage(u)}
+                  >
+                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 text-left">
+                      {u.label ?? 'Indisponible'} · {detailBlocage(u, teamSize)}
+                    </p>
+                    <span className="text-[10px] text-orange-400 shrink-0 ml-3">Supprimer</span>
+                  </button>
+                ))}
+                {unavailDay && estJourneeEntiere(unavailDay) && (
                   isFullyUnavailable(unavailDay) ? (
                     <button
                       onClick={() => setDelModal(unavailDay)}
@@ -706,6 +735,53 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
               </button>
             </div>
             <div className="space-y-4">
+              <label className="flex items-center justify-between gap-3 cursor-pointer">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Toute la journée</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={addModal.journee}
+                  onChange={() => setAddModal(m => m ? { ...m, journee: !m.journee, end: m.start } : m)}
+                  className="h-4 w-4 accent-orange-500"
+                />
+              </label>
+              {!addModal.journee && (
+                <div className="flex items-end gap-3 flex-wrap">
+                  <div>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Le</p>
+                    <input
+                      type="date"
+                      aria-label="Le"
+                      value={addModal.start}
+                      onChange={e => setAddModal(m => m ? { ...m, start: e.target.value, end: e.target.value } : m)}
+                      className="border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">De</p>
+                    <select
+                      aria-label="De"
+                      value={addModal.debut}
+                      onChange={e => setAddModal(m => m ? { ...m, debut: e.target.value } : m)}
+                      className="border border-slate-300 dark:border-slate-600 rounded-xl px-2 py-2 text-sm tabular-nums bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    >
+                      {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">À</p>
+                    <select
+                      aria-label="À"
+                      value={addModal.fin}
+                      onChange={e => setAddModal(m => m ? { ...m, fin: e.target.value } : m)}
+                      className="border border-slate-300 dark:border-slate-600 rounded-xl px-2 py-2 text-sm tabular-nums bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    >
+                      {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+              {addModal.journee && (
               <div className="flex items-center gap-3 flex-wrap">
                 <div>
                   <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Du</p>
@@ -728,10 +804,11 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                   />
                 </div>
               </div>
+              )}
               <div>
                 <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Motif (optionnel)</p>
                 <div className="flex gap-1.5 flex-wrap mb-2">
-                  {['Vacances', 'Formation', 'Congé maladie', 'Jour férié'].map(p => (
+                  {MOTIFS_BLOCAGE.map(p => (
                     <button
                       key={p}
                       type="button"
@@ -785,13 +862,21 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                 </div>
               )}
 
+              {(erreurBlocage(addModal) || uErreur) && (
+                <p role="alert" className="text-xs font-medium text-red-600 dark:text-red-400">{erreurBlocage(addModal) ?? uErreur}</p>
+              )}
+              {!erreurBlocage(addModal) && avisRendezVousTouches(rendezVousTouches(addModal, bookings), addModal.journee) && (
+                <p role="status" className="text-xs font-medium text-orange-600 dark:text-orange-400">
+                  {avisRendezVousTouches(rendezVousTouches(addModal, bookings), addModal.journee)}
+                </p>
+              )}
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setAddModal(null)} className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   Annuler
                 </button>
                 <button
                   onClick={saveUnavail}
-                  disabled={uSaving}
+                  disabled={uSaving || !!erreurBlocage(addModal)}
                   className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
                 >
                   {uSaving ? 'Enregistrement...' : 'Bloquer'}
@@ -817,6 +902,7 @@ export default function CalendrierDashboardV1({ bookings: initial, unavailabilit
                   ? new Date(delModal.start_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
                   : `${new Date(delModal.start_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date(delModal.end_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
                 }
+                {plageBloquee(delModal) && ` · ${plageBloquee(delModal)}`}
               </p>
               {delModal.label && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{delModal.label}</p>}
               {teamSize > 1 && (

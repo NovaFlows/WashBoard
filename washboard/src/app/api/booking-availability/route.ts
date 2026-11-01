@@ -5,6 +5,7 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import { FUSEAU, minuitParisUTC } from '@/lib/dateUtils'
+import { lireBlocages } from '@/lib/blocagesServeur'
 
 // Ce que la page de réservation lisait autrefois côté serveur, à chaque visite.
 //
@@ -63,10 +64,7 @@ export async function GET(request: NextRequest) {
       .order('scheduled_at')
       .order('id')
       .range(debut, fin)),
-    admin
-      .from('unavailabilities')
-      .select('id, start_date, end_date, team_members_off')
-      .eq('washer_id', washerId),
+    lireBlocages(admin, washerId, { avecId: true }),
   ])
 
   // Une lecture en échec ne doit JAMAIS ressortir en liste vide : le
