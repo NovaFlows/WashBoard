@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Fidelite from '@/components/dashboard/Fidelite'
+import FideliteV2 from '@/components/dashboard/FideliteV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logoCarte } from '@/lib/fideliteServeur'
 
@@ -23,10 +23,9 @@ export default async function FidelitePage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Fidelite
+      <FideliteV2
         slug={washer.slug}
         liste={{ nom: washer.name, slug: washer.slug, plan: washer.plan, grandfathered: washer.grandfathered }}
-        betaRefonte={washer.beta_refonte}
         marque={washer.brand_color ?? null}
         logo={logo}
         logoHorsOffre={!logo && !!washer.logo_url}

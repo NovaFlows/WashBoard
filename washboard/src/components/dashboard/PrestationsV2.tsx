@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
@@ -272,14 +272,13 @@ export default function PrestationsV2({
   // Zone et créneaux : l'état local suit la base dès qu'une écriture réussit, sans
   // attendre le rechargement — la phrase de la ligne change tout de suite.
   const [zone, setZone] = useState(zoneServeur)
-  // Arrivée par un lien de l'accueil de l'app (`#zone`, `#creneaux`) : on ouvre
-  // directement la feuille visée. Cet écran ne se monte qu'après le garde-fou de
-  // `Prestations.tsx`, donc toujours dans le navigateur.
-  const [feuille, setFeuille] = useState<FeuilleOuverte>(() => {
-    const ancre = window.location.hash
-    if (ancre === '#zone') return { quoi: 'zone' }
-    return null
-  })
+  // Arrivée par un lien de l'accueil de l'app (`#zone`) : on ouvre directement la feuille
+  // visée. Lu au montage, l'ancre n'existant pas au rendu serveur.
+  const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre lue au montage
+    if (window.location.hash === '#zone') setFeuille({ quoi: 'zone' })
+  }, [])
   const [suppression, setSuppression] = useState<Suppression>(null)
   const [suppressionEnCours, setSuppressionEnCours] = useState(false)
   const [suppressionErreur, setSuppressionErreur] = useState<string | null>(null)

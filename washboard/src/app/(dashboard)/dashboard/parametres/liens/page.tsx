@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import MesLiens from '@/components/dashboard/MesLiens'
+import MesLiensV2 from '@/components/dashboard/MesLiensV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // Refonte 2026 — « Mes liens » : le lien de réservation du laveur et un lien par
@@ -27,7 +27,7 @@ export default async function MesLiensPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <MesLiens
+      <MesLiensV2
         slug={washer.slug}
         liste={{
           nom: washer.name,
@@ -35,7 +35,6 @@ export default async function MesLiensPage() {
           plan: washer.plan,
           grandfathered: washer.grandfathered,
         }}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

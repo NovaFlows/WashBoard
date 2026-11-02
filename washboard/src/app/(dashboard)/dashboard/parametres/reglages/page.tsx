@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Reglages from '@/components/dashboard/Reglages'
+import ReglagesV2 from '@/components/dashboard/ReglagesV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { logger } from '@/lib/logger'
@@ -56,7 +56,7 @@ export default async function ReglagesPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Reglages
+      <ReglagesV2
         liste={{
           nom: washer.name,
           slug: washer.slug,
@@ -64,7 +64,6 @@ export default async function ReglagesPage() {
           plan: washer.plan,
           grandfathered: washer.grandfathered,
         }}
-        betaRefonte={washer.beta_refonte}
         progress={progress}
       />
     </DashboardShell>

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Acompte from '@/components/dashboard/Acompte'
+import AcompteV2 from '@/components/dashboard/AcompteV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // « Acompte » (2026-10-17) : l'acompte demandé à la réservation, payé par le lien du laveur
@@ -20,10 +20,9 @@ export default async function AcomptePage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Acompte
+      <AcompteV2
         slug={washer.slug}
         liste={{ nom: washer.name, slug: washer.slug, plan: washer.plan, grandfathered: washer.grandfathered }}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Apparence from '@/components/dashboard/Apparence'
+import ApparenceV2 from '@/components/dashboard/ApparenceV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 
 // Refonte 2026 — « Apparence de ma page » : le logo, la couleur, le fond, le message
@@ -39,7 +39,7 @@ export default async function ApparencePage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Apparence
+      <ApparenceV2
         nom={washer.name}
         slug={washer.slug}
         initial={{
@@ -62,7 +62,6 @@ export default async function ApparencePage() {
           plan: washer.plan,
           grandfathered: washer.grandfathered,
         }}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

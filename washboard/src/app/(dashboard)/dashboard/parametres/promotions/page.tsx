@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Promotions from '@/components/dashboard/Promotions'
+import PromotionsV2 from '@/components/dashboard/PromotionsV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
 
@@ -31,11 +31,10 @@ export default async function PromotionsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Promotions
+      <PromotionsV2
         slug={washer.slug}
         services={(services ?? []).map(s => ({ id: s.id as string, name: s.name as string }))}
         liste={{ nom: washer.name, slug: washer.slug, plan: washer.plan, grandfathered: washer.grandfathered }}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

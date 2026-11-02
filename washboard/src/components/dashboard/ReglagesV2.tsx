@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { CarteListe, Ligne, NonLus, TitreSection } from '@/components/dashboard/ParametresFormV2'
@@ -48,13 +48,13 @@ export default function ReglagesV2({ liste, progress }: Props) {
   const { etat: etatNotifications } = useNotificationsPush()
   const mobile = useDesignMobile()
   const grandEcran = useGrandEcran()
-  // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office, sinon le
-  // laveur atterrit sur un écran de réglages et doit re-chercher la ligne qu'on lui promettait.
-  // Cet écran ne se monte qu'après le garde-fou de `Reglages.tsx`, donc toujours dans le
-  // navigateur — `window` existe.
-  const [feuilleNotifications, setFeuilleNotifications] = useState(
-    () => window.location.hash === '#notifications',
-  )
+  // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office. Lu au
+  // montage, l'ancre n'existant pas au rendu serveur.
+  const [feuilleNotifications, setFeuilleNotifications] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre lue au montage
+    if (window.location.hash === '#notifications') setFeuilleNotifications(true)
+  }, [])
   const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
   const { unreadSupportCount } = useSupportBadges()
   const notifications = resumeNotifications(etatNotifications, mobile)

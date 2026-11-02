@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Documents from '@/components/dashboard/Documents'
+import DocumentsV2 from '@/components/dashboard/DocumentsV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
 
@@ -40,10 +40,9 @@ export default async function DocumentsPage() {
       {/* `useSearchParams` (lecture de `?nouveau=`) exige une limite Suspense, sinon la
           compilation de production échoue — le serveur de développement, lui, ne dit rien. */}
       <Suspense fallback={null}>
-        <Documents
+        <DocumentsV2
           prestations={(prestations ?? []).map(p => ({ id: p.id, name: p.name, price: Number(p.price) }))}
           nomLaveur={washer.name}
-          betaRefonte={washer.beta_refonte}
         />
       </Suspense>
     </DashboardShell>
