@@ -28,7 +28,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // confondent donc pas.
 const COLONNES =
   'id, name, slug, logo_url, brand_color, background_theme, welcome_message, website_url, google_place_id, booking_page_mode, ' +
-  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
+  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at'
 
 export default async function ApparencePage() {
   const supabase = await createClient()
@@ -38,7 +38,7 @@ export default async function ApparencePage() {
   const washer = await washerDuUtilisateur(supabase, user.id, 'apparence', COLONNES)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <ApparenceV2
         nom={washer.name}
         slug={washer.slug}

@@ -366,7 +366,6 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
       grandfathered={false}
       createdAt="2026-03-01T00:00:00.000Z"
       slug="demo-eclat-mobile"
-      betaRefonte
     >
       <SelecteurDemo ecran={ecran} onEcran={setEcran} etat={etat} onEtat={setEtat} ecranPlus={ecranPlus} onEcranPlus={setEcranPlus} />
       {ecran === 'aujourdhui' ? (

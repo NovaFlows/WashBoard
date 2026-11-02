@@ -229,64 +229,8 @@ body.wb-dashboard-active {
    @media (hover: hover) and (pointer: fine) par défaut) répondent déjà aux
    deux points restants du socle — rien à ajouter ici. */
 
-/* ── `wb-pwa` — la refonte v2 n'existe que dans la PWA installée ───────────
-   Décision d'Alexandre (2026-09-22) : le site (navigateur classique, mobile
-   ou ordinateur) reste v1 sans exception ; seule la PWA installée en mode
-   standalone voit la direction v2. `wb-pwa` est posée sur <html> par un
-   script synchrone dans layout.tsx (`beforeInteractive`, avant toute
-   peinture — il n'existe pas d'équivalent "cookie lu côté serveur" pour
-   `display-mode: standalone`, contrairement à la classe `dark`).
-
-   Deux mécanismes, pas un seul — ne pas les confondre :
-   - Un écran qui ne change que de couleurs/espacements/rayons (pas de JSX
-     différent) peut se contenter d'un sélecteur `html.wb-pwa …` ici, ou de
-     la variante Tailwind arbitraire `[html.wb-pwa_&]:…` côté composant.
-     Zéro flash : la classe est posée avant le premier rendu.
-   - Un écran dont la FORME change (ex. ClientProfileModal : carte v1 vs
-     feuille v2) a besoin d'un vrai branchement JSX — voir le hook React
-     `usePwaStandalone()` (src/hooks/usePwaStandalone.ts). Un flash v1→v2
-     bref au montage y est accepté (mêmes contraintes que ThemeToggle /
-     NotificationsToggle, aucun équivalent serveur possible ici).
-   Premier usage réel (2026-09-24) : l'en-tête du tableau de bord disparaît
-   dans la PWA en bêta (voir le bloc `wb-entete-beta` juste en dessous). Les
-   écrans Clients et fiche client, eux, ont une structure trop différente de
-   la v1 pour du CSS seul — voir ClientsView.tsx et ClientProfileModal.tsx. */
-
-/* ── En-tête du tableau de bord — retiré dans la PWA en bêta ──────────────
-   Demande d'Alexandre (2026-09-24) : « supprime le header, on est en mode
-   vraiment ressembler à une app ». DashboardShell pose `wb-entete-beta` sur
-   le <header> quand `washer.beta_refonte` est vrai (connu du serveur), et
-   `wb-entete-barre` sur la rangée ☰ / WashBoard / badge de plan /
-   déconnexion / thème. Sans la classe `wb-pwa` (site, PWA sans bêta) rien
-   de tout ça ne s'applique : l'en-tête est exactement celui d'avant.
-
-   Pourquoi du CSS plutôt que le hook `usePwaStandalone()` : la classe existe
-   avant la première peinture, donc aucun flash « en-tête puis plus
-   d'en-tête » — un saut de mise en page bien plus visible que celui d'un
-   simple ajout de barre en bas.
-
-   Ce qui RESTE dans le <header> : les bandeaux TrialBanner (fin d'essai,
-   paiement en retard, résiliation) et AppBetaBanner. Ils ne sont pas retirés
-   (information commerciale) ; le <header> perd seulement son statut « collant »,
-   son fond et son filet : il devient un simple bloc en flux normal en haut de
-   page, et vide (hauteur nulle) quand aucun bandeau n'a rien à dire. */
-html.wb-pwa .wb-entete-beta {
-  position: static;
-  background: transparent;
-  border-bottom-width: 0;
-}
-html.wb-pwa .wb-entete-beta .wb-entete-barre {
-  display: none;
-}
-
-/* Bandeaux v1 (rouge, bleu, vert…) : au premier rendu, avant que React ne sache qu'on est dans
-   la PWA, le serveur envoie leur forme v1. iOS 26 teinte la barre d'état d'après ce qui est en
-   haut de la page À CE MOMENT-LÀ et ne la met plus à jour avant la navigation suivante : un
-   bandeau v1 rouge donnait une barre d'état rouge jusqu'au changement d'onglet. On ne laisse
-   donc paraître, en tête de l'en-tête bêta, que la forme v2 (`wb-bandeau-v2`). */
-html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
-  display: none;
-}
+/* `wb-pwa` est posée sur <html> par un script synchrone de layout.tsx (`beforeInteractive`),
+   avant toute peinture : application installée, ou téléphone dans l'espace laveur. */
 
 /* ══════════════════════════════════════════════════════════════════════════
    Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants

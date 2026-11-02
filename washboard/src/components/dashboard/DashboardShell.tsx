@@ -17,10 +17,8 @@ import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
 import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
-import { useDashboardV2 } from '@/hooks/useDashboardV2'
 import { useEcranRail } from '@/hooks/useEcranRail'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
-import { DesignV2Context } from '@/components/dashboard/DesignV2Context'
 import SuiviPwa from '@/components/dashboard/SuiviPwa'
 import SuiviConnexion from '@/components/dashboard/SuiviConnexion'
 
@@ -38,13 +36,6 @@ type Props = {
   grandfathered?: boolean
   stripeSubscriptionId?: string | null
   cancelsAt?: string | null
-  // `washer.beta_refonte`. Depuis le 2026-10-01, n'importe quelle application INSTALLÉE
-  // reçoit la refonte sans condition (plus besoin de ce drapeau pour la PWA). Remise en
-  // service à la passe « châssis bureau » (2026-10-05) pour un seul cas : le SITE (pas la
-  // PWA) sur grand écran — voir `useDashboardV2.ts`, qui en a besoin pour ne pas basculer
-  // toute l'équipe d'un coup sur un tableau de bord moitié migré. À retirer avec ce
-  // garde-fou, quand la dernière passe (Aujourd'hui) sera livrée.
-  betaRefonte?: boolean | null
   /** Date de création de la fiche : décide si ce compte suit la règle 2026
    *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
   createdAt?: string | null
@@ -456,7 +447,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return actif ? contenu : null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite, betaRefonte }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite }: Props) {
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -481,10 +472,9 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const installee = usePwaStandalone()
   // Châssis (2026-11-02) : rail sur tout ce qui n'est pas un téléphone (voir grandEcran.ts),
   // barre du bas sur téléphone. Au rendu serveur, ni l'un ni l'autre : bandeaux et contenu seuls.
-  const estV2 = useDashboardV2(betaRefonte)
   const ecranRail = useEcranRail()
   const showBarreBas = isPwa && !ecranRail
-  const showRailBureau = estV2 && ecranRail
+  const showRailBureau = ecranRail
   // La classe `wb-pwa` est posée sur <html> avant React ; si React réécrit `className`
   // (changement de thème, rafraîchissement du layout), elle disparaît et des règles CSS de la
   // refonte cessent de s'appliquer. On la remet dès qu'elle manque.
@@ -571,7 +561,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // Contenu de page, identique quel que soit le châssis — isolé une seule fois pour ne pas
   // dupliquer les deux Providers entre la branche v1/PWA-téléphone et la branche bureau.
   const pageContent = (
-    <DesignV2Context.Provider value={estV2}>
+    <>
       <SuiviPwa />
       <SuiviConnexion />
       <SupportBadgesContext.Provider value={supportBadges}>
@@ -579,7 +569,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           {children}
         </OffreContext.Provider>
       </SupportBadgesContext.Provider>
-    </DesignV2Context.Provider>
+    </>
   )
 
   // Un seul bandeau visible à la fois, par ordre de priorité (Alexandre, 2026-10-05 : « je veux

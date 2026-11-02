@@ -22,7 +22,7 @@ import { logger } from '@/lib/logger'
 // cette MÊME lecture, pas une requête en plus. Jamais `*` : la fiche laveur porte des jetons
 // Google et des identifiants Stripe.
 const COLONNES =
-  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, created_at, slug, subscription_ends_at, ' +
+  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, slug, subscription_ends_at, ' +
   'base_address, phone, logo_url, google_refresh_token, review_enabled, followup_enabled, zone_config, smart_slot_enabled, welcome_message, brand_color'
 
 export default async function ReglagesPage() {
@@ -55,7 +55,7 @@ export default async function ReglagesPage() {
   })
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <ReglagesV2
         liste={{
           nom: washer.name,

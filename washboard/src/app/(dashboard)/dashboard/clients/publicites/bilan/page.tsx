@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import BilanPublicites from '@/components/dashboard/BilanPublicites'
+import BilanPublicitesV2 from '@/components/dashboard/BilanPublicitesV2'
 import { hasFeature } from '@/lib/plan'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { chargerCampagnes } from '@/lib/campagnesServeur'
@@ -28,8 +28,8 @@ export default async function BilanPublicitesPage() {
   if (indisponible || campagnes.length === 0) redirect('/dashboard/clients/publicites')
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <BilanPublicites betaRefonte={washer.beta_refonte} campagnes={campagnes} />
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <BilanPublicitesV2 campagnes={campagnes} />
     </DashboardShell>
   )
 }

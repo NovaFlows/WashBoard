@@ -20,7 +20,6 @@ export default async function GuidePage() {
       grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
-      betaRefonte={washer.beta_refonte}
     >
       <GuideV2
         liste={{

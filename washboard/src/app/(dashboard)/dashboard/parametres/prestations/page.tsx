@@ -35,7 +35,7 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 // `silhouettes_vehicules` : l'interrupteur « Afficher la silhouette du véhicule » (2026-10-19).
 const COLONNES =
   'id, name, slug, zone_config, base_address, silhouettes_vehicules, ' +
-  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, subscription_ends_at, created_at'
+  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, subscription_ends_at, created_at'
 
 export default async function PrestationsPage() {
   const supabase = await createClient()
@@ -66,7 +66,7 @@ export default async function PrestationsPage() {
   }
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte} avancementVisite={{ servicesCount: services?.length ?? 0 }}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} avancementVisite={{ servicesCount: services?.length ?? 0 }}>
       {/* useSearchParams (lecture de ?vue=) exige une limite Suspense. */}
       <Suspense fallback={null}>
         <PrestationsV2

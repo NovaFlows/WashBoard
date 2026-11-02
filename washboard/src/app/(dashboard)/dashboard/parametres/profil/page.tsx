@@ -27,7 +27,7 @@ const COLONNES =
   'facture_statut, facture_nom_legal, facture_siret, facture_adresse, facture_forme_juridique, ' +
   'facture_capital, facture_immatriculation, facture_regime_tva, facture_taux_tva, facture_numero_tva, ' +
   'facture_prochain_numero, ' +
-  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte'
+  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at'
 
 export default async function ProfilPage() {
   const supabase = await createClient()
@@ -39,7 +39,7 @@ export default async function ProfilPage() {
   const { data: ficheCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <ProfilV2
         washer={washer as Washer}
         email={user.email ?? ''}

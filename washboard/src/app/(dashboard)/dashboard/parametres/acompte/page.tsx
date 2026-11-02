@@ -9,7 +9,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // pour que « Plus » reste allumé dans la barre du bas. Les réglages sont chargés par
 // l'écran (`GET /api/washer/acompte`).
 const COLONNES =
-  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, created_at, subscription_ends_at'
+  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, subscription_ends_at'
 
 export default async function AcomptePage() {
   const supabase = await createClient()
@@ -19,7 +19,7 @@ export default async function AcomptePage() {
   const washer = await washerDuUtilisateur(supabase, user.id, 'acompte', COLONNES)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <AcompteV2
         slug={washer.slug}
         liste={{ nom: washer.name, slug: washer.slug, plan: washer.plan, grandfathered: washer.grandfathered }}

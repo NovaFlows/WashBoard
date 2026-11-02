@@ -1075,7 +1075,7 @@ export function jeuDeDonneesPlusDemo(): {
    *  partout ailleurs sur cette page, Starter ICI seulement, pour que la jauge « 12 / 15 » et
    *  les boutons « Passer à Pro »/« Passer à Business » aient un sens — un Pro n'a aucun plafond
    *  (`lib/plan.ts`), l'écran serait vide de la moitié de ce qu'il doit montrer. */
-  abonnement: Omit<PropsAbonnement, 'liste' | 'betaRefonte'>
+  abonnement: Omit<PropsAbonnement, 'liste'>
   /** Écran 64 (« Aide et assistance ») : trois conversations, une ouverte avec deux messages
    *  (celle que la maquette montre sélectionnée), une résolue, une en attente de réponse. */
   assistanceThreads: SupportThread[]
@@ -1148,7 +1148,7 @@ export function jeuDeDonneesPlusDemo(): {
     facture_statut: 'ei', facture_nom_legal: 'Julien Roussel', facture_siret: '123 456 789 00012',
     facture_adresse: '12 Rue Fondaudège, 33000 Bordeaux', facture_forme_juridique: null, facture_capital: null,
     facture_immatriculation: null, facture_regime_tva: 'franchise', facture_taux_tva: 0, facture_numero_tva: null,
-    facture_prochain_numero: 64, beta_refonte: true,
+    facture_prochain_numero: 64,
   }
 
   // Washer Starter, pour l'écran « Abonnement » seulement (voir le commentaire du type
@@ -1156,7 +1156,7 @@ export function jeuDeDonneesPlusDemo(): {
   // à la main : la jauge et le bouton « Passer à » resteraient corrects même si `BOOKING_QUOTA`
   // changeait demain.
   const washerStarter = { plan: 'starter' as const, grandfathered: false, created_at: versISO(-70, 9) }
-  const abonnement: Omit<PropsAbonnement, 'liste' | 'betaRefonte'> = {
+  const abonnement: Omit<PropsAbonnement, 'liste'> = {
     subscriptionStatus: 'active',
     trialEndsAt: null,
     subscriptionEndsAt: null,

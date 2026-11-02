@@ -10,7 +10,7 @@ import { logoCarte } from '@/lib/fideliteServeur'
 // allumé dans la barre du bas. Les réglages sont chargés par l'écran
 // (`GET /api/washer/fidelite`).
 const COLONNES =
-  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, created_at, subscription_ends_at, brand_color, logo_url, profile_updated_at'
+  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, subscription_ends_at, brand_color, logo_url, profile_updated_at'
 
 export default async function FidelitePage() {
   const supabase = await createClient()
@@ -22,7 +22,7 @@ export default async function FidelitePage() {
   const logo = logoCarte(washer)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <FideliteV2
         slug={washer.slug}
         liste={{ nom: washer.name, slug: washer.slug, plan: washer.plan, grandfathered: washer.grandfathered }}
