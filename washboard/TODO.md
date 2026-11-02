@@ -3461,6 +3461,21 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-11-01 — **Centre auto : le client peut venir au local du laveur** (PR #20, `38a9c61`).
+      Réglage `washers.centre_auto` (adresse du centre, lieux proposés : à domicile, au centre
+      ou les deux), dans Mon profil et dans l'ancien écran de réglages. Le client choisit le lieu
+      sur la page de réservation ; le laveur aussi dans la saisie manuelle d'un rendez-vous
+      (`bookings.lieu`). Au centre : adresse du centre imposée côté serveur, pas de frais de
+      déplacement, facture (lieu « Centre auto · adresse », pas l'adresse du centre comme adresse
+      du client), emails, reçu et agenda à jour. À domicile : rien ne change. Ouvert à toutes
+      les formules. SQL exécuté en prod. FAQ de l'accueil mise à jour le 2026-11-02.
+- [x] 2026-11-01 — **Bloquer une plage horaire sur un jour (« Autre activité »)** (PR #21,
+      `250b06f`). `unavailabilities.start_time`/`end_time` : une absence peut couvrir quelques
+      heures d'une journée au lieu de jours entiers, depuis Horaires ou l'agenda (ancien et
+      nouvel écran). Les créneaux bloqués disparaissent de la page de réservation ; le serveur
+      refuse aussi une réservation dessus, et une lecture en échec refuse par défaut (503).
+      SQL exécuté en prod. Récurrence (bloquer chaque semaine) écartée pour l'instant.
+      FAQ de l'accueil mise à jour le 2026-11-02.
 - [x] 2026-10-23 — **🔒 2 vulnérabilités npm CRITIQUES corrigées en production** (priorité de la
       réunion du jour) : `next` 16.3.8 → **16.4.3** (RCE sans compte via l'API d'optimisation
       d'images avec des SVG, GHSA-2464-fhr4-w9xw ; RCE via `use cache` et tableaux typés,
