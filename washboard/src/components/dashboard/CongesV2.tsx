@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { Minus, Plus } from 'lucide-react'
-import type { Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Unavailability } from '@/components/dashboard/calendrierTypes'
 import type { AjoutConge } from '@/hooks/useConges'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { Constat, Interrupteur } from '@/components/dashboard/PrestationsUiV2'

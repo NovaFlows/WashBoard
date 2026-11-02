@@ -2,7 +2,7 @@
 
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import type { ServiceFull } from '@/components/dashboard/CalendrierDashboardV1'
+import type { ServiceFull } from '@/components/dashboard/calendrierTypes'
 import { VEHICLE_TYPES, type ManualBooking } from '@/hooks/useRendezVousManuel'
 import type { CentreAutoPublic } from '@/lib/centreAuto'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'

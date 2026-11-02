@@ -2,7 +2,7 @@
 
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import { toDateStr } from '@/lib/dateUtils'
-import type { Booking, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking, Unavailability } from '@/components/dashboard/calendrierTypes'
 import { estJourneeEntiere, minutesDepuisMinuit } from '@/lib/slots'
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
 

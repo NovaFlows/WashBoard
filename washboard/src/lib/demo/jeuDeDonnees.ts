@@ -19,7 +19,7 @@
 // partir d'AUJOURD'HUI (jamais de date figée) : ce fichier reste correct quel que soit le jour
 // où `/demo` est ouvert.
 
-import type { Booking, Category, ServiceFull, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking, Category, ServiceFull, Unavailability } from '@/components/dashboard/calendrierTypes'
 import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
 import type { ReglagesRelance } from '@/lib/clientsARelancer'
 import type { EntrepriseListItem } from '@/lib/entrepriseProfile'

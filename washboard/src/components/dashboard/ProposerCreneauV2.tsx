@@ -10,7 +10,7 @@ import { Feuille, CHAMP, corps, corpsFort, puce, PRESSION } from '@/components/d
 import { DISTANCES_KM, adressesClients, clientsProches, libelleKm, positionsClients, type Position } from '@/lib/proposerCreneau'
 import { cleAdresse } from '@/lib/positionsAdresses'
 import { usePositionsAdresses } from '@/hooks/usePositionsAdresses'
-import type { Booking } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking } from '@/components/dashboard/calendrierTypes'
 
 // « Proposer » un créneau libre de l'agenda v2 à un client, par message —
 // demande d'Alexandre du 2026-09-24. La ligne « X de libre » de

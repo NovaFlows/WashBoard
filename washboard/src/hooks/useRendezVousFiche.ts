@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toDateStr } from '@/lib/dateUtils'
 import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
-import type { Booking, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking, Unavailability } from '@/components/dashboard/calendrierTypes'
 
 export type FactureMessage = { id: string; texte: string; completer: boolean }
 

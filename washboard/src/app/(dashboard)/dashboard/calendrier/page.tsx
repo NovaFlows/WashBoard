@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import CalendrierDashboard from '@/components/dashboard/CalendrierDashboard'
+import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { infosFacturationManquantes } from '@/lib/facture'
@@ -116,7 +116,7 @@ export default async function CalendrierPage() {
             l'heure, et l'y poser la révélerait. Le laveur les retrouve sur son
             accueil, avec le jour seul. Elles sont en attente et il ne peut
             pas les confirmer : son agenda ne perd donc aucun engagement réel. */}
-        <CalendrierDashboard
+        <CalendrierDashboardV2
           bookings={visibles}
           unavailabilities={unavailabilities ?? []}
           teamSize={washer.team_size ?? 1}
@@ -130,7 +130,6 @@ export default async function CalendrierPage() {
           joursMasques={joursMasques}
           masquees={masquees}
           offreDeblocage={offreDeblocage}
-          betaRefonte={washer.beta_refonte}
         />
       </Suspense>
     </DashboardShell>
