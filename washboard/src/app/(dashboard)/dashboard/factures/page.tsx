@@ -279,7 +279,7 @@ export default async function FacturesPage({
       {manques.length > 0 && (
         <p className="mb-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3">
           {phraseManques(manques)}{' '}
-          <Link href="/dashboard/parametres#facturation" className="font-semibold underline">Compléter mes informations</Link>
+          <Link href="/dashboard/parametres/profil#facturation" className="font-semibold underline">Compléter mes informations</Link>
         </p>
       )}
 

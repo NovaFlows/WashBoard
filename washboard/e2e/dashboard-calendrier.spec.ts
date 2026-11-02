@@ -5,10 +5,7 @@ import { expectNoAppError, hasWasherCredentials } from './helpers'
 // rendus distincts, donc trois chemins de code qui peuvent casser indépendamment —
 // d'où un test par vue plutôt qu'un seul chargement de page.
 //
-// Écrits pour l'Agenda v2 (2026-10-18) : sur ordinateur, tous les laveurs l'ont depuis
-// le 2026-10-12, et c'est lui que reçoit le navigateur des tests.
-// L'ancien calendrier (« Calendrier », boutons « Mois / Sem / Jour ») n'est plus servi
-// qu'aux tablettes sans souris.
+// Écrits pour l'Agenda v2 (2026-10-18), le seul agenda depuis le 2026-11-02.
 
 test.beforeEach(async ({}, testInfo) => {
   testInfo.skip(!hasWasherCredentials, 'TEST_WASHER_EMAIL absent — tests laveur ignorés')

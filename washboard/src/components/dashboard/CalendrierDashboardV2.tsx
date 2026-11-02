@@ -1979,6 +1979,17 @@ function FicheRdvBureauV2({
                 Message
               </a>
             )}
+            {/* WhatsApp prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
+            {b.client_phone && (
+              <button
+                type="button"
+                onClick={() => openWhatsapp(b)}
+                className={`flex h-10 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
+                style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                WhatsApp
+              </button>
+            )}
           </div>
         )}
 
@@ -2079,7 +2090,15 @@ function FicheRdvBureauV2({
           </div>
         )}
 
-        {b.client_email?.trim() && <p className={`mt-4 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{b.client_email}</p>}
+        {b.client_email?.trim() && (
+          <div className={`mt-4 flex items-center justify-between gap-3 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            <span className="truncate">{b.client_email}</span>
+            {/* Gmail prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
+            <button type="button" onClick={() => openGmail(b)} className={`shrink-0 ${corpsFort} text-[color:var(--v2-color-accent)] hover:underline`}>
+              Écrire sur Gmail (message prérempli)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -6,10 +6,9 @@ import { logger } from '@/lib/logger'
 import { suiteConfirmation } from '@/lib/confirmationSuite'
 import { etatOnboarding } from '@/lib/onboarding'
 
-// Arrivée du lien de confirmation — l'inscription envoie désormais un CODE
-// (voir `app/api/auth/confirm-code/route.ts`), cette
-// route ne reçoit donc plus que les emails de confirmation partis AVANT ce
-// changement (2026-10-11). Gardée pour ceux-là, pas pour être réutilisée.
+// Arrivée du lien de confirmation — l'inscription envoie désormais un code par SMS
+// (voir `app/api/auth/confirm-code/route.ts`), cette route ne reçoit donc plus que les
+// liens de confirmation partis avant ce changement (2026-10-11). Gardée pour ceux-là.
 //
 // Le jeton est validé ici, côté serveur, plutôt que par une redirection de
 // Supabase : la validation ouvre une session dans des cookies, ce qui marche

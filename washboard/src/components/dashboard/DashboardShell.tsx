@@ -621,7 +621,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       className="min-h-screen overflow-x-hidden wb-dashboard-shell bg-[color:var(--v2-color-fond)]"
     >
       {showBarreBas && <BarreBasV2 />}
-      {isPwa && <ConfirmationEnvoiV2 />}
+      <ConfirmationEnvoiV2 />
       {showBarreBas && <RetourGesteV2 />}
 
       {showRailBureau ? (
