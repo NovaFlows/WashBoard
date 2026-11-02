@@ -1,9 +1,31 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { estGrandEcran, estEcranRail, SEUIL_GRAND_ECRAN_PX, SEUIL_RAIL_PX } from './grandEcran'
+import { estGrandEcran, estEcranRail, SEUIL_GRAND_ECRAN_PX } from './grandEcran'
+import { REQUETE_ECRAN_MOBILE } from './designMobile'
 
-// Même précaution que pwaStandalone.test.ts : pas de DOM dans cet environnement de test, on
-// pose et retire `window` à la main pour simuler les largeurs réelles.
-describe('estGrandEcran', () => {
+// Pas de DOM dans cet environnement de test : `window.matchMedia` simulé à la main.
+type Appareil = { largeurPx: number; hauteurPx: number; tactileSeul: boolean }
+
+function poser({ largeurPx, hauteurPx, tactileSeul }: Appareil) {
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      matchMedia: (q: string) => {
+        if (q === REQUETE_ECRAN_MOBILE) return { matches: largeurPx <= 767 || (tactileSeul && hauteurPx <= 500) }
+        if (q === `(min-width: ${SEUIL_GRAND_ECRAN_PX}px)`) return { matches: largeurPx >= SEUIL_GRAND_ECRAN_PX }
+        throw new Error(`requête inattendue : ${q}`)
+      },
+    },
+  })
+}
+
+const telephone = { largeurPx: 390, hauteurPx: 844, tactileSeul: true }
+const telephonePaysage = { largeurPx: 926, hauteurPx: 428, tactileSeul: true }
+const ipadPortrait = { largeurPx: 768, hauteurPx: 1024, tactileSeul: true }
+const ipadPaysage = { largeurPx: 1024, hauteurPx: 768, tactileSeul: true }
+const fenetreReduite = { largeurPx: 820, hauteurPx: 700, tactileSeul: false }
+const ordinateur = { largeurPx: 1440, hauteurPx: 900, tactileSeul: false }
+
+describe('estEcranRail / estGrandEcran', () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'window')
 
   afterEach(() => {
@@ -11,42 +33,33 @@ describe('estGrandEcran', () => {
     else Reflect.deleteProperty(globalThis, 'window')
   })
 
-  function poserFenetre(largeurPx: number, pointeurFin = true) {
-    Object.defineProperty(globalThis, 'window', {
-      configurable: true,
-      value: {
-        matchMedia: (q: string) => ({
-          matches: q === `(min-width: ${SEUIL_GRAND_ECRAN_PX}px) and (any-pointer: fine)`
-            && largeurPx >= SEUIL_GRAND_ECRAN_PX && pointeurFin,
-        }),
-      },
-    })
-  }
-
-  it('renvoie false hors navigateur (rendu serveur)', () => {
+  it('rendu serveur : ni rail ni grand écran', () => {
+    expect(estEcranRail()).toBe(false)
     expect(estGrandEcran()).toBe(false)
   })
 
-  it('renvoie false sur téléphone (y compris le plus grand, tenu à l’horizontale)', () => {
-    poserFenetre(926, false) // iPhone Pro Max, paysage : aucun pointeur fin
-    expect(estGrandEcran()).toBe(false)
+  it('téléphone, debout ou couché : présentation mobile', () => {
+    for (const a of [telephone, telephonePaysage]) {
+      poser(a)
+      expect(estEcranRail()).toBe(false)
+      expect(estGrandEcran()).toBe(false)
+    }
   })
 
-  it('renvoie true sur un ordinateur affiché à 150 % (≈910px utiles), comme le rail', () => {
-    poserFenetre(910)
-    expect(estGrandEcran()).toBe(true)
+  it('iPad en portrait et fenêtre réduite : rail, sur une colonne', () => {
+    for (const a of [ipadPortrait, fenetreReduite]) {
+      poser(a)
+      expect(estEcranRail()).toBe(true)
+      expect(estGrandEcran()).toBe(false)
+    }
   })
 
-  it('renvoie false juste sous le seuil', () => {
-    poserFenetre(SEUIL_GRAND_ECRAN_PX - 1)
-    expect(estGrandEcran()).toBe(false)
-  })
-
-  it('renvoie true au seuil et au-delà (ordinateur)', () => {
-    poserFenetre(SEUIL_GRAND_ECRAN_PX)
-    expect(estGrandEcran()).toBe(true)
-    poserFenetre(1440)
-    expect(estGrandEcran()).toBe(true)
+  it('iPad en paysage et ordinateur : rail et grand écran', () => {
+    for (const a of [ipadPaysage, ordinateur]) {
+      poser(a)
+      expect(estEcranRail()).toBe(true)
+      expect(estGrandEcran()).toBe(true)
+    }
   })
 
   it('renvoie false plutôt que de lever une exception si matchMedia échoue', () => {
@@ -54,64 +67,7 @@ describe('estGrandEcran', () => {
       configurable: true,
       value: { matchMedia: () => { throw new Error('non supporté') } },
     })
-    expect(() => estGrandEcran()).not.toThrow()
+    expect(estEcranRail()).toBe(false)
     expect(estGrandEcran()).toBe(false)
-  })
-})
-
-// Le rail a son propre seuil, plus bas, mais assorti d'un second critère : la présence d'un
-// pointeur précis. C'est ce qui permet de descendre sous les 926px d'un grand téléphone tenu à
-// l'horizontale sans le faire basculer — un téléphone n'a aucun pointeur fin.
-describe('estEcranRail', () => {
-  const original = Object.getOwnPropertyDescriptor(globalThis, 'window')
-
-  afterEach(() => {
-    if (original) Object.defineProperty(globalThis, 'window', original)
-    else Reflect.deleteProperty(globalThis, 'window')
-  })
-
-  function poserAppareil({ largeurPx, souris }: { largeurPx: number; souris: boolean }) {
-    Object.defineProperty(globalThis, 'window', {
-      configurable: true,
-      value: {
-        matchMedia: (q: string) => ({
-          // on évalue la requête comme le ferait un navigateur : les deux conditions ET-ées
-          matches: q.includes('any-pointer: fine')
-            ? largeurPx >= SEUIL_RAIL_PX && souris
-            : largeurPx >= SEUIL_GRAND_ECRAN_PX,
-        }),
-      },
-    })
-  }
-
-  it('renvoie false hors navigateur (rendu serveur)', () => {
-    expect(estEcranRail()).toBe(false)
-  })
-
-  it('renvoie false sur le plus grand téléphone tenu à l’horizontale, bien qu’il dépasse le seuil', () => {
-    poserAppareil({ largeurPx: 926, souris: false })
-    expect(926).toBeGreaterThan(SEUIL_RAIL_PX)   // la largeur seule aurait dit oui
-    expect(estEcranRail()).toBe(false)           // l’absence de souris tranche
-  })
-
-  it('sur un ordinateur portable étroit (sous l’ancien seuil de 1024), rail ET grand écran ensemble', () => {
-    poserAppareil({ largeurPx: 910, souris: true })
-    // Plus de zone hybride (2026-10-10) : le rail se réduit à ses icônes, les écrans prennent
-    // leur mise en page ordinateur.
-    expect(estEcranRail()).toBe(true)
-    expect(estGrandEcran()).toBe(true)
-  })
-
-  it('renvoie false sur un ordinateur dont la fenêtre est trop étroite', () => {
-    poserAppareil({ largeurPx: 700, souris: true })
-    expect(estEcranRail()).toBe(false)
-  })
-
-  it('renvoie false si matchMedia échoue', () => {
-    Object.defineProperty(globalThis, 'window', {
-      configurable: true,
-      value: { matchMedia: () => { throw new Error('indisponible') } },
-    })
-    expect(estEcranRail()).toBe(false)
   })
 })

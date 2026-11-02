@@ -495,7 +495,7 @@ export default function AccueilV2({
         //     Uniquement ici : sur téléphone (colonne unique, plus bas), ni « Demain » ni
         //     « Cette semaine » ne s'affichent — la colonne de droite est une disposition de
         //     grand écran, pas un contenu qui manquerait sur un téléphone qui ne l'a jamais eu.
-        <div className="mt-6 grid grid-cols-[1fr_340px] gap-[26px] items-start">
+        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_340px] gap-[26px] items-start">
           <div>{premierJour ? demarrage : colonneActivite}</div>
           <div>
             {premierJour ? (
