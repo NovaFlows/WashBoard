@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Assistance from '@/components/dashboard/Assistance'
+import { Suspense } from 'react'
+import AssistanceV2 from '@/components/dashboard/AssistanceV2'
 
 // Un lien direct `?fil=<id>` (notification, email) doit toujours retomber
 // sur les vraies données du laveur qui clique, jamais sur un instantané mis
@@ -34,16 +35,18 @@ export default async function AssistancePage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
-      <Assistance
-        liste={{
-          nom: washer.name,
-          slug: washer.slug,
-          brandColor: washer.brand_color,
-          plan: washer.plan,
-          grandfathered: washer.grandfathered,
-        }}
-        betaRefonte={washer.beta_refonte}
-      />
+      {/* useSearchParams (lecture de ?fil=) exige une limite Suspense. */}
+      <Suspense fallback={null}>
+        <AssistanceV2
+          liste={{
+            nom: washer.name,
+            slug: washer.slug,
+            brandColor: washer.brand_color,
+            plan: washer.plan,
+            grandfathered: washer.grandfathered,
+          }}
+        />
+      </Suspense>
     </DashboardShell>
   )
 }

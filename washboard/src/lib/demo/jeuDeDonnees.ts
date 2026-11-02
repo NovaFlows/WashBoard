@@ -38,7 +38,7 @@ import type { Availability, Service, ServiceCategory, Unavailability as Unavaila
 import { quotaReservations, quotaPrestations, libelleRemiseAZero, type Plan } from '@/lib/plan'
 import type { ReglagesApparence } from '@/hooks/useApparenceV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
-import type { PropsAbonnement } from '@/components/dashboard/Abonnement'
+import type { PropsAbonnement } from '@/components/dashboard/AbonnementV2'
 import type { SupportThread } from '@/lib/support'
 import { computeSetupProgress, type SetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 import { semaineAccueil, type JourSemaine, type RdvPourSemaine } from '@/lib/semaineAccueil'

@@ -21,8 +21,10 @@ import { formatEuros } from '@/lib/plan'
 import { LigneClientVerrouilleeV2 } from '@/components/dashboard/ReservationVerrouilleeV2'
 import AutomatismesClientsV2, { type AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
 import { Ligne, CarteListe, TitreSection } from '@/components/dashboard/ParametresFormV2'
-import type { ClientBloque } from '@/components/dashboard/ClientsViewV1'
 import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
+
+/** Client masqué par le plafond de l'offre (rendu flouté en tête de liste). */
+export type ClientBloque = { id: string; scheduled_at: string }
 
 // Fichier clients du laveur, présentation v2 — réservée à la PWA installée en
 // mode standalone (voir ClientsView.tsx, le point de branchement ; décision

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Abonnement, { EnteteAbonnement } from '@/components/dashboard/Abonnement'
+import AbonnementV2 from '@/components/dashboard/AbonnementV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutPeriodeQuota, debutSoumisAuPlafond, libelleRemiseAZero } from '@/lib/plan'
 import { infosFacturationManquantes } from '@/lib/facture'
@@ -56,8 +56,7 @@ export default async function AbonnementPage() {
       cancelsAt={washer.cancels_at ?? null}
       betaRefonte={washer.beta_refonte}
     >
-      <EnteteAbonnement betaRefonte={washer.beta_refonte} />
-      <Abonnement
+      <AbonnementV2
         subscriptionStatus={washer.subscription_status ?? 'trial'}
         trialEndsAt={washer.trial_ends_at ?? null}
         subscriptionEndsAt={washer.subscription_ends_at ?? null}
@@ -69,7 +68,7 @@ export default async function AbonnementPage() {
         plafondPrestations={plafondPrestations}
         prestationsAuCatalogue={prestations?.error ? null : prestations?.count ?? null}
         remiseAZero={libelleRemiseAZero(washer.created_at)}
-        // Liste « Plus », pour la colonne de gauche sur grand écran (voir Abonnement.tsx) :
+        // Liste « Plus », pour la colonne de gauche sur grand écran :
         // `washerDuUtilisateur` lit déjà toutes les colonnes ('*', voir son défaut) sur cette
         // page, donc `brandColor` et `facturationIncomplete` ne coûtent aucune lecture de plus.
         liste={{
@@ -80,7 +79,6 @@ export default async function AbonnementPage() {
           grandfathered: washer.grandfathered,
           facturationIncomplete: infosFacturationManquantes(washer).length > 0,
         }}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

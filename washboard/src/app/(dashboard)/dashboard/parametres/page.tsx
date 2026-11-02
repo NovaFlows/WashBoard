@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import ParametresForm from '@/components/dashboard/ParametresForm'
+import ParametresFormV2 from '@/components/dashboard/ParametresFormV2'
 import { EnteteParametres } from '@/components/dashboard/EnteteParametres'
 import { resumeHorairesCourt } from '@/lib/horaires'
 import { logger } from '@/lib/logger'
@@ -29,12 +29,10 @@ export default async function ParametresPage() {
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
       <EnteteParametres />
       {/* `undefined` si la lecture a échoué : ligne affichée sans nombre plutôt qu'un zéro inventé. */}
-      <ParametresForm
+      <ParametresFormV2
         washer={washer}
-        email={user.email ?? ''}
         servicesCount={services.error ? undefined : (services.count ?? 0)}
         resumeHoraires={availabilities.error ? undefined : resumeHorairesCourt(availabilities.data ?? [])}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

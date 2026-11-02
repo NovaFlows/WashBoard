@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import ClientsView from '@/components/dashboard/ClientsView'
+import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
 import { logger } from '@/lib/logger'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import type { ClientBooking, ClientDocument, ClientReglages } from '@/lib/clientProfile'
@@ -166,9 +166,8 @@ export default async function ClientsPage() {
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <ClientsView
+      <ClientsViewV2
         nomLaveur={washer.name}
-        betaRefonte={washer.beta_refonte}
         bookings={lignes}
         bloques={bloquees}
         offreDeblocage={PLAN_LABELS[offreProposee]}
