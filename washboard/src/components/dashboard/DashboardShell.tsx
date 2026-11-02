@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { Sidebar } from './Sidebar'
 import { BarreBasV2 } from './BarreBasV2'
 import { RailBureauV2 } from './RailBureauV2'
 import ConfirmationEnvoiV2 from './ConfirmationEnvoiV2'
@@ -11,13 +10,11 @@ import VisiteGuidee from './VisiteGuidee'
 import type { VisitesAFaire } from '@/lib/visiteGuidee'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, requiredPlan, type Plan, type Feature } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
 import { useSupportUnreadTeamBadge } from '@/lib/useSupportUnreadTeamBadge'
 import { useEstEquipeSupport } from '@/lib/useEstEquipeSupport'
-import { UnreadCountBadge, unreadLabel } from '@/components/ui/UnreadCountBadge'
 import { usePreferenceLocale } from '@/hooks/usePreferenceLocale'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
 import { useDashboardV2 } from '@/hooks/useDashboardV2'
@@ -70,86 +67,6 @@ type Props = {
   }
 }
 
-function PlanBadge({ grandfathered, effectif }: { grandfathered?: boolean; effectif: Plan }) {
-  // `plan` est ce qui est écrit en base, `effectif` ce qui s'applique
-  // aujourd'hui : après un essai non transformé, les deux diffèrent, et c'est
-  // le second que le laveur doit lire.
-  const label = grandfathered ? 'Accès complet' : PLAN_LABELS[effectif]
-  const color = grandfathered
-    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-    : effectif === 'pro' || effectif === 'business'
-      ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
-    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-  return (
-    <Link
-      href="/dashboard/abonnement"
-      title="Voir mon abonnement"
-      aria-label={`Abonnement : ${label}`}
-      // Même hauteur que les deux boutons voisins (36 px, 40 px dès sm) et
-      // carré sur téléphone, où seule la couronne s'affiche.
-      className={`inline-flex items-center justify-center gap-1.5 h-9 min-w-9 sm:h-10 sm:min-w-10 px-0 sm:px-3 rounded-xl text-xs font-bold whitespace-nowrap hover:opacity-80 transition-opacity ${color}`}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-        <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zM5 20h14"/>
-      </svg>
-      {/* Sur téléphone, seule la couronne reste : le libellé du plan poussait
-          « WashBoard » hors de l'écran, qui s'affichait « Wa… ». Le badge reste
-          cliquable et son intitulé passe par aria-label. */}
-      <span className="hidden sm:inline-flex items-center gap-1.5">
-        {/* Pas de pastille pour un client historique : « Accès complet » n'est
-            pas une offre de la grille, lui en donner une couleur laisserait
-            croire qu'il existe un cinquième palier. */}
-        {!grandfathered && (
-          <span
-            className="inline-block w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: PLAN_COULEURS[effectif] }}
-            aria-hidden
-          />
-        )}
-        {label}
-      </span>
-    </Link>
-  )
-}
-
-// Description du bouton ☰ quand il porte les deux compteurs à la fois
-// (compte à la fois laveur et membre de l'équipe — le cas de Ryan en local,
-// ce sera peut-être celui d'Alexandre demain).
-//
-// Choix : le CHIFFRE affiché sur le bouton est la SOMME des deux compteurs,
-// pas seulement celui qu'on jugerait prioritaire. Deux raisons :
-//  1. Le bouton ☰ n'a jamais eu la prétention de tout détailler — c'est un
-//     simple signal « quelque chose t'attend », le détail (qui, combien de
-//     chaque côté) est à un clic, dans le menu déjà déplié où « Assistance »
-//     et « Support » portent chacun leur propre nombre.
-//  2. Un choix de priorité masquerait carrément un des deux compteurs dès que
-//     l'autre est non nul — un laveur-équipe qui voit « 3 » sur le bouton ne
-//     doit jamais se demander si ce sont 3 laveurs qui attendent ou 3
-//     réponses de l'équipe qu'il n'a pas lues : avec la somme, la question ne
-//     se pose plus, il sait juste qu'il a des choses à regarder et va les
-//     trouver en ouvrant le menu.
-// L'aria-label, lui, reste détaillé (voir `libelleBoutonMenu`) : ce que la
-// pastille visuelle ne peut pas dire en un chiffre, la description vocale le
-// peut en une phrase.
-function libelleBoutonMenu(unreadSupportCount: number | null, unreadTeamCount: number | null): string {
-  const assistance = unreadSupportCount ?? 0
-  const equipe = unreadTeamCount ?? 0
-  const parties: string[] = []
-  if (assistance > 0) parties.push(`${unreadLabel(assistance)} de l’équipe`)
-  if (equipe > 0) parties.push(`${equipe > 1 ? `${equipe} messages` : '1 message'} de laveurs en attente de réponse`)
-  return parties.length > 0 ? `Ouvrir le menu — ${parties.join(', ')}` : 'Ouvrir le menu'
-}
-
-function DismissButton({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <button onClick={onDismiss} aria-label="Fermer" className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
-  )
-}
-
 // ── Bandeaux d'information : une forme par version ─────────────────────────
 //
 // Les bandeaux (fin d'essai, paiement en retard, annonce des offres, bêta de
@@ -161,8 +78,6 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
 // voir ». D'où cette forme v2 : une carte de la même famille que les autres,
 // alignée à gauche, filet de la couleur du ton plutôt qu'un aplat.
 //
-// Le site, lui, ne bouge pas d'un pixel : c'est la branche `!isPwa` ci-dessous,
-// reprise à l'identique de ce que chaque bandeau rendait avant.
 type TonBandeau = 'accent' | 'vert' | 'ambre' | 'rouge' | 'nouveau'
 
 const V2_POLICE = '[font-family:var(--font-archivo)]'
@@ -310,7 +225,6 @@ function AppBetaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
   // On part de « masqué » : ce qui décide de l'affichage n'existe que dans le
   // navigateur, et un rendu serveur différent provoquerait un clignotement.
   const [visible, setVisible] = useState(false)
-  const isPwa = useDesignMobile()
 
   useEffect(() => {
     let annule = false
@@ -357,36 +271,16 @@ function AppBetaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
     )
   }
 
-  if (isPwa) {
-    return (
-      <BandeauV2
-        etiquette="Bêta"
-        ton="accent"
-        lien="/dashboard/guide#guide-application"
-        libelleLien="En savoir plus"
-        onDismiss={fermer}
-      >
-        Recevez vos réservations en notification sur votre téléphone.
-      </BandeauV2>
-    )
-  }
-
   return (
-    <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
-      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-wide bg-blue-600/10 dark:bg-blue-400/15 px-1.5 py-0.5 rounded">Bêta</span>
-          Recevez vos réservations en notification sur votre téléphone.
-        </span>
-        <Link
-          href="/dashboard/guide#guide-application"
-          className="underline font-bold whitespace-nowrap hover:opacity-70"
-        >
-          En savoir plus →
-        </Link>
-      </div>
-      <DismissButton onDismiss={fermer} />
-    </div>
+    <BandeauV2
+      etiquette="Bêta"
+      ton="accent"
+      lien="/dashboard/guide#guide-application"
+      libelleLien="En savoir plus"
+      onDismiss={fermer}
+    >
+      Recevez vos réservations en notification sur votre téléphone.
+    </BandeauV2>
   )
 }
 
@@ -412,7 +306,6 @@ function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBa
   // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
   // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
   const [visible, setVisible] = useState(false)
-  const isPwa = useDesignMobile()
 
   useEffect(() => {
     let annule = false
@@ -447,103 +340,16 @@ function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBa
     )
   }
 
-  if (isPwa) {
-    return (
-      <BandeauV2
-        etiquette="Nouveau"
-        ton="nouveau"
-        lien="/dashboard/abonnement"
-        libelleLien="Voir les offres"
-        onDismiss={fermer}
-      >
-        WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
-      </BandeauV2>
-    )
-  }
-
   return (
-    <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-b border-indigo-200 dark:border-indigo-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
-      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-wide bg-indigo-600/10 dark:bg-indigo-400/15 px-1.5 py-0.5 rounded">Nouveau</span>
-          WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
-        </span>
-        <Link
-          href="/dashboard/abonnement"
-          className="underline font-bold whitespace-nowrap hover:opacity-70"
-        >
-          Voir les offres →
-        </Link>
-      </div>
-      <DismissButton onDismiss={fermer} />
-    </div>
-  )
-}
-
-// Annonce de la nouvelle application (refonte 2026), une seule fois par
-// laveur — et UNIQUEMENT sur le site, jamais dans l'application installée
-// (demande explicite d'Alexandre, 2026-10-01) : inviter quelqu'un à essayer
-// la nouvelle version alors qu'il s'en sert déjà n'aurait aucun sens, et
-// laisserait croire qu'il manque quelque chose à ce qu'il a sous les yeux.
-// Même raison pour la v2 sur ordinateur (`bureau`, Alexandre, 2026-10-09) : le
-// laveur a déjà la nouvelle version sous les yeux.
-const CLE_FERMEE_ANNONCE_PWA = 'wb_annonce_pwa_2026_fermee'
-
-function AnnoncePwaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
-  const isPwa = useDesignMobile()
-  const masque = isPwa || bureau
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    if (masque) return
-    let annule = false
-    ;(async () => {
-      let fermee = false
-      try {
-        fermee = !!localStorage.getItem(CLE_FERMEE_ANNONCE_PWA)
-      } catch {
-        // Stockage bloqué : on affiche quand même, voir AppBetaBanner.
-      }
-      if (!annule && !fermee) setVisible(true)
-    })()
-    return () => { annule = true }
-  }, [masque])
-
-  // Jamais dans la nouvelle version (voir l'en-tête du fichier) : on le signale comme
-  // indisponible plutôt que de laisser le châssis attendre un signal qui ne viendra jamais.
-  useEffect(() => { onDisponibiliteChange(!masque && visible) }, [masque, visible, onDisponibiliteChange])
-
-  if (masque || !visible || !actif) return null
-
-  function fermer() {
-    setVisible(false)
-    try { localStorage.setItem(CLE_FERMEE_ANNONCE_PWA, '1') } catch { /* rien à faire */ }
-  }
-
-  if (bureau) {
-    return (
-      <BandeauBureauV2 etiquette="Nouveau" lien="/dashboard/guide#guide-application" libelleLien="En savoir plus" onDismiss={fermer}>
-        WashBoard évolue — venez essayer la nouvelle version de l&apos;application.
-      </BandeauBureauV2>
-    )
-  }
-
-  return (
-    <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 text-sm font-semibold py-2.5 px-3 flex items-center gap-2">
-      <div className="flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center min-w-0">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-wide bg-blue-600/10 dark:bg-blue-400/15 px-1.5 py-0.5 rounded">Nouveau</span>
-          WashBoard évolue — venez essayer la nouvelle version de l&apos;application.
-        </span>
-        <Link
-          href="/dashboard/guide#guide-application"
-          className="underline font-bold whitespace-nowrap hover:opacity-70"
-        >
-          En savoir plus →
-        </Link>
-      </div>
-      <DismissButton onDismiss={fermer} />
-    </div>
+    <BandeauV2
+      etiquette="Nouveau"
+      ton="nouveau"
+      lien="/dashboard/abonnement"
+      libelleLien="Voir les offres"
+      onDismiss={fermer}
+    >
+      WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+    </BandeauV2>
   )
 }
 
@@ -552,56 +358,26 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 } & PropsBandeau) {
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
-  const isPwa = useDesignMobile()
 
   /** Rend le bandeau, ou rien s'il a déjà été fermé pour ce repère. */
   const bandeau = (repere: string, contenu: (fermer: () => void) => React.ReactElement) =>
     (ferme === repere ? null : contenu(() => setFerme(repere)))
 
-  // Habillage v1 par ton — repris à l'identique de ce que chaque état rendait
-  // avant, pour que le site ne bouge pas d'un pixel.
-  const HABIT_V1: Record<TonBandeau | 'urgent' | 'expire', string> = {
-    accent: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800',
-    nouveau: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800',
-    vert: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800',
-    ambre: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800',
-    rouge: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-b border-red-200 dark:border-red-800',
-    urgent: 'bg-orange-500 text-white',
-    expire: 'bg-red-600 text-white',
-  }
-
   /** Un état du bandeau, dans la forme de la version en cours. Tout bandeau se ferme
    *  (demandé par Alexandre, 2026-09-30) : la porte vers les offres reste dans le menu. */
   const etat = (
-    ton: TonBandeau, habitV1: keyof typeof HABIT_V1,
-    texte: React.ReactNode, libelleLien: string, fermer?: () => void,
-  ) => {
-    if (bureau) {
-      return (
-        <BandeauBureauV2 lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
-          {texte}
-        </BandeauBureauV2>
-      )
-    }
-    if (isPwa) {
-      return (
-        <BandeauV2 ton={ton} lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
-          {texte}
-        </BandeauV2>
-      )
-    }
-    return (
-      <div className={`text-sm font-semibold py-2.5 px-3 flex items-center gap-2 ${HABIT_V1[habitV1]}`}>
-        <div className="flex-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-center min-w-0">
-          <span>{texte}</span>
-          <Link href="/dashboard/abonnement" className="underline font-bold whitespace-nowrap hover:opacity-70">
-            {libelleLien} →
-          </Link>
-        </div>
-        {fermer && <DismissButton onDismiss={fermer} />}
-      </div>
+    ton: TonBandeau, texte: React.ReactNode, libelleLien: string, fermer?: () => void,
+  ) => bureau
+    ? (
+      <BandeauBureauV2 lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
+        {texte}
+      </BandeauBureauV2>
     )
-  }
+    : (
+      <BandeauV2 ton={ton} lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
+        {texte}
+      </BandeauV2>
+    )
 
   // Toute la logique ci-dessous décide seulement CE QUE ce bandeau voudrait montrer
   // (`contenu`, nullable) — jamais si on l'affiche vraiment : ça, c'est `actif` (coordination
@@ -616,7 +392,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     // alors que sa page de réservation fonctionne toujours.
     if (choisirFormule) {
       return bandeau('choisir-formule', fermer => etat(
-        'accent', 'accent',
+        'accent',
         'Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.',
         'Voir les offres', fermer,
       ))
@@ -625,7 +401,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     // Résiliation programmée : abonnement encore actif jusqu'à la date de fin
     if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
       return bandeau(`resilie-${cancelsAt}`, fermer => etat(
-        'rouge', 'rouge',
+        'rouge',
         <>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</>,
         'Réactiver', fermer,
       ))
@@ -641,7 +417,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 
     if (subscriptionStatus === 'expired') {
       return bandeau('expire', fermer => etat(
-        'rouge', 'expire',
+        'rouge',
         'Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.',
         'Voir les offres', fermer,
       ))
@@ -654,18 +430,18 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       // Carte enregistrée, facturation différée
       if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
         return bandeau(`carte-${daysLeft}`, fermer => etat(
-          'vert', 'vert',
+          'vert',
           <>✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</>,
           'Gérer', fermer,
         ))
       }
 
       if (daysLeft <= 0) {
-        return bandeau('essai-expire', fermer => etat('rouge', 'expire', 'Votre période d’essai a expiré.', 'Activer mon abonnement', fermer))
+        return bandeau('essai-expire', fermer => etat('rouge', 'Votre période d’essai a expiré.', 'Activer mon abonnement', fermer))
       }
 
       return bandeau(`essai-${daysLeft}`, fermer => etat(
-        isUrgent ? 'ambre' : 'accent', isUrgent ? 'urgent' : 'accent',
+        isUrgent ? 'ambre' : 'accent',
         <>Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</>,
         'Voir l’abonnement', fermer,
       ))
@@ -692,23 +468,6 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   }
   const offreEffective = planEffectif(fiche)
 
-  // Ce que l'offre actuelle ne couvre pas, signalé dans le menu par le nom de
-  // l'offre qui l'ouvre. Avant, ces entrées étaient identiques aux autres : on
-  // cliquait, on tombait sur un mur, et rien n'avait prévenu. Le badge le dit
-  // d'avance, et l'entrée reste cliquable — c'est en voyant l'aperçu qu'on a
-  // envie de l'offre, pas en butant sur une porte fermée.
-  const badgesOffre = Object.fromEntries(
-    ([
-      ['/dashboard/crm', 'crm'],
-      ['/dashboard/compta', 'compta'],
-      ['/dashboard/factures', 'facturation'],
-    ] as [string, Feature][])
-      .filter(([, f]) => !hasFeature(fiche, f))
-      .map(([href, f]) => {
-        const requis = requiredPlan(f)
-        return [href, { label: PLAN_LABELS[requis], couleur: PLAN_COULEURS[requis] }]
-      }),
-  )
   const complet = accesComplet(fiche)
   const offreCourante = useMemo(
     () => ({ offre: offreEffective, peut: (f: Feature) => hasFeature(fiche, f) }),
@@ -716,31 +475,12 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     [offreEffective, plan, grandfathered, slug, createdAt, subscriptionStatus, trialEndsAt, subscriptionEndsAt],
   )
   const choisirFormule = doitChoisirFormule(fiche)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  // Barre du bas (refonte 2026, passe 4) : uniquement dans la PWA installée
-  // (usePwaStandalone — la FORME du châssis change, une nav en plus apparaît,
-  // donc le hook plutôt que la classe CSS `wb-pwa`, voir globals.css). Depuis le
-  // 2026-10-01, plus de filtre `beta_refonte` : toute application installée reçoit
-  // la refonte. Le menu latéral (Sidebar, juste en dessous) n'est JAMAIS conditionné
-  // par cette variable : il reste le filet de secours tant que les passes 5 et 6 ne
-  // sont pas faites.
   // Design mobile (téléphone, installé ou dans le navigateur) : décide du châssis.
   // Installation réelle : décide seulement de la couleur de la barre d'état (cookie plus bas).
   const isPwa = useDesignMobile()
   const installee = usePwaStandalone()
-  // Passe « châssis bureau » (2026-10-05, Alexandre, 2026-10-03) : sur grand écran, les 5
-  // destinations deviennent le rail vertical (RailBureauV2) plutôt que la barre du bas — il
-  // n'y a plus de pouce à ménager, mais toujours un menu à montrer. `useDashboardV2` dit si
-  // CET écran doit être en v2 (PWA, n'importe quelle largeur ; OU site + grand écran +
-  // `washer.beta_refonte`) ; `useGrandEcran` dit laquelle des deux formes de nav v2 s'applique.
-  // Combinées :
-  //   - PWA sur téléphone        → estV2 vrai, ecranRail faux  → barre du bas (inchangé)
-  //   - Site, mobile ou étroit   → estV2 faux                   → v1 (menu + en-tête), inchangé
-  //   - Site, assez large + flag  → estV2 vrai, ecranRail vrai  → rail
-  //   - PWA sur ordinateur       → estV2 vrai, ecranRail vrai  → rail (cohérent avec le fait
-  //     que la PWA voit toujours la v2, quelle que soit sa largeur — voir useDashboardV2.ts)
-  // Un découpage à la largeur réelle (pas à `isPwa` seul) : avant cette passe, une PWA ouverte
-  // sur ordinateur recevait encore la barre du bas, pensée pour un pouce qui n'existe plus là.
+  // Châssis (2026-11-02) : rail sur tout ce qui n'est pas un téléphone (voir grandEcran.ts),
+  // barre du bas sur téléphone. Au rendu serveur, ni l'un ni l'autre : bandeaux et contenu seuls.
   const estV2 = useDashboardV2(betaRefonte)
   const ecranRail = useEcranRail()
   const showBarreBas = isPwa && !ecranRail
@@ -770,23 +510,15 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
       if (!installee) html.classList.remove('wb-pwa')
     }
   }, [isPwa, showBarreBas, showRailBureau, installee])
-  // Décoratif (voir useSupportUnreadBadge) : porté ici pour n'interroger
-  // /api/support/non-lues qu'une fois par page, puis partagé entre le menu
-  // (Sidebar), le bouton ☰ juste en dessous — qui doivent montrer le même
-  // nombre, sinon un laveur qui n'ouvre jamais le menu sur mobile ne verrait
-  // jamais le compteur — et, dans la PWA en bêta où ni l'un ni l'autre
-  // n'existe plus, l'écran « Plus » (via SupportBadgesContext).
+  // Décoratif (voir useSupportUnreadBadge) : lu une fois par page et partagé avec l'écran
+  // « Plus » (via SupportBadgesContext).
   const unreadSupportCount = useSupportUnreadBadge()
   // Pendant équipe : nombre de messages de laveurs non lus par l'équipe.
   // Appelé pour tout compte (voir useSupportUnreadTeamBadge) — silencieux et
   // toujours `null` pour un laveur qui n'est pas de l'équipe.
   const unreadTeamCount = useSupportUnreadTeamBadge()
-  // Idem : un seul appel à /api/support/est-equipe par page, partagé avec le
-  // menu qui seul en a besoin ici.
+  // Idem : un seul appel à /api/support/est-equipe par page.
   const estEquipeSupport = useEstEquipeSupport()
-  // Chiffre unique affiché sur le bouton ☰ : la somme des deux compteurs,
-  // voir `libelleBoutonMenu` juste au-dessus pour le pourquoi.
-  const menuBadgeCount = (unreadSupportCount ?? 0) + (unreadTeamCount ?? 0)
   const supportBadges = useMemo(
     () => ({ estEquipeSupport, unreadSupportCount, unreadTeamCount }),
     [estEquipeSupport, unreadSupportCount, unreadTeamCount],
@@ -859,14 +591,13 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // `estBandeauActif` ci-dessous ne laisse passer que le premier disponible dans cet ordre.
   // Priorité : l'essai/la facturation (ça touche à l'argent) d'abord, puis les annonces
   // produit, dans l'ordre où elles apparaissaient déjà.
-  const ORDRE_BANDEAUX = ['trial', 'annoncePwa', 'offres2026', 'appBeta'] as const
+  const ORDRE_BANDEAUX = ['trial', 'offres2026', 'appBeta'] as const
   const [dispoBandeaux, setDispoBandeaux] = useState<Record<(typeof ORDRE_BANDEAUX)[number], boolean>>({
-    trial: false, annoncePwa: false, offres2026: false, appBeta: false,
+    trial: false, offres2026: false, appBeta: false,
   })
   // Identité stable (deps vides) : sans ça, chaque bandeau recevrait une fonction différente à
   // chaque rendu de DashboardShell et redéclencherait son effet de signalement en boucle.
   const rapporterTrial = useCallback((d: boolean) => setDispoBandeaux(s => (s.trial === d ? s : { ...s, trial: d })), [])
-  const rapporterAnnoncePwa = useCallback((d: boolean) => setDispoBandeaux(s => (s.annoncePwa === d ? s : { ...s, annoncePwa: d })), [])
   const rapporterOffres2026 = useCallback((d: boolean) => setDispoBandeaux(s => (s.offres2026 === d ? s : { ...s, offres2026: d })), [])
   const rapporterAppBeta = useCallback((d: boolean) => setDispoBandeaux(s => (s.appBeta === d ? s : { ...s, appBeta: d })), [])
   const estBandeauActif = (cle: (typeof ORDRE_BANDEAUX)[number]): boolean => {
@@ -885,7 +616,6 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt}
         bureau={showRailBureau} actif={estBandeauActif('trial')} onDisponibiliteChange={rapporterTrial}
       />
-      <AnnoncePwaBanner bureau={showRailBureau} actif={estBandeauActif('annoncePwa')} onDisponibiliteChange={rapporterAnnoncePwa} />
       <NouvellesOffresBanner bureau={showRailBureau} actif={estBandeauActif('offres2026')} onDisponibiliteChange={rapporterOffres2026} />
       <AppBetaBanner bureau={showRailBureau} actif={estBandeauActif('appBeta')} onDisponibiliteChange={rapporterAppBeta} />
     </>
@@ -898,29 +628,8 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
     // Alexandre, 2026-09-25, pour la barre du bas ; même raisonnement pour le rail). Site et
     // PWA sans bêta : inchangé.
     <div
-      className={`min-h-screen overflow-x-hidden wb-dashboard-shell ${
-        showBarreBas || showRailBureau ? 'bg-[color:var(--v2-color-fond)]' : 'bg-slate-50 dark:bg-slate-950'
-      }`}
+      className="min-h-screen overflow-x-hidden wb-dashboard-shell bg-[color:var(--v2-color-fond)]"
     >
-      {/* Menu latéral : retiré dans la PWA en bêta (refonte 2026, 2026-09-24) et dans le
-          châssis bureau (passe « bureau », 2026-10-05) — dans les deux cas, le bouton ☰ qui
-          l'ouvre a disparu avec l'en-tête, et le laisser monté offrirait des liens
-          focalisables au clavier sur un tiroir que rien ne peut ouvrir. Tout ce qu'il donnait
-          reste atteignable : les 5 destinations (barre du bas ou rail selon l'écran), et
-          « Plus » pour le reste (guide, export et liens par réseau, assistance, abonnement,
-          réglages, et l'outil interne de l'équipe). Liste vérifiée page par page dans
-          TODO.md. Site étroit et PWA sans bêta : inchangé, le menu reste monté. */}
-      {!showBarreBas && !showRailBureau && (
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          unreadSupportCount={unreadSupportCount}
-          estEquipeSupport={estEquipeSupport}
-          unreadTeamCount={unreadTeamCount}
-          badgesOffre={badgesOffre}
-        />
-      )}
-
       {showBarreBas && <BarreBasV2 />}
       {isPwa && <ConfirmationEnvoiV2 />}
       {showBarreBas && <RetourGesteV2 />}
@@ -965,85 +674,8 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         </div>
       ) : (
         <>
-          {/* En-tête. La classe `wb-entete-beta` le réduit, par CSS et sans flash, à ses
-              seuls bandeaux : la rangée ☰ / titre / badge de plan / déconnexion / thème
-              (`wb-entete-barre`) est masquée, et le bloc perd son statut collant, son fond
-              et son filet — voir globals.css. Les bandeaux (fin d'essai, paiement,
-              résiliation, annonce) restent : information commerciale, ils ne sont jamais
-              retirés. Ces règles sont portées par `html.wb-pwa` : sur le site, aucune ne
-              s'applique et l'en-tête est identique à celui d'avant. */}
-          <header
-            className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 wb-entete-beta"
-            // Dans la PWA en bêta, l'en-tête n'est plus qu'un porte-bandeaux : décidé ici, en JSX,
-            // et pas seulement par la classe `wb-pwa` de <html> (que React peut effacer en
-            // réécrivant `className`) — sinon la rangée v1 réapparaissait au fil de la navigation.
-            style={showBarreBas ? { position: 'static', background: 'transparent', borderBottomWidth: 0 } : undefined}
-          >
-            {bandeaux}
-            {!showBarreBas && <div className="wb-entete-barre w-full px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  aria-label={libelleBoutonMenu(unreadSupportCount, unreadTeamCount)}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="3" y1="6" x2="21" y2="6"/>
-                    <line x1="3" y1="12" x2="21" y2="12"/>
-                    <line x1="3" y1="18" x2="21" y2="18"/>
-                  </svg>
-                  {/* Filet pour qui n'a pas activé les notifications : le menu est
-                      replié derrière ce bouton sur mobile, le compteur doit donc
-                      être visible ICI, pas seulement dans le menu ouvert. Le
-                      libellé est déjà porté par l'aria-label du bouton
-                      (announce=false) pour ne pas l'annoncer deux fois. */}
-                  <span className="absolute -top-1 -right-1">
-                    <UnreadCountBadge
-                      count={menuBadgeCount}
-                      label=""
-                      announce={false}
-                      variant="solid"
-                      className="border-2 border-white dark:border-slate-900"
-                    />
-                  </span>
-                </button>
-
-                {/* Pas de logo ici : il est déjà dans le menu (trois barres). Dans
-                    l'en-tête, il se répétait à côté du nom et encombrait la ligne
-                    sur téléphone — retiré à la demande d'Alexandre le 2026-09-15. */}
-                <div className="min-w-0">
-                  <p className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none tracking-tight truncate">WashBoard</p>
-                  {/* Pas de fiche laveur (ex. compte support) : rien à afficher ici
-                      plutôt qu'un texte inventé — le contenu de la page se charge
-                      déjà de dire à qui appartient le compte connecté. */}
-                  {washerName && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-none truncate hidden sm:block">{washerName}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Le badge d'abonnement n'a de sens que pour un compte laveur :
-                    sans fiche, `plan` vaudrait toujours « essentiel » par défaut,
-                    ce qui laisserait croire à un abonnement qui n'existe pas. */}
-                {washerName && <PlanBadge grandfathered={complet} effectif={offreEffective} />}
-                <form action="/api/auth/logout" method="POST">
-                  <button
-                    aria-label="Se déconnecter"
-                    className="h-9 min-w-9 sm:h-10 sm:min-w-10 flex items-center justify-center px-0 sm:px-4 text-xs sm:text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold border border-slate-200 dark:border-slate-700 whitespace-nowrap"
-                  >
-                    <span className="hidden sm:inline">Déconnexion</span>
-                    <span className="sm:hidden flex">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
-                      </svg>
-                    </span>
-                  </button>
-                </form>
-                <ThemeToggle header />
-              </div>
-            </div>}
-          </header>
+          {/* Téléphone, et rendu serveur tant que l'écran n'est pas connu : bandeaux puis contenu. */}
+          {bandeaux}
 
           <main
             id="main-content"
@@ -1067,26 +699,6 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           adaptée). L'ancien site n'en a plus : son tuto visait des chemins qui n'existent plus. */}
       {(isPwa || showRailBureau) && (
         <VisiteGuidee aFaire={visiteGuidee} avancement={avancementVisite} bureau={showRailBureau} />
-      )}
-
-      {/* Retiré dans la PWA en bêta et dans le châssis bureau : posé sous la barre du bas, il
-          allongeait la page de plus d'un écran de vide et passait sous la barre (2026-09-25) ;
-          absent de la maquette bureau pour la même raison de principe (le rail n'a pas de
-          pied de page sous lui). */}
-      {!showBarreBas && !showRailBureau && (
-      <footer className="max-w-3xl mx-auto px-3 sm:px-4 pb-6 text-center">
-        <p className="text-xs text-slate-400 dark:text-slate-600">
-          Créé par{' '}
-          <a
-            href="https://novaflows.fr/realisations"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-blue-500 transition-colors font-medium"
-          >
-            NovaFlows
-          </a>
-        </p>
-      </footer>
       )}
 
       {/* Bouton WhatsApp flottant. data-wb-whatsapp-fab : accroche pour le
