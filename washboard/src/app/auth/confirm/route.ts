@@ -7,7 +7,7 @@ import { suiteConfirmation } from '@/lib/confirmationSuite'
 import { etatOnboarding } from '@/lib/onboarding'
 
 // Arrivée du lien de confirmation — l'inscription envoie désormais un CODE
-// (voir `lib/confirmationEmail`, `app/api/auth/confirm-code/route.ts`), cette
+// (voir `app/api/auth/confirm-code/route.ts`), cette
 // route ne reçoit donc plus que les emails de confirmation partis AVANT ce
 // changement (2026-10-11). Gardée pour ceux-là, pas pour être réutilisée.
 //

@@ -35,8 +35,7 @@ import { useDesignMobile } from '@/hooks/useDesignMobile'
 // (en-tête avec chevron, les deux cartes) ne change pas d'une ligne.
 //
 // La carte « Configuration de votre compte » (`SetupProgressBar`) vit ici depuis le 2026-10-04,
-// à la demande d'Alexandre : le bouton qui la masque/affiche vivait déjà sur cet écran, elle ne
-// doit plus s'afficher sur « Plus » (voir `SetupProgressBarPlus`, qui l'y cache en PWA).
+// à la demande d'Alexandre : le bouton qui la masque/affiche vivait déjà sur cet écran.
 
 type Props = {
   /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
