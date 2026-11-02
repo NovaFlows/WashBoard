@@ -31,6 +31,7 @@ import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import { semainesDuMois, compterActifsParJour, pointsRendezVous } from '@/lib/vueMois'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { openGmail, openWhatsapp } from '@/lib/contact'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -1643,6 +1644,10 @@ function DetailRendezVous({
               <Mail size={14} className="shrink-0" aria-hidden />
               <span className="truncate">{b.client_email}</span>
             </a>
+            {/* Gmail prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
+            <button type="button" onClick={() => openGmail(b)} className={`${corpsFort} text-[color:var(--v2-color-accent)] hover:underline`}>
+              Écrire sur Gmail (message prérempli)
+            </button>
           </div>}
 
           {b.client_phone && (
@@ -1663,6 +1668,15 @@ function DetailRendezVous({
               >
                 Message
               </a>
+              {/* WhatsApp prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
+              <button
+                type="button"
+                onClick={() => openWhatsapp(b)}
+                className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
+                style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
+              >
+                WhatsApp
+              </button>
             </div>
           )}
         </div>
