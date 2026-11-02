@@ -1,47 +1,26 @@
-import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import BookingList from '@/components/dashboard/BookingList'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { logger } from '@/lib/logger'
 import { computeSetupProgress, etapeDemarrage } from '@/lib/setupProgress'
 import { visitesAFaire } from '@/lib/visiteGuidee'
 import { DemarrageCard } from '@/components/dashboard/DemarrageCard'
-import { infosFacturationManquantes } from '@/lib/facture'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { revenuNet } from '@/lib/pricing'
 import { hasFeature, quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS, libelleRemiseAZero } from '@/lib/plan'
-import { BandeauBloquees } from '@/components/dashboard/ReservationsBloquees'
-import { JaugeReservations } from '@/components/dashboard/JaugeReservations'
-import { seuilsVerrouillage, masquerVerrouillees, montantVerrouille, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
+import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { getPeriodRange } from '@/lib/comptaPeriod'
 import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
-import { widgetsVisibles, type WidgetKey } from '@/lib/dashboardWidgets'
-import { countDistinctSessions, buildReferrerBreakdown } from '@/lib/funnelStats'
+import { widgetsVisibles } from '@/lib/dashboardWidgets'
+import { countDistinctSessions } from '@/lib/funnelStats'
 import { FUSEAU } from '@/lib/dateUtils'
 import { ajouterJours, bornesInstants, jourParisDe } from '@/lib/chiffresPeriode'
 import { semaineAccueil } from '@/lib/semaineAccueil'
-import { AujourdhuiWidget } from '@/components/dashboard/widgets/AujourdhuiWidget'
-import { StatsWidget } from '@/components/dashboard/widgets/StatsWidget'
-import { ClientsWidget } from '@/components/dashboard/widgets/ClientsWidget'
-import { ProchainsRdvWidget } from '@/components/dashboard/widgets/ProchainsRdvWidget'
-import { TraficWidget } from '@/components/dashboard/widgets/TraficWidget'
-import { PrestationsWidget, type PrestationComptee } from '@/components/dashboard/widgets/PrestationsWidget'
-import { ZoneWidget } from '@/components/dashboard/widgets/ZoneWidget'
-import { WidgetsConfigurator } from '@/components/dashboard/widgets/WidgetsConfigurator'
-import Accueil from '@/components/dashboard/Accueil'
-import Link from 'next/link'
+import AccueilV2 from '@/components/dashboard/AccueilV2'
 
-/**
- * Rendez-vous passés affichés sur l'accueil au premier chargement.
- *
- * L'accueil sert à voir ce qui arrive, pas à consulter des archives : le
- * calendrier montre l'historique complet, et la page Clients le regroupe par
- * personne. Au-delà, un bouton « Charger plus » va chercher la suite à la
- * demande (voir `api/bookings/historique`) plutôt que de tout envoyer d'un coup.
- */
+/** Derniers rendez-vous clôturés lus : servent à savoir si la journée a commencé. */
 const HISTORIQUE_AFFICHE = 5
 
 /** Requête vide, pour les widgets masqués : ne rien demander à la base plutôt
@@ -145,25 +124,18 @@ export default async function DashboardPage() {
       .order('scheduled_at', { ascending: false })
       .order('id')
       .limit(HISTORIQUE_AFFICHE),
-    // Widget Statistiques : « en attente »/« confirmés » d'un côté (état
-    // actuel, sans borne de temps), le nombre de rendez-vous terminés CE MOIS
-    // et le chiffre d'affaires de l'autre — cette seconde requête rend les deux
-    // à la fois, pas besoin d'un comptage séparé.
+    // Widget Statistiques : rendez-vous terminés CE MOIS et chiffre d'affaires, en une requête.
     visibles.has('stats')
-      ? Promise.all([
-          admin.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'pending'),
-          admin.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', washer.id).eq('status', 'confirmed'),
-          toutesLesLignes((debut, fin) => admin
-            .from('bookings')
-            .select('booked_price, smart_discount, is_smart_slot')
-            .eq('washer_id', washer.id)
-            .eq('status', 'done')
-            .gte('scheduled_at', `${mois.start}T00:00:00`)
-            .lte('scheduled_at', `${mois.end}T23:59:59`)
-            .order('scheduled_at')
-            .order('id')
-            .range(debut, fin)),
-        ])
+      ? toutesLesLignes((debut, fin) => admin
+          .from('bookings')
+          .select('booked_price, smart_discount, is_smart_slot')
+          .eq('washer_id', washer.id)
+          .eq('status', 'done')
+          .gte('scheduled_at', `${mois.start}T00:00:00`)
+          .lte('scheduled_at', `${mois.end}T23:59:59`)
+          .order('scheduled_at')
+          .order('id')
+          .range(debut, fin))
       : Promise.resolve(null),
     // Widget Clients : seulement email + date de création, aucune jointure —
     // juste assez pour compter, pas pour réafficher une liste (voir la leçon
@@ -177,16 +149,15 @@ export default async function DashboardPage() {
           .range(debut, fin))
       : aucuneLigne<{ client_email: string | null; created_at: string }>(),
     // Widget Trafic : événements de visite de la semaine en cours (lundi →
-    // maintenant). `step` sert à compter les conversions, `referrer_host` à la
-    // répartition par source.
+    // maintenant). `step` sert à compter les conversions.
     visibles.has('traffic')
       ? toutesLesLignes((debut, fin) => supabase
           .from('booking_funnel_events')
-          .select('session_id, step, referrer_host')
+          .select('session_id, step')
           .eq('washer_id', washer.id)
           .gte('created_at', lundiCetteSemaine.toISOString())
           .range(debut, fin))
-      : aucuneLigne<{ session_id: string; step: string; referrer_host: string | null }>(),
+      : aucuneLigne<{ session_id: string; step: string }>(),
     // Widget Prestations : quelle prestation a été la plus demandée ce mois-ci.
     // Compte tout rendez-vous ayant existé (hors annulés) : c'est la demande
     // qu'on mesure, pas seulement ce qui a été facturé.
@@ -236,19 +207,12 @@ export default async function DashboardPage() {
   if (availabilities.error) logger.warn('dashboard.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
   if (rdvSemaine.error) logger.warn('dashboard.semaine_widget.fetch_failed', { washerId: washer.id }, rdvSemaine.error)
 
-  let pending = 0
-  let confirmed = 0
   let terminesCeMois = 0
   let caCeMois = 0
   if (statsMois) {
-    const [enAttente, confirmes, doneMois] = statsMois
-    if (enAttente.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'pending' }, enAttente.error)
-    if (confirmes.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'confirmed' }, confirmes.error)
-    if (doneMois.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'done_mois' }, doneMois.error)
-    pending = enAttente.count ?? 0
-    confirmed = confirmes.count ?? 0
-    terminesCeMois = doneMois.data.length
-    caCeMois = revenuNet(doneMois.data)
+    if (statsMois.error) logger.warn('dashboard.count_failed', { washerId: washer.id, statut: 'done_mois' }, statsMois.error)
+    terminesCeMois = statsMois.data.length
+    caCeMois = revenuNet(statsMois.data)
   }
 
   // Jours de la semaine couverts par au moins une plage d'horaires récurrente
@@ -293,14 +257,6 @@ export default async function DashboardPage() {
     // Re-trié après coup : laissée à sa place d'origine, la carte verrouillée trahirait son
     // heure par ses voisines (entre le rendez-vous de 10 h et celui de 11 h).
     .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
-  // Le compte porte sur les rendez-vous À VENIR : un client bloqué dont la date
-  // est passée n'est plus une occasion à saisir, seulement un regret. Compter
-  // les regrets ne fait pas vendre, ça décourage.
-  const nbBloquees = aVenirVisible.filter(b => b.verrouillee).length
-  // Le montant se calcule sur la liste BRUTE : `masquerVerrouillees` efface
-  // justement le prix. On somme d'abord, on masque ensuite.
-  const montantBloque = montantVerrouille(aVenir ?? [], seuilsVerrou)
-
   // La jauge s'affiche en permanence, pas seulement une fois le mur atteint.
   // Le comptage n'a lieu que sur une offre plafonnée : ailleurs il n'y a rien
   // à compter, et ce serait une requête pour rien à chaque affichage.
@@ -313,19 +269,9 @@ export default async function DashboardPage() {
 
   const passes = historique.data ?? []
 
-  // Les réservations verrouillées RESTENT dans la liste « À venir », à leur
-  // place, rendues en carte floutée avec un cadenas (voir CarteVerrouillee).
-  // Elles en avaient d'abord été retirées, et un encadré à part les annonçait
-  // au-dessus : au test, cet encadré se lisait comme une publicité et se
-  // sautait comme une publicité. À sa place dans la liste, la carte se lit
-  // pour ce qu'elle est — un rendez-vous qui manque.
-  //
-  // Aucune fuite pour autant : le flou n'est qu'une décoration, c'est
-  // `masquerVerrouillees` qui a déjà retiré l'heure, le prix, le téléphone et
-  // l'adresse bien avant d'arriver ici.
+  // Les réservations verrouillées n'arrivent à l'écran que par `verrouillees` (jour seul) :
+  // `masquerVerrouillees` a déjà retiré l'heure, le prix, le téléphone et l'adresse.
   const aVenirOuvertes = aVenirVisible.filter(b => !b.verrouillee)
-  const passesOuverts = masquerVerrouillees(passes, seuilsVerrou).filter(b => !b.verrouillee)
-  const all = [...aVenirVisible, ...passesOuverts]
 
   // `aujourdhui` est calculé plus haut, avant la requête réseau (voir son
   // commentaire) : ne montre ici que ce qui reste à faire — un rendez-vous
@@ -333,8 +279,7 @@ export default async function DashboardPage() {
   const rdvAujourdhui = aVenirOuvertes.filter(
     b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
   )
-  // Après aujourd'hui, pour ne pas doublonner le widget ci-dessus : les trois
-  // prochains, dans l'ordre où `aVenir` est déjà trié.
+  // Les trois prochains après aujourd'hui, dans l'ordre où `aVenir` est déjà trié.
   // Strictement APRÈS aujourd'hui, avant de prendre les trois premiers : sans borne, trois
   // anciens rendez-vous jamais clôturés occupaient les trois places, et un vrai rendez-vous
   // à venir n'apparaissait jamais (compte NovaFlows, 2026-10-09).
@@ -342,10 +287,6 @@ export default async function DashboardPage() {
     .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) > aujourdhui)
     .slice(0, 3)
 
-  // Les deux valeurs ci-dessous ne servent QUE à l'accueil v2 (PWA installée,
-  // voir Accueil.tsx) : elles se déduisent de listes déjà en main, sans une
-  // requête ni une colonne de plus, et n'ont aucun effet sur le rendu du site.
-  //
   // « À confirmer » : les demandes en attente APRÈS aujourd'hui — celles du
   // jour sont déjà dans la journée, juste au-dessus, et les répéter en ferait
   // du bruit.
@@ -382,13 +323,11 @@ export default async function DashboardPage() {
 
   // Widget Trafic : visiteurs de la semaine en cours, et sessions ayant
   // atteint « confirmation » (une réservation vraiment déposée) rapportées à
-  // ces visiteurs — exactement le calcul de la page CRM (voir
-  // FunnelInsights/CrmView), aux deux premières sources.
+  // ces visiteurs — même calcul que la page CRM.
   const visiteursSemaine = countDistinctSessions(visitesSemaine.data ?? [])
   const conversionsSemaine = new Set(
     (visitesSemaine.data ?? []).filter(e => e.step === 'confirmation').map(e => e.session_id),
   ).size
-  const sourcesSemaine = buildReferrerBreakdown(visitesSemaine.data ?? []).slice(0, 2)
 
   // Widget Prestations : un décompte par nom, le plus demandé en tête. La
   // jointure `services` est parfois un objet, parfois un tableau selon ce que
@@ -400,122 +339,18 @@ export default async function DashboardPage() {
     const nom = svc?.name ?? 'Prestation'
     comptePrestations.set(nom, (comptePrestations.get(nom) ?? 0) + 1)
   }
-  const prestationsComptees: PrestationComptee[] = [...comptePrestations.entries()]
+  const prestationsComptees: { nom: string; nombre: number }[] = [...comptePrestations.entries()]
     .map(([nom, nombre]) => ({ nom, nombre }))
     .sort((a, b) => b.nombre - a.nombre)
 
-  // Un widget par clé, prêt à afficher — construits une fois, puis piochés
-  // dans l'ORDRE choisi par le laveur (voir WidgetsConfigurator : l'ordre du
-  // tableau `dashboard_widgets` EST l'ordre d'affichage).
-  const widgetsParCle: Record<WidgetKey, ReactNode> = {
-    today: <AujourdhuiWidget bookings={rdvAujourdhui} dateDuJour={aujourdhui} />,
-    stats: (
-      <StatsWidget
-        pending={pending}
-        confirmed={confirmed}
-        terminesCeMois={terminesCeMois}
-        // « Suivi simple du chiffre d'affaires » : c'est ce que l'offre
-        // Starter promet, et ça tient dans cette seule case. La comptabilité
-        // détaillée (dépenses, résultat, export) reste au Pro.
-        caCeMois={hasFeature(washer, 'ca_simple') ? caCeMois : null}
-      />
-    ),
-    clients: (
-      <ClientsWidget
-        total={resumeClientsWidget.total}
-        nouveauxCetteSemaine={resumeClientsWidget.nouveauxCetteSemaine}
-      />
-    ),
-    upcoming: <ProchainsRdvWidget bookings={rdvProchains} />,
-    traffic: <TraficWidget visiteurs={visiteursSemaine} conversions={conversionsSemaine} sources={sourcesSemaine} />,
-    services: <PrestationsWidget prestations={prestationsComptees} />,
-    zone: <ZoneWidget zone={washer.zone_config} />,
-  }
-
   const widgetsAffiches = [...visibles]
 
-  // Rendue une seule fois, placée par chacune des deux versions de l'accueil :
-  // elle ouvre la page v1 comme avant, et ouvre l'écran v2 dans la PWA. Un
-  // compte neuf doit trouver ses étapes de configuration des deux côtés.
   const demarrage = <DemarrageCard progress={progress} />
-
-  // L'accueil v1, à l'identique — le même arbre qu'avant cette passe, aux
-  // mêmes composants serveur (widgets, BookingList). Il est passé tel quel au
-  // point de branchement (voir Accueil.tsx) plutôt que recopié dans un
-  // `AccueilV1.tsx` client : le site doit rendre exactement ce qu'il rendait.
-  //
-  // La jauge et le bandeau des réservations bloquées (fusionné le 2026-09-28)
-  // viennent AVANT la carte de démarrage — même ordre que sur master, avant
-  // le passage v1/v2 : un compte qui touche déjà son plafond doit le voir
-  // avant même de lire ses étapes de configuration.
-  const accueilV1 = (
-    <>
-      <JaugeReservations
-        utilisees={utiliseesCeMois ?? 0}
-        quota={utiliseesCeMois === null ? null : plafondMensuel}
-        offre={planEffectif(washer)}
-        remiseAZero={libelleRemiseAZero(washer.created_at)}
-      />
-      <BandeauBloquees nombre={nbBloquees} offre={planEffectif(washer)} montant={montantBloque} />
-      {demarrage}
-
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        {/* Personnaliser la page de réservation vit dans Admin, pas dans les
-            widgets — mais y aller à chaque fois n'a rien d'intuitif. Un accès
-            direct depuis l'accueil. « Suivre mes clients », lui, est dans le
-            widget Clients (en haut à droite de sa carte) : inutile de le
-            répéter ici aussi. */}
-        <Link
-          href="/dashboard/admin#identite"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          Personnaliser ma page
-        </Link>
-        <WidgetsConfigurator visibles={[...visibles]} />
-      </div>
-
-      <BookingList
-        bookings={all}
-        washerId={washer.id}
-        facturationPrete={infosFacturationManquantes(washer).length === 0}
-        historiqueTronque={passes.length === HISTORIQUE_AFFICHE}
-        offreDeblocage={offreDeblocage}
-      >
-        {/* Passés en enfants de BookingList : lui seul peut placer « à venir »,
-            widgets et historique dans une même grille, réagencée par zone
-            selon la largeur d'écran — téléphone : à venir tout en haut,
-            widgets ensuite ; ordinateur : à venir à gauche, widgets à droite
-            sur toute la hauteur. Voir BookingList.tsx. */}
-        {widgetsAffiches.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-            {widgetsAffiches.map((cle, i) => {
-              // Un nombre impair de widgets laisserait le dernier seul sur sa
-              // ligne, avec un trou à côté : il prend alors toute la largeur.
-              // Sans objet en colonne large (lg), déjà à une seule colonne.
-              const dernierSeul = i === widgetsAffiches.length - 1 && widgetsAffiches.length % 2 === 1
-              return (
-                <div key={cle} className={dernierSeul ? 'sm:col-span-2 lg:col-span-1' : ''}>
-                  {widgetsParCle[cle]}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </BookingList>
-    </>
-  )
 
   return (
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte} visiteGuidee={visitesAFaire(washer)}>
-      {/* Passe 8 de la refonte 2026 : dans la PWA installée, l'accueil devient
-          « Aujourd'hui » (héros du prochain rendez-vous, la journée, à
-          confirmer, puis les widgets du laveur en lignes). Sur le site, rien ne
-          change — voir Accueil.tsx. Aucune requête n'a été ajoutée : les
-          valeurs ci-dessous sortent toutes de ce qui est déjà calculé plus
-          haut pour la v1, et restent à `null` quand le widget correspondant
-          est masqué (donc sa donnée jamais demandée à la base). */}
-      <Accueil
-        v1={accueilV1}
+      {/* Les valeurs des widgets restent à `null` quand le widget est masqué (donnée jamais lue). */}
+      <AccueilV2
         demarrage={demarrage}
         rdvAujourdhui={rdvAujourdhui}
         rdvProchains={rdvProchains}
@@ -545,7 +380,6 @@ export default async function DashboardPage() {
         // opérationnel mais sans logo aurait vu la carte « premier jour » à la place de son
         // agenda dès un jour sans rendez-vous — faux signal, corrigé avant d'écrire l'écran.
         configurationIncomplete={etapeDemarrage(progress) !== null}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { isValidElement, type ReactElement, type ReactNode } from 'react'
 
 // L'accueil masquait le nom d'une réservation verrouillée mais lui laissait son `scheduled_at`
-// complet dans la liste transmise à BookingList : l'heure exacte se lisait dans le code source
-// de la page, et la place de la carte entre ses voisines la trahissait aussi (audit du 2026-10-02).
+// complet : l'heure exacte se lisait dans le code source de la page (audit du 2026-10-02).
+// Tout ce qui part vers l'accueil est sérialisé dans la page : rien de verrouillé ne doit y être lisible.
 
 let aVenir: Record<string, unknown>[]
 
@@ -58,7 +58,9 @@ const reservation = (id: string, scheduled_at: string, created_at: string, clien
 
 // 9 h, 10 h 30 et 11 h à Paris, le même jour. La réservation de 10 h 30 dépasse le quota.
 const A = reservation('a', '2026-10-03T07:00:00.000Z', '2026-09-24T08:00:00.000Z', 'Claire Martin')
-const C = reservation('c', '2026-10-03T08:30:00.000Z', '2026-09-28T09:00:00.000Z', 'Nadia Costa')
+// Téléphone, adresse et prix propres à C : leur absence se vérifie sans confusion avec A et B.
+const C = { ...reservation('c', '2026-10-03T08:30:00.000Z', '2026-09-28T09:00:00.000Z', 'Nadia Costa'),
+  client_phone: '0611223344', address: '7 impasse Secrète', booked_price: 87.13 }
 const B = reservation('b', '2026-10-03T09:00:00.000Z', '2026-09-24T09:00:00.000Z', 'Paul Durand')
 
 /** Premier élément de l'arbre dont les props satisfont `test`, props-éléments compris. */
@@ -80,35 +82,52 @@ function trouver(noeud: ReactNode, test: (props: Record<string, unknown>) => boo
   return null
 }
 
+// La veille des trois rendez-vous : « demain », « prochains » et « à confirmer » sont remplis.
+const VEILLE = '2026-10-02T10:00:00Z'
+// Le jour même, 7 h à Paris : « aujourd'hui » est rempli.
+const JOUR_MEME = '2026-10-03T05:00:00Z'
+
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(VEILLE))
   aVenir = [A, C, B]
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
+afterEach(() => { vi.useRealTimers() })
+
 describe('/dashboard — heure des réservations au-delà du quota', () => {
-  it('ne transmet à BookingList que le jour d’une réservation verrouillée, à midi UTC', async () => {
+  it('ne transmet à l’accueil ni l’heure ni le nom d’une réservation verrouillée', async () => {
     const page = await DashboardPage() as ReactElement
-    const liste = trouver(page, p => 'washerId' in p && Array.isArray(p.bookings))
-    const transmises = liste!.bookings as Record<string, unknown>[]
-    const c = transmises.find(b => b.id === 'c')!
-    expect(c.verrouillee).toBe(true)
-    expect(c.scheduled_at).toBe('2026-10-03T12:00:00Z')
-    const brut = JSON.stringify(transmises)
+    const accueil = trouver(page, p => Array.isArray(p.verrouillees) && Array.isArray(p.aConfirmer))
+    const { demarrage: _demarrage, ...donnees } = accueil!
+    const brut = JSON.stringify(donnees)
     expect(brut).not.toContain('2026-10-03T08:30')
     expect(brut).not.toContain('Nadia')
+    expect(brut).not.toContain('c@example.com')
+    expect(brut).not.toContain('0611223344')
+    expect(brut).not.toContain('impasse Secrète')
+    expect(brut).not.toContain('87.13')
   })
 
-  it('range la carte verrouillée à midi plutôt qu’entre ses voisines', async () => {
+  it.each([
+    ['la veille', VEILLE, ['rdvProchains', 'aConfirmer', 'rdvDemain']],
+    ['le jour même', JOUR_MEME, ['rdvAujourdhui']],
+  ])('ne range jamais une réservation verrouillée parmi les rendez-vous lisibles (%s)', async (_cas, maintenant, remplies) => {
+    vi.setSystemTime(new Date(maintenant))
     const page = await DashboardPage() as ReactElement
-    const liste = trouver(page, p => 'washerId' in p && Array.isArray(p.bookings))
-    expect((liste!.bookings as { id: string }[]).map(b => b.id)).toEqual(['a', 'b', 'c'])
+    const accueil = trouver(page, p => Array.isArray(p.verrouillees) && Array.isArray(p.aConfirmer))!
+    for (const cle of remplies) expect((accueil[cle] as { id: string }[]).map(b => b.id)).toEqual(['a', 'b'])
+    for (const cle of ['rdvAujourdhui', 'rdvProchains', 'aConfirmer', 'rdvDemain']) {
+      expect((accueil[cle] as { id: string }[]).map(b => b.id)).not.toContain('c')
+    }
   })
 
   it('laisse intactes les heures des réservations comprises dans le quota', async () => {
     const page = await DashboardPage() as ReactElement
-    const liste = trouver(page, p => 'washerId' in p && Array.isArray(p.bookings))
-    const a = (liste!.bookings as Record<string, unknown>[]).find(b => b.id === 'a')!
+    const accueil = trouver(page, p => Array.isArray(p.verrouillees) && Array.isArray(p.aConfirmer))!
+    const a = (accueil.aConfirmer as Record<string, unknown>[]).find(b => b.id === 'a')!
     expect(a.scheduled_at).toBe('2026-10-03T07:00:00.000Z')
     expect(a.client_name).toBe('Claire Martin')
   })

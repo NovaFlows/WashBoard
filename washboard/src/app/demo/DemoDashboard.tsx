@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ClientsViewV2 from '@/components/dashboard/ClientsViewV2'
-import Accueil from '@/components/dashboard/Accueil'
+import AccueilV2 from '@/components/dashboard/AccueilV2'
 import CalendrierDashboardV2 from '@/components/dashboard/CalendrierDashboardV2'
 import MessagesAutomatiquesV2 from '@/components/dashboard/MessagesAutomatiquesV2'
 import PublicitesV2 from '@/components/dashboard/PublicitesV2'
@@ -93,23 +93,12 @@ type AccueilTroisEtats = { normal: AccueilDemo; premierJour: AccueilDemo; quota:
 // `api/trajet/route.ts`) et `/demo` n'authentifie personne — l'appel échoue avant d'atteindre
 // Google. Voir le commentaire de `jeuDeDonneesAgendaDemo()` pour le détail.
 //
-// « Aujourd'hui » passe par le VRAI point de branchement (`Accueil.tsx`), pas directement par
-// `AccueilV2` : c'est ce qui permet à ce même écran de PROUVER, sur cette même page, que le site
-// étroit (téléphone, pas de PWA installée) reste en v1 — réduis la fenêtre sous 880px et la
-// carte « V1Placeholder » ci-dessous apparaît à la place du héros, exactement ce que ferait le
-// vrai `/dashboard` (voir le rapport de la passe). `v1` reçoit un simple repère visuel plutôt que
-// l'arbre complet du site (BookingList, widgets serveur…) : le reproduire ici déplacerait ce
-// travail dans le navigateur, l'exact contraire de ce que `Accueil.tsx` existe pour éviter.
-// « Agenda », lui, est branché directement sur `CalendrierDashboardV2` (pas sur
-// `CalendrierDashboard.tsx`, le point de branchement v1/v2) : cette page sert à juger la
-// présentation v2, pas à redémontrer le branchement v1/v2 déjà prouvé par « Aujourd'hui » —
-// `CalendrierDashboardV2` lit lui-même `useGrandEcran()` en interne, donc réduire la fenêtre
-// sous 1024px y montre aussi, à l'intérieur de l'écran, sa disposition à une seule colonne.
+// Les écrans sont branchés directement sur les composants V2, qui lisent eux-mêmes
+// `useGrandEcran()` : réduire la fenêtre montre leur disposition à une seule colonne.
 
 // Passe « Plus bureau » (2026-10-06) : six écrans de plus, derrière un sous-sélecteur (même
 // geste que les trois états d'« Aujourd'hui ») — la liste elle-même (`ParametresFormV2`, état
-// de repos) et les cinq réglages qu'elle ouvre. Branchés directement sur les composants V2
-// (pas sur `ParametresForm.tsx`/`Apparence.tsx`/etc., les garde-fous v1/v2/bureau) : même
+// de repos) et les cinq réglages qu'elle ouvre. Branchés directement sur les composants V2 : même
 // raison que pour Agenda et Chiffres plus haut — cette page juge la présentation, le
 // branchement v1/v2/bureau est déjà prouvé par « Aujourd'hui ». Chacun reçoit sa propre
 // prop `liste` (sauf « Mon profil », qui la dérive de la fiche laveur complète qu'il reçoit
@@ -207,22 +196,6 @@ function SelecteurDemo({
           <PilulePilote actif={ecranPlus === 'verrouille'} onClick={() => onEcranPlus('verrouille')}>Offre verrouillée</PilulePilote>
         </div>
       )}
-    </div>
-  )
-}
-
-/** Ce que `v1` montre ici — un repère, pas l'accueil v1 réel. Volontairement SANS jeton `--v2-*`
- *  (bordure et fond en dur) : un simple rectangle qui tranche visuellement avec le reste de la
- *  page, pour qu'une capture à 390px dise d'un coup d'œil « ceci est la branche v1 », sans
- *  confusion possible avec un écran v2 qui aurait mal dégradé. */
-function V1Placeholder() {
-  return (
-    <div style={{ border: '1px dashed #94a3b8', borderRadius: 12, padding: 16, color: '#475569', fontSize: 13, lineHeight: 1.6 }}>
-      Accueil v1 (site, pas de PWA installée, écran trop étroit pour le châssis bureau) — rendu
-      réel par <code>dashboard/page.tsx</code> (carte de démarrage, widgets, <code>BookingList</code>…),
-      pas reproduit dans cette démo pour ne pas déplacer ce travail côté navigateur. Preuve que
-      le point de branchement (<code>Accueil.tsx</code>) choisit bien cette branche sous 880px /
-      sans pointeur fin, exactement comme sur le vrai tableau de bord.
     </div>
   )
 }
@@ -397,9 +370,7 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
     >
       <SelecteurDemo ecran={ecran} onEcran={setEcran} etat={etat} onEtat={setEtat} ecranPlus={ecranPlus} onEcranPlus={setEcranPlus} />
       {ecran === 'aujourdhui' ? (
-        <Accueil
-          v1={<V1Placeholder />}
-          betaRefonte
+        <AccueilV2
           demarrage={<DemarrageCard progress={donneesAccueil.progress} />}
           rdvAujourdhui={donneesAccueil.rdvAujourdhui}
           rdvProchains={donneesAccueil.rdvProchains}
