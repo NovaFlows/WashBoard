@@ -129,6 +129,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
   const [prestationComplete, setPrestationComplete] = useState(false)
   const [screen, setScreen] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState<FormState>({})
+  const [categorie, setCategorie] = useState<string | null>(services[0]?.category_id ?? null)
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [acompteDu, setAcompteDu] = useState<AcompteDu | null>(null)
   const [fideliteDue, setFideliteDue] = useState<FideliteDue | null>(null)
@@ -275,7 +276,9 @@ export default function BookingForm({ washer, services, categories, availabiliti
   const surCoordonnees = useCallback((email: string, telephone: string) => verifierFidelite(email, telephone, { prestation: prixPrestation, options: prixOptionsApresPromo, deplacement }), [verifierFidelite, prixPrestation, prixOptionsApresPromo, deplacement])
   const remiseFidelite = form.service_id && apercuFidelite && apercuFidelite.disponibles > 0 ? apercuFidelite.remise : 0
   const avantFidelite = form.service_id ? montantEstime(form) - remise : 0
-  const barAmount = form.service_id ? Math.max(0, avantFidelite - remiseFidelite) : montantMinimal(services)
+  // « À partir de » : le moins cher de la catégorie affichée, pas de tout le catalogue
+  // (un laveur qui fait aussi du textile à 15 € ne doit pas afficher 15 € sur l'onglet Voiture).
+  const barAmount = form.service_id ? Math.max(0, avantFidelite - remiseFidelite) : montantMinimal(services.filter(s => s.category_id === categorie))
 
   const complete2 = !!(form.scheduled_at && form.address)
 
@@ -327,7 +330,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             resume={resumePrestation(form, services)}
             onModifier={() => reouvrir(1)}
           >
-            <StepPrestation services={services} categories={categories} form={form} onChange={updatePrestation} promotion={promotion}
+            <StepPrestation services={services} categories={categories} category={categorie} onCategory={setCategorie} form={form} onChange={updatePrestation} promotion={promotion}
               vehicule3D={washer.silhouettes_vehicules !== false} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>

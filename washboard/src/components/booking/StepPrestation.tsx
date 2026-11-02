@@ -20,9 +20,12 @@ function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
   )
 }
 
-export default function StepPrestation({ services, categories, form, onChange, promotion = null, vehicule3D = true }: {
+export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true }: {
   services: Service[]
   categories: ServiceCategory[]
+  /** Catégorie affichée — tenue par BookingForm, dont le « À partir de » en dépend. */
+  category: string | null
+  onCategory: (id: string | null) => void
   form: FormState
   onChange: (data: FormState) => void
   /** Promotion en cours : le prix des prestations concernées s'affiche barré, avec le prix remisé. */
@@ -31,7 +34,6 @@ export default function StepPrestation({ services, categories, form, onChange, p
    *  image ni préchargement. */
   vehicule3D?: boolean
 }) {
-  const [category, setCategory] = useState<string | null>(services[0]?.category_id ?? null)
   const catalogue = services.filter(s => s.category_id === category)
   const types = [...new Set(catalogue.flatMap(s => s.vehicle_types))]
   const service = services.find(s => s.id === form.service_id)
@@ -77,7 +79,7 @@ export default function StepPrestation({ services, categories, form, onChange, p
     <h2 className="wb-booking-title">Que faut-il laver ?</h2>
     {new Set(services.map(s => s.category_id)).size > 1 && <div className="wb-booking-chips mb-4" aria-label="Catégorie">
       {[...new Set(services.map(s => s.category_id))].map(id => <button key={id ?? 'other'} type="button" aria-pressed={category === id}
-        onClick={() => { setCategory(id); setMixed(false); onChange({ service_id: '', vehicles_detail: [], selected_addons: [], booked_price: 0 }) }}>
+        onClick={() => { onCategory(id); setMixed(false); onChange({ service_id: '', vehicles_detail: [], selected_addons: [], booked_price: 0 }) }}>
         {categories.find(c => c.id === id)?.name ?? 'Autres'}
       </button>)}
     </div>}
