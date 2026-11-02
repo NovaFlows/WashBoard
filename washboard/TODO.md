@@ -3461,6 +3461,19 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-11-02 — **npm audit --omit=dev : 13 → 10** (PR #22, `983100f`). glob 13 → 14 (et
+      minimatch 11) forcé pour `@sentry/bundler-plugins` seul, outil de build, Sentry n'ayant pas
+      publié de correctif. Vérifié : tsc, lint, `next build`, CI verte, et `globFiles` de Sentry
+      (seul usage de glob, envoi des source maps) exécuté avec glob 14. **Les 10 restantes = 3
+      failles dans 2 bibliothèques, sans correctif, non exploitables :**
+      - `exceljs` 4.4.0 (dernière version, fin 2024) → `archiver`, `archiver-utils`, `zip-stream`,
+        `readdir-glob`, `rimraf`, `glob` 7, `minimatch` 5 (8 sur 10). Jamais exécuté : l'export
+        Excel du CRM tourne dans le navigateur, où exceljs charge son `dist/exceljs.min.js` déjà
+        assemblé. Forcer glob/minimatch récents casserait ces paquets (API changée). Pour arriver
+        à 0 : remplacer exceljs (export CRM, liste + synthèse), ~½ journée.
+      - `@imgly/background-removal` 1.7.0 (dernière version) → `zod` 3 (2 sur 10). Navigateur
+        seulement, valide la config que notre code lui passe. Forcer zod 4 casserait le détourage
+        (`z.function()` a changé en v4) : attendre qu'imgly passe à zod 4.
 - [x] 2026-11-01 — **Centre auto : le client peut venir au local du laveur** (PR #20, `38a9c61`).
       Réglage `washers.centre_auto` (adresse du centre, lieux proposés : à domicile, au centre
       ou les deux), dans Mon profil et dans l'ancien écran de réglages. Le client choisit le lieu
