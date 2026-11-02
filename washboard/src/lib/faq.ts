@@ -50,6 +50,10 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Tu définis tes propres paliers de prix selon la durée du trajet en voiture, calculée automatiquement via Google Maps. Le point de départ, c\'est soit ton adresse de base, soit ton dernier rendez-vous du jour — à toi de choisir dans tes paramètres.',
   },
   {
+    q: 'Mes clients peuvent-ils venir à mon local, au lieu que je me déplace ?',
+    a: 'Oui, si tu as un centre auto. Tu l\'actives dans Mon profil avec son adresse, puis tu choisis ce que propose ta page : à domicile, au centre auto, ou les deux, et le client choisit. Au centre, pas de frais de déplacement, et la facture et les emails indiquent l\'adresse du centre.',
+  },
+  {
     q: 'Ça marche pour d\'autres métiers que le lavage auto ?',
     a: 'Oui. Tu crées tes propres catégories et prestations, avec leurs durées et leurs prix : ménage, canapés, vitres, piscines… WashBoard n\'impose aucun métier.',
   },
@@ -79,7 +83,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Comment bloquer mes jours de congé ?',
-    a: 'Tu ajoutes une indisponibilité avec sa date de début et de fin dans tes horaires. Ces journées disparaissent aussitôt des créneaux proposés : personne ne peut réserver dessus.',
+    a: 'Tu ajoutes une indisponibilité dans tes horaires ou depuis ton agenda : sur plusieurs jours pour tes congés, ou sur quelques heures d\'une seule journée pour une autre activité. Ces créneaux disparaissent aussitôt de ta page de réservation : personne ne peut réserver dessus.',
   },
   {
     q: 'Un client peut-il annuler son rendez-vous tout seul ?',
