@@ -229,6 +229,9 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
       nom={nom}
       logoUrl={h.logoUrl}
       etat={h.logo}
+      couleur={h.couleur ?? COULEUR_PAR_DEFAUT}
+      retouches={h.retouches}
+      onRefaire={h.refaireLogo}
       onChoisir={() => inputLogo.current?.click()}
       onRetirer={() => demanderRetrait('logo')}
       // Sous une confirmation, Échap et la poignée ne ferment que la confirmation.

@@ -52,7 +52,7 @@ export default function ApercuPageV2({ nom, logoUrl, message, couleur, fond }: P
         >
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- adresse Supabase, comme la vraie page
-            <img src={logoUrl} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+            <img src={logoUrl} alt="" className="h-12 w-auto max-w-[112px] shrink-0 object-contain" />
           ) : (
             <div
               aria-hidden

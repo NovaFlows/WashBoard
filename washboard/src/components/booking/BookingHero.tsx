@@ -14,11 +14,12 @@ export default function BookingHero({ name, message, accent, logoUrl, personaliz
   return <header className="wb-booking-hero text-white" style={{ backgroundColor: accent, ...background }}>
     <div className="max-w-lg mx-auto px-6 pt-4 pb-12">
       <div className="flex items-center justify-between mb-4">
-        {/* Logo du laveur agrandi ×1.5 (40px → 60px, demande d'Alexandre, 2026-10-04) —
-            son repli (initiales) suit la même taille, même emplacement visuel. Le
-            logo WashBoard (offre gratuite) n'est pas concerné : ce n'est pas le logo
-            d'un laveur. */}
-        {personalized ? logoUrl ? <Image src={logoUrl} alt={name} width={60} height={60} className="w-[60px] h-[60px] rounded-full object-cover" />
+        {/* Logo du laveur : 60px de haut (demande d'Alexandre, 2026-10-04), ENTIER — sa largeur
+            suit sa forme, jusqu'à 180px. Il était rogné dans un rond : un logo large perdait
+            ses côtés (2026-11-04). `width`/`height` ne fixent que la résolution demandée à
+            l'optimiseur : 256px, 384px sur écran dense, qualité 90 (voir next.config.ts). Le
+            logo WashBoard (offre gratuite) n'est pas concerné : ce n'est pas le logo d'un laveur. */}
+        {personalized ? logoUrl ? <Image src={logoUrl} alt={name} width={180} height={60} quality={90} className="h-[60px] w-auto max-w-[180px] object-contain" />
           : <span className="w-[60px] h-[60px] rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">{name.split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()}</span>
           : <span className="text-sm font-bold flex items-center gap-2"><Image src="/LogoWashBoard.png" alt="" width={36} height={36} />WashBoard</span>}
         <div className="flex items-center gap-2">
