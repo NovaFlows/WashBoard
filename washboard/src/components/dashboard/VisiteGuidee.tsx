@@ -669,118 +669,71 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
     )
   }
 
-  if (v2) {
-    return (
-      <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Visite guidée">
-        {rect ? (
-          <div
-            aria-hidden
-            className="wb-visite-decoupe absolute rounded-2xl"
-            style={{
-              top: rect.top - MARGE_DECOUPE,
-              left: rect.left - MARGE_DECOUPE,
-              width: rect.width + MARGE_DECOUPE * 2,
-              height: rect.height + MARGE_DECOUPE * 2,
-              boxShadow: '0 0 0 9999px rgba(10,10,12,.35)',
-              transition: instantane ? 'none' : undefined,
-            }}
-          />
-        ) : (
-          <div aria-hidden className="wb-visite-fond absolute inset-0" style={{ background: 'rgba(10,10,12,.35)' }} />
-        )}
-
-        <div
-          ref={carteRef}
-          className={`wb-visite-verre wb-visite-carte absolute ${bureau ? '' : 'left-3 right-3'} rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4`}
-          style={styleCarteLarge}
-        >
-          {flecheX !== null && (
-            <div
-              className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
-              style={{ transition: instantane ? 'none' : undefined }}
-              aria-hidden
-            />
-          )}
-          <div className="flex items-center justify-between gap-3">
-            <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-              Étape {etape + 1}/{etapes.length}
-            </p>
-            <button
-              type="button"
-              onClick={fermer}
-              className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
-            >
-              Passer
-            </button>
-          </div>
-          <BarreProgres etape={etape} total={etapes.length} />
-          <p key={etape} aria-live="polite" className={`wb-visite-texte mt-3 text-[15px] leading-snug ${corps}`}>
-            {etapeActuelle.texte}
-          </p>
-          {etapeActuelle.cheminPwa && (
-            <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              « {etapeActuelle.cheminPwa} »
-            </p>
-          )}
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={avancer}
-              disabled={navigation}
-              className={`h-10 px-5 rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white bg-[color:var(--v2-color-accent)] disabled:opacity-50 transition-opacity`}
-            >
-              {navigation ? (
-                <span className="flex items-center justify-center gap-2"><Spinner />Chargement…</span>
-              ) : suivante === null ? 'Terminé' : 'Suivant'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <>
-      {/* Réserve sous le contenu : sans elle, la carte couvrirait le bas de la
-          page sans qu'on puisse le faire défiler au-dessus. */}
-      <div aria-hidden className="h-44" />
-      <section
-        aria-label="Visite guidée"
-        className="fixed z-[15] left-3 right-20 sm:right-auto sm:w-[23rem] p-4 sm:left-6 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-lg shadow-slate-900/10"
+    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Visite guidée">
+      {rect ? (
+        <div
+          aria-hidden
+          className="wb-visite-decoupe absolute rounded-2xl"
+          style={{
+            top: rect.top - MARGE_DECOUPE,
+            left: rect.left - MARGE_DECOUPE,
+            width: rect.width + MARGE_DECOUPE * 2,
+            height: rect.height + MARGE_DECOUPE * 2,
+            boxShadow: '0 0 0 9999px rgba(10,10,12,.35)',
+            transition: instantane ? 'none' : undefined,
+          }}
+        />
+      ) : (
+        <div aria-hidden className="wb-visite-fond absolute inset-0" style={{ background: 'rgba(10,10,12,.35)' }} />
+      )}
+
+      <div
+        ref={carteRef}
+        className={`wb-visite-verre wb-visite-carte absolute ${bureau ? '' : 'left-3 right-3'} rounded-[var(--v2-radius-surface)] text-[color:var(--v2-color-encre)] p-4`}
+        style={styleCarteLarge}
       >
+        {flecheX !== null && (
+          <div
+            className={`wb-visite-fleche ${flecheEnBas ? 'wb-visite-fleche--bas' : ''}`}
+            style={{ transition: instantane ? 'none' : undefined }}
+            aria-hidden
+          />
+        )}
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#1651E8] dark:text-[#00C4D4]">Étape {etape + 1}/{etapes.length}</p>
+          <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
+            Étape {etape + 1}/{etapes.length}
+          </p>
           <button
             type="button"
-            onClick={() => fermerPourLInstant(appareil)}
-            className="-my-2 -mr-2 px-2 py-2 transition-colors text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            onClick={fermer}
+            className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
           >
             Passer
           </button>
         </div>
-        <div className="mt-2 h-1 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800" aria-hidden>
-          <div
-            className="h-full rounded-full bg-[#1651E8] dark:bg-[#00C4D4] transition-[width] duration-300 motion-reduce:transition-none"
-            style={{ width: `${((etape + 1) / etapes.length) * 100}%` }}
-          />
-        </div>
-        <p aria-live="polite" className="mt-3 text-sm leading-snug">{etapeActuelle.texte}</p>
-        {etapeActuelle.chemin && (
-          <p className="mt-1.5 text-xs leading-snug text-slate-400 dark:text-slate-500">{etapeActuelle.chemin}</p>
+        <BarreProgres etape={etape} total={etapes.length} />
+        <p key={etape} aria-live="polite" className={`wb-visite-texte mt-3 text-[15px] leading-snug ${corps}`}>
+          {etapeActuelle.texte}
+        </p>
+        {etapeActuelle.cheminPwa && (
+          <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+            « {etapeActuelle.cheminPwa} »
+          </p>
         )}
         <div className="mt-3 flex justify-end">
           <button
             type="button"
             onClick={avancer}
             disabled={navigation}
-            className="h-10 px-5 transition-colors disabled:opacity-50 rounded-xl text-sm font-semibold text-white bg-[#1651E8] hover:bg-[#0F4ACC] shadow-lg shadow-[#1651E8]/20"
+            className={`h-10 px-5 rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white bg-[color:var(--v2-color-accent)] disabled:opacity-50 transition-opacity`}
           >
             {navigation ? (
               <span className="flex items-center justify-center gap-2"><Spinner />Chargement…</span>
             ) : suivante === null ? 'Terminé' : 'Suivant'}
           </button>
         </div>
-      </section>
-    </>
+      </div>
+    </div>
   )
 }

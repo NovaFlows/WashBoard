@@ -7,9 +7,8 @@ import { useState, forwardRef } from 'react'
 // passe se découvre seulement en échec de connexion, jamais avant.
 //
 // `style` plutôt qu'une classe Tailwind pour la marge réservée à l'œil : le
-// champ reçoit la classe `wb-input` de l'appelant (CSS brut, globals.css),
-// et une classe utilitaire n'aurait pas la priorité garantie sur elle selon
-// l'ordre des feuilles de style — un style en ligne, lui, gagne toujours.
+// champ reçoit les classes de l'appelant, et un style en ligne a toujours la
+// priorité sur elles, quel que soit l'ordre des feuilles de style.
 type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>
 
 export const PasswordInput = forwardRef<HTMLInputElement, Props>(function PasswordInput(

@@ -89,7 +89,7 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
 }) {
   const couleur = couleurTon(ton)
   return (
-    <div className="wb-bandeau-v2 px-3 pt-3 sm:px-4">
+    <div className="px-3 pt-3 sm:px-4">
       <div
         className="flex items-start gap-2.5 rounded-[var(--v2-radius-carte)] border bg-[color:var(--v2-color-surface)] px-3.5 py-3"
         style={{ borderColor: `color-mix(in srgb, ${couleur} 35%, transparent)` }}
@@ -151,7 +151,7 @@ function BandeauBureauV2({ etiquette, children, lien, libelleLien, onDismiss }: 
   onDismiss?: () => void
 }) {
   return (
-    <div className="wb-bandeau-v2 border-b border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-[34px] py-2.5">
+    <div className="border-b border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-[34px] py-2.5">
       <div className="flex items-center gap-3">
         <span className={`min-w-0 flex-1 text-[13px] leading-snug ${V2_POLICE} text-[color:var(--v2-color-encre)]`}>
           {etiquette && (
