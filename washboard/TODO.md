@@ -3461,6 +3461,20 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## ✅ Fait
 
+- [x] 2026-11-04 — **Message « lieu adapté » activable par prestation** (PR #27, `936dd46`).
+      Colonne `services.lieu_adapte` (posée par Ryan dans Supabase). Interrupteur « Prévenir le
+      client » dans la fiche prestation ; le client voit « Le lavage doit être effectué dans un
+      lieu adapté. » sous la prestation, sur la nouvelle et l'ancienne page de réservation.
+      Masqué en centre auto. Testé en prod sur compte jetable.
+- [x] 2026-11-04 — **Fin de rendez-vous non déplacée** (PR #26, `8149d71`). Déplacer un
+      rendez-vous ne recalculait pas `ends_at` (lu par la détection de chevauchements). Fin
+      recalculée comme à la création, même fin envoyée à Google Agenda, 3 réservations réparées,
+      garde-fou `CHECK (ends_at > scheduled_at)` en base. Signalé par l'analyse Automaclean ;
+      « 0 client dans son fichier » du même rapport = fausse alerte.
+- [x] 2026-11-04 — **Logos laveurs nets et entiers** (PR #25, `12e8913`). Logo toujours affiché
+      en entier (`object-contain`), servi en qualité 90 et en densité 2x/3x, détourage refait
+      (fond uni, creux des lettres, bords sans liseré), choix « remettre une partie » ou « garder
+      le fond d'origine ». Logo Maestro nettoyé à la main (trait parasite retiré, sauvegarde gardée).
 - [x] 2026-11-02 — **npm audit --omit=dev : 13 → 10** (PR #22, `983100f`). glob 13 → 14 (et
       minimatch 11) forcé pour `@sentry/bundler-plugins` seul, outil de build, Sentry n'ayant pas
       publié de correctif. Vérifié : tsc, lint, `next build`, CI verte, et `globFiles` de Sentry
