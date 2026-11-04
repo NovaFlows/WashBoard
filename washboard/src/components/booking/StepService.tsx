@@ -6,6 +6,7 @@ import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
 import { hex } from '@/lib/colorUtils'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
+import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 type Props = {
@@ -23,6 +24,8 @@ type Props = {
   accent?: string
   /** Le véhicule choisi apparaît en 3D — réglage du laveur, affiché par défaut. */
   vehicule3D?: boolean
+  /** Rendez-vous au local du laveur : la mention « lieu adapté » n'a plus lieu d'être. */
+  auCentre?: boolean
 }
 
 // Images pour les types « voiture » historiques (résolus par id de type).
@@ -39,7 +42,7 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true, auCentre = false }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   const [serviceId, setServiceId] = useState(selected.service_id ?? '')
   // Panier : un compteur par type (permet de mélanger les types)
@@ -289,6 +292,7 @@ export default function StepService({ services, categories, selected, factureApr
                   {service.description && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{service.description}</p>
                   )}
+                  <MentionLieuAdapte service={service} auCentre={auCentre} className="mt-1.5" />
                 </div>
 
                 {/* Prix + radio */}

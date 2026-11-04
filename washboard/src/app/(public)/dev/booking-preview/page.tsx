@@ -43,7 +43,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     { id: '00000000-0000-4000-8000-000000000012', name: 'Intérieur', description: 'Aspiration, plastiques, tapis, vitres intérieures', price: 45, duration_minutes: 75,
       addons: [{ id: 'seats', label: 'Shampoing des sièges', price: 30, duration_minutes: 30, category: 'Options' }, { id: 'pets', label: 'Poils d’animaux', price: 15, duration_minutes: 15, category: 'Options' }] },
     { id: '00000000-0000-4000-8000-000000000013', name: 'Complet', description: 'Intérieur et extérieur en une seule visite', price: 75, duration_minutes: 120, addons: [] },
-  ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 } }))
+  ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 }, lieu_adapte: s.name !== 'Extérieur' }))
   if (mode === 'promotions') return <PromotionsV2 slug="demo" services={services.map(s => ({ id: s.id, name: s.name }))} liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   // ?mode=centre-auto : la feuille « Centre auto » de Mon profil.
   if (mode === 'centre-auto') return <CentreAutoDemo />

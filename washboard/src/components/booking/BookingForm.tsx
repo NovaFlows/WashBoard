@@ -12,6 +12,7 @@ import EncartFidelite, { useApercuFidelite } from './EncartFidelite'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepPrestation from './StepPrestation'
+import { estAuCentre } from '@/lib/lieuAdapte'
 import BookingAction from './BookingAction'
 import './booking.css'
 import StepSlot from './StepSlot'
@@ -331,7 +332,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
             onModifier={() => reouvrir(1)}
           >
             <StepPrestation services={services} categories={categories} category={categorie} onCategory={setCategorie} form={form} onChange={updatePrestation} promotion={promotion}
-              vehicule3D={washer.silhouettes_vehicules !== false} />
+              vehicule3D={washer.silhouettes_vehicules !== false} auCentre={estAuCentre(washer.centre_auto, form.lieu)} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
               {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}

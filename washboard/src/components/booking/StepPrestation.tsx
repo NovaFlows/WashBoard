@@ -7,6 +7,7 @@ import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pri
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
+import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
 /** Prix d'une prestation ; barré avec le prix remisé quand une promotion la concerne. */
@@ -20,7 +21,7 @@ function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
   )
 }
 
-export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true }: {
+export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true, auCentre = false }: {
   services: Service[]
   categories: ServiceCategory[]
   /** Catégorie affichée — tenue par BookingForm, dont le « À partir de » en dépend. */
@@ -33,6 +34,8 @@ export default function StepPrestation({ services, categories, category, onCateg
   /** Le véhicule choisi apparaît en 3D — réglage du laveur, affiché par défaut. Éteint : ni
    *  image ni préchargement. */
   vehicule3D?: boolean
+  /** Rendez-vous au local du laveur : la mention « lieu adapté » n'a plus lieu d'être. */
+  auCentre?: boolean
 }) {
   const catalogue = services.filter(s => s.category_id === category)
   const types = [...new Set(catalogue.flatMap(s => s.vehicle_types))]
@@ -118,6 +121,7 @@ export default function StepPrestation({ services, categories, category, onCateg
               ? <span className="whitespace-nowrap font-normal text-zinc-500">dès {formatPrice(prixDepart(s))}</span>
               : <PrixPrestation prix={vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0)} remise={remisePromotion(promotion, s.id, vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))} />}</span>
             {s.description && <span className="block text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{s.description}</span>}
+            <MentionLieuAdapte service={s} auCentre={auCentre} className="mt-1.5" />
             <span className="block text-xs text-zinc-500 mt-2">Environ {formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length))} sur place</span>
           </span>
         </label>
