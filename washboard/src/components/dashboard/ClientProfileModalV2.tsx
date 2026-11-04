@@ -578,17 +578,6 @@ export default function ClientProfileModalV2({
     closeRef.current?.focus()
   }, [panneau])
 
-  // Le bouton WhatsApp flottant du châssis est au même z-index que la
-  // feuille et se pose par-dessus son bas. Même mécanisme que SupportPanel,
-  // AssistanceContent et SupportInbox, qui le masquent déjà pendant qu'un
-  // panneau couvre l'écran (voir globals.css, body.wb-hide-fab). Le panneau bureau ne couvre
-  // rien : le bouton reste à sa place.
-  useEffect(() => {
-    if (panneau) return
-    document.body.classList.add('wb-hide-fab')
-    return () => document.body.classList.remove('wb-hide-fab')
-  }, [panneau])
-
   // Échap pour fermer, Tab piégé dans la feuille : un menu ouvert au clavier
   // ne doit pas laisser échapper la tabulation vers la liste derrière.
   useEffect(() => {

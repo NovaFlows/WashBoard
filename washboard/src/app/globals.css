@@ -67,35 +67,6 @@ body {
   }
 }
 
-/* ── Bouton WhatsApp flottant : masqué pendant qu'un panneau de question
-   est ouvert ─────────────────────────────────────────────────────────────
-   Les deux sont fixés en bas à droite, au même z-index : sans cette règle,
-   la bulle WhatsApp — plus bas dans le DOM — reste visible AU-DESSUS du
-   panneau et peut même capter le clic destiné à « Envoyer ». On la masque
-   plutôt que de la décaler ou de monter le panneau au-dessus : elle
-   resterait sinon flottante par-dessus le contenu de la conversation, ce
-   qui n'est pas plus propre, et proposer WhatsApp par-dessus un message en
-   train d'être écrit à la même équipe est redondant. */
-body.wb-hide-fab [data-wb-whatsapp-fab] {
-  display: none;
-}
-
-/* Barre du bas de la PWA (refonte 2026) : la bulle WhatsApp flotte au même coin
-   et se poserait par-dessus l'onglet « Plus ». Elle est masquée tant que la
-   barre existe, par la barre elle-même. Le mécanisme `wb-hide-fab` ci-dessus
-   ne suffit pas : chaque panneau qui l'utilise le RETIRE à sa fermeture, y
-   compris quand c'est la barre qui l'avait posé — la bulle réapparaissait donc
-   après la première fiche fermée.
-
-   ⚠️ Aucun `:has()` dans ce fichier : Turbopack, qui construit les déploiements, abandonne
-   silencieusement TOUT le CSS qui suit le premier `:has()` rencontré. Le 2026-10-01, la
-   refonte est partie en production sans ses couleurs ni ses arrondis pour cette raison —
-   les utilitaires Tailwind survivaient, les jetons `--v2-*` non. D'où la classe
-   `wb-barre-bas`, posée sur <html> par DashboardShell. */
-html.wb-barre-bas [data-wb-whatsapp-fab] {
-  display: none;
-}
-
 /* ── Socle mobile (refonte 2026, passe 0) ──────────────────────────────────
    Ce qui sépare « un site dans un navigateur » d'une app installée. html et
    body sont communs à TOUT le site — dashboard, landing, blog, et le flux de
@@ -139,7 +110,7 @@ button {
 /* ── Réservé au tableau de bord ─────────────────────────────────────────── */
 
 /* `wb-dashboard-active` est posée sur <body> par DashboardShell tant qu'un
-   écran du dashboard est monté (même mécanisme que `wb-hide-fab` ci-dessus).
+   écran du dashboard est monté.
    Neutralise le rebond de défilement en haut de page : utile dans le
    dashboard pour ne pas déclencher un rechargement accidentel en tirant vers
    le bas une liste (clients, factures...). Le reste du site — en particulier

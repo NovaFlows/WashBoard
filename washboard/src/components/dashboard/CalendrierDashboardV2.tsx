@@ -1366,11 +1366,6 @@ function DetailRendezVous({
   useEffect(() => { closeRef.current?.focus() }, [])
 
   useEffect(() => {
-    document.body.classList.add('wb-hide-fab')
-    return () => document.body.classList.remove('wb-hide-fab')
-  }, [])
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab' || !feuilleRef.current) return

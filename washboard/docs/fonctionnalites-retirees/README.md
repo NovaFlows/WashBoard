@@ -38,6 +38,7 @@ git show 007d644:washboard/src/components/dashboard/Sidebar.tsx
 | Montant des lavages en attente | Page Clients (« 3 masqués · 266,64 € ») |
 | Bouton « Imprimer » de la page de confirmation | Bouton « Télécharger PDF » de la page reçu |
 | Code de confirmation d'inscription par email | Code par SMS |
+| Bouton vert « Support » en bas à droite (WhatsApp de l'équipe) | Section Support dans WashBoard (Réglages, Guide → Assistance) |
 
 ## Gardé dans le code (sans remplaçant, donc non supprimé)
 

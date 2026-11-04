@@ -487,18 +487,6 @@ export default function SupportInbox({ initialConversations = [] }: { initialCon
     }
   }, [chargerConversations])
 
-  // Le bandeau « Annuler » occupe le même coin bas-droit que le bouton
-  // WhatsApp flottant du tableau de bord (DashboardShell), au même z-index —
-  // même conflit, même remède déjà en place pour AssistanceContent et
-  // SupportPanel : masquer la bulle via la classe sur <body> plutôt que de
-  // déplacer l'un des deux, sous peine de laisser la bulle flotter par-dessus
-  // le bandeau et capter le clic destiné à « Annuler ».
-  useEffect(() => {
-    if (archivagesEnAttente.length === 0) return
-    document.body.classList.add('wb-hide-fab')
-    return () => document.body.classList.remove('wb-hide-fab')
-  }, [archivagesEnAttente.length])
-
   function toggle(id: string) {
     const conv = conversations.find(c => c.id === id)
     setExpandedId(cur => (cur === id ? null : id))
