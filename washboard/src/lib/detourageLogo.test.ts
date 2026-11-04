@@ -77,6 +77,28 @@ describe('retirerFondUni', () => {
     expect(px(p, 50, 50)).toEqual(BLANC)
   })
 
+  it('garde un anneau blanc dans un disque : une zone allongée n’est pas un creux', () => {
+    const disque = (x: number, y: number): RVBA | null => {
+      const d = Math.hypot(x - 60, y - 60)
+      if (d >= 36 && d <= 39) return BLANC
+      return d <= 50 ? BLEU : null
+    }
+    const p = image(120, 120, BLANC, disque)
+    expect(retirerFondUni(p, [255, 255, 255])).toBe(0)
+    expect(px(p, 60, 22)).toEqual(BLANC)
+  })
+
+  it('pas de liseré clair autour d’un dessin sombre lissé', () => {
+    // Bord en dégradé blanc → noir sur 2 pixels : le pixel à mi-chemin doit être à moitié
+    // transparent et noir, pas gris opaque.
+    const p = image(30, 30, BLANC, (x, y) => (y < 8 || y > 22 ? null : x >= 12 ? NOIR : x === 11 ? [128, 128, 128, 255] : x === 10 ? [200, 200, 200, 255] : null))
+    retirerFondUni(p, [255, 255, 255])
+    const [r, g, b, a] = px(p, 11, 15)
+    expect(a).toBeGreaterThan(90)
+    expect(a).toBeLessThan(170)
+    expect(Math.max(r, g, b)).toBeLessThan(40)
+  })
+
   it('garde une grande surface enfermée (panneau blanc)', () => {
     const cadre = (x: number, y: number): RVBA | null => {
       if (x >= 10 && x <= 89 && y >= 10 && y <= 89) return x <= 12 || x >= 87 || y <= 12 || y >= 87 ? NOIR : BLANC

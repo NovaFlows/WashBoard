@@ -22,11 +22,10 @@ const SEUIL_DEJA_DETOURE = 0.3
 const SEUIL_FOND_UNI = 0.85
 /** Écart de couleur (distance RVB) toléré pour la bordure d'un fond uni. */
 const ECART_BORD = 40
-/** En dessous : pixel de fond, retiré. Entre les deux : bord adouci, en partie transparent.
- *  Seule la première rangée de pixels du dessin est concernée (la propagation s'y arrête) :
- *  un écart large adoucit bien les bords lissés sans entamer l'intérieur du dessin. */
+/** En dessous : pixel de fond (bruit JPEG compris), retiré. */
 export const ECART_FOND = 28
-export const ECART_DESSIN = 160
+/** Épaisseur, en pixels, du contour recalculé autour du fond retiré (bords lissés). */
+const BANDE = 2
 /** Alpha en dessous duquel un pixel ne compte pas dans le cadrage. */
 const ALPHA_VISIBLE = 10
 
@@ -71,74 +70,123 @@ export function analyserBord(p: Pixels): Analyse {
  *
  *  Un creux de lettre (A, O, D…) est entouré d'un simple trait : l'extérieur est tout près.
  *  Un texte blanc au milieu d'un écusson est loin de l'extérieur par rapport à sa propre
- *  épaisseur. Gardée si elle est plus loin que `RAPPORT_PROFONDEUR` fois son épaisseur, ou
+ *  épaisseur. Gardée si elle est allongée (`ALLONGEMENT_MAX`), plus loin que `RAPPORT_PROFONDEUR` fois son épaisseur, ou
  *  si elle couvre plus de `PART_SURFACE` du cadre du dessin (grand panneau blanc). Aucune
  *  règle ne distingue tout (un O très gras ressemble à un disque blanc dans un anneau) :
  *  le laveur peut toujours remettre les creux (`creux: false`). */
 export const RAPPORT_PROFONDEUR = 6
 export const PART_SURFACE = 0.5
+/** Au-delà (surface / demi-épaisseur²), la zone est allongée : un trait ou un texte blanc
+ *  (anneau, lettres d'un écusson), gardé. Un creux de lettre est ramassé (5 à 15). */
+export const ALLONGEMENT_MAX = 25
 
 /** Retire un fond uni, en place, par propagation depuis les bords.
  *
- *  Le fond relié au bord de l'image part. Avec `creux`, les petites zones enfermées de
- *  la même couleur partent aussi : l'intérieur d'un A ou d'un O, qui sinon restait
- *  blanc sur la couleur de la page. Les grandes zones enfermées restent (voir
- *  `SEUIL_CREUX`). Les pixels de transition (bords lissés du dessin) deviennent en
- *  partie transparents, et la couleur du fond en est retirée pour ne pas laisser de
- *  liseré clair. Rend le nombre de creux retirés. */
+ *  Le fond relié au bord de l'image part. Avec `creux`, les zones enfermées de la même
+ *  couleur partent aussi quand ce sont des creux de lettres (voir `RAPPORT_PROFONDEUR`).
+ *  Puis le contour : un pixel lissé est un mélange du dessin et du fond. Sa transparence
+ *  est calculée d'après la couleur du dessin juste à côté, côté intérieur, et la part du
+ *  fond est retirée de sa couleur — sans quoi un liseré clair (ou sombre sur fond noir)
+ *  entourerait chaque lettre. Rend le nombre de creux retirés. */
 export function retirerFondUni(p: Pixels, fond: readonly [number, number, number], { creux = true }: { creux?: boolean } = {}): number {
   const { data, width, height } = p
-  const vu = new Uint8Array(width * height)
+  const total = width * height
+  const e = new Float32Array(total)
+  for (let n = 0; n < total; n++) e[n] = data[n * 4 + 3] < 16 ? 0 : ecart(data, n * 4, fond)
+  const estFond = (n: number) => e[n] <= ECART_FOND
   const voisins = (n: number) => {
     const x = n % width, y = (n - x) / width
     return [x > 0 ? n - 1 : -1, x < width - 1 ? n + 1 : -1, y > 0 ? n - width : -1, y < height - 1 ? n + width : -1]
   }
-  const propager = (file: number[]) => {
-    while (file.length) {
-      const n = file.pop()!
-      const i = n * 4
-      const e = ecart(data, i, fond)
-      if (e > ECART_FOND) {
-        // Bord lissé : on ne se propage pas plus loin, c'est déjà le dessin.
-        const a = (e - ECART_FOND) / (ECART_DESSIN - ECART_FOND)
-        for (let c = 0; c < 3; c++) data[i + c] = fond[c] + (data[i + c] - fond[c]) / a
-        data[i + 3] = Math.round(data[i + 3] * a)
-        continue
-      }
-      data[i + 3] = 0
-      for (const v of voisins(n)) {
-        if (v < 0 || vu[v]) continue
-        if (ecart(data, v * 4, fond) < ECART_DESSIN) { vu[v] = 1; file.push(v) }
-      }
-    }
+  // 1 : fond extérieur ; 2 : creux retiré.
+  const retire = new Uint8Array(total)
+
+  const file: number[] = []
+  for (const i of indicesBord(p)) { const n = i / 4; if (!retire[n] && estFond(n)) { retire[n] = 1; file.push(n) } }
+  for (let k = 0; k < file.length; k++) {
+    for (const v of voisins(file[k])) if (v >= 0 && !retire[v] && estFond(v)) { retire[v] = 1; file.push(v) }
   }
 
-  const bord: number[] = []
-  for (const i of indicesBord(p)) {
-    const n = i / 4
-    if (!vu[n] && ecart(data, i, fond) < ECART_DESSIN) { vu[n] = 1; bord.push(n) }
+  let retires = 0
+  if (creux) retires = retirerCreux(p, e, retire, voisins)
+
+  // Contour : distance (en pixels, 8 voisins) au fond retiré, jusqu'à BANDE + 2.
+  const dist = new Uint8Array(total).fill(255)
+  let front: number[] = []
+  for (let n = 0; n < total; n++) if (retire[n]) { dist[n] = 0; front.push(n) }
+  for (let d = 1; d <= BANDE + 2 && front.length; d++) {
+    const suivant: number[] = []
+    for (const n of front) {
+      const x = n % width, y = (n - x) / width
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy
+        if (xx < 0 || yy < 0 || xx >= width || yy >= height) continue
+        const v = yy * width + xx
+        if (dist[v] === 255) { dist[v] = d; suivant.push(v) }
+      }
+    }
+    front = suivant
   }
-  propager(bord)
-  if (!creux) return 0
+  const plancher = ECART_FOND / 2
+  const alphas = new Float32Array(total).fill(1)
+  for (let n = 0; n < total; n++) {
+    const d = dist[n]
+    if (d === 0 || d > BANDE) continue
+    // Couleur du dessin à côté : l'écart le plus fort parmi les voisins plus à l'intérieur ;
+    // à défaut (trait très fin), parmi tous les voisins du dessin.
+    const x = n % width, y = (n - x) / width
+    let interieur = 0, autour = 0
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const xx = x + dx, yy = y + dy
+      if (xx < 0 || yy < 0 || xx >= width || yy >= height) continue
+      const v = yy * width + xx
+      if (retire[v]) continue
+      if (e[v] > autour) autour = e[v]
+      if (dist[v] > d && e[v] > interieur) interieur = e[v]
+    }
+    const encre = interieur || autour
+    if (encre <= e[n] || encre <= plancher) continue
+    alphas[n] = Math.min(1, Math.max(0, (e[n] - plancher) / (encre - plancher)))
+  }
+  for (let n = 0; n < total; n++) {
+    const i = n * 4
+    if (retire[n]) { data[i + 3] = 0; continue }
+    const a = alphas[n]
+    if (a >= 0.98) continue
+    if (a <= 0.02) { data[i + 3] = 0; continue }
+    for (let c = 0; c < 3; c++) data[i + c] = fond[c] + (data[i + c] - fond[c]) / a
+    data[i + 3] = Math.round(data[i + 3] * a)
+  }
+  return retires
+}
+
+/** Marque les creux de lettres (`retire` = 2) et rend leur nombre. */
+function retirerCreux(p: Pixels, e: Float32Array, retire: Uint8Array, voisins: (n: number) => number[]): number {
+  const { width, height } = p
+  const total = width * height
+  const estFond = (n: number) => e[n] <= ECART_FOND
 
   // Cadre de ce qui reste : la taille d'une zone se juge par rapport au dessin, pas à
   // l'image (un logo posé au milieu de grandes marges aurait sinon des zones « petites »).
-  const cadre = cadrer({ data, width, height })
-  if (!cadre) return 0
-  const plafond = PART_SURFACE * cadre.width * cadre.height
-
-  // Distance de chaque pixel au fond extérieur déjà retiré.
-  const distance = new Int32Array(width * height).fill(-1)
-  const vague: number[] = []
-  for (let n = 0; n < width * height; n++) if (vu[n] && data[n * 4 + 3] === 0) { distance[n] = 0; vague.push(n) }
-  for (let k = 0; k < vague.length; k++) {
-    for (const v of voisins(vague[k])) {
-      if (v >= 0 && distance[v] < 0) { distance[v] = distance[vague[k]] + 1; vague.push(v) }
-    }
+  let x0 = width, y0 = height, x1 = -1, y1 = -1
+  for (let n = 0; n < total; n++) {
+    if (retire[n]) continue
+    const x = n % width, y = (n - x) / width
+    if (x < x0) x0 = x
+    if (x > x1) x1 = x
+    if (y < y0) y0 = y
+    if (y > y1) y1 = y
   }
+  if (x1 < 0) return 0
+  const plafond = PART_SURFACE * (x1 - x0 + 1) * (y1 - y0 + 1)
 
-  // Zones enfermées : composantes de pixels de fond que la propagation n'a pas atteintes.
-  const zone = new Uint8Array(width * height)
+  // Distance de chaque pixel au fond extérieur.
+  const distance = new Int32Array(total).fill(-1)
+  const vague: number[] = []
+  for (let n = 0; n < total; n++) if (retire[n]) { distance[n] = 0; vague.push(n) }
+  for (let k = 0; k < vague.length; k++) {
+    for (const v of voisins(vague[k])) if (v >= 0 && distance[v] < 0) { distance[v] = distance[vague[k]] + 1; vague.push(v) }
+  }
   const eloignement = (c: number[]) => c.reduce((m, n) => (distance[n] >= 0 && distance[n] < m ? distance[n] : m), Infinity)
   // Demi-épaisseur : profondeur maximale à l'intérieur de la zone, depuis son pourtour.
   const epaisseur = (c: number[]) => {
@@ -154,22 +202,25 @@ export function retirerFondUni(p: Pixels, fond: readonly [number, number, number
     }
     return max
   }
+
+  const zone = new Uint8Array(total)
   let retires = 0
-  for (let n = 0; n < width * height; n++) {
-    if (vu[n] || zone[n] || ecart(data, n * 4, fond) > ECART_FOND) continue
+  for (let n = 0; n < total; n++) {
+    if (retire[n] || zone[n] || !estFond(n)) continue
     const composante = [n]
     zone[n] = 1
     for (let k = 0; k < composante.length; k++) {
       for (const v of voisins(composante[k])) {
-        if (v < 0 || vu[v] || zone[v] || ecart(data, v * 4, fond) > ECART_FOND) continue
+        if (v < 0 || retire[v] || zone[v] || !estFond(v)) continue
         zone[v] = 1
         composante.push(v)
       }
     }
     if (composante.length > plafond) continue
-    if (eloignement(composante) > RAPPORT_PROFONDEUR * epaisseur(composante) + 2) continue
-    for (const c of composante) vu[c] = 1
-    propager(composante)
+    const ep = epaisseur(composante)
+    if (composante.length > ALLONGEMENT_MAX * ep * ep) continue
+    if (eloignement(composante) > RAPPORT_PROFONDEUR * ep + 2) continue
+    for (const c of composante) retire[c] = 2
     retires++
   }
   return retires
