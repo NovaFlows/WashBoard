@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { compressImage, LOGO_OPTIONS, BACKGROUND_OPTIONS } from '@/lib/imageCompression'
+import { compressImage, BACKGROUND_OPTIONS } from '@/lib/imageCompression'
 import { enregistrerApparence, envoyerImage, type ChampsApparence } from '@/lib/apparenceApi'
 import { DELAI_ATTENTE_LONGUE_MS, estImageAcceptee, messageNormalise, type PhaseImage } from '@/lib/apparence'
 import { logger } from '@/lib/logger'
-import { retirerLeFond } from '@/hooks/retirerLeFond'
+import { preparerEtEnvoyerLogo, type ModeLogo, type Retouches } from '@/lib/preparerLogo'
 
 // État de l'écran « Apparence de ma page » de la PWA (`ApparenceV2`) : les six
 // réglages, leurs écritures et l'état des envois d'image. `avisGoogle` (ID de
@@ -56,6 +56,9 @@ export function useApparenceV2(initial: ReglagesApparence) {
   const [avisGoogle, setAvisGoogle] = useState(initial.avisGoogle)
 
   const [logo, setLogo] = useState<EtatImage>(REPOS)
+  // Dernière image choisie, gardée pour « Garder le fond d'origine » tant que l'écran est ouvert.
+  const logoOriginal = useRef<File | null>(null)
+  const [retouches, setRetouches] = useState<Retouches>({ fondRetire: false, creuxRetires: false })
   const [fondPhoto, setFondPhoto] = useState<EtatImage>(REPOS)
   const [couleurEnAttente, setCouleurEnAttente] = useState<string | null>(null)
   const [couleurErreur, setCouleurErreur] = useState<string | null>(null)
@@ -81,33 +84,41 @@ export function useApparenceV2(initial: ReglagesApparence) {
   async function changerLogo(fichier: File) {
     if (verrouLogo.current) return
     if (!estImageAcceptee(fichier.type)) { setLogo(echec(PHRASE_PAS_UNE_IMAGE)); return }
+    logoOriginal.current = fichier
+    await envoyerLogo(fichier, 'complet')
+  }
+
+  /** Renvoie la dernière image choisie autrement, quand le détourage l'a abîmée : sans
+   *  retirer les creux des lettres, ou telle quelle. */
+  async function refaireLogo(mode: Exclude<ModeLogo, 'complet'>) {
+    if (logoOriginal.current) await envoyerLogo(logoOriginal.current, mode)
+  }
+
+  async function envoyerLogo(fichier: File, mode: ModeLogo) {
+    if (verrouLogo.current) return
     verrouLogo.current = true
+    setRetouches({ fondRetire: false, creuxRetires: false })
     setLogo({ phase: 'detourage', attenteLongue: false, erreur: null })
     minuteur.current = setTimeout(
       () => setLogo(l => (l.phase === 'detourage' ? { ...l, attenteLongue: true } : l)),
       DELAI_ATTENTE_LONGUE_MS,
     )
     try {
-      let detoure: Blob
-      try {
-        detoure = await retirerLeFond(fichier)
-      } catch (e) {
+      const r = await preparerEtEnvoyerLogo(fichier, mode, () => {
+        if (minuteur.current) clearTimeout(minuteur.current)
+        setLogo({ phase: 'envoi', attenteLongue: false, erreur: null })
+      })
+      if (!r.ok) {
         // Modèle injoignable, mémoire insuffisante, WebAssembly absent : sans trace,
         // un téléphone où le détourage ne marche jamais resterait invisible.
-        logger.error('apparence.logo.detourage_failed', {}, e)
-        setLogo(echec(PHRASE_DETOURAGE_ECHEC))
+        if (r.etape === 'detourage') logger.error('apparence.logo.detourage_failed', {}, r.erreur)
+        setLogo(echec(r.etape === 'detourage' ? PHRASE_DETOURAGE_ECHEC : r.message ?? PHRASE_DETOURAGE_ECHEC))
         return
       }
-      if (minuteur.current) clearTimeout(minuteur.current)
-      setLogo({ phase: 'envoi', attenteLongue: false, erreur: null })
-      // Le détourage rend un PNG en pleine résolution (jusqu'à 4 Mo) : réduit avant
-      // l'envoi, comme l'ancien écran — c'est ce plafond que le serveur contrôle.
-      const reduit = await compressImage(new File([detoure], 'logo.png', { type: 'image/png' }), LOGO_OPTIONS)
-      const r = await envoyerImage('logo', reduit)
-      if (!r.ok) { setLogo(echec(r.message)); return }
       // Le fichier garde la même adresse d'un envoi à l'autre : sans ce paramètre,
       // le navigateur réafficherait l'ancien logo. Local à l'écran, jamais enregistré.
-      setLogoUrl(`${r.data}?t=${Date.now()}`)
+      setLogoUrl(`${r.url}?t=${Date.now()}`)
+      setRetouches({ fondRetire: r.fondRetire, creuxRetires: r.creuxRetires })
       setLogo({ phase: 'fait', attenteLongue: false, erreur: null })
       rafraichir()
     } finally {
@@ -123,6 +134,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
     const r = await enregistrerApparence({ logo_url: null })
     if (!r.ok) return r.message
     setLogoUrl(null)
+    setRetouches({ fondRetire: false, creuxRetires: false })
     setLogo(REPOS)
     rafraichir()
     return null
@@ -237,7 +249,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
 
   return {
     logoUrl, couleur, fond, message, site, avisGoogle,
-    logo, fondPhoto,
+    logo, fondPhoto, retouches, refaireLogo,
     couleurEnAttente, couleurErreur, couleurFaite,
     fondEnAttente, fondErreur,
     changerLogo, retirerLogo, acquitterLogo,

@@ -83,8 +83,12 @@ export async function compressImage(file: File, options: CompressionOptions): Pr
     // on garde alors l'originale.
     if (blob.size >= file.size) return file
 
-    const nom = file.name.replace(/\.[^.]+$/, '') + (options.type === 'image/webp' ? '.webp' : '.jpg')
-    return new File([blob], nom, { type: options.type })
+    // Safari ne sait pas encoder le WebP : il rend du PNG sans le dire. On nomme le
+    // fichier d'après ce qu'il contient vraiment, sinon il est stocké sous une fausse extension.
+    const type = blob.type || options.type
+    const extension = type === 'image/webp' ? '.webp' : type === 'image/png' ? '.png' : '.jpg'
+    const nom = file.name.replace(/\.[^.]+$/, '') + extension
+    return new File([blob], nom, { type })
   } catch {
     return file
   }

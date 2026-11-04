@@ -122,6 +122,8 @@ export type Service = {
   addons: ServiceAddon[]
   /** En veille : conservee en base, invisible pour les clients. */
   en_veille?: boolean
+  /** Prévient le client que le lavage exige un lieu adapté (absent tant que la colonne n'est pas posée en base). */
+  lieu_adapte?: boolean
 }
 
 export type Availability = {
