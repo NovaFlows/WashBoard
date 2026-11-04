@@ -12,7 +12,7 @@ import { appeler } from '@/lib/prestationsApi'
 import { PRECISION_SOURCE_MAX, QUESTIONS_FACULTATIVES, QUESTIONS_OBLIGATOIRES, SOURCES_ACQUISITION, questionsObligatoiresRepondues, type ProfilActivite, type QuestionActivite, type SourceAcquisition } from '@/lib/onboarding'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { COULEUR_PAR_DEFAUT, estImageAcceptee } from '@/lib/apparence'
-import { preparerEtEnvoyerLogo } from '@/lib/preparerLogo'
+import { preparerEtEnvoyerLogo, type ModeLogo, type Retouches } from '@/lib/preparerLogo'
 import { EtatEnvoi } from '@/components/dashboard/ApparenceUiV2'
 import ApercuLogoV2 from '@/components/dashboard/ApercuLogoV2'
 import type { EtatImage } from '@/hooks/useApparenceV2'
@@ -155,7 +155,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [etatLogo, setEtatLogo] = useState<EtatImage>(REPOS_LOGO)
   const logoOriginal = useRef<File | null>(null)
-  const [fondRetire, setFondRetire] = useState(false)
+  const [retouches, setRetouches] = useState<Retouches>({ fondRetire: false, creuxRetires: false })
   const inputLogo = useRef<HTMLInputElement>(null)
   const minuteurLogo = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (minuteurLogo.current) clearTimeout(minuteurLogo.current) }, [])
@@ -252,18 +252,18 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
       return
     }
     logoOriginal.current = fichier
-    await envoyerLogo(fichier, true)
+    await envoyerLogo(fichier, 'complet')
   }
 
-  async function envoyerLogo(fichier: File, retirerFond: boolean) {
-    setFondRetire(false)
+  async function envoyerLogo(fichier: File, mode: ModeLogo) {
+    setRetouches({ fondRetire: false, creuxRetires: false })
     setEtatLogo({ phase: 'detourage', attenteLongue: false, erreur: null })
     minuteurLogo.current = setTimeout(
       () => setEtatLogo(l => (l.phase === 'detourage' ? { ...l, attenteLongue: true } : l)),
       DELAI_ATTENTE_LONGUE_MS,
     )
     try {
-      const r = await preparerEtEnvoyerLogo(fichier, retirerFond, () => {
+      const r = await preparerEtEnvoyerLogo(fichier, mode, () => {
         if (minuteurLogo.current) clearTimeout(minuteurLogo.current)
         setEtatLogo({ phase: 'envoi', attenteLongue: false, erreur: null })
       })
@@ -278,7 +278,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
       }
       // Même adresse d'un envoi à l'autre : le paramètre force le navigateur à relire l'image.
       setLogoUrl(`${r.url}?t=${Date.now()}`)
-      setFondRetire(r.fondRetire)
+      setRetouches({ fondRetire: r.fondRetire, creuxRetires: r.creuxRetires })
       setEtatLogo({ phase: 'fait', attenteLongue: false, erreur: null })
     } finally {
       if (minuteurLogo.current) clearTimeout(minuteurLogo.current)
@@ -493,10 +493,19 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
             <p className="text-xs leading-snug text-[color:var(--v2-color-gris)]">
               Le fond de l’image est retiré automatiquement. La première fois, c’est un peu plus long.
             </p>
-            {fondRetire && !occupeLogo && (
+            {!occupeLogo && retouches.creuxRetires && (
               <button
                 type="button"
-                onClick={() => { if (logoOriginal.current) envoyerLogo(logoOriginal.current, false) }}
+                onClick={() => { if (logoOriginal.current) envoyerLogo(logoOriginal.current, 'sans-creux') }}
+                className="-mt-2 text-left text-sm font-semibold underline underline-offset-2"
+              >
+                Une partie du logo a disparu ? La remettre
+              </button>
+            )}
+            {!occupeLogo && retouches.fondRetire && (
+              <button
+                type="button"
+                onClick={() => { if (logoOriginal.current) envoyerLogo(logoOriginal.current, 'original') }}
                 className="-mt-2 text-left text-sm font-semibold underline underline-offset-2"
               >
                 Le résultat ne te plaît pas ? Garder le fond d’origine

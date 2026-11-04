@@ -54,11 +54,48 @@ describe('retirerFondUni', () => {
     expect(px(p, 12, 12)).toEqual(BLEU)
   })
 
-  it('garde une zone de la couleur du fond enfermée dans le dessin', () => {
-    // La lettre blanche de l'écusson : la même couleur que le fond, mais pas reliée au bord.
-    const p = image(40, 40, BLANC, ecusson)
-    retirerFondUni(p, [255, 255, 255])
-    expect(px(p, 19, 19)).toEqual(BLANC)
+  it('retire le creux d’une lettre, enfermé dans le dessin', () => {
+    // Un « O » noir de 30 px sur fond blanc : son centre blanc doit laisser voir la page.
+    const o = (x: number, y: number): RVBA | null => {
+      const d = Math.hypot(x - 50, y - 50)
+      return d <= 15 && d >= 11 ? NOIR : null
+    }
+    const p = image(100, 100, BLANC, o)
+    expect(retirerFondUni(p, [255, 255, 255])).toBe(1)
+    expect(px(p, 50, 50)[3]).toBe(0)
+    expect(px(p, 50, 37)).toEqual(NOIR)
+  })
+
+  it('garde un texte blanc posé au milieu d’un écusson', () => {
+    // Petite zone blanche loin de l'extérieur : une vraie partie du dessin, pas un creux.
+    const ecu = (x: number, y: number): RVBA | null => {
+      if (x >= 48 && x <= 52 && y >= 48 && y <= 52) return BLANC
+      return Math.hypot(x - 50, y - 50) <= 40 ? BLEU : null
+    }
+    const p = image(100, 100, BLANC, ecu)
+    expect(retirerFondUni(p, [255, 255, 255])).toBe(0)
+    expect(px(p, 50, 50)).toEqual(BLANC)
+  })
+
+  it('garde une grande surface enfermée (panneau blanc)', () => {
+    const cadre = (x: number, y: number): RVBA | null => {
+      if (x >= 10 && x <= 89 && y >= 10 && y <= 89) return x <= 12 || x >= 87 || y <= 12 || y >= 87 ? NOIR : BLANC
+      return null
+    }
+    const p = image(100, 100, BLANC, cadre)
+    expect(retirerFondUni(p, [255, 255, 255])).toBe(0)
+    expect(px(p, 50, 50)).toEqual(BLANC)
+  })
+
+  it('sans les creux : tout ce qui est enfermé reste', () => {
+    const o = (x: number, y: number): RVBA | null => {
+      const d = Math.hypot(x - 50, y - 50)
+      return d <= 15 && d >= 11 ? NOIR : null
+    }
+    const p = image(100, 100, BLANC, o)
+    expect(retirerFondUni(p, [255, 255, 255], { creux: false })).toBe(0)
+    expect(px(p, 50, 50)).toEqual(BLANC)
+    expect(px(p, 0, 0)[3]).toBe(0)
   })
 
   it('adoucit un bord lissé au lieu de laisser un liseré du fond', () => {
@@ -76,7 +113,7 @@ describe('retirerFondUni', () => {
     const p = image(40, 40, NOIR, ecusson)
     retirerFondUni(p, [0, 0, 0])
     expect(px(p, 0, 0)[3]).toBe(0)
-    expect(px(p, 19, 19)).toEqual(BLANC)
+    expect(px(p, 12, 12)).toEqual(BLEU)
   })
 })
 

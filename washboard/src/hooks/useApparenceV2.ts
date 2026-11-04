@@ -6,7 +6,7 @@ import { compressImage, BACKGROUND_OPTIONS } from '@/lib/imageCompression'
 import { enregistrerApparence, envoyerImage, type ChampsApparence } from '@/lib/apparenceApi'
 import { DELAI_ATTENTE_LONGUE_MS, estImageAcceptee, messageNormalise, type PhaseImage } from '@/lib/apparence'
 import { logger } from '@/lib/logger'
-import { preparerEtEnvoyerLogo } from '@/lib/preparerLogo'
+import { preparerEtEnvoyerLogo, type ModeLogo, type Retouches } from '@/lib/preparerLogo'
 
 // État de l'écran « Apparence de ma page » de la PWA (`ApparenceV2`) : les six
 // réglages, leurs écritures et l'état des envois d'image. `avisGoogle` (ID de
@@ -58,7 +58,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
   const [logo, setLogo] = useState<EtatImage>(REPOS)
   // Dernière image choisie, gardée pour « Garder le fond d'origine » tant que l'écran est ouvert.
   const logoOriginal = useRef<File | null>(null)
-  const [fondRetire, setFondRetire] = useState(false)
+  const [retouches, setRetouches] = useState<Retouches>({ fondRetire: false, creuxRetires: false })
   const [fondPhoto, setFondPhoto] = useState<EtatImage>(REPOS)
   const [couleurEnAttente, setCouleurEnAttente] = useState<string | null>(null)
   const [couleurErreur, setCouleurErreur] = useState<string | null>(null)
@@ -85,25 +85,26 @@ export function useApparenceV2(initial: ReglagesApparence) {
     if (verrouLogo.current) return
     if (!estImageAcceptee(fichier.type)) { setLogo(echec(PHRASE_PAS_UNE_IMAGE)); return }
     logoOriginal.current = fichier
-    await envoyerLogo(fichier, true)
+    await envoyerLogo(fichier, 'complet')
   }
 
-  /** Renvoie la dernière image choisie telle quelle, quand le détourage l'a abîmée. */
-  async function garderFondOrigine() {
-    if (logoOriginal.current) await envoyerLogo(logoOriginal.current, false)
+  /** Renvoie la dernière image choisie autrement, quand le détourage l'a abîmée : sans
+   *  retirer les creux des lettres, ou telle quelle. */
+  async function refaireLogo(mode: Exclude<ModeLogo, 'complet'>) {
+    if (logoOriginal.current) await envoyerLogo(logoOriginal.current, mode)
   }
 
-  async function envoyerLogo(fichier: File, retirerFond: boolean) {
+  async function envoyerLogo(fichier: File, mode: ModeLogo) {
     if (verrouLogo.current) return
     verrouLogo.current = true
-    setFondRetire(false)
+    setRetouches({ fondRetire: false, creuxRetires: false })
     setLogo({ phase: 'detourage', attenteLongue: false, erreur: null })
     minuteur.current = setTimeout(
       () => setLogo(l => (l.phase === 'detourage' ? { ...l, attenteLongue: true } : l)),
       DELAI_ATTENTE_LONGUE_MS,
     )
     try {
-      const r = await preparerEtEnvoyerLogo(fichier, retirerFond, () => {
+      const r = await preparerEtEnvoyerLogo(fichier, mode, () => {
         if (minuteur.current) clearTimeout(minuteur.current)
         setLogo({ phase: 'envoi', attenteLongue: false, erreur: null })
       })
@@ -117,7 +118,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
       // Le fichier garde la même adresse d'un envoi à l'autre : sans ce paramètre,
       // le navigateur réafficherait l'ancien logo. Local à l'écran, jamais enregistré.
       setLogoUrl(`${r.url}?t=${Date.now()}`)
-      setFondRetire(r.fondRetire)
+      setRetouches({ fondRetire: r.fondRetire, creuxRetires: r.creuxRetires })
       setLogo({ phase: 'fait', attenteLongue: false, erreur: null })
       rafraichir()
     } finally {
@@ -133,7 +134,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
     const r = await enregistrerApparence({ logo_url: null })
     if (!r.ok) return r.message
     setLogoUrl(null)
-    setFondRetire(false)
+    setRetouches({ fondRetire: false, creuxRetires: false })
     setLogo(REPOS)
     rafraichir()
     return null
@@ -248,7 +249,7 @@ export function useApparenceV2(initial: ReglagesApparence) {
 
   return {
     logoUrl, couleur, fond, message, site, avisGoogle,
-    logo, fondPhoto, fondRetire, garderFondOrigine,
+    logo, fondPhoto, retouches, refaireLogo,
     couleurEnAttente, couleurErreur, couleurFaite,
     fondEnAttente, fondErreur,
     changerLogo, retirerLogo, acquitterLogo,

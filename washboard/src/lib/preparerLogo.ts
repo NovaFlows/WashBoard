@@ -13,8 +13,14 @@ const COTE_TRAITEMENT = 1200
 /** Un détourage qui laisse moins que cela a effacé le logo : on garde l'image d'origine. */
 const PART_VISIBLE_MIN = 0.005
 
+/** `complet` : fond et creux des lettres retirés ; `sans-creux` : seulement le fond autour
+ *  (le laveur a vu disparaître une partie de son logo) ; `original` : l'image telle quelle. */
+export type ModeLogo = 'complet' | 'sans-creux' | 'original'
+
+export type Retouches = { fondRetire: boolean; creuxRetires: boolean }
+
 export type ResultatLogo =
-  | { ok: true; url: string; fondRetire: boolean }
+  | ({ ok: true; url: string } & Retouches)
   | { ok: false; etape: 'detourage' | 'envoi'; message: string | null; erreur?: unknown }
 
 async function lirePixels(source: Blob): Promise<Pixels> {
@@ -46,31 +52,32 @@ async function enPng(p: Pixels): Promise<Blob> {
   return blob
 }
 
-/** Image prête à réduire. `retirerFond: false` : l'image d'origine, sans retouche
- *  (choix du laveur quand le détourage ne lui convient pas). */
-export async function preparerLogo(fichier: File, retirerFond: boolean): Promise<{ image: Blob; fondRetire: boolean }> {
+const TEL_QUEL: Retouches = { fondRetire: false, creuxRetires: false }
+
+/** Image prête à réduire, et ce qui y a été retiré (pour proposer de revenir en arrière). */
+export async function preparerLogo(fichier: File, mode: ModeLogo): Promise<{ image: Blob } & Retouches> {
   // Un SVG est vectoriel : le passer en pixels le dégraderait (voir `compressImage`).
-  if (!retirerFond || fichier.type === 'image/svg+xml') return { image: fichier, fondRetire: false }
+  if (mode === 'original' || fichier.type === 'image/svg+xml') return { image: fichier, ...TEL_QUEL }
 
   const pixels = await lirePixels(fichier)
   const analyse = analyserBord(pixels)
-  if (analyse.methode === 'deja-detoure') return { image: await enPng(pixels), fondRetire: false }
+  if (analyse.methode === 'deja-detoure') return { image: await enPng(pixels), ...TEL_QUEL }
   if (analyse.methode === 'fond-uni') {
     const copie = { ...pixels, data: new Uint8ClampedArray(pixels.data) }
-    retirerFondUni(copie, analyse.fond)
-    if (partVisible(copie) >= PART_VISIBLE_MIN) return { image: await enPng(copie), fondRetire: true }
-    return { image: fichier, fondRetire: false }
+    const creux = retirerFondUni(copie, analyse.fond, { creux: mode === 'complet' })
+    if (partVisible(copie) >= PART_VISIBLE_MIN) return { image: await enPng(copie), fondRetire: true, creuxRetires: creux > 0 }
+    return { image: fichier, ...TEL_QUEL }
   }
   const detoure = await lirePixels(await retirerLeFond(fichier))
-  if (partVisible(detoure) >= PART_VISIBLE_MIN) return { image: await enPng(detoure), fondRetire: true }
-  return { image: fichier, fondRetire: false }
+  if (partVisible(detoure) >= PART_VISIBLE_MIN) return { image: await enPng(detoure), fondRetire: true, creuxRetires: false }
+  return { image: fichier, ...TEL_QUEL }
 }
 
 /** Prépare, réduit et envoie le logo. `onEnvoi` : la préparation est finie, l'envoi commence. */
-export async function preparerEtEnvoyerLogo(fichier: File, retirerFond: boolean, onEnvoi: () => void): Promise<ResultatLogo> {
-  let prepare: { image: Blob; fondRetire: boolean }
+export async function preparerEtEnvoyerLogo(fichier: File, mode: ModeLogo, onEnvoi: () => void): Promise<ResultatLogo> {
+  let prepare: { image: Blob } & Retouches
   try {
-    prepare = await preparerLogo(fichier, retirerFond)
+    prepare = await preparerLogo(fichier, mode)
   } catch (erreur) {
     return { ok: false, etape: 'detourage', message: null, erreur }
   }
@@ -79,5 +86,5 @@ export async function preparerEtEnvoyerLogo(fichier: File, retirerFond: boolean,
   const reduit = await compressImage(source, LOGO_OPTIONS)
   const r = await envoyerImage('logo', reduit)
   if (!r.ok) return { ok: false, etape: 'envoi', message: r.message }
-  return { ok: true, url: r.data, fondRetire: prepare.fondRetire }
+  return { ok: true, url: r.data, fondRetire: prepare.fondRetire, creuxRetires: prepare.creuxRetires }
 }

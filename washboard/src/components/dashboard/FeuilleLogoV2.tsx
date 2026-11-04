@@ -5,6 +5,7 @@ import { TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { EtatEnvoi, enCoursEnvoi } from '@/components/dashboard/ApparenceUiV2'
 import ApercuLogoV2 from '@/components/dashboard/ApercuLogoV2'
 import type { EtatImage } from '@/hooks/useApparenceV2'
+import type { ModeLogo, Retouches } from '@/lib/preparerLogo'
 
 // Logo — feuille du bas de l'écran « Apparence de ma page » (PWA). Le laveur envoie
 // SA propre image (il n'y a pas de galerie) ; le fond en est retiré automatiquement
@@ -19,9 +20,9 @@ type Props = {
   etat: EtatImage
   /** Couleur de la marque : l'aperçu montre le logo sur le vrai fond de la page. */
   couleur: string
-  /** Le dernier envoi a retiré un fond : on propose de garder l'image d'origine. */
-  fondRetire: boolean
-  onGarderOrigine: () => void
+  /** Ce que le dernier envoi a retiré : on propose de revenir en arrière. */
+  retouches: Retouches
+  onRefaire: (mode: Exclude<ModeLogo, 'complet'>) => void
   onChoisir: () => void
   onRetirer: () => void
   onClose: () => void
@@ -30,7 +31,7 @@ type Props = {
   panneau?: boolean
 }
 
-export default function FeuilleLogoV2({ nom, logoUrl, etat, couleur, fondRetire, onGarderOrigine, onChoisir, onRetirer, onClose, panneau }: Props) {
+export default function FeuilleLogoV2({ nom, logoUrl, etat, couleur, retouches, onRefaire, onChoisir, onRetirer, onClose, panneau }: Props) {
   const occupe = enCoursEnvoi(etat)
 
   return (
@@ -75,11 +76,20 @@ export default function FeuilleLogoV2({ nom, logoUrl, etat, couleur, fondRetire,
       <p className={`mt-4 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
         Le fond de l’image est retiré automatiquement, sur votre téléphone.
       </p>
-      {fondRetire && !occupe && (
+      {!occupe && retouches.creuxRetires && (
         <button
           type="button"
-          onClick={onGarderOrigine}
-          className={`mt-2 text-left text-[14px] underline underline-offset-2 ${corpsFort} text-[color:var(--v2-color-encre)]`}
+          onClick={() => onRefaire('sans-creux')}
+          className={`mt-2 block text-left text-[14px] underline underline-offset-2 ${corpsFort} text-[color:var(--v2-color-encre)]`}
+        >
+          Une partie du logo a disparu ? La remettre
+        </button>
+      )}
+      {!occupe && retouches.fondRetire && (
+        <button
+          type="button"
+          onClick={() => onRefaire('original')}
+          className={`mt-2 block text-left text-[14px] underline underline-offset-2 ${corpsFort} text-[color:var(--v2-color-encre)]`}
         >
           Le résultat ne vous plaît pas ? Garder le fond d’origine
         </button>
