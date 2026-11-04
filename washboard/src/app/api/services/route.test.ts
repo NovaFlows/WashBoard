@@ -219,3 +219,22 @@ describe('POST /api/services — plafond de catalogue selon l’offre', () => {
     expect(res.status).toBe(403)
   })
 })
+
+describe('POST /api/services — « Prévenir le client » (lieu_adapte)', () => {
+  it('enregistre le booléen reçu', async () => {
+    const res = await POST(requete({ ...COMPLETE, lieu_adapte: true }))
+    expect(res.status).toBe(200)
+    expect(inserts[0].lieu_adapte).toBe(true)
+  })
+
+  it('n’envoie pas la colonne quand elle est absente du corps (colonne pas encore posée en base)', async () => {
+    await POST(requete(COMPLETE))
+    expect(inserts[0]).not.toHaveProperty('lieu_adapte')
+  })
+
+  it.each(['true', 1, null, {}])('refuse une valeur non booléenne : %j', async (valeur) => {
+    const res = await POST(requete({ ...COMPLETE, lieu_adapte: valeur }))
+    expect(res.status).toBe(400)
+    expect(inserts).toHaveLength(0)
+  })
+})

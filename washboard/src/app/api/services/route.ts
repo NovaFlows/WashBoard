@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id } = await request.json()
+  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte } = await request.json()
   if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
@@ -60,6 +60,10 @@ export async function POST(request: NextRequest) {
   }
   if (!dureeValide(Number(duration_minutes))) {
     return NextResponse.json({ error: ERREUR_DUREE_MAX }, { status: 400 })
+  }
+
+  if (lieu_adapte !== undefined && typeof lieu_adapte !== 'boolean') {
+    return NextResponse.json({ error: 'Valeur invalide pour « Prévenir le client »' }, { status: 400 })
   }
 
   const { data, error } = await supabase
@@ -74,6 +78,7 @@ export async function POST(request: NextRequest) {
       vehicle_types: vehicle_types ?? [],
       vehicle_price_overrides: vehicle_price_overrides ?? {},
       addons: addons ?? [],
+      ...(lieu_adapte === undefined ? {} : { lieu_adapte }),
     })
     .select()
     .single()

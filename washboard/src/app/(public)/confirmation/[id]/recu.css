@@ -24,7 +24,7 @@
 .wb-recu-kicker { padding: 14px 28px; border-bottom: 1px solid var(--v2-filet); display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--v2-color-gris); }
 .wb-recu-kicker b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .wb-recu-tete { padding: 28px 28px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
-.wb-recu-logo { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; margin-bottom: 12px; display: block; }
+.wb-recu-logo { width: auto; max-width: 200px; height: 56px; object-fit: contain; margin-bottom: 12px; display: block; }
 .wb-recu h1 { font-size: 28px; font-weight: var(--v2-type-titre-poids); font-stretch: var(--v2-type-titre-largeur); letter-spacing: var(--v2-type-titre-tracking); line-height: 1.1; overflow-wrap: anywhere; }
 .wb-recu-doux { font-size: 14px; color: var(--v2-color-gris); margin-top: 3px; }
 .wb-recu-droite { text-align: right; font-size: 14px; }

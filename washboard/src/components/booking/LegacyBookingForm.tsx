@@ -6,6 +6,7 @@ import { dureeTotale } from '@/lib/pricing'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepService from './StepService'
+import { estAuCentre } from '@/lib/lieuAdapte'
 import StepOptions from './StepOptions'
 import StepSlot from './LegacyStepSlot'
 import StepContact from './StepContact'
@@ -344,6 +345,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             factureApresPrestation={washer.facturation_prete === true}
             clientsProAutorises={washer.clients_pro !== false}
             vehicule3D={washer.silhouettes_vehicules !== false}
+            auCentre={estAuCentre(centreAuto, form.lieu)}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
               // Changer de prestation invalide les options de la précédente :

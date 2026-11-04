@@ -3,11 +3,14 @@
 import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { EtatEnvoi, enCoursEnvoi } from '@/components/dashboard/ApparenceUiV2'
+import ApercuLogoV2 from '@/components/dashboard/ApercuLogoV2'
 import type { EtatImage } from '@/hooks/useApparenceV2'
+import type { ModeLogo, Retouches } from '@/lib/preparerLogo'
 
 // Logo — feuille du bas de l'écran « Apparence de ma page » (PWA). Le laveur envoie
 // SA propre image (il n'y a pas de galerie) ; le fond en est retiré automatiquement
-// dans le téléphone, comme sur l'ancien écran. Cette feuille n'a AUCUN état d'envoi :
+// dans le téléphone (`preparerLogo.ts`), avec un retour à l'image d'origine si le
+// détourage l'a abîmée. Cette feuille n'a AUCUN état d'envoi :
 // il vit dans `useApparenceV2` (l'écran), pour que la fermer n'annule rien et ne
 // fasse pas perdre un échec. Le sélecteur de fichier est lui aussi dans l'écran.
 
@@ -15,6 +18,11 @@ type Props = {
   nom: string
   logoUrl: string | null
   etat: EtatImage
+  /** Couleur de la marque : l'aperçu montre le logo sur le vrai fond de la page. */
+  couleur: string
+  /** Ce que le dernier envoi a retiré : on propose de revenir en arrière. */
+  retouches: Retouches
+  onRefaire: (mode: Exclude<ModeLogo, 'complet'>) => void
   onChoisir: () => void
   onRetirer: () => void
   onClose: () => void
@@ -23,7 +31,7 @@ type Props = {
   panneau?: boolean
 }
 
-export default function FeuilleLogoV2({ nom, logoUrl, etat, onChoisir, onRetirer, onClose, panneau }: Props) {
+export default function FeuilleLogoV2({ nom, logoUrl, etat, couleur, retouches, onRefaire, onChoisir, onRetirer, onClose, panneau }: Props) {
   const occupe = enCoursEnvoi(etat)
 
   return (
@@ -58,29 +66,34 @@ export default function FeuilleLogoV2({ nom, logoUrl, etat, onChoisir, onRetirer
         </div>
       }
     >
-      <div className="flex items-center gap-4">
-        {/* Même carré rogné que sur la vraie page (48 px, `object-cover`), en plus grand. */}
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- adresse Supabase, comme la vraie page
-          <img src={logoUrl} alt="Votre logo" className="h-[88px] w-[88px] shrink-0 rounded-[18px] border border-[color:var(--v2-filet)] object-cover" />
-        ) : (
-          <div
-            aria-hidden
-            className={`flex h-[88px] w-[88px] shrink-0 select-none items-center justify-center rounded-[18px] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-filet)] text-[34px] text-[color:var(--v2-color-gris)] ${corpsFort}`}
-          >
-            {nom.charAt(0).toUpperCase()}
-          </div>
-        )}
-        <p className={`min-w-0 text-[14px] leading-snug ${corps}`}>
-          {logoUrl
-            ? 'Il est affiché en petit carré : les bords d’une image large sont coupés.'
-            : 'Pas encore de logo : vos clients voient la première lettre de votre nom.'}
-        </p>
-      </div>
+      <ApercuLogoV2 logoUrl={logoUrl} nom={nom} couleur={couleur} />
+      <p className={`mt-3 text-[14px] leading-snug ${corps}`}>
+        {logoUrl
+          ? 'C’est ce que voient vos clients en haut de votre page : le logo entier.'
+          : 'Pas encore de logo : vos clients voient les initiales de votre nom.'}
+      </p>
 
       <p className={`mt-4 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-        Le fond de l’image est retiré automatiquement, sur votre téléphone. La première fois, c’est plus long.
+        Le fond de l’image est retiré automatiquement, sur votre téléphone.
       </p>
+      {!occupe && retouches.creuxRetires && (
+        <button
+          type="button"
+          onClick={() => onRefaire('sans-creux')}
+          className={`mt-2 block text-left text-[14px] underline underline-offset-2 ${corpsFort} text-[color:var(--v2-color-encre)]`}
+        >
+          Une partie du logo a disparu ? La remettre
+        </button>
+      )}
+      {!occupe && retouches.fondRetire && (
+        <button
+          type="button"
+          onClick={() => onRefaire('original')}
+          className={`mt-2 block text-left text-[14px] underline underline-offset-2 ${corpsFort} text-[color:var(--v2-color-encre)]`}
+        >
+          Le résultat ne vous plaît pas ? Garder le fond d’origine
+        </button>
+      )}
 
       <div className="mt-4 min-h-[22px] pb-2" aria-live="polite">
         <EtatEnvoi etat={etat} texteFait="Logo mis en ligne." />
