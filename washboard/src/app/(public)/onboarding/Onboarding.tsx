@@ -11,11 +11,10 @@ import { enregistrerProfil } from '@/lib/profilApi'
 import { appeler } from '@/lib/prestationsApi'
 import { PRECISION_SOURCE_MAX, QUESTIONS_FACULTATIVES, QUESTIONS_OBLIGATOIRES, SOURCES_ACQUISITION, questionsObligatoiresRepondues, type ProfilActivite, type QuestionActivite, type SourceAcquisition } from '@/lib/onboarding'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { estImageAcceptee } from '@/lib/apparence'
-import { retirerLeFond } from '@/hooks/retirerLeFond'
-import { compressImage, LOGO_OPTIONS } from '@/lib/imageCompression'
-import { envoyerImage } from '@/lib/apparenceApi'
+import { COULEUR_PAR_DEFAUT, estImageAcceptee } from '@/lib/apparence'
+import { preparerEtEnvoyerLogo } from '@/lib/preparerLogo'
 import { EtatEnvoi } from '@/components/dashboard/ApparenceUiV2'
+import ApercuLogoV2 from '@/components/dashboard/ApercuLogoV2'
 import type { EtatImage } from '@/hooks/useApparenceV2'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GroupeChamps, Guide, LIEN_DISCRET, SAISIE,
@@ -117,8 +116,9 @@ function Question({ q, reponse, onChoisir, disabled, derniere }: {
 function Vignette({ logoUrl, nom, grande }: { logoUrl: string | null; nom: string; grande?: boolean }) {
   const taille = grande ? 'h-[88px] w-[88px] rounded-[18px] text-[34px]' : 'h-11 w-11 rounded-[11px] text-[19px]'
   if (logoUrl) {
+    // Entier, jamais rogné : sa largeur suit sa forme.
     // eslint-disable-next-line @next/next/no-img-element -- adresse Supabase, comme Apparence
-    return <img src={logoUrl} alt="Ton logo" className={`${taille} shrink-0 border border-[color:var(--v2-filet-fort)] object-cover`} />
+    return <img src={logoUrl} alt="Ton logo" className={`${grande ? 'h-[88px] max-w-[220px]' : 'h-11 max-w-[120px]'} w-auto shrink-0 object-contain`} />
   }
   return (
     <div aria-hidden className={`${taille} flex shrink-0 select-none items-center justify-center border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-fond)] font-semibold text-[color:var(--v2-color-gris)]`}>
@@ -150,10 +150,12 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
   const [adresse, setAdresse] = useState('')
 
   // Étape 3 — logo. `etatLogo` reprend `EtatImage` (useApparenceV2) pour réutiliser
-  // `EtatEnvoi` tel quel ; avance toute seule vers l'étape 4 une fois l'envoi réussi
-  // (« Plus tard » fait pareil sans rien envoyer).
+  // `EtatEnvoi` tel quel. Reste sur l'étape une fois l'envoi réussi : le laveur voit son
+  // logo sur le fond de la page et peut garder l'image d'origine si le détourage l'a abîmée.
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [etatLogo, setEtatLogo] = useState<EtatImage>(REPOS_LOGO)
+  const logoOriginal = useRef<File | null>(null)
+  const [fondRetire, setFondRetire] = useState(false)
   const inputLogo = useRef<HTMLInputElement>(null)
   const minuteurLogo = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (minuteurLogo.current) clearTimeout(minuteurLogo.current) }, [])
@@ -249,27 +251,35 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
       setEtatLogo({ phase: 'echec', attenteLongue: false, erreur: 'Ce fichier n’est pas une image. Choisis un logo en JPG, PNG ou WebP.' })
       return
     }
+    logoOriginal.current = fichier
+    await envoyerLogo(fichier, true)
+  }
+
+  async function envoyerLogo(fichier: File, retirerFond: boolean) {
+    setFondRetire(false)
     setEtatLogo({ phase: 'detourage', attenteLongue: false, erreur: null })
     minuteurLogo.current = setTimeout(
       () => setEtatLogo(l => (l.phase === 'detourage' ? { ...l, attenteLongue: true } : l)),
       DELAI_ATTENTE_LONGUE_MS,
     )
     try {
-      let detoure: Blob
-      try {
-        detoure = await retirerLeFond(fichier)
-      } catch {
-        setEtatLogo({ phase: 'echec', attenteLongue: false, erreur: 'Le fond n’a pas pu être retiré. Vérifie ta connexion (un modèle se télécharge la première fois) puis réessaie.' })
+      const r = await preparerEtEnvoyerLogo(fichier, retirerFond, () => {
+        if (minuteurLogo.current) clearTimeout(minuteurLogo.current)
+        setEtatLogo({ phase: 'envoi', attenteLongue: false, erreur: null })
+      })
+      if (!r.ok) {
+        setEtatLogo({
+          phase: 'echec', attenteLongue: false,
+          erreur: r.etape === 'detourage' || !r.message
+            ? 'Le fond n’a pas pu être retiré. Vérifie ta connexion (un modèle se télécharge la première fois) puis réessaie.'
+            : r.message,
+        })
         return
       }
-      if (minuteurLogo.current) clearTimeout(minuteurLogo.current)
-      setEtatLogo({ phase: 'envoi', attenteLongue: false, erreur: null })
-      const reduit = await compressImage(new File([detoure], 'logo.png', { type: 'image/png' }), LOGO_OPTIONS)
-      const r = await envoyerImage('logo', reduit)
-      if (!r.ok) { setEtatLogo({ phase: 'echec', attenteLongue: false, erreur: r.message }); return }
-      setLogoUrl(r.data)
+      // Même adresse d'un envoi à l'autre : le paramètre force le navigateur à relire l'image.
+      setLogoUrl(`${r.url}?t=${Date.now()}`)
+      setFondRetire(r.fondRetire)
       setEtatLogo({ phase: 'fait', attenteLongue: false, erreur: null })
-      allerA(4)
     } finally {
       if (minuteurLogo.current) clearTimeout(minuteurLogo.current)
     }
@@ -460,22 +470,38 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
         {etape === 3 && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
-              {etatLogo.phase === 'detourage' ? (
-                <div aria-hidden className="wb-entree-detourage relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[18px] border border-[color:var(--v2-filet-fort)]" />
-              ) : (
-                <Vignette logoUrl={logoUrl} nom={nom} grande />
-              )}
-              <p className="min-w-0 text-sm leading-snug text-[color:var(--v2-color-gris)]">
-                {logoUrl
-                  ? 'Il est affiché en petit carré : les bords d’une image large sont coupés.'
-                  : 'Pas encore de logo : tes clients voient la première lettre de ton nom.'}
-              </p>
-            </div>
+            {logoUrl && etatLogo.phase !== 'detourage' ? (
+              <div className="flex flex-col gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
+                <ApercuLogoV2 logoUrl={logoUrl} nom={nom} couleur={COULEUR_PAR_DEFAUT} />
+                <p className="text-sm leading-snug text-[color:var(--v2-color-gris)]">
+                  C’est ce que voient tes clients en haut de ta page : le logo entier.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
+                {etatLogo.phase === 'detourage' ? (
+                  <div aria-hidden className="wb-entree-detourage relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[18px] border border-[color:var(--v2-filet-fort)]" />
+                ) : (
+                  <Vignette logoUrl={null} nom={nom} grande />
+                )}
+                <p className="min-w-0 text-sm leading-snug text-[color:var(--v2-color-gris)]">
+                  {etatLogo.phase === 'detourage' ? 'Ton logo se prépare…' : 'Pas encore de logo : tes clients voient les initiales de ton nom.'}
+                </p>
+              </div>
+            )}
 
             <p className="text-xs leading-snug text-[color:var(--v2-color-gris)]">
               Le fond de l’image est retiré automatiquement. La première fois, c’est un peu plus long.
             </p>
+            {fondRetire && !occupeLogo && (
+              <button
+                type="button"
+                onClick={() => { if (logoOriginal.current) envoyerLogo(logoOriginal.current, false) }}
+                className="-mt-2 text-left text-sm font-semibold underline underline-offset-2"
+              >
+                Le résultat ne te plaît pas ? Garder le fond d’origine
+              </button>
+            )}
 
             <div className="min-h-[22px]" aria-live="polite">
               <EtatEnvoi etat={etatLogo} />
@@ -490,12 +516,25 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
             />
 
             <BarreActions>
-              <BoutonPrincipal type="button" onClick={() => inputLogo.current?.click()} chargement={occupeLogo} libelleChargement="En cours…">
-                {logoUrl ? 'Changer l’image' : 'Choisir une image'}
-              </BoutonPrincipal>
-              <button type="button" onClick={() => { setEtatLogo(REPOS_LOGO); allerA(4) }} disabled={occupeLogo} className={LIEN_DISCRET}>
-                Plus tard
-              </button>
+              {logoUrl ? (
+                <>
+                  <BoutonPrincipal type="button" onClick={() => { setEtatLogo(REPOS_LOGO); allerA(4) }} chargement={occupeLogo} libelleChargement="En cours…">
+                    Continuer
+                  </BoutonPrincipal>
+                  <button type="button" onClick={() => inputLogo.current?.click()} disabled={occupeLogo} className={LIEN_DISCRET}>
+                    Changer l’image
+                  </button>
+                </>
+              ) : (
+                <>
+                  <BoutonPrincipal type="button" onClick={() => inputLogo.current?.click()} chargement={occupeLogo} libelleChargement="En cours…">
+                    Choisir une image
+                  </BoutonPrincipal>
+                  <button type="button" onClick={() => { setEtatLogo(REPOS_LOGO); allerA(4) }} disabled={occupeLogo} className={LIEN_DISCRET}>
+                    Plus tard
+                  </button>
+                </>
+              )}
             </BarreActions>
           </div>
         )}

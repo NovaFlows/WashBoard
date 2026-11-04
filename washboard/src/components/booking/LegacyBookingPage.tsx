@@ -69,12 +69,14 @@ export default function LegacyBookingPage({washer, services, categories, availab
                 // (voir api/washer/logo/route.ts). `?v=` évite de montrer un
                 // ancien logo après un nouvel envoi : le chemin de stockage
                 // est réutilisé (upsert), pas l'URL.
+                // Entier, jamais rogné : la largeur suit la forme du logo.
                 <Image
                   src={urlVersionnee(logoUrl, washer.profile_updated_at)}
                   alt={washer.name}
-                  width={48}
+                  width={160}
                   height={48}
-                  className="w-12 h-12 rounded-xl object-cover"
+                  quality={90}
+                  className="h-12 w-auto max-w-[160px] shrink-0 object-contain"
                 />
               ) : (
                 <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold select-none ${

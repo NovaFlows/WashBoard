@@ -79,6 +79,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https' as const, hostname: 'images.unsplash.com' },
     ],
     minimumCacheTTL: 31536000,
+    // 90 : logos des laveurs (BookingHero, LegacyBookingPage), plus nets qu'à 75. Une
+    // seule transformation par logo et par taille, gardée un an en cache.
+    qualities: [75, 90],
   },
 
   // Articles « assurance » retirés du blog (hors périmètre) : redirections
