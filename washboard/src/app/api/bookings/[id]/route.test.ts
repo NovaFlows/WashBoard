@@ -156,6 +156,54 @@ describe('PATCH /api/bookings/[id] — réservation dans le quota', () => {
   })
 })
 
+describe('PATCH /api/bookings/[id] — déplacement', () => {
+  beforeEach(() => {
+    plan.booking = { ...plan.booking, created_at: '2026-09-24T12:00:00.000Z', status: 'confirmed' }
+  })
+
+  it('déplace aussi la fin du rendez-vous', async () => {
+    // Cas Automaclean (2026-11-04) : 1 h 30, déplacé du lundi soir au mercredi 14 h.
+    plan.booking = { ...plan.booking, scheduled_at: '2026-11-02T20:00:00.000Z', ends_at: '2026-11-02T21:30:00.000Z', services: { name: 'Pack Entretien', price: 70, duration_minutes: 90 } }
+    plan.updated = { ...plan.booking }
+    const res = await PATCH(requete({ scheduled_at: '2026-11-04T13:00:00.000Z' }), { params })
+    expect(res.status).toBe(200)
+    expect(miseAJour).toHaveBeenCalledWith('bookings', { scheduled_at: '2026-11-04T13:00:00.000Z', ends_at: '2026-11-04T14:30:00.000Z' })
+  })
+
+  it('compte les options et les véhicules, comme à la création', async () => {
+    plan.booking = {
+      ...plan.booking, vehicle_count: 2,
+      selected_addons: [{ id: 'o', name: 'Jantes', price: 10, duration_minutes: 15 }],
+      services: { name: 'Lavage', price: 40, duration_minutes: 30 },
+    }
+    plan.updated = { ...plan.booking }
+    await PATCH(requete({ scheduled_at: '2026-10-05T08:00:00.000Z' }), { params })
+    // (30 + 15) min × 2 véhicules.
+    expect(miseAJour).toHaveBeenCalledWith('bookings', { scheduled_at: '2026-10-05T08:00:00.000Z', ends_at: '2026-10-05T09:30:00.000Z' })
+  })
+
+  it('ne recopie jamais une ancienne fin fausse', async () => {
+    plan.booking = { ...plan.booking, ends_at: '2026-09-01T00:00:00.000Z' }
+    plan.updated = { ...plan.booking }
+    await PATCH(requete({ scheduled_at: '2026-10-05T08:00:00.000Z' }), { params })
+    expect(miseAJour).toHaveBeenCalledWith('bookings', { scheduled_at: '2026-10-05T08:00:00.000Z', ends_at: '2026-10-05T08:30:00.000Z' })
+  })
+
+  it('donne à Google Agenda la même fin qu’en base', async () => {
+    plan.washer = { ...WASHER, google_refresh_token: 'rt' }
+    plan.booking = { ...plan.booking, google_calendar_event_id: 'evt-1' }
+    plan.updated = { ...plan.booking }
+    await PATCH(requete({ scheduled_at: '2026-10-05T08:00:00.000Z' }), { params })
+    expect(patchCalendarEvent).toHaveBeenCalledWith('rt', 'evt-1', { startIso: '2026-10-05T08:00:00.000Z', endIso: '2026-10-05T08:30:00.000Z' })
+  })
+
+  it('ne touche pas à la fin quand l’horaire ne change pas', async () => {
+    plan.updated = { ...plan.booking, notes: 'x' }
+    await PATCH(requete({ notes: 'x' }), { params })
+    expect(miseAJour).toHaveBeenCalledWith('bookings', { notes: 'x' })
+  })
+})
+
 describe('PATCH /api/bookings/[id] — réservation annulée', () => {
   beforeEach(() => {
     // Dans le quota : seul le statut `cancelled` doit bloquer, pas le verrouillage.

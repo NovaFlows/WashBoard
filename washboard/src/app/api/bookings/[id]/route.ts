@@ -12,6 +12,7 @@ import { genererJetonReservation } from '@/lib/bookingToken'
 import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/cloture'
 import { prevenirTampon } from '@/lib/fideliteServeur'
 import { avisJoignable } from '@/lib/messagesAutomatiques'
+import { dureeTotale } from '@/lib/pricing'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -100,13 +101,24 @@ export async function PATCH(
     if (montant === null) return NextResponse.json({ error: 'Montant encaissé invalide' }, { status: 400 })
   }
 
+  // Durée réellement bloquée, même règle qu'à la création (POST /api/bookings) : options et
+  // nombre de véhicules compris.
+  const svcDuree = booking.services as { duration_minutes: number | null } | null
+  const dureeMinutes = dureeTotale(svcDuree?.duration_minutes ?? 60, booking.vehicles_detail, booking.selected_addons, booking.vehicle_count ?? 1)
+
   // Mettre à jour le statut / les notes / l'horaire
   const updates: Record<string, unknown> = {}
   if (montant !== null && montant !== montantPrevu(booking)) Object.assign(updates, colonnesMontantEncaisse(montant))
   if (status       !== undefined) updates.status       = status
   if (notes        !== undefined) updates.notes        = notes
   if (closed_late  !== undefined) updates.closed_late  = closed_late
-  if (scheduled_at !== undefined) updates.scheduled_at = scheduled_at
+  if (scheduled_at !== undefined) {
+    updates.scheduled_at = scheduled_at
+    // La fin suit le début : sans elle, `ends_at` gardait l'ancien horaire après un déplacement
+    // (constaté le 2026-11-04), et la réservation atomique, qui compte les chevauchements sur
+    // `ends_at`, comparait le mauvais créneau.
+    updates.ends_at = new Date(new Date(scheduled_at).getTime() + dureeMinutes * 60_000).toISOString()
+  }
   // Acompte payé par le lien du laveur (lib/acompte.ts) : c'est lui qui confirme l'avoir reçu.
   // Seulement sur une réservation qui en demande un : sinon la colonne peut ne pas exister.
   if (typeof acompte_recu === 'boolean') {
@@ -135,13 +147,10 @@ export async function PATCH(
   // ── Déplacement d'horaire : mettre à jour l'événement Google Calendar ────
   if (scheduled_at !== undefined && scheduled_at !== booking.scheduled_at
       && booking.google_calendar_event_id && washer.google_refresh_token) {
-    const svc = booking.services as { duration_minutes: number } | null
-    const newEndIso = new Date(
-      new Date(scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * vehicleCount * 60_000
-    ).toISOString()
+    // Même fin que celle enregistrée en base.
     await patchCalendarEvent(washer.google_refresh_token, booking.google_calendar_event_id, {
       startIso: scheduled_at,
-      endIso:   newEndIso,
+      endIso:   updates.ends_at as string,
     })
   }
 
