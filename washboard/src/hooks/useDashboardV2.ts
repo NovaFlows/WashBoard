@@ -1,7 +1,5 @@
 'use client'
 
-import { useDesignMobile } from '@/hooks/useDesignMobile'
-import { useEcranRail } from '@/hooks/useEcranRail'
 
 // Décide si le TABLEAU DE BORD (une page entière, pas un composant isolé — pour ça voir
 // usePwaStandalone) doit s'afficher en v2. Passe « bureau » (Alexandre, 2026-10-03), qui rouvre
@@ -44,8 +42,10 @@ export function bureauAutorise(betaRefonte?: boolean | null): boolean {
   return BUREAU_POUR_TOUS || !!betaRefonte || bureauForceEnDev()
 }
 
+/** Nouvelle version partout depuis le 2026-11-02 (téléphone → mobile, le reste → ordinateur,
+ *  voir grandEcran.ts). Vrai dès le rendu serveur : l'ancien écran ne s'affiche plus, même
+ *  le temps du chargement. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature conservée pour les appelants
 export function useDashboardV2(betaRefonte?: boolean | null): boolean {
-  const pwa = useDesignMobile()
-  const ecranRail = useEcranRail()
-  return pwa || (ecranRail && bureauAutorise(betaRefonte))
+  return true
 }
