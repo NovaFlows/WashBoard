@@ -32,6 +32,8 @@ export type FormulairePrestation = {
   vehicle_types: string[]
   vehicle_price_overrides: Record<string, number>
   addons: ServiceAddon[]
+  /** Indéfini tant que le laveur n'y touche pas (colonne absente avant le SQL) : alors non envoyé. */
+  lieu_adapte?: boolean
 }
 
 export const FORMULAIRE_VIDE: FormulairePrestation = {
@@ -68,6 +70,7 @@ export function formulaireDepuisService(svc: Service): FormulairePrestation {
     vehicle_types: [...svc.vehicle_types],
     vehicle_price_overrides: { ...(svc.vehicle_price_overrides ?? {}) },
     addons: [...(svc.addons ?? [])],
+    lieu_adapte: svc.lieu_adapte,
   }
 }
 
@@ -160,6 +163,7 @@ export function corpsPrestation(form: FormulairePrestation) {
     vehicle_types: form.vehicle_types,
     vehicle_price_overrides: form.vehicle_price_overrides,
     addons: form.addons,
+    ...(form.lieu_adapte === undefined ? {} : { lieu_adapte: form.lieu_adapte }),
   }
 }
 

@@ -410,3 +410,17 @@ describe('prestationsUtilisantTypes', () => {
     expect(prestationsUtilisantTypes([s1, s2], 'cat-voiture', [])).toEqual([])
   })
 })
+
+describe('lieu_adapte dans le corps envoyé', () => {
+  it('absent tant que le laveur n’y a pas touché et que la colonne n’existe pas', () => {
+    expect(corpsPrestation(rempli())).not.toHaveProperty('lieu_adapte')
+  })
+  it('envoyé quand il est défini, true comme false', () => {
+    expect(corpsPrestation(rempli({ lieu_adapte: true })).lieu_adapte).toBe(true)
+    expect(corpsPrestation(rempli({ lieu_adapte: false })).lieu_adapte).toBe(false)
+  })
+  it('le formulaire reprend la valeur de la prestation', () => {
+    expect(formulaireDepuisService(service({ lieu_adapte: true })).lieu_adapte).toBe(true)
+    expect(formulaireDepuisService(service()).lieu_adapte).toBeUndefined()
+  })
+})

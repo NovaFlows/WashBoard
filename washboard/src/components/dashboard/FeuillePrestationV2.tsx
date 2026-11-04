@@ -4,7 +4,8 @@ import { useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Availability, Service, ServiceCategory } from '@/types'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
-import { Constat, Repliable, TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
+import { Constat, Interrupteur, Repliable, TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
+import { MESSAGE_LIEU_ADAPTE } from '@/lib/lieuAdapte'
 import { champsManquants, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX, ERREUR_SANS_TYPE } from '@/lib/prestation'
 import {
   basculerType, categoriesOptionProposees, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
@@ -464,6 +465,19 @@ export default function FeuillePrestationV2({
           />
           <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/250</p>
         </Repliable>
+
+        <div className="flex items-center gap-3 border-t border-[color:var(--v2-filet)] pt-3">
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className={`text-[15px] ${corpsFort}`}>Prévenir le client</span>
+            <span className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{MESSAGE_LIEU_ADAPTE}</span>
+          </span>
+          <Interrupteur
+            actif={form.lieu_adapte === true}
+            enCours={false}
+            libelle="Prévenir le client"
+            onClick={() => setForm(f => ({ ...f, lieu_adapte: f.lieu_adapte !== true }))}
+          />
+        </div>
 
         {service && veille && (
           <div className="border-t border-[color:var(--v2-filet)] pt-3">

@@ -119,3 +119,22 @@ describe('DELETE /api/services/[id]', () => {
     expect((await res.json()).error).toBe('Une erreur interne est survenue.')
   })
 })
+
+describe('PATCH /api/services/[id] — « Prévenir le client » (lieu_adapte)', () => {
+  it.each([true, false])('enregistre le booléen %s', async (valeur) => {
+    const res = await PATCH(requete({ lieu_adapte: valeur }), { params })
+    expect(res.status).toBe(200)
+    expect(updates[0].lieu_adapte).toBe(valeur)
+  })
+
+  it('ne touche pas la colonne quand le corps ne la contient pas', async () => {
+    await PATCH(requete({ name: 'ez' }), { params })
+    expect(updates[0]).not.toHaveProperty('lieu_adapte')
+  })
+
+  it.each(['true', 0, null])('refuse une valeur non booléenne : %j', async (valeur) => {
+    const res = await PATCH(requete({ lieu_adapte: valeur }), { params })
+    expect(res.status).toBe(400)
+    expect(updates).toHaveLength(0)
+  })
+})
