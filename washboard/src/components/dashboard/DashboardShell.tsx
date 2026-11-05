@@ -79,6 +79,18 @@ const V2_FORT = `${V2_POLICE} [font-weight:var(--v2-type-corps-fort-poids)] [fon
 const couleurTon = (ton: TonBandeau) =>
   ton === 'nouveau' ? 'var(--v2-color-accent)' : `var(--v2-color-${ton})`
 
+/** « Nouveau », « Bêta » : pastille teintée, commune aux bandeaux téléphone et ordinateur. */
+function PastilleEtiquette({ couleur = 'var(--v2-color-accent)', children }: { couleur?: string; children: React.ReactNode }) {
+  return (
+    <span
+      className="inline-block shrink-0 rounded-full px-[9px] py-1 text-[10px] font-black uppercase leading-none tracking-[0.14em]"
+      style={{ color: couleur, background: `color-mix(in srgb, ${couleur} 10%, transparent)` }}
+    >
+      {children}
+    </span>
+  )
+}
+
 function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
   etiquette?: string
   ton: TonBandeau
@@ -96,11 +108,8 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
       >
         <span className="min-w-0 flex-1">
           {etiquette && (
-            <span
-              className="mb-1 block text-[10.5px] font-black uppercase tracking-[0.18em]"
-              style={{ color: couleur }}
-            >
-              {etiquette}
+            <span className="mb-1.5 block">
+              <PastilleEtiquette couleur={couleur}>{etiquette}</PastilleEtiquette>
             </span>
           )}
           <span className={`block text-[13.5px] leading-snug ${V2_FORT} text-[color:var(--v2-color-encre)]`}>
@@ -134,8 +143,9 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
 
 // Rhabillage du châssis bureau (passe « bureau », 2026-10-05, décision d'Alexandre) : plus de
 // carte posée sur le papier, une simple ligne discrète — le bloc de verre/carte de BandeauV2
-// se voyait trop sur un écran déjà dense (menu + rail + contenu large). Toujours sur
-// `--v2-color-surface`, un filet en bas plutôt qu'une bordure tout autour, le texte à l'encre
+// se voyait trop sur un écran déjà dense (menu + rail + contenu large). Ryan, 2026-11-05 : la
+// ligne collée en haut faisait « rectangle sec » et touchait le menu — elle devient une carte
+// fine décollée du bord, alignée sur le contenu, ombre légère, toujours discrète. Le texte à l'encre
 // QUEL QUE SOIT LE TON (pas d'ambre, pas de rouge ici : « une ligne discrète », pas une alerte)
 // — seul le lien reste en accent, pour qu'il reste le seul élément qui invite au clic. Le
 // padding horizontal reprend celui du `<main>` du châssis bureau (34px, voir plus bas) pour que
@@ -151,21 +161,21 @@ function BandeauBureauV2({ etiquette, children, lien, libelleLien, onDismiss }: 
   onDismiss?: () => void
 }) {
   return (
-    <div className="border-b border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-[34px] py-2.5">
-      <div className="flex items-center gap-3">
-        <span className={`min-w-0 flex-1 text-[13px] leading-snug ${V2_POLICE} text-[color:var(--v2-color-encre)]`}>
-          {etiquette && (
-            <span className="mr-2 text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--v2-color-gris)]">
-              {etiquette}
-            </span>
-          )}
+    <div className="px-[34px] pt-[14px]">
+      <div className="flex items-center gap-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] py-2.5 pl-3.5 pr-3 shadow-[0_1px_2px_rgba(22,22,26,.04),0_6px_18px_rgba(22,22,26,.06)] dark:shadow-[0_1px_3px_rgba(0,0,0,.4)]">
+        {etiquette && <PastilleEtiquette>{etiquette}</PastilleEtiquette>}
+        <span className={`min-w-0 flex-1 text-[13.5px] leading-snug ${V2_POLICE} text-[color:var(--v2-color-encre)]`}>
           {children}
-          {lien && libelleLien && (
-            <Link href={lien} className={`ml-2 ${V2_FORT}`} style={{ color: 'var(--v2-color-accent)' }}>
-              {libelleLien} →
-            </Link>
-          )}
         </span>
+        {lien && libelleLien && (
+          <Link
+            href={lien}
+            className={`shrink-0 rounded-[var(--v2-radius-bouton)] border px-3 py-1.5 text-[13px] ${V2_FORT} transition-opacity hover:opacity-80`}
+            style={{ color: 'var(--v2-color-accent)', borderColor: 'color-mix(in srgb, var(--v2-color-accent) 30%, transparent)' }}
+          >
+            {libelleLien}
+          </Link>
+        )}
         {onDismiss && (
           <button
             onClick={onDismiss}
