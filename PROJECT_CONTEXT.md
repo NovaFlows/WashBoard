@@ -1,9 +1,16 @@
 # Contexte partagé — WashBoard
 
-Dernière mise à jour : 2026-10-18.
+Dernière mise à jour : 2026-11-05.
 
 ## Continuité de travail
 L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
+
+## Espace équipe — fiches laveurs (2026-11-05, `607e131`)
+- Demande d'Alexandre : un vrai espace admin avec des fiches clients ; le suivi client s'améliore par tranches, la première est livrée.
+- `/dashboard/support/laveurs` : liste des laveurs, comptes de test exclus, pastille de priorité. `/dashboard/support/laveurs/[id]` : la fiche, avec le topo complet. Elle contient les boutons Appeler / WhatsApp / Sa page, la partie « à dire à l'appel », le contact, l'activité, le parcours de la page sur 30 jours, la configuration, le profil et les points bloquants.
+- Accès réservé à `SUPPORT_ADMIN_USER_IDS` (`exigerEquipe` dans `lib/ficheLaveurDonnees.ts`, lectures en service_role). Les calculs sont des fonctions pures dans `lib/ficheLaveur.ts`, testées.
+- La notification push « nouvel inscrit » (`lib/confirmationSuite.ts`) ouvre la fiche de l'inscrit.
+- Pistes pour la suite, rien de décidé : notes et suivi d'appel saisis dans la fiche (aujourd'hui dans `prospects/suivi_clients.xlsx`), Instagram du laveur, filtres de la liste.
 
 ## Repères vérifiés
 - `washboard/` contient l'application et son `package.json`.
