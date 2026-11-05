@@ -92,11 +92,6 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
   }, [])
 
   useEffect(() => {
-    document.body.classList.add('wb-hide-fab')
-    return () => document.body.classList.remove('wb-hide-fab')
-  }, [])
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose()

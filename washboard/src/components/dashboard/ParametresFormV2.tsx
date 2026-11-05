@@ -36,8 +36,8 @@ import { infosFacturationManquantes } from '@/lib/facture'
 // menu au fur et à mesure que ces réglages ont leur écran v2 dédié.
 //
 // 2026-09-24 — l'en-tête (☰, titre, badge de plan, déconnexion, thème) et le
-// menu latéral disparaissent de la PWA en bêta (voir DashboardShell.tsx,
-// `wb-entete-beta` dans globals.css). « Plus » devient alors le SEUL chemin
+// menu latéral disparaissent de la PWA en bêta (voir DashboardShell.tsx).
+// « Plus » devient alors le SEUL chemin
 // vers ce que le menu donnait et que ni la barre du bas ni Chiffres
 // n'atteignent : le guide, l'ancien écran CRM (export Excel, liens par
 // réseau — sans le mot « CRM »), et pour l'équipe l'outil interne « Support »

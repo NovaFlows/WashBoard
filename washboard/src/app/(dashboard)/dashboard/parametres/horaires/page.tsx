@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Horaires from '@/components/dashboard/Horaires'
+import HorairesV2 from '@/components/dashboard/HorairesV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
 import type { Availability, Unavailability } from '@/types'
@@ -43,8 +43,8 @@ export default async function HorairesPage() {
   }
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte} avancementVisite={{ availabilitiesCount: availabilities?.length ?? 0 }}>
-      <Horaires
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} avancementVisite={{ availabilitiesCount: availabilities?.length ?? 0 }}>
+      <HorairesV2
         availabilities={(availabilities ?? []) as Availability[]}
         unavailabilities={(unavailabilities ?? []) as Unavailability[]}
         teamSize={washer.team_size ?? 1}
@@ -62,7 +62,6 @@ export default async function HorairesPage() {
           plan: washer.plan,
           grandfathered: washer.grandfathered,
         }}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

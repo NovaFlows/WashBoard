@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Booking } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking } from '@/components/dashboard/calendrierTypes'
 
 type Trajet = { minutes: number; km: number }
 

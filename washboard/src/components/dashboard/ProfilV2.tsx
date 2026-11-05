@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
@@ -60,11 +60,12 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
   // le rechargement de la page (`router.refresh()`, lancé en plus pour le reste de l'écran).
   const [fiche, setFiche] = useState(washer)
   // Arrivée par un lien du guide (`#facturation`, « que dois-je remplir pour facturer ? ») :
-  // la feuille visée s'ouvre d'office. Cet écran ne se monte qu'après le garde-fou de
-  // `Profil.tsx`, donc toujours dans le navigateur.
-  const [feuille, setFeuille] = useState<Feuille>(
-    () => (window.location.hash === '#facturation' ? 'facturation' : null),
-  )
+  // la feuille visée s'ouvre d'office. Lu au montage, l'ancre n'existant pas au rendu serveur.
+  const [feuille, setFeuille] = useState<Feuille>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre lue au montage
+    if (window.location.hash === '#facturation') setFeuille('facturation')
+  }, [])
 
   const fermer = () => setFeuille(null)
   const [centre, setCentre] = useState<ReglagesCentreAuto | null>(() => {

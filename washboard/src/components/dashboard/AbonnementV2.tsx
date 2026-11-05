@@ -9,8 +9,26 @@ import {
   LIBELLE_RDV_BUSINESS, yearlyPrice, yearlyMonthlyEquivalent, type Plan, type BillingCycle,
 } from '@/lib/plan'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
-import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
-import type { PropsAbonnement } from '@/components/dashboard/Abonnement'
+import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+
+export type PropsAbonnement = {
+  subscriptionStatus: string
+  trialEndsAt: string | null
+  subscriptionEndsAt: string | null
+  plan: Plan
+  grandfathered: boolean
+  /** `null` : l'offre n'a pas de plafond, ou le comptage n'a pas pu être lu. */
+  plafondReservations: number | null
+  reservationsCeMois: number | null
+  plafondPrestations: number | null
+  prestationsAuCatalogue: number | null
+  /** Date à laquelle le compteur repart, déjà écrite (« 22 octobre »). */
+  remiseAZero: string
+  /** Essai terminé sans formule choisie : le compte tourne sur Découverte. */
+  doitChoisir: boolean
+  /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
+  liste: ReglagesListeProps
+}
 
 // « Mon offre », présentation v2 — réservée à la PWA installée (voir
 // Abonnement.tsx, le point de branchement ; décision d'Alexandre, 2026-09-22 :

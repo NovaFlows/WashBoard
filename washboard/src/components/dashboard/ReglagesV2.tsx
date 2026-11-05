@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { CarteListe, Ligne, NonLus, TitreSection } from '@/components/dashboard/ParametresFormV2'
@@ -35,8 +35,7 @@ import { useDesignMobile } from '@/hooks/useDesignMobile'
 // (en-tête avec chevron, les deux cartes) ne change pas d'une ligne.
 //
 // La carte « Configuration de votre compte » (`SetupProgressBar`) vit ici depuis le 2026-10-04,
-// à la demande d'Alexandre : le bouton qui la masque/affiche vivait déjà sur cet écran, elle ne
-// doit plus s'afficher sur « Plus » (voir `SetupProgressBarPlus`, qui l'y cache en PWA).
+// à la demande d'Alexandre : le bouton qui la masque/affiche vivait déjà sur cet écran.
 
 type Props = {
   /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
@@ -49,13 +48,13 @@ export default function ReglagesV2({ liste, progress }: Props) {
   const { etat: etatNotifications } = useNotificationsPush()
   const mobile = useDesignMobile()
   const grandEcran = useGrandEcran()
-  // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office, sinon le
-  // laveur atterrit sur un écran de réglages et doit re-chercher la ligne qu'on lui promettait.
-  // Cet écran ne se monte qu'après le garde-fou de `Reglages.tsx`, donc toujours dans le
-  // navigateur — `window` existe.
-  const [feuilleNotifications, setFeuilleNotifications] = useState(
-    () => window.location.hash === '#notifications',
-  )
+  // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office. Lu au
+  // montage, l'ancre n'existant pas au rendu serveur.
+  const [feuilleNotifications, setFeuilleNotifications] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre lue au montage
+    if (window.location.hash === '#notifications') setFeuilleNotifications(true)
+  }, [])
   const [carteCachee, setCarteCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
   const { unreadSupportCount } = useSupportBadges()
   const notifications = resumeNotifications(etatNotifications, mobile)

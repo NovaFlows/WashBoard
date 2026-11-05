@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Chiffres from '@/components/dashboard/Chiffres'
+import ChiffresV2 from '@/components/dashboard/ChiffresV2'
 import { hasFeature, quotaReservations } from '@/lib/plan'
 import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { normalizeHost } from '@/lib/funnelStats'
@@ -120,8 +120,8 @@ export default async function ChiffresPage() {
   const websiteHost = washer.website_url ? normalizeHost(washer.website_url) : undefined
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <Chiffres
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <ChiffresV2
         bookings={bookingsVisibles}
         facturesManuelles={(facturesManuelles ?? []) as unknown as FactureManuelle[]}
         events={funnelEvents ?? []}
@@ -134,7 +134,6 @@ export default async function ChiffresPage() {
         evenementsDepuis={since.toISOString()}
         reservationsIncompletes={!!bookingsError}
         evenementsIncomplets={!!funnelError}
-        betaRefonte={washer.beta_refonte}
       />
     </DashboardShell>
   )

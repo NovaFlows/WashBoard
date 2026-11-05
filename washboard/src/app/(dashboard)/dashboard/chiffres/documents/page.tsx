@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Documents from '@/components/dashboard/Documents'
+import DocumentsV2 from '@/components/dashboard/DocumentsV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
 
@@ -18,7 +18,7 @@ import { logger } from '@/lib/logger'
 // taper. D'où la liste de colonnes minimale (jamais `*` : la fiche laveur porte des jetons
 // Google et des identifiants Stripe).
 const COLONNES =
-  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, beta_refonte, created_at, slug, subscription_ends_at'
+  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, slug, subscription_ends_at'
 
 export default async function DocumentsPage() {
   const supabase = await createClient()
@@ -36,14 +36,13 @@ export default async function DocumentsPage() {
   if (error) logger.warn('documents.services.read_failed', { washerId: washer.id }, error)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       {/* `useSearchParams` (lecture de `?nouveau=`) exige une limite Suspense, sinon la
           compilation de production échoue — le serveur de développement, lui, ne dit rien. */}
       <Suspense fallback={null}>
-        <Documents
+        <DocumentsV2
           prestations={(prestations ?? []).map(p => ({ id: p.id, name: p.name, price: Number(p.price) }))}
           nomLaveur={washer.name}
-          betaRefonte={washer.beta_refonte}
         />
       </Suspense>
     </DashboardShell>

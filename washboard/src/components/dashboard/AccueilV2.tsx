@@ -360,8 +360,9 @@ export default function AccueilV2({
   const routeDuJour = useMemo(() => minutesDeRoute(rdvAujourdhui), [rdvAujourdhui])
   const totalDuJour = useMemo(() => rdvAujourdhui.reduce((s, b) => s + montant(b), 0), [rdvAujourdhui])
 
-  const aujourdhui = new Date()
-  const titreJour = aujourdhui.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  // `dateDuJour` (Paris, calculé par le serveur) plutôt que l'horloge : même texte au rendu
+  // serveur et dans le navigateur, y compris entre minuit et 1 h.
+  const titreJour = new Date(`${dateDuJour}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
   const sousTitre =
     rdvAujourdhui.length > 0
       ? `${rdvAujourdhui.length} rendez-vous · ${totalDuJour} €`

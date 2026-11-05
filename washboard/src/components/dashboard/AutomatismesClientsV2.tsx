@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CarteListe, TitreSection } from '@/components/dashboard/ParametresFormV2'
 import { LigneDeuxNiveaux } from '@/components/dashboard/PrestationsUiV2'
@@ -56,8 +56,13 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
     campagnes, publicitesAutorisees, libellePlanPublicites,
   } = automatismes
   const [creneaux, setCreneaux] = useState(automatismes.creneaux)
-  // Lien de l'accueil (`/dashboard/clients#creneaux`) : on ouvre directement la feuille.
-  const [feuille, setFeuille] = useState(() => typeof window !== 'undefined' && window.location.hash === '#creneaux')
+  // Lien de l'accueil (`/dashboard/clients#creneaux`) : on ouvre directement la feuille. Lu au
+  // montage, l'ancre n'existant pas au rendu serveur.
+  const [feuille, setFeuille] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre lue au montage
+    if (window.location.hash === '#creneaux') setFeuille(true)
+  }, [])
 
   const ctx = { smsAutorise }
 

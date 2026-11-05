@@ -5,7 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { dayKey, isSameDay } from '@/lib/calendarLayout'
 import { cleMois, colonnePremierJour, compterActifsParJour, plageDeMois, pointsRendezVous, semainesDuMois } from '@/lib/vueMois'
 import { police, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
-import type { Booking, Unavailability } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking, Unavailability } from '@/components/dashboard/calendrierTypes'
 import { journeeBloquee } from '@/lib/slots'
 
 // Vue « mois » de l'agenda v2 — réservée à la PWA installée en mode standalone

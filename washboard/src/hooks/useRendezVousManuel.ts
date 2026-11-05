@@ -7,7 +7,7 @@ import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
 import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
-import type { Booking, Unavailability, ServiceFull, Category } from '@/components/dashboard/CalendrierDashboardV1'
+import type { Booking, Unavailability, ServiceFull, Category } from '@/components/dashboard/calendrierTypes'
 
 export const VEHICLE_TYPES = [
   { value: 'citadine',    label: 'Citadine' },

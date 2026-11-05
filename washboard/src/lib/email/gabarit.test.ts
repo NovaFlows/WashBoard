@@ -39,7 +39,6 @@ async function tousLesEmails() {
     () => m.sendSubExpired({ ...laveur }),
     () => m.sendSupportReply({ to: 'l@test.fr', titreQuestion: 'Titre', questionId: 'q1', appUrl: 'https://app.test' }),
     () => m.sendGraceEndingWarning({ ...laveur, cutoffDate: QUAND }),
-    () => m.sendEmailConfirmation({ to: 'l@test.fr', washerName: 'Malo Lavage', code: '123456' }),
     () => m.sendNouvellesOffres({ ...laveur }),
     () => m.sendAnnoncePwa({ ...laveur }),
     () => m.sendAnnonceBureau({ ...laveur }),

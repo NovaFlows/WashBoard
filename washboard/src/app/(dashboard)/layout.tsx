@@ -49,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, beta_refonte')
+    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -83,7 +83,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           plafond={plafond}
           aRanger={aRanger}
           offre={planEffectif(washer)}
-          betaRefonte={washer.beta_refonte}
         />
       )}
     </>

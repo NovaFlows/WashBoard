@@ -45,66 +45,6 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Écrans d'authentification (login, signup, mot de passe) ──────────────
-   Ces règles étaient dupliquées à l'identique dans un bloc <style> de chaque
-   page (56 lignes × 3). Centralisées ici : un seul endroit à modifier, et
-   `reset-password` — qui ne les utilisait pas et détonnait donc — peut
-   désormais s'aligner sur les autres. */
-.wb-auth-bg {
-  background: linear-gradient(140deg, #EBF5FF 0%, #F4F9FF 45%, #FFFFFF 100%);
-}
-.dark .wb-auth-bg {
-  background: linear-gradient(150deg, #09111E 0%, #0C1D38 65%, #09111E 100%);
-}
-.wb-auth-glow {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,196,212,0.13), transparent);
-}
-.dark .wb-auth-glow { background: none; }
-.wb-auth-card {
-  background: rgba(255,255,255,0.97);
-  border: 1px solid rgba(22,81,232,0.10);
-  box-shadow: 0 4px 32px rgba(22,81,232,0.07);
-}
-.dark .wb-auth-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: none;
-}
-.wb-input {
-  width: 100%;
-  border: 1px solid rgba(22,81,232,0.15);
-  border-radius: 0.75rem;
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  background: white;
-  color: #0f172a;
-  outline: none;
-  transition: box-shadow 0.15s, border-color 0.15s;
-}
-.dark .wb-input {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.9);
-}
-.wb-input::placeholder { color: #94a3b8; }
-.dark .wb-input::placeholder { color: rgba(255,255,255,0.3); }
-.wb-input:focus {
-  border-color: #1651E8;
-  box-shadow: 0 0 0 3px rgba(22,81,232,0.12);
-}
-.dark .wb-input:focus {
-  border-color: #4A81FF;
-  box-shadow: 0 0 0 3px rgba(74,129,255,0.15);
-}
-.wb-label {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  margin-bottom: 0.375rem;
-  color: #475569;
-}
-.dark .wb-label { color: rgba(255,255,255,0.6); }
-
 /* ── iOS : empêcher le zoom automatique à la saisie ──────────────────────────
    Safari agrandit la page dès qu'un champ de moins de 16px reçoit le focus, et
    ne revient jamais à l'échelle d'origine tout seul. Concrètement : on tapait
@@ -113,8 +53,8 @@ body {
 
    16px est le seuil exact retenu par WebKit ; en dessous, il zoome. La règle
    ne s'applique qu'aux petits écrans, la typographie d'origine est conservée
-   ailleurs. Elle vise tous les champs de saisie, pas seulement `.wb-input` :
-   il en reste ailleurs en `text-sm`, et le zoom se déclenche au premier venu.
+   ailleurs. Elle vise tous les champs de saisie : il en reste en `text-sm`, et
+   le zoom se déclenche au premier venu.
 
    L'autre correctif possible — `maximum-scale=1` dans la balise viewport —
    est écarté volontairement : il empêche AUSSI de zoomer à la main, ce qui
@@ -125,35 +65,6 @@ body {
   textarea {
     font-size: 16px;
   }
-}
-
-/* ── Bouton WhatsApp flottant : masqué pendant qu'un panneau de question
-   est ouvert ─────────────────────────────────────────────────────────────
-   Les deux sont fixés en bas à droite, au même z-index : sans cette règle,
-   la bulle WhatsApp — plus bas dans le DOM — reste visible AU-DESSUS du
-   panneau et peut même capter le clic destiné à « Envoyer ». On la masque
-   plutôt que de la décaler ou de monter le panneau au-dessus : elle
-   resterait sinon flottante par-dessus le contenu de la conversation, ce
-   qui n'est pas plus propre, et proposer WhatsApp par-dessus un message en
-   train d'être écrit à la même équipe est redondant. */
-body.wb-hide-fab [data-wb-whatsapp-fab] {
-  display: none;
-}
-
-/* Barre du bas de la PWA (refonte 2026) : la bulle WhatsApp flotte au même coin
-   et se poserait par-dessus l'onglet « Plus ». Elle est masquée tant que la
-   barre existe, par la barre elle-même. Le mécanisme `wb-hide-fab` ci-dessus
-   ne suffit pas : chaque panneau qui l'utilise le RETIRE à sa fermeture, y
-   compris quand c'est la barre qui l'avait posé — la bulle réapparaissait donc
-   après la première fiche fermée.
-
-   ⚠️ Aucun `:has()` dans ce fichier : Turbopack, qui construit les déploiements, abandonne
-   silencieusement TOUT le CSS qui suit le premier `:has()` rencontré. Le 2026-10-01, la
-   refonte est partie en production sans ses couleurs ni ses arrondis pour cette raison —
-   les utilitaires Tailwind survivaient, les jetons `--v2-*` non. D'où la classe
-   `wb-barre-bas`, posée sur <html> par DashboardShell. */
-html.wb-barre-bas [data-wb-whatsapp-fab] {
-  display: none;
 }
 
 /* ── Socle mobile (refonte 2026, passe 0) ──────────────────────────────────
@@ -199,7 +110,7 @@ button {
 /* ── Réservé au tableau de bord ─────────────────────────────────────────── */
 
 /* `wb-dashboard-active` est posée sur <body> par DashboardShell tant qu'un
-   écran du dashboard est monté (même mécanisme que `wb-hide-fab` ci-dessus).
+   écran du dashboard est monté.
    Neutralise le rebond de défilement en haut de page : utile dans le
    dashboard pour ne pas déclencher un rechargement accidentel en tirant vers
    le bas une liste (clients, factures...). Le reste du site — en particulier
@@ -229,64 +140,8 @@ body.wb-dashboard-active {
    @media (hover: hover) and (pointer: fine) par défaut) répondent déjà aux
    deux points restants du socle — rien à ajouter ici. */
 
-/* ── `wb-pwa` — la refonte v2 n'existe que dans la PWA installée ───────────
-   Décision d'Alexandre (2026-09-22) : le site (navigateur classique, mobile
-   ou ordinateur) reste v1 sans exception ; seule la PWA installée en mode
-   standalone voit la direction v2. `wb-pwa` est posée sur <html> par un
-   script synchrone dans layout.tsx (`beforeInteractive`, avant toute
-   peinture — il n'existe pas d'équivalent "cookie lu côté serveur" pour
-   `display-mode: standalone`, contrairement à la classe `dark`).
-
-   Deux mécanismes, pas un seul — ne pas les confondre :
-   - Un écran qui ne change que de couleurs/espacements/rayons (pas de JSX
-     différent) peut se contenter d'un sélecteur `html.wb-pwa …` ici, ou de
-     la variante Tailwind arbitraire `[html.wb-pwa_&]:…` côté composant.
-     Zéro flash : la classe est posée avant le premier rendu.
-   - Un écran dont la FORME change (ex. ClientProfileModal : carte v1 vs
-     feuille v2) a besoin d'un vrai branchement JSX — voir le hook React
-     `usePwaStandalone()` (src/hooks/usePwaStandalone.ts). Un flash v1→v2
-     bref au montage y est accepté (mêmes contraintes que ThemeToggle /
-     NotificationsToggle, aucun équivalent serveur possible ici).
-   Premier usage réel (2026-09-24) : l'en-tête du tableau de bord disparaît
-   dans la PWA en bêta (voir le bloc `wb-entete-beta` juste en dessous). Les
-   écrans Clients et fiche client, eux, ont une structure trop différente de
-   la v1 pour du CSS seul — voir ClientsView.tsx et ClientProfileModal.tsx. */
-
-/* ── En-tête du tableau de bord — retiré dans la PWA en bêta ──────────────
-   Demande d'Alexandre (2026-09-24) : « supprime le header, on est en mode
-   vraiment ressembler à une app ». DashboardShell pose `wb-entete-beta` sur
-   le <header> quand `washer.beta_refonte` est vrai (connu du serveur), et
-   `wb-entete-barre` sur la rangée ☰ / WashBoard / badge de plan /
-   déconnexion / thème. Sans la classe `wb-pwa` (site, PWA sans bêta) rien
-   de tout ça ne s'applique : l'en-tête est exactement celui d'avant.
-
-   Pourquoi du CSS plutôt que le hook `usePwaStandalone()` : la classe existe
-   avant la première peinture, donc aucun flash « en-tête puis plus
-   d'en-tête » — un saut de mise en page bien plus visible que celui d'un
-   simple ajout de barre en bas.
-
-   Ce qui RESTE dans le <header> : les bandeaux TrialBanner (fin d'essai,
-   paiement en retard, résiliation) et AppBetaBanner. Ils ne sont pas retirés
-   (information commerciale) ; le <header> perd seulement son statut « collant »,
-   son fond et son filet : il devient un simple bloc en flux normal en haut de
-   page, et vide (hauteur nulle) quand aucun bandeau n'a rien à dire. */
-html.wb-pwa .wb-entete-beta {
-  position: static;
-  background: transparent;
-  border-bottom-width: 0;
-}
-html.wb-pwa .wb-entete-beta .wb-entete-barre {
-  display: none;
-}
-
-/* Bandeaux v1 (rouge, bleu, vert…) : au premier rendu, avant que React ne sache qu'on est dans
-   la PWA, le serveur envoie leur forme v1. iOS 26 teinte la barre d'état d'après ce qui est en
-   haut de la page À CE MOMENT-LÀ et ne la met plus à jour avant la navigation suivante : un
-   bandeau v1 rouge donnait une barre d'état rouge jusqu'au changement d'onglet. On ne laisse
-   donc paraître, en tête de l'en-tête bêta, que la forme v2 (`wb-bandeau-v2`). */
-html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
-  display: none;
-}
+/* `wb-pwa` est posée sur <html> par un script synchrone de layout.tsx (`beforeInteractive`),
+   avant toute peinture : application installée, ou téléphone dans l'espace laveur. */
 
 /* ══════════════════════════════════════════════════════════════════════════
    Jetons v2 (refonte 2026, passe 1) — posés À CÔTÉ des jetons existants
@@ -305,8 +160,7 @@ html.wb-pwa .wb-entete-beta > :not(.wb-bandeau-v2) {
    ce vocabulaire que l'équipe utilise à l'oral et dans la maquette, la
    correspondance code ↔ planche reste directe. Le thème suit le mécanisme
    RÉEL du projet — classe `.dark` posée sur <html> depuis un cookie lu
-   serveur (`ThemeProvider`, pas next-themes malgré la dépendance présente
-   dans package.json) — exactement le procédé déjà utilisé par
+   serveur (`ThemeProvider`) — exactement le procédé déjà utilisé par
    `--background`/`--foreground` juste au-dessus : une valeur dans `:root`,
    une redéfinition dans `.dark` seulement quand la valeur change réellement
    entre les deux thèmes (sinon elle est simplement héritée de `:root`).

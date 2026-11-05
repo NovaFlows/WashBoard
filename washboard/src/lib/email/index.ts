@@ -736,45 +736,6 @@ ${paragraphe('PayPal ou virement · Activation sous 24h', { ton: 'petit', marge:
   })
 }
 
-// ── Email : confirmation de l'adresse à l'inscription ─────────────────────
-// Le nom de l'entreprise est saisi par l'inscrit lui-même : il est échappé,
-// sinon n'importe qui pourrait glisser un lien de sa composition dans un email
-// parti de noreply@washboard.fr vers l'adresse qu'il a tapée.
-//
-// Un CODE à recopier, pas un lien à cliquer : décidé par Ryan le 2026-10-11
-// après avoir buté sur l'app Mail de l'iPhone qui ouvre tout lien dans Safari,
-// jamais dans la PWA installée — avec un tiroir de cookies séparé de celui de
-// l'app, la confirmation se faisait dans un contexte que la PWA ne voit
-// jamais. Le code reste dans l'app qui l'a demandé, sur n'importe quel
-// appareil.
-export async function sendEmailConfirmation({ to, washerName, code }: {
-  to: string; washerName: string | null; code: string
-}) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
-  const salutation = washerName ? `Bonjour <strong>${escapeHtml(washerName)}</strong>,` : 'Bonjour,'
-  const codeEchappe = escapeHtml(code)
-
-  return resend.emails.send({
-    from: 'WashBoard <noreply@washboard.fr>',
-    to,
-    subject: 'Confirme ton adresse email — WashBoard',
-    html: page({
-      titre: 'Confirme ton adresse email',
-      entete: enteteWashBoard(origineImages()),
-      contenu: `
-${titre({ icone: iconeTitre(origineImages(), 'enveloppe'), texte: 'Confirme ton adresse email', sousTitre: 'Dernière étape avant d&apos;accéder à ton tableau de bord' })}
-${paragraphe(salutation, { marge: '0 0 8px' })}
-${paragraphe('Ton compte WashBoard est créé. Pour l&apos;activer, entre ce code dans l&apos;application :', { marge: '0 0 20px' })}
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin:0 0 20px;"><tr>
-<td style="background:${COULEUR.papier};border:1px solid ${COULEUR.filet};border-radius:12px;padding:16px 26px;">
-<span style="font-size:32px;font-weight:700;letter-spacing:8px;color:${COULEUR.encre};font-family:${MONO};">${codeEchappe}</span>
-</td>
-</tr></table>
-${paragraphe('Si tu n&apos;es pas à l&apos;origine de cette inscription, ignore cet email : le compte ne sera pas activé.', { ton: 'petit', marge: '0' })}`,
-    }),
-  })
-}
-
 // ── Email : annonce des 4 offres 2026 (diffusion unique à tous les laveurs) ─
 //
 // Le message ne doit rien promettre de faux à personne : un client historique

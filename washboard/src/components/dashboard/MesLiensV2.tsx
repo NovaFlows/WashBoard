@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronLeft } from 'lucide-react'
@@ -35,6 +35,8 @@ const DUREE_COPIE_MS = 1800
 
 type Copie = { cle: string; ok: boolean } | null
 
+const sansAbonnement = () => () => {}
+
 export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string; liste: ReglagesListeProps }) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -49,9 +51,8 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (minuterie.current) clearTimeout(minuterie.current) }, [])
 
-  // Cet écran ne se monte qu'après le garde-fou de `MesLiens.tsx`, donc toujours dans
-  // le navigateur : `navigator` existe.
-  const peutPartager = typeof navigator.share === 'function'
+  // Faux au rendu serveur, puis lu dans le navigateur (évite un écart à l'hydratation).
+  const peutPartager = useSyncExternalStore(sansAbonnement, () => typeof navigator.share === 'function', () => false)
 
   async function copier(cle: string, lien: string) {
     let ok = true

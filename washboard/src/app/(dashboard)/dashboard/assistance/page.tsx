@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Assistance from '@/components/dashboard/Assistance'
+import { Suspense } from 'react'
+import AssistanceV2 from '@/components/dashboard/AssistanceV2'
 
 // Un lien direct `?fil=<id>` (notification, email) doit toujours retomber
 // sur les vraies données du laveur qui clique, jamais sur un instantané mis
@@ -13,12 +14,9 @@ export default async function AssistancePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // '*' plutôt qu'une liste de colonnes explicite (refonte 2026, passe 4) :
-  // `washer.beta_refonte` doit rester lisible ici pour que la barre du bas
-  // s'affiche sur cette page aussi. Un `select` qui nomme les colonnes une à
-  // une casserait dès qu'on en ajoute une qui n'existe pas encore en base
-  // (jamais le cas de '*', qui tolère une colonne absente) — et couvre déjà
-  // toutes celles que `master` énumère (created_at, slug…) pour le badge de
+  // '*' plutôt qu'une liste de colonnes : un `select` qui nomme les colonnes une à une
+  // casserait dès qu'on en ajoute une qui n'existe pas encore en base — et '*' couvre
+  // toutes celles que le châssis lit (created_at, slug…) pour le badge de
   // plan et les bandeaux d'offres.
   const { data: washer } = await supabase.from('washers').select('*').eq('user_id', user.id).single()
   if (!washer) redirect('/login')
@@ -32,18 +30,19 @@ export default async function AssistancePage() {
       grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug}
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
-      betaRefonte={washer.beta_refonte}
     >
-      <Assistance
-        liste={{
-          nom: washer.name,
-          slug: washer.slug,
-          brandColor: washer.brand_color,
-          plan: washer.plan,
-          grandfathered: washer.grandfathered,
-        }}
-        betaRefonte={washer.beta_refonte}
-      />
+      {/* useSearchParams (lecture de ?fil=) exige une limite Suspense. */}
+      <Suspense fallback={null}>
+        <AssistanceV2
+          liste={{
+            nom: washer.name,
+            slug: washer.slug,
+            brandColor: washer.brand_color,
+            plan: washer.plan,
+            grandfathered: washer.grandfathered,
+          }}
+        />
+      </Suspense>
     </DashboardShell>
   )
 }

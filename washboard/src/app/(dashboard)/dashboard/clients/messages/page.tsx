@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import MessagesAutomatiques from '@/components/dashboard/MessagesAutomatiques'
+import MessagesAutomatiquesV2 from '@/components/dashboard/MessagesAutomatiquesV2'
 import { hasFeature, requiredPlanLabel, quotaReservations } from '@/lib/plan'
 import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerrouillees'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
@@ -77,9 +77,8 @@ export default async function MessagesAutomatiquesPage() {
   // Seuls les réglages utiles passent au navigateur : la fiche laveur porte
   // aussi des jetons (Google) qui n'ont rien à y faire.
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
-      <MessagesAutomatiques
-        betaRefonte={washer.beta_refonte}
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+      <MessagesAutomatiquesV2
         reglages={{
           review_enabled: !!washer.review_enabled,
           review_delay_hours: washer.review_delay_hours ?? DELAI_AVIS_DEFAUT_HEURES,

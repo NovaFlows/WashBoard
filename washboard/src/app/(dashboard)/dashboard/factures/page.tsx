@@ -133,7 +133,7 @@ export default async function FacturesPage({
   // La facturation conforme fait partie de l'offre Pro (et au-dessus).
   if (!hasFeature(washer, 'facturation')) {
     return (
-      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+      <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
         <div className="p-4">
           <div className="mb-6">
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Factures</h1>
@@ -235,7 +235,7 @@ export default async function FacturesPage({
   const manques = infosFacturationManquantes(washer)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <div className="mb-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Factures</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -279,7 +279,7 @@ export default async function FacturesPage({
       {manques.length > 0 && (
         <p className="mb-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3">
           {phraseManques(manques)}{' '}
-          <Link href="/dashboard/parametres#facturation" className="font-semibold underline">Compléter mes informations</Link>
+          <Link href="/dashboard/parametres/profil#facturation" className="font-semibold underline">Compléter mes informations</Link>
         </p>
       )}
 

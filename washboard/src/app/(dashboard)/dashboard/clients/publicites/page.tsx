@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import Publicites from '@/components/dashboard/Publicites'
+import PublicitesV2 from '@/components/dashboard/PublicitesV2'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { ApercuCampagnes } from '@/components/dashboard/ApercusVerrouilles'
 import { SITE_URL_FALLBACK, hasFeature } from '@/lib/plan'
@@ -29,7 +29,7 @@ export default async function PublicitesPage() {
   const washer = await washerDuUtilisateur(supabase, user.id, 'publicites')
 
   const coque = (contenu: React.ReactNode) => (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null} betaRefonte={washer.beta_refonte}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       {contenu}
     </DashboardShell>
   )
@@ -53,8 +53,7 @@ export default async function PublicitesPage() {
   const { campagnes, indisponible } = await chargerCampagnes(supabase, createAdminClient(), washer.id)
 
   return coque(
-    <Publicites
-      betaRefonte={washer.beta_refonte}
+    <PublicitesV2
       campagnes={campagnes}
       baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`}
       indisponible={indisponible}

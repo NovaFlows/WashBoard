@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PLAN_LABELS, PLAN_PRICES, SERVICE_QUOTA, type Plan } from '@/lib/plan'
-import { useDashboardV2 } from '@/hooks/useDashboardV2'
 
 type PrestationChoisissable = {
   id: string
@@ -12,13 +11,6 @@ type PrestationChoisissable = {
   price: number
   duration_minutes: number
 }
-
-// ── Identité WashBoard ──────────────────────────────────────────────────────
-// Reprises de la page d'accueil publique. Une fenêtre qui invente ses propres
-// couleurs se reconnaît immédiatement comme une pièce rapportée.
-const BLEU = '#1651E8'
-const BLEU_SOMBRE = '#0F4ACC'
-const SURTITRE = 'text-[11px] font-black uppercase tracking-[0.22em]'
 
 /** Première offre qui lève le plafond du catalogue. Calculée plutôt qu'écrite
  *  en dur : déplacer le catalogue illimité d'un palier à l'autre ne doit pas
@@ -94,14 +86,12 @@ function ApercuPage({ actives, plafond, habit }: {
  *  Et pourquoi le laisser choisir plutôt que d'éteindre les plus récentes : sa
  *  prestation la plus rentable peut être la dernière ajoutée. Choisir au hasard
  *  lui coûterait de l'argent sans qu'il comprenne pourquoi. */
-export function ChoixVeilleModal({ actives, plafond, aRanger, offre, betaRefonte }: {
+export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   actives: PrestationChoisissable[]
   plafond: number
   aRanger: number
   /** Offre en cours, pour la nommer au lieu de dire « votre offre ». */
   offre: Plan
-  /** `washers.beta_refonte` : la v2 ordinateur prend aussi l'habillage v2 (audit du 2026-10-10). */
-  betaRefonte?: boolean | null
 }) {
   const router = useRouter()
   // Deux habillages, une seule mécanique (voir plus bas, `V`) : dans la PWA la
@@ -110,7 +100,6 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, betaRefonte
   // carte blanche centrée d'avant. Alexandre, 2026-09-29 : une fenêtre du site
   // posée par-dessus l'application « n'a rien à voir » avec le reste.
   // Rendue par le layout, HORS de DashboardShell : elle refait donc le même choix que lui.
-  const isPwa = useDashboardV2(betaRefonte)
   // La fenêtre gère sa propre disparition : le layout la rend sur chaque page,
   // il ne peut pas savoir qu'on vient de la fermer.
   const [ferme, setFerme] = useState(false)
@@ -178,17 +167,10 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, betaRefonte
   // l'impression que le clic n'est pas passé. Seuls `transform` et les couleurs
   // sont animés — jamais la géométrie, qui ferait sauter la mise en page.
   const principal = 'px-5 py-3 text-white text-[15px] font-semibold rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100'
-  const secondaire = 'px-4 py-3 text-[15px] font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40'
 
-  // ── Les deux habillages, côte à côte ───────────────────────────────────────
-  //
-  // Un seul arbre JSX, deux jeux de classes : dupliquer 150 lignes de contenu
-  // pour changer des couleurs aurait garanti que les deux versions divergent au
-  // premier correctif. Ce qui change ici est de la présentation pure — aucune
-  // condition ne touche à la logique de choix ni aux appels réseau.
+  // Habillage de la refonte (jetons --v2-*).
   const POLICE = '[font-family:var(--font-archivo)]'
-  const V: Habit = isPwa
-    ? {
+  const V: Habit = {
         voile: 'fixed inset-0 z-50 overflow-y-auto bg-[color:var(--v2-color-encre)]/40 backdrop-blur-[2px]',
         boite: `mx-auto max-w-md px-3 py-3 min-h-full flex flex-col justify-end sm:justify-center ${POLICE}`,
         carte: 'bg-[color:var(--v2-color-surface)] rounded-[var(--v2-radius-feuille)] border border-[color:var(--v2-filet)] p-5 text-[color:var(--v2-color-encre)]',
@@ -209,28 +191,6 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, betaRefonte
         principal: `${principal} rounded-[var(--v2-radius-bouton)]`,
         secondaire: 'px-4 py-3 text-[15px] rounded-[var(--v2-radius-bouton)] text-[color:var(--v2-color-gris)] transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40',
         pied: '-mx-5 -mb-5 mt-5 px-5 py-3.5 border-t border-[color:var(--v2-filet)] rounded-b-[var(--v2-radius-feuille)]',
-      }
-    : {
-        voile: 'fixed inset-0 z-50 overflow-y-auto bg-[#0B1828]/60 backdrop-blur-[2px]',
-        boite: 'mx-auto max-w-md px-4 py-4 sm:py-8 min-h-full flex flex-col justify-center',
-        carte: 'bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 p-6',
-        accent: BLEU,
-        accentSombre: BLEU_SOMBRE,
-        inactif: '#cbd5e1',
-        surtitre: SURTITRE,
-        titre: 'text-[22px] font-black tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] text-balance',
-        texte: 'text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed',
-        petit: 'text-[13px] text-slate-400 dark:text-slate-500 leading-relaxed',
-        carteInterne: 'rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden',
-        ligne: 'divide-y divide-slate-100 dark:divide-slate-800',
-        ligneEteinte: 'bg-slate-50 dark:bg-slate-800/40',
-        choixRetire: 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40',
-        choixGarde: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900',
-        nom: 'text-[15px] font-semibold text-slate-900 dark:text-slate-100',
-        nomEteint: 'text-slate-400 dark:text-slate-500 line-through',
-        principal,
-        secondaire,
-        pied: '-mx-6 -mb-6 mt-5 px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl bg-slate-50/60 dark:bg-slate-950/30',
       }
 
   return (
@@ -376,8 +336,8 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre, betaRefonte
               </div>
 
               {error && (
-                <p className="text-sm font-medium mt-4" style={{ color: isPwa ? 'var(--v2-color-rouge)' : undefined }}>
-                  <span className={isPwa ? '' : 'text-red-600 dark:text-red-400'}>{error}</span>
+                <p className="text-sm font-medium mt-4" style={{ color: 'var(--v2-color-rouge)' }}>
+                  <span>{error}</span>
                 </p>
               )}
 

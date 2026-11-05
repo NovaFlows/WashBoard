@@ -116,12 +116,6 @@ export function Feuille({
     return () => { if (focusPrecedent.current?.isConnected) focusPrecedent.current.focus() }
   }, [panneau])
 
-  useEffect(() => {
-    if (panneau) return
-    document.body.classList.add('wb-hide-fab')
-    return () => document.body.classList.remove('wb-hide-fab')
-  }, [panneau])
-
   // Échap ferme la feuille quelle que soit sa forme (panneau compris, voir plus haut) : seul
   // le piège de tabulation ne s'applique qu'à la fenêtre qui recouvre l'écran.
   useEffect(() => {
