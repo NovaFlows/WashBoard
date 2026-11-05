@@ -80,6 +80,12 @@ describe('analyserLaveur', () => {
     expect(t.activite.chiffre30).toBe(120)
   })
 
+  it('expéditeur de la liste validée chez Brevo : approuvé même si la fiche est restée en attente', () => {
+    const ligne = (w: Partial<WasherFiche>) => analyserLaveur(laveur(w), NOW).configuration.find(c => c.libelle === 'Expéditeur SMS')!
+    expect(ligne({ sms_sender: 'Tsuya', sms_sender_statut: 'en_attente' })).toMatchObject({ fait: true, detail: '« Tsuya », approuvé' })
+    expect(ligne({ sms_sender: 'Inconnu', sms_sender_statut: 'en_attente' }).fait).toBe(false)
+  })
+
   it('préfère derniere_connexion_le à la date de connexion Supabase', () => {
     const t = analyserLaveur(laveur({ derniere_connexion_le: ilYaJours(1) }, { derniereConnexionAuth: ilYaJours(20) }), NOW)
     expect(t.activite.derniereConnexion).toBe(ilYaJours(1))

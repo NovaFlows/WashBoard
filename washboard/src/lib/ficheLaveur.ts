@@ -1,4 +1,5 @@
 import { planEffectif, PLAN_LABELS, type Plan } from '@/lib/plan'
+import { estExpediteurApprouve } from '@/lib/expediteurs'
 import { SOURCES_ACQUISITION, CLE_PRECISION_SOURCE } from '@/lib/onboarding'
 
 // Fiche laveur de l'espace équipe : le « topo » qu'Alexandre demandait à
@@ -145,8 +146,11 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
   const jours = [...new Set(d.joursOuverts)].sort()
   const zone = !!w.zone_config?.enabled
   const pagePrete = actives.length > 0 && jours.length > 0
+  // Un nom de la liste validée chez Brevo est approuvé quel que soit l'état resté sur la fiche
+  // (même règle que l'envoi, `expediteurPour`).
+  const expediteurApprouve = !!w.sms_sender && (w.sms_sender_statut === 'approuve' || estExpediteurApprouve(w.sms_sender))
   const expediteur = !w.sms_sender ? 'Aucun nom demandé'
-    : w.sms_sender_statut === 'approuve' ? `« ${w.sms_sender} », approuvé`
+    : expediteurApprouve ? `« ${w.sms_sender} », approuvé`
     : w.sms_sender_statut === 'en_attente' ? `« ${w.sms_sender} », en attente d’approbation`
     : `« ${w.sms_sender} »`
   const configuration = [
@@ -155,7 +159,7 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
     { libelle: 'Zone d’intervention', fait: zone, detail: zone ? (w.base_address ?? 'Définie') : 'Non définie' },
     { libelle: 'Logo', fait: !!w.logo_url, detail: w.logo_url ? 'Ajouté' : 'Pas de logo' },
     { libelle: 'Lien avis Google', fait: !!w.google_review_url, detail: w.google_review_url ? 'Renseigné' : 'Absent : pas de demande d’avis' },
-    { libelle: 'Expéditeur SMS', fait: w.sms_sender_statut === 'approuve', detail: expediteur },
+    { libelle: 'Expéditeur SMS', fait: expediteurApprouve, detail: expediteur },
     { libelle: 'Appli installée', fait: !!w.pwa_installee_le, detail: w.pwa_installee_le ? `Le ${dateCourte(w.pwa_installee_le)}` : 'Pas installée sur son téléphone' },
     { libelle: 'Notifications', fait: d.appareilsNotifies > 0, detail: d.appareilsNotifies ? pluriel(d.appareilsNotifies, 'appareil') : 'Aucun appareil abonné' },
   ]

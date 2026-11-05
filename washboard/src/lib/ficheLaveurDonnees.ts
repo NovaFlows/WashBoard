@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupportMember } from '@/lib/supportAccess'
 import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 import { logger } from '@/lib/logger'
+import { estExpediteurApprouve } from '@/lib/expediteurs'
 import type { DonneesLaveur, WasherFiche } from '@/lib/ficheLaveur'
 import { relanceDue, tableAbsente, type Appel } from '@/lib/suiviAppels'
 
@@ -148,7 +149,10 @@ export async function chargerResumeEquipe(now: Date = new Date()) {
   const [nouveaux, total, expediteurs, appels] = await Promise.all([
     admin.from('washers').select('id', { count: 'exact', head: true }).not('is_preview', 'is', true).not('slug', 'in', INTERNES).gte('created_at', semaine),
     admin.from('washers').select('id', { count: 'exact', head: true }).not('is_preview', 'is', true).not('slug', 'in', INTERNES),
-    admin.from('washers').select('id', { count: 'exact', head: true }).eq('sms_sender_statut', 'en_attente'),
+    // Lignes, pas un simple compte : un nom de la liste validée chez Brevo
+    // (`EXPEDITEURS_APPROUVES`) est approuvé même si la fiche est restée « en attente »
+    // — l'écran Expéditeurs l'affiche approuvé, le compteur doit dire pareil.
+    admin.from('washers').select('sms_sender').eq('sms_sender_statut', 'en_attente'),
     chargerAppels(),
   ])
   for (const [quoi, r] of [['nouveaux', nouveaux], ['total', total], ['expediteurs', expediteurs]] as const) {
@@ -160,7 +164,7 @@ export async function chargerResumeEquipe(now: Date = new Date()) {
   return {
     nouveaux: nouveaux.count ?? null,
     total: total.count ?? null,
-    expediteursEnAttente: expediteurs.count ?? null,
+    expediteursEnAttente: expediteurs.error ? null : (expediteurs.data ?? []).filter(e => !e.sms_sender || !estExpediteurApprouve(e.sms_sender)).length,
     aRelancer: appels.actif ? aRelancer : null,
   }
 }
