@@ -10,20 +10,22 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 // chevron de retour sur téléphone. Sur ordinateur, une colonne de lecture centrée.
 
 export default function EcranEquipe({
-  titre: intitule, sousTitre, retour, action, children,
+  titre: intitule, sousTitre, retour, action, large = false, children,
 }: {
   titre: string
   sousTitre?: string
   retour: { href: string; label: string }
   /** Bouton à droite de l'en-tête (« … » de la fiche, par exemple). */
   action?: React.ReactNode
+  /** Sur ordinateur, pleine largeur (tableau de bord) au lieu d'une colonne de lecture. */
+  large?: boolean
   children: React.ReactNode
 }) {
   const grandEcran = useGrandEcran()
   return (
     <div
       className={grandEcran
-        ? 'max-w-[720px] mx-auto pb-10 text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
+        ? `${large ? 'max-w-[1180px]' : 'max-w-[720px]'} mx-auto pb-10 text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]`
         : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-10 min-h-screen bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}
     >
       {grandEcran && (

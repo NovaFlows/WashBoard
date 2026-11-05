@@ -6,25 +6,10 @@ import { CHAMP, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import { ilYa } from '@/lib/ficheLaveur'
+import type { LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Initiales, Point } from './EcranEquipe'
 
-export type LaveurResume = {
-  id: string
-  name: string
-  slug: string
-  phone: string | null
-  creeLe: string
-  statut: string
-  ton: 'ok' | 'attention' | 'alerte' | 'neutre'
-  priorite: 1 | 2 | 3
-  pagePrete: boolean
-  enEssai: boolean
-  visites30: number
-  reservations30: number
-  derniereConnexion: string | null
-  relance: { le: string; action: string | null } | null
-  dernierAppel: { le: string; resultat: string } | null
-}
+export type { LaveurResume }
 
 export type Filtre = 'tous' | 'rappeler' | 'nouveaux' | 'configurer' | 'essai'
 

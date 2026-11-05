@@ -3,18 +3,26 @@
 import { CarteListe, Ligne, NonLus } from '@/components/dashboard/ParametresFormV2'
 import { corps } from '@/components/dashboard/FeuilleV2'
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
+import { useGrandEcran } from '@/hooks/useGrandEcran'
+import type { LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Section } from './EcranEquipe'
+import TableauEquipe from './TableauEquipe'
 
 // Accueil de l'espace équipe : trois portes, chacune avec ce qui l'attend.
 // Avant (2026-11-05), tout s'empilait sur une seule page à l'ancien design :
-// formulaire d'accès, expéditeurs, boîte de questions.
+// formulaire d'accès, expéditeurs, boîte de questions. Sur ordinateur, un tableau
+// de bord à la place (TableauEquipe).
 
 type Resume = { nouveaux: number | null; total: number | null; expediteursEnAttente: number | null; aRelancer: number | null }
 
 const nombre = (n: number | null, un: string, plusieurs: string) => n == null ? undefined : n === 0 ? undefined : `${n} ${n > 1 ? plusieurs : un}`
 
-export default function AccueilEquipeV2({ resume, email }: { resume: Resume; email: string | null }) {
+export default function AccueilEquipeV2({ resume, email, laveurs, maintenant }: { resume: Resume; email: string | null; laveurs: LaveurResume[]; maintenant: number }) {
   const { unreadTeamCount } = useSupportBadges()
+  const grandEcran = useGrandEcran()
+  if (grandEcran) {
+    return <TableauEquipe laveurs={laveurs} resume={{ expediteursEnAttente: resume.expediteursEnAttente, suiviActif: resume.aRelancer !== null }} email={email} maintenant={maintenant} />
+  }
   return (
     <EcranEquipe titre="Équipe" sousTitre="Outil interne, invisible des laveurs" retour={{ href: '/dashboard/parametres', label: 'Plus' }}>
       <Section titre="Laveurs">

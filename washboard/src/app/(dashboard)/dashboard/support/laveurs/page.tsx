@@ -1,9 +1,7 @@
 import { exigerEquipe, chargerTousLesLaveurs, chargerAppels } from '@/lib/ficheLaveurDonnees'
-import { analyserLaveur } from '@/lib/ficheLaveur'
-import { estAppel, relanceDue, type Appel } from '@/lib/suiviAppels'
-import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
+import { resumerLaveurs } from '@/lib/resumeLaveurs'
 import CoqueEquipe from '@/components/dashboard/equipe/CoqueEquipe'
-import ListeLaveursV2, { type Filtre, type LaveurResume } from '@/components/dashboard/equipe/ListeLaveursV2'
+import ListeLaveursV2, { type Filtre } from '@/components/dashboard/equipe/ListeLaveursV2'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,26 +15,7 @@ export default async function LaveursPage({ searchParams }: { searchParams: Prom
   const now = new Date()
   const [tous, { appels }] = await Promise.all([chargerTousLesLaveurs(), chargerAppels()])
 
-  const parLaveur = new Map<string, Appel[]>()
-  for (const a of appels) parLaveur.set(a.washer_id, [...(parLaveur.get(a.washer_id) ?? []), a])
-
-  const laveurs: LaveurResume[] = tous
-    .filter(d => !COMPTES_INTERNES_EXCLUS_DIFFUSION.includes(d.washer.slug))
-    .map(d => {
-      const topo = analyserLaveur(d, now)
-      const siens = parLaveur.get(d.washer.id) ?? []
-      const due = relanceDue(siens, now)
-      const dernierAppel = siens.find(estAppel)
-      return {
-        id: d.washer.id, name: d.washer.name, slug: d.washer.slug, phone: d.washer.phone, creeLe: d.washer.created_at,
-        statut: topo.statut.libelle, ton: topo.statut.ton, priorite: topo.priorite, pagePrete: topo.pagePrete,
-        enEssai: topo.statut.libelle.startsWith('En essai'),
-        visites30: topo.activite.visites30, reservations30: topo.activite.reservations30,
-        derniereConnexion: topo.activite.derniereConnexion,
-        relance: due ? { le: due.relancer_le!, action: due.prochaine_action } : null,
-        dernierAppel: dernierAppel ? { le: dernierAppel.appele_le, resultat: dernierAppel.resultat } : null,
-      }
-    })
+  const laveurs = resumerLaveurs(tous, appels, now, washer?.id)
 
   return (
     <CoqueEquipe washer={washer}>
