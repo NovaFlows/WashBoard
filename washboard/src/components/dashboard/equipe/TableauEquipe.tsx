@@ -151,7 +151,8 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant }: {
       enEssai: laveurs.filter(l => l.enEssai).length,
       payants: laveurs.filter(l => l.payant).length,
       pagesAFaire: laveurs.filter(l => !l.pagePrete).length,
-      aRappeler: laveurs.filter(l => l.relance).sort((a, b) => a.relance!.le.localeCompare(b.relance!.le)),
+      aRappeler: laveurs.filter(l => l.relance && l.relance.le <= auj).sort((a, b) => a.relance!.le.localeCompare(b.relance!.le)),
+      aVenir: laveurs.filter(l => l.relance && l.relance.le > auj).length,
       derniers: parInscription.slice(0, 8),
       connectes: laveurs
         .filter(l => l.derniereConnexion && aujourdhuiParis(new Date(l.derniereConnexion)) === auj)
@@ -180,7 +181,7 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant }: {
 
       <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-6">
         <div className="space-y-6">
-          <Section titre="À rappeler" action={d.aRappeler.length > 5 ? <ToutVoir href="/dashboard/support/laveurs?filtre=rappeler" /> : undefined}>
+          <Section titre="À rappeler aujourd’hui" action={d.aRappeler.length > 5 || d.aVenir ? <ToutVoir href="/dashboard/support/laveurs?filtre=rappeler">{d.aVenir ? `+ ${d.aVenir} les prochains jours` : 'Tout voir'}</ToutVoir> : undefined}>
             {!resume.suiviActif ? <Vide>Le suivi d’appel n’est pas encore activé en base.</Vide>
               : d.aRappeler.length === 0 ? <Vide>Personne à rappeler aujourd’hui. Le bouton « À rappeler » d’une fiche l’ajoute ici.</Vide>
               : (

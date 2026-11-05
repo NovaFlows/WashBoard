@@ -6,8 +6,9 @@ import { CHAMP, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import { ilYa } from '@/lib/ficheLaveur'
+import { aujourdhuiParis } from '@/lib/suiviAppels'
 import type { LaveurResume } from '@/lib/resumeLaveurs'
-import EcranEquipe, { Initiales, Point } from './EcranEquipe'
+import EcranEquipe, { Initiales, Point, Section } from './EcranEquipe'
 
 export type { LaveurResume }
 
@@ -34,6 +35,10 @@ function garde(l: LaveurResume, filtre: Filtre, maintenant: number): boolean {
   }
 }
 
+function jourCourt(aaaammjj: string): string {
+  return new Date(`${aaaammjj}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' })
+}
+
 const sansAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: { laveurs: LaveurResume[]; filtreInitial: Filtre; maintenant: number }) {
@@ -55,6 +60,40 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: {
 
   const compte = (f: Filtre) => laveurs.filter(l => garde(l, f, maintenant)).length
 
+  // « À rappeler » rangé par jour : aujourd'hui (retards compris), demain, les jours suivants.
+  const auj = aujourdhuiParis(now)
+  const demain = aujourdhuiParis(new Date(maintenant + 864e5))
+  const jours = filtre === 'rappeler' ? [
+    { titre: 'Aujourd’hui', vide: 'Personne à rappeler aujourd’hui.', laveurs: visibles.filter(l => l.relance!.le <= auj) },
+    { titre: 'Demain', vide: 'Personne demain.', laveurs: visibles.filter(l => l.relance!.le === demain) },
+    { titre: 'Les prochains jours', vide: 'Rien de prévu après demain.', laveurs: visibles.filter(l => l.relance!.le > demain) },
+  ] : null
+
+  const ligne = (l: LaveurResume) => (
+    <li key={l.id}>
+      <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--v2-filet)]/50">
+        <Initiales nom={l.name} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className={`truncate text-[15.5px] ${styleNom}`}>{l.name}</span>
+            {l.priorite === 1 && <span className={`shrink-0 text-[11.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>À appeler</span>}
+          </span>
+          <span className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            <Point ton={TON_POINT[l.ton]} />
+            <span className="truncate">{l.statut} · {l.pagePrete ? 'page prête' : 'page à faire'}</span>
+          </span>
+          <span className={`mt-0.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            {filtre === 'rappeler' && l.relance
+              ? [l.relance.le < auj ? `En retard depuis ${jourCourt(l.relance.le)}` : l.relance.le > demain ? jourCourt(l.relance.le).replace(/^./, c => c.toUpperCase()) : null, l.relance.action ?? 'Sans motif'].filter(Boolean).join(' · ')
+              : `${l.visites30} visite${l.visites30 > 1 ? 's' : ''} · ${l.reservations30} résa sur 30 j${l.derniereConnexion ? ` · vu ${ilYa(l.derniereConnexion, now)}` : ''}`}
+          </span>
+        </span>
+        <Chevron />
+      </Link>
+    </li>
+  )
+  const LISTE = 'overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)]'
+
   return (
     <EcranEquipe titre="Laveurs" sousTitre={`${laveurs.length} comptes, comptes de test exclus`} retour={{ href: '/dashboard/support', label: 'Équipe' }}>
       <div className="space-y-3">
@@ -71,36 +110,23 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: {
         </div>
       </div>
 
-      {visibles.length === 0 ? (
-        <p className={`py-6 text-center text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {filtre === 'rappeler' ? 'Aucune relance due. Ajoutez un laveur avec le bouton « À rappeler » de sa fiche, ou fixez une relance en notant un appel.' : 'Aucun laveur ne correspond.'}
-        </p>
+      {jours && (recherche.trim() === '' || visibles.length > 0) ? (
+        jours.map(j => (
+          <Section key={j.titre} titre={j.laveurs.length ? `${j.titre} · ${j.laveurs.length}` : j.titre}>
+            {j.laveurs.length === 0
+              ? <p className={`px-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{j.vide}</p>
+              : <ul className={LISTE}>{j.laveurs.map(ligne)}</ul>}
+          </Section>
+        ))
+      ) : visibles.length === 0 ? (
+        <p className={`py-6 text-center text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucun laveur ne correspond.</p>
       ) : (
-        <ul className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)]">
-          {visibles.map(l => (
-            <li key={l.id}>
-              <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--v2-filet)]/50">
-                <Initiales nom={l.name} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className={`truncate text-[15.5px] ${styleNom}`}>{l.name}</span>
-                    {l.priorite === 1 && <span className={`shrink-0 text-[11.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>À appeler</span>}
-                  </span>
-                  <span className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                    <Point ton={TON_POINT[l.ton]} />
-                    <span className="truncate">{l.statut} · {l.pagePrete ? 'page prête' : 'page à faire'}</span>
-                  </span>
-                  <span className={`mt-0.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                    {l.relance
-                      ? `Relance ${l.relance.le <= now.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) ? 'due' : 'prévue'}${l.relance.action ? ` : ${l.relance.action}` : ''}`
-                      : `${l.visites30} visite${l.visites30 > 1 ? 's' : ''} · ${l.reservations30} résa sur 30 j${l.derniereConnexion ? ` · vu ${ilYa(l.derniereConnexion, now)}` : ''}`}
-                  </span>
-                </span>
-                <Chevron />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ul className={LISTE}>{visibles.map(ligne)}</ul>
+      )}
+      {filtre === 'rappeler' && (
+        <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          Un laveur s’ajoute ici avec le bouton « À rappeler » de sa fiche, ou en fixant une date de relance quand vous notez un appel.
+        </p>
       )}
     </EcranEquipe>
   )
