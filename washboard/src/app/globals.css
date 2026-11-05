@@ -523,6 +523,56 @@ html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after {
   html.wb-pwa.wb-lancement-fin:not(.wb-pret) body::after { animation-duration: 1ms; }
 }
 
+/* Sortie « atterrissage » (Ryan, 2026-11-05), au lancement sur téléphone : le logo tombe sur
+   le « + » de la barre du bas, la barre monte, puis les blocs de la page arrivent un par un.
+   Position et taille du « + » mesurées par MarqueurPret (`--wb-atterrissage-*`), qui pose
+   aussi `data-wb-lancement` et `--wb-i` sur les blocs. Tout s'arrête avec `wb-pret`. */
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) body::before {
+  animation: wb-lancement-fondu 300ms ease-out 320ms both;
+}
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) body::after {
+  animation: wb-atterrissage-logo 700ms linear both;
+}
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) [data-visite-cible="barre-bas"] {
+  animation: wb-atterrissage-barre 420ms cubic-bezier(.2,.8,.2,1) 380ms both;
+}
+/* Onde du « + » : un anneau qui grandit (transform + opacity), pas une ombre qui s'étale —
+   l'ombre se redessine à chaque image et faisait sauter des images sur téléphone lent. */
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) [data-visite-cible="barre-bas-nouveau"] > span {
+  position: relative;
+}
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) [data-visite-cible="barre-bas-nouveau"] > span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--v2-color-accent);
+  pointer-events: none;
+  animation: wb-atterrissage-onde 620ms ease-out 490ms both;
+}
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) [data-visite-cible="barre-bas-nouveau"] svg {
+  animation: wb-atterrissage-croix 340ms cubic-bezier(.3,1.4,.5,1) 520ms both;
+}
+html.wb-pwa.wb-atterrissage.wb-lancement-fin:not(.wb-pret) [data-wb-lancement] {
+  animation: wb-atterrissage-bloc 520ms cubic-bezier(.2,.8,.2,1) calc(520ms + var(--wb-i, 0) * 90ms) both;
+}
+@keyframes wb-atterrissage-logo {
+  0% { transform: translate(0, 0) scale(1); border-radius: 22.5%; animation-timing-function: cubic-bezier(.3,0,.4,1); }
+  16% { transform: translate(0, -16px) scale(1.05); animation-timing-function: cubic-bezier(.55,0,.85,.35); }
+  70% { transform: translate(var(--wb-atterrissage-dx), var(--wb-atterrissage-dy)) scale(var(--wb-atterrissage-echelle));
+        border-radius: 50%; opacity: 1; animation-timing-function: ease-out; }
+  80% { transform: translate(var(--wb-atterrissage-dx), calc(var(--wb-atterrissage-dy) + 4px))
+        scale(calc(var(--wb-atterrissage-echelle) * 1.15), calc(var(--wb-atterrissage-echelle) * .86)); }
+  90% { transform: translate(var(--wb-atterrissage-dx), calc(var(--wb-atterrissage-dy) - 2px))
+        scale(calc(var(--wb-atterrissage-echelle) * .96), calc(var(--wb-atterrissage-echelle) * 1.05)); }
+  100% { transform: translate(var(--wb-atterrissage-dx), var(--wb-atterrissage-dy)) scale(var(--wb-atterrissage-echelle));
+         border-radius: 50%; opacity: 0; }
+}
+@keyframes wb-atterrissage-barre { from { opacity: 0; translate: 0 20px; } to { opacity: 1; translate: none; } }
+@keyframes wb-atterrissage-onde { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(1.8); } }
+@keyframes wb-atterrissage-croix { from { rotate: -90deg; scale: .3; opacity: 0; } to { rotate: none; scale: none; opacity: 1; } }
+@keyframes wb-atterrissage-bloc { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: none; } }
+
 /* ── « Bien envoyé » (ConfirmationEnvoiV2) ─────────────────────────────────
    La carte monte en 220 ms, la pastille verte « pose » son coche juste après.
    `--v2-ease-out`, jamais d'ease-in. Sous `prefers-reduced-motion` : rien ne bouge,
