@@ -65,6 +65,22 @@ export function validerAppel(corps: unknown): { erreur: string } | { appel: Omit
   }
 }
 
+/** Modification de la relance d'une ligne du suivi (date, motif). Une mise « À rappeler »
+ *  garde toujours une date : sans date, elle n'aurait plus de sens — on la retire. */
+export function validerModificationRelance(corps: unknown, resultat: string): { erreur: string } | { modif: Pick<Appel, 'relancer_le' | 'prochaine_action'> } {
+  const c = (corps ?? {}) as Record<string, unknown>
+  let relancer: string | null = null
+  if (c.relancer_le != null && c.relancer_le !== '') {
+    if (typeof c.relancer_le !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.relancer_le) || Number.isNaN(Date.parse(c.relancer_le))) {
+      return { erreur: 'Date de relance invalide.' }
+    }
+    relancer = c.relancer_le
+  }
+  if (resultat === MISE_A_RAPPELER && !relancer) return { erreur: 'Choisissez une date, ou retirez-le de « À rappeler ».' }
+  const action = typeof c.prochaine_action === 'string' && c.prochaine_action.trim() ? c.prochaine_action.trim().slice(0, LONGUEUR_MAX_ACTION) : null
+  return { modif: { relancer_le: relancer, prochaine_action: action } }
+}
+
 /** Date du jour à Paris, AAAA-MM-JJ — comparable aux `relancer_le`. */
 export function aujourdhuiParis(now: Date = new Date()): string {
   return now.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })

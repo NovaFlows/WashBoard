@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validerAppel, relanceDue, relancePrevue, aujourdhuiParis, tableAbsente, estAppel, MISE_A_RAPPELER, RESULTATS_APPEL, type Appel } from './suiviAppels'
+import { validerAppel, validerModificationRelance, relanceDue, relancePrevue, aujourdhuiParis, tableAbsente, estAppel, MISE_A_RAPPELER, RESULTATS_APPEL, type Appel } from './suiviAppels'
 
 const NOW = new Date('2026-11-05T23:30:00Z') // déjà le 6 novembre à Paris (UTC+1)
 
@@ -54,6 +54,20 @@ describe('mise « À rappeler » depuis la fiche', () => {
     expect(relancePrevue([mise])?.id).toBe('m')
     const appelEnsuite = appel({ id: 'x', resultat: 'Intéressé', appele_le: '2026-11-05T20:00:00Z' })
     expect(relancePrevue([mise, appelEnsuite])).toBeNull()
+  })
+})
+
+describe('validerModificationRelance', () => {
+  it('change la date et le motif', () => {
+    expect(validerModificationRelance({ relancer_le: '2026-11-12', prochaine_action: '  Après sa presta ' }, 'Rappeler'))
+      .toEqual({ modif: { relancer_le: '2026-11-12', prochaine_action: 'Après sa presta' } })
+  })
+  it('un appel peut perdre sa relance, pas une mise « À rappeler »', () => {
+    expect(validerModificationRelance({ relancer_le: '' }, 'Intéressé')).toEqual({ modif: { relancer_le: null, prochaine_action: null } })
+    expect(validerModificationRelance({ relancer_le: '' }, MISE_A_RAPPELER)).toHaveProperty('erreur')
+  })
+  it('refuse une date mal formée', () => {
+    expect(validerModificationRelance({ relancer_le: '12/11/2026' }, MISE_A_RAPPELER)).toHaveProperty('erreur')
   })
 })
 

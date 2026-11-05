@@ -4,6 +4,39 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { isSupportMember } from '@/lib/supportAccess'
 import { uuidValide } from '@/lib/uuid'
+import { validerModificationRelance } from '@/lib/suiviAppels'
+
+// Change la relance d'une ligne du suivi : sa date et son motif (fiche laveur, espace équipe).
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (!isSupportMember(user.id, process.env.SUPPORT_ADMIN_USER_IDS)) {
+    logger.warn('support.appels.patch.denied', { userId: user.id })
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
+  const { id } = await params
+  if (!uuidValide(id)) return NextResponse.json({ error: 'Appel introuvable' }, { status: 404 })
+
+  const admin = createAdminClient()
+  const { data: ligne, error: errLecture } = await admin.from('suivi_appels').select('resultat').eq('id', id).maybeSingle()
+  if (errLecture) {
+    logger.error('support.appels.patch.read_failed', { appelId: id }, errLecture)
+    return NextResponse.json({ error: 'Modification impossible. Réessayez.' }, { status: 500 })
+  }
+  if (!ligne) return NextResponse.json({ error: 'Appel introuvable' }, { status: 404 })
+
+  const saisie = validerModificationRelance(await request.json().catch(() => null), ligne.resultat)
+  if ('erreur' in saisie) return NextResponse.json({ error: saisie.erreur }, { status: 400 })
+
+  const { error } = await admin.from('suivi_appels').update(saisie.modif).eq('id', id)
+  if (error) {
+    logger.error('support.appels.patch.failed', { appelId: id }, error)
+    return NextResponse.json({ error: 'Modification impossible. Réessayez.' }, { status: 500 })
+  }
+  return NextResponse.json({ ok: true })
+}
 
 // Supprime un appel saisi par erreur (fiche laveur, espace équipe).
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
