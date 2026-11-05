@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { isSupportMember } from '@/lib/supportAccess'
 import { logger } from '@/lib/logger'
@@ -82,6 +83,14 @@ export default async function SupportPage() {
         Accéder au compte d&apos;un laveur qui a ouvert l&apos;accès depuis ses réglages.
         Connecté en tant que {user.email}.
       </p>
+
+      <Link
+        href="/dashboard/support/laveurs"
+        className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 mb-6 text-sm font-semibold text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      >
+        Fiches laveurs : le topo de chaque compte
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+      </Link>
 
       <SupportAccessForm />
 

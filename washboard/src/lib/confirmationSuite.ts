@@ -61,7 +61,8 @@ export async function suiteConfirmation(userId: string, email: string) {
       `⏳ Essai jusqu'au ${finEssai}`,
       ...annonce.lignes,
     ].join('\n'),
-    url: '/dashboard',
+    // La fiche du nouvel inscrit, avec son topo complet (espace équipe).
+    url: `/dashboard/support/laveurs/${fiche.id}`,
     tag: `signup-${userId}`,
   })
 }
