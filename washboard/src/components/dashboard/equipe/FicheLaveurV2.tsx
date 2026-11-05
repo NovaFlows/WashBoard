@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CalendarPlus, MessageCircle, MoreHorizontal, Phone, Plus } from 'lucide-react'
+import { CalendarPlus, MessageCircle, MoreHorizontal, Phone, Plus, UserRound } from 'lucide-react'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { useDemandeAcces } from '@/components/dashboard/SupportAccessForm'
@@ -10,6 +10,7 @@ import type { DonneesLaveur, Topo } from '@/lib/ficheLaveur'
 import { dateCourte, dateHeure, ilYa } from '@/lib/ficheLaveur'
 import { MISE_A_RAPPELER, RESULTATS_APPEL, aujourdhuiParis, estAppel, relancePrevue, type Appel, type ResultatAppel } from '@/lib/suiviAppels'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
+import { EQUIPE } from '@/lib/responsables'
 import EcranEquipe, { Carte, Initiales, LigneInfo, Point, Section } from './EcranEquipe'
 
 // Fiche d'un laveur, espace équipe (2026-11-05). On y arrive surtout en touchant la
@@ -276,6 +277,57 @@ function FeuilleDetailAppel({ appel, now, modifierDirect = false, onClose }: { a
   )
 }
 
+// ── Qui le suit dans l'équipe ────────────────────────────────────────────────
+
+function FeuilleResponsable({ washerId, nomLaveur, actuel, onClose }: { washerId: string; nomLaveur: string; actuel: string | null; onClose: () => void }) {
+  const router = useRouter()
+  const [enCours, setEnCours] = useState<string | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function choisir(responsable: string | null) {
+    if (enCours) return
+    setEnCours(responsable ?? 'personne')
+    setErreur(null)
+    try {
+      const res = await fetch(`/api/support/laveurs/${washerId}/responsable`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responsable }),
+      })
+      if (!res.ok) {
+        const corpsReponse = await res.json().catch(() => ({}))
+        setErreur(corpsReponse.error ?? 'Enregistrement impossible. Réessayez.')
+        return
+      }
+      router.refresh()
+      onClose()
+    } catch {
+      setErreur('Enregistrement impossible. Vérifiez votre connexion.')
+    } finally {
+      setEnCours(null)
+    }
+  }
+
+  return (
+    <Feuille titre="Qui le suit ?" sousTitre={nomLaveur} onClose={onClose}>
+      <div className="flex flex-wrap gap-2">
+        {EQUIPE.map(n => (
+          <button key={n} type="button" aria-pressed={actuel === n} disabled={!!enCours} onClick={() => void choisir(n)} className={puce(actuel === n)}>
+            {enCours === n ? '…' : n}
+          </button>
+        ))}
+        <button type="button" aria-pressed={actuel === null} disabled={!!enCours} onClick={() => void choisir(null)} className={puce(actuel === null)}>
+          {enCours === 'personne' ? '…' : 'Personne'}
+        </button>
+      </div>
+      <p className={`mt-4 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+        Le laveur apparaît dans « Suivi par » de la liste des laveurs, au nom choisi.
+      </p>
+      {erreur && <div className="mt-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+    </Feuille>
+  )
+}
+
 // ── Accès au compte du laveur ────────────────────────────────────────────────
 
 function FeuilleOptions({ nomLaveur, slug, onClose }: { nomLaveur: string; slug: string; onClose: () => void }) {
@@ -307,15 +359,17 @@ function FeuilleOptions({ nomLaveur, slug, onClose }: { nomLaveur: string; slug:
 
 // ── La fiche ─────────────────────────────────────────────────────────────────
 
-export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maintenant }: {
+export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, responsable, maintenant }: {
   donnees: DonneesLaveur
   topo: Topo
   appels: Appel[]
   suiviActif: boolean
+  /** Membre de l'équipe qui le suit ; `undefined` tant que l'affiliation n'est pas activée en base. */
+  responsable?: string | null
   maintenant: number
 }) {
   const now = useMemo(() => new Date(maintenant), [maintenant])
-  const [feuille, setFeuille] = useState<{ quoi: 'appel' } | { quoi: 'rappeler' } | { quoi: 'detail'; appel: Appel } | { quoi: 'options' } | null>(null)
+  const [feuille, setFeuille] = useState<{ quoi: 'appel' } | { quoi: 'rappeler' } | { quoi: 'detail'; appel: Appel } | { quoi: 'options' } | { quoi: 'responsable' } | null>(null)
   const w = donnees.washer
   const a = topo.activite
   const lienPage = `washboard.fr/book/${w.slug}`
@@ -341,6 +395,15 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maint
           {topo.statut.libelle}
           {topo.statut.detail && <span className={`${corps} text-[color:var(--v2-color-gris)]`}>· {topo.statut.detail}</span>}
         </p>
+        {responsable !== undefined && (
+          <button type="button" onClick={() => setFeuille({ quoi: 'responsable' })} className={`-mt-2 inline-flex items-center gap-1.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            <UserRound size={14} strokeWidth={2} aria-hidden />
+            {responsable
+              ? <>Suivi par <span className={`${corpsFort} text-[color:var(--v2-color-encre)]`}>{responsable}</span></>
+              : 'Personne ne le suit'}
+            <span className={corpsFort} style={{ color: 'var(--v2-color-accent)' }}>· {responsable ? 'Changer' : 'Le prendre'}</span>
+          </button>
+        )}
         <dl className="grid grid-cols-3 gap-3">
           {[
             { v: a.visites30, l: 'visites sur 30 j' },
@@ -514,6 +577,7 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maint
       {feuille?.quoi === 'appel' && <FeuilleAppel washerId={w.id} now={now} onClose={() => setFeuille(null)} />}
       {feuille?.quoi === 'rappeler' && <FeuilleARappeler washerId={w.id} nomLaveur={w.name} now={now} onClose={() => setFeuille(null)} />}
       {feuille?.quoi === 'detail' && <FeuilleDetailAppel appel={feuille.appel} now={now} onClose={() => setFeuille(null)} />}
+      {feuille?.quoi === 'responsable' && <FeuilleResponsable washerId={w.id} nomLaveur={w.name} actuel={responsable ?? null} onClose={() => setFeuille(null)} />}
       {feuille?.quoi === 'options' && <FeuilleOptions nomLaveur={w.name} slug={w.slug} onClose={() => setFeuille(null)} />}
     </EcranEquipe>
   )

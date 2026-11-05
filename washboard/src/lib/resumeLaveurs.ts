@@ -27,11 +27,14 @@ export type LaveurResume = {
   derniereConnexion: string | null
   /** Relance prévue (due ou à venir) : la liste « À rappeler » la range par jour. */
   relance: { le: string; action: string | null } | null
+  /** Membre de l'équipe qui suit ce laveur (voir lib/responsables.ts). */
+  responsable: string | null
   dernierAppel: { le: string; resultat: string } | null
 }
 
-/** `exclure` : la fiche laveur du compte de l'équipe elle-même (AutoNett), qui n'est pas un client. */
-export function resumerLaveurs(tous: DonneesLaveur[], appels: Appel[], now: Date = new Date(), exclure?: string | null): LaveurResume[] {
+/** `exclure` : la fiche laveur du compte de l'équipe elle-même (AutoNett), qui n'est pas un client.
+ *  `responsables` : washer_id → prénom du membre qui le suit. */
+export function resumerLaveurs(tous: DonneesLaveur[], appels: Appel[], { now = new Date(), exclure, responsables = {} }: { now?: Date; exclure?: string | null; responsables?: Record<string, string> } = {}): LaveurResume[] {
   const parLaveur = new Map<string, Appel[]>()
   for (const a of appels) parLaveur.set(a.washer_id, [...(parLaveur.get(a.washer_id) ?? []), a])
 
@@ -50,6 +53,7 @@ export function resumerLaveurs(tous: DonneesLaveur[], appels: Appel[], now: Date
         source: topo.source,
         visites30: topo.activite.visites30, reservations30: topo.activite.reservations30, chiffre30: topo.activite.chiffre30,
         derniereConnexion: topo.activite.derniereConnexion,
+        responsable: responsables[d.washer.id] ?? null,
         relance: prevue ? { le: prevue.relancer_le!, action: prevue.prochaine_action } : null,
         dernierAppel: dernierAppel ? { le: dernierAppel.appele_le, resultat: dernierAppel.resultat } : null,
       }

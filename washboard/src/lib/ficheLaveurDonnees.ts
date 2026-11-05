@@ -124,6 +124,23 @@ export async function chargerTousLesLaveurs(): Promise<DonneesLaveur[]> {
   return reels.map(w => assembler(w, liees, w.user_id ? utilisateurs.get(w.user_id) : undefined))
 }
 
+/** Qui suit quel laveur (washer_id → prénom). `actif` est faux tant que la table
+ *  `suivi_laveurs` n'existe pas : l'affiliation ne s'affiche alors pas. */
+export async function chargerResponsables(washerIds?: string[]): Promise<{ parLaveur: Record<string, string>; actif: boolean }> {
+  const admin = createAdminClient()
+  let q = admin.from('suivi_laveurs').select('washer_id, responsable')
+  if (washerIds) q = q.in('washer_id', washerIds)
+  const { data, error } = await q.limit(5000)
+  if (error) {
+    if (tableAbsente(error)) return { parLaveur: {}, actif: false }
+    logger.error('equipe.responsables.read_failed', {}, error)
+    throw error
+  }
+  const parLaveur: Record<string, string> = {}
+  for (const l of data ?? []) if (l.responsable) parLaveur[l.washer_id] = l.responsable
+  return { parLaveur, actif: true }
+}
+
 /** Appels de l'équipe, du plus récent au plus ancien. `actif` est faux tant que
  *  la table `suivi_appels` n'existe pas : la fiche s'affiche alors sans suivi. */
 export async function chargerAppels(washerIds?: string[]): Promise<{ appels: Appel[]; actif: boolean }> {

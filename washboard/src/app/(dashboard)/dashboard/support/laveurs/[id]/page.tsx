@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { exigerEquipe, chargerFicheLaveur, chargerAppels } from '@/lib/ficheLaveurDonnees'
+import { exigerEquipe, chargerFicheLaveur, chargerAppels, chargerResponsables } from '@/lib/ficheLaveurDonnees'
 import { analyserLaveur } from '@/lib/ficheLaveur'
 import { uuidValide } from '@/lib/uuid'
 import CoqueEquipe from '@/components/dashboard/equipe/CoqueEquipe'
@@ -15,7 +15,7 @@ export default async function FicheLaveurPage({ params }: { params: Promise<{ id
   // Identifiant mal formé : Postgres répondrait par une erreur, affichée comme
   // une panne plutôt que comme une fiche introuvable.
   if (!uuidValide(id)) notFound()
-  const [donnees, suivi] = await Promise.all([chargerFicheLaveur(id), chargerAppels([id])])
+  const [donnees, suivi, responsables] = await Promise.all([chargerFicheLaveur(id), chargerAppels([id]), chargerResponsables([id])])
   if (!donnees) notFound()
   const now = new Date()
   return (
@@ -25,6 +25,7 @@ export default async function FicheLaveurPage({ params }: { params: Promise<{ id
         topo={analyserLaveur(donnees, now)}
         appels={suivi.appels}
         suiviActif={suivi.actif}
+        responsable={responsables.actif ? (responsables.parLaveur[id] ?? null) : undefined}
         maintenant={now.getTime()}
       />
     </CoqueEquipe>

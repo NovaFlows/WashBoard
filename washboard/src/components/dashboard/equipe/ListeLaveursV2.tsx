@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { CHAMP, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import { ilYa } from '@/lib/ficheLaveur'
 import { aujourdhuiParis } from '@/lib/suiviAppels'
+import { EQUIPE } from '@/lib/responsables'
 import type { LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Initiales, Point, Section } from './EcranEquipe'
 
@@ -41,24 +42,43 @@ function jourCourt(aaaammjj: string): string {
 
 const sansAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
-export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: { laveurs: LaveurResume[]; filtreInitial: Filtre; maintenant: number }) {
+// « Suivi par » : retenu sur l'appareil, pour que chacun retrouve ses laveurs en ouvrant la liste.
+const CLE_SUIVI_PAR = 'equipe.suiviPar'
+type SuiviPar = 'tous' | 'personne' | string
+
+export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, affiliationActive = false }: { laveurs: LaveurResume[]; filtreInitial: Filtre; maintenant: number; affiliationActive?: boolean }) {
   const [filtre, setFiltre] = useState<Filtre>(filtreInitial)
+  const [suiviPar, setSuiviPar] = useState<SuiviPar>('tous')
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(CLE_SUIVI_PAR)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture unique au montage (le serveur ne connaît pas l'appareil)
+      if (v && (v === 'personne' || (EQUIPE as readonly string[]).includes(v))) setSuiviPar(v)
+    } catch { /* stockage indisponible : on reste sur « Tous » */ }
+  }, [])
+  function choisirSuiviPar(v: SuiviPar) {
+    setSuiviPar(v)
+    try { localStorage.setItem(CLE_SUIVI_PAR, v) } catch { /* sans effet */ }
+  }
+  const suit = (l: LaveurResume, v: SuiviPar = suiviPar) => !affiliationActive || v === 'tous' || (v === 'personne' ? !l.responsable : l.responsable === v)
   const [recherche, setRecherche] = useState('')
   const now = useMemo(() => new Date(maintenant), [maintenant])
 
   const visibles = useMemo(() => {
     const q = sansAccents(recherche.trim())
     const chiffres = recherche.replace(/\D/g, '')
-    const liste = laveurs.filter(l => garde(l, filtre, maintenant) && (!q
+    const liste = laveurs.filter(l => garde(l, filtre, maintenant) && suit(l) && (!q
       || sansAccents(l.name).includes(q) || l.slug.includes(q)
       || (chiffres.length >= 3 && (l.phone ?? '').replace(/\D/g, '').includes(chiffres))))
     // « À rappeler » : la relance la plus ancienne d'abord. Sinon, les derniers inscrits.
     return filtre === 'rappeler'
       ? liste.sort((a, b) => a.relance!.le.localeCompare(b.relance!.le))
       : liste
-  }, [laveurs, filtre, recherche, maintenant])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `suit` ne dépend que de suiviPar et affiliationActive
+  }, [laveurs, filtre, recherche, maintenant, suiviPar, affiliationActive])
 
-  const compte = (f: Filtre) => laveurs.filter(l => garde(l, f, maintenant)).length
+  const compte = (f: Filtre) => laveurs.filter(l => garde(l, f, maintenant) && suit(l)).length
+  const compteSuivi = (v: SuiviPar) => laveurs.filter(l => garde(l, filtre, maintenant) && suit(l, v)).length
 
   // « À rappeler » rangé par jour : aujourd'hui (retards compris), demain, les jours suivants.
   const auj = aujourdhuiParis(now)
@@ -77,6 +97,7 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: {
           <span className="flex items-center gap-2">
             <span className={`truncate text-[15.5px] ${styleNom}`}>{l.name}</span>
             {l.priorite === 1 && <span className={`shrink-0 text-[11.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>À appeler</span>}
+            {l.responsable && suiviPar === 'tous' && <span className={`ml-auto shrink-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{l.responsable}</span>}
           </span>
           <span className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
             <Point ton={TON_POINT[l.ton]} />
@@ -108,6 +129,16 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: {
             </button>
           ))}
         </div>
+        {affiliationActive && (
+          <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Suivi par">
+            <span className={`shrink-0 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Suivi par</span>
+            {(['tous', ...EQUIPE, 'personne'] as SuiviPar[]).map(v => (
+              <button key={v} type="button" aria-pressed={suiviPar === v} onClick={() => choisirSuiviPar(v)} className={puce(suiviPar === v)}>
+                {v === 'tous' ? 'Tous' : v === 'personne' ? `Personne ${compteSuivi(v)}` : `${v} ${compteSuivi(v)}`}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {jours && (recherche.trim() === '' || visibles.length > 0) ? (

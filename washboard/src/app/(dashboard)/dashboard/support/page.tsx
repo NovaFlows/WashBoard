@@ -1,4 +1,4 @@
-import { exigerEquipe, chargerResumeEquipe, chargerTousLesLaveurs, chargerAppels } from '@/lib/ficheLaveurDonnees'
+import { exigerEquipe, chargerResumeEquipe, chargerTousLesLaveurs, chargerAppels, chargerResponsables } from '@/lib/ficheLaveurDonnees'
 import { resumerLaveurs } from '@/lib/resumeLaveurs'
 import CoqueEquipe from '@/components/dashboard/equipe/CoqueEquipe'
 import AccueilEquipeV2 from '@/components/dashboard/equipe/AccueilEquipeV2'
@@ -19,10 +19,10 @@ export const dynamic = 'force-dynamic'
 export default async function SupportPage() {
   const { user, washer } = await exigerEquipe()
   const now = new Date()
-  const [resume, tous, { appels }] = await Promise.all([chargerResumeEquipe(now), chargerTousLesLaveurs(), chargerAppels()])
+  const [resume, tous, { appels }, responsables] = await Promise.all([chargerResumeEquipe(now), chargerTousLesLaveurs(), chargerAppels(), chargerResponsables()])
   return (
     <CoqueEquipe washer={washer}>
-      <AccueilEquipeV2 resume={resume} email={user.email ?? null} laveurs={resumerLaveurs(tous, appels, now, washer?.id)} maintenant={now.getTime()} />
+      <AccueilEquipeV2 resume={resume} email={user.email ?? null} laveurs={resumerLaveurs(tous, appels, { now, exclure: washer?.id, responsables: responsables.parLaveur })} maintenant={now.getTime()} />
     </CoqueEquipe>
   )
 }
