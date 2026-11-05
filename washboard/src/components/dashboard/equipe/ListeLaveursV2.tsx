@@ -88,7 +88,7 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant }: {
 
       {visibles.length === 0 ? (
         <p className={`py-6 text-center text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {filtre === 'rappeler' ? 'Aucune relance due. Les dates de relance se fixent en notant un appel.' : 'Aucun laveur ne correspond.'}
+          {filtre === 'rappeler' ? 'Aucune relance due. Ajoutez un laveur avec le bouton « À rappeler » de sa fiche, ou fixez une relance en notant un appel.' : 'Aucun laveur ne correspond.'}
         </p>
       ) : (
         <ul className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)]">

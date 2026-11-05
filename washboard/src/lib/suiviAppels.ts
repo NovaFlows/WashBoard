@@ -13,7 +13,18 @@ export const RESULTATS_APPEL = [
   'Injoignable',
 ] as const
 
-export type ResultatAppel = (typeof RESULTATS_APPEL)[number]
+/** Pas un appel : le laveur est mis dans « À rappeler » depuis sa fiche (bouton
+ *  « À rappeler »). Une ligne du suivi comme une autre, pour que la règle « seul
+ *  le dernier élément du suivi compte » reste vraie : noter un appel ensuite
+ *  remplace cette relance. */
+export const MISE_A_RAPPELER = 'À rappeler'
+
+export type ResultatAppel = (typeof RESULTATS_APPEL)[number] | typeof MISE_A_RAPPELER
+
+/** Vrai appel (pas une simple mise dans « À rappeler »). */
+export function estAppel(a: Pick<Appel, 'resultat'>): boolean {
+  return a.resultat !== MISE_A_RAPPELER
+}
 
 export type Appel = {
   id: string
@@ -32,7 +43,8 @@ export const LONGUEUR_MAX_ACTION = 300
 /** Valide une saisie d'appel. Renvoie le message à afficher, ou les champs propres. */
 export function validerAppel(corps: unknown): { erreur: string } | { appel: Omit<Appel, 'id' | 'washer_id' | 'appele_le'> } {
   const c = (corps ?? {}) as Record<string, unknown>
-  if (!RESULTATS_APPEL.includes(c.resultat as ResultatAppel)) return { erreur: 'Choisissez le résultat de l’appel.' }
+  const miseARappeler = c.resultat === MISE_A_RAPPELER
+  if (!miseARappeler && !RESULTATS_APPEL.includes(c.resultat as (typeof RESULTATS_APPEL)[number])) return { erreur: 'Choisissez le résultat de l’appel.' }
   const texte = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
   let relancer: string | null = null
   if (c.relancer_le != null && c.relancer_le !== '') {
@@ -41,6 +53,8 @@ export function validerAppel(corps: unknown): { erreur: string } | { appel: Omit
     }
     relancer = c.relancer_le
   }
+  // Mis dans « À rappeler » sans date : à rappeler aujourd'hui.
+  if (miseARappeler && !relancer) relancer = aujourdhuiParis()
   return {
     appel: {
       resultat: c.resultat as ResultatAppel,
@@ -56,11 +70,16 @@ export function aujourdhuiParis(now: Date = new Date()): string {
   return now.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
 }
 
+/** La relance fixée par le dernier élément du suivi, due ou à venir. */
+export function relancePrevue(appels: Appel[]): Appel | null {
+  const dernier = [...appels].sort((a, b) => b.appele_le.localeCompare(a.appele_le))[0]
+  return dernier?.relancer_le ? dernier : null
+}
+
 /** La relance prévue au dernier appel, si elle est due (aujourd'hui ou passée). */
 export function relanceDue(appels: Appel[], now: Date = new Date()): Appel | null {
-  const dernier = [...appels].sort((a, b) => b.appele_le.localeCompare(a.appele_le))[0]
-  if (!dernier?.relancer_le) return null
-  return dernier.relancer_le <= aujourdhuiParis(now) ? dernier : null
+  const prevue = relancePrevue(appels)
+  return prevue && prevue.relancer_le! <= aujourdhuiParis(now) ? prevue : null
 }
 
 /** La table n'existe pas encore (SQL pas encore passé) : PostgREST répond 42P01

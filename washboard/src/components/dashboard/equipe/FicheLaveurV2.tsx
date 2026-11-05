@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, MoreHorizontal, Phone, Plus } from 'lucide-react'
+import { CalendarPlus, MessageCircle, MoreHorizontal, Phone, Plus } from 'lucide-react'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression, nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { useDemandeAcces } from '@/components/dashboard/SupportAccessForm'
 import type { DonneesLaveur, Topo } from '@/lib/ficheLaveur'
 import { dateCourte, dateHeure, ilYa } from '@/lib/ficheLaveur'
-import { RESULTATS_APPEL, aujourdhuiParis, relanceDue, type Appel, type ResultatAppel } from '@/lib/suiviAppels'
+import { MISE_A_RAPPELER, RESULTATS_APPEL, aujourdhuiParis, estAppel, relancePrevue, type Appel, type ResultatAppel } from '@/lib/suiviAppels'
+import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import EcranEquipe, { Carte, Initiales, LigneInfo, Point, Section } from './EcranEquipe'
 
 // Fiche d'un laveur, espace équipe (2026-11-05). On y arrive surtout en touchant la
@@ -31,6 +32,90 @@ function dateJour(aaaammjj: string): string {
   return new Date(`${aaaammjj}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' })
 }
 
+/** Raccourcis + calendrier, pour la date de relance. */
+function ChoixDate({ valeur, onChange, now, avecAujourdhui = false }: { valeur: string; onChange: (v: string) => void; now: Date; avecAujourdhui?: boolean }) {
+  const raccourcis = [
+    ...(avecAujourdhui ? [{ l: 'Aujourd’hui', j: 0 }] : []),
+    { l: 'Demain', j: 1 }, { l: 'Dans 3 jours', j: 3 }, { l: 'Dans 1 semaine', j: 7 },
+  ]
+  return (
+    <>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {raccourcis.map(r => {
+          const date = dansJours(r.j, now)
+          // Mise « À rappeler » : une date est obligatoire, une puce ne se décoche pas.
+          return <button key={r.l} type="button" aria-pressed={valeur === date} onClick={() => onChange(valeur === date && !avecAujourdhui ? '' : date)} className={puce(valeur === date)}>{r.l}</button>
+        })}
+      </div>
+      <input type="date" aria-label="Date de relance" value={valeur} min={aujourdhuiParis(now)} onChange={e => onChange(e.target.value)} className={CHAMP} />
+    </>
+  )
+}
+
+/** Enregistre une ligne du suivi. Renvoie le message d'erreur, ou null. */
+async function enregistrerSuivi(washerId: string, corpsRequete: Record<string, unknown>): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/support/laveurs/${washerId}/appels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpsRequete),
+    })
+    if (res.ok) return null
+    const corpsReponse = await res.json().catch(() => ({}))
+    return corpsReponse.error ?? 'Enregistrement impossible.'
+  } catch {
+    return 'Enregistrement impossible. Vérifiez votre connexion.'
+  }
+}
+
+// ── Mettre dans « À rappeler » ───────────────────────────────────────────────
+
+function FeuilleARappeler({ washerId, nomLaveur, now, onClose }: { washerId: string; nomLaveur: string; now: Date; onClose: () => void }) {
+  const router = useRouter()
+  const [le, setLe] = useState(aujourdhuiParis(now))
+  const [motif, setMotif] = useState('')
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function enregistrer() {
+    if (enCours) return
+    setEnCours(true)
+    setErreur(null)
+    const echec = await enregistrerSuivi(washerId, { resultat: MISE_A_RAPPELER, prochaine_action: motif, relancer_le: le || null })
+    setEnCours(false)
+    if (echec) { setErreur(echec); return }
+    router.refresh()
+    onClose()
+  }
+
+  return (
+    <Feuille
+      titre="À rappeler"
+      sousTitre={nomLaveur}
+      onClose={onClose}
+      pied={
+        <div>
+          {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
+          <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+            {enCours ? 'Ajout…' : 'Ajouter à « À rappeler »'}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        <div>
+          <p className={ETIQUETTE}>Quand</p>
+          <ChoixDate valeur={le} onChange={setLe} now={now} avecAujourdhui />
+        </div>
+        <div>
+          <label htmlFor="rappel-motif" className={ETIQUETTE}>Pourquoi le rappeler (facultatif)</label>
+          <input id="rappel-motif" value={motif} onChange={e => setMotif(e.target.value)} maxLength={300} placeholder="Vérifier qu’il a mis ses prix" className={CHAMP} />
+        </div>
+      </div>
+    </Feuille>
+  )
+}
+
 // ── Noter un appel ───────────────────────────────────────────────────────────
 
 function FeuilleAppel({ washerId, now, onClose }: { washerId: string; now: Date; onClose: () => void }) {
@@ -41,27 +126,16 @@ function FeuilleAppel({ washerId, now, onClose }: { washerId: string; now: Date;
   const [relance, setRelance] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const raccourcis = [{ l: 'Demain', j: 1 }, { l: 'Dans 3 jours', j: 3 }, { l: 'Dans 1 semaine', j: 7 }]
 
   async function enregistrer() {
     if (!resultat || enCours) { if (!resultat) setErreur('Choisissez le résultat de l’appel.'); return }
     setEnCours(true)
     setErreur(null)
-    try {
-      const res = await fetch(`/api/support/laveurs/${washerId}/appels`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resultat, notes, prochaine_action: action, relancer_le: relance || null }),
-      })
-      const corpsReponse = await res.json().catch(() => ({}))
-      if (!res.ok) { setErreur(corpsReponse.error ?? 'Enregistrement impossible.'); return }
-      router.refresh()
-      onClose()
-    } catch {
-      setErreur('Enregistrement impossible. Vérifiez votre connexion.')
-    } finally {
-      setEnCours(false)
-    }
+    const echec = await enregistrerSuivi(washerId, { resultat, notes, prochaine_action: action, relancer_le: relance || null })
+    setEnCours(false)
+    if (echec) { setErreur(echec); return }
+    router.refresh()
+    onClose()
   }
 
   return (
@@ -100,13 +174,7 @@ function FeuilleAppel({ washerId, now, onClose }: { washerId: string; now: Date;
         </div>
         <div>
           <p className={ETIQUETTE}>Relancer le</p>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {raccourcis.map(r => {
-              const date = dansJours(r.j, now)
-              return <button key={r.l} type="button" aria-pressed={relance === date} onClick={() => setRelance(relance === date ? '' : date)} className={puce(relance === date)}>{r.l}</button>
-            })}
-          </div>
-          <input type="date" aria-label="Date de relance" value={relance} min={aujourdhuiParis(now)} onChange={e => setRelance(e.target.value)} className={CHAMP} />
+          <ChoixDate valeur={relance} onChange={setRelance} now={now} />
         </div>
       </div>
     </Feuille>
@@ -131,16 +199,19 @@ function FeuilleDetailAppel({ appel, onClose }: { appel: Appel; onClose: () => v
     onClose()
   }
 
+  const appelReel = estAppel(appel)
   if (suppression) {
-    return <ConfirmationSuppression titre="Supprimer cet appel ?" texte="Il disparaît du suivi de ce laveur." enCours={enCours} erreur={erreur} onConfirmer={() => void supprimer()} onClose={() => setSuppression(false)} />
+    return appelReel
+      ? <ConfirmationSuppression titre="Supprimer cet appel ?" texte="Il disparaît du suivi de ce laveur." enCours={enCours} erreur={erreur} onConfirmer={() => void supprimer()} onClose={() => setSuppression(false)} />
+      : <ConfirmationSuppression titre="Retirer de « À rappeler » ?" texte="Il ne sera plus dans la liste des laveurs à rappeler." libelleAction="Retirer" libelleEnCours="Retrait…" enCours={enCours} erreur={erreur} onConfirmer={() => void supprimer()} onClose={() => setSuppression(false)} />
   }
   return (
-    <Feuille titre={appel.resultat} sousTitre={`Appel du ${dateHeure(appel.appele_le)}`} onClose={onClose}>
+    <Feuille titre={appelReel ? appel.resultat : 'Mis à rappeler'} sousTitre={`${appelReel ? 'Appel du' : 'Le'} ${dateHeure(appel.appele_le)}`} onClose={onClose}>
       <div className="space-y-4">
         {appel.notes && <p className={`whitespace-pre-wrap text-[15px] leading-snug ${corps}`}>{appel.notes}</p>}
-        {appel.prochaine_action && <LigneInfo libelle="Prochaine action">{appel.prochaine_action}</LigneInfo>}
-        {appel.relancer_le && <LigneInfo libelle="Relancer le">{dateJour(appel.relancer_le)}</LigneInfo>}
-        <button type="button" onClick={() => setSuppression(true)} className={`text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>Supprimer cet appel</button>
+        {appel.prochaine_action && <LigneInfo libelle={appelReel ? 'Prochaine action' : 'Pourquoi'}>{appel.prochaine_action}</LigneInfo>}
+        {appel.relancer_le && <LigneInfo libelle={appelReel ? 'Relancer le' : 'À rappeler le'}>{dateJour(appel.relancer_le)}</LigneInfo>}
+        <button type="button" onClick={() => setSuppression(true)} className={`text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>{appelReel ? 'Supprimer cet appel' : 'Retirer de « À rappeler »'}</button>
       </div>
     </Feuille>
   )
@@ -185,11 +256,12 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maint
   maintenant: number
 }) {
   const now = useMemo(() => new Date(maintenant), [maintenant])
-  const [feuille, setFeuille] = useState<{ quoi: 'appel' } | { quoi: 'detail'; appel: Appel } | { quoi: 'options' } | null>(null)
+  const [feuille, setFeuille] = useState<{ quoi: 'appel' } | { quoi: 'rappeler' } | { quoi: 'detail'; appel: Appel } | { quoi: 'options' } | null>(null)
   const w = donnees.washer
   const a = topo.activite
   const lienPage = `washboard.fr/book/${w.slug}`
-  const relance = relanceDue(appels, now)
+  const relance = relancePrevue(appels)
+  const aujourdhui = aujourdhuiParis(now)
   const max = Math.max(a.parcours[0], 1)
 
   return (
@@ -239,12 +311,25 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maint
             </a>
           )}
         </div>
-        {relance && (
-          <Constat ton="ambre" role="status">
-            Relance prévue {relance.relancer_le === aujourdhuiParis(now) ? 'aujourd’hui' : `le ${dateJour(relance.relancer_le!)}`}
-            {relance.prochaine_action ? ` : ${relance.prochaine_action}` : '.'}
-          </Constat>
-        )}
+        {/* « À rappeler » : la relance en cours (touchée, elle s'ouvre et se retire), sinon le bouton pour l'y mettre. */}
+        {suiviActif && (relance ? (
+          <button type="button" onClick={() => setFeuille({ quoi: 'detail', appel: relance })} className="flex w-full items-center gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3 text-left">
+            <Point ton={relance.relancer_le! <= aujourdhui ? 'ambre' : 'gris'} />
+            <span className="min-w-0 flex-1">
+              <span className={`block text-[14.5px] ${corpsFort}`}>
+                À rappeler {relance.relancer_le! < aujourdhui ? `depuis le ${dateJour(relance.relancer_le!)}` : relance.relancer_le === aujourdhui ? 'aujourd’hui' : `le ${dateJour(relance.relancer_le!)}`}
+              </span>
+              <span className={`block text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                {relance.prochaine_action ?? (estAppel(relance) ? `Fixé à l’appel du ${dateCourte(relance.appele_le)}` : 'Sans motif')}
+              </span>
+            </span>
+            <Chevron />
+          </button>
+        ) : (
+          <button type="button" onClick={() => setFeuille({ quoi: 'rappeler' })} className={`${BOUTON} w-full gap-2 border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>
+            <CalendarPlus size={16} strokeWidth={2} aria-hidden />Ajouter à « À rappeler »
+          </button>
+        ))}
       </div>
 
       <Section titre="À dire à l’appel">
@@ -283,13 +368,13 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maint
               <li key={ap.id}>
                 <button type="button" onClick={() => setFeuille({ quoi: 'detail', appel: ap })} className="w-full px-4 py-3 text-left">
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className={`text-[15px] ${styleNom}`}>{ap.resultat}</span>
+                    <span className={`text-[15px] ${styleNom}`}>{estAppel(ap) ? ap.resultat : 'Mis à rappeler'}</span>
                     <span className={`shrink-0 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{dateCourte(ap.appele_le)}</span>
                   </span>
                   {ap.notes && <span className={`mt-0.5 block line-clamp-2 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{ap.notes}</span>}
                   {(ap.prochaine_action || ap.relancer_le) && (
                     <span className={`mt-1 block text-[12.5px] ${corpsFort}`}>
-                      {[ap.prochaine_action, ap.relancer_le && `relance ${dateJour(ap.relancer_le)}`].filter(Boolean).join(' · ')}
+                      {[ap.prochaine_action, ap.relancer_le && `${estAppel(ap) ? 'relance' : 'pour le'} ${dateJour(ap.relancer_le)}`].filter(Boolean).join(' · ')}
                     </span>
                   )}
                 </button>
@@ -368,6 +453,7 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, maint
       </Section>
 
       {feuille?.quoi === 'appel' && <FeuilleAppel washerId={w.id} now={now} onClose={() => setFeuille(null)} />}
+      {feuille?.quoi === 'rappeler' && <FeuilleARappeler washerId={w.id} nomLaveur={w.name} now={now} onClose={() => setFeuille(null)} />}
       {feuille?.quoi === 'detail' && <FeuilleDetailAppel appel={feuille.appel} onClose={() => setFeuille(null)} />}
       {feuille?.quoi === 'options' && <FeuilleOptions nomLaveur={w.name} slug={w.slug} onClose={() => setFeuille(null)} />}
     </EcranEquipe>

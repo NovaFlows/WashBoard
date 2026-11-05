@@ -31,6 +31,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (error) {
     if (tableAbsente(error)) return NextResponse.json({ error: 'Le suivi d’appel n’est pas encore activé en base.' }, { status: 503 })
+    // 23514 : la contrainte de `resultat` ne connaît pas encore « À rappeler »
+    // (SQL du 2026-11-05 pas encore passé).
+    if ((error as { code?: string }).code === '23514') return NextResponse.json({ error: 'La mise « À rappeler » n’est pas encore activée en base.' }, { status: 503 })
     // 23503 : le laveur n'existe pas (clé étrangère).
     if ((error as { code?: string }).code === '23503') return NextResponse.json({ error: 'Laveur introuvable' }, { status: 404 })
     logger.error('support.appels.post.write_failed', { washerId: id }, error)

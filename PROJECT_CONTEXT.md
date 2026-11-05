@@ -13,6 +13,7 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
   - `/dashboard/support/expediteurs` et `/dashboard/support/questions`. La boîte `SupportInbox` est simplement encadrée en v2 : son intérieur garde l'ancien style, à refaire.
 - Notifications : un nouvel inscrit ouvre sa fiche, une question ouvre `/questions`, un expéditeur ouvre `/expediteurs`.
 - Suivi d'appel : table `suivi_appels`. Le SQL a été donné dans le chat, sans fichier de migration. Elle n'a ni RLS ni politique, et service_role seul y accède. Routes `POST /api/support/laveurs/[id]/appels` et `DELETE /api/support/appels/[id]`. Tant que la table est absente, la fiche s'affiche sans suivi (`tableAbsente`).
+- Bouton « Ajouter à « À rappeler » » dans la fiche : il insère une ligne de `suivi_appels` avec `resultat = 'À rappeler'` (`MISE_A_RAPPELER`, pas un appel : `estAppel` la distingue), une date (aujourd'hui par défaut) et un motif dans `prochaine_action`. On ne lit que le dernier élément du suivi : un appel noté ensuite remplace la relance, et la retirer revient à supprimer cette ligne. Cela suppose d'ajouter 'À rappeler' à la contrainte check de `resultat` ; le SQL a été donné dans le chat. Sans lui, la route répond 503 (code 23514).
 - Le code : calculs purs dans `lib/ficheLaveur.ts` et `lib/suiviAppels.ts` (testés), lectures dans `lib/ficheLaveurDonnees.ts` (`exigerEquipe` = garde SUPPORT_ADMIN_USER_IDS), écrans dans `components/dashboard/equipe/`.
 - Banc local, hors git : `/banc-equipe?ecran=accueil|liste|fiche`.
 

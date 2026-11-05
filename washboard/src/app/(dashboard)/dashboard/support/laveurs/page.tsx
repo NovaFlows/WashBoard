@@ -1,6 +1,6 @@
 import { exigerEquipe, chargerTousLesLaveurs, chargerAppels } from '@/lib/ficheLaveurDonnees'
 import { analyserLaveur } from '@/lib/ficheLaveur'
-import { relanceDue, type Appel } from '@/lib/suiviAppels'
+import { estAppel, relanceDue, type Appel } from '@/lib/suiviAppels'
 import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 import CoqueEquipe from '@/components/dashboard/equipe/CoqueEquipe'
 import ListeLaveursV2, { type Filtre, type LaveurResume } from '@/components/dashboard/equipe/ListeLaveursV2'
@@ -26,6 +26,7 @@ export default async function LaveursPage({ searchParams }: { searchParams: Prom
       const topo = analyserLaveur(d, now)
       const siens = parLaveur.get(d.washer.id) ?? []
       const due = relanceDue(siens, now)
+      const dernierAppel = siens.find(estAppel)
       return {
         id: d.washer.id, name: d.washer.name, slug: d.washer.slug, phone: d.washer.phone, creeLe: d.washer.created_at,
         statut: topo.statut.libelle, ton: topo.statut.ton, priorite: topo.priorite, pagePrete: topo.pagePrete,
@@ -33,7 +34,7 @@ export default async function LaveursPage({ searchParams }: { searchParams: Prom
         visites30: topo.activite.visites30, reservations30: topo.activite.reservations30,
         derniereConnexion: topo.activite.derniereConnexion,
         relance: due ? { le: due.relancer_le!, action: due.prochaine_action } : null,
-        dernierAppel: siens[0] ? { le: siens[0].appele_le, resultat: siens[0].resultat } : null,
+        dernierAppel: dernierAppel ? { le: dernierAppel.appele_le, resultat: dernierAppel.resultat } : null,
       }
     })
 
