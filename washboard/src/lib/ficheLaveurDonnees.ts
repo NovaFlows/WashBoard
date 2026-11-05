@@ -2,8 +2,10 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupportMember } from '@/lib/supportAccess'
+import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 import { logger } from '@/lib/logger'
 import type { DonneesLaveur, WasherFiche } from '@/lib/ficheLaveur'
+import { relanceDue, tableAbsente, type Appel } from '@/lib/suiviAppels'
 
 // Lectures de l'espace équipe (fiches laveurs). Service-role : l'équipe voit
 // tous les comptes, ce que la RLS refuse — d'où la garde `exigerEquipe` en
@@ -119,4 +121,46 @@ export async function chargerTousLesLaveurs(): Promise<DonneesLaveur[]> {
 
   const liees = await lireLiees(admin, reels.map(w => w.id), depuis)
   return reels.map(w => assembler(w, liees, w.user_id ? utilisateurs.get(w.user_id) : undefined))
+}
+
+/** Appels de l'équipe, du plus récent au plus ancien. `actif` est faux tant que
+ *  la table `suivi_appels` n'existe pas : la fiche s'affiche alors sans suivi. */
+export async function chargerAppels(washerIds?: string[]): Promise<{ appels: Appel[]; actif: boolean }> {
+  const admin = createAdminClient()
+  let q = admin.from('suivi_appels').select('id, washer_id, appele_le, resultat, notes, prochaine_action, relancer_le').order('appele_le', { ascending: false })
+  if (washerIds) q = q.in('washer_id', washerIds)
+  const { data, error } = await q.limit(5000)
+  if (error) {
+    if (tableAbsente(error)) return { appels: [], actif: false }
+    logger.error('equipe.appels.read_failed', {}, error)
+    throw error
+  }
+  return { appels: (data ?? []) as Appel[], actif: true }
+}
+
+// Comptes de test écartés des chiffres, comme de la liste.
+const INTERNES = `(${COMPTES_INTERNES_EXCLUS_DIFFUSION.join(',')})`
+
+/** Les chiffres de l'accueil de l'espace équipe. */
+export async function chargerResumeEquipe(now: Date = new Date()) {
+  const admin = createAdminClient()
+  const semaine = new Date(now.getTime() - 7 * 864e5).toISOString()
+  const [nouveaux, total, expediteurs, appels] = await Promise.all([
+    admin.from('washers').select('id', { count: 'exact', head: true }).not('is_preview', 'is', true).not('slug', 'in', INTERNES).gte('created_at', semaine),
+    admin.from('washers').select('id', { count: 'exact', head: true }).not('is_preview', 'is', true).not('slug', 'in', INTERNES),
+    admin.from('washers').select('id', { count: 'exact', head: true }).eq('sms_sender_statut', 'en_attente'),
+    chargerAppels(),
+  ])
+  for (const [quoi, r] of [['nouveaux', nouveaux], ['total', total], ['expediteurs', expediteurs]] as const) {
+    if (r.error) logger.error('equipe.resume.read_failed', { quoi }, r.error)
+  }
+  const parLaveur = new Map<string, Appel[]>()
+  for (const a of appels.appels) parLaveur.set(a.washer_id, [...(parLaveur.get(a.washer_id) ?? []), a])
+  const aRelancer = [...parLaveur.values()].filter(l => relanceDue(l, now)).length
+  return {
+    nouveaux: nouveaux.count ?? null,
+    total: total.count ?? null,
+    expediteursEnAttente: expediteurs.count ?? null,
+    aRelancer: appels.actif ? aRelancer : null,
+  }
 }

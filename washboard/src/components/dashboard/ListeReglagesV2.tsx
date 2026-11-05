@@ -206,7 +206,7 @@ export default function ListeReglagesV2({
           <TitreSection>Outil interne</TitreSection>
           <CarteListe>
             <Ligne
-              label="Support (équipe)"
+              label="Équipe"
               href="/dashboard/support"
               signal={<NonLus count={unreadTeamCount} />}
             />

@@ -393,7 +393,8 @@ export async function PATCH(request: NextRequest) {
   if (updates.sms_sender_statut === 'en_attente') {
     await notifierEquipe({
       title: 'Expéditeur SMS à approuver',
-      body: `🏢 ${profil.name}\n📱 Nom demandé : ${updates.sms_sender}\nÀ valider dans Support › Expéditeurs SMS, après l'approbation Brevo.`,
+      body: `🏢 ${profil.name}\n📱 Nom demandé : ${updates.sms_sender}\nÀ valider dans Équipe › Expéditeurs SMS, après l'approbation Brevo.`,
+      url: '/dashboard/support/expediteurs',
     })
   }
   return NextResponse.json({ success: true })

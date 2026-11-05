@@ -54,6 +54,17 @@ describe('analyserLaveur', () => {
     expect(t.pourquoi).toMatch(/au choix du créneau/)
     expect(t.activite.lienReseaux).toMatch(/^Oui : visites venues de Instagram/)
     expect(t.priorite).toBe(1)
+    expect(t.aDire.some(x => x.includes('horaires'))).toBe(true)
+  })
+
+  it('perte avant les créneaux : pas de conseil sur les horaires', () => {
+    const t = analyserLaveur(laveur({}, {
+      prestations: [{ name: 'Intérieur', price: 50, en_veille: false }], joursOuverts: [1],
+      evenements: [...visites(22, 'prestation'), ...visites(3, 'creneau')],
+    }), NOW)
+    expect(t.pourquoi).toMatch(/sans rien choisir/)
+    expect(t.aDire.some(x => x.includes('horaires'))).toBe(false)
+    expect(t.aDire.some(x => x.includes('Regarder sa page avec lui'))).toBe(true)
   })
 
   it('les prestations en veille ne comptent pas', () => {

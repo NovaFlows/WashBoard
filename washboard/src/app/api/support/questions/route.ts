@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
   await notifierEquipe({
     title: 'Nouvelle question support',
     body: `${washer?.name ?? 'Un laveur'} : ${subject}`,
-    url: '/dashboard/support',
+    url: '/dashboard/support/questions',
     tag: `support-question-${questionId}`,
   })
 

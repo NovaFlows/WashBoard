@@ -5,12 +5,16 @@ Dernière mise à jour : 2026-11-05.
 ## Continuité de travail
 L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
 
-## Espace équipe — fiches laveurs (2026-11-05, `607e131`)
-- Demande d'Alexandre : un vrai espace admin avec des fiches clients ; le suivi client s'améliore par tranches, la première est livrée.
-- `/dashboard/support/laveurs` : liste des laveurs, comptes de test exclus, pastille de priorité. `/dashboard/support/laveurs/[id]` : la fiche, avec le topo complet. Elle contient les boutons Appeler / WhatsApp / Sa page, la partie « à dire à l'appel », le contact, l'activité, le parcours de la page sur 30 jours, la configuration, le profil et les points bloquants.
-- Accès réservé à `SUPPORT_ADMIN_USER_IDS` (`exigerEquipe` dans `lib/ficheLaveurDonnees.ts`, lectures en service_role). Les calculs sont des fonctions pures dans `lib/ficheLaveur.ts`, testées.
-- La notification push « nouvel inscrit » (`lib/confirmationSuite.ts`) ouvre la fiche de l'inscrit.
-- Pistes pour la suite, rien de décidé : notes et suivi d'appel saisis dans la fiche (aujourd'hui dans `prospects/suivi_clients.xlsx`), Instagram du laveur, filtres de la liste.
+## Espace équipe (2026-11-05), au design de la refonte
+- Demande d'Alexandre : un vrai espace admin, avec des fiches clients. L'ancienne page Support (ancien design, tout empilé) a été découpée en écrans v2 :
+  - `/dashboard/support` : accueil « Équipe » (lien « Équipe » dans Plus), avec les accès Laveurs / À rappeler / Nouveaux, Questions et Expéditeurs SMS ;
+  - `/dashboard/support/laveurs` : liste avec recherche et filtres (`?filtre=rappeler|nouveaux|configurer|essai`) ;
+  - `/dashboard/support/laveurs/[id]` : la fiche, avec le topo complet et le suivi des appels. L'accès au compte du laveur se demande depuis le menu « … » de la fiche ;
+  - `/dashboard/support/expediteurs` et `/dashboard/support/questions`. La boîte `SupportInbox` est simplement encadrée en v2 : son intérieur garde l'ancien style, à refaire.
+- Notifications : un nouvel inscrit ouvre sa fiche, une question ouvre `/questions`, un expéditeur ouvre `/expediteurs`.
+- Suivi d'appel : table `suivi_appels`. Le SQL a été donné dans le chat, sans fichier de migration. Elle n'a ni RLS ni politique, et service_role seul y accède. Routes `POST /api/support/laveurs/[id]/appels` et `DELETE /api/support/appels/[id]`. Tant que la table est absente, la fiche s'affiche sans suivi (`tableAbsente`).
+- Le code : calculs purs dans `lib/ficheLaveur.ts` et `lib/suiviAppels.ts` (testés), lectures dans `lib/ficheLaveurDonnees.ts` (`exigerEquipe` = garde SUPPORT_ADMIN_USER_IDS), écrans dans `components/dashboard/equipe/`.
+- Banc local, hors git : `/banc-equipe?ecran=accueil|liste|fiche`.
 
 ## Repères vérifiés
 - `washboard/` contient l'application et son `package.json`.

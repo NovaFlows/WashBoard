@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   await notifierEquipe({
     title: 'Relance sur une question support',
     body: `${washer?.name ?? 'Un laveur'} : ${thread.subject}`,
-    url: '/dashboard/support',
+    url: '/dashboard/support/questions',
     tag: `support-question-${id}`,
   })
 

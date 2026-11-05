@@ -1,4 +1,5 @@
 import { planEffectif, PLAN_LABELS, type Plan } from '@/lib/plan'
+import { SOURCES_ACQUISITION, CLE_PRECISION_SOURCE } from '@/lib/onboarding'
 
 // Fiche laveur de l'espace équipe : le « topo » qu'Alexandre demandait à
 // chaque nouvel inscrit (2026-11-05), calculé ici une fois pour toutes.
@@ -34,7 +35,7 @@ export type WasherFiche = {
   derniere_connexion_le: string | null
   onboarding_complete_at: string | null
   acquisition_source: string | null
-  profil_activite: { anciennete?: string; ca_mois?: string; prestations_semaine?: string; temps_perdu?: string[] } | null
+  profil_activite: { anciennete?: string; ca_mois?: string; prestations_semaine?: string; temps_perdu?: string[]; [CLE_PRECISION_SOURCE]?: string } | null
   facture_nom_legal: string | null
   telephone_verifie_le: string | null
   is_preview: boolean | null
@@ -56,10 +57,13 @@ export type Ton = 'ok' | 'attention' | 'alerte' | 'neutre'
 
 export type Topo = {
   statut: { libelle: string; ton: Ton; detail: string | null }
+  /** « Comment as-tu connu WashBoard ? », en clair (avec la précision d'« Autre »). */
+  source: string | null
   /** 1 = à appeler en premier, 2 = à accompagner, 3 = rien d'urgent. */
   priorite: 1 | 2 | 3
   pagePrete: boolean
-  configuration: { libelle: string; fait: boolean; detail: string }[]
+  /** `essentiel` : sans lui, personne ne peut réserver. */
+  configuration: { libelle: string; fait: boolean; detail: string; essentiel?: boolean }[]
   activite: {
     derniereConnexion: string | null
     visites30: number
@@ -146,8 +150,8 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
     : w.sms_sender_statut === 'en_attente' ? `« ${w.sms_sender} », en attente d’approbation`
     : `« ${w.sms_sender} »`
   const configuration = [
-    { libelle: 'Prestations', fait: actives.length > 0, detail: actives.length ? actives.map(p => p.price != null ? `${p.name} (${p.price} €)` : p.name).join(', ') : 'Aucune : personne ne peut réserver' },
-    { libelle: 'Horaires', fait: jours.length > 0, detail: jours.length ? jours.map(j => JOURS_COURTS[j]).join(', ') : 'Aucun jour ouvert' },
+    { libelle: 'Prestations', essentiel: true, fait: actives.length > 0, detail: actives.length ? actives.map(p => p.price != null ? `${p.name} (${p.price} €)` : p.name).join(', ') : 'Aucune : personne ne peut réserver' },
+    { libelle: 'Horaires', essentiel: true, fait: jours.length > 0, detail: jours.length ? jours.map(j => JOURS_COURTS[j]).join(', ') : 'Aucun jour ouvert' },
     { libelle: 'Zone d’intervention', fait: zone, detail: zone ? (w.base_address ?? 'Définie') : 'Non définie' },
     { libelle: 'Logo', fait: !!w.logo_url, detail: w.logo_url ? 'Ajouté' : 'Pas de logo' },
     { libelle: 'Lien avis Google', fait: !!w.google_review_url, detail: w.google_review_url ? 'Renseigné' : 'Absent : pas de demande d’avis' },
@@ -184,6 +188,7 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
   // ── Pourquoi pas (ou peu) de ventes
   const [vP, vC, vCo, vConf] = parcours
   let pourquoi: string
+  let perte: 'rien' | 'creneau' | 'coordonnees' | null = null
   if (!pagePrete) pourquoi = 'Sa page n’est pas configurée : impossible de réserver.'
   else if (resa30.length >= 4) pourquoi = `Ça tourne : ${pluriel(resa30.length, 'réservation')} en 30 jours.`
   else if (vP < 5) pourquoi = `Presque personne ne voit sa page (${pluriel(vP, 'visite')} en 30 jours) : le lien n’est pas partagé, ou pas assez visible.`
@@ -191,6 +196,7 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
     // « prestation » = ouverture de la page : perdre là, c'est repartir sans rien choisir.
     const pertes: [string, number][] = [['sans rien choisir', vP - vC], ['au choix du créneau', vC - vCo], ['aux coordonnées', vCo - vConf]]
     const [ou] = pertes.sort((a, b) => b[1] - a[1])[0]
+    perte = ou === 'au choix du créneau' ? 'creneau' : ou === 'sans rien choisir' ? 'rien' : 'coordonnees'
     const piste = ou === 'au choix du créneau' ? 'Horaires trop étroits ou prestations trop longues ?'
       : ou === 'sans rien choisir' ? 'Prix, présentation des prestations, ou ses propres tests ?'
       : 'Formulaire trop long, ou manque de confiance ?'
@@ -206,7 +212,11 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
     aDire.push(`Proposer de remplir sa page ensemble pendant l’appel (${manque}) : 15 minutes.`)
   }
   if (pagePrete && vP < 5) aDire.push(`Mettre washboard.fr/book/${w.slug} dans sa bio Instagram/TikTok, et l’envoyer aux clients qui écrivent en message privé.`)
-  if (pourquoi.includes('créneau')) aDire.push('Revoir avec lui ses horaires et la durée de ses prestations.')
+  // Décidé sur l'étape perdue, jamais sur le texte : « vont jusqu'aux créneaux » contient
+  // aussi le mot, et donnait ce conseil à qui perdait ses visiteurs avant (Automaclean).
+  if (perte === 'creneau') aDire.push('Revoir avec lui ses horaires et la durée de ses prestations.')
+  if (perte === 'rien') aDire.push('Regarder sa page avec lui : prix, noms et descriptions des prestations. Vérifier que les visites ne sont pas surtout ses propres essais.')
+  if (perte === 'coordonnees') aDire.push('Lui demander si des clients lui ont dit avoir abandonné au moment de laisser leurs coordonnées.')
   if (!w.google_review_url) aDire.push('Ajouter son lien d’avis Google : les demandes d’avis partent toutes seules.')
   if (!w.sms_sender) aDire.push('Lui faire choisir un nom d’expéditeur SMS (11 caractères, sans espace).')
   if (!w.pwa_installee_le) aDire.push('Lui faire installer l’appli sur son téléphone.')
@@ -218,8 +228,14 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
   const profil = [libelle('anciennete', p.anciennete), libelle('ca_mois', p.ca_mois), libelle('prestations_semaine', p.prestations_semaine)].filter((x): x is string => !!x)
   if (p.temps_perdu?.length) profil.push(`Perd du temps à ${p.temps_perdu.map(x => libelle('temps_perdu', x)).join(', ')}`)
 
+  const brute = w.acquisition_source
+  const precision = w.profil_activite?.[CLE_PRECISION_SOURCE]
+  const source = !brute ? null
+    : brute === 'autre' && precision ? `Autre : ${precision}`
+    : SOURCES_ACQUISITION.find(s => s.valeur === brute)?.libelle ?? brute
+
   return {
-    statut, priorite, pagePrete, configuration,
+    statut, source, priorite, pagePrete, configuration,
     activite: {
       derniereConnexion, visites30, parcours, provenance: provenance(ev30), lienReseaux,
       reservations: resa.length,
