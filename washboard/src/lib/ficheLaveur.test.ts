@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { analyserLaveur, sourceVisite, ilYa, type DonneesLaveur, type WasherFiche } from './ficheLaveur'
+import { analyserLaveur, sourceVisite, ilYa, dateHeure, type DonneesLaveur, type WasherFiche } from './ficheLaveur'
 
 const NOW = new Date('2026-11-05T12:00:00Z')
 const ilYaJours = (j: number) => new Date(NOW.getTime() - j * 864e5).toISOString()
@@ -106,5 +106,28 @@ describe('ilYa', () => {
   it('formate court', () => {
     expect(ilYa(new Date(NOW.getTime() - 5 * 60000).toISOString(), NOW)).toBe('il y a 5 min')
     expect(ilYa(ilYaJours(3), NOW)).toBe('il y a 3 j')
+  })
+})
+
+describe('cas limites', () => {
+  it('reconnaît les autres réseaux', () => {
+    expect(['www.tiktok.com', 'm.facebook.com', 'www.google.fr'].map(sourceVisite)).toEqual(['TikTok', 'Facebook', 'Google'])
+  })
+  it('statut : payant avec résiliation, paiement en échec, Découverte, offre sans essai', () => {
+    const payant = analyserLaveur(laveur({ subscription_status: 'active', cancels_at: '2026-12-01T12:00:00Z' }), NOW)
+    expect(payant.statut).toMatchObject({ libelle: 'Payant · Pro', detail: 'Résiliation prévue le 1 déc.' })
+    expect(payant.priorite).toBe(3)
+    expect(analyserLaveur(laveur({ subscription_status: 'past_due' }), NOW).statut.libelle).toBe('Paiement en échec')
+    expect(analyserLaveur(laveur({ plan: 'decouverte', trial_ends_at: null, subscription_status: null }), NOW).statut.libelle).toBe('Découverte')
+    expect(analyserLaveur(laveur({ trial_ends_at: null, subscription_status: null }), NOW).statut.detail).toBeNull()
+  })
+  it('signale une longue absence', () => {
+    const t = analyserLaveur(laveur({ derniere_connexion_le: ilYaJours(20) }), NOW)
+    expect(t.problemes).toContain('Pas connecté depuis 20 jours')
+  })
+  it('dates lisibles', () => {
+    expect(ilYa(new Date(NOW.getTime() - 10000).toISOString(), NOW)).toBe('à l’instant')
+    expect(ilYa(new Date(NOW.getTime() - 3 * 36e5).toISOString(), NOW)).toBe('il y a 3 h')
+    expect(dateHeure('2026-11-05T12:30:00Z')).toBe('5 nov., 13:30')
   })
 })
