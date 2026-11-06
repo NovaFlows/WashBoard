@@ -10,6 +10,7 @@ import { ilYa } from '@/lib/ficheLaveur'
 import { aujourdhuiParis } from '@/lib/suiviAppels'
 import { inscriptionsParSemaine, type LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Carte, Initiales, Point, Section } from './EcranEquipe'
+import type { ResumeProspects } from './AccueilEquipeV2'
 
 // Accueil de l'espace équipe sur ordinateur (Alexandre, 2026-11-05) : un tableau de
 // bord plutôt que trois portes. Le téléphone garde la liste courte (AccueilEquipeV2).
@@ -135,11 +136,12 @@ function Vide({ children }: { children: React.ReactNode }) {
 
 // ── Le tableau ───────────────────────────────────────────────────────────────
 
-export default function TableauEquipe({ laveurs, resume, email, maintenant }: {
+export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null }: {
   laveurs: LaveurResume[]
   resume: Resume
   email: string | null
   maintenant: number
+  prospects?: ResumeProspects
 }) {
   const { unreadTeamCount } = useSupportBadges()
   const now = useMemo(() => new Date(maintenant), [maintenant])
@@ -238,6 +240,8 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant }: {
             <CarteListe>
               <Ligne label="Questions des laveurs" href="/dashboard/support/questions" signal={<NonLus count={unreadTeamCount} />} />
               <Ligne label="Expéditeurs SMS" valeur={resume.expediteursEnAttente ? `${resume.expediteursEnAttente} en attente` : undefined} href="/dashboard/support/expediteurs" />
+              <Ligne label="Prospects : réponses à trier" valeur={prospects ? (prospects.aTrier ? String(prospects.aTrier) : 'Aucune') : 'À activer'} href="/dashboard/support/prospects?filtre=trier" />
+              <Ligne label="Prospects à rappeler" valeur={prospects?.aRappeler ? `${prospects.aRappeler} aujourd’hui` : undefined} href="/dashboard/support/prospects?filtre=discussion" />
             </CarteListe>
           </Section>
 

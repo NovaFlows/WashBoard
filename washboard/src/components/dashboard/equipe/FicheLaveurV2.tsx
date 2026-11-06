@@ -12,6 +12,7 @@ import { MISE_A_RAPPELER, RESULTATS_APPEL, aujourdhuiParis, estAppel, relancePre
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import { EQUIPE } from '@/lib/responsables'
 import EcranEquipe, { Carte, Initiales, LigneInfo, Point, Section } from './EcranEquipe'
+import ChoixDate, { dateJour } from './ChoixDate'
 
 // Fiche d'un laveur, espace équipe (2026-11-05). On y arrive surtout en touchant la
 // notification « nouvel inscrit » : d'abord de quoi appeler et quoi dire, ensuite le
@@ -23,35 +24,6 @@ const ETAPES = ['Ouvrent la page', 'Vont aux créneaux', 'Donnent leurs coordonn
 function numeroWhatsApp(tel: string): string {
   const chiffres = tel.replace(/\D/g, '')
   return chiffres.startsWith('0') ? '33' + chiffres.slice(1) : chiffres
-}
-
-function dansJours(n: number, now: Date): string {
-  return aujourdhuiParis(new Date(now.getTime() + n * 864e5))
-}
-
-function dateJour(aaaammjj: string): string {
-  return new Date(`${aaaammjj}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' })
-}
-
-/** Raccourcis + calendrier, pour la date de relance. */
-function ChoixDate({ valeur, onChange, now, avecAujourdhui = false, effacable = false }: { valeur: string; onChange: (v: string) => void; now: Date; avecAujourdhui?: boolean; effacable?: boolean }) {
-  const raccourcis = [
-    ...(avecAujourdhui ? [{ l: 'Aujourd’hui', j: 0 }] : []),
-    { l: 'Demain', j: 1 }, { l: 'Dans 3 jours', j: 3 }, { l: 'Dans 1 semaine', j: 7 },
-  ]
-  return (
-    <>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {effacable && <button type="button" aria-pressed={valeur === ''} onClick={() => onChange('')} className={puce(valeur === '')}>Pas de relance</button>}
-        {raccourcis.map(r => {
-          const date = dansJours(r.j, now)
-          // Mise « À rappeler » : une date est obligatoire, une puce ne se décoche pas.
-          return <button key={r.l} type="button" aria-pressed={valeur === date} onClick={() => onChange(valeur === date && !avecAujourdhui ? '' : date)} className={puce(valeur === date)}>{r.l}</button>
-        })}
-      </div>
-      <input type="date" aria-label="Date de relance" value={valeur} min={aujourdhuiParis(now)} onChange={e => onChange(e.target.value)} className={CHAMP} />
-    </>
-  )
 }
 
 /** Enregistre une ligne du suivi. Renvoie le message d'erreur, ou null. */

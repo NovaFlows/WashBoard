@@ -14,14 +14,16 @@ import TableauEquipe from './TableauEquipe'
 // de bord à la place (TableauEquipe).
 
 type Resume = { nouveaux: number | null; total: number | null; expediteursEnAttente: number | null; aRelancer: number | null }
+/** Null tant que la table `prospects` n'existe pas. */
+export type ResumeProspects = { total: number; aTrier: number; aRappeler: number } | null
 
 const nombre = (n: number | null, un: string, plusieurs: string) => n == null ? undefined : n === 0 ? undefined : `${n} ${n > 1 ? plusieurs : un}`
 
-export default function AccueilEquipeV2({ resume, email, laveurs, maintenant }: { resume: Resume; email: string | null; laveurs: LaveurResume[]; maintenant: number }) {
+export default function AccueilEquipeV2({ resume, email, laveurs, maintenant, prospects = null }: { resume: Resume; email: string | null; laveurs: LaveurResume[]; maintenant: number; prospects?: ResumeProspects }) {
   const { unreadTeamCount } = useSupportBadges()
   const grandEcran = useGrandEcran()
   if (grandEcran) {
-    return <TableauEquipe laveurs={laveurs} resume={{ expediteursEnAttente: resume.expediteursEnAttente, suiviActif: resume.aRelancer !== null }} email={email} maintenant={maintenant} />
+    return <TableauEquipe laveurs={laveurs} resume={{ expediteursEnAttente: resume.expediteursEnAttente, suiviActif: resume.aRelancer !== null }} email={email} maintenant={maintenant} prospects={prospects} />
   }
   return (
     <EcranEquipe titre="Équipe" sousTitre="Outil interne, invisible des laveurs" retour={{ href: '/dashboard/parametres', label: 'Plus' }}>
@@ -30,6 +32,14 @@ export default function AccueilEquipeV2({ resume, email, laveurs, maintenant }: 
           <Ligne label="Tous les laveurs" valeur={resume.total != null ? String(resume.total) : undefined} href="/dashboard/support/laveurs" />
           <Ligne label="À rappeler" valeur={nombre(resume.aRelancer, 'relance due', 'relances dues') ?? (resume.aRelancer === null ? 'Suivi à activer' : 'Personne')} href="/dashboard/support/laveurs?filtre=rappeler" />
           <Ligne label="Nouveaux inscrits" valeur={nombre(resume.nouveaux, 'cette semaine', 'cette semaine') ?? 'Aucun cette semaine'} href="/dashboard/support/laveurs?filtre=nouveaux" />
+        </CarteListe>
+      </Section>
+
+      <Section titre="Prospects">
+        <CarteListe>
+          <Ligne label="Réponses à trier" valeur={prospects ? (prospects.aTrier ? String(prospects.aTrier) : 'Aucune') : 'À activer'} href="/dashboard/support/prospects?filtre=trier" />
+          <Ligne label="Prospects à rappeler" valeur={prospects ? (prospects.aRappeler ? `${prospects.aRappeler} aujourd’hui` : 'Personne') : undefined} href="/dashboard/support/prospects?filtre=discussion" />
+          <Ligne label="Tous les prospects" valeur={prospects ? String(prospects.total) : undefined} href="/dashboard/support/prospects" />
         </CarteListe>
       </Section>
 
