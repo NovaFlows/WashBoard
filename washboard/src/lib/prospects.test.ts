@@ -108,3 +108,35 @@ describe('rangement', () => {
     expect(resumerProspects(liste, NOW)).toEqual({ total: 5, aTrier: 2, aRappeler: 2 })
   })
 })
+
+describe('cas limites', () => {
+  it('saisie : Instagram vidé, Instagram ou date invalides', () => {
+    expect(validerSaisie({ instagram: '' }, false)).toEqual({ champs: { instagram: null } })
+    expect(validerSaisie({ instagram: 'mon compte' }, false)).toEqual({ erreur: 'Compte Instagram invalide.' })
+    expect(validerSaisie({ relancer_le: 'demain' }, false)).toEqual({ erreur: 'Date de rappel invalide.' })
+  })
+  it('événement refusé : sans Instagram, Instagram ou étape invalides, type inconnu', () => {
+    expect(validerEvenement({ type: 'contacte' }, NOW)).toHaveProperty('erreur')
+    expect(validerEvenement({ type: 'ajout', nom: 'X', instagram: 'mon compte' }, NOW)).toEqual({ erreur: 'instagram invalide' })
+    expect(validerEvenement({ type: 'ajout', nom: 'X', statut: 'perdu' }, NOW)).toEqual({ erreur: 'statut inconnu' })
+    expect(validerEvenement({ type: 'supprime' }, NOW)).toHaveProperty('erreur')
+  })
+  it('un contact complète une fiche créée par une réponse', () => {
+    const p = prospect({ nom: 'laveur.exemple', contacte_le: null, statut: 'a_repondu' })
+    const e = appliquerEvenement(p, ev({ type: 'contacte', instagram: 'laveur.exemple', nom: 'Laveur Exemple', message: 'Salut !', ville: 'Lyon', le: '2026-11-06T09:00:00Z' }))
+    expect(e).toEqual({ modifier: { contacte_le: '2026-11-06T09:00:00.000Z', message: 'Salut !', ville: 'Lyon', nom: 'Laveur Exemple' } })
+  })
+  it('un « vu » ou une réponse d’un inconnu crée la fiche à trier', () => {
+    expect(appliquerEvenement(null, ev({ type: 'vu', instagram: 'laveur.exemple' }))).toMatchObject({ creer: { statut: 'a_vu', nom: 'laveur.exemple' } })
+    expect(appliquerEvenement(null, ev({ type: 'reponse', instagram: 'laveur.exemple', reponse: 'Oui' }))).toMatchObject({ creer: { statut: 'a_repondu', reponse: 'Oui' } })
+  })
+  it('un ajout remplit téléphone, ville et vrai nom s’ils manquaient', () => {
+    const e = appliquerEvenement(prospect({ nom: 'laveur.exemple' }), ev({ type: 'ajout', nom: 'Laveur Exemple', telephone: '07 11 11 11 11', ville: 'Lyon' }))
+    expect(e).toEqual({ modifier: { statut: 'en_discussion', telephone: '07 11 11 11 11', ville: 'Lyon', nom: 'Laveur Exemple' } })
+  })
+  it('range chaque étape dans son onglet', () => {
+    expect(['a_repondu', 'en_discussion', 'interesse', 'inscrit'].map(s => ongletDe(prospect({ statut: s as Prospect['statut'] }), NOW)))
+      .toEqual(['trier', 'discussion', 'interesses', 'inscrits'])
+    expect(estArchive(prospect({ statut: 'interesse', contacte_le: '2026-10-01T10:00:00Z' }), NOW)).toBe(false)
+  })
+})
