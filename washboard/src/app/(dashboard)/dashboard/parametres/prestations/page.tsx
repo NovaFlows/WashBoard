@@ -33,8 +33,9 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 // besoin lui-même (`slug={washer.slug}` plus bas) et ne le recevait pas : même requête,
 // une colonne de plus.
 // `silhouettes_vehicules` : l'interrupteur « Afficher la silhouette du véhicule » (2026-10-19).
+// `demander_type_vehicule` : l'interrupteur « Demander le type de véhicule » (2026-11-06).
 const COLONNES =
-  'id, name, slug, zone_config, base_address, silhouettes_vehicules, ' +
+  'id, name, slug, zone_config, base_address, silhouettes_vehicules, demander_type_vehicule, ' +
   'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, subscription_ends_at, created_at'
 
 export default async function PrestationsPage() {
@@ -79,6 +80,7 @@ export default async function PrestationsPage() {
           zone={washer.zone_config ?? null}
           adresseDeBase={washer.base_address ?? null}
           silhouettesVehicules={washer.silhouettes_vehicules !== false}
+          demanderTypeVehicule={washer.demander_type_vehicule !== false}
           // Liste « Plus », pour la colonne de gauche sur grand écran : `servicesCount` et
           // `resumeHoraires` sont RECALCULÉS à partir de ce que cette page lit déjà pour son
           // propre contenu (`services`, `availabilities`) — aucune requête de plus.

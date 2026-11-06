@@ -53,6 +53,8 @@ type Props = {
     refus: string | null
     onBasculer: () => void
   }
+  /** `false` : le laveur ne demande pas le type de véhicule, seul le prix principal compte. */
+  typeDemande?: boolean
   onClose: () => void
 }
 
@@ -70,7 +72,7 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
 }
 
 export default function FeuillePrestationV2({
-  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, onClose,
+  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, typeDemande = true, onClose,
 }: Props) {
   const [form, setForm] = useState(formulaireInitial)
   const [enCours, setEnCours] = useState(false)
@@ -236,6 +238,11 @@ export default function FeuillePrestationV2({
           <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
             Durée par tranches de 15 minutes, 8 h au plus.
           </p>
+          {!typeDemande && (
+            <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+              Vous ne demandez pas le type de véhicule : vos clients paient ce prix, quel que soit leur véhicule.
+            </p>
+          )}
         </div>
 
         <section className="space-y-3 border-t border-[color:var(--v2-filet)] py-5">
@@ -308,6 +315,11 @@ export default function FeuillePrestationV2({
         </section>
 
         <Repliable id="presta-prix-type" titre="Prix par type" resume={resumePrixParType(form)} ouvert={ouvert.prix} onBascule={() => basculer('prix')}>
+          {!typeDemande && (
+            <p className={`mb-2 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              Pas utilisés tant que vous ne demandez pas le type de véhicule. Ils reviennent si vous le redemandez.
+            </p>
+          )}
           {form.vehicle_types.length === 0 ? (
             <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Cochez d’abord au moins un type.</p>
           ) : (

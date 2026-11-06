@@ -6,6 +6,8 @@ import type { Service, ServiceCategory, VehicleItem } from '@/types'
 import { vehiclePrice, minVehiclePrice, hasPriceOverrides } from '@/lib/pricing'
 import { hex } from '@/lib/colorUtils'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
+import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { sansChoixDeType } from '@/lib/prestation'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
@@ -104,7 +106,7 @@ export default function StepService({ services, categories, selected, factureApr
   function typeInfo(service: Service, typeId: string): { name: string; img?: string } {
     const cat = categories.find(c => c.id === service.category_id)
     const t = cat?.types.find(tt => tt.id === typeId)
-    return { name: t?.name ?? typeId, img: VEHICLE_IMAGES[typeId] }
+    return { name: t?.name ?? VEHICLE_LABELS[typeId] ?? typeId, img: VEHICLE_IMAGES[typeId] }
   }
 
   const basketCount = Object.values(basket).reduce((sum, c) => sum + c, 0)
@@ -322,7 +324,9 @@ export default function StepService({ services, categories, selected, factureApr
       {selectedService && (
         <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Ajoutez un ou plusieurs éléments, de types différents si besoin.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">{sansChoixDeType(selectedService.vehicle_types)
+            ? 'Indiquez le nombre de véhicules.'
+            : 'Ajoutez un ou plusieurs éléments, de types différents si besoin.'}</p>
           {vehicule3D && selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null

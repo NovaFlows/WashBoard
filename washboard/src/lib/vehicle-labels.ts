@@ -11,4 +11,6 @@ export const VEHICLE_LABELS: Record<string, string> = {
   moto:          'Moto',
   scooter:       'Scooter',
   velo:          'Vélo / Trottinette',
+  // Type unique quand le laveur ne demande pas le type de véhicule (lib/prestation.ts).
+  vehicule:      'Véhicule',
 }

@@ -153,3 +153,32 @@ export function estRefusCleEtrangere(erreur: unknown): boolean {
  *  refusée, voir `ERREUR_SANS_TYPE`), donc on ne le propose pas. */
 export const ERREUR_PRESTATION_RESERVEE =
   'Impossible de supprimer cette prestation : des réservations l’utilisent. Mettez-la plutôt en veille : vos clients ne la verront plus, et ses rendez-vous et factures restent.'
+
+// ── Sans type de véhicule ──────────────────────────────────────────────────
+//
+// Demande de My Clean (2026-11-06) : ses clients ne savent pas si leur voiture est une
+// citadine ou un monospace, et abandonnent. Le laveur peut donc ne plus demander le type
+// (`washers.demander_type_vehicule = false`). Ses prestations gardent leurs types et leurs prix
+// par type en base — rallumer remet tout — mais sa page de réservation les voit avec un seul
+// type, `TYPE_UNIQUE`, au prix principal de la prestation. Le serveur n'a rien à savoir de plus :
+// `vehiclePrice` rend déjà le prix principal pour un type sans prix propre.
+
+export const TYPE_UNIQUE = 'vehicule'
+
+/** Allumé sauf `false` explicite : `null`/absent valent « on demande le type », comme avant. */
+export function demandeLeTypeDeVehicule(w: { demander_type_vehicule?: boolean | null }): boolean {
+  return w.demander_type_vehicule !== false
+}
+
+/** Les prestations telles que la page de réservation doit les proposer. */
+export function prestationsSelonLeType<T extends { vehicle_types: string[]; vehicle_price_overrides?: Record<string, number> | null }>(
+  services: T[], w: { demander_type_vehicule?: boolean | null },
+): T[] {
+  if (demandeLeTypeDeVehicule(w)) return services
+  return services.map(s => ({ ...s, vehicle_types: [TYPE_UNIQUE], vehicle_price_overrides: {} }))
+}
+
+/** Vrai si le client n'a aucun type à choisir (seul le type unique est proposé). */
+export function sansChoixDeType(types: string[]): boolean {
+  return types.length === 1 && types[0] === TYPE_UNIQUE
+}

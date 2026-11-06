@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { VEHICLE_LABELS } from './vehicle-labels'
 
 describe('VEHICLE_LABELS', () => {
-  it('contient les 12 types canoniques', () => {
-    expect(Object.keys(VEHICLE_LABELS)).toHaveLength(12)
+  it('contient les 12 types canoniques et le type unique', () => {
+    expect(Object.keys(VEHICLE_LABELS)).toHaveLength(13)
+    expect(VEHICLE_LABELS.vehicule).toBe('Véhicule')
   })
   it('expose les libellés attendus', () => {
     expect(VEHICLE_LABELS['SUV']).toBe('SUV / 4x4')

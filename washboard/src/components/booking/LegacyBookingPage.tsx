@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getBgStyle, urlVersionnee } from '@/lib/themes'
 import { reviewsForWasher } from '@/lib/googleReviews'
 import { hasFeature, quotaPrestations } from '@/lib/plan'
-import { prestationsAffichees } from '@/lib/prestation'
+import { prestationsAffichees, prestationsSelonLeType } from '@/lib/prestation'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import type { PromotionPublique } from '@/lib/promotion'
@@ -17,7 +17,7 @@ import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
 import type { CentreAutoPublic } from '@/lib/centreAuto'
 type Props = {
- washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme' | 'silhouettes_vehicules'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
+ washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme' | 'silhouettes_vehicules' | 'demander_type_vehicule'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
  plafondAtteint: boolean; facturationPrete: boolean; pixelId: string | null
  promotion?: PromotionPublique | null
@@ -163,7 +163,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à
           // choisir. Le tableau de bord la signale au laveur en rouge.
-          services={prestationsAffichees(services ?? [], quotaPrestations(washer))}
+          services={prestationsSelonLeType(prestationsAffichees(services ?? [], quotaPrestations(washer)), washer)}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
           // Plus de existingBookings/unavailabilities ici : BookingForm les
