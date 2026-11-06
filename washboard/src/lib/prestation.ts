@@ -178,6 +178,11 @@ export function prestationsSelonLeType<T extends { vehicle_types: string[]; vehi
   return services.map(s => ({ ...s, vehicle_types: [TYPE_UNIQUE], vehicle_price_overrides: {} }))
 }
 
+/** « 1 véhicule », « 2 véhicules » : le nombre, quand il n'y a pas de type à nommer. */
+export function nombreDeVehicules(n: number): string {
+  return `${n} véhicule${n > 1 ? 's' : ''}`
+}
+
 /** Vrai si le client n'a aucun type à choisir (seul le type unique est proposé). */
 export function sansChoixDeType(types: string[]): boolean {
   return types.length === 1 && types[0] === TYPE_UNIQUE

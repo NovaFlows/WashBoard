@@ -15,7 +15,7 @@ import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
 import { ConfirmationSuppression, Constat, Interrupteur, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
 import { enregistrerProfil } from '@/lib/profilApi'
-import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients } from '@/lib/prestation'
+import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients, prestationsSelonLeType } from '@/lib/prestation'
 import { PLAN_LABELS, offreCatalogueIllimite, type Plan } from '@/lib/plan'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
@@ -185,8 +185,10 @@ export function Section({
 // « Supprimer » avec sa poubelle, qui ouvre la même confirmation que le lien de la
 // feuille d'édition : une suppression reste un geste à confirmer (elle échoue d'ailleurs
 // si des réservations utilisent la prestation, et la confirmation le dit).
-function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
   service: Service
+  /** `false` : le client ne choisit pas le type, la ligne montre le prix principal seul. */
+  typeDemande: boolean
   categorie: ServiceCategory | undefined
   onOuvrir: () => void
   ouverte: boolean
@@ -194,8 +196,9 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
-  const prix = prixListe(service)
   const reservable = estReservable(service)
+  const sansType = !typeDemande && reservable
+  const prix = prixListe(sansType ? prestationsSelonLeType([service], { demander_type_vehicule: false })[0] : service)
   const enVeille = estEnVeille(service)
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
     ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
@@ -229,7 +232,7 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className={`truncate text-[15.5px] ${nom}`}>{service.name}</span>
             <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {reservable ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
+              {reservable && !sansType ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
             </span>
             {!reservable && (
               <span className="flex items-start gap-2">
@@ -582,7 +585,7 @@ export default function PrestationsV2({
                   ) : (
                     <ul className="divide-y divide-[color:var(--v2-filet)]">
                       {deLaCategorie.map(s => (
-                        <LignePrestation key={s.id} service={s} categorie={cat} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
+                        <LignePrestation key={s.id} service={s} categorie={cat} typeDemande={typeDemande} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
                       ))}
                     </ul>
                   )}
@@ -596,7 +599,7 @@ export default function PrestationsV2({
               <CarteListe>
                 <ul className="divide-y divide-[color:var(--v2-filet)]">
                   {sansCategorie.map(s => (
-                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
+                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} typeDemande={typeDemande} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
                   ))}
                 </ul>
               </CarteListe>

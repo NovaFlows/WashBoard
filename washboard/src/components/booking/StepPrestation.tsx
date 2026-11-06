@@ -7,7 +7,7 @@ import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pri
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
-import { sansChoixDeType } from '@/lib/prestation'
+import { nombreDeVehicules, sansChoixDeType } from '@/lib/prestation'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
@@ -111,6 +111,7 @@ export default function StepPrestation({ services, categories, category, onCateg
       <h3 className="font-semibold">La prestation</h3>
       <span className="text-xs text-zinc-500">{sansVehicule
         ? 'Prix selon votre véhicule'
+        : sansChoixDeType(types) ? <>Prix pour {nombreDeVehicules(vehicles.length)}</>
         : <>Prix pour {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : 'véhicules'}</>}</span>
     </div>
     <div className="divide-y divide-zinc-200/70 dark:divide-zinc-700">
