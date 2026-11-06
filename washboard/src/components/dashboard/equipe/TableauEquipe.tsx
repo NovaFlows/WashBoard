@@ -240,7 +240,7 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
             <CarteListe>
               <Ligne label="Questions des laveurs" href="/dashboard/support/questions" signal={<NonLus count={unreadTeamCount} />} />
               <Ligne label="Expéditeurs SMS" valeur={resume.expediteursEnAttente ? `${resume.expediteursEnAttente} en attente` : undefined} href="/dashboard/support/expediteurs" />
-              <Ligne label="Prospects : réponses à trier" valeur={prospects ? (prospects.aTrier ? String(prospects.aTrier) : 'Aucune') : 'À activer'} href="/dashboard/support/prospects?filtre=trier" />
+              <Ligne label="Prospects à trier" valeur={prospects ? (prospects.aTrier ? String(prospects.aTrier) : 'Aucune') : 'À activer'} href="/dashboard/support/prospects?filtre=trier" />
               <Ligne label="Prospects à rappeler" valeur={prospects?.aRappeler ? `${prospects.aRappeler} aujourd’hui` : undefined} href="/dashboard/support/prospects?filtre=discussion" />
             </CarteListe>
           </Section>

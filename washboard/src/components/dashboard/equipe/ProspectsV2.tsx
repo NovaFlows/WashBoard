@@ -23,7 +23,7 @@ const sansAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').to
 const majuscule = (s: string) => s.replace(/^./, c => c.toUpperCase())
 
 const VIDE: Record<Onglet, string> = {
-  trier: 'Aucune réponse à trier. Elles arrivent ici quand un prospect répond au message Instagram.',
+  trier: 'Rien à trier. Un prospect arrive ici quand il a vu le message Instagram ou qu’il y a répondu.',
   discussion: 'Personne en discussion. Ajoutez ceux que vous avez eus au téléphone avec « Ajouter ».',
   interesses: 'Aucun prospect intéressé pour l’instant.',
   contactes: 'Aucun message envoyé ces 30 derniers jours.',
@@ -133,7 +133,7 @@ function FicheProspect({ p, now, onClose }: { p: Prospect; now: Date; onClose: (
           </div>
         )}
 
-        {p.statut === 'a_repondu' && (
+        {(p.statut === 'a_repondu' || p.statut === 'a_vu') && (
           <div className="flex gap-2.5">
             <button type="button" disabled={!!enCours} onClick={() => void changer({ statut: 'interesse' }, 'interesse', true)} className={`${BOUTON} flex-1 text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
               {enCours === 'interesse' ? '…' : 'Intéressé'}
@@ -304,6 +304,9 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
     { titre: 'Demain', liste: visibles.filter(p => p.relancer_le === demain) },
     { titre: 'Les prochains jours', liste: visibles.filter(p => p.relancer_le && p.relancer_le > demain) },
     { titre: 'Sans date de rappel', liste: visibles.filter(p => !p.relancer_le) },
+  ].filter(j => j.liste.length > 0) : !recherche.trim() && onglet === 'trier' ? [
+    { titre: 'Ont répondu', liste: visibles.filter(p => p.statut === 'a_repondu') },
+    { titre: 'Ont vu, sans répondre', liste: visibles.filter(p => p.statut === 'a_vu') },
   ].filter(j => j.liste.length > 0) : null
 
   const detail = (p: Prospect): string => {
@@ -312,7 +315,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
       const quand = p.relancer_le ? (p.relancer_le < auj ? `En retard depuis ${dateJour(p.relancer_le)}` : p.relancer_le > demain ? majuscule(dateJour(p.relancer_le)) : null) : null
       return [quand, p.notes?.split('\n')[0]].filter(Boolean).join(' · ') || (p.reponse ? `« ${p.reponse} »` : 'Sans note')
     }
-    if (o === 'trier') return p.reponse ? `« ${p.reponse} »` : 'Réponse à lire dans la messagerie'
+    if (o === 'trier') return p.statut === 'a_vu' ? `A vu le message · envoyé ${p.contacte_le ? ilYa(p.contacte_le, now) : ''}`.trim() : p.reponse ? `« ${p.reponse} »` : 'Réponse à lire dans la messagerie'
     if (o === 'contactes' || o === 'archives') return p.contacte_le ? `Message envoyé ${ilYa(p.contacte_le, now)}` : 'Message envoyé'
     return `${LIBELLE_STATUT[p.statut]} · ${ilYa(p.updated_at, now)}`
   }
@@ -379,7 +382,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
           )}
 
           {onglet === 'trier' && !recherche.trim() && visibles.length > 0 && (
-            <p className={`px-0.5 text-[12.5px] leading-snug ${GRIS}`}>Ouvrez une réponse et choisissez « Intéressé » ou « Pas intéressé ». La réponse se lit en entier dans la messagerie @washboard.fr.</p>
+            <p className={`px-0.5 text-[12.5px] leading-snug ${GRIS}`}>Ouvrez un prospect et choisissez « Intéressé » ou « Pas intéressé ». Les réponses se lisent en entier dans la messagerie @washboard.fr.</p>
           )}
         </>
       )}

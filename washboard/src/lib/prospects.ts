@@ -9,11 +9,12 @@ import { aujourdhuiParis } from '@/lib/suiviAppels'
 // automatiquement. Les « non » restent, rangés à part — ils servent aussi à ne
 // jamais recontacter quelqu'un qui a refusé.
 
-export const STATUTS = ['contacte', 'a_repondu', 'interesse', 'en_discussion', 'pas_interesse', 'inscrit'] as const
+export const STATUTS = ['contacte', 'a_vu', 'a_repondu', 'interesse', 'en_discussion', 'pas_interesse', 'inscrit'] as const
 export type StatutProspect = (typeof STATUTS)[number]
 
 export const LIBELLE_STATUT: Record<StatutProspect, string> = {
   contacte: 'Contacté',
+  a_vu: 'A vu',
   a_repondu: 'A répondu',
   interesse: 'Intéressé',
   en_discussion: 'En discussion',
@@ -113,14 +114,16 @@ export function validerSaisie(corps: unknown, creation: boolean): { erreur: stri
 export type Evenement =
   | { type: 'contacte'; instagram: string; nom: string | null; message: string | null; ville: string | null; le: string }
   | { type: 'reponse'; instagram: string; reponse: string | null; le: string }
+  | { type: 'vu'; instagram: string; le: string }
   | { type: 'ajout'; instagram: string | null; nom: string; telephone: string | null; ville: string | null; notes: string | null; relancer_le: string | null; statut: StatutProspect }
 
 export function validerEvenement(v: unknown, now: Date = new Date()): { erreur: string } | { evenement: Evenement } {
   const e = (v ?? {}) as Record<string, unknown>
-  if (e.type === 'contacte' || e.type === 'reponse') {
+  if (e.type === 'contacte' || e.type === 'reponse' || e.type === 'vu') {
     const instagram = normaliserInstagram(e.instagram)
     if (!instagram) return { erreur: 'instagram manquant ou invalide' }
     const le = horodatage(e.le, now)
+    if (e.type === 'vu') return { evenement: { type: 'vu', instagram, le } }
     return e.type === 'contacte'
       ? { evenement: { type: 'contacte', instagram, nom: texte(e.nom, LONGUEURS.nom), message: texte(e.message, LONGUEURS.texte), ville: texte(e.ville, LONGUEURS.ville), le } }
       : { evenement: { type: 'reponse', instagram, reponse: texte(e.reponse, LONGUEURS.texte), le } }
@@ -139,7 +142,7 @@ export function validerEvenement(v: unknown, now: Date = new Date()): { erreur: 
     if (!d.ok) return { erreur: 'relancer_le invalide (AAAA-MM-JJ)' }
     return { evenement: { type: 'ajout', instagram, nom, telephone: texte(e.telephone, LONGUEURS.telephone), ville: texte(e.ville, LONGUEURS.ville), notes: texte(e.notes, LONGUEURS.texte), relancer_le: d.valeur, statut: statut as StatutProspect } }
   }
-  return { erreur: 'type inconnu (contacte, reponse ou ajout)' }
+  return { erreur: 'type inconnu (contacte, vu, reponse ou ajout)' }
 }
 
 export type Ligne = Omit<Prospect, 'id' | 'created_at' | 'updated_at'>
@@ -160,13 +163,19 @@ export function appliquerEvenement(existant: Prospect | null, ev: Evenement): Ef
     return Object.keys(m).length ? { modifier: m } : { rien: 'déjà connu' }
   }
 
+  if (ev.type === 'vu') {
+    // A vu le message sans répondre : à trier. Ne touche à rien d'autre.
+    if (!existant) return { creer: { ...vide, instagram: ev.instagram, nom: ev.instagram, statut: 'a_vu' } }
+    return existant.statut === 'contacte' ? { modifier: { statut: 'a_vu' } } : { rien: 'étape déjà au-delà de « A vu »' }
+  }
+
   if (ev.type === 'reponse') {
     if (!existant) return { creer: { ...vide, instagram: ev.instagram, nom: ev.instagram, statut: 'a_repondu', reponse: ev.reponse, repondu_le: ev.le } }
     if (existant.repondu_le && Date.parse(existant.repondu_le) >= Date.parse(ev.le) && existant.reponse === ev.reponse) return { rien: 'réponse déjà connue' }
     const m: Partial<Ligne> = { repondu_le: ev.le }
     if (ev.reponse) m.reponse = ev.reponse
-    // Un contacté qui répond, ou un « non » qui revient : à trier de nouveau.
-    if (existant.statut === 'contacte' || existant.statut === 'pas_interesse') m.statut = 'a_repondu'
+    // Un contacté (vu ou non) qui répond, ou un « non » qui revient : à trier de nouveau.
+    if (existant.statut === 'contacte' || existant.statut === 'a_vu' || existant.statut === 'pas_interesse') m.statut = 'a_repondu'
     return { modifier: m }
   }
 
@@ -205,6 +214,7 @@ export function estArchive(p: Prospect, now: Date): boolean {
 export function ongletDe(p: Prospect, now: Date): Onglet {
   switch (p.statut) {
     case 'a_repondu': return 'trier'
+    case 'a_vu': return 'trier'
     case 'en_discussion': return 'discussion'
     case 'interesse': return 'interesses'
     case 'pas_interesse': return 'non'
@@ -221,7 +231,7 @@ export function rappelDu(p: Prospect, now: Date): boolean {
 export function resumerProspects(prospects: Prospect[], now: Date) {
   return {
     total: prospects.length,
-    aTrier: prospects.filter(p => p.statut === 'a_repondu').length,
+    aTrier: prospects.filter(p => p.statut === 'a_repondu' || p.statut === 'a_vu').length,
     aRappeler: prospects.filter(p => rappelDu(p, now)).length,
   }
 }

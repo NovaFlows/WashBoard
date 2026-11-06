@@ -61,6 +61,12 @@ describe('appliquerEvenement', () => {
     expect(e).toMatchObject({ modifier: { reponse: 'Rappelle-moi' } })
     expect((e as { modifier: object }).modifier).not.toHaveProperty('statut')
   })
+  it('« vu » fait passer un contacté à « A vu », sans faire reculer les autres', () => {
+    expect(appliquerEvenement(prospect(), ev({ type: 'vu', instagram: 'laveur.exemple' }))).toEqual({ modifier: { statut: 'a_vu' } })
+    expect(appliquerEvenement(prospect({ statut: 'a_repondu' }), ev({ type: 'vu', instagram: 'laveur.exemple' }))).toHaveProperty('rien')
+    expect(appliquerEvenement(prospect({ statut: 'a_vu' }), ev({ type: 'reponse', instagram: 'laveur.exemple', reponse: 'Ok' }))).toMatchObject({ modifier: { statut: 'a_repondu' } })
+    expect(ongletDe(prospect({ statut: 'a_vu' }), NOW)).toBe('trier')
+  })
   it('la même réponse vue deux fois ne change rien', () => {
     const p = prospect({ statut: 'a_repondu', reponse: 'Oui', repondu_le: '2026-11-06T11:00:00.000Z' })
     expect(appliquerEvenement(p, ev({ type: 'reponse', instagram: 'laveur.exemple', reponse: 'Oui', le: '2026-11-06T10:00:00Z' }))).toHaveProperty('rien')
@@ -93,11 +99,12 @@ describe('rangement', () => {
   it('compte les réponses à trier et les rappels dus', () => {
     const liste = [
       prospect({ statut: 'a_repondu' }),
+      prospect({ statut: 'a_vu' }),
       prospect({ statut: 'en_discussion', relancer_le: '2026-11-05' }),
       prospect({ statut: 'interesse', relancer_le: '2026-11-06' }),
       prospect({ statut: 'en_discussion', relancer_le: '2026-11-08' }),
     ]
-    expect(rappelDu(liste[1], NOW)).toBe(true)
-    expect(resumerProspects(liste, NOW)).toEqual({ total: 4, aTrier: 1, aRappeler: 2 })
+    expect(rappelDu(liste[2], NOW)).toBe(true)
+    expect(resumerProspects(liste, NOW)).toEqual({ total: 5, aTrier: 2, aRappeler: 2 })
   })
 })

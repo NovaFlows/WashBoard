@@ -8,7 +8,7 @@ import { COLONNES_PROSPECT } from '@/lib/prospectsDonnees'
 
 // Entrée des agents dans la zone Prospects (2026-11-06) :
 //   - l'agent prospection : « contacte » après chaque message Instagram envoyé,
-//     « reponse » quand il voit qu'un prospect a répondu ;
+//     « vu » quand le prospect l'a vu sans répondre, « reponse » quand il a répondu ;
 //   - l'agent suivi client : « ajout » d'un prospect qu'Alexandre a eu au téléphone.
 //
 // Authentification : « Authorization: Bearer <PROSPECTION_JETON> ». Ce jeton ne sait
@@ -46,6 +46,8 @@ async function traiter(admin: Admin, ev: Evenement): Promise<{ ok: true; effet: 
     if (tableAbsente(error)) return { ok: false, erreur: 'table absente', table: true }
     // Deux passages simultanés sur le même compte : le second retombe sur le premier.
     if ((error as { code?: string }).code === '23505') return { ok: true, effet: 'déjà créé' }
+    // Contrainte de la colonne statut pas encore mise à jour en base (étape « a_vu »).
+    if ((error as { code?: string }).code === '23514') return { ok: false, erreur: 'étape refusée par la base (contrainte statut à mettre à jour)' }
     logger.error('prospects.flux.write_failed', { type: ev.type }, error)
     return { ok: false, erreur: 'écriture impossible' }
   }

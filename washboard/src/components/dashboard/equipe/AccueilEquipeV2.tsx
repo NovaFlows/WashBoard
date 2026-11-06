@@ -37,7 +37,7 @@ export default function AccueilEquipeV2({ resume, email, laveurs, maintenant, pr
 
       <Section titre="Prospects">
         <CarteListe>
-          <Ligne label="Réponses à trier" valeur={prospects ? (prospects.aTrier ? String(prospects.aTrier) : 'Aucune') : 'À activer'} href="/dashboard/support/prospects?filtre=trier" />
+          <Ligne label="Prospects à trier" valeur={prospects ? (prospects.aTrier ? String(prospects.aTrier) : 'Aucune') : 'À activer'} href="/dashboard/support/prospects?filtre=trier" />
           <Ligne label="Prospects à rappeler" valeur={prospects ? (prospects.aRappeler ? `${prospects.aRappeler} aujourd’hui` : 'Personne') : undefined} href="/dashboard/support/prospects?filtre=discussion" />
           <Ligne label="Tous les prospects" valeur={prospects ? String(prospects.total) : undefined} href="/dashboard/support/prospects" />
         </CarteListe>
