@@ -16,6 +16,10 @@ import { FacturationCard } from '@/components/dashboard/FacturationCard'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
 import { CHOIX_LIEUX, ReglagesCentreAutoSchema, type LieuxProposes } from '@/lib/centreAuto'
 import { enregistrerCentreAuto } from '@/lib/profilApi'
+import {
+  UNITES_DEPLACEMENT, ajouterPalier, libellePalier, seuilPalier, unitePaliers,
+  type PalierDeplacement, type UniteDeplacement,
+} from '@/lib/profil'
 
 // Réglages, présentation v1 — le site (navigateur classique, mobile ou
 // ordinateur) affiche ce contenu SANS EXCEPTION, décision d'Alexandre du
@@ -101,8 +105,17 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const [phone, setPhone] = useState(washer.phone ?? '')
   const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
   const [baseAddress, setBaseAddress] = useState(washer.base_address ?? '')
-  const [tiers, setTiers] = useState<{ max_minutes: number; fee: number }[]>(washer.travel_fee_tiers ?? [])
-  const [tierDraft, setTierDraft] = useState({ max_minutes: '', fee: '' })
+  // Une liste par unité, comme la feuille mobile (`FeuilleDeplacementV2`) : seule celle de l'unité
+  // choisie est enregistrée.
+  const [uniteTrajet, setUniteTrajet] = useState<UniteDeplacement>(unitePaliers(washer.travel_fee_tiers))
+  const [tiersParUnite, setTiersParUnite] = useState<Record<UniteDeplacement, PalierDeplacement[]>>(() => ({
+    minutes: unitePaliers(washer.travel_fee_tiers) === 'minutes' ? washer.travel_fee_tiers ?? [] : [],
+    km: unitePaliers(washer.travel_fee_tiers) === 'km' ? washer.travel_fee_tiers ?? [] : [],
+  }))
+  const tiers = tiersParUnite[uniteTrajet]
+  const setTiers = (maj: (l: PalierDeplacement[]) => PalierDeplacement[]) =>
+    setTiersParUnite(t => ({ ...t, [uniteTrajet]: maj(t[uniteTrajet]) }))
+  const [tierDraft, setTierDraft] = useState({ seuil: '', fee: '' })
   const [tierErr, setTierErr] = useState<string | null>(null)
   const [travelFeeMode, setTravelFeeMode] = useState<'base' | 'previous'>(washer.travel_fee_mode ?? 'base')
   const [reviewEnabled, setReviewEnabled] = useState(washer.review_enabled ?? true)
@@ -168,17 +181,15 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const canFacturer = hasFeature(washer, 'facturation')
 
   function addTier() {
-    const mins = parseInt(tierDraft.max_minutes)
-    const fee  = parseFloat(tierDraft.fee)
-    setTierErr(null)
-    if (isNaN(mins) || mins <= 0) { setTierErr('La durée doit être un nombre de minutes positif'); return }
-    if (isNaN(fee) || fee < 0) { setTierErr('Le frais doit être positif ou nul'); return }
-    setTiers(prev => [...prev.filter(t => t.max_minutes !== mins), { max_minutes: mins, fee }].sort((a, b) => a.max_minutes - b.max_minutes))
-    setTierDraft({ max_minutes: '', fee: '' })
+    const r = ajouterPalier(tiers, tierDraft.seuil, tierDraft.fee, uniteTrajet)
+    setTierErr(r.erreur)
+    if (r.erreur) return
+    setTiers(() => r.tiers)
+    setTierDraft({ seuil: '', fee: '' })
   }
 
-  function removeTier(mins: number) {
-    setTiers(prev => prev.filter(t => t.max_minutes !== mins))
+  function removeTier(seuil: number) {
+    setTiers(prev => prev.filter(t => seuilPalier(t) !== seuil))
   }
 
   async function saveProfile(e: React.FormEvent) {
@@ -326,19 +337,36 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 
           <SectionVerrouillee verrouille={!canTrajets} planLabel={requiredPlanLabel('frais_deplacement')}>
           <div>
-            <label className={labelClass}>Frais de déplacement par durée</label>
+            <label className={labelClass}>Frais de déplacement</label>
+            <div className="flex flex-wrap gap-2 mb-3" role="group" aria-label="Unité des paliers">
+              {UNITES_DEPLACEMENT.map(u => (
+                <button
+                  key={u.valeur}
+                  type="button"
+                  aria-pressed={uniteTrajet === u.valeur}
+                  onClick={() => { setUniteTrajet(u.valeur); setTierDraft(d => ({ ...d, seuil: '' })); setTierErr(null) }}
+                  className={`px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-colors ${
+                    uniteTrajet === u.valeur
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300'
+                      : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  Selon {u.libelle.charAt(0).toLowerCase() + u.libelle.slice(1)}
+                </button>
+              ))}
+            </div>
             <div className="space-y-2 mb-3">
               {tiers.length === 0 && (
                 <p className="text-xs text-slate-400 dark:text-slate-500">Aucun frais de déplacement configuré.</p>
               )}
               {tiers.map(t => (
-                <div key={t.max_minutes} className="flex items-center gap-2 text-sm">
+                <div key={seuilPalier(t)} className="flex items-center gap-2 text-sm">
                   <span className="flex-1 text-slate-700 dark:text-slate-300">
-                    Jusqu&apos;à {t.max_minutes} min → <strong>{t.fee}€</strong>
+                    {libellePalier(t)} → <strong>{t.fee}€</strong>
                   </span>
                   <button
                     type="button"
-                    onClick={() => removeTier(t.max_minutes)}
+                    onClick={() => removeTier(seuilPalier(t))}
                     className="text-red-400 hover:text-red-600 dark:hover:text-red-300 text-xs px-2 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     Supprimer
@@ -348,13 +376,13 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             </div>
             <div className="flex flex-wrap gap-2 items-end">
               <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Durée max (min)</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{uniteTrajet === 'km' ? 'Distance max (km)' : 'Durée max (min)'}</p>
                 <input
                   type="number"
                   min={1}
-                  placeholder="30"
-                  value={tierDraft.max_minutes}
-                  onChange={e => setTierDraft(d => ({ ...d, max_minutes: e.target.value }))}
+                  placeholder={uniteTrajet === 'km' ? '20' : '30'}
+                  value={tierDraft.seuil}
+                  onChange={e => setTierDraft(d => ({ ...d, seuil: e.target.value }))}
                   className={`${inputClass} w-28`}
                 />
               </div>
@@ -380,7 +408,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             </div>
             {tierErr && <p className="text-xs text-red-500 mt-2">{tierErr}</p>}
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-              Les frais sont calculés automatiquement selon la durée de trajet.
+              Les frais sont calculés automatiquement selon {uniteTrajet === 'km' ? 'la distance' : 'la durée'} du trajet.
             </p>
           </div>
 

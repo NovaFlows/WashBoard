@@ -27,7 +27,7 @@ export type Washer = {
    *  Prestations, allumé par défaut pour tous, 2026-10-19). Seul `false` l'éteint : `undefined`
    *  tant que la colonne n'existe pas en base, `null` — les deux valent « affiché ». */
   silhouettes_vehicules?: boolean | null
-  travel_fee_tiers: { max_minutes: number; fee: number }[]
+  travel_fee_tiers: { max_minutes?: number; max_km?: number; fee: number }[]
   base_address: string | null
   travel_fee_mode: 'base' | 'previous'
   background_theme: string | null
@@ -203,7 +203,7 @@ export type BookingFormData = {
   vehicles_detail?: VehicleItem[]
   selected_addons?: ServiceAddon[]
   travel_fee?: number
-  travel_fee_tiers?: { max_minutes: number; fee: number }[]
+  travel_fee_tiers?: { max_minutes?: number; max_km?: number; fee: number }[]
   address: string
   /** À domicile (par défaut) ou au centre auto du laveur (lib/centreAuto.ts). */
   lieu?: 'domicile' | 'centre'

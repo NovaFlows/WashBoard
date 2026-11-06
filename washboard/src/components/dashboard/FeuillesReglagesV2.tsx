@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { Feuille, BOUTON, CHAMP, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import { Feuille, BOUTON, CHAMP, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat, ConfirmationSuppression } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import { CarteListe } from '@/components/dashboard/ParametresFormV2'
 import { envoyerSmsTest, actionCompte } from '@/lib/profilApi'
 import { confirmerEnvoi } from '@/lib/confirmationEnvoi'
 import {
-  MODES_DEPLACEMENT, ajouterPalier, joursAvantPurge, nettoyerExpediteur, nomConfirme, resumeTelephone,
-  type ModeDeplacement, type PalierDeplacement,
+  MODES_DEPLACEMENT, UNITES_DEPLACEMENT, ajouterPalier, joursAvantPurge, libellePalier, nettoyerExpediteur,
+  nomConfirme, resumeTelephone, seuilPalier, unitePaliers,
+  type ModeDeplacement, type PalierDeplacement, type UniteDeplacement,
 } from '@/lib/profil'
 
 // Feuilles du bas des réglages qui n'existaient que sur l'ancien écran « Tous les réglages »
@@ -32,20 +33,29 @@ export function FeuilleDeplacementV2({
   onEnregistrer: Enregistrer<{ travel_fee_tiers: PalierDeplacement[]; travel_fee_mode: ModeDeplacement }>
   onClose: () => void
 }) {
-  const [liste, setListe] = useState(paliers)
+  const [unite, setUnite] = useState<UniteDeplacement>(unitePaliers(paliers))
+  // Une liste par unité : passer aux km puis revenir aux minutes rend les paliers d'avant.
+  // Seule celle de l'unité choisie est enregistrée.
+  const [listes, setListes] = useState<Record<UniteDeplacement, PalierDeplacement[]>>(() => ({
+    minutes: unitePaliers(paliers) === 'minutes' ? paliers : [],
+    km: unitePaliers(paliers) === 'km' ? paliers : [],
+  }))
+  const liste = listes[unite]
+  const setListe = (maj: (l: PalierDeplacement[]) => PalierDeplacement[]) => setListes(ls => ({ ...ls, [unite]: maj(ls[unite]) }))
+  const abrege = UNITES_DEPLACEMENT.find(u => u.valeur === unite)!.abrege
   const [choix, setChoix] = useState(mode)
-  const [minutes, setMinutes] = useState('')
+  const [seuil, setSeuil] = useState('')
   const [frais, setFrais] = useState('')
   const [erreurPalier, setErreurPalier] = useState<string | null>(null)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
   function ajouter() {
-    const r = ajouterPalier(liste, minutes, frais)
+    const r = ajouterPalier(liste, seuil, frais, unite)
     setErreurPalier(r.erreur)
     if (r.erreur) return
-    setListe(r.tiers)
-    setMinutes('')
+    setListe(() => r.tiers)
+    setSeuil('')
     setFrais('')
   }
 
@@ -54,12 +64,12 @@ export function FeuilleDeplacementV2({
     if (enCours) return
     // Un palier tapé mais pas encore ajouté : on le prend, plutôt que de le perdre en silence.
     let final = liste
-    if (minutes.trim() || frais.trim()) {
-      const r = ajouterPalier(liste, minutes, frais)
+    if (seuil.trim() || frais.trim()) {
+      const r = ajouterPalier(liste, seuil, frais, unite)
       if (r.erreur) { setErreurPalier(r.erreur); return }
       final = r.tiers
-      setListe(final)
-      setMinutes(''); setFrais('')
+      setListe(() => final)
+      setSeuil(''); setFrais('')
     }
     setErreur(null)
     setEnCours(true)
@@ -74,7 +84,7 @@ export function FeuilleDeplacementV2({
   return (
     <Feuille
       titre="Frais de déplacement"
-      sousTitre="Facturés selon la durée du trajet jusqu’au client."
+      sousTitre="Facturés selon la durée ou la distance du trajet jusqu’au client."
       verrou={paliers.length === 0 ? 'frais_deplacement' : undefined}
       onClose={onClose}
       pied={
@@ -85,6 +95,20 @@ export function FeuilleDeplacementV2({
       }
     >
       <form id="reglage-deplacement" onSubmit={soumettre} noValidate>
+        <Bloc titre="Calculés selon">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Unité des paliers">
+            {UNITES_DEPLACEMENT.map(u => (
+              <button
+                key={u.valeur} type="button" aria-pressed={unite === u.valeur}
+                onClick={() => { setUnite(u.valeur); setSeuil(''); setErreurPalier(null) }}
+                className={puce(unite === u.valeur)} style={PRESSION}
+              >
+                {u.libelle}
+              </button>
+            ))}
+          </div>
+        </Bloc>
+
         <Bloc titre="Paliers">
           {liste.length === 0 ? (
             <p className={`text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -94,14 +118,14 @@ export function FeuilleDeplacementV2({
             <CarteListe>
               <ul className="divide-y divide-[color:var(--v2-filet)]">
                 {liste.map(p => (
-                  <li key={p.max_minutes} className="flex min-h-[52px] items-center gap-3 pl-4 pr-1">
+                  <li key={seuilPalier(p)} className="flex min-h-[52px] items-center gap-3 pl-4 pr-1">
                     <span className={`min-w-0 flex-1 text-[15px] ${corps}`}>
-                      Jusqu’à {p.max_minutes} min <span className="text-[color:var(--v2-color-gris)]">→</span>{' '}
+                      {libellePalier(p)} <span className="text-[color:var(--v2-color-gris)]">→</span>{' '}
                       <span className={`${corpsFort} tabular-nums`}>{euros(p.fee)}</span>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setListe(l => l.filter(x => x.max_minutes !== p.max_minutes))}
+                      onClick={() => setListe(l => l.filter(x => seuilPalier(x) !== seuilPalier(p)))}
                       className={`flex h-11 shrink-0 items-center px-3 text-[13.5px] ${corpsFort}`}
                       style={{ color: 'var(--v2-color-rouge)' }}
                     >
@@ -117,10 +141,10 @@ export function FeuilleDeplacementV2({
         <Bloc titre="Ajouter un palier">
           <div className="flex items-end gap-2">
             <label className="min-w-0 flex-1">
-              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">Trajet jusqu’à (min)</span>
+              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">Trajet jusqu’à ({abrege})</span>
               <input
-                type="number" inputMode="numeric" min={1} placeholder="30" value={minutes}
-                onChange={e => { setMinutes(e.target.value); setErreurPalier(null) }} onKeyDown={entree}
+                type="number" inputMode="numeric" min={1} placeholder={unite === 'km' ? '20' : '30'} value={seuil}
+                onChange={e => { setSeuil(e.target.value); setErreurPalier(null) }} onKeyDown={entree}
                 className={CHAMP}
               />
             </label>

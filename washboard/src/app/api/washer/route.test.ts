@@ -426,6 +426,19 @@ describe('PATCH /api/washer — bornage des valeurs numériques', () => {
     ] })
     expect(updates[0].travel_fee_tiers).toEqual([{ max_minutes: 15, fee: 5 }])
   })
+
+  it('accepte des paliers au km', async () => {
+    plan.washer = PRO
+    await patch({ travel_fee_tiers: [{ max_km: 10, fee: 0 }, { max_km: 0, fee: 5 }, { max_km: 25, fee: 15 }] })
+    expect(updates[0].travel_fee_tiers).toEqual([{ max_km: 10, fee: 0 }, { max_km: 25, fee: 15 }])
+  })
+
+  it('refuse un mélange de paliers en minutes et en km', async () => {
+    plan.washer = PRO
+    const { res } = await patch({ travel_fee_tiers: [{ max_minutes: 15, fee: 5 }, { max_km: 20, fee: 10 }] })
+    expect(res.status).toBe(400)
+    expect(updates).toHaveLength(0)
+  })
 })
 
 describe('PATCH /api/washer — réservation le jour même', () => {

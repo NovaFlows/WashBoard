@@ -10,22 +10,22 @@ const tiers = [
 
 describe('pickTravelFee', () => {
   it('renvoie 0 sans palier', () => {
-    expect(pickTravelFee([], 20)).toBe(0)
+    expect(pickTravelFee([], { minutes: 20, km: 0 })).toBe(0)
   })
 
   it('prend le 1er palier qui couvre la durée', () => {
-    expect(pickTravelFee(tiers, 10)).toBe(5)   // <= 15
-    expect(pickTravelFee(tiers, 20)).toBe(10)  // <= 30
-    expect(pickTravelFee(tiers, 45)).toBe(20)  // <= 60
+    expect(pickTravelFee(tiers, { minutes: 10, km: 0 })).toBe(5)   // <= 15
+    expect(pickTravelFee(tiers, { minutes: 20, km: 0 })).toBe(10)  // <= 30
+    expect(pickTravelFee(tiers, { minutes: 45, km: 0 })).toBe(20)  // <= 60
   })
 
   it('inclut la borne (durée == max_minutes)', () => {
-    expect(pickTravelFee(tiers, 15)).toBe(5)
-    expect(pickTravelFee(tiers, 30)).toBe(10)
+    expect(pickTravelFee(tiers, { minutes: 15, km: 0 })).toBe(5)
+    expect(pickTravelFee(tiers, { minutes: 30, km: 0 })).toBe(10)
   })
 
   it('au-delà du dernier palier, applique le frais le plus élevé', () => {
-    expect(pickTravelFee(tiers, 120)).toBe(20)
+    expect(pickTravelFee(tiers, { minutes: 120, km: 0 })).toBe(20)
   })
 
   it('trie les paliers même fournis dans le désordre', () => {
@@ -34,8 +34,16 @@ describe('pickTravelFee', () => {
       { max_minutes: 15, fee: 5 },
       { max_minutes: 30, fee: 10 },
     ]
-    expect(pickTravelFee(messy, 10)).toBe(5)
-    expect(pickTravelFee(messy, 200)).toBe(20)
+    expect(pickTravelFee(messy, { minutes: 10, km: 0 })).toBe(5)
+    expect(pickTravelFee(messy, { minutes: 200, km: 0 })).toBe(20)
+  })
+
+  it('paliers au km : se règle sur la distance, pas sur la durée', () => {
+    const km = [{ max_km: 10, fee: 0 }, { max_km: 25, fee: 15 }, { max_km: 50, fee: 30 }]
+    expect(pickTravelFee(km, { minutes: 90, km: 8 })).toBe(0)
+    expect(pickTravelFee(km, { minutes: 5, km: 25 })).toBe(15)
+    expect(pickTravelFee(km, { minutes: 5, km: 25.4 })).toBe(30)
+    expect(pickTravelFee(km, { minutes: 5, km: 300 })).toBe(30)
   })
 })
 
@@ -93,6 +101,24 @@ describe('computeTravelFee', () => {
     }))
     const fee = await computeTravelFee(sb, 'w1', 'dest', '2026-07-01T10:00:00Z')
     expect(fee).toBe(10)
+  })
+
+  it('paliers au km : applique le palier selon la distance Google Maps', async () => {
+    const km = [{ max_km: 10, fee: 5 }, { max_km: 30, fee: 12 }]
+    const sb = fakeSupabase({ washer: { travel_fee_tiers: km, base_address: '1 rue A', travel_fee_mode: 'base' } })
+    // 18,2 km en 12 min → palier <= 30 km → 12, même si la durée tomberait sous un seuil de 10
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: async () => ({ rows: [{ elements: [{ duration: { value: 12 * 60 }, distance: { value: 18200 } }] }] }),
+    }))
+    expect(await computeTravelFee(sb, 'w1', 'dest', '2026-07-01T10:00:00Z')).toBe(12)
+  })
+
+  it('paliers au km sans distance dans la réponse Google : 0, sans deviner', async () => {
+    const sb = fakeSupabase({ washer: { travel_fee_tiers: [{ max_km: 10, fee: 5 }], base_address: '1 rue A', travel_fee_mode: 'base' } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: async () => ({ rows: [{ elements: [{ duration: { value: 12 * 60 } }] }] }),
+    }))
+    expect(await computeTravelFee(sb, 'w1', 'dest', '2026-07-01T10:00:00Z')).toBe(0)
   })
 
   it('mode previous : part de l’adresse du RDV précédent', async () => {

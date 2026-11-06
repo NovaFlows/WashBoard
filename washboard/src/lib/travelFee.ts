@@ -1,17 +1,17 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getMapsApiKey } from '@/lib/googleMaps'
 import { logger } from '@/lib/logger'
+import { seuilPalier, unitePaliers, type PalierDeplacement } from '@/lib/profil'
 
-type Tier = { max_minutes: number; fee: number }
-
-/** Sélectionne le frais de déplacement selon la durée de trajet (en minutes).
- *  Prend le 1er palier dont max_minutes >= durée ; au-delà, le palier le plus élevé.
- *  Fonction pure (testable). Renvoie 0 si aucun palier.
+/** Sélectionne le frais de déplacement selon le trajet : durée (paliers `max_minutes`) ou
+ *  distance (paliers `max_km`). Prend le 1er palier dont le seuil >= trajet ; au-delà, le
+ *  palier le plus élevé. Fonction pure (testable). Renvoie 0 si aucun palier.
  */
-export function pickTravelFee(tiers: Tier[], durationMin: number): number {
+export function pickTravelFee(tiers: PalierDeplacement[], trajet: { minutes: number; km: number }): number {
   if (!tiers || tiers.length === 0) return 0
-  const sorted = [...tiers].sort((a, b) => a.max_minutes - b.max_minutes)
-  const matching = sorted.find(t => durationMin <= t.max_minutes)
+  const valeur = unitePaliers(tiers) === 'km' ? trajet.km : trajet.minutes
+  const sorted = [...tiers].sort((a, b) => seuilPalier(a) - seuilPalier(b))
+  const matching = sorted.find(t => valeur <= seuilPalier(t))
   return matching ? matching.fee : (sorted[sorted.length - 1]?.fee ?? 0)
 }
 
@@ -89,7 +89,7 @@ export async function computeTravelFee(
   // sur chaque réservation pendant la panne de facturation Google (2026-08-26).
   if (errWasher) logger.error('travelFee.washer.read_failed', { washerId }, errWasher)
 
-  const tiers: Tier[] = washer?.travel_fee_tiers ?? []
+  const tiers: PalierDeplacement[] = washer?.travel_fee_tiers ?? []
   const baseAddr: string | null = washer?.base_address ?? null
   const mode: 'base' | 'previous' = washer?.travel_fee_mode ?? 'base'
 
@@ -102,17 +102,20 @@ export async function computeTravelFee(
     const apiKey = getMapsApiKey()
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destinationAddress)}&mode=driving&key=${apiKey}`
     const gmData = await (await fetch(url)).json()
-    const durationSec = gmData?.rows?.[0]?.elements?.[0]?.duration?.value
+    const element = gmData?.rows?.[0]?.elements?.[0]
+    const durationSec = element?.duration?.value
+    const distanceM = element?.distance?.value
 
-    if (typeof durationSec !== 'number') {
+    // Seule la mesure qui sert aux paliers est exigée.
+    const mesure = unitePaliers(tiers) === 'km' ? distanceM : durationSec
+    if (typeof mesure !== 'number') {
       // Cas vecu pendant la panne de facturation Google : les frais tombaient
       // silencieusement a 0 sur chaque reservation.
       logger.error('travelFee.no_duration', { washerId, status: gmData?.status ?? null })
       return 0
     }
 
-    const durationMin = durationSec / 60
-    return pickTravelFee(tiers, durationMin)
+    return pickTravelFee(tiers, { minutes: (durationSec ?? 0) / 60, km: (distanceM ?? 0) / 1000 })
   } catch (e) {
     logger.error('travelFee.distance_matrix_failed', { washerId }, e)
     return 0
