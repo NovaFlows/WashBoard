@@ -70,7 +70,10 @@ passage, `envoyer.ps1` transmet les messages partis et les réponses vues à l'a
 (Équipe › Prospects), par `POST https://www.washboard.fr/api/prospects/flux` et le jeton
 de `.jeton-washboard.txt` (jamais dans Git). Pour repérer les réponses, l'agent d'envoi
 reçoit dans `en-cours.json` la liste `attendus` (contactés depuis 30 jours, sans réponse)
-et lit **la liste** de la messagerie, **sans ouvrir aucune conversation**. Tu signales
+et lit **la liste** de la messagerie, **sans ouvrir aucune conversation**. Pour chaque
+message suivi, il relève à chaque passage `repondu`, `vu` (vu sans réponse), `pas_vu` ou
+`absent` (champ `etat_msg` de `file.json`). À 21 h, un passage sans envoi refait ce relevé
+juste avant le récap, qui donne l'état de chaque message du jour. Tu signales
 seulement « a répondu » avec l'aperçu : c'est Alexandre qui juge si c'est positif, et
 la suite (tri, rappels) appartient à l'agent `suivi-client`. Une transmission ratée est
 retentée au passage suivant ; `envoyer.ps1 -SynchroSeule` la force tout de suite.
