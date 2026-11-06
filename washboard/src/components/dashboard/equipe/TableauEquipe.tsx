@@ -163,6 +163,7 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant }: {
       // Statut « attention » d'un essai = 7 jours ou moins (voir analyserLaveur).
       finsEssai: laveurs.filter(l => l.enEssai && l.ton === 'attention'),
       semaines: inscriptionsParSemaine(laveurs, now),
+      resa24h: laveurs.filter(l => l.reservations24h > 0).sort((a, b) => b.reservations24h - a.reservations24h),
     }
   }, [laveurs, maintenant, now, auj])
 
@@ -198,6 +199,20 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant }: {
                   ))}
                 </ul>
               )}
+          </Section>
+
+          <Section titre={d.resa24h.length ? `Réservations des dernières 24 h · ${d.resa24h.reduce((t, l) => t + l.reservations24h, 0)}` : 'Réservations des dernières 24 h'}>
+            {d.resa24h.length === 0 ? <Vide>Aucune réservation ces dernières 24 heures.</Vide> : (
+              <ul className={LISTE}>
+                {d.resa24h.map(l => (
+                  <LigneLaveur
+                    key={l.id} l={l}
+                    sousTitre={<span className="truncate">{l.reservations24hEnLigne === l.reservations24h ? 'Toutes prises en ligne' : l.reservations24hEnLigne ? `${l.reservations24hEnLigne} en ligne, ${l.reservations24h - l.reservations24hEnLigne} saisie${l.reservations24h - l.reservations24hEnLigne > 1 ? 's' : ''} par lui` : `Saisie${l.reservations24h > 1 ? 's' : ''} par lui`}</span>}
+                    droite={<span className={`shrink-0 text-[15px] ${corpsFort} tabular-nums`}>{l.reservations24h}</span>}
+                  />
+                ))}
+              </ul>
+            )}
           </Section>
 
           <Section titre="Derniers inscrits" action={<ToutVoir href="/dashboard/support/laveurs?filtre=nouveaux" />}>

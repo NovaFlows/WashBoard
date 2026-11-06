@@ -24,6 +24,9 @@ export type LaveurResume = {
   visites30: number
   reservations30: number
   chiffre30: number
+  /** Réservations créées dans les dernières 24 h (annulées exclues), dont celles prises en ligne. */
+  reservations24h: number
+  reservations24hEnLigne: number
   derniereConnexion: string | null
   /** Relance prévue (due ou à venir) : la liste « À rappeler » la range par jour. */
   relance: { le: string; action: string | null } | null
@@ -45,6 +48,7 @@ export function resumerLaveurs(tous: DonneesLaveur[], appels: Appel[], { now = n
       const siens = parLaveur.get(d.washer.id) ?? []
       const prevue = relancePrevue(siens)
       const dernierAppel = siens.find(estAppel)
+      const resa24h = d.reservations.filter(r => r.status !== 'cancelled' && now.getTime() - Date.parse(r.created_at) < 864e5)
       return {
         id: d.washer.id, name: d.washer.name, slug: d.washer.slug, phone: d.washer.phone, creeLe: d.washer.created_at,
         statut: topo.statut.libelle, statutDetail: topo.statut.detail, ton: topo.statut.ton, priorite: topo.priorite, pagePrete: topo.pagePrete,
@@ -52,6 +56,7 @@ export function resumerLaveurs(tous: DonneesLaveur[], appels: Appel[], { now = n
         payant: topo.statut.libelle.startsWith('Payant') || topo.statut.libelle === 'Client historique',
         source: topo.source,
         visites30: topo.activite.visites30, reservations30: topo.activite.reservations30, chiffre30: topo.activite.chiffre30,
+        reservations24h: resa24h.length, reservations24hEnLigne: resa24h.filter(r => !r.saisie_par_laveur).length,
         derniereConnexion: topo.activite.derniereConnexion,
         responsable: responsables[d.washer.id] ?? null,
         relance: prevue ? { le: prevue.relancer_le!, action: prevue.prochaine_action } : null,
