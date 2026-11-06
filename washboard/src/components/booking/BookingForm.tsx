@@ -91,7 +91,7 @@ export type WasherPublic = {
   base_address: string | null
   team_size: number | null
   travel_fee_mode: 'base' | 'previous'
-  travel_fee_tiers: { max_minutes: number; fee: number }[] | null
+  travel_fee_tiers: { max_minutes?: number; max_km?: number; fee: number }[] | null
   /** Le laveur accepte-t-il qu'on réserve pour aujourd'hui ? Sans ce champ,
    *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
    *  « oui » par erreur. */

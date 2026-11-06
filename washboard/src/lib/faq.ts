@@ -47,7 +47,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Les frais de déplacement sont calculés comment ?',
-    a: 'Tu définis tes propres paliers de prix selon la durée du trajet en voiture, calculée automatiquement via Google Maps. Le point de départ, c\'est soit ton adresse de base, soit ton dernier rendez-vous du jour — à toi de choisir dans tes paramètres.',
+    a: 'Tu définis tes propres paliers de prix selon la durée du trajet en voiture ou selon la distance en kilomètres, calculées automatiquement via Google Maps. Le point de départ, c\'est soit ton adresse de base, soit ton dernier rendez-vous du jour — à toi de choisir dans tes paramètres.',
   },
   {
     q: 'Mes clients peuvent-ils venir à mon local, au lieu que je me déplace ?',

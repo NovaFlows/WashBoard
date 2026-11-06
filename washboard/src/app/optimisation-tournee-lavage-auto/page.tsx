@@ -200,7 +200,7 @@ export default function Page() {
             <div className="pg-etape">
               <h3>3. Le frais de déplacement suit le trajet réel, pas une estimation</h3>
               <p>
-                Tu définis des paliers de prix selon la durée de trajet. WashBoard calcule la distance
+                Tu définis des paliers de prix selon la durée de trajet ou la distance en kilomètres. WashBoard calcule le trajet
                 réelle depuis ton adresse de départ, ou depuis ton rendez-vous précédent si tu enchaînes
                 plusieurs adresses dans la journée, et applique automatiquement le bon palier — sans que
                 tu aies à l&apos;estimer toi-même.

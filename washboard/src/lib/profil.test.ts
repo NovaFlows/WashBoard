@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ajouterPalier, joursAvantPurge, nettoyerExpediteur, nomConfirme, resumeFraisDeplacement,
+  ajouterPalier, joursAvantPurge, libellePalier, unitePaliers, nettoyerExpediteur, nomConfirme, resumeFraisDeplacement,
   resumeAdresseDepart, resumeEquipe, resumeFacturation, resumeNomEntreprise, resumeTelephone,
   validerEmail, validerFacturation, validerMotDePasse, validerNomEntreprise, validerTelephone,
 } from './profil'
@@ -102,6 +102,23 @@ describe('frais de déplacement', () => {
       expect(r.tiers).toBe(base)
     }
     expect(ajouterPalier(base, '20', '0').erreur).toBeNull()
+  })
+
+  it('ajoute des paliers au km, triés, et les résume comme tels', () => {
+    const a = ajouterPalier([], '25', '15', 'km')
+    const b = ajouterPalier(a.tiers, '10', '0', 'km')
+    expect(b.tiers).toEqual([{ max_km: 10, fee: 0 }, { max_km: 25, fee: 15 }])
+    expect(unitePaliers(b.tiers)).toBe('km')
+    expect(libellePalier(b.tiers[1])).toBe('Jusqu’à 25 km')
+    expect(resumeFraisDeplacement(b.tiers).texte).toBe('2 paliers au km, jusqu’à 15 €')
+    expect(ajouterPalier([], '0', '5', 'km').erreur).toBe('Indiquez une distance en km (1 ou plus).')
+  })
+
+  it('sans palier, ou avec des paliers d’avant, l’unité reste la durée', () => {
+    expect(unitePaliers([])).toBe('minutes')
+    expect(unitePaliers(null)).toBe('minutes')
+    expect(unitePaliers([{ max_minutes: 30, fee: 10 }])).toBe('minutes')
+    expect(libellePalier({ max_minutes: 30, fee: 10 })).toBe('Jusqu’à 30 min')
   })
 })
 

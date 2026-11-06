@@ -141,6 +141,12 @@ export async function PATCH(request: NextRequest) {
   if (smart_slot_enabled === true && !hasFeature(profil, 'creneaux_intelligents')) {
     return refuserOffre('creneaux_intelligents')
   }
+  // Paliers en minutes OU en km, jamais les deux : un même trajet serait facturé deux fois.
+  if (Array.isArray(travel_fee_tiers)
+    && travel_fee_tiers.some((t: { max_km?: unknown }) => t?.max_km != null)
+    && travel_fee_tiers.some((t: { max_minutes?: unknown }) => t?.max_minutes != null)) {
+    return NextResponse.json({ error: 'Les paliers doivent être tous en minutes ou tous en km.' }, { status: 400 })
+  }
   // Frais de déplacement : seule la mise en place de paliers est réservée.
   // Les vider reste possible à tout moment, y compris après une rétrogradation.
   if (Array.isArray(travel_fee_tiers) && travel_fee_tiers.length > 0
@@ -229,10 +235,14 @@ export async function PATCH(request: NextRequest) {
   if (reservation_jour_meme !== undefined) updates.reservation_jour_meme = Boolean(reservation_jour_meme)
   if (silhouettes_vehicules !== undefined) updates.silhouettes_vehicules = Boolean(silhouettes_vehicules)
   if (travel_fee_tiers !== undefined) {
-    // Ne conserver que les paliers cohérents (durée > 0, frais >= 0)
+    // Ne conserver que les paliers cohérents (seuil > 0, frais >= 0), réduits à leurs deux champs.
+    type Palier = { max_minutes?: unknown; max_km?: unknown; fee?: unknown }
     updates.travel_fee_tiers = Array.isArray(travel_fee_tiers)
-      ? travel_fee_tiers.filter((t: { max_minutes: number; fee: number }) =>
-          Number(t?.max_minutes) > 0 && Number.isFinite(Number(t?.fee)) && Number(t?.fee) >= 0)
+      ? (travel_fee_tiers as Palier[])
+          .filter(t => Number(t?.max_km ?? t?.max_minutes) > 0 && Number.isFinite(Number(t?.fee)) && Number(t?.fee) >= 0)
+          .map(t => t.max_km != null
+            ? { max_km: Number(t.max_km), fee: Number(t.fee) }
+            : { max_minutes: Number(t.max_minutes), fee: Number(t.fee) })
       : []
   }
   if (base_address !== undefined) updates.base_address = base_address?.trim() || null

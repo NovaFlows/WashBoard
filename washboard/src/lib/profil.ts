@@ -101,8 +101,30 @@ export function validerFacturation(champs: { siret: string; regime: 'franchise' 
 // Les trois réglages qui n'existaient que sur l'ancien écran (`ParametresFormV1`) : mêmes
 // règles, mêmes bornes que lui et que la route (`PATCH /api/washer`, `POST /api/account`).
 
-export type PalierDeplacement = { max_minutes: number; fee: number }
+/** Un palier porte son unité dans sa clé : `max_minutes` (durée de trajet) ou `max_km` (distance).
+ *  Tous les paliers d'un laveur ont la même unité (contrôlé par `PATCH /api/washer`). Demande de
+ *  My Clean, 2026-11-06 : facturer au kilomètre, pas seulement à la durée. */
+export type PalierDeplacement = { max_minutes?: number; max_km?: number; fee: number }
+export type UniteDeplacement = 'minutes' | 'km'
 export type ModeDeplacement = 'base' | 'previous'
+
+export const UNITES_DEPLACEMENT: { valeur: UniteDeplacement; libelle: string; abrege: string }[] = [
+  { valeur: 'minutes', libelle: 'La durée du trajet', abrege: 'min' },
+  { valeur: 'km', libelle: 'La distance', abrege: 'km' },
+]
+
+/** Unité des paliers ; « minutes » sans palier, comme avant l'ajout des kilomètres. */
+export function unitePaliers(tiers: PalierDeplacement[] | null | undefined): UniteDeplacement {
+  return tiers?.some(t => t.max_km != null) ? 'km' : 'minutes'
+}
+
+export function seuilPalier(t: PalierDeplacement): number {
+  return t.max_km ?? t.max_minutes ?? 0
+}
+
+export function libellePalier(t: PalierDeplacement): string {
+  return `Jusqu’à ${seuilPalier(t)} ${t.max_km != null ? 'km' : 'min'}`
+}
 
 export const MODES_DEPLACEMENT: { valeur: ModeDeplacement; libelle: string; detail: string }[] = [
   { valeur: 'base', libelle: 'Mon siège (adresse de départ)', detail: 'Toujours calculé depuis votre adresse fixe.' },
@@ -115,21 +137,27 @@ export function resumeFraisDeplacement(tiers: PalierDeplacement[] | null | undef
   const n = tiers?.length ?? 0
   if (n === 0) return { texte: 'Aucun : le déplacement est offert' }
   const plus = tiers!.reduce((m, t) => Math.max(m, t.fee), 0)
-  return { texte: `${n} palier${n > 1 ? 's' : ''}, jusqu’à ${euro(plus)}` }
+  const km = unitePaliers(tiers) === 'km' ? ' au km' : ''
+  return { texte: `${n} palier${n > 1 ? 's' : ''}${km}, jusqu’à ${euro(plus)}` }
 }
 
-/** Ajoute un palier (durée max. en minutes → frais), trié et sans doublon de durée : un palier
- *  saisi deux fois avec la même durée remplace l'ancien. `erreur` non nul = rien n'est ajouté. */
+/** Ajoute un palier (seuil en minutes ou en km → frais), trié et sans doublon de seuil : un
+ *  palier saisi deux fois avec le même seuil remplace l'ancien. `erreur` non nul = rien n'est
+ *  ajouté. */
 export function ajouterPalier(
-  tiers: PalierDeplacement[], minutes: string, frais: string,
+  tiers: PalierDeplacement[], seuil: string, frais: string, unite: UniteDeplacement = 'minutes',
 ): { tiers: PalierDeplacement[]; erreur: string | null } {
-  const m = Number(minutes.replace(',', '.'))
+  const s = Number(seuil.replace(',', '.'))
   const f = Number(frais.replace(',', '.'))
-  if (!minutes.trim() || !Number.isFinite(m) || m <= 0) return { tiers, erreur: 'Indiquez une durée de trajet en minutes (1 ou plus).' }
+  if (!seuil.trim() || !Number.isFinite(s) || s <= 0) {
+    return { tiers, erreur: unite === 'km' ? 'Indiquez une distance en km (1 ou plus).' : 'Indiquez une durée de trajet en minutes (1 ou plus).' }
+  }
   if (!frais.trim() || !Number.isFinite(f) || f < 0) return { tiers, erreur: 'Indiquez des frais en euros (0 ou plus).' }
-  const minutesEntieres = Math.round(m)
-  const suite = [...tiers.filter(t => t.max_minutes !== minutesEntieres), { max_minutes: minutesEntieres, fee: Math.round(f * 100) / 100 }]
-  return { tiers: suite.sort((a, b) => a.max_minutes - b.max_minutes), erreur: null }
+  const entier = Math.max(1, Math.round(s))
+  const fee = Math.round(f * 100) / 100
+  const nouveau: PalierDeplacement = unite === 'km' ? { max_km: entier, fee } : { max_minutes: entier, fee }
+  const suite = [...tiers.filter(t => seuilPalier(t) !== entier), nouveau]
+  return { tiers: suite.sort((a, b) => seuilPalier(a) - seuilPalier(b)), erreur: null }
 }
 
 /** Nettoie un nom d'expéditeur SMS : lettres et chiffres sans accent, 11 caractères au plus. */
