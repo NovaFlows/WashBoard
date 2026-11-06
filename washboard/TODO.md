@@ -3405,6 +3405,16 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟢 Polish / UX
 
+- [ ] 2026-11-06 — **Paliers de frais de déplacement : « Jusqu'à » cache deux règles.**
+      Le premier palier vaut aussi pour les tout petits trajets : avec un seul palier
+      « Jusqu'à 30 km → 15 € », un client à 2 km paie 15 €. Pour offrir le déplacement aux
+      proches, il faut un premier palier à 0 €. Au-delà du dernier palier, c'est le prix de ce
+      dernier palier qui s'applique. Idée si un laveur s'y perd : afficher des tranches (« De 0
+      à 15 km → 0 € », « De 15 à 30 km → 15 € », « Au-delà de 30 km → 15 € »), et une phrase
+      quand le premier palier est payant. Laissé tel quel le 2026-11-06 : Ryan trouve
+      « Jusqu'à » compréhensible, et My Clean, qui a demandé les km, n'en a pas parlé.
+      Fichiers : `FeuillesReglagesV2.tsx` (mobile), `ParametresFormV1.tsx` (ordinateur).
+
 - [x] 2026-10-19 (Archivo mise en cache par le service worker v4, bleu #306090) — **`public/hors-ligne.html` encore dans l'ancienne DA** (accent `#2B59FF`,
       police système). C'est l'écran réellement servi par le service worker sans réseau ; la
       page `/hors-ligne` est passée en DA v2 mais pas ce fichier statique.
