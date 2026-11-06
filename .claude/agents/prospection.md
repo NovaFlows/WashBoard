@@ -72,8 +72,11 @@ de `.jeton-washboard.txt` (jamais dans Git). Pour repérer les réponses, l'agen
 reçoit dans `en-cours.json` la liste `attendus` (contactés depuis 30 jours, sans réponse)
 et lit **la liste** de la messagerie, **sans ouvrir aucune conversation**. Pour chaque
 message suivi, il relève à chaque passage `repondu`, `vu` (vu sans réponse), `pas_vu` ou
-`absent` (champ `etat_msg` de `file.json`). À 21 h, un passage sans envoi refait ce relevé
-juste avant le récap, qui donne l'état de chaque message du jour. Tu signales
+`absent` (champ `etat_msg` de `file.json`). Une fois le quota du jour atteint ou la file
+vide, la tâche continue de tourner **toutes les heures** jusqu'à 21 h pour refaire ce
+relevé, sans rien envoyer (demande d'Alexandre, 06/11) ; à 21 h, un dernier relevé
+précède le récap, qui donne l'état de chaque message du jour. La tâche se reprogramme
+le lendemain tant qu'il reste des messages à envoyer ou à surveiller. Tu signales
 seulement « a répondu » avec l'aperçu : c'est Alexandre qui juge si c'est positif, et
 la suite (tri, rappels) appartient à l'agent `suivi-client`. Une transmission ratée est
 retentée au passage suivant ; `envoyer.ps1 -SynchroSeule` la force tout de suite.
