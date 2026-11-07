@@ -48,15 +48,21 @@ prospect ne doit être recopié ici ni dans un commit).
 | `exporter-clients.cjs` → `deja-clients.txt` | photo locale des laveurs inscrits, à exclure |
 | `exclusions-manuelles.txt` | comptes qu'Alexandre a fait retirer |
 
-Tâches planifiées Windows : « WashBoard DM Instagram » (envoi) et « WashBoard DM
-Instagram - lot complement » (recherche ponctuelle).
+Tâches planifiées Windows :
+- « WashBoard DM Instagram » : envoi, se reprogramme seul.
+- « … - lot du soir » (21 h 30, `lancer-lot.ps1 -Auto`) : cherche seulement ce qui manque pour
+  le quota du lendemain, dans `lots/lot-<demain>.md`.
+- « … - liste de demain » (22 h, `envoyer.ps1 -ListeDemain`) : mail à Alexandre avec les
+  prospects prévus le lendemain et les lots à valider. **Il veut cette liste la veille à 22 h,
+  pas le matin même.**
 
 **Règles fixées par Alexandre — ne les change pas sans son accord :**
 - Envoi depuis **@washboard.fr**. Cible : pros du nettoyage / detailing auto, **France ou
   Belgique**, actifs, **jamais contactés par nous**, secteur vérifié.
 - **15 à 25 min** entre deux messages (tirage au hasard), **10 h – 21 h** uniquement.
   Il a refusé un réveil toutes les 5 min : un passage = un message.
-- Quotas : 10 le 06/11, 10 le 07/11, puis 15 à 20 par jour.
+- Quotas : 10 le 06/11, 15 le 07/11, puis 15 à 20 par jour (calculé à partir de la date,
+  le même pour le mail de la veille, le lot du soir et les envois).
 - Au moindre avertissement d'Instagram : pause 48 h + mail urgent. Récap par mail à 21 h.
   Mails uniquement à novaflows.pro@gmail.com.
 - Messages : ses deux modèles exacts (« sans interaction » / « avec interaction » quand
