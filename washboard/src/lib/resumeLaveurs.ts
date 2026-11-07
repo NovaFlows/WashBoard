@@ -29,7 +29,8 @@ export type LaveurResume = {
   reservations24hEnLigne: number
   derniereConnexion: string | null
   /** Relance prévue (due ou à venir) : la liste « À rappeler » la range par jour. */
-  relance: { le: string; action: string | null } | null
+  /** `appelId` : la ligne du suivi qui la porte ; `mise` : simple mise « À rappeler » (pas un appel). */
+  relance: { le: string; action: string | null; appelId: string; mise: boolean } | null
   /** Membre de l'équipe qui suit ce laveur (voir lib/responsables.ts). */
   responsable: string | null
   dernierAppel: { le: string; resultat: string } | null
@@ -59,7 +60,7 @@ export function resumerLaveurs(tous: DonneesLaveur[], appels: Appel[], { now = n
         reservations24h: resa24h.length, reservations24hEnLigne: resa24h.filter(r => !r.saisie_par_laveur).length,
         derniereConnexion: topo.activite.derniereConnexion,
         responsable: responsables[d.washer.id] ?? null,
-        relance: prevue ? { le: prevue.relancer_le!, action: prevue.prochaine_action } : null,
+        relance: prevue ? { le: prevue.relancer_le!, action: prevue.prochaine_action, appelId: prevue.id, mise: !estAppel(prevue) } : null,
         dernierAppel: dernierAppel ? { le: dernierAppel.appele_le, resultat: dernierAppel.resultat } : null,
       }
     })

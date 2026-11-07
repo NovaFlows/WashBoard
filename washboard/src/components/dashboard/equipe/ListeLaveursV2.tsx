@@ -10,6 +10,7 @@ import { aujourdhuiParis } from '@/lib/suiviAppels'
 import { EQUIPE } from '@/lib/responsables'
 import type { LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Initiales, Point, Section } from './EcranEquipe'
+import FeuilleRappel, { BoutonRappel, rappelLaveur } from './FeuilleRappel'
 
 export type { LaveurResume }
 
@@ -62,6 +63,7 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, aff
   }
   const suit = (l: LaveurResume, v: SuiviPar = suiviPar) => !affiliationActive || v === 'tous' || (v === 'personne' ? !l.responsable : l.responsable === v)
   const [recherche, setRecherche] = useState('')
+  const [rappelOuvert, setRappelOuvert] = useState<string | null>(null)
   const now = useMemo(() => new Date(maintenant), [maintenant])
 
   const visibles = useMemo(() => {
@@ -90,8 +92,8 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, aff
   ] : null
 
   const ligne = (l: LaveurResume) => (
-    <li key={l.id}>
-      <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--v2-filet)]/50">
+    <li key={l.id} className="flex items-center">
+      <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-[color:var(--v2-filet)]/50">
         <Initiales nom={l.name} />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
@@ -109,10 +111,13 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, aff
               : `${l.visites30} visite${l.visites30 > 1 ? 's' : ''} · ${l.reservations30} résa sur 30 j${l.derniereConnexion ? ` · vu ${ilYa(l.derniereConnexion, now)}` : ''}`}
           </span>
         </span>
-        <Chevron />
+        {!(filtre === 'rappeler' && l.relance) && <Chevron />}
       </Link>
+      {/* « À rappeler » : décaler ou supprimer l'appel sans ouvrir la fiche. */}
+      {filtre === 'rappeler' && l.relance && <span className="pr-2"><BoutonRappel onClick={() => setRappelOuvert(l.id)} libelle={`Décaler ou supprimer le rappel de ${l.name}`} /></span>}
     </li>
   )
+  const laveurRappel = rappelOuvert ? laveurs.find(l => l.id === rappelOuvert && l.relance) : null
   const LISTE = 'overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)]'
 
   return (
@@ -158,6 +163,12 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, aff
         <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
           Un laveur s’ajoute ici avec le bouton « À rappeler » de sa fiche, ou en fixant une date de relance quand vous notez un appel.
         </p>
+      )}
+      {laveurRappel?.relance && (
+        <FeuilleRappel
+          key={laveurRappel.relance.appelId} nom={laveurRappel.name} le={laveurRappel.relance.le} now={now}
+          lienFiche={`/dashboard/support/laveurs/${laveurRappel.id}`} {...rappelLaveur(laveurRappel.relance)} onClose={() => setRappelOuvert(null)}
+        />
       )}
     </EcranEquipe>
   )

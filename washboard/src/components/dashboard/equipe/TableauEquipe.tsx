@@ -11,6 +11,7 @@ import { aujourdhuiParis } from '@/lib/suiviAppels'
 import { inscriptionsParSemaine, type LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Carte, Initiales, Point, Section } from './EcranEquipe'
 import type { ResumeProspects } from './AccueilEquipeV2'
+import FeuilleRappel, { BoutonRappel, rappelLaveur } from './FeuilleRappel'
 
 // Accueil de l'espace équipe sur ordinateur (Alexandre, 2026-11-05) : un tableau de
 // bord plutôt que trois portes. Le téléphone garde la liste courte (AccueilEquipeV2).
@@ -109,10 +110,10 @@ function GraphiqueInscriptions({ semaines }: { semaines: { debut: string; nombre
 
 // ── Ligne de laveur ──────────────────────────────────────────────────────────
 
-function LigneLaveur({ l, sousTitre, droite }: { l: LaveurResume; sousTitre: React.ReactNode; droite?: React.ReactNode }) {
+function LigneLaveur({ l, sousTitre, droite, apres }: { l: LaveurResume; sousTitre: React.ReactNode; droite?: React.ReactNode; apres?: React.ReactNode }) {
   return (
-    <li>
-      <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--v2-filet)]/50">
+    <li className="flex items-center">
+      <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--v2-filet)]/50">
         <Initiales nom={l.name} taille={34} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
@@ -122,8 +123,9 @@ function LigneLaveur({ l, sousTitre, droite }: { l: LaveurResume; sousTitre: Rea
           <span className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</span>
         </span>
         {droite}
-        <Chevron />
+        {!apres && <Chevron />}
       </Link>
+      {apres && <span className="pr-2">{apres}</span>}
     </li>
   )
 }
@@ -146,6 +148,8 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
   const { unreadTeamCount } = useSupportBadges()
   const now = useMemo(() => new Date(maintenant), [maintenant])
   const auj = aujourdhuiParis(now)
+  const [rappelOuvert, setRappelOuvert] = useState<string | null>(null)
+  const laveurRappel = rappelOuvert ? laveurs.find(l => l.id === rappelOuvert && l.relance) : null
 
   const d = useMemo(() => {
     const recent = (l: LaveurResume, de: number, a: number) => { const age = maintenant - Date.parse(l.creeLe); return age >= de && age < a }
@@ -197,6 +201,7 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
                       key={l.id} l={l}
                       sousTitre={<span className="truncate">{l.relance!.action ?? 'Sans motif'}</span>}
                       droite={<span className={`shrink-0 text-[12.5px] ${corpsFort}`}>{l.relance!.le < auj ? `depuis le ${jourMois(l.relance!.le)}` : 'aujourd’hui'}</span>}
+                      apres={<BoutonRappel onClick={() => setRappelOuvert(l.id)} libelle={`Décaler ou supprimer le rappel de ${l.name}`} />}
                     />
                   ))}
                 </ul>
@@ -276,6 +281,12 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
       </div>
 
       {email && <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Connecté en tant que {email}. L’accès au compte d’un laveur se demande depuis sa fiche.</p>}
+      {laveurRappel?.relance && (
+        <FeuilleRappel
+          key={laveurRappel.relance.appelId} nom={laveurRappel.name} le={laveurRappel.relance.le} now={now}
+          lienFiche={`/dashboard/support/laveurs/${laveurRappel.id}`} {...rappelLaveur(laveurRappel.relance)} onClose={() => setRappelOuvert(null)}
+        />
+      )}
     </EcranEquipe>
   )
 }

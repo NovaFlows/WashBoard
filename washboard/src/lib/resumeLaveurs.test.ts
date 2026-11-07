@@ -61,7 +61,7 @@ describe('resumerLaveurs', () => {
       appel({ id: 'a3', washer_id: 'autre', resultat: 'Pas répondu' }),
     ]
     const [l] = resumerLaveurs([laveur()], appels, { now: NOW, responsables: { w1: 'Alexandre' } })
-    expect(l.relance).toEqual({ le: '2026-11-07', action: 'Montrer la page' })
+    expect(l.relance).toEqual({ le: '2026-11-07', action: 'Montrer la page', appelId: 'a1', mise: true })
     expect(l.dernierAppel?.resultat).toBe('Intéressé')
     expect(l.responsable).toBe('Alexandre')
     expect(l.enEssai).toBe(true)

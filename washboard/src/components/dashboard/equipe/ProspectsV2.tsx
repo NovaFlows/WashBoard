@@ -11,6 +11,7 @@ import { aujourdhuiParis } from '@/lib/suiviAppels'
 import { ARCHIVE_APRES_JOURS, LIBELLE_ONGLET, LIBELLE_STATUT, ONGLETS, STATUTS, ongletDe, type Onglet, type Prospect, type StatutProspect } from '@/lib/prospects'
 import EcranEquipe, { Carte, Initiales, Section } from './EcranEquipe'
 import ChoixDate, { dateJour } from './ChoixDate'
+import FeuilleRappel, { BoutonRappel, rappelProspect } from './FeuilleRappel'
 
 // Zone Prospects de l'espace équipe (2026-11-06). Les messages Instagram envoyés
 // arrivent seuls (agent prospection) ; les réponses aussi, dans « À trier », et c'est
@@ -282,6 +283,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
   const [onglet, setOnglet] = useState<Onglet>(() => ongletInitial ?? (['trier', 'discussion', 'interesses'] as Onglet[]).find(o => compte[o] > 0) ?? 'contactes')
   const [recherche, setRecherche] = useState('')
   const [ouvert, setOuvert] = useState<string | null>(null)
+  const [rappelOuvert, setRappelOuvert] = useState<string | null>(null)
 
   const visibles = useMemo(() => {
     const q = sansAccents(recherche.trim())
@@ -321,8 +323,8 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
   }
 
   const ligne = (p: Prospect) => (
-    <li key={p.id}>
-      <button type="button" onClick={() => setOuvert(p.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)]/50">
+    <li key={p.id} className="flex items-center">
+      <button type="button" onClick={() => setOuvert(p.id)} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left hover:bg-[color:var(--v2-filet)]/50">
         <Initiales nom={p.nom} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
@@ -334,10 +336,13 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
           </span>
           <span className={`mt-0.5 block truncate text-[12.5px] ${GRIS}`}>{detail(p)}</span>
         </span>
-        <Chevron />
+        {!p.relancer_le && <Chevron />}
       </button>
+      {/* Un rappel prévu : le décaler ou le supprimer sans ouvrir la fiche. */}
+      {p.relancer_le && <span className="pr-2"><BoutonRappel onClick={() => setRappelOuvert(p.id)} libelle={`Décaler ou supprimer le rappel de ${p.nom}`} /></span>}
     </li>
   )
+  const prospectRappel = rappelOuvert ? prospects.find(p => p.id === rappelOuvert && p.relancer_le) : null
 
   const choisi = ouvert && ouvert !== 'nouveau' ? prospects.find(p => p.id === ouvert) : null
 
@@ -389,6 +394,9 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
 
       {ouvert === 'nouveau' && <NouveauProspect now={now} onClose={() => setOuvert(null)} />}
       {choisi && <FicheProspect key={choisi.id} p={choisi} now={now} onClose={() => setOuvert(null)} />}
+      {prospectRappel?.relancer_le && (
+        <FeuilleRappel key={prospectRappel.id} nom={prospectRappel.nom} le={prospectRappel.relancer_le} now={now} {...rappelProspect(prospectRappel.id)} onClose={() => setRappelOuvert(null)} />
+      )}
     </EcranEquipe>
   )
 }
