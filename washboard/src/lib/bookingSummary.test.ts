@@ -80,3 +80,14 @@ describe('montantEstime', () => {
     expect(montantEstime({ booked_price: 95, travel_fee: 8, smart_discount: 10, is_smart_slot: false })).toBe(103)
   })
 })
+
+describe('resumePrestation sans type de véhicule', () => {
+  it('« 2 véhicules », au pluriel, plutôt que « 2 Véhicule »', () => {
+    const services = [{ id: 's1', name: 'Lavage complet' }] as unknown as Service[]
+    expect(resumePrestation({ service_id: 's1', vehicles_detail: [
+      { type: 'vehicule', label: 'Véhicule', count: 1, unit_price: 50 }, { type: 'vehicule', label: 'Véhicule', count: 1, unit_price: 50 },
+    ] }, services)).toBe('Lavage complet, 2 véhicules')
+    expect(resumePrestation({ service_id: 's1', vehicles_detail: [{ type: 'vehicule', label: 'Véhicule', count: 1, unit_price: 50 }] }, services))
+      .toBe('Lavage complet, 1 véhicule')
+  })
+})

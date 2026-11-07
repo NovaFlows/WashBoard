@@ -15,7 +15,7 @@ import FeuilleZoneV2 from '@/components/dashboard/FeuilleZoneV2'
 import PrestationsEtatVideV2 from '@/components/dashboard/PrestationsEtatVideV2'
 import { ConfirmationSuppression, Constat, Interrupteur, LigneDeuxNiveaux, nom } from '@/components/dashboard/PrestationsUiV2'
 import { enregistrerProfil } from '@/lib/profilApi'
-import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients } from '@/lib/prestation'
+import { aMettreEnVeille, estReservable, estEnVeille, estVisibleParLesClients, prestationsSelonLeType } from '@/lib/prestation'
 import { PLAN_LABELS, offreCatalogueIllimite, type Plan } from '@/lib/plan'
 import {
   detailPrestation, formulaireDepuisService, formulaireNeuf, prixListe, sousTitrePrestations, typesDepuisModele,
@@ -82,6 +82,9 @@ type Props = {
   /** `washers.silhouettes_vehicules` : le véhicule choisi apparaît en 3D sur la page de
    *  réservation. Allumé par défaut pour tous (Alexandre, 2026-10-19). */
   silhouettesVehicules: boolean
+  /** `washers.demander_type_vehicule` : le client choisit citadine, SUV… Allumé par défaut ;
+   *  éteint, un seul prix par prestation (demande de My Clean, 2026-11-06). */
+  demanderTypeVehicule: boolean
   /** Nombre de prestations que l'offre affiche sur la page de réservation —
    *  `null` : aucune limite (Pro, Business, clients historiques). Au-delà, les
    *  suivantes sont MASQUÉES aux clients sans être effacées, voir
@@ -182,8 +185,10 @@ export function Section({
 // « Supprimer » avec sa poubelle, qui ouvre la même confirmation que le lien de la
 // feuille d'édition : une suppression reste un geste à confirmer (elle échoue d'ailleurs
 // si des réservations utilisent la prestation, et la confirmation le dit).
-function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
+function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, onOuvrirLigne, onFermerLigne, onSupprimer }: {
   service: Service
+  /** `false` : le client ne choisit pas le type, la ligne montre le prix principal seul. */
+  typeDemande: boolean
   categorie: ServiceCategory | undefined
   onOuvrir: () => void
   ouverte: boolean
@@ -191,8 +196,9 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
-  const prix = prixListe(service)
   const reservable = estReservable(service)
+  const sansType = !typeDemande && reservable
+  const prix = prixListe(sansType ? prestationsSelonLeType([service], { demander_type_vehicule: false })[0] : service)
   const enVeille = estEnVeille(service)
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
     ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
@@ -226,7 +232,7 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className={`truncate text-[15.5px] ${nom}`}>{service.name}</span>
             <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {reservable ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
+              {reservable && !sansType ? detailPrestation(service, categorie) : formatDureeFr(service.duration_minutes)}
             </span>
             {!reservable && (
               <span className="flex items-start gap-2">
@@ -263,7 +269,7 @@ function LignePrestation({ service, categorie, onOuvrir, ouverte, onOuvrirLigne,
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, silhouettesVehicules, plafond, offre, liste,
+  zone: zoneServeur, adresseDeBase, silhouettesVehicules, demanderTypeVehicule, plafond, offre, liste,
 }: Props) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -299,6 +305,20 @@ export default function PrestationsV2({
     setSilhouettesEnCours(false)
     if (r.ok) setSilhouettes(!silhouettes)
     else setSilhouettesErreur(r.message)
+  }
+
+  const [typeDemande, setTypeDemande] = useState(demanderTypeVehicule)
+  const [typeEnCours, setTypeEnCours] = useState(false)
+  const [typeErreur, setTypeErreur] = useState<string | null>(null)
+
+  async function basculerTypeDemande() {
+    if (typeEnCours) return
+    setTypeEnCours(true)
+    setTypeErreur(null)
+    const r = await enregistrerProfil({ demander_type_vehicule: !typeDemande })
+    setTypeEnCours(false)
+    if (r.ok) setTypeDemande(!typeDemande)
+    else setTypeErreur(r.message)
   }
 
   // Ce que les clients voient VRAIMENT : ni en veille, ni sans type de véhicule.
@@ -565,7 +585,7 @@ export default function PrestationsV2({
                   ) : (
                     <ul className="divide-y divide-[color:var(--v2-filet)]">
                       {deLaCategorie.map(s => (
-                        <LignePrestation key={s.id} service={s} categorie={cat} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
+                        <LignePrestation key={s.id} service={s} categorie={cat} typeDemande={typeDemande} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
                       ))}
                     </ul>
                   )}
@@ -579,7 +599,7 @@ export default function PrestationsV2({
               <CarteListe>
                 <ul className="divide-y divide-[color:var(--v2-filet)]">
                   {sansCategorie.map(s => (
-                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
+                    <LignePrestation key={s.id} service={s} categorie={categorieDe(s.category_id)} typeDemande={typeDemande} onOuvrir={() => ouvrirPrestation(s)} ouverte={ligneOuverte === s.id} onOuvrirLigne={() => setLigneOuverte(s.id)} onFermerLigne={fermerLigne} onSupprimer={() => supprimerDepuisLigne(s)} />
                   ))}
                 </ul>
               </CarteListe>
@@ -592,9 +612,31 @@ export default function PrestationsV2({
             </CarteListe>
           </div>
 
+          <section aria-label="Type de véhicule" className="mt-[22px]">
+            <CarteListe>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1 py-3">
+                  <p className={`text-[15.5px] ${nom}`}>Demander le type de véhicule</p>
+                  <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {typeDemande
+                      ? 'Vos clients choisissent citadine, berline, SUV… et paient le prix de ce type.'
+                      : 'Vos clients choisissent seulement la prestation et le nombre de véhicules : le prix principal de chaque prestation s’applique.'}
+                  </p>
+                </div>
+                <Interrupteur
+                  actif={typeDemande}
+                  enCours={typeEnCours}
+                  libelle="Demander le type de véhicule sur la page de réservation"
+                  onClick={basculerTypeDemande}
+                />
+              </div>
+            </CarteListe>
+            {typeErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{typeErreur}</Constat></div>}
+          </section>
+
           {/* Demande d'Alexandre (2026-10-19) : pouvoir éteindre le véhicule 3D de la page de
-              réservation ; allumé par défaut pour tous. */}
-          <section aria-label="Silhouette du véhicule" className="mt-[22px]">
+              réservation ; allumé par défaut pour tous. Sans type demandé, il n'y a rien à montrer. */}
+          {typeDemande && <section aria-label="Silhouette du véhicule" className="mt-[22px]">
             <CarteListe>
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1 py-3">
@@ -614,7 +656,7 @@ export default function PrestationsV2({
               </div>
             </CarteListe>
             {silhouettesErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{silhouettesErreur}</Constat></div>}
-          </section>
+          </section>}
         </>
       )}
 
@@ -626,6 +668,7 @@ export default function PrestationsV2({
           services={services}
           availabilities={availabilities}
           onEnregistrer={enregistrerPrestation}
+          typeDemande={typeDemande}
           onSupprimer={feuille.service ? () => demanderSuppression({ quoi: 'prestation', service: feuille.service! }) : undefined}
           // Ouvert à toutes les offres (Alexandre, 2026-10-10) : une prestation déjà réservée ne
           // se supprime pas, la veille est le seul moyen de la retirer de la page de réservation.

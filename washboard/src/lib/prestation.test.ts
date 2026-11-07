@@ -4,7 +4,9 @@ import {
   estReservable, champsManquants, messageManques, dureeValide, DUREE_MAX_MINUTES,
   estRefusCleEtrangere, CODE_PG_CLE_ETRANGERE, ERREUR_PRESTATION_RESERVEE, ERREUR_SANS_TYPE,
   estEnVeille, estVisibleParLesClients, aMettreEnVeille, prestationsAffichees, erreurTropDActives,
+  demandeLeTypeDeVehicule, prestationsSelonLeType, sansChoixDeType, TYPE_UNIQUE,
 } from './prestation'
+import { vehiclePrice } from './pricing'
 
 const complete = { name: 'Lavage complet', price: '80', duration_minutes: '90', vehicle_types: ['SUV'] }
 
@@ -240,5 +242,26 @@ describe('erreurTropDActives — le refus lu par le laveur', () => {
     // jour où le catalogue illimité change de palier, le message suit.
     expect(erreurTropDActives(3)).toContain(PLAN_LABELS[offreCatalogueIllimite()])
     expect(erreurTropDActives(3)).toMatch(/illimité/)
+  })
+})
+
+describe('sans type de véhicule', () => {
+  const s = { id: 's1', vehicle_types: ['citadine', 'SUV'], vehicle_price_overrides: { SUV: 70 }, price: 50 }
+  it('demandé par défaut : null, absent ou true', () => {
+    expect(demandeLeTypeDeVehicule({})).toBe(true)
+    expect(demandeLeTypeDeVehicule({ demander_type_vehicule: null })).toBe(true)
+    expect(demandeLeTypeDeVehicule({ demander_type_vehicule: true })).toBe(true)
+    expect(demandeLeTypeDeVehicule({ demander_type_vehicule: false })).toBe(false)
+  })
+  it('type demandé : les prestations restent telles quelles', () => {
+    expect(prestationsSelonLeType([s], {})).toEqual([s])
+  })
+  it('type non demandé : un seul type, au prix principal, sans toucher à l’original', () => {
+    const [r] = prestationsSelonLeType([s], { demander_type_vehicule: false })
+    expect(r).toMatchObject({ id: 's1', vehicle_types: [TYPE_UNIQUE], vehicle_price_overrides: {}, price: 50 })
+    expect(vehiclePrice(r, TYPE_UNIQUE)).toBe(50)
+    expect(s.vehicle_types).toEqual(['citadine', 'SUV'])
+    expect(sansChoixDeType(r.vehicle_types)).toBe(true)
+    expect(sansChoixDeType(['citadine'])).toBe(false)
   })
 })

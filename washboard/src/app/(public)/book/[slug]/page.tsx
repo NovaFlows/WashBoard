@@ -10,7 +10,7 @@ import BookingForm from '@/components/booking/BookingForm'
 import { urlVersionnee } from '@/lib/themes'
 import { reviewsForWasher } from '@/lib/googleReviews'
 import { graceEnded, hasFeature, quotaPrestations, quotaReservations, suitRetourGratuit } from '@/lib/plan'
-import { prestationsAffichees } from '@/lib/prestation'
+import { prestationsAffichees, prestationsSelonLeType } from '@/lib/prestation'
 import { COLONNES_PROMOTION, versPublique, type Promotion } from '@/lib/promotion'
 import { acompteActif, versPublic as versPublicAcompte } from '@/lib/acompte'
 import { fideliteActive } from '@/lib/fidelite'
@@ -38,7 +38,7 @@ type Props = {
 // Une seule chaîne littérale, et non un tableau assemblé : supabase-js déduit
 // le type du résultat de ce littéral. Un `join()` lui rend un `string` et fait
 // perdre le typage de toutes les colonnes.
-const COLONNES_LAVEUR = 'id, booking_page_mode, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, google_place_id, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, silhouettes_vehicules, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
+const COLONNES_LAVEUR = 'id, booking_page_mode, name, slug, phone, logo_url, welcome_message, brand_color, background_theme, profile_updated_at, website_url, google_place_id, base_address, team_size, created_at, travel_fee_mode, travel_fee_tiers, zone_config, smart_slot_enabled, smart_slot_radius_minutes, smart_slot_discount_type, smart_slot_discount_value, reservation_jour_meme, silhouettes_vehicules, demander_type_vehicule, account_status, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, plan, is_preview, meta_pixel_id, facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_numero_tva'
 
 /** Une seule lecture de la fiche par requête HTTP.
  *
@@ -315,7 +315,7 @@ export default async function BookingPage({ params }: Props) {
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à
           // choisir. Le tableau de bord la signale au laveur en rouge.
-          services={prestationsAffichees(services ?? [], quotaPrestations(washer))}
+          services={prestationsSelonLeType(prestationsAffichees(services ?? [], quotaPrestations(washer)), washer)}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
           // Plus de existingBookings/unavailabilities ici : BookingForm les

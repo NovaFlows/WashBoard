@@ -447,6 +447,7 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
             zone={plus.prestations.zone}
             adresseDeBase={plus.prestations.adresseDeBase}
             silhouettesVehicules
+            demanderTypeVehicule
             plafond={plus.prestations.plafond}
             offre={plus.prestations.offre}
             liste={plus.listeBase}

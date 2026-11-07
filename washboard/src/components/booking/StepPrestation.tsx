@@ -7,6 +7,7 @@ import { vehiclePrice, formatPrice, formatDureeFr, prixOptions } from '@/lib/pri
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
+import { nombreDeVehicules, sansChoixDeType } from '@/lib/prestation'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
@@ -89,13 +90,14 @@ export default function StepPrestation({ services, categories, category, onCateg
     {avecSilhouettes && typeAffiche && <ApparitionVehicule>
       <SilhouetteVehicule3D key={typeAffiche} type={typeAffiche} nom={label(typeAffiche)} />
     </ApparitionVehicule>}
-    <div className="wb-booking-chips" aria-label="Type de véhicule">
+    {/* Le laveur ne demande pas le type (lib/prestation.ts) : rien à choisir, seul le nombre reste. */}
+    {!sansChoixDeType(types) && <div className="wb-booking-chips" aria-label="Type de véhicule">
       {types.map(type => <button key={type} type="button" aria-pressed={activeTypes.includes(type)} onClick={() => {
         setDernier(type)
         if (mixed) count(type, vehicles.filter(v => v.type === type).length ? 0 : 1)
         else if (activeTypes.length !== 1 || activeTypes[0] !== type) change([{ type, count: 1, unit_price: 0, addons: [] }])
       }}>{label(type)}</button>)}
-    </div>
+    </div>}
     {activeTypes.map(type => <div key={type} className="flex items-center justify-between gap-3 my-3">
       <span className="text-sm font-medium">{mixed ? label(type) : 'Nombre de véhicules'}</span>
       <div className="wb-booking-counter">
@@ -109,6 +111,7 @@ export default function StepPrestation({ services, categories, category, onCateg
       <h3 className="font-semibold">La prestation</h3>
       <span className="text-xs text-zinc-500">{sansVehicule
         ? 'Prix selon votre véhicule'
+        : sansChoixDeType(types) ? <>Prix pour {nombreDeVehicules(vehicles.length)}</>
         : <>Prix pour {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : 'véhicules'}</>}</span>
     </div>
     <div className="divide-y divide-zinc-200/70 dark:divide-zinc-700">

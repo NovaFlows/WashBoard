@@ -11,6 +11,8 @@
 import type { BookingFormData, Service } from '@/types'
 import { hasPriceOverrides, minVehiclePrice, finalDisplayPrice } from '@/lib/pricing'
 import { FUSEAU } from '@/lib/dateUtils'
+import { nombreDeVehicules, TYPE_UNIQUE } from '@/lib/prestation'
+import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 
 export type FormeResumee = Partial<BookingFormData>
 
@@ -32,7 +34,7 @@ export function resumePrestation(form: FormeResumee, services: Service[]): strin
       const nom = v.label ?? v.type
       parType.set(nom, (parType.get(nom) ?? 0) + (v.count ?? 1))
     }
-    for (const [nom, count] of parType) bits.push(`${count} ${nom}`)
+    for (const [nom, count] of parType) bits.push(nom === VEHICLE_LABELS[TYPE_UNIQUE] ? nombreDeVehicules(count) : `${count} ${nom}`)
   } else if (form.vehicle_count) {
     bits.push(`${form.vehicle_count} ${form.vehicle_type ?? ''}`.trim())
   }
