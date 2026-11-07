@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { CarteListe, Chevron, Ligne, NonLus } from '@/components/dashboard/ParametresFormV2'
-import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import { corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { ilYa } from '@/lib/ficheLaveur'
@@ -11,7 +11,8 @@ import { aujourdhuiParis } from '@/lib/suiviAppels'
 import { inscriptionsParSemaine, type LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Carte, Initiales, Point, Section } from './EcranEquipe'
 import type { ResumeProspects } from './AccueilEquipeV2'
-import FeuilleRappel, { BoutonRappel, rappelLaveur } from './FeuilleRappel'
+import FeuilleRappel, { BoutonRappel, rappelLaveur, rappelProspect } from './FeuilleRappel'
+import type { ProspectARappeler } from '@/lib/prospects'
 
 // Accueil de l'espace équipe sur ordinateur (Alexandre, 2026-11-05) : un tableau de
 // bord plutôt que trois portes. Le téléphone garde la liste courte (AccueilEquipeV2).
@@ -138,18 +139,26 @@ function Vide({ children }: { children: React.ReactNode }) {
 
 // ── Le tableau ───────────────────────────────────────────────────────────────
 
-export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null }: {
+type FiltreRappel = 'tous' | 'clients' | 'prospects'
+
+export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null, rappelsProspects = [] }: {
   laveurs: LaveurResume[]
   resume: Resume
   email: string | null
   maintenant: number
   prospects?: ResumeProspects
+  rappelsProspects?: ProspectARappeler[]
 }) {
   const { unreadTeamCount } = useSupportBadges()
   const now = useMemo(() => new Date(maintenant), [maintenant])
   const auj = aujourdhuiParis(now)
   const [rappelOuvert, setRappelOuvert] = useState<string | null>(null)
   const laveurRappel = rappelOuvert ? laveurs.find(l => l.id === rappelOuvert && l.relance) : null
+  const prospectRappel = rappelOuvert ? rappelsProspects.find(p => `p:${p.id}` === rappelOuvert) : null
+  // « À rappeler » : clients (laveurs inscrits) et prospects ensemble, filtrables (Alexandre, 2026-11-07).
+  const [filtreRappel, setFiltreRappel] = useState<FiltreRappel>('tous')
+  const prospectsDus = rappelsProspects.filter(p => p.le <= auj)
+  const prospectsAVenir = rappelsProspects.length - prospectsDus.length
 
   const d = useMemo(() => {
     const recent = (l: LaveurResume, de: number, a: number) => { const age = maintenant - Date.parse(l.creeLe); return age >= de && age < a }
@@ -173,6 +182,13 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
     }
   }, [laveurs, maintenant, now, auj])
 
+  type LigneRappel = { genre: 'client'; le: string; l: LaveurResume } | { genre: 'prospect'; le: string; p: ProspectARappeler }
+  const rappelsDus: LigneRappel[] = [
+    ...(filtreRappel !== 'prospects' && resume.suiviActif ? d.aRappeler.map(l => ({ genre: 'client' as const, le: l.relance!.le, l })) : []),
+    ...(filtreRappel !== 'clients' ? prospectsDus.map(p => ({ genre: 'prospect' as const, le: p.le, p })) : []),
+  ].sort((a, b) => a.le.localeCompare(b.le))
+  const rappelsAVenir = (filtreRappel !== 'prospects' ? d.aVenir : 0) + (filtreRappel !== 'clients' ? prospectsAVenir : 0)
+
   return (
     <EcranEquipe titre="Équipe" sousTitre="Outil interne, invisible des laveurs" retour={{ href: '/dashboard/parametres', label: 'Plus' }} large>
       {/* Les chiffres : chacun ouvre la liste filtrée correspondante. */}
@@ -183,26 +199,51 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
         <Chiffre libelle="Payants" valeur={d.payants} detail="abonnés et historiques" />
         <Chiffre
           libelle="À rappeler"
-          valeur={resume.suiviActif ? d.aRappeler.length : '—'}
-          detail={resume.suiviActif ? (d.aRappeler.length ? (d.aRappeler.length > 1 ? 'relances dues' : 'relance due') : 'Personne aujourd’hui') : 'Suivi à activer'}
+          valeur={resume.suiviActif ? d.aRappeler.length + prospectsDus.length : '—'}
+          detail={resume.suiviActif ? (d.aRappeler.length + prospectsDus.length ? `${d.aRappeler.length} client${d.aRappeler.length > 1 ? 's' : ''} · ${prospectsDus.length} prospect${prospectsDus.length > 1 ? 's' : ''}` : 'Personne aujourd’hui') : 'Suivi à activer'}
           href="/dashboard/support/laveurs?filtre=rappeler"
         />
       </div>
 
       <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-6">
         <div className="space-y-6">
-          <Section titre="À rappeler aujourd’hui" action={d.aRappeler.length > 5 || d.aVenir ? <ToutVoir href="/dashboard/support/laveurs?filtre=rappeler">{d.aVenir ? `+ ${d.aVenir} les prochains jours` : 'Tout voir'}</ToutVoir> : undefined}>
-            {!resume.suiviActif ? <Vide>Le suivi d’appel n’est pas encore activé en base.</Vide>
-              : d.aRappeler.length === 0 ? <Vide>Personne à rappeler aujourd’hui. Le bouton « À rappeler » d’une fiche l’ajoute ici.</Vide>
+          <Section
+            titre={`À rappeler aujourd’hui${rappelsDus.length ? ` · ${rappelsDus.length}` : ''}`}
+            action={rappelsAVenir ? <ToutVoir href={filtreRappel === 'prospects' ? '/dashboard/support/prospects?filtre=discussion' : '/dashboard/support/laveurs?filtre=rappeler'}>{`+ ${rappelsAVenir} les prochains jours`}</ToutVoir> : undefined}
+          >
+            <div className="mb-3 flex gap-2" role="group" aria-label="Qui rappeler">
+              {([['tous', 'Tous', d.aRappeler.length + prospectsDus.length], ['clients', 'Clients', d.aRappeler.length], ['prospects', 'Prospects', prospectsDus.length]] as const).map(([cle, libelle, n]) => (
+                <button key={cle} type="button" aria-pressed={filtreRappel === cle} onClick={() => setFiltreRappel(cle)} className={puce(filtreRappel === cle)}>{libelle} {n}</button>
+              ))}
+            </div>
+            {filtreRappel === 'clients' && !resume.suiviActif ? <Vide>Le suivi d’appel n’est pas encore activé en base.</Vide>
+              : rappelsDus.length === 0 ? <Vide>{filtreRappel === 'prospects' ? 'Aucun prospect à rappeler aujourd’hui.' : filtreRappel === 'clients' ? 'Aucun client à rappeler aujourd’hui. Le bouton « À rappeler » d’une fiche l’ajoute ici.' : 'Personne à rappeler aujourd’hui.'}</Vide>
               : (
                 <ul className={LISTE}>
-                  {d.aRappeler.slice(0, 5).map(l => (
+                  {rappelsDus.map(r => r.genre === 'client' ? (
                     <LigneLaveur
-                      key={l.id} l={l}
-                      sousTitre={<span className="truncate">{l.relance!.action ?? 'Sans motif'}</span>}
-                      droite={<span className={`shrink-0 text-[12.5px] ${corpsFort}`}>{l.relance!.le < auj ? `depuis le ${jourMois(l.relance!.le)}` : 'aujourd’hui'}</span>}
-                      apres={<BoutonRappel onClick={() => setRappelOuvert(l.id)} libelle={`Décaler ou supprimer le rappel de ${l.name}`} />}
+                      key={`c:${r.l.id}`} l={r.l}
+                      sousTitre={<span className="truncate">{filtreRappel === 'tous' && 'Client · '}{r.l.relance!.action ?? 'Sans motif'}</span>}
+                      droite={<span className={`shrink-0 text-[12.5px] ${corpsFort}`}>{r.le < auj ? `depuis le ${jourMois(r.le)}` : 'aujourd’hui'}</span>}
+                      apres={<BoutonRappel onClick={() => setRappelOuvert(r.l.id)} libelle={`Décaler ou supprimer le rappel de ${r.l.name}`} />}
                     />
+                  ) : (
+                    <li key={`p:${r.p.id}`} className="flex items-center">
+                      <Link href={`/dashboard/support/prospects?p=${r.p.id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--v2-filet)]/50">
+                        <Initiales nom={r.p.nom} taille={34} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline gap-2">
+                            <span className={`truncate text-[14.5px] ${styleNom}`}>{r.p.nom}</span>
+                            {(r.p.telephone || r.p.instagram) && <span className={`shrink-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{r.p.telephone ?? `@${r.p.instagram}`}</span>}
+                          </span>
+                          <span className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                            <span className="truncate">{filtreRappel === 'tous' && 'Prospect · '}{r.p.motif ?? 'Sans note'}</span>
+                          </span>
+                        </span>
+                        <span className={`shrink-0 text-[12.5px] ${corpsFort}`}>{r.le < auj ? `depuis le ${jourMois(r.le)}` : 'aujourd’hui'}</span>
+                      </Link>
+                      <span className="pr-2"><BoutonRappel onClick={() => setRappelOuvert(`p:${r.p.id}`)} libelle={`Décaler ou supprimer le rappel de ${r.p.nom}`} /></span>
+                    </li>
                   ))}
                 </ul>
               )}
@@ -281,6 +322,9 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
       </div>
 
       {email && <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Connecté en tant que {email}. L’accès au compte d’un laveur se demande depuis sa fiche.</p>}
+      {prospectRappel && (
+        <FeuilleRappel key={`p:${prospectRappel.id}`} nom={prospectRappel.nom} le={prospectRappel.le} now={now} lienFiche={`/dashboard/support/prospects?p=${prospectRappel.id}`} {...rappelProspect(prospectRappel.id)} onClose={() => setRappelOuvert(null)} />
+      )}
       {laveurRappel?.relance && (
         <FeuilleRappel
           key={laveurRappel.relance.appelId} nom={laveurRappel.name} le={laveurRappel.relance.le} now={now}

@@ -228,6 +228,17 @@ export function rappelDu(p: Prospect, now: Date): boolean {
   return (p.statut === 'en_discussion' || p.statut === 'interesse') && !!p.relancer_le && p.relancer_le <= aujourdhuiParis(now)
 }
 
+/** Prospect à rappeler, réduit à ce que le tableau de bord de l'équipe affiche. */
+export type ProspectARappeler = { id: string; nom: string; instagram: string | null; telephone: string | null; le: string; motif: string | null }
+
+/** Les prospects avec un rappel prévu (dû ou à venir), le plus ancien d'abord. */
+export function prospectsARappeler(prospects: Prospect[]): ProspectARappeler[] {
+  return prospects
+    .filter(p => (p.statut === 'en_discussion' || p.statut === 'interesse') && !!p.relancer_le)
+    .map(p => ({ id: p.id, nom: p.nom, instagram: p.instagram, telephone: p.telephone, le: p.relancer_le!, motif: p.notes?.split('\n')[0]?.trim() || null }))
+    .sort((a, b) => a.le.localeCompare(b.le))
+}
+
 export function resumerProspects(prospects: Prospect[], now: Date) {
   return {
     total: prospects.length,

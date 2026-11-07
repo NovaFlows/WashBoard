@@ -273,7 +273,7 @@ function NouveauProspect({ now, onClose }: { now: Date; onClose: () => void }) {
 
 // ── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ProspectsV2({ prospects, actif, maintenant, ongletInitial }: { prospects: Prospect[]; actif: boolean; maintenant: number; ongletInitial?: Onglet }) {
+export default function ProspectsV2({ prospects, actif, maintenant, ongletInitial, ouvertInitial }: { prospects: Prospect[]; actif: boolean; maintenant: number; ongletInitial?: Onglet; ouvertInitial?: string }) {
   const now = useMemo(() => new Date(maintenant), [maintenant])
   const compte = useMemo(() => {
     const c = Object.fromEntries(ONGLETS.map(o => [o, 0])) as Record<Onglet, number>
@@ -282,7 +282,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
   }, [prospects, now])
   const [onglet, setOnglet] = useState<Onglet>(() => ongletInitial ?? (['trier', 'discussion', 'interesses'] as Onglet[]).find(o => compte[o] > 0) ?? 'contactes')
   const [recherche, setRecherche] = useState('')
-  const [ouvert, setOuvert] = useState<string | null>(null)
+  const [ouvert, setOuvert] = useState<string | null>(ouvertInitial ?? null)
   const [rappelOuvert, setRappelOuvert] = useState<string | null>(null)
 
   const visibles = useMemo(() => {
@@ -351,6 +351,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
       titre="Prospects"
       sousTitre={actif ? `${prospects.length} laveurs démarchés, sans compte WashBoard` : 'Laveurs démarchés, sans compte WashBoard'}
       retour={{ href: '/dashboard/support', label: 'Équipe' }}
+      large
       action={actif ? (
         <button type="button" onClick={() => setOuvert('nouveau')} className={`flex h-11 shrink-0 items-center gap-1.5 rounded-[var(--v2-radius-pilule)] px-4 text-[14px] ${corpsFort} text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           <Plus size={17} strokeWidth={2.2} aria-hidden />Ajouter
@@ -364,7 +365,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
           <div className="space-y-3">
             <input type="search" inputMode="search" value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Nom, @compte, ville, téléphone" aria-label="Rechercher un prospect" className={CHAMP} />
             {!recherche.trim() && (
-              <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Étape">
+              <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible [scrollbar-width:none]" role="group" aria-label="Étape">
                 {ONGLETS.map(o => (
                   <button key={o} type="button" aria-pressed={onglet === o} onClick={() => setOnglet(o)} className={puce(onglet === o)}>
                     {LIBELLE_ONGLET[o]} {compte[o]}

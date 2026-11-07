@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { appliquerEvenement, estArchive, normaliserInstagram, ongletDe, rappelDu, resumerProspects, validerEvenement, validerSaisie, type Evenement, type Prospect } from './prospects'
+import { appliquerEvenement, estArchive, normaliserInstagram, ongletDe, prospectsARappeler, rappelDu, resumerProspects, validerEvenement, validerSaisie, type Evenement, type Prospect } from './prospects'
 
 const NOW = new Date('2026-11-06T12:00:00Z')
 
@@ -138,5 +138,17 @@ describe('cas limites', () => {
     expect(['a_repondu', 'en_discussion', 'interesse', 'inscrit'].map(s => ongletDe(prospect({ statut: s as Prospect['statut'] }), NOW)))
       .toEqual(['trier', 'discussion', 'interesses', 'inscrits'])
     expect(estArchive(prospect({ statut: 'interesse', contacte_le: '2026-10-01T10:00:00Z' }), NOW)).toBe(false)
+  })
+})
+
+describe('prospectsARappeler', () => {
+  it('garde les rappels prévus en discussion ou intéressés, le plus ancien d’abord, avec la première ligne des notes', () => {
+    const liste = [
+      prospect({ id: 'a', statut: 'en_discussion', relancer_le: '2026-11-09', notes: 'Rappeler après 18h\nA un associé' }),
+      prospect({ id: 'b', statut: 'interesse', relancer_le: '2026-11-04' }),
+      prospect({ id: 'c', statut: 'pas_interesse', relancer_le: '2026-11-04' }),
+      prospect({ id: 'd', statut: 'en_discussion' }),
+    ]
+    expect(prospectsARappeler(liste).map(p => [p.id, p.le, p.motif])).toEqual([['b', '2026-11-04', null], ['a', '2026-11-09', 'Rappeler après 18h']])
   })
 })
