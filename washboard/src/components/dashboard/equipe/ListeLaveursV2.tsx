@@ -127,7 +127,7 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, aff
           type="search" inputMode="search" value={recherche} onChange={e => setRecherche(e.target.value)}
           placeholder="Nom, téléphone, lien" aria-label="Rechercher un laveur" className={CHAMP}
         />
-        <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtrer">
+        <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible [scrollbar-width:none]" role="group" aria-label="Filtrer">
           {FILTRES.map(f => (
             <button key={f.cle} type="button" aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)} className={puce(filtre === f.cle)}>
               {f.label}{f.cle !== 'tous' ? ` ${compte(f.cle)}` : ''}
@@ -135,7 +135,7 @@ export default function ListeLaveursV2({ laveurs, filtreInitial, maintenant, aff
           ))}
         </div>
         {affiliationActive && (
-          <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Suivi par">
+          <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex items-center gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible [scrollbar-width:none]" role="group" aria-label="Suivi par">
             <span className={`shrink-0 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Suivi par</span>
             {(['tous', ...EQUIPE, 'personne'] as SuiviPar[]).map(v => (
               <button key={v} type="button" aria-pressed={suiviPar === v} onClick={() => choisirSuiviPar(v)} className={puce(suiviPar === v)}>

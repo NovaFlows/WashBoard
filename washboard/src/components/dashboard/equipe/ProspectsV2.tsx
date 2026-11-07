@@ -351,7 +351,6 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
       titre="Prospects"
       sousTitre={actif ? `${prospects.length} laveurs démarchés, sans compte WashBoard` : 'Laveurs démarchés, sans compte WashBoard'}
       retour={{ href: '/dashboard/support', label: 'Équipe' }}
-      large
       action={actif ? (
         <button type="button" onClick={() => setOuvert('nouveau')} className={`flex h-11 shrink-0 items-center gap-1.5 rounded-[var(--v2-radius-pilule)] px-4 text-[14px] ${corpsFort} text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
           <Plus size={17} strokeWidth={2.2} aria-hidden />Ajouter
