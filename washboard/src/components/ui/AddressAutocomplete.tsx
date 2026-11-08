@@ -126,12 +126,14 @@ export default function AddressAutocomplete({ id, value, onChange, onSelectWithC
         style={style}
         autoComplete="off"
       />
-      {allowGeolocation && value.trim().length < 5 && (
+      {/* Masqué sans être retiré : la page ne change pas de hauteur pendant la saisie. */}
+      {allowGeolocation && (
         <button
           type="button"
           onClick={locate}
           disabled={locating}
-          className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:opacity-70 disabled:opacity-50 transition-opacity"
+          aria-hidden={value.trim().length >= 5 || undefined}
+          className={`${value.trim().length >= 5 ? 'invisible ' : ''}mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:opacity-70 disabled:opacity-50 transition-opacity`}
         >
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <circle cx="12" cy="12" r="7" />
