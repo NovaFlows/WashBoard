@@ -1,6 +1,6 @@
 {
   "prenom": "Ryan",
-  "voix_elevenlabs": "A_REMPLIR (ElevenLabs > Voices > ta voix clonée > Copy voice ID)",
+  "voix_elevenlabs": "mqYqB8ax2kYDxiS0NNJf",
   "modele_voix": "eleven_v4",
   "reglages_voix": {
     "stability": 0.4,
