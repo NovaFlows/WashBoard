@@ -192,11 +192,12 @@ export function appliquerEvenement(existant: Prospect | null, ev: Evenement): Ef
 
 // ── Rangement à l'écran ──────────────────────────────────────────────────────
 
-export const ONGLETS = ['trier', 'discussion', 'interesses', 'contactes', 'non', 'inscrits', 'archives'] as const
+export const ONGLETS = ['trier', 'vu', 'discussion', 'interesses', 'contactes', 'non', 'inscrits', 'archives'] as const
 export type Onglet = (typeof ONGLETS)[number]
 
 export const LIBELLE_ONGLET: Record<Onglet, string> = {
   trier: 'À trier',
+  vu: 'Ont vu',
   discussion: 'En discussion',
   interesses: 'Intéressés',
   contactes: 'Contactés',
@@ -214,7 +215,8 @@ export function estArchive(p: Prospect, now: Date): boolean {
 export function ongletDe(p: Prospect, now: Date): Onglet {
   switch (p.statut) {
     case 'a_repondu': return 'trier'
-    case 'a_vu': return 'trier'
+    // « À trier » : seulement les réponses ; vu sans réponse a son onglet (Alexandre, 2026-11-08).
+    case 'a_vu': return 'vu'
     case 'en_discussion': return 'discussion'
     case 'interesse': return 'interesses'
     case 'pas_interesse': return 'non'
@@ -242,7 +244,7 @@ export function prospectsARappeler(prospects: Prospect[]): ProspectARappeler[] {
 export function resumerProspects(prospects: Prospect[], now: Date) {
   return {
     total: prospects.length,
-    aTrier: prospects.filter(p => p.statut === 'a_repondu' || p.statut === 'a_vu').length,
+    aTrier: prospects.filter(p => p.statut === 'a_repondu').length,
     aRappeler: prospects.filter(p => rappelDu(p, now)).length,
   }
 }

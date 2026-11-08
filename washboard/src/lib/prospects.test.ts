@@ -65,7 +65,7 @@ describe('appliquerEvenement', () => {
     expect(appliquerEvenement(prospect(), ev({ type: 'vu', instagram: 'laveur.exemple' }))).toEqual({ modifier: { statut: 'a_vu' } })
     expect(appliquerEvenement(prospect({ statut: 'a_repondu' }), ev({ type: 'vu', instagram: 'laveur.exemple' }))).toHaveProperty('rien')
     expect(appliquerEvenement(prospect({ statut: 'a_vu' }), ev({ type: 'reponse', instagram: 'laveur.exemple', reponse: 'Ok' }))).toMatchObject({ modifier: { statut: 'a_repondu' } })
-    expect(ongletDe(prospect({ statut: 'a_vu' }), NOW)).toBe('trier')
+    expect(ongletDe(prospect({ statut: 'a_vu' }), NOW)).toBe('vu')
   })
   it('la même réponse vue deux fois ne change rien', () => {
     const p = prospect({ statut: 'a_repondu', reponse: 'Oui', repondu_le: '2026-11-06T11:00:00.000Z' })
@@ -105,7 +105,7 @@ describe('rangement', () => {
       prospect({ statut: 'en_discussion', relancer_le: '2026-11-08' }),
     ]
     expect(rappelDu(liste[2], NOW)).toBe(true)
-    expect(resumerProspects(liste, NOW)).toEqual({ total: 5, aTrier: 2, aRappeler: 2 })
+    expect(resumerProspects(liste, NOW)).toEqual({ total: 5, aTrier: 1, aRappeler: 2 })
   })
 })
 

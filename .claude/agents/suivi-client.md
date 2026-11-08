@@ -18,6 +18,7 @@ Starter 19 €, Pro 49 €, Business 129 €). Pitch : *« Tu laves des voitures
 |---|---|---|
 | Contacté | `contacte` | automatique, à chaque message Instagram envoyé |
 | À trier | `a_repondu` | automatique, quand l'agent d'envoi voit une réponse |
+| Ont vu | `a_vu` | automatique, quand l'agent d'envoi voit « Vu » sans réponse (onglet à part depuis le 2026-11-08) |
 | Intéressé | `interesse` | **Alexandre**, après lecture de la réponse |
 | Pas intéressé | `pas_interesse` | **Alexandre** |
 | En discussion | `en_discussion` | toi ou l'équipe : prospect eu au téléphone, à rappeler |
