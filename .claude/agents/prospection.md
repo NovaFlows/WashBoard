@@ -59,15 +59,24 @@ Tâches planifiées Windows :
 **Règles fixées par Alexandre — ne les change pas sans son accord :**
 - Envoi depuis **@washboard.fr**. Cible : pros du nettoyage / detailing auto, **France ou
   Belgique**, actifs, **jamais contactés par nous**, secteur vérifié.
-- **15 à 25 min** entre deux messages (tirage au hasard), **10 h – 21 h** uniquement.
+- **10 à 20 min** entre deux messages (Alexandre, 07/11 : « fais 10-20 ») (tirage au hasard), **10 h – 21 h** uniquement.
   Il a refusé un réveil toutes les 5 min : un passage = un message.
 - Quotas : 10 le 06/11, 15 le 07/11, puis 15 à 20 par jour (calculé à partir de la date,
   le même pour le mail de la veille, le lot du soir et les envois).
 - Au moindre avertissement d'Instagram : pause 48 h + mail urgent. Récap par mail à 21 h.
   Mails uniquement à novaflows.pro@gmail.com.
-- Messages : ses deux modèles exacts (« sans interaction » / « avec interaction » quand
-  le compte nous suit, a liké ou republié), seule la phrase du milieu est personnalisée.
-  Un nouveau lot lui est **montré avant d'entrer dans la file**.
+- **Interactions d'abord, puis interaction créée la veille** (Alexandre, 08/11 : « on fait en
+  priorité les interactions puis quand il y en a pas alors on va en créer la veille ») :
+  à la main il obtenait 2-3 réponses sur 10 avec des gens qui avaient interagi ; à froid,
+  0 sur 31 les 7 et 8/11. Le lot retient d'abord les abonnés / likers / commentateurs.
+  Les prospects « aucune » interaction passent en `a_chauffer` : un passage de préparation
+  (`chauffe.md` : abonnement + 1 ou 2 likes, 20 par jour au plus) la veille, le message au
+  plus tôt le lendemain. Les passages alternent préparations et messages.
+- Messages : le modèle exact « avec interaction » d'Alexandre pour tous (« Je pense que tu as
+  peut-être vu passer WashBoard… »), seule la phrase du milieu est personnalisée.
+  Un nouveau lot lui est **montré avant d'entrer dans la file** ; quand il valide :
+  `python valider-lot.py lots/lot-<date>.md [--retirer a,b --raison "…"]` (jamais d'ajout
+  à la main dans file.json).
 - C'est **Alexandre qui répond** aux prospects. Relance à 4 jours : prévue, pas encore
   construite.
 
