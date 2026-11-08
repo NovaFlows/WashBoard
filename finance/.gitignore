@@ -1,0 +1,7 @@
+# ⚠️ Le dépôt WashBoard est PUBLIC. Ce dossier contient la tenue de compte
+# (dépenses, gains, factures) : rien ne doit partir sur git, et Git en
+# garderait la trace pour toujours, même après suppression du fichier.
+# Seuls ce fichier et le README sont versionnés (ils ne contiennent aucun chiffre).
+*
+!.gitignore
+!README.md
