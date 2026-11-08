@@ -1,6 +1,12 @@
 {
-  "regions": ["cdg1"],
+  "regions": [
+    "cdg1"
+  ],
   "crons": [
-    { "path": "/api/cron/purge-accounts", "schedule": "0 3 * * *" }
-  ]
+    {
+      "path": "/api/cron/purge-accounts",
+      "schedule": "0 3 * * *"
+    }
+  ],
+  "ignoreCommand": "[ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- ."
 }

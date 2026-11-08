@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Carrousel 3 novembre — v2</title>
+<!-- Carrousel « 5 prestations à ajouter à ton catalogue », v2 après le retour d'Alexandre (« trop design Claude »).
+     Identité de la refonte WashBoard : fond papier, encre, bleu acier, Archivo. Titres en Archivo étroit et capitales,
+     comme le lettrage d'une camionnette de laveur. Chaque slide montre une VRAIE pièce de WashBoard (page de réservation
+     dans l'iPhone du client, ligne du catalogue, options, total, demande côté laveur, formulaire d'ajout : captures/)
+     et un sticker d'Alexandre choisi pour ce que dit la slide (2e retour : plus de stickers, des visuels variés). -->
+<style>
+@font-face { font-family: Archivo; src: url(fonts/archivo-latin.woff2) format('woff2'); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: Archivo; src: url(fonts/archivo-latin-ext.woff2) format('woff2'); font-weight: 100 900; font-stretch: 62% 125%; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: Emoji; src: url(fonts/noto-emoji.woff2) format('woff2'); }
+@font-face { font-family: Inter; src: url(fonts/inter-latin.woff2) format('woff2'); font-weight: 100 900; }
+:root { --fond: #F6F5F3; --encre: #16161A; --gris: #6B6B76; --accent: #306090; --chassis: #1C1C21; }
+.sombre { --fond: #18181D; --encre: #F2F2F5; --gris: #A8A8B2; --accent: #7FAAD8; }
+* { box-sizing: border-box; margin: 0; }
+body { background: #888; font-family: Archivo, sans-serif; display: flex; flex-direction: column; gap: 40px; padding: 40px; }
+.slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: var(--fond); color: var(--encre); padding: 72px 72px 0; }
+.haut { display: flex; justify-content: space-between; align-items: center; font-size: 30px; color: var(--gris); font-weight: 500; }
+.marque { display: flex; align-items: center; gap: 14px; color: var(--encre); font-weight: 700; font-size: 34px; }
+.marque img { width: 48px; height: 48px; border-radius: 11px; }
+h1 { font-stretch: 75%; font-weight: 800; text-transform: uppercase; line-height: .9; letter-spacing: -.005em; font-size: 124px; margin-top: 64px; }
+h1 em { font-style: normal; color: var(--accent); }
+p { font-size: 38px; line-height: 1.32; color: var(--gris); margin-top: 30px; max-width: 900px; }
+p b { color: var(--encre); font-weight: 600; }
+
+/* iPhone 15 Pro : écran 393 pt de large, rendu à 560 px (×1,425), coupé par le bas de la slide. */
+.iphone { position: absolute; left: 50%; width: 600px; margin-left: -300px; transform: scale(1.14); transform-origin: 50% 0; padding: 20px; border-radius: 98px; background: var(--chassis);
+  box-shadow: inset 0 0 0 3px #3a3a42, 0 30px 60px -24px rgba(22,22,26,.35), 0 8px 20px -10px rgba(22,22,26,.18); }
+.sombre .iphone { box-shadow: inset 0 0 0 3px #3a3a42, 0 30px 80px -20px rgba(0,0,0,.7); }
+.iphone::before, .iphone::after { content: ''; position: absolute; width: 6px; background: #2a2a30; border-radius: 3px; }
+.iphone::before { left: -5px; top: 190px; height: 90px; }
+.iphone::after { right: -5px; top: 260px; height: 140px; }
+.ecran { position: relative; width: 560px; height: 1213px; border-radius: 78px; overflow: hidden; background: #F6F5F3; }
+.ecran img.page { position: absolute; top: 77px; left: 0; width: 560px; }
+.barre { position: absolute; top: 0; left: 0; right: 0; height: 77px; background: #F6F5F3; z-index: 2; font-family: Inter, sans-serif; }
+.barre .h { position: absolute; left: 70px; top: 24px; font-size: 24px; font-weight: 600; color: #000; letter-spacing: -.01em; }
+.barre .ile { position: absolute; left: 50%; top: 16px; width: 180px; height: 53px; margin-left: -90px; background: #000; border-radius: 27px; }
+.barre svg { position: absolute; right: 44px; top: 28px; }
+
+.sticker { position: absolute; filter: drop-shadow(0 18px 30px rgba(0,0,0,.18)); }
+.piece { position: absolute; background: #fff; border-radius: 40px; padding: 34px 38px; box-shadow: 0 30px 60px -24px rgba(22,22,26,.28), 0 8px 20px -10px rgba(22,22,26,.14); }
+.piece img { display: block; width: 100%; }
+.piece.nue { padding: 0; overflow: hidden; }
+/* notification iOS de WashBoard (texte du vrai push : api/bookings/route.ts) */
+.notif { position: absolute; display: flex; gap: 26px; padding: 30px 34px; border-radius: 52px; background: rgba(255,255,255,.86); font-family: Inter, Emoji, sans-serif;
+  box-shadow: 0 30px 60px -24px rgba(22,22,26,.3), 0 8px 20px -10px rgba(22,22,26,.14); color: #000; }
+.notif img { width: 86px; height: 86px; border-radius: 20px; flex: none; }
+.notif .t { display: flex; justify-content: space-between; font-size: 32px; font-weight: 600; }
+.notif .t span { color: #8a8a8e; font-weight: 400; font-size: 28px; }
+.notif .c { font-size: 32px; line-height: 1.3; margin-top: 4px; }
+.pied { position: absolute; left: 72px; bottom: 64px; font-size: 34px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- 1 · couverture : il se pose la question (variante sombre générée par capturer.mjs avec la classe .sombre) -->
+<section class="slide couverture">
+  <div class="haut"><span class="marque"><img src="logo.png" alt="">WashBoard</span></div>
+  <h1 style="font-size:140px; margin-top:110px; white-space:nowrap">Tu laves.<br>Mais tu vends<br><em>quoi d'autre&nbsp;?</em></h1>
+  <p style="position:absolute; left:72px; bottom:110px; max-width:440px; font-size:44px">5 prestations à ajouter à ton catalogue. <b>Et à facturer.</b></p>
+  <img class="sticker" src="stickers/p05.png" style="right:-10px; bottom:-260px; width:470px">
+</section>
+
+<!-- 2 · le catalogue que tout le monde a : bras croisés -->
+<section class="slide">
+  <div class="haut"><span class="marque"><img src="logo.png" alt="">WashBoard</span><span>washboard.fr</span></div>
+  <h1 style="font-size:112px">Le lavage, tout<br>le monde le fait.</h1>
+  <p>Ce qui te démarque, c'est <b>ce que tu proposes autour</b>. Un catalogue classique, vu par ton client :</p>
+  <div class="iphone" data-ecran="c0-aujourdhui" style="top:640px; left:37%"></div>
+  <img class="sticker" src="stickers/p02.png" style="right:-40px; bottom:-60px; width:400px">
+</section>
+
+<!-- 3 · phares : la ligne du catalogue en grand, il est bluffé -->
+<section class="slide">
+  <div class="haut"><span>1 sur 5</span><span>washboard.fr</span></div>
+  <h1>Rénovation<br>des phares</h1>
+  <p>Des phares jaunis, il y en a sur toutes les voitures de plus de huit ans. <b>Le client voit la différence avant de payer.</b></p>
+  <div class="piece" style="left:72px; top:690px; width:936px"><img src="captures/ecrans/z-phares.png" alt=""></div>
+  <img class="sticker" src="stickers/p18.png" style="right:30px; bottom:-90px; width:430px">
+</section>
+
+<!-- 4 · shampouinage : la notification de réservation, il la lit, content -->
+<section class="slide">
+  <div class="haut"><span>2 sur 5</span><span>washboard.fr</span></div>
+  <h1 style="font-size:112px">Shampouinage<br>sièges &amp; moquettes</h1>
+  <p>Un café renversé, un siège bébé, un chien. <b>Ça se demande toute l'année</b>, pas qu'au printemps.</p>
+  <div class="notif" style="left:72px; right:72px; top:700px">
+    <img src="logo.png" alt="">
+    <div style="flex:1">
+      <div class="t">WashBoard<span>maintenant</span></div>
+      <div class="c"><b>🚗 Nouvelle réservation</b><br>👤 Inès Garnier<br>✨ Shampouinage sièges &amp; moquettes · 69&nbsp;€</div>
+    </div>
+  </div>
+  <img class="sticker" src="stickers/p14.png" style="right:60px; bottom:-200px; width:400px">
+</section>
+
+<!-- 5 · protection : l'option cochée, pulvérisateur et microfibre en main -->
+<section class="slide">
+  <div class="haut"><span>3 sur 5</span><span>washboard.fr</span></div>
+  <h1>Protection<br>longue durée</h1>
+  <p>Cire ou céramique, <b>en option du lavage complet</b> : le prix et le temps s'ajoutent tout seuls au créneau.</p>
+  <div class="piece" style="left:72px; top:650px; width:610px; padding:28px 30px"><img src="captures/ecrans/z-protection.png" alt=""></div>
+  <img class="sticker" src="stickers/p28.png" style="right:-50px; bottom:-40px; width:400px">
+</section>
+
+<!-- 6 · odeurs : il repousse l'odeur ; l'option cochée et le total qui suit -->
+<section class="slide">
+  <div class="haut"><span>4 sur 5</span><span>washboard.fr</span></div>
+  <h1>Traitement<br>des odeurs</h1>
+  <p style="max-width:600px">Tabac, chien, humidité. <b>Une case à cocher pour le client</b>, et le total suit.</p>
+  <img class="sticker" src="stickers/p10.png" style="right:10px; top:140px; width:280px">
+  <div class="piece" style="left:72px; top:640px; width:680px; padding:26px 28px"><img src="captures/ecrans/z-odeurs.png" alt=""></div>
+  <div class="piece nue" style="right:72px; top:1150px; width:480px; border-radius:32px"><img src="captures/ecrans/z-odeurs-total.png" alt=""></div>
+</section>
+
+<!-- 7 · revente : côté laveur, la demande « En attente » ; il part livrer la voiture -->
+<section class="slide">
+  <div class="haut"><span>5 sur 5</span><span>washboard.fr</span></div>
+  <h1>Préparation<br>avant revente</h1>
+  <p>Vente ou fin de leasing : chaque trace coûte de l'argent à ton client. <b>C'est là qu'on discute le moins ton prix.</b></p>
+  <div class="piece nue" style="left:72px; top:650px; width:936px; border-radius:40px; background:#F6F5F3"><img src="captures/ecrans/z-demande.png" alt=""></div>
+  <img class="sticker" src="stickers/p25.png" style="right:60px; bottom:-60px; width:330px">
+</section>
+
+<!-- 8 · appel à l'action : le formulaire d'ajout, il montre son téléphone -->
+<section class="slide">
+  <div class="haut"><span class="marque"><img src="logo.png" alt="">WashBoard</span></div>
+  <h1 style="font-size:100px">Enregistre ce post.<br><em>Ajoutes-en une<br>ce soir.</em></h1>
+  <p>Dans WashBoard, c'est trois champs. <b>Ton agenda se cale dessus.</b></p>
+  <div class="piece" style="left:72px; top:640px; width:936px; padding:16px 30px 26px; overflow:hidden"><img src="captures/ecrans/z-formulaire.png" alt="" style="clip-path:inset(14px 0 0 0)"></div>
+  <div class="pied" style="color:var(--accent); font-size:44px; bottom:90px">Lien en bio<br>→ washboard.fr</div>
+  <img class="sticker" src="stickers/p12.png" style="right:40px; bottom:-270px; width:400px">
+</section>
+
+<script>
+// Habille chaque .iphone : écran, barre d'état iOS (9:41, réseau, Wi-Fi, batterie), Dynamic Island, capture de la page.
+const icones = `<svg width="118" height="24" viewBox="0 0 118 24" fill="#000">
+  <rect x="0" y="15" width="5.5" height="8" rx="1.6"/><rect x="8" y="11" width="5.5" height="12" rx="1.6"/><rect x="16" y="7" width="5.5" height="16" rx="1.6"/><rect x="24" y="2" width="5.5" height="21" rx="1.6"/>
+  <path d="M51 6.3c4.2 0 8 1.6 10.9 4.3l2-2.1C59.5 5.2 55.4 3.4 51 3.4s-8.5 1.8-11.9 5.1l2 2.1c2.9-2.7 6.7-4.3 10.9-4.3zm0 5.7c2.6 0 5 1 6.8 2.7l2-2.1c-2.3-2.2-5.4-3.5-8.8-3.5s-6.5 1.3-8.8 3.5l2 2.1c1.8-1.7 4.2-2.7 6.8-2.7zm0 5.7c1 0 1.9.4 2.6 1L51 21.5l-2.6-2.8c.7-.6 1.6-1 2.6-1z"/>
+  <rect x="73.5" y="3.5" width="37" height="17" rx="5" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="1.6"/><rect x="76" y="6" width="32" height="12" rx="3"/><path d="M113 9.5v5c1.3-.4 2.2-1.4 2.2-2.5s-.9-2.1-2.2-2.5z" fill-opacity=".45"/></svg>`;
+for (const t of document.querySelectorAll('.iphone')) {
+  t.innerHTML = `<div class="ecran"><div class="barre"><span class="h">9:41</span><span class="ile"></span>${icones}</div>
+    <img class="page" src="captures/ecrans/${t.dataset.ecran}.png" alt=""></div>`;
+}
+</script>
+</body>
+</html>

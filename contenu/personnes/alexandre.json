@@ -1,0 +1,14 @@
+{
+  "prenom": "Alexandre",
+  "voix_elevenlabs": "Qs5oId5fqohxwLxgdSQZ",
+  "modele_voix": "eleven_v4",
+  "reglages_voix": {
+    "stability": 0.4,
+    "similarity_boost": 0.85,
+    "style": 0.45,
+    "use_speaker_boost": true,
+    "speed": 1.08
+  },
+  "stickers": "stickers/alexandre",
+  "note": "Réglages de voix choisis par Alexandre le 2026-11-02 (prise A)."
+}

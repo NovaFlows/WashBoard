@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>WashBoard · Un garage te confie 3 véhicules</title>
+<style>
+  @font-face { font-family: 'Geist'; src: url('assets/fonts/geist-latin.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Geist'; src: url('assets/fonts/geist-latin-ext.woff2') format('woff2'); font-weight: 100 900; unicode-range: U+0100-024F, U+1E00-1EFF; }
+  @font-face { font-family: 'Caveat'; src: url('assets/fonts/caveat-latin.woff2') format('woff2'); font-weight: 400 700; }
+  @font-face { font-family: 'Inter'; src: url('assets/fonts/inter-latin.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Noto Color Emoji'; src: url('assets/fonts/noto-emoji.woff2') format('woff2'); }
+  @font-face { font-family: 'Geist Mono'; src: url('assets/fonts/geist-mono-latin.woff2') format('woff2'); font-weight: 100 900; }
+  html, body { margin: 0; background: #F2EEE6; }
+  canvas { display: block; width: 1080px; height: 1920px; }
+  /* aperçu dans un navigateur : ?t=12.5 pour figer une image, sinon lecture en boucle */
+  body.apercu canvas { width: auto; height: 100vh; margin: 0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="vo_data.js"></script>
+<script src="timeline.js"></script>
+<script src="render.js"></script>
+<script>
+  const canvas = document.getElementById('c');
+  // utilisé par capture.mjs : await __pret puis __image(t) pour chaque image
+  window.__pret = WB.charger('').then(() => true);
+  // ?couverture=sombre|clair : l'image de couverture au lieu de la vidéo
+  const theme = new URLSearchParams(location.search).get('couverture');
+  window.__image = (t) => theme ? WB.couverture(canvas, theme) : (WB.rendu(t, canvas), canvas.toDataURL('image/png').slice(22));
+  if (!navigator.webdriver && !location.search.includes('capture')) {
+    document.body.classList.add('apercu');
+    const fixe = new URLSearchParams(location.search).get('t');
+    __pret.then(() => {
+      if (fixe !== null) { WB.rendu(parseFloat(fixe), canvas); return; }
+      const t0 = performance.now();
+      const boucle = () => { WB.rendu(((performance.now() - t0) / 1000) % TL.DUREE, canvas); requestAnimationFrame(boucle); };
+      boucle();
+    });
+  }
+</script>
+</body>
+</html>

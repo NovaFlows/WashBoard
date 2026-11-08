@@ -1,0 +1,93 @@
+{
+  "explication": "Journal commun des posts Instagram/TikTok de @washboard.fr, tenu par les routines d'Alexandre et de Ryan avec contenu/outils/journal.mjs. Un seul post par jour sur les comptes ; jamais un sujet déjà traité ; couverture claire/sombre en alternance d'un post à l'autre.",
+  "sujets_avant_le_2026_11_02": [
+    "relance des clients (4 fois)",
+    "tout au même endroit / 6 applis",
+    "devis",
+    "facture",
+    "acompte",
+    "frais de déplacement",
+    "regroupement des RDV par quartier (meilleur post organique : « Trois clients dans le même quartier »)",
+    "avis Google",
+    "fidélité",
+    "page de réservation",
+    "agenda sur WhatsApp",
+    "catalogue de prestations",
+    "CRM / fichier clients",
+    "« juste laver des voitures »"
+  ],
+  "noms_fictifs_utilises": [
+    "Thomas Leroy",
+    "Alex Detailing",
+    "Marc D.",
+    "Sarah K.",
+    "Julie M.",
+    "Karim B.",
+    "Inès R.",
+    "Nicolas Moreau",
+    "Sofia Bernard",
+    "Karim Lemoine",
+    "Enzo Caron",
+    "Hugo P.",
+    "Brillance Mobile (laveur de l'aperçu de réservation)",
+    "Inès Garnier",
+    "Sarah Benali",
+    "Bastien Roche",
+    "Camille Vidal",
+    "Noé Blanc",
+    "Léa Moulin",
+    "Yasmine Haddad",
+    "Garage des Tilleuls",
+    "Garage du Lac"
+  ],
+  "publications": [
+    {
+      "date": "2026-11-02",
+      "personne": "alexandre",
+      "statut": "publie",
+      "type": "reel",
+      "sujet": "Ton agenda, c'est WhatsApp + un carnet ? (agenda bricolé)",
+      "theme_couverture": null
+    },
+    {
+      "date": "2026-11-04",
+      "personne": "alexandre",
+      "statut": "publie",
+      "type": "carrousel",
+      "sujet": "5 prestations à ajouter à ton catalogue (et à facturer)",
+      "theme_couverture": null
+    },
+    {
+      "date": "2026-11-05",
+      "personne": "alexandre",
+      "statut": "publie",
+      "type": "reel",
+      "sujet": "Un devis envoyé en 30 secondes",
+      "theme_couverture": null
+    },
+    {
+      "date": "2026-11-06",
+      "personne": "alexandre",
+      "statut": "publie",
+      "type": "post",
+      "sujet": "Un client oublié, c'est un client perdu (relance)",
+      "theme_couverture": null
+    },
+    {
+      "date": "2026-11-07",
+      "personne": "alexandre",
+      "statut": "publie",
+      "type": "reel",
+      "sujet": "Un garage te confie 3 véhicules ? (clients pros, facture au nom de l'entreprise)",
+      "theme_couverture": "clair"
+    },
+    {
+      "date": "2026-11-08",
+      "personne": "alexandre",
+      "statut": "publie",
+      "type": "carrousel",
+      "sujet": "T'as encaissé. Mais il t'en reste combien ? (dépenses, résultat du mois)",
+      "theme_couverture": "sombre"
+    }
+  ]
+}

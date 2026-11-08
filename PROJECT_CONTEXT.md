@@ -5,6 +5,11 @@ Dernière mise à jour : 2026-11-05.
 ## Continuité de travail
 L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude Code (deux comptes) et Codex selon les crédits disponibles. Il souhaite que les assistants entretiennent le contexte dans les fichiers du projet pour faciliter les reprises.
 
+## Kit contenu Instagram / TikTok partagé (2026-11-08)
+- `contenu/` + agent `contenu` : Alexandre ET Ryan font chacun leurs posts sur @washboard.fr / @wash_board.fr avec leur personnage (stickers) et leur voix ElevenLabs (`contenu/personnes/<nom>.json`, clé dans `contenu/.env` hors Git). Démarrage : `contenu/README.md`.
+- Journal commun `contenu/publications.json` via `contenu/outils/journal.mjs` (un post par jour, sujets et noms fictifs jamais repris, couverture claire/sombre alternée) ; la routine 8 h/18 h d'Alexandre (hors dépôt) le lit et l'écrit aussi.
+- `washboard/vercel.json` → `ignoreCommand` : pas de build Vercel si rien n'a changé dans `washboard/` depuis le dernier déploiement (`VERCEL_GIT_PREVIOUS_SHA`). Conséquence : un commit vide ou hors `washboard/` ne force plus un déploiement.
+
 ## Espace équipe (2026-11-05), au design de la refonte
 - Demande d'Alexandre : un vrai espace admin, avec des fiches clients. L'ancienne page Support (ancien design, tout empilé) a été découpée en écrans v2 :
   - `/dashboard/support` : accueil « Équipe » (lien « Équipe » dans Plus), avec les accès Laveurs / À rappeler / Nouveaux, Questions et Expéditeurs SMS ;

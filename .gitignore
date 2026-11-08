@@ -7,3 +7,16 @@ gstack/
 # Dépôt de référence cloné en local (liste d'API publiques), comme gstack/ —
 # consultable, jamais embarqué dans le produit.
 public-apis/
+
+# Kit contenu (posts Instagram/TikTok) : clés, copies de travail et rendus restent sur chaque PC
+contenu/.env
+contenu/travail/
+contenu/out/
+contenu/**/prises/
+contenu/**/vo/out/
+contenu/**/audio/*.wav
+contenu/**/captures/ecrans/
+contenu/**/video/assets/ecrans/
+contenu/**/video/assets/stickers/
+contenu/**/rendu/
+contenu/**/__pycache__/
