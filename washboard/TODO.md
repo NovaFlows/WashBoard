@@ -2172,6 +2172,13 @@ aucun écran sombre de la maquette ne permet de les mesurer.
   - Seuils de couverture (`vitest.config`) + CI `test:coverage` → anti-régression.
   - `docs/RUNBOOK.md` : procédure d'incident.
 
+- [x] 2026-11-08 — **CI e2e rouge du 7 au 8 novembre : réglage éteint sur le compte de test, pas un bug.**
+      `autonettoyage` (AutoNett) est le compte de la CI (`E2E_WASHER_SLUG`). « Demander le type de véhicule » y avait
+      été éteint pendant un essai de la PR #30 : les tests réservation complète et annulation attendaient les boutons
+      de type (`e2e/helpers.ts`, `reserverCommeClient`) et expiraient. Option rallumée, relance verte sur `be0afa0`.
+      **À retenir : ne pas changer les réglages de ce compte pour un essai**, même depuis une préversion Vercel
+      (même base que la prod) : prendre un autre compte. Aucun e2e ne couvre encore la réservation option éteinte.
+
 ### 📡 Outils externes de monitoring / analytics (feuille de route)
 
 > Chaque outil couvre un besoin **différent** — ce ne sont pas des concurrents.
