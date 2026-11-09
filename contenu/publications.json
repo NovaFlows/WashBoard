@@ -88,6 +88,13 @@
       "type": "carrousel",
       "sujet": "T'as encaissé. Mais il t'en reste combien ? (dépenses, résultat du mois)",
       "theme_couverture": "sombre"
+    },
+    {
+      "date": "2026-11-09",
+      "personne": "alexandre",
+      "statut": "prevu",
+      "type": "reel",
+      "sujet": "Novembre, c'est calme ? Ta promo, personne ne la voit (promotions avec compte a rebours)"
     }
   ]
 }
