@@ -106,9 +106,15 @@
     {
       "date": "2026-11-09",
       "personne": "alexandre",
-      "statut": "prevu",
+      "statut": "publie",
       "type": "reel",
-      "sujet": "Novembre, c'est calme ? Ta promo, personne ne la voit (promotions avec compte a rebours)"
+      "sujet": "Novembre, c'est calme ? Ta promo, personne ne la voit (promotions avec compte à rebours)",
+      "theme_couverture": "clair",
+      "liens": {
+        "instagram": "https://www.instagram.com/washboard.fr/reel/Dfh4tTQBiXE/",
+        "facebook": "partagé depuis Instagram",
+        "tiktok": "https://www.tiktok.com/@wash_board.fr/video/7706228514994834710"
+      }
     }
   ]
 }
