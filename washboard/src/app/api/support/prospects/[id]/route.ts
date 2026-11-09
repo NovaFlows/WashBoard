@@ -35,6 +35,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { data, error } = await admin.from('prospects').update({ ...saisie.champs, updated_at: new Date().toISOString() }).eq('id', id).select('id')
   if (error) {
     if (tableAbsente(error)) return NextResponse.json({ error: INACTIF }, { status: 503 })
+    if ((error as { code?: string }).code === '42703') return NextResponse.json({ error: 'Le suivi des prospects par membre n’est pas encore activé en base.' }, { status: 503 })
     if ((error as { code?: string }).code === '23505') return NextResponse.json({ error: 'Ce compte Instagram est déjà dans les prospects.' }, { status: 409 })
     logger.error('support.prospects.patch.failed', { prospectId: id }, error)
     return NextResponse.json({ error: 'Enregistrement impossible. Réessayez.' }, { status: 500 })

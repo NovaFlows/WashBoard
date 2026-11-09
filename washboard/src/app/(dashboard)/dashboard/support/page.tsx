@@ -2,6 +2,7 @@ import { exigerEquipe, chargerResumeEquipe, chargerTousLesLaveurs, chargerAppels
 import { resumerLaveurs } from '@/lib/resumeLaveurs'
 import { chargerProspects } from '@/lib/prospectsDonnees'
 import { prospectsARappeler, resumerProspects } from '@/lib/prospects'
+import { resumerEquipe } from '@/lib/espaceEquipe'
 import CoqueEquipe from '@/components/dashboard/equipe/CoqueEquipe'
 import AccueilEquipeV2 from '@/components/dashboard/equipe/AccueilEquipeV2'
 
@@ -22,9 +23,10 @@ export default async function SupportPage() {
   const { user, washer } = await exigerEquipe()
   const now = new Date()
   const [resume, tous, { appels }, responsables, prospects] = await Promise.all([chargerResumeEquipe(now), chargerTousLesLaveurs(), chargerAppels(), chargerResponsables(), chargerProspects()])
+  const laveurs = resumerLaveurs(tous, appels, { now, exclure: washer?.id, responsables: responsables.parLaveur })
   return (
     <CoqueEquipe washer={washer}>
-      <AccueilEquipeV2 resume={resume} email={user.email ?? null} laveurs={resumerLaveurs(tous, appels, { now, exclure: washer?.id, responsables: responsables.parLaveur })} maintenant={now.getTime()} prospects={prospects.actif ? resumerProspects(prospects.prospects, now) : null} rappelsProspects={prospects.actif ? prospectsARappeler(prospects.prospects) : []} />
+      <AccueilEquipeV2 resume={resume} email={user.email ?? null} laveurs={laveurs} equipe={resumerEquipe(laveurs, prospects.prospects, now)} maintenant={now.getTime()} prospects={prospects.actif ? resumerProspects(prospects.prospects, now) : null} rappelsProspects={prospects.actif ? prospectsARappeler(prospects.prospects) : []} />
     </CoqueEquipe>
   )
 }

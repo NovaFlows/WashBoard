@@ -7,6 +7,7 @@ import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } f
 import { Constat, ConfirmationSuppression, TEXTE_ROUGE, nom as styleNom } from '@/components/dashboard/PrestationsUiV2'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import { dateCourte, ilYa } from '@/lib/ficheLaveur'
+import { EQUIPE } from '@/lib/responsables'
 import { aujourdhuiParis } from '@/lib/suiviAppels'
 import { ARCHIVE_APRES_JOURS, LIBELLE_ONGLET, LIBELLE_STATUT, ONGLETS, STATUTS, ongletDe, type Onglet, type Prospect, type StatutProspect } from '@/lib/prospects'
 import EcranEquipe, { Carte, Initiales, Section } from './EcranEquipe'
@@ -143,6 +144,23 @@ function FicheProspect({ p, now, onClose }: { p: Prospect; now: Date; onClose: (
             <button type="button" disabled={!!enCours} onClick={() => void changer({ statut: 'pas_interesse' }, 'pas_interesse', true)} className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`} style={PRESSION}>
               {enCours === 'pas_interesse' ? '…' : 'Pas intéressé'}
             </button>
+          </div>
+        )}
+
+        {/* « Suivi par » : absent tant que la colonne n'existe pas en base (responsable indéfini). */}
+        {p.responsable !== undefined && (
+          <div>
+            <p className={ETIQUETTE}>Suivi par</p>
+            <div className="flex flex-wrap gap-2">
+              {EQUIPE.map(n => (
+                <button key={n} type="button" aria-pressed={p.responsable === n} disabled={!!enCours} onClick={() => p.responsable !== n && void changer({ responsable: n }, `suivi-${n}`)} className={puce(p.responsable === n)}>
+                  {enCours === `suivi-${n}` ? '…' : n}
+                </button>
+              ))}
+              <button type="button" aria-pressed={!p.responsable} disabled={!!enCours} onClick={() => p.responsable && void changer({ responsable: null }, 'suivi-personne')} className={puce(!p.responsable)}>
+                {enCours === 'suivi-personne' ? '…' : 'Personne'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -329,6 +347,7 @@ export default function ProspectsV2({ prospects, actif, maintenant, ongletInitia
           <span className="flex items-baseline gap-2">
             <span className={`truncate text-[15.5px] ${styleNom}`}>{p.nom}</span>
             {recherche.trim() && <span className={`ml-auto shrink-0 text-[12px] ${GRIS}`}>{LIBELLE_STATUT[p.statut]}</span>}
+            {!recherche.trim() && p.responsable && <span className={`ml-auto shrink-0 text-[12px] ${GRIS}`}>{p.responsable}</span>}
           </span>
           <span className={`mt-0.5 block truncate text-[12.5px] ${GRIS}`}>
             {[p.instagram && `@${p.instagram}`, p.ville, !p.instagram && p.telephone].filter(Boolean).join(' · ') || 'Sans coordonnées'}

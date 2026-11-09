@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     .select('id').single()
   if (error) {
     if (tableAbsente(error)) return NextResponse.json({ error: 'La zone Prospects n’est pas encore activée en base.' }, { status: 503 })
+    if ((error as { code?: string }).code === '42703') return NextResponse.json({ error: 'Le suivi des prospects par membre n’est pas encore activé en base.' }, { status: 503 })
     if ((error as { code?: string }).code === '23505') return NextResponse.json({ error: 'Ce compte Instagram est déjà dans les prospects.' }, { status: 409 })
     logger.error('support.prospects.post.failed', {}, error)
     return NextResponse.json({ error: 'Enregistrement impossible. Réessayez.' }, { status: 500 })

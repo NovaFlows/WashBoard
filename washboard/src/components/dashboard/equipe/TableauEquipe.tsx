@@ -13,6 +13,8 @@ import EcranEquipe, { Carte, Initiales, Point, Section } from './EcranEquipe'
 import type { ResumeProspects } from './AccueilEquipeV2'
 import FeuilleRappel, { BoutonRappel, rappelLaveur, rappelProspect } from './FeuilleRappel'
 import type { ProspectARappeler } from '@/lib/prospects'
+import type { ResumeMembre } from '@/lib/espaceEquipe'
+import CartesEquipe from './CartesEquipe'
 
 // Accueil de l'espace équipe sur ordinateur (Alexandre, 2026-11-05) : un tableau de
 // bord plutôt que trois portes. Le téléphone garde la liste courte (AccueilEquipeV2).
@@ -141,13 +143,14 @@ function Vide({ children }: { children: React.ReactNode }) {
 
 type FiltreRappel = 'tous' | 'clients' | 'prospects'
 
-export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null, rappelsProspects = [] }: {
+export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null, rappelsProspects = [], equipe = [] }: {
   laveurs: LaveurResume[]
   resume: Resume
   email: string | null
   maintenant: number
   prospects?: ResumeProspects
   rappelsProspects?: ProspectARappeler[]
+  equipe?: ResumeMembre[]
 }) {
   const { unreadTeamCount } = useSupportBadges()
   const now = useMemo(() => new Date(maintenant), [maintenant])
@@ -191,6 +194,9 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
 
   return (
     <EcranEquipe titre="Équipe" sousTitre="Outil interne, invisible des laveurs" retour={{ href: '/dashboard/parametres', label: 'Plus' }}>
+      {/* L'équipe : un clic ouvre les laveurs et les prospects du membre (2026-11-09). */}
+      {equipe.length > 0 && <CartesEquipe equipe={equipe} />}
+
       {/* Les chiffres : chacun ouvre la liste filtrée correspondante. */}
       <div className="grid grid-cols-5 divide-x divide-[color:var(--v2-filet)] overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
         <Chiffre libelle="Laveurs" valeur={laveurs.length} detail={`${d.pagesAFaire} page${d.pagesAFaire > 1 ? 's' : ''} à faire`} href="/dashboard/support/laveurs" />

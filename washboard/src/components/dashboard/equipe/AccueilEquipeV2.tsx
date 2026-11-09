@@ -8,6 +8,8 @@ import type { LaveurResume } from '@/lib/resumeLaveurs'
 import EcranEquipe, { Section } from './EcranEquipe'
 import TableauEquipe from './TableauEquipe'
 import type { ProspectARappeler } from '@/lib/prospects'
+import type { ResumeMembre } from '@/lib/espaceEquipe'
+import CartesEquipe from './CartesEquipe'
 
 // Accueil de l'espace équipe : trois portes, chacune avec ce qui l'attend.
 // Avant (2026-11-05), tout s'empilait sur une seule page à l'ancien design :
@@ -20,14 +22,20 @@ export type ResumeProspects = { total: number; aTrier: number; aRappeler: number
 
 const nombre = (n: number | null, un: string, plusieurs: string) => n == null ? undefined : n === 0 ? undefined : `${n} ${n > 1 ? plusieurs : un}`
 
-export default function AccueilEquipeV2({ resume, email, laveurs, maintenant, prospects = null, rappelsProspects = [] }: { resume: Resume; email: string | null; laveurs: LaveurResume[]; maintenant: number; prospects?: ResumeProspects; rappelsProspects?: ProspectARappeler[] }) {
+export default function AccueilEquipeV2({ resume, email, laveurs, maintenant, prospects = null, rappelsProspects = [], equipe = [] }: { resume: Resume; email: string | null; laveurs: LaveurResume[]; maintenant: number; prospects?: ResumeProspects; rappelsProspects?: ProspectARappeler[]; equipe?: ResumeMembre[] }) {
   const { unreadTeamCount } = useSupportBadges()
   const grandEcran = useGrandEcran()
   if (grandEcran) {
-    return <TableauEquipe laveurs={laveurs} resume={{ expediteursEnAttente: resume.expediteursEnAttente, suiviActif: resume.aRelancer !== null }} email={email} maintenant={maintenant} prospects={prospects} rappelsProspects={rappelsProspects} />
+    return <TableauEquipe laveurs={laveurs} resume={{ expediteursEnAttente: resume.expediteursEnAttente, suiviActif: resume.aRelancer !== null }} email={email} maintenant={maintenant} prospects={prospects} rappelsProspects={rappelsProspects} equipe={equipe} />
   }
   return (
     <EcranEquipe titre="Équipe" sousTitre="Outil interne, invisible des laveurs" retour={{ href: '/dashboard/parametres', label: 'Plus' }}>
+      {equipe.length > 0 && (
+        <Section titre="L’équipe">
+          <CartesEquipe equipe={equipe} />
+        </Section>
+      )}
+
       <Section titre="Laveurs">
         <CarteListe>
           <Ligne label="Tous les laveurs" valeur={resume.total != null ? String(resume.total) : undefined} href="/dashboard/support/laveurs" />

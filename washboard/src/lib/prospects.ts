@@ -1,4 +1,5 @@
 import { aujourdhuiParis } from '@/lib/suiviAppels'
+import { EQUIPE, type Responsable } from '@/lib/responsables'
 
 // Zone « Prospects » de l'espace équipe (2026-11-06) : les laveurs qu'on démarche et
 // qui n'ont pas (encore) de compte. Deux portes d'entrée :
@@ -41,6 +42,8 @@ export type Prospect = {
   relancer_le: string | null
   created_at: string
   updated_at: string
+  /** Membre de l'équipe qui suit ce prospect (lib/responsables.ts). Absent tant que la colonne n'existe pas en base. */
+  responsable?: string | null
 }
 
 /** Un message resté sans réponse passe aux archives au bout de ce délai. */
@@ -74,7 +77,7 @@ function horodatage(v: unknown, now: Date): string {
 
 // ── Saisie de l'équipe ───────────────────────────────────────────────────────
 
-type ChampsModifiables = Partial<Pick<Prospect, 'nom' | 'instagram' | 'telephone' | 'ville' | 'notes' | 'statut' | 'relancer_le'>>
+type ChampsModifiables = Partial<Pick<Prospect, 'nom' | 'instagram' | 'telephone' | 'ville' | 'notes' | 'statut' | 'relancer_le' | 'responsable'>>
 
 /** Champs envoyés par l'écran (création ou modification). `creation` exige un nom. */
 export function validerSaisie(corps: unknown, creation: boolean): { erreur: string } | { champs: ChampsModifiables } {
@@ -105,6 +108,11 @@ export function validerSaisie(corps: unknown, creation: boolean): { erreur: stri
     const d = dateJour(c.relancer_le)
     if (!d.ok) return { erreur: 'Date de rappel invalide.' }
     champs.relancer_le = d.valeur
+  }
+  if ('responsable' in c) {
+    if (c.responsable === null || c.responsable === '') champs.responsable = null
+    else if (EQUIPE.includes(c.responsable as Responsable)) champs.responsable = c.responsable as string
+    else return { erreur: 'Choisissez un membre de l’équipe.' }
   }
   return { champs }
 }
@@ -145,7 +153,7 @@ export function validerEvenement(v: unknown, now: Date = new Date()): { erreur: 
   return { erreur: 'type inconnu (contacte, vu, reponse ou ajout)' }
 }
 
-export type Ligne = Omit<Prospect, 'id' | 'created_at' | 'updated_at'>
+export type Ligne = Omit<Prospect, 'id' | 'created_at' | 'updated_at' | 'responsable'>
 export type Effet = { creer: Ligne } | { modifier: Partial<Ligne> } | { rien: string }
 
 /** Ce qu'un événement change, selon ce qu'on sait déjà du prospect. Ne fait jamais
