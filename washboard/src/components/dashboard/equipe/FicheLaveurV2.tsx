@@ -11,6 +11,7 @@ import { dateCourte, dateHeure, ilYa } from '@/lib/ficheLaveur'
 import { MISE_A_RAPPELER, RESULTATS_APPEL, aujourdhuiParis, estAppel, relancePrevue, type Appel, type ResultatAppel } from '@/lib/suiviAppels'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
 import { EQUIPE } from '@/lib/responsables'
+import { resumerOnboarding } from '@/lib/ficheOnboarding'
 import EcranEquipe, { Carte, Initiales, LigneInfo, Point, Section } from './EcranEquipe'
 import ChoixDate, { dateJour } from './ChoixDate'
 
@@ -344,6 +345,7 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, respo
   const [feuille, setFeuille] = useState<{ quoi: 'appel' } | { quoi: 'rappeler' } | { quoi: 'detail'; appel: Appel } | { quoi: 'options' } | { quoi: 'responsable' } | null>(null)
   const w = donnees.washer
   const a = topo.activite
+  const onboarding = useMemo(() => resumerOnboarding(w), [w])
   const lienPage = `washboard.fr/book/${w.slug}`
   const relance = relancePrevue(appels)
   const aujourdhui = aujourdhuiParis(now)
@@ -522,10 +524,32 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, respo
         </ul>
       </Section>
 
-      {(topo.problemes.length > 0 || topo.profil.length > 0) && (
-        <Section titre="Profil et points bloquants">
+      {/* Onboarding complet (2026-11-09) : ses réponses, ou la mention d'un compte antérieur à l'onboarding. */}
+      <Section titre="Onboarding">
+        <Carte className="px-4">
+          <div className="flex items-start gap-3 py-3">
+            <span className="mt-[7px]"><Point ton={onboarding.etat === 'termine' ? 'vert' : onboarding.etat === 'en_cours' ? 'ambre' : 'gris'} /></span>
+            <span className="min-w-0 flex-1">
+              <span className={`block text-[14.5px] ${corpsFort}`}>{onboarding.resume}</span>
+              {onboarding.note && <span className={`mt-0.5 block text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{onboarding.note}</span>}
+            </span>
+          </div>
+          {onboarding.etat !== 'avant' && (
+            <ul className="divide-y divide-[color:var(--v2-filet)] border-t border-[color:var(--v2-filet)]">
+              {onboarding.reponses.map(r => (
+                <li key={r.question} className="py-2.5">
+                  <span className={`block text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{r.question}</span>
+                  <span className={`block text-[14.5px] leading-snug ${r.reponse ? corpsFort : `${corps} text-[color:var(--v2-color-gris)]`}`}>{r.reponse ?? 'Pas de réponse'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Carte>
+      </Section>
+
+      {topo.problemes.length > 0 && (
+        <Section titre="Points bloquants">
           <Carte className="p-4 space-y-3">
-            {topo.profil.length > 0 && <p className={`text-[14px] leading-snug ${corps}`}>{topo.profil.join(' · ')}</p>}
             {topo.problemes.map(p => <Constat key={p} ton="rouge">{p}</Constat>)}
           </Carte>
         </Section>
