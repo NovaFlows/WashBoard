@@ -15,15 +15,17 @@ const COLONNE_ABSENTE = '42703'
 /** `actif` est faux tant que la table `prospects` n'existe pas en base. */
 export async function chargerProspects(): Promise<{ prospects: Prospect[]; actif: boolean }> {
   const admin = createAdminClient()
-  let { data, error } = await admin.from('prospects').select(COLONNES_EQUIPE).order('updated_at', { ascending: false }).limit(5000)
-  // Colonne « responsable » pas encore créée : la zone fonctionne, sans affiliation.
-  if ((error as { code?: string } | null)?.code === COLONNE_ABSENTE) {
-    ;({ data, error } = await admin.from('prospects').select(COLONNES_PROSPECT).order('updated_at', { ascending: false }).limit(5000))
+  const lire = async (colonnes: string): Promise<{ data: Prospect[] | null; error: { code?: string } | null }> => {
+    const r = await admin.from('prospects').select(colonnes).order('updated_at', { ascending: false }).limit(5000)
+    return { data: r.data as unknown as Prospect[] | null, error: r.error }
   }
+  let { data, error } = await lire(COLONNES_EQUIPE)
+  // Colonne « responsable » pas encore créée : la zone fonctionne, sans affiliation.
+  if (error?.code === COLONNE_ABSENTE) ({ data, error } = await lire(COLONNES_PROSPECT))
   if (error) {
     if (tableAbsente(error)) return { prospects: [], actif: false }
     logger.error('equipe.prospects.read_failed', {}, error)
     throw error
   }
-  return { prospects: (data ?? []) as Prospect[], actif: true }
+  return { prospects: data ?? [], actif: true }
 }
