@@ -16,6 +16,7 @@ import { FacturationCard } from '@/components/dashboard/FacturationCard'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
 import { CHOIX_LIEUX, ReglagesCentreAutoSchema, type LieuxProposes } from '@/lib/centreAuto'
 import { enregistrerCentreAuto } from '@/lib/profilApi'
+import ChangerTelephoneV1 from '@/components/dashboard/ChangerTelephoneV1'
 import {
   UNITES_DEPLACEMENT, ajouterPalier, libellePalier, seuilPalier, unitePaliers,
   type PalierDeplacement, type UniteDeplacement,
@@ -56,7 +57,6 @@ type Props = {
 type Tab = 'general' | 'client'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_RE = /^[+0-9 ().-]{6,20}$/
 
 // Identifiants portés par des cartes de l'onglet « Page client » (voir le
 // commentaire de tête du fichier) : un lien vers l'un d'eux doit donc aussi
@@ -102,7 +102,6 @@ export default function ParametresFormV1({ washer, email }: Props) {
 function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
   const router = useRouter()
   const [name, setName] = useState(washer.name)
-  const [phone, setPhone] = useState(washer.phone ?? '')
   const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
   const [baseAddress, setBaseAddress] = useState(washer.base_address ?? '')
   // Une liste par unité, comme la feuille mobile (`FeuilleDeplacementV2`) : seule celle de l'unité
@@ -196,14 +195,12 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
     e.preventDefault()
     setProfileMsg(null)
     if (!name.trim()) { setProfileMsg({ ok: false, text: "Le nom de l'entreprise est requis" }); return }
-    if (phone.trim() && !PHONE_RE.test(phone.trim())) { setProfileMsg({ ok: false, text: 'Numéro de téléphone invalide' }); return }
     setProfileLoading(true)
     const res = await fetch('/api/washer', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name,
-        phone,
         team_size: Math.max(1, parseInt(teamSize) || 1),
         base_address: baseAddress.trim() || null,
         travel_fee_tiers: tiers,
@@ -321,10 +318,8 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
             <label className={labelClass}>Nom de l&apos;entreprise</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputClass} />
           </div>
-          <div>
-            <label className={labelClass}>Téléphone</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 00 00 00 00" className={inputClass} />
-          </div>
+          {/* Le numéro se change avec un code reçu par SMS, hors de ce formulaire (2026-11-10). */}
+          <ChangerTelephoneV1 telephone={washer.phone ?? null} />
           <div>
             <label className={labelClass}>Adresse de départ (pour le calcul de déplacement)</label>
             <AddressAutocomplete

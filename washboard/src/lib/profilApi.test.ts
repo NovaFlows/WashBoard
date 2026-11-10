@@ -20,8 +20,8 @@ const appel = (mock: ReturnType<typeof serveur>) => {
 describe('enregistrerProfil', () => {
   it('n’envoie que les champs passés : le reste du profil n’est pas écrasé', async () => {
     const mock = serveur()
-    expect(await enregistrerProfil({ phone: '0612345678' })).toEqual({ ok: true, data: null })
-    expect(appel(mock)).toEqual({ url: '/api/washer', method: 'PATCH', corps: { phone: '0612345678' } })
+    expect(await enregistrerProfil({ name: 'Kooki Clean' })).toEqual({ ok: true, data: null })
+    expect(appel(mock)).toEqual({ url: '/api/washer', method: 'PATCH', corps: { name: 'Kooki Clean' } })
   })
 
   it('un refus remonte comme un échec', async () => {

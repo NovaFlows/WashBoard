@@ -55,6 +55,21 @@ export async function PATCH(request: NextRequest) {
       )
     }
   }
+  // Depuis le 2026-11-10, un numéro ne change plus par cette route : il se change dans Mon profil,
+  // avec un code reçu par SMS sur le nouveau numéro (`POST /api/washer/telephone`). Sans cela,
+  // n'importe qui aurait contourné la vérification faite à l'inscription. Renvoyer le numéro
+  // actuel reste permis : l'ancien formulaire du site l'envoie avec chaque enregistrement.
+  if (telephoneNormalise !== null) {
+    const { data: actuel, error: erreurActuel } = await createAdminClient().from('washers').select('phone').eq('user_id', user.id).single()
+    if (erreurActuel) return errorResponse('washer.patch.telephone_illisible', erreurActuel, { userId: user.id })
+    const numeroActuel = normalizePhone((actuel as { phone?: string | null } | null)?.phone)
+    if (telephoneNormalise !== numeroActuel) {
+      return NextResponse.json(
+        { error: 'Le numéro se change depuis Mon profil, avec un code reçu par SMS sur le nouveau numéro.' },
+        { status: 400 },
+      )
+    }
+  }
 
   // ── Pixel Meta ──────────────────────────────────────────────────────────
   // Quinze ou seize chiffres. Vérifié ici ET par une contrainte en base : un
@@ -223,7 +238,6 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (name !== undefined) updates.name = String(name).trim()
-  if (phone !== undefined) updates.phone = telephoneNormalise
   if (logo_url !== undefined) updates.logo_url = logo_url?.trim() || null
   if (welcome_message !== undefined) updates.welcome_message = welcome_message?.trim() || null
   if (brand_color !== undefined) updates.brand_color = brand_color || null

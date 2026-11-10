@@ -362,11 +362,24 @@ describe('PATCH /api/washer — format du lien public', () => {
 })
 
 describe('PATCH /api/washer — téléphone', () => {
-  it('normalise le numéro, pour que l unicité voie deux écritures identiques', async () => {
-    // « +33612345678 » et « 06 12 34 56 78 » désignent le même numéro : sans
-    // normalisation, la contrainte d'unicité laissait créer un second compte.
-    await patch({ phone: '+33612345678' })
-    expect(updates[0].phone).toBe('0612345678')
+  // Depuis le 2026-11-10 le numéro ne change plus ici : il se change avec un code reçu par SMS
+  // (POST /api/washer/telephone). Cette route ne doit pas rouvrir la porte aux numéros inventés.
+  const avecNumero = (phone: string | null) => ({ data: { plan: 'decouverte', grandfathered: false, id: 'w1', phone }, error: null })
+
+  it('refuse un numéro différent de l’actuel, sans rien écrire', async () => {
+    plan.washer = avecNumero('0699999999')
+    const { res, body } = await patch({ phone: '+33612345678' })
+    expect(res.status).toBe(400)
+    expect(body.error).toContain('code reçu par SMS')
+    expect(updates).toHaveLength(0)
+  })
+
+  it('accepte le numéro actuel, même écrit autrement : l’ancien formulaire le renvoie à chaque enregistrement', async () => {
+    plan.washer = avecNumero('0612345678')
+    const { res } = await patch({ phone: '06 12 34 56 78', name: 'Kooki Clean' })
+    expect(res.status).toBe(200)
+    expect(updates[0].name).toBe('Kooki Clean')
+    expect(updates[0]).not.toHaveProperty('phone')
   })
 
   it('refuse un numéro invalide', async () => {
@@ -375,10 +388,10 @@ describe('PATCH /api/washer — téléphone', () => {
     expect(updates).toHaveLength(0)
   })
 
-  it('accepte un numéro vidé', async () => {
-    const { res } = await patch({ phone: '' })
+  it('un numéro vidé est ignoré : on ne retire pas son numéro', async () => {
+    const { res } = await patch({ phone: '', name: 'Kooki Clean' })
     expect(res.status).toBe(200)
-    expect(updates[0].phone).toBeNull()
+    expect(updates[0]).not.toHaveProperty('phone')
   })
 })
 

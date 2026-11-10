@@ -11,7 +11,6 @@ import type { ReglagesCentreAuto } from '@/lib/centreAuto'
 
 export type ChampsProfil = Partial<{
   name: string
-  phone: string
   base_address: string
   team_size: number
   reservation_jour_meme: boolean

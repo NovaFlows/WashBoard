@@ -17,12 +17,12 @@ import { requiredPlanLabel } from '@/lib/plan'
 import FeuilleCentreAutoV2 from '@/components/dashboard/FeuilleCentreAutoV2'
 import { ReglagesCentreAutoSchema, resumeCentreAuto, type ReglagesCentreAuto } from '@/lib/centreAuto'
 import FeuilleFacturationV2 from '@/components/dashboard/FeuilleFacturationV2'
-import { FeuilleEmailV2, FeuilleMotDePasseV2 } from '@/components/dashboard/FeuillesConnexionV2'
+import { FeuilleEmailV2, FeuilleMotDePasseV2, FeuilleTelephoneV2 } from '@/components/dashboard/FeuillesConnexionV2'
 import { actionCompte, enregistrerCentreAuto, enregistrerProfil, type ChampsProfil } from '@/lib/profilApi'
 import {
   resumeAdresseDepart, resumeEmail, resumeEquipe, resumeFacturation, resumeFraisDeplacement, resumeNomEntreprise,
   resumeTelephone,
-  validerNomEntreprise, validerTelephone,
+  validerNomEntreprise,
 } from '@/lib/profil'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
@@ -155,7 +155,6 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
             <Ligne label="Nom de l’entreprise" valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
-            <Ligne label="Téléphone" valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
             <Ligne label="Adresse de départ" valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
             <Ligne label="Frais de déplacement" valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
             <Ligne label="Centre auto" valeur={resumeCentreAuto(centre)} onClick={() => setFeuille('centre')} />
@@ -188,6 +187,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
             <Ligne label="Adresse e-mail" valeur={courriel.texte} ton={courriel.ton} tronquer onClick={() => setFeuille('email')} />
+            <Ligne label="Téléphone" valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
             <Ligne label="Mot de passe" valeur="••••••••" onClick={() => setFeuille('motDePasse')} />
           </ul>
         </CarteListe>
@@ -225,15 +225,9 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
         />
       )}
       {feuille === 'telephone' && (
-        <FeuilleTexteV2
-          titre="Téléphone"
-          etiquette="Votre numéro"
-          type="tel"
-          valeur={fiche.phone ?? ''}
-          placeholder="06 00 00 00 00"
-          aide="Il apparaît sur vos factures et sert à vous joindre. Vos clients, eux, vous joignent par votre page."
-          valider={validerTelephone}
-          onEnregistrer={v => enregistrer({ phone: v })}
+        <FeuilleTelephoneV2
+          telephone={fiche.phone ?? null}
+          onChange={tel => { setFiche(f => ({ ...f, phone: tel }) as Washer); router.refresh() }}
           onClose={fermer}
         />
       )}

@@ -27,6 +27,11 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 - Le code : calculs purs dans `lib/ficheLaveur.ts` et `lib/suiviAppels.ts` (testés), lectures dans `lib/ficheLaveurDonnees.ts` (`exigerEquipe` = garde SUPPORT_ADMIN_USER_IDS), écrans dans `components/dashboard/equipe/`.
 - Banc local, hors git : `/banc-equipe?ecran=accueil|liste|fiche`.
 
+## Changer de numéro (2026-11-10)
+- Demande d'Alexandre : un laveur change son numéro depuis ses réglages, comme son e-mail ou son mot de passe (rien à voir avec l'espace équipe). Mon profil › « Ma connexion » › Téléphone (`FeuilleTelephoneV2`, PWA) et, sur le site, l'ancien formulaire (`ChangerTelephoneV1`). La ligne « Téléphone » de « Mon entreprise » a disparu.
+- Le numéro d'un compte est vérifié par SMS à l'inscription : un nouveau numéro l'est aussi. Mot de passe actuel + nouveau mobile (06/07, pas déjà pris, sauf `PHONE_UNIQUENESS_EXEMPT`) → code de 6 chiffres envoyé sur CE numéro → saisi → `washers.phone` change et `telephone_verifie_le` est daté. Route `POST /api/washer/telephone` (`etape: 'code' | 'confirmer'`), qui réutilise `codes_sms` et `lib/codeSms` (60 s entre deux envois, 5 par demande ; une demande restée sans suite depuis plus d'une heure est repartie de zéro). Le numéro changé est celui de la demande, jamais celui du navigateur.
+- `PATCH /api/washer` n'écrit plus `phone` : un numéro différent de l'actuel est refusé (400), le numéro actuel renvoyé par l'ancien formulaire est ignoré. Aucune table ni colonne à créer.
+
 ## Repères vérifiés
 - `washboard/` contient l'application et son `package.json`.
 - Le `CLAUDE.md` racine décrit WashBoard comme un SaaS B2B pour laveurs auto mobiles, avec Next.js, Supabase, Vercel, Google Maps, Resend et Stripe. Ce sont des indications documentaires ; la configuration actuelle n'a pas encore été auditée.
