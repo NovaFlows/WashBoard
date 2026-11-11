@@ -790,9 +790,23 @@ export function graceEnded(
   return now > graceEnd
 }
 
+/** Ajoute des mois CALENDAIRES à une date (UTC), en gardant le même jour du mois ; le jour est
+ *  ramené au dernier jour du mois quand il n'existe pas (31 janvier + 1 mois = 28 février).
+ *  Règle d'Alexandre (2026-11-11) : une période d'abonnement va du JJ/MM au JJ/MM+1, jamais « 30
+ *  jours » — sinon l'échéance dérive de 1 à 3 jours par trimestre (Kookii Clean : 17 → 14). */
+export function ajouterMois(date: Date, mois: number): Date {
+  const d = new Date(date.getTime())
+  const jour = d.getUTCDate()
+  d.setUTCDate(1)
+  d.setUTCMonth(d.getUTCMonth() + mois)
+  const dernier = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()
+  d.setUTCDate(Math.min(jour, dernier))
+  return d
+}
+
 // Nombre de mois dus depuis la dernière échéance payée (subscription_ends_at,
 // ou trial_ends_at si jamais encore abonné). 0 tant que l'échéance n'est pas
-// passée ; 1 dès le jour J ; +1 par tranche de 30 jours de retard supplémentaire.
+// passée ; 1 dès le jour J ; +1 à chaque échéance mensuelle suivante (même jour du mois).
 export function monthsOwed(
   subscriptionEndsAt: string | null,
   trialEndsAt: string | null,
@@ -800,7 +814,8 @@ export function monthsOwed(
 ): number {
   const baseDate = subscriptionEndsAt ? new Date(subscriptionEndsAt) : trialEndsAt ? new Date(trialEndsAt) : null
   if (!baseDate) return 0
-  const diffDays = (now.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)
-  if (diffDays <= 0) return 0
-  return Math.floor(diffDays / 30) + 1
+  if (now.getTime() <= baseDate.getTime()) return 0
+  let dus = 1
+  while (ajouterMois(baseDate, dus).getTime() <= now.getTime()) dus++
+  return dus
 }

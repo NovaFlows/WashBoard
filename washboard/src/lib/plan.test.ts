@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { minuitParisUTC } from './dateUtils'
 import { quotaSmsEnClair,
   hasFeature, washerPlan, requiredPlanLabel, yearlyPrice, yearlyMonthlyEquivalent,
-  formatEuros, graceEnded, monthsOwed, YEARLY_FREE_MONTHS, freeMonthsLabel,
+  formatEuros, graceEnded, monthsOwed, ajouterMois, YEARLY_FREE_MONTHS, freeMonthsLabel,
   quotaReservations, quotaPrestations, quotaDepasse, debutDuMoisParis,
   debutPeriodeQuota, finPeriodeQuota, libelleRemiseAZero,
   PLAN_PRICES, PLAN_LABELS, PLAN_CARDS, PLAN_COULEURS, SMS_QUOTA, BOOKING_QUOTA, SERVICE_QUOTA,
@@ -430,15 +430,16 @@ describe('monthsOwed — mois dus après échéance', () => {
     expect(monthsOwed(echeance, null, new Date('2026-01-02T00:00:00.000Z'))).toBe(1)
   })
 
-  it('doit toujours un mois à 29 jours de retard', () => {
+  it('doit toujours un mois tant que la prochaine échéance mensuelle n’est pas atteinte', () => {
     expect(monthsOwed(echeance, null, new Date('2026-01-30T00:00:00.000Z'))).toBe(1)
   })
 
-  it('passe à deux mois après 30 jours de retard', () => {
-    expect(monthsOwed(echeance, null, new Date('2026-01-31T12:00:00.000Z'))).toBe(2)
+  it('passe à deux mois à l’échéance mensuelle suivante (1er février)', () => {
+    expect(monthsOwed(echeance, null, new Date('2026-01-31T12:00:00.000Z'))).toBe(1)
+    expect(monthsOwed(echeance, null, new Date('2026-02-01T12:00:00.000Z'))).toBe(2)
   })
 
-  it('passe à trois mois après 60 jours de retard', () => {
+  it('passe à trois mois après deux échéances mensuelles', () => {
     expect(monthsOwed(echeance, null, new Date('2026-03-02T12:00:00.000Z'))).toBe(3)
   })
 
@@ -1023,5 +1024,17 @@ describe('finPeriodeQuota', () => {
         .toBeGreaterThan(debut.getTime())
       expect(debut.getTime()).toBeLessThanOrEqual(now.getTime())
     }
+  })
+})
+
+describe('ajouterMois — période du JJ/MM au JJ/MM+1', () => {
+  it('garde le même jour : 17 juillet + 4 mois = 17 novembre (pas le 14)', () => {
+    expect(ajouterMois(new Date('2026-07-17T00:15:05.422Z'), 4).toISOString()).toBe('2026-11-17T00:15:05.422Z')
+  })
+  it('ramène au dernier jour du mois quand le jour n’existe pas', () => {
+    expect(ajouterMois(new Date('2026-01-31T00:00:00.000Z'), 1).toISOString()).toBe('2026-02-28T00:00:00.000Z')
+  })
+  it('passe l’année', () => {
+    expect(ajouterMois(new Date('2026-12-15T00:00:00.000Z'), 1).toISOString()).toBe('2027-01-15T00:00:00.000Z')
   })
 })
