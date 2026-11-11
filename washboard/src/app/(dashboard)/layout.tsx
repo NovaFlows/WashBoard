@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COOKIE_REPORT } from '@/lib/veilleReport'
+import { formationOuverte } from '@/lib/formationAcces'
+import { FormationProvider } from '@/components/dashboard/FormationContext'
 import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
 
 /** Enveloppe commune à tout le tableau de bord.
@@ -34,7 +36,22 @@ import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
  *  le résultat du layout vers les pages, ce que Next ne permet pas sans
  *  contexte : une requête indexée de plus coûte moins cher que cette plomberie.
  */
+// Onglet « Formation » (feat/formation) : lu une seule fois ici, seulement si une des deux
+// variables est posée, pour ne rien coûter tant que la coquille est fermée.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  let ouverte = false
+  if (process.env.FORMATION_OUVERTE === '1' || process.env.FORMATION_USER_IDS) {
+    const { data: { user } } = await (await createClient()).auth.getUser()
+    ouverte = formationOuverte(user?.id)
+  }
+  return (
+    <FormationProvider ouverte={ouverte}>
+      <DashboardLayoutInterne>{children}</DashboardLayoutInterne>
+    </FormationProvider>
+  )
+}
+
+async function DashboardLayoutInterne({ children }: { children: React.ReactNode }) {
   // « Plus tard » : on ne redirige plus de la visite. Lu en premier, pour ne
   // même pas payer les requêtes quand la question a déjà été repoussée.
   if ((await cookies()).get(COOKIE_REPORT)) return <>{children}</>

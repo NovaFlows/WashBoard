@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { LogOut } from 'lucide-react'
+import { useFormationOuverte } from './FormationContext'
 
 // Rail de navigation — passe « châssis bureau » (2026-10-05, Alexandre, 2026-10-03). Ce que
 // deviennent, sur grand écran, les 5 destinations de BarreBasV2.tsx + « Documents » épinglé :
@@ -90,6 +91,13 @@ const ICONE_PLUS_DESTINATION = (
     <circle cx="19" cy="12" r="1.4" fill="currentColor" />
   </svg>
 )
+const ICONE_FORMATION = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+    <path d="M10.5 9.5v5l4-2.5z" />
+  </svg>
+)
+
 const ICONE_DOCUMENT = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1.5-1.5z" />
@@ -114,6 +122,15 @@ function destinations(): Destination[] {
     },
     { href: '/dashboard/parametres', label: 'Plus', actif: p => p.startsWith('/dashboard/parametres'), icone: ICONE_PLUS_DESTINATION, cibleVisite: 'rail-plus' },
   ]
+}
+
+function destinationFormation(): Destination {
+  return {
+    href: '/dashboard/formation',
+    label: 'Formation',
+    actif: p => p.startsWith('/dashboard/formation'),
+    icone: ICONE_FORMATION,
+  }
 }
 
 function destinationDocuments(): Destination {
@@ -176,7 +193,9 @@ type Props = {
 export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Props) {
   const pathname = usePathname() ?? ''
   const router = useRouter()
+  const formation = useFormationOuverte()
   const items = destinations()
+  if (formation) items.push(destinationFormation())
   const docs = destinationDocuments()
   const nouveauHref = NOUVEAU_HREF
 
