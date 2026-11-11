@@ -17,6 +17,7 @@ import { fideliteActive } from '@/lib/fidelite'
 import { centreAutoPublic } from '@/lib/centreAuto'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
+import { whatsappDigits } from '@/lib/phone'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
@@ -274,7 +275,7 @@ export default async function BookingPage({ params }: Props) {
   // pas de téléphone, ou plafond mensuel atteint (voir plus bas pourquoi le
   // bouton disparaît alors — masquage des coordonnées du client).
   const waHref = washer.phone && !plafondAtteint
-    ? `https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`
+    ? `https://wa.me/${whatsappDigits(washer.phone)}`
     : null
 
   return (

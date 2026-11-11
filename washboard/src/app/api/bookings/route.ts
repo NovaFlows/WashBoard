@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizePhone, paysDuTelephone } from '@/lib/phone'
 import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { sendBookingRequest, sendWasherNotification, sendWasherBookingLocked } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
@@ -220,6 +221,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     supabase.from('washers').select('name, phone, user_id, google_refresh_token, team_size, plan, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, grandfathered, zone_config, is_preview, reservation_jour_meme').eq('id', bookingData.washer_id).single(),
     supabase.from('services').select('name, price, vehicle_price_overrides, duration_minutes, addons, washer_id').eq('id', bookingData.service_id).single(),
   ])
+
+  // Client d'un laveur belge : son 0470 12 34 56 est un numéro belge (+32…), pas un fixe français —
+  // sans ça, le SMS partirait en +33 470… Le pays est celui du laveur (son numéro est en +32…).
+  bookingData.client_phone = normalizePhone(bookingData.client_phone, paysDuTelephone(washer?.phone)) ?? bookingData.client_phone
 
   // La prestation doit appartenir au laveur de la réservation.
   //

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import { isValidPhone, normalizePhone } from '@/lib/phone'
+import { normaliserMobile, normalizePhone } from '@/lib/phone'
 import Link from 'next/link'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
@@ -25,9 +25,9 @@ export default function SignupPage() {
     setError(null)
     if (!name.trim()) { setError('Le nom de ton entreprise est requis'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
-    if (!isValidPhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78)'); return }
+    if (!normaliserMobile(phone) && !normalizePhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78, ou 0470 12 34 56 en Belgique)'); return }
     // Le code de confirmation arrive par SMS (2026-10-21) : un mobile, forcément.
-    if (!/^0[67]/.test(normalizePhone(phone) ?? '')) { setError('Il faut un numéro de mobile (06 ou 07) : le code de confirmation arrive par SMS.'); return }
+    if (!normaliserMobile(phone)) { setError('Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code de confirmation arrive par SMS.'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
     if (!cgvAcceptees) { setError('Merci d’accepter les CGV pour continuer'); return }
@@ -57,7 +57,7 @@ export default function SignupPage() {
     // Pas de connexion ici : Supabase la refuse tant que l'inscription n'est pas
     // confirmée. Les deux derniers chiffres du numéro, pour que l'écran du code dise où
     // le SMS est parti.
-    const fin = (normalizePhone(phone) ?? '').slice(-2)
+    const fin = (normaliserMobile(phone) ?? normalizePhone(phone) ?? '').slice(-2)
     router.push(`/verifier-email?email=${encodeURIComponent(email.trim())}&tel=${fin}`)
   }
 

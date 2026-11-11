@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness, whatsappDigits } from './phone'
+import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness, whatsappDigits, normaliserMobile, paysDuTelephone } from './phone'
 
 // Cette normalisation porte une règle anti-abus : sans forme canonique, la
 // contrainte d'unicité en base laisserait passer trois comptes d'essai avec le
@@ -45,9 +45,8 @@ describe('normalizePhone', () => {
   })
 
   it('refuse un numéro étranger non français', () => {
-    // +32 = Belgique : hors périmètre pour l'instant, et l'accepter
-    // fausserait la détection de doublons.
-    expect(normalizePhone('+32470123456')).toBeNull()
+    // Seules la France et la Belgique (+32, depuis le 2026-11-11) sont acceptées.
+    expect(normalizePhone('+447911123456')).toBeNull()
   })
 
   it('deux écritures du même numéro donnent la même clé', () => {
@@ -89,7 +88,7 @@ describe('formatPhone', () => {
   it('renvoie l’entrée telle quelle si elle n’est pas normalisable', () => {
     // On préfère afficher une donnée existante imparfaite plutôt que de la
     // masquer : un numéro étranger déjà en base doit rester lisible.
-    expect(formatPhone('+32470123456')).toBe('+32470123456')
+    expect(formatPhone('+447911123456')).toBe('+447911123456')
   })
   it('gère l’absence de valeur', () => {
     expect(formatPhone(null)).toBe('')
@@ -172,5 +171,36 @@ describe('whatsappDigits', () => {
   it('ne renvoie jamais null : une saisie vide ou incomplète donne une chaîne, pas une erreur', () => {
     expect(whatsappDigits('')).toBe('')
     expect(whatsappDigits('061234567')).toBe('3361234567')
+  })
+})
+
+describe('numéros belges (ouverture du 2026-11-11)', () => {
+  it('garde un numéro belge en forme internationale', () => {
+    expect(normalizePhone('+32 470 12 34 56')).toBe('+32470123456')
+    expect(normalizePhone('0032470123456')).toBe('+32470123456')
+    expect(normalizePhone('32470123456')).toBe('+32470123456')
+  })
+  it('lit un 0470… à la belge seulement quand on est en Belgique', () => {
+    expect(normalizePhone('0470 12 34 56', 'BE')).toBe('+32470123456')
+    expect(normalizePhone('0470 12 34 56')).toBe('0470123456') // sans pays : un fixe français, comme avant
+  })
+  it('normaliserMobile : 06/07 français ou 04xx belge, rien d’autre', () => {
+    expect(normaliserMobile('06 12 34 56 78')).toBe('0612345678')
+    expect(normaliserMobile('0470 12 34 56')).toBe('+32470123456')
+    expect(normaliserMobile('+32 470 12 34 56')).toBe('+32470123456')
+    expect(normaliserMobile('04 72 12 34 56')).toBe('+32472123456') // à l'inscription, un fixe français ne peut pas recevoir de SMS
+    expect(normaliserMobile('02 123 45 67')).toBeNull() // fixe belge
+    expect(normaliserMobile('+44 7911 123456')).toBeNull() // autre pays
+  })
+  it('paysDuTelephone, whatsappDigits et formatPhone', () => {
+    expect(paysDuTelephone('+32470123456')).toBe('BE')
+    expect(paysDuTelephone('0612345678')).toBe('FR')
+    expect(whatsappDigits('+32470123456')).toBe('32470123456')
+    expect(whatsappDigits('0612345678')).toBe('33612345678')
+    expect(formatPhone('+32470123456')).toBe('+32 470 12 34 56')
+  })
+  it('isMobilePhone reconnaît un mobile belge', () => {
+    expect(isMobilePhone('+32470123456')).toBe(true)
+    expect(isMobilePhone('+3221234567')).toBe(false)
   })
 })

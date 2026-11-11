@@ -6,7 +6,7 @@ import { FileText } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { Washer } from '@/types'
 import {
-  TAUX_TVA, infosFacturationManquantes, phraseManques, siretValide,
+  paysFacturation, tauxTvaPour, infosFacturationManquantes, phraseManques, siretValide,
   type RegimeTva, type StatutJuridique,
 } from '@/lib/facture'
 
@@ -66,6 +66,9 @@ export function FacturationCard({ washer }: { washer: Washer }) {
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
   const [taux, setTaux] = useState(String(washer.facture_taux_tva ?? 20))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
+  // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6), plus celui déjà enregistré s'il est ailleurs.
+  const pays = paysFacturation({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })
+  const tauxProposes = [...new Set([...tauxTvaPour(pays), ...(Number.isFinite(Number(taux)) && Number(taux) > 0 ? [Number(taux)] : [])])]
   const numeroActuel = washer.facture_prochain_numero ?? 1
   const [prochainNumero, setProchainNumero] = useState(String(numeroActuel))
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -88,7 +91,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
     e.preventDefault()
     setMsg(null)
     if (siret.trim() && !siretValide(siret)) {
-      setMsg({ ok: false, text: 'SIRET invalide : vérifiez les 14 chiffres.' })
+      setMsg({ ok: false, text: 'Numéro invalide : SIRET (14 chiffres) ou numéro BCE belge (10 chiffres).' })
       return
     }
     setLoading(true)
@@ -168,7 +171,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         </div>
 
         <div>
-          <label htmlFor="facture-siret" className={labelClass}>SIRET</label>
+          <label htmlFor="facture-siret" className={labelClass}>SIRET ou n° BCE (Belgique)</label>
           <input id="facture-siret" type="text" inputMode="numeric" value={siret} onChange={e => setSiret(e.target.value)} placeholder="123 456 789 00012" className={inputClass} />
           <p className={aideClass}>14 chiffres, sur votre avis de situation Insee ou sur annuaire-entreprises.data.gouv.fr.</p>
         </div>
@@ -236,12 +239,12 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             <div>
               <label htmlFor="facture-taux-tva" className={labelClass}>Taux</label>
               <select id="facture-taux-tva" value={taux} onChange={e => setTaux(e.target.value)} className={inputClass}>
-                {TAUX_TVA.map(t => <option key={t} value={String(t)}>{String(t).replace('.', ',')} %</option>)}
+                {tauxProposes.map(t => <option key={t} value={String(t)}>{String(t).replace('.', ',')} %</option>)}
               </select>
             </div>
             <div>
               <label htmlFor="facture-numero-tva" className={labelClass}>N° de TVA intracommunautaire</label>
-              <input id="facture-numero-tva" type="text" value={numeroTva} onChange={e => setNumeroTva(e.target.value)} placeholder="FR40123456789" className={inputClass} />
+              <input id="facture-numero-tva" type="text" value={numeroTva} onChange={e => setNumeroTva(e.target.value)} placeholder={pays === 'BE' ? 'BE0123456749' : 'FR40123456789'} className={inputClass} />
             </div>
           </div>
         )}

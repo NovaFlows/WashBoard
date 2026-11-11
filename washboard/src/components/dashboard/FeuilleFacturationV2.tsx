@@ -5,7 +5,7 @@ import { Feuille, CHAMP, PRESSION, BOUTON, corps } from '@/components/dashboard/
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied, Puces } from '@/components/dashboard/ReglageAutomatismeV2'
 import { validerFacturation } from '@/lib/profil'
-import { TAUX_TVA, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
+import { paysFacturation, tauxTvaPour, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
 import type { ChampsProfil } from '@/lib/profilApi'
 
 // « Mon statut et mes factures » — feuille du bas de « Mon profil » (PWA). Ce sont les mentions
@@ -82,6 +82,9 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
   const [taux, setTaux] = useState<number>(washer.facture_taux_tva ?? 20)
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
+  // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6), plus celui déjà enregistré s'il est ailleurs.
+  const pays = paysFacturation({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })
+  const tauxProposes = [...new Set([...tauxTvaPour(pays), ...(Number.isFinite(Number(taux)) && Number(taux) > 0 ? [Number(taux)] : [])])]
   const numeroActuel = washer.facture_prochain_numero ?? 1
   const [prochainNumero, setProchainNumero] = useState(String(numeroActuel))
   const [enCours, setEnCours] = useState(false)
@@ -166,7 +169,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
           </p>
         </Bloc>
 
-        <Bloc titre="SIRET">
+        <Bloc titre="SIRET ou n° BCE (Belgique)">
           <input
             type="text"
             inputMode="numeric"
@@ -260,7 +263,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
                 <p className={`mb-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Taux appliqué</p>
                 <Puces
                   nom="Taux de TVA"
-                  valeurs={TAUX_TVA}
+                  valeurs={tauxProposes}
                   libelle={v => `${String(v).replace('.', ',')} %`}
                   valeur={taux}
                   onChoisir={v => { if (v !== 'autre') setTaux(v) }}

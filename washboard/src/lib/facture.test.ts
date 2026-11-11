@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   siretValide, numeroTvaValide, infosFacturationManquantes, phraseManques,
   lignesFacture, totauxFacture, construireFacture, nomLegalAffiche,
-  doitEnvoyerFactureAuClient,
+  doitEnvoyerFactureAuClient, paysFacturation, tauxTvaPour, mentionFranchiseTva,
   type ReservationFacturable, type VendeurFacturable,
 } from './facture'
 
@@ -235,5 +235,25 @@ describe('entrepreneur individuel ou société', () => {
       statut: 'societe', nomLegal: 'Démo Lavage', formeJuridique: 'SASU',
       capital: '1 000 €', immatriculation: 'RCS Pontoise 123 456 789',
     })
+  })
+})
+
+describe('Belgique (ouverture du 2026-11-11)', () => {
+  it('valide un numéro BCE et un numéro de TVA belge (clé modulo 97)', () => {
+    // 0123.456.749 : 97 − (01234567 mod 97) = 49
+    expect(siretValide('0123.456.749')).toBe(true)
+    expect(siretValide('0123456748')).toBe(false)
+    expect(numeroTvaValide('BE 0123.456.749')).toBe(true)
+    expect(numeroTvaValide('BE0123456748')).toBe(false)
+  })
+  it('déduit le pays et propose les bons taux et la bonne mention', () => {
+    expect(paysFacturation({ facture_numero_tva: 'BE0123456749' })).toBe('BE')
+    expect(paysFacturation({ facture_siret: '0123456749' })).toBe('BE')
+    expect(paysFacturation({ phone: '+32470123456' })).toBe('BE')
+    expect(paysFacturation({ facture_siret: '12345678901234', phone: '0612345678' })).toBe('FR')
+    expect(tauxTvaPour('BE')).toEqual([21, 12, 6])
+    expect(tauxTvaPour('FR')).toEqual([20, 10, 5.5])
+    expect(mentionFranchiseTva('BE')).toContain('56bis')
+    expect(mentionFranchiseTva('FR')).toContain('293 B')
   })
 })

@@ -13,7 +13,7 @@ import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
 // Le vrai risque d'un envoi de SMS ouvert à tous est la fraude (« SMS pumping ») : des robots
 // déclenchent des milliers d'envois vers des numéros surtaxés, et la facture grimpe en une
 // nuit. Parades, toutes ici :
-//   - mobiles français seulement (06, 07) — les numéros surtaxés visés sont à l'étranger ;
+//   - mobiles français (06, 07) ou belges (04xx) seulement — les numéros surtaxés visés sont à l'étranger ;
 //   - 60 s entre deux envois, 5 envois au plus par compte ;
 //   - un plafond global : au-delà de PLAFOND_24H comptes en attente sur 24 h, plus aucun SMS,
 //     et l'erreur se voit dans les journaux. Les comptes confirmés quittent la table : seuls
@@ -26,13 +26,16 @@ const ENVOIS_MAX = 5
 const DELAI_RENVOI_MS = 60 * 1000
 const PLAFOND_24H = 30
 
-/** Un mobile français, sous la forme canonique de `normalizePhone` (10 chiffres). */
+/** Un mobile français (10 chiffres, 06/07) ou belge (+32 4xx), sous la forme canonique de
+ *  `normalizePhone`. Gardé sous ce nom : la Belgique s'est ajoutée le 2026-11-11, les autres pays
+ *  restent refusés (fraude aux SMS surtaxés, voir plus haut). */
 export function estMobileFrancais(telephone: string | null | undefined): boolean {
-  return /^0[67]\d{8}$/.test(telephone ?? '')
+  return /^0[67]\d{8}$/.test(telephone ?? '') || /^\+324[5-9]\d{7}$/.test(telephone ?? '')
 }
 
 /** « 06 •• •• •• 78 » : assez pour reconnaître son numéro, sans l'afficher. */
 export function telephoneMasque(telephone: string): string {
+  if (telephone.startsWith('+32')) return `+32 ${telephone.slice(3, 4)}•• •• •• ${telephone.slice(-2)}`
   return `${telephone.slice(0, 2)} •• •• •• ${telephone.slice(-2)}`
 }
 

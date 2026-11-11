@@ -20,9 +20,35 @@ export type RegimeTva = 'franchise' | 'assujetti'
  *  mentions obligatoires ne sont pas les mêmes. */
 export type StatutJuridique = 'ei' | 'societe'
 
-/** Taux proposés au laveur qui facture la TVA : 20 % (taux normal, le cas du
- *  lavage), 10 % et 5,5 % pour les cas particuliers. */
-export const TAUX_TVA = [20, 10, 5.5] as const
+/** Taux proposés au laveur qui facture la TVA. France : 20 % (taux normal, le cas du lavage), 10 %
+ *  et 5,5 %. Belgique (ouverture du 2026-11-11) : 21 % (taux normal), 12 % et 6 %. */
+export const TAUX_TVA_FR = [20, 10, 5.5] as const
+export const TAUX_TVA_BE = [21, 12, 6] as const
+/** Tous les taux acceptés par le serveur ; l'écran n'en propose que ceux du pays du laveur. */
+export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6] as const
+
+export type PaysFacturation = 'FR' | 'BE'
+
+/** Le pays de facturation d'un laveur, déduit de ce qu'il a saisi : un numéro de TVA en « BE », un
+ *  numéro d'entreprise à 10 chiffres (BCE) ou un téléphone en +32 disent la Belgique. Aucune
+ *  colonne de plus en base : la donnée existe déjà. */
+export function paysFacturation(w: { facture_numero_tva?: string | null; facture_siret?: string | null; phone?: string | null }): PaysFacturation {
+  if (/^BE/i.test((w.facture_numero_tva ?? '').replace(/\s/g, ''))) return 'BE'
+  if (/^0\d{9}$/.test(normaliserSiret(w.facture_siret ?? ''))) return 'BE'
+  if (/^(\+32|0032)/.test((w.phone ?? '').replace(/[\s.()-]/g, ''))) return 'BE'
+  return 'FR'
+}
+
+export const tauxTvaPour = (pays: PaysFacturation): readonly number[] => (pays === 'BE' ? TAUX_TVA_BE : TAUX_TVA_FR)
+export const libelleIdentifiant = (pays: PaysFacturation): string => (pays === 'BE' ? 'numéro d’entreprise (BCE)' : 'SIRET')
+
+/** Mention obligatoire d'une facture sans TVA. France : micro-entreprise (art. 293 B du CGI).
+ *  Belgique : régime de franchise des petites entreprises (art. 56bis du Code de la TVA). */
+export function mentionFranchiseTva(pays: PaysFacturation): string {
+  return pays === 'BE'
+    ? 'TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).'
+    : 'TVA non applicable, art. 293 B du CGI.'
+}
 
 export type InfosFacturation = {
   facture_statut?: StatutJuridique | null
@@ -50,6 +76,9 @@ export function normaliserSiret(brut: string): string {
  *  règle — la somme des chiffres est un multiple de 5. */
 export function siretValide(brut: string): boolean {
   const s = normaliserSiret(brut)
+  // Belgique : numéro d'entreprise (BCE), 10 chiffres commençant par 0 ou 1, dont les deux
+  // derniers sont la clé : 97 − (les 8 premiers modulo 97).
+  if (/^[01]\d{9}$/.test(s)) return 97 - (Number(s.slice(0, 8)) % 97) === Number(s.slice(8))
   if (!/^\d{14}$/.test(s)) return false
   if (s.startsWith('356000000')) {
     return [...s].reduce((t, c) => t + Number(c), 0) % 5 === 0
@@ -67,10 +96,12 @@ export function normaliserNumeroTva(brut: string): string {
   return brut.replace(/\s/g, '').toUpperCase()
 }
 
-/** Numéro de TVA intracommunautaire français : FR, une clé de deux
- *  caractères, puis le SIREN. */
+/** Numéro de TVA intracommunautaire : français (FR, une clé de deux caractères, puis le SIREN) ou
+ *  belge (BE, puis le numéro d'entreprise à 10 chiffres, clé comprise). */
 export function numeroTvaValide(brut: string): boolean {
-  return /^FR[0-9A-Z]{2}\d{9}$/.test(normaliserNumeroTva(brut))
+  const n = normaliserNumeroTva(brut.replace(/\./g, ''))
+  if (/^BE[01]\d{9}$/.test(n)) return siretValide(n.slice(2))
+  return /^FR[0-9A-Z]{2}\d{9}$/.test(n)
 }
 
 /** Un entrepreneur individuel doit faire figurer « EI » (ou « entrepreneur
@@ -89,7 +120,7 @@ export function infosFacturationManquantes(w: InfosFacturation): string[] {
   const societe = w.facture_statut === 'societe'
   const manques: string[] = []
   if (!w.facture_nom_legal?.trim()) manques.push(societe ? 'votre raison sociale' : 'votre nom légal')
-  if (!w.facture_siret || !siretValide(w.facture_siret)) manques.push('votre SIRET')
+  if (!w.facture_siret || !siretValide(w.facture_siret)) manques.push(`votre ${libelleIdentifiant(paysFacturation(w))}`)
   if (!w.facture_adresse?.trim()) manques.push('votre adresse professionnelle')
   if (societe) {
     if (!w.facture_forme_juridique?.trim()) manques.push('votre forme juridique')

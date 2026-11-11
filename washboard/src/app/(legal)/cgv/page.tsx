@@ -70,6 +70,10 @@ export default function CGV() {
           Tous les prix sont exprimés en euros hors taxes. La TVA applicable est celle en vigueur au moment de la facturation.
         </p>
         <p>
+          WashBoard est ouvert aux laveurs établis en France et en Belgique. Chaque laveur reste responsable des mentions
+          légales et de la TVA de ses propres factures, selon le droit du pays où il est établi.
+        </p>
+        <p>
           L&apos;abonnement est à renouvellement mensuel automatique. La facturation intervient chaque mois à la date anniversaire
           de la souscription.
         </p>

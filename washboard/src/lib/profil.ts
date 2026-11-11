@@ -85,7 +85,7 @@ export function validerMotDePasse(nouveau: string, confirmation: string): string
 /** Facturation : ce qu'on refuse AVANT d'envoyer (le reste — champs vides — est autorisé,
  *  la facture reste simplement impossible à émettre tant qu'il manque quelque chose). */
 export function validerFacturation(champs: { siret: string; regime: 'franchise' | 'assujetti'; numeroTva: string; prochainNumero: string; numeroActuel: number }): string | null {
-  if (champs.siret.trim() && !siretValide(champs.siret)) return 'SIRET invalide : vérifiez les 14 chiffres.'
+  if (champs.siret.trim() && !siretValide(champs.siret)) return 'Numéro d’entreprise invalide : SIRET (14 chiffres) ou numéro BCE belge (10 chiffres).'
   if (champs.regime === 'assujetti' && champs.numeroTva.trim() && !numeroTvaValide(champs.numeroTva)) {
     return 'Numéro de TVA invalide : FR suivi de 11 caractères.'
   }

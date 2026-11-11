@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { mentionFranchiseTva, paysFacturation } from '@/lib/facture'
 import { notFound } from 'next/navigation'
 import { logger } from '@/lib/logger'
 import { quotaReservations } from '@/lib/plan'
@@ -143,7 +144,7 @@ export default async function ConfirmationPage({ params }: Props) {
                 )}
               </div>
             </div>
-            <p className="wb-recu-tva">TVA non applicable — art. 293 B du CGI</p>
+            <p className="wb-recu-tva">{mentionFranchiseTva(paysFacturation({ phone: washer.phone })).replace(/.$/, '')}</p>
           </div>
 
           <div className="wb-recu-total">

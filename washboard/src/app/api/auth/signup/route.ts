@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
-import { normalizePhone, isPhoneExemptFromUniqueness } from '@/lib/phone'
+import { normalizePhone, normaliserMobile, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { envoyerCodeSms, estMobileFrancais } from '@/lib/codeSms'
 import { PLAN_ESSAI } from '@/lib/plan'
@@ -45,10 +45,11 @@ export async function POST(request: NextRequest) {
   // chiffres) : sans ça « 06 12 34 56 78 » et « +33612345678 » passeraient
   // pour deux numéros distincts et la vérification d'unicité ne servirait à
   // rien.
-  const telephone = normalizePhone(phone)
+  // France : 06 12 34 56 78. Belgique : 0470 12 34 56 ou +32 470 12 34 56 (stocké en +32…).
+  const telephone = normaliserMobile(phone) ?? normalizePhone(phone)
   if (!telephone) {
     return NextResponse.json(
-      { error: 'Numéro de téléphone invalide (format attendu : 06 12 34 56 78)' },
+      { error: 'Numéro de téléphone invalide (ex. 06 12 34 56 78, ou 0470 12 34 56 en Belgique)' },
       { status: 400 },
     )
   }
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
   // numéros étrangers sont la porte d'entrée de la fraude aux SMS (voir `lib/codeSms`).
   if (!estMobileFrancais(telephone)) {
     return NextResponse.json(
-      { error: 'Il faut un numéro de mobile (06 ou 07) : le code de confirmation arrive par SMS.' },
+      { error: 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code de confirmation arrive par SMS.' },
       { status: 400 },
     )
   }

@@ -8,6 +8,9 @@ export function normalizePhone(raw: string): string | null {
   const digits = raw.replace(/\D/g, '')
   // Déjà en format international
   if (digits.startsWith('33') && digits.length === 11) return `+${digits}`
+  // Belgique (+32…, forme canonique des numéros belges en base) : 8 ou 9 chiffres après 32.
+  if (/^32[1-9]\d{7,8}$/.test(digits)) return `+${digits}`
+  if (/^0032[1-9]\d{7,8}$/.test(digits)) return `+${digits.slice(2)}`
   // Format local français (06, 07)
   if (digits.length === 10 && digits.startsWith('0')) return `+33${digits.slice(1)}`
   return null

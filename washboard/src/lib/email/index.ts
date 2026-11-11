@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import type { VehicleItem } from '@/types'
 import { escapeHtml } from '@/lib/escapeHtml'
 import { formatPhone } from '@/lib/phone'
+import { mentionFranchiseTva, paysFacturation } from '@/lib/facture'
 import { FUSEAU } from '@/lib/dateUtils'
 import { adresseAvecLieu, libelleAdresse } from '@/lib/centreAuto'
 import { trustedOrigin } from '@/lib/appOrigin'
@@ -242,7 +243,7 @@ ${colonne('Date d&apos;émission', `<p style="margin:0;font-size:14px;font-weigh
     </td>
   </tr>
   <tr>
-    <td colspan="2" style="padding:10px 0;font-size:12.5px;font-style:italic;color:${COULEUR.grisPetit};">TVA non applicable — art. 293 B du CGI</td>
+    <td colspan="2" style="padding:10px 0;font-size:12.5px;font-style:italic;color:${COULEUR.grisPetit};">${mentionFranchiseTva(paysFacturation({ phone: params.washerPhone })).replace(/.$/, '')}</td>
   </tr>
   <tr>
     <td style="padding:14px 12px 0 0;border-top:2px solid ${COULEUR.encre};font-size:12.5px;font-weight:700;line-height:1.35;letter-spacing:.06em;color:${COULEUR.encre};">TOTAL À RÉGLER SUR PLACE</td>
