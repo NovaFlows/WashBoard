@@ -61,4 +61,6 @@ Après l'envoi, ajoute l'id du mail que tu viens d'envoyer à la liste `mails_ro
 - Si une vidéo est partie sur TikTok, ajoute en fin de mail : « 📱 Story TikTok : ouvre la vidéo dans l'appli → Partager → Story » + le lien TikTok. Alexandre veut chaque Reel aussi en story TikTok, mais TikTok web n'a AUCUNE fonction story (vérifié le 2026-11-03 : ni le menu Partager, ni le menu « … », ni TikTok Studio) → c'est lui qui le fait depuis son téléphone. Ne tente pas « Republier », ce n'est pas une story.
 - Partiel ou échec : objet « Post WashBoard du <jour> — publication à finir », ce qui a marché, ce qui a bloqué (une phrase claire chacun), et rappelle que les fichiers sont dans contenu\out\<date>\ pour qu'il publie à la main.
 
+**Discord (depuis le 2026-11-10)** : poste AUSSI ce même compte rendu (« Publié ✅ » + liens, ou « publication à finir » + explications, avec la mention TikTok story si elle s'applique) dans le channel #posts, avec PowerShell : `H:\Desktop\Automatisation\NovaFlows_Discord\discord.ps1 -Canal posts -Fichier <fichier texte du message>`. Si le script échoue, ne bloque rien : le mail reste la référence.
+
 Termine par une ligne : statut final et liens.

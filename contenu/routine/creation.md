@@ -110,6 +110,7 @@ Avec mcp__gmail__send_email, à l'adresse MAIL_RAPPORTS de contenu\.env uniqueme
 - statut « manuel » : objet « Post WashBoard du <jour> — à faire toi-même ». Corps : pourquoi ce n'est pas automatisable, le script ou les consignes de stickers, la légende ; pièces jointes : les fonds de stories s'il y en a. Rien ne sera publié à 18 h.
 - statut « echec » : objet « Post WashBoard du <jour> — pas créé ». Corps : ce qui a bloqué, en une phrase claire, et ce qu'il faut pour débloquer.
 Si l'outil SendUserFile est disponible (Alexandre suit la session depuis son téléphone), envoie-lui aussi publication.mp4 (ou les images) avec, dès que c'est prêt.
+**Discord (depuis le 2026-11-10)** : la même information va AUSSI dans le channel #posts de l'équipe, après le mail. Écris le corps dans un fichier texte (objet en première ligne, en gras avec **…**) puis lance, avec PowerShell : `H:\Desktop\Automatisation\NovaFlows_Discord\discord.ps1 -Canal posts -Fichier <ce fichier> -Pieces <publication.mp4 ou les images, séparés par des virgules>`. Dans la version Discord, remplace la phrase « Réponds NON à ce mail » par « Pour annuler : répondre NON au mail du matin (le NON par Discord viendra plus tard) ». Si le script échoue, ne bloque rien : le mail reste la référence, mentionne l'échec dans ta dernière ligne.
 Puis relis le mail envoyé (mcp__gmail__search_emails sur l'objet) pour récupérer son id et son threadId, et enregistre-les dans post.json.
 
 Termine par une ligne : statut, chemin de post.json, mail envoyé oui/non.
