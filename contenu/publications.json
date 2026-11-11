@@ -129,6 +129,13 @@
       "statut": "prevu",
       "type": "carrousel",
       "sujet": "Combien tu gagnes VRAIMENT par heure ? (taux horaire réel : temps de route dans l'agenda, créneaux libres à proposer, total du jour)"
+    },
+    {
+      "date": "2026-11-11",
+      "personne": "alexandre",
+      "statut": "prevu",
+      "type": "reel",
+      "sujet": "Tu recopies encore l'adresse dans ton GPS ? (bouton Itinéraire : Plans, Waze ou Google Maps en un toucher)"
     }
   ]
 }
