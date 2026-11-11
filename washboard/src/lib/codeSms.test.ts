@@ -10,7 +10,7 @@ const { sendSms } = vi.hoisted(() => ({ sendSms: vi.fn() }))
 vi.mock('@/lib/sms', () => ({ sendSms, EXPEDITEUR_SMS_DEFAUT: 'WashBoard' }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
-const { envoyerCodeSms, verifierCodeSms, estMobileFrancais, telephoneMasque, texteSmsCode, phraseEnvoi, LONGUEUR_CODE_SMS } = await import('./codeSms')
+const { envoyerCodeSms, verifierCodeSms, estMobileFrancais, telephoneMasque, texteSmsCode, phraseEnvoi, LONGUEUR_CODE_SMS, codeDuNumeroTest } = await import('./codeSms')
 
 type Ligne = Record<string, unknown>
 let lignes: Map<string, Ligne>
@@ -149,5 +149,21 @@ describe('verifierCodeSms', () => {
     const nouveau = codeEnvoye()
     if (nouveau !== ancien) expect(await verifierCodeSms(a, 'u-1', ancien, plus(62_000))).toBe('invalide')
     expect(await verifierCodeSms(a, 'u-1', nouveau, plus(62_000))).toBe('ok')
+  })
+})
+
+describe('codeDuNumeroTest', () => {
+  const env = { SMS_NUMEROS_TEST: '0470 00 00 01, 06 11 22 33 44', SMS_CODE_TEST: '424242' }
+  it('renvoie le code fixe pour un numéro de test, belge ou français', () => {
+    expect(codeDuNumeroTest('+32470000001', env)).toBe('424242')
+    expect(codeDuNumeroTest('0611223344', env)).toBe('424242')
+  })
+  it('ne contourne rien pour un autre numéro', () => {
+    expect(codeDuNumeroTest('0612345678', env)).toBeNull()
+  })
+  it('ne contourne rien sans les DEUX variables, ou avec un code mal formé', () => {
+    expect(codeDuNumeroTest('+32470000001', { SMS_NUMEROS_TEST: '0470 00 00 01' })).toBeNull()
+    expect(codeDuNumeroTest('+32470000001', { SMS_CODE_TEST: '424242' })).toBeNull()
+    expect(codeDuNumeroTest('+32470000001', { ...env, SMS_CODE_TEST: '12' })).toBeNull()
   })
 })

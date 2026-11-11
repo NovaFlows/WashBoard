@@ -2,6 +2,7 @@ import { createHmac, randomInt, timingSafeEqual } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
+import { normaliserMobile } from '@/lib/phone'
 
 // Confirmation de l'inscription par un code reçu par SMS (décision d'Alexandre, 2026-10-21) :
 // remplace le code par email. Un compte n'est utilisable qu'une fois son numéro vérifié — fini
@@ -31,6 +32,20 @@ const PLAFOND_24H = 30
  *  restent refusés (fraude aux SMS surtaxés, voir plus haut). */
 export function estMobileFrancais(telephone: string | null | undefined): boolean {
   return /^0[67]\d{8}$/.test(telephone ?? '') || /^\+324[5-9]\d{7}$/.test(telephone ?? '')
+}
+
+/** Numéro de TEST (2026-11-11) : pour essayer l'inscription avec un numéro qui n'existe pas (ex. un
+ *  numéro belge fictif), sans envoyer de SMS. Deux variables d'environnement, toutes deux
+ *  nécessaires — jamais dans le dépôt, qui est public :
+ *    SMS_NUMEROS_TEST = numéros séparés par des virgules (forme saisie, ils sont normalisés ici)
+ *    SMS_CODE_TEST    = le code à six chiffres que ces numéros acceptent
+ *  Sans l'une des deux, rien n'est contourné. À retirer de Vercel après l'essai : tant qu'elles
+ *  existent, quiconque connaît le numéro ET le code peut s'inscrire sans recevoir de SMS. */
+export function codeDuNumeroTest(telephone: string, env: Record<string, string | undefined> = process.env): string | null {
+  const code = (env.SMS_CODE_TEST ?? '').trim()
+  if (!/^\d{6}$/.test(code)) return null
+  const liste = (env.SMS_NUMEROS_TEST ?? '').split(',').map(n => normaliserMobile(n)).filter((n): n is string => !!n)
+  return liste.includes(telephone) ? code : null
 }
 
 /** « 06 •• •• •• 78 » : assez pour reconnaître son numéro, sans l'afficher. */
@@ -85,7 +100,10 @@ export async function envoyerCodeSms(
       }
     }
 
-    const code = nouveauCode()
+    // Numéro de test (voir `codeDuNumeroTest`) : code fixe, aucun SMS. Le reste du parcours
+    // (empreinte, expiration, essais) est inchangé : seul l'envoi réel est sauté.
+    const codeTest = codeDuNumeroTest(telephone)
+    const code = codeTest ?? nouveauCode()
     const { error: erreurEcriture } = await admin.from('codes_sms').upsert({
       user_id: userId,
       telephone,
@@ -97,6 +115,10 @@ export async function envoyerCodeSms(
     }, { onConflict: 'user_id' })
     if (erreurEcriture) throw erreurEcriture
 
+    if (codeTest) {
+      logger.info('auth.code_sms.numero_test', { userId })
+      return { ok: true }
+    }
     await sendSms({ to: telephone, content: texteSmsCode(code), sender: EXPEDITEUR_SMS_DEFAUT })
     logger.info('auth.code_sms.envoye', { userId })
     return { ok: true }
@@ -141,7 +163,7 @@ export async function verifierCodeSms(
 export function phraseEnvoi(r: Exclude<EnvoiCode, { ok: true }>): string {
   switch (r.raison) {
     case 'attente': return `Un SMS vient de partir. Attends ${r.secondes} s avant d'en redemander un.`
-    case 'numero': return 'Il faut un numéro de mobile français (06 ou 07) : le code arrive par SMS.'
+    case 'numero': return 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code arrive par SMS.'
     case 'trop_d_envois': return 'Trop de codes demandés pour cette inscription. Recommence-la, ou écris-nous à contact@washboard.fr.'
     case 'plafond': return 'Trop d’inscriptions en ce moment. Réessaie dans quelques heures, ou écris-nous à contact@washboard.fr.'
     case 'panne': return 'Le SMS n’a pas pu partir. Réessaie dans un instant.'
