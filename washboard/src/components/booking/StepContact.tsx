@@ -53,7 +53,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   const phoneError  = phoneTouched && !phoneValid
 
   const siretDigits = siret.replace(/\D/g, '')
-  const siretValid  = siretDigits.length === 14
+  const siretValid  = [10, 14].includes(siretDigits.length)
   const siretError  = siretTouched && !siretValid
 
   const proFieldsValid = !isProfessional || (companyName.trim().length >= 2 && siretValid)
@@ -121,7 +121,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
                 </svg>
-                {siretDigits.length < 14 ? `Numéro trop court (${siretDigits.length}/14 chiffres)` : 'Numéro trop long — 14 chiffres attendus'}
+                {siretDigits.length < 14 ? `Numéro incomplet (${siretDigits.length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)` : 'Numéro trop long — 14 chiffres attendus'}
               </p>
             ) : (
               <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">14 chiffres sans espaces</p>

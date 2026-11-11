@@ -56,7 +56,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   const phoneNormalise = normalizePhone(phone)
   useEffect(() => { onCoordonnees?.(email, phone) }, [email, phone, onCoordonnees])
   const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && phoneNormalise !== null && modelsValid
-    && (!pro || (company.trim().length >= 2 && siret.replace(/\D/g, '').length === 14))
+    && (!pro || (company.trim().length >= 2 && [10, 14].includes(siret.replace(/\D/g, '').length)))
   const pret = valid && (!acompte || acompteAccepte)
   const input = 'w-full min-h-12 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-3 bg-white dark:bg-zinc-900 outline-none focus:border-zinc-500'
   const label = 'block text-sm font-medium mb-2'
@@ -85,7 +85,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
       {pro && <>
         <div><label className={label} htmlFor="booking-company">Nom de l’entreprise</label><input id="booking-company" autoComplete="organization" required minLength={2} value={company} onChange={e => setCompany(e.target.value)} className={input} />
           <p className="text-xs text-zinc-500 mt-2">{factureApresPrestation ? 'La facture sera établie à ce nom.' : 'Le récapitulatif sera établi à ce nom.'}</p></div>
-        <div><label className={label} htmlFor="booking-siret">SIRET</label><input id="booking-siret" inputMode="numeric" required value={siret} onChange={e => setSiret(e.target.value)} className={input} /><p className="text-xs text-zinc-500 mt-2">14 chiffres pour identifier votre entreprise.</p></div>
+        <div><label className={label} htmlFor="booking-siret">SIRET ou n° BCE (Belgique)</label><input id="booking-siret" inputMode="numeric" required value={siret} onChange={e => setSiret(e.target.value)} className={input} /><p className="text-xs text-zinc-500 mt-2">14 chiffres pour identifier votre entreprise.</p></div>
         <div><label className={label} htmlFor="booking-billing">Adresse de facturation <span className="text-zinc-500 font-normal">facultatif</span></label><input id="booking-billing" value={billing} onChange={e => setBilling(e.target.value)} className={input} placeholder="Adresse du lavage si vide" /></div>
       </>}
       <details><summary className="text-sm underline underline-offset-2 cursor-pointer py-2">Ajouter une précision pour le laveur</summary><label className="sr-only" htmlFor="booking-notes">Note pour le laveur</label><textarea id="booking-notes" value={notes} maxLength={1000} onChange={e => setNotes(e.target.value)} className={input} placeholder="Code portail, accès…" rows={3} /></details>
