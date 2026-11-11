@@ -4,6 +4,7 @@
 // `FORMATION_USER_IDS` (identifiants de comptes séparés par des virgules, comme
 // `SUPPORT_ADMIN_USER_IDS`). `FORMATION_OUVERTE=1` l'ouvre à tous les laveurs, le jour du
 // lancement. Sans aucune des deux, l'onglet n'existe pour personne.
+// (Variables lues à la construction du déploiement : en changer une demande un nouveau build.)
 
 type Env = Record<string, string | undefined>
 
