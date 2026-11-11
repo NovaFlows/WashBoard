@@ -177,3 +177,12 @@ Colonnes `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz)
 - **Point SEO** : le 1er slogan de `SLOGANS` est le H1 réel lu par Google et les IA (rendu serveur, avant la rotation JS). Mots-clés métier posés le 2026-09-28 — avis de l'agent `seo-geo` obligatoire avant de toucher à la position 0.
 - Vérifié : `tsc --noEmit` propre, `eslint` sans erreur sur les fichiers touchés (1 avertissement préexistant sur `ThemeToggle`), `next build` passe, captures Playwright du parcours complet en clair, sombre et mobile.
 - Reste à porter depuis le prototype : storytelling en chapitres, section créneaux intelligents interactive, tarifs façon Rezam. Rien de tout ça n'est commencé.
+
+## Formation (branche `feat/formation`, 2026-11-10) — coquille, pas en production
+Partenariat prévu avec Kookii Clean : formations vidéo + appels en direct pour les laveurs inscrits,
+WashBoard prend 50 %. La branche contient un onglet jouable (catalogue d'exemple, lecteur protégé avec
+filigrane au nom du laveur et jeton signé, appels en direct en maquette) caché derrière
+`FORMATION_USER_IDS` / `FORMATION_OUVERTE`. Tout est documenté dans `washboard/docs/FORMATION.md` :
+ce qui protège vraiment (DRM chez un fournisseur vidéo — une page web ne peut PAS bloquer une capture
+d'écran), le partage 50/50, le schéma de tables proposé (non créé) et les questions ouvertes.
+À reprendre le 2026-11-11. Ne pas fusionner dans `master` avant que ces questions soient tranchées.
