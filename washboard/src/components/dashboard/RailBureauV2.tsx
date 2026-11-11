@@ -195,7 +195,8 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
   const router = useRouter()
   const formation = useFormationOuverte()
   const items = destinations()
-  if (formation) items.push(destinationFormation())
+  // Au-dessus de « Plus » (dernière destination), pas à la fin.
+  if (formation) items.splice(items.length - 1, 0, destinationFormation())
   const docs = destinationDocuments()
   const nouveauHref = NOUVEAU_HREF
 

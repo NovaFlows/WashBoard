@@ -41,11 +41,9 @@ type Props = {
   /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
   liste: ReglagesListeProps
   progress: SetupProgress
-  /** Onglet « Formation » ouvert à ce compte (voir `lib/formationAcces.ts`) : la ligne n'existe pas sinon. */
-  formation?: boolean
 }
 
-export default function ReglagesV2({ liste, progress, formation = false }: Props) {
+export default function ReglagesV2({ liste, progress }: Props) {
   const { theme, setTheme } = useTheme()
   const { etat: etatNotifications } = useNotificationsPush()
   const mobile = useDesignMobile()
@@ -120,14 +118,6 @@ export default function ReglagesV2({ liste, progress, formation = false }: Props
           `CLE_CARTE_CACHEE`) : pas de condition à dupliquer ici. */}
       <SetupProgressBar progress={progress} />
 
-      {formation && (
-        <div>
-          <TitreSection>Apprendre</TitreSection>
-          <CarteListe>
-            <Ligne label="Formation" sousLabel="Vidéos et appels en direct" href="/dashboard/formation" />
-          </CarteListe>
-        </div>
-      )}
 
       <div>
         <TitreSection>De l’aide</TitreSection>

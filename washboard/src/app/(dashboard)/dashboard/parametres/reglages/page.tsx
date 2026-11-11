@@ -5,7 +5,6 @@ import ReglagesV2 from '@/components/dashboard/ReglagesV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { computeSetupProgress } from '@/lib/setupProgress'
 import { logger } from '@/lib/logger'
-import { formationOuverte } from '@/lib/formationAcces'
 
 // Refonte 2026 — « Réglages » : ce qui règle l'application (apparence, notifications, barre de
 // configuration, aide), par opposition à « Plus », qui règle l'entreprise du laveur.
@@ -66,7 +65,6 @@ export default async function ReglagesPage() {
           grandfathered: washer.grandfathered,
         }}
         progress={progress}
-        formation={formationOuverte(user.id)}
       />
     </DashboardShell>
   )

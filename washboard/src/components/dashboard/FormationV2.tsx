@@ -95,7 +95,6 @@ export default function FormationV2({ liste, packs, sessions, maintenantIso }: P
       liste={liste}
       titre="Formation"
       sousTitre="Apprendre le métier, avec ceux qui le font"
-      retour={{ href: '/dashboard/parametres/reglages', label: 'Réglages' }}
     >
       {encours && encours.suite && (
         <Link href={`/dashboard/formation/${encours.pack.slug}/${encours.suite.id}`} className={`${CARTE} block p-4`}>
