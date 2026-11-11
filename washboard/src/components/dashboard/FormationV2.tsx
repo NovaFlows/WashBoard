@@ -71,12 +71,14 @@ function CartePack({ pack, termines }: { pack: PackFormation; termines: Readonly
 type Props = {
   liste: ReglagesListeProps
   packs: PackFormation[]
+  /** Administrateur de la formation : voit le lien « Gérer » et les brouillons. */
+  admin?: boolean
   sessions: SessionLive[]
   /** Instant du rendu serveur : sinon « dans 10 min » ne serait pas le même au serveur et au navigateur. */
   maintenantIso: string
 }
 
-export default function FormationV2({ liste, packs, sessions, maintenantIso }: Props) {
+export default function FormationV2({ liste, packs, admin = false, sessions, maintenantIso }: Props) {
   const { termines } = useProgressionFormation()
   const maintenant = new Date(maintenantIso)
 
@@ -96,6 +98,15 @@ export default function FormationV2({ liste, packs, sessions, maintenantIso }: P
       titre="Formation"
       sousTitre="Apprendre le métier, avec ceux qui le font"
     >
+      {admin && (
+        <Link href="/dashboard/formation/admin" className={`${CARTE} flex items-center justify-between p-4`}>
+          <span>
+            <span className={`block text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)]`}>Gérer la formation</span>
+            <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Packs, leçons, vidéos, publication</span>
+          </span>
+          <Chevron />
+        </Link>
+      )}
       {encours && encours.suite && (
         <Link href={`/dashboard/formation/${encours.pack.slug}/${encours.suite.id}`} className={`${CARTE} block p-4`}>
           <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Reprendre</p>

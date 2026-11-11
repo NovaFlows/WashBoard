@@ -127,3 +127,21 @@ filigrane et les logs de lecture. À faire passer par l'agent `legal`.
 6. **Exclusivité** : le partenaire peut-il vendre les mêmes vidéos ailleurs ?
 7. Faut-il un **espace côté partenaire** (téléverser ses vidéos, voir ses ventes) ou est-ce l'équipe qui s'en charge ?
 8. **Remboursement** : délai, et que devient le partage déjà versé ?
+
+---
+
+## Gestion par NovaFlows (2026-11-11)
+
+**Qui fait quoi.** `FORMATION_USER_IDS` = comptes qui VOIENT l'onglet (laveurs, comptes test).
+`FORMATION_ADMIN_USER_IDS` = comptes qui le GÈRENT (NovaFlows) : page `/dashboard/formation/admin`
+(lien « Gérer la formation » en haut de l'onglet), packs en brouillon jusqu'à leur publication.
+Un administrateur voit toujours l'onglet.
+
+**Où vivent les données.** Tables `formation_packs` et `formation_lecons` (service_role seulement, pas de
+politique RLS : tout passe par le serveur) ; vidéos dans le bucket PRIVÉ `formation-videos`, lues avec un
+lien signé d'une heure. Tant que les tables n'existent pas, l'écran montre le catalogue d'exemple.
+
+**Envoi d'une vidéo.** Le navigateur reçoit une URL d'envoi signée (`video.preparer`) et dépose le fichier
+directement dans le bucket (une fonction serverless ne peut pas porter une vidéo), puis la rattache à la
+leçon (`video.rattacher`, avec la durée lue dans le fichier). Formats : MP4, WebM, MOV. Limite côté code :
+2 Go ; la limite réelle est celle du plan Supabase (50 Mo en gratuit, à relever dans Storage › Settings).

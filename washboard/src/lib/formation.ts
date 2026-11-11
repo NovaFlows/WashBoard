@@ -17,6 +17,8 @@ export type Lecon = {
   dureeSec: number
   /** Visible sans avoir acheté le pack : sert d'aperçu commercial. */
   apercuGratuit?: boolean
+  /** Une vidéo a été envoyée pour cette leçon (le chemin du fichier ne quitte jamais le serveur). */
+  aVideo?: boolean
 }
 
 export type ModuleFormation = {
@@ -40,6 +42,10 @@ export type PackFormation = {
   modules: ModuleFormation[]
   /** Ce que le laveur saura faire à la fin (3 puces maximum à l'écran). */
   objectifs: string[]
+  /** Identifiant en base ; absent pour le catalogue d'exemple. */
+  id?: string
+  /** Pas encore publié : visible des seuls administrateurs. */
+  brouillon?: boolean
 }
 
 export type SessionLive = {

@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { formationOuverte } from '@/lib/formationAcces'
+import { formationAdmin, formationOuverte } from '@/lib/formationAcces'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 
 // Garde et cadre communs aux pages « Formation » (branche feat/formation, 2026-11-10) : connexion
@@ -23,7 +23,7 @@ export async function contexteFormation(ecran: string) {
     plan: washer.plan,
     grandfathered: washer.grandfathered,
   }
-  return { washer, liste }
+  return { washer, liste, admin: formationAdmin(user.id) }
 }
 
 type Washer = Awaited<ReturnType<typeof contexteFormation>>['washer']

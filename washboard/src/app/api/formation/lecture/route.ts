@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isTrustedOrigin } from '@/lib/appOrigin'
 import { rateLimit } from '@/lib/rateLimit'
-import { formationOuverte } from '@/lib/formationAcces'
-import { CATALOGUE_DEMO, leconDuCatalogue } from '@/lib/formation'
+import { formationAdmin, formationOuverte } from '@/lib/formationAcces'
+import { leconDuCatalogue } from '@/lib/formation'
+import { chargerCatalogue, cheminVideoDeLecon } from '@/lib/formationCatalogue'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { BUCKET_VIDEOS } from '@/lib/formationAdmin'
 import { POLITIQUE_PROTECTION, signerJetonLecture, texteFiligrane } from '@/lib/formationProtection'
 
 // Autorise la lecture d'UNE leçon (branche feat/formation, 2026-11-10). Le lecteur appelle cette
@@ -40,16 +43,27 @@ export async function POST(req: NextRequest) {
   const corps = await req.json().catch(() => null) as { leconId?: unknown } | null
   if (typeof corps?.leconId !== 'string') return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })
 
-  const trouvee = leconDuCatalogue(CATALOGUE_DEMO, corps.leconId)
+  const { packs } = await chargerCatalogue({ admin: formationAdmin(user.id) })
+  const trouvee = leconDuCatalogue(packs, corps.leconId)
   if (!trouvee) return NextResponse.json({ error: 'Leçon introuvable.' }, { status: 404 })
 
   const maintenant = new Date()
+  // Vidéo envoyée : URL signée d'une heure (le bucket est privé ; assez longue pour qu'une lecture
+  // continue ne casse pas en pleine leçon). Sans vidéo, le lecteur simule la lecture comme avant.
+  let source: string | null = null
+  if (trouvee.lecon.aVideo) {
+    const chemin = await cheminVideoDeLecon(trouvee.lecon.id)
+    if (chemin) {
+      const { data } = await createAdminClient().storage.from(BUCKET_VIDEOS).createSignedUrl(chemin, 3600)
+      source = data?.signedUrl ?? null
+    }
+  }
   const jeton = signerJetonLecture({ userId: user.id, leconId: trouvee.lecon.id, secret, maintenant })
   return NextResponse.json({
     jeton,
     expireDans: POLITIQUE_PROTECTION.dureeJetonSec,
     renouvellement: POLITIQUE_PROTECTION.renouvellementSec,
     filigrane: texteFiligrane({ email: user.email ?? 'laveur', userId: user.id, maintenant }),
-    source: null,
+    source,
   }, { headers: { 'Cache-Control': 'no-store' } })
 }

@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation'
 import LecteurFormationV2 from '@/components/dashboard/LecteurFormationV2'
-import { CATALOGUE_DEMO, leconsDuPack, packParSlug, trouverLecon } from '@/lib/formation'
+import { leconsDuPack, packParSlug, trouverLecon } from '@/lib/formation'
+import { chargerCatalogue } from '@/lib/formationCatalogue'
 import { CadreFormation, contexteFormation } from '../../cadre'
 
 export default async function LeconFormationPage({ params }: { params: Promise<{ slug: string; leconId: string }> }) {
   const { slug, leconId } = await params
-  const { washer, liste } = await contexteFormation('formation-lecon')
-  const pack = packParSlug(CATALOGUE_DEMO, slug)
+  const { washer, liste, admin } = await contexteFormation('formation-lecon')
+  const { packs } = await chargerCatalogue({ admin })
+  const pack = packParSlug(packs, slug)
   const trouvee = pack ? trouverLecon(pack, leconId) : null
   if (!pack || !trouvee) notFound()
 
