@@ -234,12 +234,12 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
               />
             </Bloc>
 
-            <Bloc titre="Immatriculation (RCS)">
+            <Bloc titre="Immatriculation (RCS en France, RPM en Belgique)">
               <input
                 type="text"
                 value={immatriculation}
                 onChange={e => setImmatriculation(e.target.value)}
-                placeholder="RCS Pontoise 123 456 789"
+                placeholder="RCS Pontoise 123 456 789 ou RPM Bruxelles"
                 aria-label="Immatriculation"
                 className={CHAMP}
               />

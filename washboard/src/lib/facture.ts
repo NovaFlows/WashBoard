@@ -125,7 +125,7 @@ export function infosFacturationManquantes(w: InfosFacturation): string[] {
   if (societe) {
     if (!w.facture_forme_juridique?.trim()) manques.push('votre forme juridique')
     if (!w.facture_capital?.trim()) manques.push('votre capital social')
-    if (!w.facture_immatriculation?.trim()) manques.push('votre immatriculation (RCS)')
+    if (!w.facture_immatriculation?.trim()) manques.push(paysFacturation(w) === 'BE' ? 'votre immatriculation (RPM)' : 'votre immatriculation (RCS)')
   }
   if (w.facture_regime_tva === 'assujetti'
       && (!w.facture_numero_tva || !numeroTvaValide(w.facture_numero_tva))) {
