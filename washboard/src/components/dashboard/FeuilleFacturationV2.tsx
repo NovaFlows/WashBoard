@@ -122,7 +122,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
       facture_capital: societe ? capital : '',
       facture_immatriculation: societe ? immatriculation : '',
       facture_regime_tva: regime,
-      facture_taux_tva: taux,
+      facture_taux_tva: pays === 'BE' && !tauxTvaPour('BE').includes(taux) ? 21 : taux,
       facture_numero_tva: assujetti ? numeroTva : '',
       // Envoyé seulement s'il a changé : le serveur refuse de revenir en arrière.
       ...(Number(prochainNumero) !== numeroActuel ? { facture_prochain_numero: Number(prochainNumero) } : {}),

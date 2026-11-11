@@ -107,7 +107,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         facture_capital: societe ? capital : '',
         facture_immatriculation: societe ? immatriculation : '',
         facture_regime_tva: regime,
-        facture_taux_tva: Number(taux),
+        facture_taux_tva: pays === 'BE' && !tauxTvaPour('BE').includes(Number(taux)) ? 21 : Number(taux),
         facture_numero_tva: regime === 'assujetti' ? numeroTva : '',
         // Envoyé seulement s'il a changé : le serveur refuse de revenir en arrière.
         ...(Number(prochainNumero) !== numeroActuel ? { facture_prochain_numero: Number(prochainNumero) } : {}),
