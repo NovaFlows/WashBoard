@@ -45,6 +45,29 @@ function dureeDuFichier(fichier: File): Promise<number | null> {
   })
 }
 
+/** Une image prise dans la vidéo (vers 10 % de sa durée, jamais le noir du tout début), en JPEG de 960 px. */
+function vignetteDuFichier(fichier: File): Promise<Blob | null> {
+  return new Promise(resolve => {
+    const v = document.createElement('video')
+    const url = URL.createObjectURL(fichier)
+    const fin = (b: Blob | null) => { URL.revokeObjectURL(url); resolve(b) }
+    v.muted = true; v.playsInline = true; v.preload = 'auto'
+    v.onerror = () => fin(null)
+    v.onloadedmetadata = () => { v.currentTime = Number.isFinite(v.duration) ? Math.min(Math.max(v.duration * 0.1, 0.5), v.duration / 2) : 0.5 }
+    v.onseeked = () => {
+      try {
+        const largeur = Math.min(960, v.videoWidth || 960)
+        const canvas = document.createElement('canvas')
+        canvas.width = largeur
+        canvas.height = Math.round(largeur * ((v.videoHeight || 540) / (v.videoWidth || 960)))
+        canvas.getContext('2d')?.drawImage(v, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(b => fin(b), 'image/jpeg', 0.82)
+      } catch { fin(null) }
+    }
+    v.src = url
+  })
+}
+
 function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string; onChange: () => void }) {
   const [ouvert, setOuvert] = useState(false)
   const [titreL, setTitreL] = useState(lecon.titre)
@@ -94,6 +117,14 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
       const duree = await dureeDuFichier(f)
       const fin = await appeler({ action: 'video.rattacher', leconId: lecon.id, chemin: prep.chemin, dureeSec: duree })
       if (!fin.ok) return setEtat(fin.erreur ?? 'Échec.')
+      // La vignette est un plus : si elle échoue, la vidéo reste en ligne (l'écran montre un visuel par défaut).
+      try {
+        const image = await vignetteDuFichier(f)
+        if (image) {
+          const v = await appeler({ action: 'video.preparer_vignette', leconId: lecon.id })
+          if (v.ok) await createClient().storage.from(BUCKET_VIDEOS).uploadToSignedUrl(String(v.chemin), String(v.jeton), image, { contentType: 'image/jpeg' })
+        }
+      } catch { /* sans vignette */ }
       setEtat('Vidéo en ligne.'); onChange()
     } finally {
       setOccupe(false); setEnvoi(null)

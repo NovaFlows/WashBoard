@@ -108,6 +108,13 @@ export function nettoyerLecon(brut: unknown): ChampsLecon | null {
   return out
 }
 
+/**
+ * Vignette d'une leçon : une image prise dans la vidéo par le navigateur de l'administrateur au
+ * moment de l'envoi, rangée à côté de la vidéo. Chemin fixe : pas de colonne en plus en base, la
+ * vignette existe ou n'existe pas.
+ */
+export const cheminVignette = (leconId: string): string => `${leconId}/vignette.jpg`
+
 /** Chemin de stockage d'une vidéo : rangé par leçon, nom assaini (jamais celui du fichier tel quel). */
 export function cheminVideo(leconId: string, nomFichier: string, maintenant = Date.now()): string {
   const ext = (nomFichier.match(/\.([a-z0-9]{2,5})$/i)?.[1] ?? 'mp4').toLowerCase()

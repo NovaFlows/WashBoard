@@ -105,6 +105,38 @@ export function prochaineLecon(pack: PackFormation, termines: ReadonlySet<string
   return leconsDuPack(pack).find(l => !termines.has(l.id)) ?? null
 }
 
+export type VideoAReprendre = {
+  pack: PackFormation
+  lecon: Lecon
+  /** Rang de la leçon dans le pack, à partir de 1. */
+  rang: number
+  total: number
+  pourcent: number
+  /** Au moins une leçon déjà faite : « Reprendre » plutôt que « Commencer ». */
+  commence: boolean
+}
+
+/**
+ * La vedette de l'accueil : la prochaine leçon du pack le plus avancé, sinon la première leçon du
+ * premier pack disponible. Les packs « bientôt » et les packs sans leçon ne sont jamais proposés.
+ */
+export function videoAReprendre(packs: PackFormation[], termines: ReadonlySet<string>): VideoAReprendre | null {
+  const ouverts = packs.filter(p => p.statut === 'disponible' && leconsDuPack(p).length > 0)
+  const candidats = ouverts.map(pack => ({ pack, pourcent: progressionPack(pack, termines), lecon: prochaineLecon(pack, termines) }))
+  const choisi = candidats.filter(c => c.pourcent > 0 && c.lecon).sort((a, b) => b.pourcent - a.pourcent)[0]
+    ?? candidats.find(c => c.lecon)
+  if (!choisi?.lecon) return null
+  const lecons = leconsDuPack(choisi.pack)
+  return {
+    pack: choisi.pack,
+    lecon: choisi.lecon,
+    rang: lecons.findIndex(l => l.id === choisi.lecon!.id) + 1,
+    total: lecons.length,
+    pourcent: choisi.pourcent,
+    commence: choisi.pourcent > 0,
+  }
+}
+
 /**
  * Partage d'une vente entre le partenaire et WashBoard (50/50 convenu). En centimes entiers : le
  * centime impair va à WashBoard, de sorte que partenaire + WashBoard = prix, toujours. Un

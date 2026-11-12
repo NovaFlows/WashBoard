@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { BUCKET_VIDEOS, cheminVignette } from '@/lib/formationAdmin'
 import { CATALOGUE_DEMO, type Lecon, type NiveauFormation, type PackFormation, type TypeLecon } from '@/lib/formation'
 
 // Catalogue de la formation LU EN BASE (branche feat/formation, 2026-11-11), tables
@@ -97,6 +98,27 @@ export async function chargerCatalogue({ admin }: { admin: boolean }): Promise<{
     return { packs: assemblerCatalogue(p.data as LignePack[], (l.data ?? []) as LigneLecon[], { admin }), demo: false }
   } catch {
     return { packs: CATALOGUE_DEMO, demo: true }
+  }
+}
+
+/**
+ * Adresses des vignettes (leçon → image) pour les leçons qui ont une vidéo, valables 1 h. Une
+ * vignette absente (vidéo envoyée avant cette fonction, prise d'image refusée) est simplement
+ * omise : l'écran montre alors son visuel par défaut.
+ */
+export async function urlsVignettes(packs: PackFormation[]): Promise<Record<string, string>> {
+  const ids = packs.flatMap(p => p.modules.flatMap(m => m.lecons)).filter(l => l.aVideo).map(l => l.id)
+  if (ids.length === 0) return {}
+  try {
+    const { data } = await createAdminClient().storage.from(BUCKET_VIDEOS).createSignedUrls(ids.map(cheminVignette), 3600)
+    const urls: Record<string, string> = {}
+    for (const ligne of data ?? []) {
+      const leconId = ligne.path?.split('/')[0]
+      if (leconId && ligne.signedUrl && !ligne.error) urls[leconId] = ligne.signedUrl
+    }
+    return urls
+  } catch {
+    return {}
   }
 }
 

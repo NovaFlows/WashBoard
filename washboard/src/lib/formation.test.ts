@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   CATALOGUE_DEMO, SESSIONS_DEMO, dureePack, dureeTexte, etatSession, leconDuCatalogue, leconsDuPack,
-  packParSlug, partageVente, prixTexte, progressionPack, prochaineLecon, sessionsAVenir, trouverLecon,
+  packParSlug, partageVente, prixTexte, progressionPack, prochaineLecon, sessionsAVenir, trouverLecon, videoAReprendre,
 } from './formation'
 
 describe('dureeTexte', () => {
@@ -94,5 +94,31 @@ describe('appels en direct', () => {
   it('liste les appels à venir, du plus proche au plus lointain, sans les passés', () => {
     const liste = sessionsAVenir(SESSIONS_DEMO, new Date('2026-11-20T00:00:00+01:00'))
     expect(liste.map(x => x.id)).toEqual(['s-2', 's-3'])
+  })
+})
+
+describe('videoAReprendre (la vedette de l’accueil)', () => {
+  const lecons = leconsDuPack(CATALOGUE_DEMO[0])
+  it('sans rien de commencé : la toute première leçon du premier pack ouvert', () => {
+    const v = videoAReprendre(CATALOGUE_DEMO, new Set())
+    expect(v?.lecon.id).toBe(lecons[0].id)
+    expect(v).toMatchObject({ rang: 1, pourcent: 0, commence: false })
+  })
+  it('pack commencé : la leçon suivante, avec son rang et l’avancement', () => {
+    const v = videoAReprendre(CATALOGUE_DEMO, new Set([lecons[0].id, lecons[1].id]))
+    expect(v?.lecon.id).toBe(lecons[2].id)
+    expect(v).toMatchObject({ rang: 3, total: lecons.length, commence: true })
+  })
+  it('choisit le pack le plus avancé', () => {
+    const second = leconsDuPack(CATALOGUE_DEMO[1])
+    const v = videoAReprendre(CATALOGUE_DEMO, new Set([lecons[0].id, second[0].id, second[1].id]))
+    expect(v?.pack.slug).toBe(CATALOGUE_DEMO[1].slug)
+  })
+  it('un pack terminé laisse la place au suivant ; les packs « bientôt » ne sont jamais proposés', () => {
+    const v = videoAReprendre(CATALOGUE_DEMO, new Set(lecons.map(l => l.id)))
+    expect(v?.pack.slug).toBe(CATALOGUE_DEMO[1].slug)
+    const tout = new Set(CATALOGUE_DEMO.flatMap(leconsDuPack).map(l => l.id))
+    expect(videoAReprendre(CATALOGUE_DEMO, tout)).toBeNull()
+    expect(videoAReprendre([], new Set())).toBeNull()
   })
 })

@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isTrustedOrigin } from '@/lib/appOrigin'
 import { rateLimit } from '@/lib/rateLimit'
 import { formationAdmin } from '@/lib/formationAcces'
-import { BUCKET_VIDEOS, TAILLE_MAX_VIDEO_MO, TYPES_VIDEO_ACCEPTES, cheminVideo, nettoyerLecon, nettoyerPack, slugDe } from '@/lib/formationAdmin'
+import { BUCKET_VIDEOS, TAILLE_MAX_VIDEO_MO, TYPES_VIDEO_ACCEPTES, cheminVideo, cheminVignette, nettoyerLecon, nettoyerPack, slugDe } from '@/lib/formationAdmin'
 import { logger } from '@/lib/logger'
 
 // Gestion de la formation par les administrateurs (branche feat/formation, 2026-11-11) : créer,
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       const leconId = id(corps.id)
       if (!leconId) return invalide()
       const { data } = await db.from('formation_lecons').select('video_path').eq('id', leconId).maybeSingle()
-      if (data?.video_path) await db.storage.from(BUCKET_VIDEOS).remove([data.video_path])
+      if (data?.video_path) await db.storage.from(BUCKET_VIDEOS).remove([data.video_path, cheminVignette(leconId)])
       const { error } = await db.from('formation_lecons').delete().eq('id', leconId)
       if (error) return echec('lecon_supprimer', error)
       return NextResponse.json({ ok: true })
@@ -143,11 +143,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // Facultatif : la vignette (image prise dans la vidéo), envoyée après la vidéo. Remplace la précédente.
+    case 'video.preparer_vignette': {
+      const leconId = id(corps.leconId)
+      if (!leconId) return invalide()
+      const { data, error } = await db.storage.from(BUCKET_VIDEOS).createSignedUploadUrl(cheminVignette(leconId), { upsert: true })
+      if (error || !data) return echec('video_preparer_vignette', error)
+      return NextResponse.json({ ok: true, chemin: cheminVignette(leconId), jeton: data.token })
+    }
+
     case 'video.retirer': {
       const leconId = id(corps.leconId)
       if (!leconId) return invalide()
       const { data } = await db.from('formation_lecons').select('video_path').eq('id', leconId).maybeSingle()
-      if (data?.video_path) await db.storage.from(BUCKET_VIDEOS).remove([data.video_path])
+      if (data?.video_path) await db.storage.from(BUCKET_VIDEOS).remove([data.video_path, cheminVignette(leconId)])
       const { error } = await db.from('formation_lecons').update({ video_path: null }).eq('id', leconId)
       if (error) return echec('video_retirer', error)
       return NextResponse.json({ ok: true })

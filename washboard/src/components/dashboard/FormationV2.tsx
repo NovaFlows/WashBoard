@@ -7,8 +7,8 @@ import FormationEnveloppeV2 from '@/components/dashboard/FormationEnveloppeV2'
 import type { ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { useProgressionFormation } from '@/hooks/useProgressionFormation'
 import {
-  NIVEAUX, dureePack, dureeTexte, etatSession, leconsDuPack, prixTexte, progressionPack, prochaineLecon,
-  sessionsAVenir, type PackFormation, type SessionLive,
+  NIVEAUX, dureePack, dureeTexte, etatSession, leconsDuPack, prixTexte, progressionPack, videoAReprendre,
+  sessionsAVenir, type PackFormation, type SessionLive, type VideoAReprendre,
 } from '@/lib/formation'
 
 // Écran d'accueil « Formation » (branche feat/formation, 2026-11-10) : reprendre là où on s'était
@@ -34,6 +34,55 @@ export function quandTexte(iso: string): string {
   const jour = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' }).format(d)
   const heure = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(d).replace(':', ' h ')
   return `${jour} · ${heure}`
+}
+
+/**
+ * Grande carte de l'accueil : la vignette de la prochaine vidéo (ou de la première), un bouton lecture,
+ * la durée, puis où l'on en est. Sans image (vidéo pas encore envoyée, catalogue d'exemple), un fond
+ * dégradé tient la place : la carte reste belle et cliquable.
+ */
+function CarteVedette({ v, vignette }: { v: VideoAReprendre; vignette?: string }) {
+  const verbe = v.commence ? 'Reprendre' : 'Commencer'
+  return (
+    <Link
+      href={`/dashboard/formation/${v.pack.slug}/${v.lecon.id}`}
+      className={`${CARTE} group block overflow-hidden transition-transform active:scale-[.99] lg:flex`}
+      data-testid="carte-vedette"
+    >
+      <div
+        className="relative aspect-video w-full overflow-hidden lg:w-[440px] lg:shrink-0"
+        style={{ background: 'linear-gradient(135deg, #15202e 0%, #2a4a6e 100%)' }}
+      >
+        {vignette && (
+          // eslint-disable-next-line @next/next/no-img-element -- adresse signée Supabase (expire), pas une image du site
+          <img src={vignette} alt="" className="absolute inset-0 h-full w-full object-cover" loading="eager" />
+        )}
+        {/* Voile : garde le texte et la durée lisibles sur n'importe quelle image. */}
+        <div aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(10,14,20,.78) 0%, rgba(10,14,20,.1) 55%, rgba(10,14,20,.25) 100%)' }} />
+        <span className="absolute left-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur-sm">
+          Leçon {v.rang} sur {v.total}
+        </span>
+        <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur-sm">
+          {dureeTexte(v.lecon.dureeSec)}
+        </span>
+        <span aria-hidden className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform group-hover:scale-105">
+          <svg viewBox="0 0 24 24" className="ml-0.5 h-6 w-6" fill="#16161A"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+        </span>
+        {v.commence && (
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-white/25">
+            <div className="h-full bg-[color:var(--v2-color-accent)]" style={{ width: `${v.pourcent}%` }} />
+          </div>
+        )}
+      </div>
+      <div className="p-4 lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:p-8">
+        <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>{verbe}</p>
+        <p className={`mt-1 text-[17px] leading-snug ${titre}`}>{v.lecon.titre}</p>
+        <p className={`mt-0.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+          {v.pack.titre}{v.commence ? ` · ${v.pourcent} % terminé` : ''}
+        </p>
+      </div>
+    </Link>
+  )
 }
 
 function CartePack({ pack, termines }: { pack: PackFormation; termines: ReadonlySet<string> }) {
@@ -71,6 +120,8 @@ function CartePack({ pack, termines }: { pack: PackFormation; termines: Readonly
 type Props = {
   liste: ReglagesListeProps
   packs: PackFormation[]
+  /** Image de chaque leçon qui en a une (leçon → adresse signée). */
+  vignettes?: Record<string, string>
   /** Administrateur de la formation : voit le lien « Gérer » et les brouillons. */
   admin?: boolean
   sessions: SessionLive[]
@@ -78,16 +129,12 @@ type Props = {
   maintenantIso: string
 }
 
-export default function FormationV2({ liste, packs, admin = false, sessions, maintenantIso }: Props) {
+export default function FormationV2({ liste, packs, vignettes = {}, admin = false, sessions, maintenantIso }: Props) {
   const { termines } = useProgressionFormation()
   const maintenant = new Date(maintenantIso)
 
-  // « Reprendre » : le pack commencé (au moins une leçon faite) mais pas terminé, le plus avancé d'abord.
-  const encours = packs
-    .filter(p => p.statut === 'disponible')
-    .map(p => ({ pack: p, pourcent: progressionPack(p, termines), suite: prochaineLecon(p, termines) }))
-    .filter(x => x.pourcent > 0 && x.suite)
-    .sort((a, b) => b.pourcent - a.pourcent)[0]
+  // La vedette : la prochaine leçon du pack commencé (le plus avancé), sinon la toute première.
+  const vedette = videoAReprendre(packs, termines)
 
   const prochain = sessionsAVenir(sessions, maintenant)[0]
   const etat = prochain ? etatSession(prochain, maintenant) : null
@@ -107,14 +154,7 @@ export default function FormationV2({ liste, packs, admin = false, sessions, mai
           <Chevron />
         </Link>
       )}
-      {encours && encours.suite && (
-        <Link href={`/dashboard/formation/${encours.pack.slug}/${encours.suite.id}`} className={`${CARTE} block p-4`}>
-          <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Reprendre</p>
-          <p className={`mt-1 text-[16px] leading-snug ${titre}`}>{encours.suite.titre}</p>
-          <p className={`mt-0.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{encours.pack.titre}</p>
-          <div className="mt-3"><BarreProgression pourcent={encours.pourcent} /></div>
-        </Link>
-      )}
+      {vedette && <CarteVedette v={vedette} vignette={vignettes[vedette.lecon.id]} />}
 
       {prochain && (
         <Link href="/dashboard/formation/directs" className={`${CARTE} block p-4`}>
