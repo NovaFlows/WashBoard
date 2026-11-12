@@ -51,7 +51,19 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Mes clients peuvent-ils venir à mon local, au lieu que je me déplace ?',
-    a: 'Oui, si tu as un centre auto. Tu l\'actives dans Mon profil avec son adresse, puis tu choisis ce que propose ta page : à domicile, au centre auto, ou les deux, et le client choisit. Au centre, pas de frais de déplacement, et la facture et les emails indiquent l\'adresse du centre.',
+    a: 'Oui, si tu as un centre auto, ou plusieurs (jusqu\'à 10). Tu les ajoutes dans Mon profil avec leur nom et leur adresse, puis tu choisis ce que propose ta page : à domicile, au centre auto, ou les deux. Avec plusieurs centres, le client choisit le sien en réservant. Au centre, pas de frais de déplacement, et la facture et les emails indiquent l\'adresse du centre. Tes horaires restent les mêmes pour tous tes centres.',
+  },
+  {
+    q: 'Une prestation peut-elle se faire seulement à domicile, ou seulement dans un de mes centres ?',
+    a: 'Oui. Si tu proposes à la fois le déplacement et le centre auto, tu limites chaque prestation à l\'un ou à l\'autre depuis sa fiche, et, si tu as plusieurs centres, à certains d\'entre eux. Ta page de réservation ne propose alors au client que les lieux possibles pour ce qu\'il a choisi.',
+  },
+  {
+    q: 'Je peux fixer les heures de début d\'une prestation ?',
+    a: 'Oui. Dans la fiche de la prestation, tu choisis ses heures de début, par exemple 8 h 30, 13 h et 16 h : le client ne voit que ces horaires-là pour cette prestation. Elles valent pour tous les jours de la semaine. Sans heure choisie, tous tes créneaux habituels restent proposés.',
+  },
+  {
+    q: 'Mes clients doivent-ils choisir un type de véhicule ?',
+    a: 'Seulement si tu le veux. Par défaut, ta page leur demande le type de véhicule (citadine, SUV…) pour afficher le bon prix. Si tes clients hésitent, tu éteins « Demander le type de véhicule » dans Prestations : ils choisissent simplement la prestation et le nombre de véhicules, au prix principal. Tes prix par type restent enregistrés, et tu peux rallumer quand tu veux.',
   },
   {
     q: 'Ça marche pour d\'autres métiers que le lavage auto ?',
@@ -86,8 +98,8 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Tu ajoutes une indisponibilité dans tes horaires ou depuis ton agenda : sur plusieurs jours pour tes congés, ou sur quelques heures d\'une seule journée pour une autre activité. Ces créneaux disparaissent aussitôt de ta page de réservation : personne ne peut réserver dessus.',
   },
   {
-    q: 'Un client peut-il annuler son rendez-vous tout seul ?',
-    a: 'Pas aujourd\'hui : sa page de confirmation n\'a pas de bouton d\'annulation, il te prévient directement. Tu annules alors le rendez-vous depuis ton agenda, et le créneau redevient immédiatement réservable. Si c\'est un particulier qui a réservé en ligne, il dispose en principe de 14 jours pour se rétracter : traite sa demande (message, appel) comme une annulation et regarde si l\'acompte doit lui être rendu. En cas de doute, fais relire tes conditions par un professionnel du droit.',
+    q: 'Comment se passe l\'annulation d\'un rendez-vous ?',
+    a: 'Ton client te prévient par message ou par appel, et tu annules le rendez-vous depuis ton agenda : le créneau redevient aussitôt réservable sur ta page. C\'est toi qui gardes la main, notamment sur l\'acompte en cas d\'annulation de dernière minute. Si c\'est un particulier qui a réservé en ligne, il dispose en principe de 14 jours pour se rétracter : traite sa demande (message, appel) comme une annulation et regarde si l\'acompte doit lui être rendu. En cas de doute, fais relire tes conditions par un professionnel du droit.',
   },
   {
     q: 'Comment marche la carte de fidélité ?',
