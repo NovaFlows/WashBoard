@@ -166,9 +166,14 @@
     {
       "date": "2026-11-12",
       "personne": "ryan",
-      "statut": "prevu",
+      "statut": "publie",
       "type": "post",
-      "sujet": "Voilà à quoi ressemble une semaine organisée (vue Semaine de l'agenda sur ordinateur)"
+      "sujet": "Voilà à quoi ressemble une semaine organisée (vue Semaine de l'agenda sur ordinateur)",
+      "theme_couverture": "sombre",
+      "liens": {
+        "instagram": "https://www.instagram.com/p/DfpjBPRB_ae/",
+        "facebook": "partagé depuis Instagram"
+      }
     }
   ]
 }
