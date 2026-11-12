@@ -49,6 +49,10 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 - `centreRestreint(centre, ids)` (lib/centreAuto.ts) filtre les centres vus par le client (StepSlot/LegacyStepSlot) et par le serveur (`POST /api/bookings`, adresse imposée parmi les centres cochés). Identifiants périmés (centre supprimé) = aucune restriction.
 - Éditeur : « Dans quels centres ? » (cases) dans `FeuillePrestationV2`, si 2 centres ou plus (ids présents) et prestation pas limitée au déplacement. Agenda manuel et éditeur v1 : non faits.
 
+## Tests e2e du lot centres / prestations (2026-11-12)
+- `washboard/e2e/lot-centres-prestations.spec.ts` (16 scénarios, config `playwright.refonte.config.ts`, données fictives) : plusieurs centres, lieu/heures/centres par prestation, éditeur, correctif acompte page classique. Paramètres du banc : `?centre=3` (deux centres), `?prest=1` (prestations limitées), `?mode=feuille-prestation`, `?mode=centre-auto&centre=3`, `?mode=custom&acompte=1`. Les 26 scénarios du banc passent (+ `plage-bloquee`).
+- Sélecteur SIRET de `booking-refonte.spec.ts` corrigé (libellé « SIRET ou n° BCE (Belgique) » depuis 4220e04).
+
 ## Changer de numéro (2026-11-10)
 - Demande d'Alexandre : un laveur change son numéro depuis ses réglages, comme son e-mail ou son mot de passe (rien à voir avec l'espace équipe). Mon profil › « Ma connexion » › Téléphone (`FeuilleTelephoneV2`, PWA) et, sur le site, l'ancien formulaire (`ChangerTelephoneV1`). La ligne « Téléphone » de « Mon entreprise » a disparu.
 - Le numéro d'un compte est vérifié par SMS à l'inscription : un nouveau numéro l'est aussi. Mot de passe actuel + nouveau mobile (06/07, pas déjà pris, sauf `PHONE_UNIQUENESS_EXEMPT`) → code de 6 chiffres envoyé sur CE numéro → saisi → `washers.phone` change et `telephone_verifie_le` est daté. Route `POST /api/washer/telephone` (`etape: 'code' | 'confirmer'`), qui réutilise `codes_sms` et `lib/codeSms` (60 s entre deux envois, 5 par demande ; une demande restée sans suite depuis plus d'une heure est repartie de zéro). Le numéro changé est celui de la demande, jamais celui du navigateur.

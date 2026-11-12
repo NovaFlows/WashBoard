@@ -65,7 +65,7 @@ test('parcours mobile, prix en direct, retour et confirmation', async ({ page },
   await page.getByLabel('Je réserve pour une entreprise').check()
   await expect(page.getByTestId('booking-continue')).toBeDisabled()
   await page.getByLabel('Nom de l’entreprise').fill('Société Démo')
-  await page.getByLabel('SIRET', { exact: true }).fill('12345678901234')
+  await page.getByLabel('SIRET ou n° BCE (Belgique)').fill('12345678901234')
   await page.screenshot({ path: testInfo.outputPath('03-contact.png'), fullPage: true })
   const request = page.waitForRequest(r => new URL(r.url()).pathname === '/api/bookings' && r.method() === 'POST')
   await page.getByTestId('booking-continue').click()

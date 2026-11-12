@@ -16,6 +16,8 @@ import CarteApresReservation from '@/components/booking/CarteApresReservation'
 import CarteFidelite3D, { type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
 import EncartAcompte from '@/components/booking/EncartAcompte'
 import CentreAutoDemo from './CentreAutoDemo'
+import FeuillePrestationDemo from './FeuillePrestationDemo'
+import { lieuxPossibles, type CentreAutoPublic } from '@/lib/centreAuto'
 import type { PromotionPublique } from '@/lib/promotion'
 
 // Fin de la promotion d'exemple, calculée au chargement du module et non pendant le rendu
@@ -23,8 +25,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string }> }) {
-  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string; prest?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre, prest } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -44,9 +46,25 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
       addons: [{ id: 'seats', label: 'Shampoing des sièges', price: 30, duration_minutes: 30, category: 'Options' }, { id: 'pets', label: 'Poils d’animaux', price: 15, duration_minutes: 15, category: 'Options' }] },
     { id: '00000000-0000-4000-8000-000000000013', name: 'Complet', description: 'Intérieur et extérieur en une seule visite', price: 75, duration_minutes: 120, addons: [] },
   ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 }, lieu_adapte: s.name !== 'Extérieur' }))
+  // ?prest=1 : prestations limitées (Extérieur : déplacement seulement, 10 h et 14 h ; Intérieur :
+  // centre seulement ; Complet : centre Sud seulement). ?centre=3 : deux centres, Nord et Sud.
+  const centrePublic: CentreAutoPublic | null = !centre ? null : centre === '3'
+    ? { adresse: '8 avenue Foch, 69006 Lyon', domicile: true, centres: [
+      { id: 'a1', nom: 'Nord', adresse: '8 avenue Foch, 69006 Lyon' },
+      { id: 'b2', nom: 'Sud', adresse: '3 rue du Port, 13002 Marseille' },
+    ] }
+    : { adresse: '8 avenue Foch, 69006 Lyon', domicile: centre === '1' }
+  const prestations: Service[] = prest !== '1' ? services : services
+    .map(sv => sv.name === 'Extérieur' ? { ...sv, lieu_restreint: 'domicile' as const, heures_debut: ['10:00', '14:00'] }
+      : sv.name === 'Intérieur' ? { ...sv, lieu_restreint: 'centre' as const }
+      : { ...sv, centres_ids: ['b2'] })
+    // Même règle que la page publique : pas de prestation réservable nulle part.
+    .filter(sv => lieuxPossibles(centrePublic, sv.lieu_restreint).length > 0)
   if (mode === 'promotions') return <PromotionsV2 slug="demo" services={services.map(s => ({ id: s.id, name: s.name }))} liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   // ?mode=centre-auto : la feuille « Centre auto » de Mon profil.
-  if (mode === 'centre-auto') return <CentreAutoDemo />
+  if (mode === 'centre-auto') return <CentreAutoDemo multi={centre === '3'} />
+  // ?mode=feuille-prestation : la fiche d'une prestation (lieu, heures, centres) d'un laveur à deux centres.
+  if (mode === 'feuille-prestation') return <FeuillePrestationDemo />
   if (mode === 'acompte') return <AcompteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} />
   if (mode === 'fidelite') return <FideliteV2 slug="demo" liste={{ nom: 'Brillance Mobile', slug: 'demo', plan: 'business', grandfathered: false }} marque="#7c3aed" />
   // La carte en 3D seule (`?scenario=reservation|tampon|consultation&couleur=0F7A55&tampons=7`).
@@ -67,15 +85,16 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     liens={[{ libelle: 'PayPal', url: 'https://paypal.me/eclat/16.05EUR', montantExact: true }, { libelle: 'Stripe', url: 'https://buy.stripe.com/test', montantExact: false }]}
     wero={{ telephone: '06 12 34 56 78', lien: 'https://share.weropay.eu/p/1/c/exemple' }}
     virement={{ titulaire: 'Éclat Mobile', iban: 'FR76 3000 6000 0112 3456 7890 189', reference: 'WB-54CF8F67' }} /></div>
-  if (mode === 'custom') return <LegacyBookingPage washer={{ id: washerId, name: 'Brillance Mobile', slug: 'demo', phone: null, logo_url: null, welcome_message: 'Bienvenue chez Brillance Mobile', brand_color: '#7c3aed', background_theme: null, website_url: null, base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], reservation_jour_meme: false, plan: 'business', subscription_status: 'active' }} services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))} plafondAtteint={false} facturationPrete={true} pixelId={null} promotion={promotion} />
+  if (mode === 'custom') return <LegacyBookingPage washer={{ id: washerId, name: 'Brillance Mobile', slug: 'demo', phone: null, logo_url: null, welcome_message: 'Bienvenue chez Brillance Mobile', brand_color: '#7c3aed', background_theme: null, website_url: null, base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], reservation_jour_meme: false, plan: 'business', subscription_status: 'active' }} services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))} plafondAtteint={false} facturationPrete={true} pixelId={null} promotion={promotion}
+    acompte={acompte === '1' ? { type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/demo' }, delai_heures: 48, remboursable: true, remboursement_heures: 48, virementPropose: true, weroPropose: false } : null} />
   return <><div className="min-h-screen bg-[#f6f5f3] dark:bg-zinc-950">
     {promotion && <BandeauPromotion promo={promotion} />}
     <BookingHero name="Brillance Mobile" message="Lavage auto à domicile par Karim, à Lyon et alentours. Trois questions et c’est réservé." accent="#2563eb" personalized whatsappHref="https://wa.me/33000000000" />
     <main className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
       {/* ?centre=1 : centre auto et domicile (avec frais de déplacement) ; ?centre=2 : centre seulement. */}
       <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: centre ? '12 rue Mercière, 69002 Lyon' : null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: centre ? [{ max_minutes: 30, fee: 10 }] : [], clients_pro: true, facturation_prete: true,
-        centre_auto: centre ? { adresse: '8 avenue Foch, 69006 Lyon', domicile: centre === '1' } : null }}
-        services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
+        centre_auto: centrePublic }}
+        services={prestations} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
         // ?scenario=plage-bloquee : « Autre activité » le dimanche 4 octobre 2026 de 9h à 12h.
         disponibilites={{ bookings: [], unavailabilities: scenario === 'plage-bloquee' ? [{ id: 'u-1', start_date: '2026-10-04', end_date: '2026-10-04', team_members_off: 1, start_time: '09:00:00', end_time: '12:00:00' }] : [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
         // ?acompte=1 : un laveur qui demande 30 % d'acompte (case des conditions à cocher).
