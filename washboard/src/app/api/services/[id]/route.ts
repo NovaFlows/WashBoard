@@ -1,3 +1,4 @@
+import { heuresDebutAcceptables, heuresDebutValides } from '@/lib/heuresPrestation'
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError, errorResponse } from '@/lib/apiError'
 import { requireWasher } from '@/lib/requireWasher'
@@ -27,6 +28,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
   if (body.lieu_restreint !== undefined && body.lieu_restreint !== null && body.lieu_restreint !== 'domicile' && body.lieu_restreint !== 'centre') {
     return NextResponse.json({ error: 'Lieu de la prestation invalide' }, { status: 400 })
+  }
+  if (!heuresDebutAcceptables(body.heures_debut)) {
+    return NextResponse.json({ error: 'Heures de début invalides' }, { status: 400 })
   }
   // ── Mise en veille / reactivation ───────────────────────────────────────
   //
@@ -83,6 +87,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.addons !== undefined) updates.addons = body.addons
   if (body.lieu_adapte !== undefined) updates.lieu_adapte = body.lieu_adapte
   if (body.lieu_restreint !== undefined) updates.lieu_restreint = body.lieu_restreint
+  if (body.heures_debut !== undefined) updates.heures_debut = heuresDebutValides(body.heures_debut)
 
   const { error } = await supabase.from('services').update(updates).eq('id', id).eq('washer_id', washerId)
   if (error) return errorResponse('services.id.patch.db', error)

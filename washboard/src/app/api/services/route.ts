@@ -1,3 +1,4 @@
+import { heuresDebutAcceptables, heuresDebutValides } from '@/lib/heuresPrestation'
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte, lieu_restreint } = await request.json()
+  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte, lieu_restreint, heures_debut } = await request.json()
   if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
@@ -70,6 +71,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Lieu de la prestation invalide' }, { status: 400 })
   }
 
+  if (!heuresDebutAcceptables(heures_debut)) {
+    return NextResponse.json({ error: 'Heures de début invalides' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('services')
     .insert({
@@ -85,6 +90,8 @@ export async function POST(request: NextRequest) {
       ...(lieu_adapte === undefined ? {} : { lieu_adapte }),
       // Seulement quand il est posé : sans le SQL, la colonne n'existe pas encore.
       ...(lieu_restreint ? { lieu_restreint } : {}),
+      // Seulement quand il y a des heures : sans le SQL, la colonne n'existe pas encore.
+      ...(heuresDebutValides(heures_debut) ? { heures_debut: heuresDebutValides(heures_debut) } : {}),
     })
     .select()
     .single()

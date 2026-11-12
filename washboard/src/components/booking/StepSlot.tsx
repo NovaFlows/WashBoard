@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import { filtrerHeures } from '@/lib/heuresPrestation'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
@@ -40,6 +41,8 @@ type Props = {
   centre?: CentreAutoPublic | null
   /** Lieu imposé par la prestation choisie (lib/centreAuto.ts) ; vide = les deux. */
   lieuPrestation?: LieuRestreint
+  /** Heures de début autorisées pour la prestation choisie ; vide = toutes. */
+  heuresPrestation?: string[] | null
   initialLieu?: Lieu
   onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   initialAddress?: string
@@ -76,7 +79,7 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, lieuPrestation = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, lieuPrestation = null, heuresPrestation = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
@@ -216,7 +219,7 @@ export default function StepSlot({
   function journeeEcoulee(d: Date): boolean {
     const horaires = availabilities
       .filter(a => a.day_of_week === d.getDay())
-      .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
+      .flatMap(a => filtrerHeures(generateSlots(a.start_time, a.end_time, serviceDuration), heuresPrestation))
     return horaires.length > 0 && horaires.every(s => slotEstPasse(s, d))
   }
 
@@ -243,7 +246,7 @@ export default function StepSlot({
 
   const slotsForDay = selectedDate
     ? dayAvailabilities
-        .flatMap(a => generateSlots(a.start_time, a.end_time, serviceDuration))
+        .flatMap(a => filtrerHeures(generateSlots(a.start_time, a.end_time, serviceDuration), heuresPrestation))
         // Sans effet un jour futur (jamais « passé ») ; retire les horaires du
         // matin quand le jour même est réservable et qu'il est déjà l'après-midi.
         .filter(slot => !slotEstPasse(slot, selectedDate))

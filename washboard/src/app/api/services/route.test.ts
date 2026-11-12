@@ -255,3 +255,20 @@ describe('POST /api/services — lieu de la prestation (lieu_restreint)', () => 
     expect(inserts).toHaveLength(0)
   })
 })
+
+describe('POST /api/services — heures de début (heures_debut)', () => {
+  it('enregistre les heures triées', async () => {
+    const res = await POST(requete({ ...COMPLETE, heures_debut: ['16:00', '08:30', '13:00'] }))
+    expect(res.status).toBe(200)
+    expect(inserts[0].heures_debut).toEqual(['08:30', '13:00', '16:00'])
+  })
+  it.each([undefined, null, []])('n’envoie pas la colonne pour %j (toutes les heures)', async (valeur) => {
+    await POST(requete({ ...COMPLETE, heures_debut: valeur }))
+    expect(inserts[0]).not.toHaveProperty('heures_debut')
+  })
+  it.each([['8h30'], '08:30', [1], ['25:00']])('refuse %j', async (valeur) => {
+    const res = await POST(requete({ ...COMPLETE, heures_debut: valeur }))
+    expect(res.status).toBe(400)
+    expect(inserts).toHaveLength(0)
+  })
+})

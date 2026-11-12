@@ -16,6 +16,7 @@ import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { centreAutoPublic, centreParAdresse, lieuAccepte, lieuRestreintValide, lieuxPossibles, libelleCentre } from '@/lib/centreAuto'
 import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
 import { lireBlocages } from '@/lib/blocagesServeur'
+import { heureAutorisee, heuresDebutValides } from '@/lib/heuresPrestation'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
@@ -495,6 +496,20 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       })
       return Response.json(
         { error: 'Ce créneau ne fait pas partie des horaires du prestataire.' },
+        { status: 409 },
+      )
+    }
+
+    // Heures de début limitées pour cette prestation (`services.heures_debut`), lues à part :
+    // sans la colonne, aucune restriction et les réservations continuent.
+    const { data: ficheHeures, error: errHeures } = await supabase
+      .from('services').select('heures_debut').eq('id', bookingData.service_id).maybeSingle()
+    if (errHeures && !migrationEnAttente(errHeures)) logger.error('bookings.heures_debut.read_failed', { washerId: bookingData.washer_id }, errHeures)
+    const heuresPermises = errHeures ? null : heuresDebutValides((ficheHeures as { heures_debut?: unknown } | null)?.heures_debut)
+    if (!heureAutorisee(heureStr, heuresPermises)) {
+      logger.warn('bookings.rejected.heure_prestation', { washerId: bookingData.washer_id, heure: heureStr })
+      return Response.json(
+        { error: 'Cette prestation n’est pas proposée à cette heure. Merci de choisir un autre créneau.' },
         { status: 409 },
       )
     }

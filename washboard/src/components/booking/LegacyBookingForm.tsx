@@ -432,6 +432,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             reservationJourMeme={washer.reservation_jour_meme === true}
             centre={centreAuto}
             lieuPrestation={services.find(s => s.id === form.service_id)?.lieu_restreint}
+            heuresPrestation={services.find(s => s.id === form.service_id)?.heures_debut}
             onNext={(data) => { updateForm(data); setStep(4) }}
             onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}

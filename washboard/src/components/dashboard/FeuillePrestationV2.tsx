@@ -7,6 +7,7 @@ import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } f
 import { Constat, Interrupteur, Repliable, TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { MESSAGE_LIEU_ADAPTE } from '@/lib/lieuAdapte'
 import { CHOIX_LIEU_PRESTATION, lieuRestreintValide } from '@/lib/centreAuto'
+import { HEURES_PROPOSEES, MAX_HEURES_DEBUT, heuresDebutValides, libelleHeure, resumeHeures } from '@/lib/heuresPrestation'
 import { champsManquants, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX, ERREUR_SANS_TYPE } from '@/lib/prestation'
 import {
   basculerType, categoriesOptionProposees, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
@@ -80,7 +81,7 @@ export default function FeuillePrestationV2({
   const [form, setForm] = useState(formulaireInitial)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [ouvert, setOuvert] = useState({ prix: false, options: false, description: false })
+  const [ouvert, setOuvert] = useState({ prix: false, options: false, description: false, heures: false })
   const verrou = useRef(false)
 
   const sansCategorie = useMemo(() => (service ? sansCategorieDe(service, categories) : null), [service, categories])
@@ -139,7 +140,7 @@ export default function FeuillePrestationV2({
     }
   }
 
-  const basculer = (cle: 'prix' | 'options' | 'description') => setOuvert(o => ({ ...o, [cle]: !o[cle] }))
+  const basculer = (cle: 'prix' | 'options' | 'description' | 'heures') => setOuvert(o => ({ ...o, [cle]: !o[cle] }))
   const majBrouillon = (champ: keyof BrouillonOption, valeur: string) => setBrouillon(b => ({ ...b, [champ]: valeur }))
 
   const pied = (
@@ -479,6 +480,56 @@ export default function FeuillePrestationV2({
             className={`${CHAMP} h-auto resize-none py-2.5 leading-[1.5]`}
           />
           <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/250</p>
+        </Repliable>
+
+        <Repliable id="presta-heures" titre="Heures de début" resume={resumeHeures(form.heures_debut)} ouvert={ouvert.heures} onBascule={() => basculer('heures')}>
+          <p className={`mb-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+            Pour regrouper vos journées, proposez cette prestation seulement à certaines heures. Vos horaires, congés et rendez-vous déjà pris restent respectés. Sans heure choisie, toutes les heures de vos horaires sont proposées.
+          </p>
+          {(heuresDebutValides(form.heures_debut) ?? []).length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {(heuresDebutValides(form.heures_debut) ?? []).map(h => (
+                <button
+                  key={h}
+                  type="button"
+                  aria-label={`Retirer ${libelleHeure(h)}`}
+                  onClick={() => setForm(f => ({ ...f, heures_debut: (heuresDebutValides(f.heures_debut) ?? []).filter(x => x !== h) }))}
+                  className={`${BOUTON} !h-9 gap-1.5 border border-[color:var(--v2-color-encre)] px-3 text-[14px] text-[color:var(--v2-color-encre)]`}
+                  style={PRESSION}
+                >
+                  {libelleHeure(h)}<X size={14} aria-hidden />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <select
+              aria-label="Ajouter une heure de début"
+              value=""
+              onChange={e => {
+                const h = e.target.value
+                if (!h) return
+                setForm(f => ({ ...f, heures_debut: [...(heuresDebutValides(f.heures_debut) ?? []), h].sort() }))
+              }}
+              disabled={(heuresDebutValides(form.heures_debut) ?? []).length >= MAX_HEURES_DEBUT}
+              className={CHAMP}
+            >
+              <option value="">+ Ajouter une heure</option>
+              {HEURES_PROPOSEES.filter(h => !(heuresDebutValides(form.heures_debut) ?? []).includes(h)).map(h => (
+                <option key={h} value={h}>{libelleHeure(h)}</option>
+              ))}
+            </select>
+            {(heuresDebutValides(form.heures_debut) ?? []).length > 0 && (
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, heures_debut: null }))}
+                className={`${BOUTON} shrink-0 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]`}
+                style={PRESSION}
+              >
+                Toutes
+              </button>
+            )}
+          </div>
         </Repliable>
 
         {lieuxMixtes && (

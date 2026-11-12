@@ -155,3 +155,24 @@ describe('PATCH /api/services/[id] — lieu de la prestation (lieu_restreint)', 
     expect(updates).toHaveLength(0)
   })
 })
+
+describe('PATCH /api/services/[id] — heures de début (heures_debut)', () => {
+  it('enregistre les heures, triées', async () => {
+    const res = await PATCH(requete({ heures_debut: ['16:00', '08:30'] }), { params })
+    expect(res.status).toBe(200)
+    expect(updates[0].heures_debut).toEqual(['08:30', '16:00'])
+  })
+  it.each([null, []])('%j : retire la restriction (colonne à null)', async (valeur) => {
+    await PATCH(requete({ heures_debut: valeur }), { params })
+    expect(updates[0].heures_debut).toBeNull()
+  })
+  it('ne touche pas la colonne quand le corps ne la contient pas', async () => {
+    await PATCH(requete({ name: 'ez' }), { params })
+    expect(updates[0]).not.toHaveProperty('heures_debut')
+  })
+  it.each([['8h30'], '08:30', [true]])('refuse %j', async (valeur) => {
+    const res = await PATCH(requete({ heures_debut: valeur }), { params })
+    expect(res.status).toBe(400)
+    expect(updates).toHaveLength(0)
+  })
+})

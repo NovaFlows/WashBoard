@@ -121,6 +121,8 @@ export type Service = {
   lieu_adapte?: boolean
   /** Prestation faite seulement à domicile ou seulement au centre auto ; vide = les deux (absent avant le SQL). */
   lieu_restreint?: 'domicile' | 'centre' | null
+  /** Heures de début proposées (« HH:MM ») ; vide = toutes celles des horaires (absent avant le SQL). */
+  heures_debut?: string[] | null
 }
 
 export type Availability = {
