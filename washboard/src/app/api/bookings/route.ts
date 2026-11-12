@@ -13,7 +13,7 @@ import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
-import { centreAutoPublic, lieuAccepte } from '@/lib/centreAuto'
+import { centreAutoPublic, centreParAdresse, lieuAccepte, libelleCentre } from '@/lib/centreAuto'
 import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
 import { lireBlocages } from '@/lib/blocagesServeur'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
@@ -294,7 +294,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       { status: 409 },
     )
   }
-  if (auCentre && centre) bookingData.address = centre.adresse
+  // Plusieurs centres : le client a choisi l'adresse de l'un d'eux ; toute autre adresse
+  // envoyée retombe sur le premier centre, on ne garde jamais une adresse libre.
+  if (auCentre && centre) bookingData.address = libelleCentre(centreParAdresse(centre, bookingData.address))
   const is_smart_slot = auCentre ? false : smartDemande
   const smart_discount = auCentre ? 0 : remiseSmartDemandee
   // La page publique exige toujours un email : c'est par lui que le client reçoit sa demande.

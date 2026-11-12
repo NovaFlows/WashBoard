@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, libelleAdresse, lieuAccepte, lieuParDefaut, resumeCentreAuto } from './centreAuto'
+import { ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, centreParAdresse, centresDe, libelleAdresse, libelleCentre, lieuAccepte, lieuParDefaut, normaliserReglages, resumeCentreAuto } from './centreAuto'
 
 const adresse = '12 rue des Lilas, 93100 Montreuil'
 
@@ -58,5 +58,42 @@ describe('affichage après la réservation', () => {
     expect(libelleAdresse('domicile')).toBe('Adresse')
     expect(libelleAdresse(undefined)).toBe('Adresse')
     expect(adresseAvecLieu(adresse, null)).toBe(adresse)
+  })
+})
+
+describe('plusieurs centres', () => {
+  const lyon = '8 avenue Foch, 69006 Lyon'
+  const centres = [{ nom: 'Montreuil', adresse }, { nom: 'Lyon', adresse: lyon }]
+  const reglage = { actif: true, adresse, lieux: 'les_deux', centres }
+
+  it('un seul centre garde la forme d’avant, deux ou plus exposent la liste', () => {
+    expect(centreAutoPublic({ actif: true, adresse, lieux: 'centre', centres: [{ nom: 'A', adresse }] })).toEqual({ adresse, domicile: false })
+    expect(centreAutoPublic(reglage)).toEqual({ adresse, domicile: true, centres })
+  })
+  it('l’adresse du premier centre est celle par défaut, même si l’ancien champ est vide', () => {
+    expect(centreAutoPublic({ ...reglage, adresse: '' })?.adresse).toBe(adresse)
+  })
+  it('refuse un centre sans adresse valable quand le centre est actif', () => {
+    expect(ReglagesCentreAutoSchema.safeParse({ ...reglage, centres: [...centres, { nom: 'X', adresse: 'ab' }] }).success).toBe(false)
+    expect(ReglagesCentreAutoSchema.safeParse({ actif: true, adresse: '', lieux: 'centre', centres: [] }).success).toBe(false)
+    expect(ReglagesCentreAutoSchema.safeParse({ ...reglage, centres: Array(11).fill(centres[0]) }).success).toBe(false)
+  })
+  it('normaliser : l’adresse unique suit le premier centre', () => {
+    const r = ReglagesCentreAutoSchema.parse({ ...reglage, adresse: 'autre' })
+    expect(normaliserReglages(r).adresse).toBe(adresse)
+  })
+  it('le serveur ne retient qu’une adresse de la liste, sinon le premier centre', () => {
+    const pub = centreAutoPublic(reglage)!
+    expect(centreParAdresse(pub, ` ${lyon} `).nom).toBe('Lyon')
+    expect(centreParAdresse(pub, '1 rue inventée, 75000 Paris').nom).toBe('Montreuil')
+    expect(centreParAdresse(pub, undefined).adresse).toBe(adresse)
+    expect(centresDe({ adresse, domicile: true })).toEqual([{ nom: '', adresse }])
+  })
+  it('l’adresse du rendez-vous porte le nom du centre', () => {
+    expect(libelleCentre(centres[1])).toBe(`Lyon · ${lyon}`)
+    expect(libelleCentre({ nom: '', adresse })).toBe(adresse)
+  })
+  it('résumé : le nombre de centres', () => {
+    expect(resumeCentreAuto(reglage)).toBe('Oui · 2 centres · page : à domicile et en centre auto')
   })
 })

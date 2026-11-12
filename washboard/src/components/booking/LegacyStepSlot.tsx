@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
@@ -76,6 +76,10 @@ export default function LegacyStepSlot({
   const [lieu,              setLieu]              = useState<Lieu>(() => lieuParDefaut(centre))
   // Au centre, l'adresse est celle du laveur : ni zone à vérifier, ni déplacement à facturer.
   const auCentre = lieu === 'centre' && !!centre
+  // Plusieurs centres : celui que le client a choisi (adresse), le premier par défaut.
+  const [centreAdresse, setCentreAdresse] = useState(() => (centre ? centreParAdresse(centre, null).adresse : ''))
+  const centres = centre ? centresDe(centre) : []
+  const adresseCentre = centre ? centreParAdresse(centre, centreAdresse).adresse : ''
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
   const [address,           setAddress]           = useState('')
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
@@ -170,7 +174,7 @@ export default function LegacyStepSlot({
   }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, auCentre])
 
   // Adresse du rendez-vous : celle du centre, ou celle tapée par le client.
-  const adresseRdv = auCentre && centre ? centre.adresse : debouncedAddress
+  const adresseRdv = auCentre && centre ? adresseCentre : debouncedAddress
 
   useEffect(() => {
     if (!selectedDate || adresseRdv.trim().length <= 5) {
@@ -300,7 +304,7 @@ export default function LegacyStepSlot({
     const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
     onNext({
       scheduled_at: debutCreneauIso(selectedTime, selectedDate),
-      address: auCentre && centre ? centre.adresse : address,
+      address: auCentre && centre ? adresseCentre : address,
       lieu: auCentre ? 'centre' : 'domicile',
       is_smart_slot: isSmart,
       smart_discount: discount,
@@ -340,8 +344,19 @@ export default function LegacyStepSlot({
 
       {auCentre && centre ? (
         <div className="mb-5 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3">
-          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Rendez-vous au centre auto</p>
-          <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{centre.adresse}</p>
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{centres.length > 1 ? 'Choisissez votre centre auto' : 'Rendez-vous au centre auto'}</p>
+          {centres.length > 1 ? (
+            <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label="Centre auto">
+              {centres.map(c => (
+                <button key={c.adresse} type="button" role="radio" aria-checked={adresseCentre === c.adresse} onClick={() => setCentreAdresse(c.adresse)}
+                  className={'text-left rounded-xl border px-3 py-2.5 min-h-11 transition-colors ' + (adresseCentre === c.adresse ? 'text-white border-transparent' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300')}
+                  style={adresseCentre === c.adresse ? { backgroundColor: accent } : undefined}>
+                  {c.nom && <span className="block text-sm font-semibold">{c.nom}</span>}
+                  <span className="block text-sm opacity-80">{c.adresse}</span>
+                </button>
+              ))}
+            </div>
+          ) : <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{adresseCentre}</p>}
           <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">Pas de frais de déplacement</p>
         </div>
       ) : (

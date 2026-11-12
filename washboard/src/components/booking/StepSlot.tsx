@@ -8,7 +8,7 @@ import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiv
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
-import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -81,7 +81,11 @@ export default function StepSlot({
   const [lieu,              setLieu]              = useState<Lieu>(() => (centre && initialLieu ? initialLieu : lieuParDefaut(centre)))
   // Au centre, l'adresse est celle du laveur : ni zone à vérifier, ni déplacement à facturer.
   const auCentre = lieu === 'centre' && !!centre
-  const [address,           setAddress]           = useState(centre && initialAddress === centre.adresse ? '' : initialAddress)
+  // Plusieurs centres : celui que le client a choisi (adresse), le premier par défaut.
+  const [centreAdresse,     setCentreAdresse]     = useState(() => (centre ? centreParAdresse(centre, initialAddress).adresse : ''))
+  const centres = centre ? centresDe(centre) : []
+  const adresseCentre = centre ? centreParAdresse(centre, centreAdresse).adresse : ''
+  const [address,           setAddress]           = useState(centre && centresDe(centre).some(c => c.adresse === initialAddress) ? '' : initialAddress)
   const [debouncedAddress,  setDebouncedAddress]  = useState('')
   const [zoneAllowed,       setZoneAllowed]       = useState(true)
   const [zoneMessage,       setZoneMessage]       = useState<string | null>(null)
@@ -164,7 +168,7 @@ export default function StepSlot({
   }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, active, auCentre, retry])
 
   // Adresse du rendez-vous : celle du centre, ou celle tapée par le client (après la pause de saisie).
-  const adresseRdv = auCentre && centre ? centre.adresse : debouncedAddress
+  const adresseRdv = auCentre && centre ? adresseCentre : debouncedAddress
 
   useEffect(() => {
     if (!active || !selectedDate || adresseRdv.trim().length <= 5) return
@@ -271,7 +275,7 @@ export default function StepSlot({
   const scheduledAt = selectedDate && selectedTime ? (() => {
     return debutCreneauIso(selectedTime, selectedDate)
   })() : undefined
-  const adresseEnvoyee = auCentre && centre ? centre.adresse : address
+  const adresseEnvoyee = auCentre && centre ? adresseCentre : address
   useEffect(() => {
     if (active) onDraft({ address: adresseEnvoyee, lieu: auCentre ? 'centre' : 'domicile', scheduled_at: canContinue ? scheduledAt : undefined, travel_fee: addressReady ? fee : undefined,
       is_smart_slot: addressReady && isSmart, smart_discount: addressReady ? discount : 0 })
@@ -301,8 +305,14 @@ export default function StepSlot({
       {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>}
     </div>}
     {auCentre && centre ? <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-3">
-      <p className="text-sm font-medium">Rendez-vous au centre auto</p>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">{centre.adresse}</p>
+      <p className="text-sm font-medium">{centres.length > 1 ? 'Choisissez votre centre auto' : 'Rendez-vous au centre auto'}</p>
+      {centres.length > 1 ? <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label="Centre auto">
+        {centres.map(c => <button key={c.adresse} type="button" role="radio" aria-checked={adresseCentre === c.adresse} onClick={() => setCentreAdresse(c.adresse)}
+          className={'text-left rounded-xl border px-3 py-2.5 min-h-12 ' + (adresseCentre === c.adresse ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
+          {c.nom && <span className="block text-sm font-semibold">{c.nom}</span>}
+          <span className="block text-sm opacity-80">{c.adresse}</span>
+        </button>)}
+      </div> : <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">{adresseCentre}</p>}
       <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2">● Pas de frais de déplacement</p>
     </div> : <>
     <label htmlFor="booking-address" className="block text-sm font-medium mb-2">Adresse du lavage</label>

@@ -3,7 +3,7 @@ import { errorResponse } from '@/lib/apiError'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 import { migrationEnAttente, MESSAGE_EN_ATTENTE } from '@/lib/migrationEnAttente'
-import { ReglagesCentreAutoSchema } from '@/lib/centreAuto'
+import { ReglagesCentreAutoSchema, normaliserReglages } from '@/lib/centreAuto'
 
 // Réglages « centre auto » du laveur connecté (lib/centreAuto.ts), rangés dans
 // `washers.centre_auto`. Lus et écrits à part de la fiche, comme l'acompte : tant que la
@@ -34,7 +34,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const { data, error } = await supabase
-    .from('washers').update({ centre_auto: saisie.data }).eq('user_id', user.id).select('centre_auto')
+    .from('washers').update({ centre_auto: normaliserReglages(saisie.data) }).eq('user_id', user.id).select('centre_auto')
   if (error) {
     if (migrationEnAttente(error)) {
       logger.warn('washer.centre_auto.migration_en_attente', { userId: user.id })

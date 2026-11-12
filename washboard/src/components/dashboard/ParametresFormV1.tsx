@@ -14,7 +14,7 @@ import { NotificationsToggle } from '@/components/dashboard/NotificationsToggle'
 import { SupportAccessPanel } from '@/components/dashboard/SupportAccessPanel'
 import { FacturationCard } from '@/components/dashboard/FacturationCard'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
-import { CHOIX_LIEUX, ReglagesCentreAutoSchema, type LieuxProposes } from '@/lib/centreAuto'
+import { CHOIX_LIEUX, MAX_CENTRES, ReglagesCentreAutoSchema, centresDeReglages, normaliserReglages, type LieuxProposes } from '@/lib/centreAuto'
 import { enregistrerCentreAuto } from '@/lib/profilApi'
 import ChangerTelephoneV1 from '@/components/dashboard/ChangerTelephoneV1'
 import {
@@ -1108,7 +1108,7 @@ function CarteCentreAuto({ adresseDeBase, inputClass, labelClass }: { adresseDeB
   // écraserait le centre du laveur avec les valeurs par défaut.
   const [etat, setEtat] = useState<'chargement' | 'migration' | 'erreur' | 'pret'>('chargement')
   const [actif, setActif] = useState(false)
-  const [adresse, setAdresse] = useState('')
+  const [centres, setCentres] = useState<{ nom: string; adresse: string }[]>([{ nom: '', adresse: '' }])
   const [lieux, setLieux] = useState<LieuxProposes>('les_deux')
   const [enCours, setEnCours] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -1124,7 +1124,9 @@ function CarteCentreAuto({ adresseDeBase, inputClass, labelClass }: { adresseDeB
         if (json.centre_auto != null) {
           const r = ReglagesCentreAutoSchema.safeParse(json.centre_auto)
           if (!r.success) { setEtat('erreur'); return }
-          setActif(r.data.actif); setAdresse(r.data.adresse); setLieux(r.data.lieux)
+          setActif(r.data.actif); setLieux(r.data.lieux)
+          const liste = centresDeReglages(r.data)
+          if (liste.length > 0) setCentres(liste)
         }
         setEtat('pret')
       })
@@ -1135,10 +1137,10 @@ function CarteCentreAuto({ adresseDeBase, inputClass, labelClass }: { adresseDeB
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const saisie = ReglagesCentreAutoSchema.safeParse({ actif, adresse, lieux })
+    const saisie = ReglagesCentreAutoSchema.safeParse({ actif, adresse: centres[0]?.adresse ?? '', lieux, centres })
     if (!saisie.success) { setMsg({ ok: false, text: saisie.error.issues[0]?.message ?? 'Réglages invalides.' }); return }
     setEnCours(true)
-    const res = await enregistrerCentreAuto(saisie.data)
+    const res = await enregistrerCentreAuto(normaliserReglages(saisie.data))
     setEnCours(false)
     setMsg(res.ok ? { ok: true, text: 'Centre auto enregistré' } : { ok: false, text: res.message })
   }
@@ -1173,14 +1175,35 @@ function CarteCentreAuto({ adresseDeBase, inputClass, labelClass }: { adresseDeB
 
         {actif && (
           <>
-            <div>
-              <label className={labelClass}>Adresse du centre</label>
-              <AddressAutocomplete value={adresse} onChange={v => { setAdresse(v); setMsg(null) }} placeholder="12 rue de la Paix, 75001 Paris" className={inputClass} />
-              {adresseDeBase && adresse !== adresseDeBase && (
-                <button type="button" onClick={() => { setAdresse(adresseDeBase); setMsg(null) }} className="mt-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
-                  Reprendre mon adresse de départ
+            <div className="space-y-3">
+              <label className={labelClass}>{centres.length > 1 ? 'Vos centres' : 'Adresse du centre'}</label>
+              {centres.map((c, i) => (
+                <div key={i} className="space-y-2">
+                  {centres.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Centre {i + 1}</span>
+                      <button type="button" onClick={() => { setCentres(l => l.filter((_, j) => j !== i)); setMsg(null) }} className="text-xs text-slate-500 dark:text-slate-400 underline">Retirer</button>
+                    </div>
+                  )}
+                  {centres.length > 1 && (
+                    <input type="text" aria-label={`Nom du centre ${i + 1}`} placeholder="Nom (ex. Centre Lyon Nord)" maxLength={80} value={c.nom}
+                      onChange={e => { const v = e.target.value; setCentres(l => l.map((x, j) => (j === i ? { ...x, nom: v } : x))); setMsg(null) }} className={inputClass} />
+                  )}
+                  <AddressAutocomplete value={c.adresse} onChange={v => { setCentres(l => l.map((x, j) => (j === i ? { ...x, adresse: v } : x))); setMsg(null) }} placeholder="12 rue de la Paix, 75001 Paris" className={inputClass} />
+                  {i === 0 && adresseDeBase && c.adresse !== adresseDeBase && (
+                    <button type="button" onClick={() => { setCentres(l => l.map((x, j) => (j === 0 ? { ...x, adresse: adresseDeBase } : x))); setMsg(null) }} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                      Reprendre mon adresse de départ
+                    </button>
+                  )}
+                </div>
+              ))}
+              {centres.length < MAX_CENTRES && (
+                <button type="button" onClick={() => { setCentres(l => [...l, { nom: '', adresse: '' }]); setMsg(null) }}
+                  className="w-full py-2 rounded-xl text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                  + Ajouter un autre centre
                 </button>
               )}
+              {centres.length > 1 && <p className="text-xs text-slate-400 dark:text-slate-500">Le client choisit son centre au moment de réserver.</p>}
             </div>
             <div>
               <p id="centre-auto-lieux" className={labelClass}>Sur votre page de réservation</p>

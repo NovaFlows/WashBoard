@@ -6,7 +6,7 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
 import { toDateStr } from '@/lib/dateUtils'
 import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
-import { lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
+import { centreParAdresse, lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 import type { Booking, Unavailability, ServiceFull, Category } from '@/components/dashboard/calendrierTypes'
 
 export const VEHICLE_TYPES = [
@@ -34,6 +34,8 @@ export type ManualBooking = {
   address: string
   /** 'centre' : au centre auto du laveur, à son adresse (lib/centreAuto.ts). */
   lieu: Lieu
+  /** Plusieurs centres : adresse de celui choisi (le premier si vide). */
+  centre?: string
   lat: number | null
   lng: number | null
   is_professional: boolean
@@ -48,10 +50,10 @@ export type ManualBooking = {
  *  celle du centre (le serveur l'impose de toute façon), sans coordonnées. Sans centre
  *  proposé, toujours à domicile. */
 export function lieuDuRendezVous(
-  m: Pick<ManualBooking, 'lieu' | 'address' | 'lat' | 'lng'>,
+  m: Pick<ManualBooking, 'lieu' | 'address' | 'lat' | 'lng' | 'centre'>,
   centreAuto: CentreAutoPublic | null,
 ): { lieu: Lieu; address: string; lat: number | null; lng: number | null } {
-  if (m.lieu === 'centre' && centreAuto) return { lieu: 'centre', address: centreAuto.adresse, lat: null, lng: null }
+  if (m.lieu === 'centre' && centreAuto) return { lieu: 'centre', address: centreParAdresse(centreAuto, m.centre).adresse, lat: null, lng: null }
   return { lieu: 'domicile', address: m.address, lat: m.lat, lng: m.lng }
 }
 

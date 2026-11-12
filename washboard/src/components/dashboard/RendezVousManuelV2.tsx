@@ -4,7 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { ServiceFull } from '@/components/dashboard/calendrierTypes'
 import { VEHICLE_TYPES, type ManualBooking } from '@/hooks/useRendezVousManuel'
-import type { CentreAutoPublic } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, type CentreAutoPublic } from '@/lib/centreAuto'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 
 // Ajout d'un rendez-vous à la main, présentation v2 — réservée à la PWA
@@ -257,7 +257,33 @@ export default function RendezVousManuelV2({
             </div>
           )}
           {centreAuto && form.lieu === 'centre' ? (
-            <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>Au centre auto · {centreAuto.adresse}</p>
+            centresDe(centreAuto).length > 1 ? (
+              <div role="radiogroup" aria-label="Centre auto" className="flex flex-col gap-2">
+                {centresDe(centreAuto).map(c => {
+                  const choisi = centreParAdresse(centreAuto, form.centre).adresse === c.adresse
+                  return (
+                    <button
+                      key={c.adresse}
+                      type="button"
+                      role="radio"
+                      aria-checked={choisi}
+                      onClick={() => updateManual('centre', c.adresse)}
+                      className={`rounded-[var(--v2-radius-bouton)] border px-3.5 py-2.5 text-left text-[14px] ${corps} ${
+                        choisi
+                          ? 'border-[color:var(--v2-color-encre)] text-[color:var(--v2-color-encre)]'
+                          : 'border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]'
+                      }`}
+                      style={PRESSION}
+                    >
+                      {c.nom && <span className={`block ${corpsFort}`}>{c.nom}</span>}
+                      <span className="block">{c.adresse}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>Au centre auto · {centreAuto.adresse}</p>
+            )
           ) : (
             <div role="group" aria-labelledby="rdvm-adresse-label">
               <p id="rdvm-adresse-label" className={ETIQUETTE}>Adresse d’intervention *</p>
