@@ -85,6 +85,28 @@ export function lieuAccepte(centre: CentreAutoPublic | null, lieu: Lieu): boolea
   return lieu === 'centre' ? centre !== null : centre === null || centre.domicile
 }
 
+// Prestation limitée à un lieu (demande du 2026-11-12) : `services.lieu_restreint` vaut
+// 'domicile' ou 'centre' ; vide = les deux. Elle croise ce que le laveur propose : une
+// prestation « en centre » chez un laveur sans centre n'est réservable nulle part.
+export type LieuRestreint = Lieu | null | undefined
+
+/** Les lieux où cette prestation peut se faire, selon le centre du laveur et sa restriction. */
+export function lieuxPossibles(centre: CentreAutoPublic | null | undefined, restreint: LieuRestreint): Lieu[] {
+  const base: Lieu[] = !centre ? ['domicile'] : centre.domicile ? ['domicile', 'centre'] : ['centre']
+  return restreint === 'domicile' || restreint === 'centre' ? base.filter(l => l === restreint) : base
+}
+
+/** Valeur lue en base ou reçue : seulement 'domicile' ou 'centre', sinon pas de restriction. */
+export function lieuRestreintValide(v: unknown): Lieu | null {
+  return v === 'domicile' || v === 'centre' ? v : null
+}
+
+export const CHOIX_LIEU_PRESTATION: { valeur: Lieu | null; libelle: string }[] = [
+  { valeur: null, libelle: 'Les deux' },
+  { valeur: 'domicile', libelle: 'En déplacement' },
+  { valeur: 'centre', libelle: 'En centre auto' },
+]
+
 /** Lieu coché à l'ouverture de la page : à domicile dès qu'il est proposé. */
 export function lieuParDefaut(centre: CentreAutoPublic | null): Lieu {
   return centre && !centre.domicile ? 'centre' : 'domicile'

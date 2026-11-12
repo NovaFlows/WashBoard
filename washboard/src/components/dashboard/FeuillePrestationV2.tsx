@@ -6,6 +6,7 @@ import type { Availability, Service, ServiceCategory } from '@/types'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat, Interrupteur, Repliable, TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { MESSAGE_LIEU_ADAPTE } from '@/lib/lieuAdapte'
+import { CHOIX_LIEU_PRESTATION, lieuRestreintValide } from '@/lib/centreAuto'
 import { champsManquants, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX, ERREUR_SANS_TYPE } from '@/lib/prestation'
 import {
   basculerType, categoriesOptionProposees, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
@@ -55,6 +56,8 @@ type Props = {
   }
   /** `false` : le laveur ne demande pas le type de véhicule, seul le prix principal compte. */
   typeDemande?: boolean
+  /** Le laveur propose déplacement ET centre auto : le choix « où se fait-elle » est montré. */
+  lieuxMixtes?: boolean
   onClose: () => void
 }
 
@@ -72,7 +75,7 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
 }
 
 export default function FeuillePrestationV2({
-  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, typeDemande = true, onClose,
+  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, typeDemande = true, lieuxMixtes = false, onClose,
 }: Props) {
   const [form, setForm] = useState(formulaireInitial)
   const [enCours, setEnCours] = useState(false)
@@ -477,6 +480,36 @@ export default function FeuillePrestationV2({
           />
           <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/250</p>
         </Repliable>
+
+        {lieuxMixtes && (
+          <div className="border-t border-[color:var(--v2-filet)] pt-3">
+            <Titre>Où se fait-elle ?</Titre>
+            <div className="mt-2 flex gap-2" role="group" aria-label="Lieu de la prestation">
+              {CHOIX_LIEU_PRESTATION.map(c => {
+                const choisi = lieuRestreintValide(form.lieu_restreint) === c.valeur
+                return (
+                  <button
+                    key={c.libelle}
+                    type="button"
+                    aria-pressed={choisi}
+                    onClick={() => setForm(f => ({ ...f, lieu_restreint: c.valeur }))}
+                    className={`${BOUTON} flex-1 border px-2 text-[14px] ${
+                      choisi
+                        ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)] border-[color:var(--v2-color-encre)]'
+                        : 'bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-gris)] border-[color:var(--v2-filet-fort)]'
+                    }`}
+                    style={PRESSION}
+                  >
+                    {c.libelle}
+                  </button>
+                )
+              })}
+            </div>
+            <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+              « Les deux » : le client choisit. Sinon la prestation n’est proposée que pour ce lieu.
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center gap-3 border-t border-[color:var(--v2-filet)] pt-3">
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">

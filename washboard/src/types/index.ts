@@ -119,6 +119,8 @@ export type Service = {
   en_veille?: boolean
   /** Prévient le client que le lavage exige un lieu adapté (absent tant que la colonne n'est pas posée en base). */
   lieu_adapte?: boolean
+  /** Prestation faite seulement à domicile ou seulement au centre auto ; vide = les deux (absent avant le SQL). */
+  lieu_restreint?: 'domicile' | 'centre' | null
 }
 
 export type Availability = {

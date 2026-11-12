@@ -25,6 +25,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.lieu_adapte !== undefined && typeof body.lieu_adapte !== 'boolean') {
     return NextResponse.json({ error: 'Valeur invalide pour « Prévenir le client »' }, { status: 400 })
   }
+  if (body.lieu_restreint !== undefined && body.lieu_restreint !== null && body.lieu_restreint !== 'domicile' && body.lieu_restreint !== 'centre') {
+    return NextResponse.json({ error: 'Lieu de la prestation invalide' }, { status: 400 })
+  }
   // ── Mise en veille / reactivation ───────────────────────────────────────
   //
   // Mettre en veille est TOUJOURS permis : c'est la sortie de secours d'un
@@ -79,6 +82,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.vehicle_price_overrides !== undefined) updates.vehicle_price_overrides = body.vehicle_price_overrides
   if (body.addons !== undefined) updates.addons = body.addons
   if (body.lieu_adapte !== undefined) updates.lieu_adapte = body.lieu_adapte
+  if (body.lieu_restreint !== undefined) updates.lieu_restreint = body.lieu_restreint
 
   const { error } = await supabase.from('services').update(updates).eq('id', id).eq('washer_id', washerId)
   if (error) return errorResponse('services.id.patch.db', error)

@@ -8,7 +8,7 @@ import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiv
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
-import { centreParAdresse, centresDe, lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -38,6 +38,8 @@ type Props = {
   reservationJourMeme?: boolean
   /** Centre auto du laveur (lib/centreAuto.ts) ; absent = à domicile seulement. */
   centre?: CentreAutoPublic | null
+  /** Lieu imposé par la prestation choisie (lib/centreAuto.ts) ; vide = les deux. */
+  lieuPrestation?: LieuRestreint
   initialLieu?: Lieu
   onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   initialAddress?: string
@@ -74,11 +76,14 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, lieuPrestation = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
-  const [lieu,              setLieu]              = useState<Lieu>(() => (centre && initialLieu ? initialLieu : lieuParDefaut(centre)))
+  const [lieuChoisi,        setLieu]              = useState<Lieu>(() => (centre && initialLieu ? initialLieu : lieuParDefaut(centre)))
+  // La prestation peut n'être faisable qu'à domicile ou qu'au centre : le lieu s'y plie.
+  const lieuxOk = lieuxPossibles(centre, lieuPrestation)
+  const lieu: Lieu = lieuxOk.includes(lieuChoisi) ? lieuChoisi : lieuxOk[0] ?? 'domicile'
   // Au centre, l'adresse est celle du laveur : ni zone à vérifier, ni déplacement à facturer.
   const auCentre = lieu === 'centre' && !!centre
   // Plusieurs centres : celui que le client a choisi (adresse), le premier par défaut.
@@ -295,7 +300,7 @@ export default function StepSlot({
   const actionLabel = !addressReady ? 'Indiquez votre adresse' : busy ? 'Vérification en cours…' : !zoneOk ? 'Vérifiez votre adresse' : !selectedDate ? 'Choisissez un jour' : !selectedTime ? 'Choisissez une heure' : canContinue ? 'Continuer' : 'Vérifiez le créneau'
   return <div>
     <h2 className="wb-booking-title">Où et quand ?</h2>
-    {centre && centre.domicile && <div className="mb-4">
+    {centre && lieuxOk.length > 1 && <div className="mb-4">
       <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Lieu du lavage">
         {(['domicile', 'centre'] as const).map(l => <button key={l} type="button" role="radio" aria-checked={lieu === l} onClick={() => choisirLieu(l)}
           className={'min-h-12 rounded-xl border text-sm font-semibold ' + (lieu === l ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>

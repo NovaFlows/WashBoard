@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte } = await request.json()
+  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte, lieu_restreint } = await request.json()
   if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
 
   if (lieu_adapte !== undefined && typeof lieu_adapte !== 'boolean') {
     return NextResponse.json({ error: 'Valeur invalide pour « Prévenir le client »' }, { status: 400 })
+  }
+
+  if (lieu_restreint !== undefined && lieu_restreint !== null && lieu_restreint !== 'domicile' && lieu_restreint !== 'centre') {
+    return NextResponse.json({ error: 'Lieu de la prestation invalide' }, { status: 400 })
   }
 
   const { data, error } = await supabase
@@ -79,6 +83,8 @@ export async function POST(request: NextRequest) {
       vehicle_price_overrides: vehicle_price_overrides ?? {},
       addons: addons ?? [],
       ...(lieu_adapte === undefined ? {} : { lieu_adapte }),
+      // Seulement quand il est posé : sans le SQL, la colonne n'existe pas encore.
+      ...(lieu_restreint ? { lieu_restreint } : {}),
     })
     .select()
     .single()

@@ -138,3 +138,20 @@ describe('PATCH /api/services/[id] — « Prévenir le client » (lieu_adapte)',
     expect(updates).toHaveLength(0)
   })
 })
+
+describe('PATCH /api/services/[id] — lieu de la prestation (lieu_restreint)', () => {
+  it.each(['domicile', 'centre', null])('enregistre %j', async (valeur) => {
+    const res = await PATCH(requete({ lieu_restreint: valeur }), { params })
+    expect(res.status).toBe(200)
+    expect(updates[0].lieu_restreint).toBe(valeur)
+  })
+  it('ne touche pas la colonne quand le corps ne la contient pas', async () => {
+    await PATCH(requete({ name: 'ez' }), { params })
+    expect(updates[0]).not.toHaveProperty('lieu_restreint')
+  })
+  it.each(['ailleurs', 0, true])('refuse %j', async (valeur) => {
+    const res = await PATCH(requete({ lieu_restreint: valeur }), { params })
+    expect(res.status).toBe(400)
+    expect(updates).toHaveLength(0)
+  })
+})

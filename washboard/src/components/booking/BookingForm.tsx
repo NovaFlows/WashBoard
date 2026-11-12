@@ -393,6 +393,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 key={slotVersion}
                 initialAddress={form.address}
                 centre={washer.centre_auto ?? null}
+                lieuPrestation={selectedService?.lieu_restreint}
                 initialLieu={form.lieu}
                 active={section === 2}
                 actionTarget={section === 2 ? actionTarget : null}

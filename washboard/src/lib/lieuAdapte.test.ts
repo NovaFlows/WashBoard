@@ -19,6 +19,8 @@ describe('afficherMentionLieuAdapte', () => {
   it('visible si activée et hors centre', () => expect(afficherMentionLieuAdapte({ lieu_adapte: true }, false)).toBe(true))
   it('masquée si désactivée', () => expect(afficherMentionLieuAdapte({ lieu_adapte: false }, false)).toBe(false))
   it('masquée si la colonne est absente', () => expect(afficherMentionLieuAdapte({}, false)).toBe(false))
+  it('masquée pour une prestation faite seulement en centre', () => expect(afficherMentionLieuAdapte({ lieu_adapte: true, lieu_restreint: 'centre' }, false)).toBe(false))
+  it('visible pour une prestation faite seulement en déplacement', () => expect(afficherMentionLieuAdapte({ lieu_adapte: true, lieu_restreint: 'domicile' }, false)).toBe(true))
   it('masquée au centre auto', () => expect(afficherMentionLieuAdapte({ lieu_adapte: true }, true)).toBe(false))
 })
 

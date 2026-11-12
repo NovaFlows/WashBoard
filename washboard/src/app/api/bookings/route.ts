@@ -13,7 +13,7 @@ import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
-import { centreAutoPublic, centreParAdresse, lieuAccepte, libelleCentre } from '@/lib/centreAuto'
+import { centreAutoPublic, centreParAdresse, lieuAccepte, lieuRestreintValide, lieuxPossibles, libelleCentre } from '@/lib/centreAuto'
 import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
 import { lireBlocages } from '@/lib/blocagesServeur'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
@@ -296,6 +296,23 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   }
   // Plusieurs centres : le client a choisi l'adresse de l'un d'eux ; toute autre adresse
   // envoyée retombe sur le premier centre, on ne garde jamais une adresse libre.
+  // Prestation limitée à un lieu (`services.lieu_restreint`), lue à part : sans la colonne,
+  // aucune restriction et les réservations continuent. Le laveur qui saisit lui-même garde la main.
+  if (!isOwner) {
+    const { data: ficheRestriction, error: errRestriction } = await supabase
+      .from('services').select('lieu_restreint').eq('id', bookingData.service_id).maybeSingle()
+    if (errRestriction && !migrationEnAttente(errRestriction)) logger.error('bookings.lieu_restreint.read_failed', { washerId: bookingData.washer_id }, errRestriction)
+    const restreint = errRestriction ? null : lieuRestreintValide((ficheRestriction as { lieu_restreint?: unknown } | null)?.lieu_restreint)
+    if (!lieuxPossibles(centre, restreint).includes(lieu)) {
+      logger.warn('bookings.rejected.lieu_prestation', { washerId: bookingData.washer_id, lieu, restreint })
+      return Response.json(
+        { error: restreint === 'centre'
+          ? 'Cette prestation se fait uniquement en centre auto. Merci de recharger la page.'
+          : 'Cette prestation se fait uniquement en déplacement. Merci de recharger la page.' },
+        { status: 409 },
+      )
+    }
+  }
   if (auCentre && centre) bookingData.address = libelleCentre(centreParAdresse(centre, bookingData.address))
   const is_smart_slot = auCentre ? false : smartDemande
   const smart_discount = auCentre ? 0 : remiseSmartDemandee

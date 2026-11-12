@@ -14,7 +14,7 @@ import { prestationsAffichees, prestationsSelonLeType } from '@/lib/prestation'
 import { COLONNES_PROMOTION, versPublique, type Promotion } from '@/lib/promotion'
 import { acompteActif, versPublic as versPublicAcompte } from '@/lib/acompte'
 import { fideliteActive } from '@/lib/fidelite'
-import { centreAutoPublic } from '@/lib/centreAuto'
+import { centreAutoPublic, lieuxPossibles } from '@/lib/centreAuto'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { whatsappDigits } from '@/lib/phone'
@@ -227,6 +227,9 @@ export default async function BookingPage({ params }: Props) {
   // Carte de fidélité : cherchée à partir des coordonnées du client (BookingForm).
   const fideliteProposee = !!fideliteActive((ficheFidelite as { fidelite?: unknown } | null)?.fidelite)
   const centreAuto = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)
+  // Une prestation limitée à un lieu que le laveur ne propose pas (ex. « en centre » sans
+  // centre) ne peut se réserver nulle part : on ne l'affiche pas.
+  const prestationsReservables = (services ?? []).filter(s => lieuxPossibles(centreAuto, s.lieu_restreint).length > 0)
 
   // ── Identité visuelle : réservée aux offres payantes ────────────────────
   //
@@ -257,7 +260,7 @@ export default async function BookingPage({ params }: Props) {
     ?? (pixelIdValide(washer.meta_pixel_id) ? String(washer.meta_pixel_id).trim() : null)
 
   if (bookingPageMode(washer.booking_page_mode) === 'custom') {
-    return <LegacyBookingPage washer={washer} services={services ?? []} categories={categories ?? []}
+    return <LegacyBookingPage washer={washer} services={prestationsReservables} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
       promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} centreAuto={centreAuto} />
   }
@@ -316,7 +319,7 @@ export default async function BookingPage({ params }: Props) {
           // Une prestation sans type s'affichait, se sélectionnait, puis
           // laissait le client devant un bouton Continuer grisé sans rien à
           // choisir. Le tableau de bord la signale au laveur en rouge.
-          services={prestationsSelonLeType(prestationsAffichees(services ?? [], quotaPrestations(washer)), washer)}
+          services={prestationsSelonLeType(prestationsAffichees(prestationsReservables, quotaPrestations(washer)), washer)}
           categories={categories ?? []}
           availabilities={availabilities ?? []}
           // Plus de existingBookings/unavailabilities ici : BookingForm les

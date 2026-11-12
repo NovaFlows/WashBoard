@@ -11,6 +11,6 @@ export function estAuCentre(centre: CentreAutoPublic | null | undefined, lieu: '
 }
 
 /** La mention s'affiche si le laveur l'a activée, sauf au centre auto (le local est le lieu adapté). */
-export function afficherMentionLieuAdapte(service: { lieu_adapte?: boolean }, auCentre: boolean): boolean {
-  return service.lieu_adapte === true && !auCentre
+export function afficherMentionLieuAdapte(service: { lieu_adapte?: boolean; lieu_restreint?: string | null }, auCentre: boolean): boolean {
+  return service.lieu_adapte === true && !auCentre && service.lieu_restreint !== 'centre'
 }

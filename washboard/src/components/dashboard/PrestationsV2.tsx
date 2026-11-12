@@ -85,6 +85,8 @@ type Props = {
   /** `washers.demander_type_vehicule` : le client choisit citadine, SUV… Allumé par défaut ;
    *  éteint, un seul prix par prestation (demande de My Clean, 2026-11-06). */
   demanderTypeVehicule: boolean
+  /** Le laveur propose à la fois le déplacement et le centre auto : une prestation peut alors n'être faite qu'à l'un des deux. */
+  lieuxMixtes?: boolean
   /** Nombre de prestations que l'offre affiche sur la page de réservation —
    *  `null` : aucune limite (Pro, Business, clients historiques). Au-delà, les
    *  suivantes sont MASQUÉES aux clients sans être effacées, voir
@@ -269,7 +271,7 @@ function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, o
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, silhouettesVehicules, demanderTypeVehicule, plafond, offre, liste,
+  zone: zoneServeur, adresseDeBase, silhouettesVehicules, demanderTypeVehicule, lieuxMixtes = false, plafond, offre, liste,
 }: Props) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -669,6 +671,7 @@ export default function PrestationsV2({
           availabilities={availabilities}
           onEnregistrer={enregistrerPrestation}
           typeDemande={typeDemande}
+          lieuxMixtes={lieuxMixtes}
           onSupprimer={feuille.service ? () => demanderSuppression({ quoi: 'prestation', service: feuille.service! }) : undefined}
           // Ouvert à toutes les offres (Alexandre, 2026-10-10) : une prestation déjà réservée ne
           // se supprime pas, la veille est le seul moyen de la retirer de la page de réservation.

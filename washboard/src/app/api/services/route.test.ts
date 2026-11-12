@@ -238,3 +238,20 @@ describe('POST /api/services — « Prévenir le client » (lieu_adapte)', () =>
     expect(inserts).toHaveLength(0)
   })
 })
+
+describe('POST /api/services — lieu de la prestation (lieu_restreint)', () => {
+  it.each(['domicile', 'centre'])('enregistre « %s »', async (valeur) => {
+    const res = await POST(requete({ ...COMPLETE, lieu_restreint: valeur }))
+    expect(res.status).toBe(200)
+    expect(inserts[0].lieu_restreint).toBe(valeur)
+  })
+  it.each([undefined, null])('n’envoie pas la colonne pour %s (les deux lieux, ou colonne absente)', async (valeur) => {
+    await POST(requete({ ...COMPLETE, lieu_restreint: valeur }))
+    expect(inserts[0]).not.toHaveProperty('lieu_restreint')
+  })
+  it.each(['ailleurs', 1, {}])('refuse %j', async (valeur) => {
+    const res = await POST(requete({ ...COMPLETE, lieu_restreint: valeur }))
+    expect(res.status).toBe(400)
+    expect(inserts).toHaveLength(0)
+  })
+})

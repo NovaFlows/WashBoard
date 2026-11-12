@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, centreParAdresse, centresDe, libelleAdresse, libelleCentre, lieuAccepte, lieuParDefaut, normaliserReglages, resumeCentreAuto } from './centreAuto'
+import { ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, centreParAdresse, centresDe, libelleAdresse, libelleCentre, lieuAccepte, lieuParDefaut, lieuRestreintValide, lieuxPossibles, normaliserReglages, resumeCentreAuto } from './centreAuto'
 
 const adresse = '12 rue des Lilas, 93100 Montreuil'
 
@@ -95,5 +95,29 @@ describe('plusieurs centres', () => {
   })
   it('résumé : le nombre de centres', () => {
     expect(resumeCentreAuto(reglage)).toBe('Oui · 2 centres · page : à domicile et en centre auto')
+  })
+})
+
+describe('prestation limitée à un lieu', () => {
+  const lesDeux = { adresse, domicile: true }
+  const centreSeul = { adresse, domicile: false }
+  it('sans restriction : tout ce que le laveur propose', () => {
+    expect(lieuxPossibles(null, null)).toEqual(['domicile'])
+    expect(lieuxPossibles(lesDeux, undefined)).toEqual(['domicile', 'centre'])
+    expect(lieuxPossibles(centreSeul, null)).toEqual(['centre'])
+  })
+  it('restreinte : un seul lieu quand le laveur propose les deux', () => {
+    expect(lieuxPossibles(lesDeux, 'domicile')).toEqual(['domicile'])
+    expect(lieuxPossibles(lesDeux, 'centre')).toEqual(['centre'])
+  })
+  it('restriction sur un lieu que le laveur ne propose pas : réservable nulle part', () => {
+    expect(lieuxPossibles(null, 'centre')).toEqual([])
+    expect(lieuxPossibles(centreSeul, 'domicile')).toEqual([])
+  })
+  it('valeur inconnue en base : pas de restriction', () => {
+    expect(lieuRestreintValide('centre')).toBe('centre')
+    expect(lieuRestreintValide('domicile')).toBe('domicile')
+    expect(lieuRestreintValide('autre')).toBeNull()
+    expect(lieuRestreintValide(undefined)).toBeNull()
   })
 })

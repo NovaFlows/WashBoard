@@ -34,6 +34,8 @@ export type FormulairePrestation = {
   addons: ServiceAddon[]
   /** Indéfini tant que le laveur n'y touche pas (colonne absente avant le SQL) : alors non envoyé. */
   lieu_adapte?: boolean
+  /** 'domicile' ou 'centre' : prestation limitée à ce lieu ; null = les deux. Indéfini tant qu'on n'y touche pas. */
+  lieu_restreint?: 'domicile' | 'centre' | null
 }
 
 export const FORMULAIRE_VIDE: FormulairePrestation = {
@@ -71,6 +73,7 @@ export function formulaireDepuisService(svc: Service): FormulairePrestation {
     vehicle_price_overrides: { ...(svc.vehicle_price_overrides ?? {}) },
     addons: [...(svc.addons ?? [])],
     lieu_adapte: svc.lieu_adapte,
+    lieu_restreint: svc.lieu_restreint,
   }
 }
 
@@ -164,6 +167,7 @@ export function corpsPrestation(form: FormulairePrestation) {
     vehicle_price_overrides: form.vehicle_price_overrides,
     addons: form.addons,
     ...(form.lieu_adapte === undefined ? {} : { lieu_adapte: form.lieu_adapte }),
+    ...(form.lieu_restreint === undefined ? {} : { lieu_restreint: form.lieu_restreint }),
   }
 }
 

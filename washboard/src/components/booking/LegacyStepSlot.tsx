@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { centreParAdresse, centresDe, lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
@@ -37,6 +37,8 @@ type Props = {
   reservationJourMeme?: boolean
   /** Centre auto du laveur (lib/centreAuto.ts) ; absent = à domicile seulement. */
   centre?: CentreAutoPublic | null
+  /** Lieu imposé par la prestation choisie (lib/centreAuto.ts) ; vide = les deux. */
+  lieuPrestation?: LieuRestreint
   onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   onBack: () => void
   accent?: string
@@ -70,10 +72,13 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function LegacyStepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, lieuPrestation = null, onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
-  const [lieu,              setLieu]              = useState<Lieu>(() => lieuParDefaut(centre))
+  const [lieuChoisi,        setLieu]              = useState<Lieu>(() => lieuParDefaut(centre))
+  // La prestation peut n'être faisable qu'à domicile ou qu'au centre : le lieu s'y plie.
+  const lieuxOk = lieuxPossibles(centre, lieuPrestation)
+  const lieu: Lieu = lieuxOk.includes(lieuChoisi) ? lieuChoisi : lieuxOk[0] ?? 'domicile'
   // Au centre, l'adresse est celle du laveur : ni zone à vérifier, ni déplacement à facturer.
   const auCentre = lieu === 'centre' && !!centre
   // Plusieurs centres : celui que le client a choisi (adresse), le premier par défaut.
@@ -323,7 +328,7 @@ export default function LegacyStepSlot({
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez un créneau</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Où et quand souhaitez-vous être lavé ?</p>
 
-      {centre && centre.domicile && (
+      {centre && lieuxOk.length > 1 && (
         <div className="mb-5">
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Lieu du lavage">
             {(['domicile', 'centre'] as const).map(l => (
