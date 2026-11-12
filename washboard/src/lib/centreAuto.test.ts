@@ -121,3 +121,25 @@ describe('prestation limitée à un lieu', () => {
     expect(lieuRestreintValide(undefined)).toBeNull()
   })
 })
+
+describe('laveur à plusieurs centres × prestation limitée à un lieu', () => {
+  const pub = centreAutoPublic({
+    actif: true, adresse, lieux: 'les_deux',
+    centres: [{ nom: 'Nord', adresse }, { nom: 'Sud', adresse: '3 rue du Port, 13002 Marseille' }],
+  })!
+  it('par défaut (aucune restriction) : déplacement et centre', () => {
+    expect(lieuxPossibles(pub, null)).toEqual(['domicile', 'centre'])
+  })
+  it('limitée au centre : le client choisira parmi les centres, jamais de déplacement', () => {
+    expect(lieuxPossibles(pub, 'centre')).toEqual(['centre'])
+    expect(centresDe(pub)).toHaveLength(2)
+  })
+  it('limitée au déplacement : pas de centre', () => {
+    expect(lieuxPossibles(pub, 'domicile')).toEqual(['domicile'])
+  })
+  it('laveur « centres seulement » : une prestation « déplacement » n’est réservable nulle part', () => {
+    const seul = centreAutoPublic({ actif: true, adresse, lieux: 'centre', centres: pub.centres })!
+    expect(lieuxPossibles(seul, null)).toEqual(['centre'])
+    expect(lieuxPossibles(seul, 'domicile')).toEqual([])
+  })
+})

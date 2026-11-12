@@ -24,3 +24,19 @@ describe('lieuDuRendezVous', () => {
       .toEqual({ lieu: 'domicile', address: saisie.address, lat: 48.87, lng: 2.33 })
   })
 })
+
+describe('lieuDuRendezVous — plusieurs centres', () => {
+  const nord = { nom: 'Nord', adresse: '8 avenue Foch, 69006 Lyon' }
+  const sud = { nom: 'Sud', adresse: '3 rue du Port, 13002 Marseille' }
+  const deux = { adresse: nord.adresse, domicile: true, centres: [nord, sud] }
+
+  it('au centre choisi : son adresse', () => {
+    expect(lieuDuRendezVous({ ...saisie, lieu: 'centre', centre: sud.adresse }, deux).address).toBe(sud.adresse)
+  })
+  it('aucun centre choisi : le premier', () => {
+    expect(lieuDuRendezVous({ ...saisie, lieu: 'centre' }, deux).address).toBe(nord.adresse)
+  })
+  it('à domicile : le centre choisi avant ne remplace pas l’adresse saisie', () => {
+    expect(lieuDuRendezVous({ ...saisie, lieu: 'domicile', centre: sud.adresse }, deux).address).toBe(saisie.address)
+  })
+})
