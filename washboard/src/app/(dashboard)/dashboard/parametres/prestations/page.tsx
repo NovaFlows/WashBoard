@@ -5,7 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
-import { centreAutoPublic, centresDe } from '@/lib/centreAuto'
+import { ReglagesCentreAutoSchema, centreAutoPublic, centresDe, normaliserReglages } from '@/lib/centreAuto'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { planEffectif, quotaPrestations } from '@/lib/plan'
 import { resumeHorairesCourt } from '@/lib/horaires'
@@ -61,7 +61,17 @@ export default async function PrestationsPage() {
   // de la fiche : sans la colonne `centre_auto`, l'écran reste comme avant.
   const { data: ficheCentre, error: errCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
   if (errCentre && !migrationEnAttente(errCentre)) logger.error('prestations.centre_auto.read_failed', { washerId: washer.id }, errCentre)
-  const centrePublic = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)
+  let centreBrut = (ficheCentre as { centre_auto?: unknown } | null)?.centre_auto
+  // Centres enregistrés avant les identifiants (2026-11-12) : on leur en pose un, une fois, pour
+  // que le laveur puisse les cocher sans avoir à rouvrir ses réglages. Sans effet ensuite.
+  const reglagesCentres = ReglagesCentreAutoSchema.safeParse(centreBrut)
+  if (reglagesCentres.success && reglagesCentres.data.actif && reglagesCentres.data.centres.some(c => !c.id)) {
+    const avecIds = normaliserReglages(reglagesCentres.data)
+    const { error: errIds } = await supabase.from('washers').update({ centre_auto: avecIds }).eq('id', washer.id)
+    if (errIds) logger.error('prestations.centre_auto.ids_failed', { washerId: washer.id }, errIds)
+    else centreBrut = avecIds
+  }
+  const centrePublic = centreAutoPublic(centreBrut)
   const lieuxMixtes = centrePublic?.domicile === true
   // Seuls les centres déjà dotés d'un identifiant (posé à l'enregistrement des centres) peuvent être cochés.
   const centresProposes = (centrePublic ? centresDe(centrePublic) : [])
