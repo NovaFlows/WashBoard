@@ -74,6 +74,9 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
       client_phone: phoneNormalise,
       notes:        notes.trim() || undefined,
       hp,
+      // Le serveur exige cette preuve dès qu'un acompte est demandé (route bookings) : sans
+      // elle, la case cochée ne servait à rien et la réservation était refusée.
+      ...(acompte ? { acompte_accepte: true } : {}),
       ...(isProfessional && {
         company_name:    companyName.trim(),
         siret:           siretDigits,
