@@ -42,7 +42,12 @@ export function CadreFormation({ washer, children }: { washer: Washer; children:
       stripeSubscriptionId={washer.stripe_subscription_id ?? null}
       cancelsAt={washer.cancels_at ?? null}
     >
-      {children}
+      {/* Ordinateur seulement pour l'instant (Alexandre, 2026-11-12) : sur téléphone, un message à la place. En CSS pur, sans clignotement au chargement. */}
+      <div className="hidden md:block">{children}</div>
+      <div className="md:hidden px-1 py-10 text-center" data-testid="formation-ordinateur-seulement">
+        <p className="text-[17px] font-semibold">La formation est disponible sur ordinateur</p>
+        <p className="mt-2 text-[14px] text-zinc-500">Ouvrez WashBoard depuis votre ordinateur pour suivre les vidéos.</p>
+      </div>
     </DashboardShell>
   )
 }
