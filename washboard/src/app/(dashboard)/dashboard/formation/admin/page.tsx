@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import AdminFormationV2 from '@/components/dashboard/AdminFormationV2'
-import { chargerCatalogue } from '@/lib/formationCatalogue'
+import { chargerCatalogue, urlsVignettes } from '@/lib/formationCatalogue'
 import { CadreFormation, contexteFormation } from '../cadre'
 
 // Gestion de la formation : réservée aux administrateurs (`FORMATION_ADMIN_USER_IDS`). Les autres
@@ -9,9 +9,10 @@ export default async function AdminFormationPage() {
   const { washer, admin } = await contexteFormation('formation-admin')
   if (!admin) notFound()
   const { packs } = await chargerCatalogue({ admin: true })
+  const vignettes = await urlsVignettes(packs)
   return (
     <CadreFormation washer={washer}>
-      <AdminFormationV2 packs={packs} />
+      <AdminFormationV2 packs={packs} vignettes={vignettes} />
     </CadreFormation>
   )
 }

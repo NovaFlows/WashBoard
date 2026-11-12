@@ -68,7 +68,32 @@ function vignetteDuFichier(fichier: File): Promise<Blob | null> {
   })
 }
 
-function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string; onChange: () => void }) {
+const TYPES_IMAGE = ['image/jpeg', 'image/png', 'image/webp']
+const TAILLE_MAX_IMAGE_MO = 10
+
+/** Une image importée, recadrée en 16:9 (comme la vignette prise dans la vidéo) et passée en JPEG de 960 px. */
+function imageEnVignette(fichier: File): Promise<Blob | null> {
+  return new Promise(resolve => {
+    const img = new Image()
+    const url = URL.createObjectURL(fichier)
+    const fin = (b: Blob | null) => { URL.revokeObjectURL(url); resolve(b) }
+    img.onerror = () => fin(null)
+    img.onload = () => {
+      try {
+        const L = 960, H = 540
+        const canvas = document.createElement('canvas')
+        canvas.width = L; canvas.height = H
+        const ratio = Math.max(L / img.naturalWidth, H / img.naturalHeight)
+        const w = img.naturalWidth * ratio, h = img.naturalHeight * ratio
+        canvas.getContext('2d')?.drawImage(img, (L - w) / 2, (H - h) / 2, w, h)
+        canvas.toBlob(b => fin(b), 'image/jpeg', 0.85)
+      } catch { fin(null) }
+    }
+    img.src = url
+  })
+}
+
+function LigneLecon({ lecon, module, vignette, onChange }: { lecon: Lecon; module: string; vignette?: string; onChange: () => void }) {
   const [ouvert, setOuvert] = useState(false)
   const [titreL, setTitreL] = useState(lecon.titre)
   const [moduleL, setModuleL] = useState(module)
@@ -81,6 +106,9 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
   // Fichier en cours d'envoi (nom, taille) et survol de la zone de dépôt (glisser-déposer).
   const [envoi, setEnvoi] = useState<{ nom: string; mo: number } | null>(null)
   const [survol, setSurvol] = useState(false)
+  // Couverture importée à la main : aperçu immédiat, avant que la page relise l'adresse signée.
+  const [couvertureLocale, setCouvertureLocale] = useState<string | null>(null)
+  const imageRef = useRef<HTMLInputElement>(null)
 
   async function enregistrer() {
     setOccupe(true); setEtat(null)
@@ -128,6 +156,26 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
       setEtat('Vidéo en ligne.'); onChange()
     } finally {
       setOccupe(false); setEnvoi(null)
+    }
+  }
+
+  async function importerCouverture(f: File) {
+    setEtat(null)
+    if (!TYPES_IMAGE.includes(f.type)) return setEtat('Format refusé : JPEG, PNG ou WebP.')
+    if (f.size > TAILLE_MAX_IMAGE_MO * 1024 * 1024) return setEtat(`Image trop lourde (${TAILLE_MAX_IMAGE_MO} Mo maximum).`)
+    setOccupe(true)
+    try {
+      const image = await imageEnVignette(f)
+      if (!image) return setEtat('Image illisible.')
+      const v = await appeler({ action: 'video.preparer_vignette', leconId: lecon.id })
+      if (!v.ok) return setEtat(v.erreur ?? 'Échec.')
+      const { error } = await createClient().storage.from(BUCKET_VIDEOS)
+        .uploadToSignedUrl(String(v.chemin), String(v.jeton), image, { contentType: 'image/jpeg' })
+      if (error) return setEtat(`Envoi interrompu : ${error.message}`)
+      setCouvertureLocale(URL.createObjectURL(image))
+      setEtat('Couverture mise à jour.'); onChange()
+    } finally {
+      setOccupe(false)
     }
   }
 
@@ -211,6 +259,27 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
             )}
           </div>
 
+          {/* Couverture : par défaut une image de la vidéo ; on peut importer la sienne. */}
+          <div className="flex items-center gap-3" data-testid="couverture">
+            <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-[10px]" style={{ background: 'linear-gradient(135deg, #15202e 0%, #2a4a6e 100%)' }}>
+              {(couvertureLocale ?? vignette) && (
+                // eslint-disable-next-line @next/next/no-img-element -- adresse signée Supabase ou aperçu local
+                <img src={couvertureLocale ?? vignette} alt="Couverture de la leçon" className="absolute inset-0 h-full w-full object-cover" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <p className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-encre)]`}>Couverture</p>
+              <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                {couvertureLocale ?? vignette ? 'Image affichée avant la lecture.' : 'Aucune image : un fond par défaut s’affiche. Importez-en une ou envoyez la vidéo.'}
+              </p>
+              <input
+                ref={imageRef} type="file" accept={TYPES_IMAGE.join(',')} className="sr-only" tabIndex={-1} aria-label="Choisir une image de couverture"
+                onChange={e => { const f = e.target.files?.[0]; if (f) void importerCouverture(f); e.target.value = '' }}
+              />
+              <button type="button" disabled={occupe} onClick={() => imageRef.current?.click()} className={SECONDAIRE}>Importer une image</button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
             <button type="button" disabled={occupe} onClick={enregistrer} className={`${PRIMAIRE} flex-1`}>Enregistrer</button>
             <button type="button" disabled={occupe} onClick={supprimer} className={`${SECONDAIRE} text-[color:var(--v2-color-erreur,#b3261e)]`}>Supprimer</button>
@@ -222,7 +291,7 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
   )
 }
 
-function CartePackAdmin({ pack, onChange }: { pack: PackFormation; onChange: () => void }) {
+function CartePackAdmin({ pack, vignettes, onChange }: { pack: PackFormation; vignettes: Record<string, string>; onChange: () => void }) {
   const [ouvert, setOuvert] = useState(false)
   const [titreP, setTitreP] = useState(pack.titre)
   const [accroche, setAccroche] = useState(pack.accroche)
@@ -316,7 +385,7 @@ function CartePackAdmin({ pack, onChange }: { pack: PackFormation; onChange: () 
               <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune leçon pour l’instant.</p>
             ) : (
               <ul className="divide-y divide-[color:var(--v2-filet)]">
-                {pack.modules.flatMap(m => m.lecons.map(l => <LigneLecon key={l.id} lecon={l} module={m.titre} onChange={onChange} />))}
+                {pack.modules.flatMap(m => m.lecons.map(l => <LigneLecon key={l.id} lecon={l} module={m.titre} vignette={vignettes[l.id]} onChange={onChange} />))}
               </ul>
             )}
             <div className="mt-3 flex gap-2">
@@ -339,7 +408,7 @@ function CartePackAdmin({ pack, onChange }: { pack: PackFormation; onChange: () 
   )
 }
 
-export default function AdminFormationV2({ packs }: { packs: PackFormation[] }) {
+export default function AdminFormationV2({ packs, vignettes = {} }: { packs: PackFormation[]; vignettes?: Record<string, string> }) {
   const router = useRouter()
   const [nouveau, setNouveau] = useState('')
   const [etat, setEtat] = useState<string | null>(null)
@@ -375,7 +444,7 @@ export default function AdminFormationV2({ packs }: { packs: PackFormation[] }) 
           Aucun pack pour l’instant. Créez le premier ci-dessus : il restera en brouillon, invisible des laveurs, jusqu’à sa publication.
         </p>
       ) : (
-        <div className="space-y-3">{packs.map(p => <CartePackAdmin key={p.id ?? p.slug} pack={p} onChange={rafraichir} />)}</div>
+        <div className="space-y-3">{packs.map(p => <CartePackAdmin key={p.id ?? p.slug} pack={p} vignettes={vignettes} onChange={rafraichir} />)}</div>
       )}
 
       <p className={`px-0.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
