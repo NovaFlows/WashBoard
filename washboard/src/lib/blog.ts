@@ -104,7 +104,7 @@ export const ARTICLES: Article[] = [
     description:
       'Rendez-vous manqués, créneaux bloqués pour rien : quand demander un acompte, combien, comment le faire payer (PayPal, Stripe, SumUp, Lydia, Wero, virement) et ce qui fait fuir les clients. Avec le calcul de ce que coûte un lapin.',
     publishedAt: '2026-10-18',
-    updatedAt: '2026-10-18',
+    updatedAt: '2026-11-12',
     readingMinutes: 8,
   },
   {
@@ -174,7 +174,7 @@ export const ARTICLES: Article[] = [
     description:
       'Comment calculer un prix qui tient : temps réel par prestation, frais de déplacement, charges et cotisations. Avec une grille indicative et les erreurs qui plombent une marge.',
     publishedAt: '2026-08-26',
-    updatedAt: '2026-10-19',
+    updatedAt: '2026-11-12',
     readingMinutes: 9,
   },
   {

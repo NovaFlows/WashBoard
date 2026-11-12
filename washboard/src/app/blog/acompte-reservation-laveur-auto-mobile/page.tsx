@@ -234,7 +234,8 @@ export default function Page() {
           pourcentage), le délai pour payer et vos conditions de remboursement, que le client lit
           avant de réserver. Il paie par votre propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou
           virement) : WashBoard n&apos;encaisse rien, l&apos;argent va directement chez vous. Vous
-          confirmez la réception en un geste sur la fiche du rendez-vous, et une réservation encore
+          confirmez la réception en un geste sur la fiche du rendez-vous. Avant l&apos;échéance, le
+          client reçoit un rappel par email, et une réservation encore
           en attente dont l&apos;acompte n&apos;est pas réglé à temps est annulée toute seule, le
           créneau libéré. L&apos;acompte est inclus dès l&apos;offre gratuite.
         </Cta>

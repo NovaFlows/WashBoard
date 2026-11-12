@@ -127,7 +127,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Que se passe-t-il si un client ne paie pas son acompte ?',
-    a: 'Tu choisis un délai pour le payer (2 h, 12 h, 24 h ou 48 h). Passé ce délai, une réservation encore en attente est annulée toute seule : le créneau est libéré et le client est prévenu par email. Si tu as déjà confirmé le rendez-vous, WashBoard ne l\'annule pas à ta place. Tu peux aussi ne fixer aucun délai.',
+    a: 'Tu choisis un délai pour le payer (2 h, 12 h, 24 h ou 48 h). Avant l\'échéance, le client reçoit un rappel par email. Passé ce délai, une réservation encore en attente est annulée toute seule : le créneau est libéré et le client est prévenu par email, avec un lien pour réserver à nouveau. Si tu as déjà confirmé le rendez-vous, WashBoard ne l\'annule pas à ta place. Tu peux aussi ne fixer aucun délai.',
   },
   {
     q: 'Puis-je faire une promotion sur mes prestations ?',

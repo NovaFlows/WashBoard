@@ -211,7 +211,8 @@ export default function Page() {
           title="Savoir ce que vous gagnez vraiment"
           secondary={lienPageMetier(article.theme)}
         >
-          WashBoard calcule automatiquement les frais de déplacement selon le temps de trajet réel,
+          WashBoard calcule automatiquement les frais de déplacement selon le temps de trajet ou la
+          distance réels,
           vous laisse lancer une promotion datée, avec bandeau et compte à rebours, plutôt qu&apos;une
           remise permanente, et suit vos recettes et vos dépenses mois par mois (dès la formule{' '}
           {requiredPlanLabel('compta')}). Plus besoin d&apos;estimer à la fin du mois.
