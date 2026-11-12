@@ -55,6 +55,9 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
   const [etat, setEtat] = useState<string | null>(null)
   const [occupe, setOccupe] = useState(false)
   const fichier = useRef<HTMLInputElement>(null)
+  // Fichier en cours d'envoi (nom, taille) et survol de la zone de dépôt (glisser-déposer).
+  const [envoi, setEnvoi] = useState<{ nom: string; mo: number } | null>(null)
+  const [survol, setSurvol] = useState(false)
 
   async function enregistrer() {
     setOccupe(true); setEtat(null)
@@ -81,17 +84,20 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
     if (!TYPES_VIDEO_ACCEPTES.includes(f.type)) return setEtat('Format refusé : MP4, WebM ou MOV.')
     const tailleMo = f.size / (1024 * 1024)
     if (tailleMo > TAILLE_MAX_VIDEO_MO) return setEtat(`Vidéo trop lourde (${TAILLE_MAX_VIDEO_MO} Mo maximum).`)
-    setOccupe(true); setEtat(`Envoi de « ${f.name} » (${Math.round(tailleMo)} Mo)…`)
-    const prep = await appeler({ action: 'video.preparer', leconId: lecon.id, nom: f.name, type: f.type, tailleMo })
-    if (!prep.ok) { setOccupe(false); return setEtat(prep.erreur ?? 'Échec.') }
-    const { error } = await createClient().storage.from(BUCKET_VIDEOS)
-      .uploadToSignedUrl(String(prep.chemin), String(prep.jeton), f, { contentType: f.type })
-    if (error) { setOccupe(false); return setEtat(`Envoi interrompu : ${error.message}`) }
-    const duree = await dureeDuFichier(f)
-    const fin = await appeler({ action: 'video.rattacher', leconId: lecon.id, chemin: prep.chemin, dureeSec: duree })
-    setOccupe(false)
-    if (!fin.ok) return setEtat(fin.erreur ?? 'Échec.')
-    setEtat('Vidéo en ligne.'); onChange()
+    setOccupe(true); setEnvoi({ nom: f.name, mo: tailleMo })
+    try {
+      const prep = await appeler({ action: 'video.preparer', leconId: lecon.id, nom: f.name, type: f.type, tailleMo })
+      if (!prep.ok) return setEtat(prep.erreur ?? 'Échec.')
+      const { error } = await createClient().storage.from(BUCKET_VIDEOS)
+        .uploadToSignedUrl(String(prep.chemin), String(prep.jeton), f, { contentType: f.type })
+      if (error) return setEtat(`Envoi interrompu : ${error.message}`)
+      const duree = await dureeDuFichier(f)
+      const fin = await appeler({ action: 'video.rattacher', leconId: lecon.id, chemin: prep.chemin, dureeSec: duree })
+      if (!fin.ok) return setEtat(fin.erreur ?? 'Échec.')
+      setEtat('Vidéo en ligne.'); onChange()
+    } finally {
+      setOccupe(false); setEnvoi(null)
+    }
   }
 
   async function retirer() {
@@ -127,17 +133,51 @@ function LigneLecon({ lecon, module, onChange }: { lecon: Lecon; module: string;
             <button type="button" onClick={() => setApercu(a => !a)} className={puce(apercu)}>Aperçu gratuit</button>
           </div>
 
-          <div className="space-y-2">
+          {/* Zone de dépôt : on glisse un fichier dessus, ou on ouvre l'explorateur de fichiers. */}
+          <div
+            data-testid="zone-video"
+            onDragOver={e => { e.preventDefault(); if (!occupe) setSurvol(true) }}
+            onDragLeave={() => setSurvol(false)}
+            onDrop={e => {
+              e.preventDefault(); setSurvol(false)
+              const f = e.dataTransfer.files?.[0]
+              if (f && !occupe) void envoyer(f)
+            }}
+            className={`rounded-[var(--v2-radius-surface)] border-2 border-dashed p-5 text-center transition-colors ${
+              survol ? 'border-[color:var(--v2-color-accent)] bg-[color:var(--v2-color-accent)]/10' : 'border-[color:var(--v2-filet-fort)]'
+            }`}
+          >
             <input
-              ref={fichier} type="file" accept={TYPES_VIDEO_ACCEPTES.join(',')} className="sr-only" tabIndex={-1}
+              ref={fichier} type="file" accept={TYPES_VIDEO_ACCEPTES.join(',')} className="sr-only" tabIndex={-1} aria-label="Choisir une vidéo"
               onChange={e => { const f = e.target.files?.[0]; if (f) void envoyer(f); e.target.value = '' }}
             />
-            <div className="flex flex-wrap gap-2">
-              <button type="button" disabled={occupe} onClick={() => fichier.current?.click()} className={SECONDAIRE}>
-                {lecon.aVideo ? 'Remplacer la vidéo' : 'Envoyer une vidéo'}
-              </button>
-              {lecon.aVideo && <button type="button" disabled={occupe} onClick={retirer} className={SECONDAIRE}>Retirer la vidéo</button>}
-            </div>
+            {envoi ? (
+              <div className="space-y-2">
+                <p className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-encre)]`}>{envoi.nom} · {envoi.mo < 10 ? envoi.mo.toFixed(1).replace('.', ',') : Math.round(envoi.mo)} Mo</p>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--v2-filet)]" role="progressbar" aria-label="Envoi en cours">
+                  <div className="h-full w-full animate-pulse rounded-full bg-[color:var(--v2-color-accent)]" />
+                </div>
+                <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Envoi en cours… ne fermez pas cette page.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {lecon.aVideo && (
+                  <p className={`text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)]`}>✓ Une vidéo est en ligne pour cette leçon</p>
+                )}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-[color:var(--v2-color-gris)]" aria-hidden>
+                  <path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+                </svg>
+                <p className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-encre)]`}>
+                  {lecon.aVideo ? 'Glissez une nouvelle vidéo ici pour la remplacer' : 'Glissez votre vidéo ici'}
+                </p>
+                <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>ou</p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button type="button" disabled={occupe} onClick={() => fichier.current?.click()} className={SECONDAIRE}>Parcourir mes fichiers</button>
+                  {lecon.aVideo && <button type="button" disabled={occupe} onClick={retirer} className={SECONDAIRE}>Retirer la vidéo</button>}
+                </div>
+                <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>MP4, WebM ou MOV · {TAILLE_MAX_VIDEO_MO / 1024} Go maximum</p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
