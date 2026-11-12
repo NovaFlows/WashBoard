@@ -12,6 +12,16 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: utilisateur } }) } }),
 }))
 
+// Le catalogue vient de la base en production ; ici, celui d'exemple, sans réseau (61 appels réels
+// dans le test de limite dépassaient le délai du test, et faisaient échouer le build).
+vi.mock('@/lib/formationCatalogue', async () => {
+  const { CATALOGUE_DEMO } = await import('@/lib/formation')
+  return {
+    chargerCatalogue: async () => ({ packs: CATALOGUE_DEMO, demo: true }),
+    cheminVideoDeLecon: async () => null,
+  }
+})
+
 const { POST } = await import('./route')
 
 const ORIGINE = 'https://www.washboard.fr'
