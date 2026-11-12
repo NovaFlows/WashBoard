@@ -1108,7 +1108,7 @@ function CarteCentreAuto({ adresseDeBase, inputClass, labelClass }: { adresseDeB
   // écraserait le centre du laveur avec les valeurs par défaut.
   const [etat, setEtat] = useState<'chargement' | 'migration' | 'erreur' | 'pret'>('chargement')
   const [actif, setActif] = useState(false)
-  const [centres, setCentres] = useState<{ nom: string; adresse: string }[]>([{ nom: '', adresse: '' }])
+  const [centres, setCentres] = useState<{ id?: string; nom: string; adresse: string }[]>([{ nom: '', adresse: '' }])
   const [lieux, setLieux] = useState<LieuxProposes>('les_deux')
   const [enCours, setEnCours] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)

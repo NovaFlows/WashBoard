@@ -176,3 +176,24 @@ describe('PATCH /api/services/[id] — heures de début (heures_debut)', () => {
     expect(updates).toHaveLength(0)
   })
 })
+
+describe('PATCH /api/services/[id] — centres de la prestation (centres_ids)', () => {
+  it('enregistre les identifiants', async () => {
+    const res = await PATCH(requete({ centres_ids: ['a1'] }), { params })
+    expect(res.status).toBe(200)
+    expect(updates[0].centres_ids).toEqual(['a1'])
+  })
+  it.each([null, []])('%j : tous les centres (colonne à null)', async (valeur) => {
+    await PATCH(requete({ centres_ids: valeur }), { params })
+    expect(updates[0].centres_ids).toBeNull()
+  })
+  it('ne touche pas la colonne quand le corps ne la contient pas', async () => {
+    await PATCH(requete({ name: 'ez' }), { params })
+    expect(updates[0]).not.toHaveProperty('centres_ids')
+  })
+  it.each(['a1', [true]])('refuse %j', async (valeur) => {
+    const res = await PATCH(requete({ centres_ids: valeur }), { params })
+    expect(res.status).toBe(400)
+    expect(updates).toHaveLength(0)
+  })
+})

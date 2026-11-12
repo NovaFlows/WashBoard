@@ -16,6 +16,9 @@ export const MAX_CENTRES = 10
 export const CentreSchema = z.object({
   nom: z.string().trim().max(80).default(''),
   adresse: z.string().trim().max(300),
+  // Identifiant stable (posé à l'enregistrement) : les prestations s'y rattachent, l'adresse
+  // pouvant changer. Absent sur un centre enregistré avant le 2026-11-12.
+  id: z.string().trim().max(40).optional(),
 })
 
 export type Centre = z.infer<typeof CentreSchema>
@@ -41,9 +44,14 @@ export function centresDeReglages(r: { adresse: string; centres?: Centre[] }): C
   return r.adresse.length >= 5 ? [{ nom: '', adresse: r.adresse }] : []
 }
 
+export function nouvelIdentifiantCentre(): string {
+  return globalThis.crypto.randomUUID().slice(0, 8)
+}
+
 /** Réglages à enregistrer : `adresse` suit toujours le premier centre. */
 export function normaliserReglages(r: ReglagesCentreAuto): ReglagesCentreAuto {
-  const centres = r.centres.filter(c => c.adresse.length > 0)
+  // Chaque centre garde son identifiant ; un nouveau centre en reçoit un.
+  const centres = r.centres.filter(c => c.adresse.length > 0).map(c => (c.id ? c : { ...c, id: nouvelIdentifiantCentre() }))
   return { ...r, centres, adresse: centres[0]?.adresse ?? r.adresse }
 }
 
@@ -54,6 +62,32 @@ export type CentreAutoPublic = { adresse: string; domicile: boolean; centres?: C
 /** Tous les centres proposés au client (au moins un). */
 export function centresDe(centre: CentreAutoPublic): Centre[] {
   return centre.centres && centre.centres.length > 0 ? centre.centres : [{ nom: '', adresse: centre.adresse }]
+}
+
+// Prestation rattachée à certains centres seulement (`services.centres_ids`, identifiants de
+// centres) : vide = tous. Des identifiants qui ne désignent plus aucun centre (centre supprimé)
+// ne bloquent rien : la prestation reste proposée dans tous les centres.
+export const MAX_CENTRES_PRESTATION = MAX_CENTRES
+
+export function identifiantsCentresValides(brut: unknown): string[] | null {
+  if (!Array.isArray(brut)) return null
+  const ids = [...new Set(brut.filter((i): i is string => typeof i === 'string' && i.length > 0 && i.length <= 40))]
+  return ids.length > 0 ? ids : null
+}
+
+export function identifiantsCentresAcceptables(brut: unknown): boolean {
+  if (brut === undefined || brut === null) return true
+  return Array.isArray(brut) && brut.length <= MAX_CENTRES_PRESTATION && brut.every(i => typeof i === 'string' && i.length > 0 && i.length <= 40)
+}
+
+/** Ce que voit le client pour cette prestation : seulement les centres où elle se fait. */
+export function centreRestreint(centre: CentreAutoPublic | null | undefined, ids: string[] | null | undefined): CentreAutoPublic | null {
+  if (!centre) return null
+  const permis = identifiantsCentresValides(ids)
+  if (!permis) return centre
+  const gardes = centresDe(centre).filter(c => c.id && permis.includes(c.id))
+  if (gardes.length === 0) return centre
+  return { adresse: gardes[0].adresse, domicile: centre.domicile, centres: gardes }
 }
 
 /** Le centre dont c'est l'adresse (celle envoyée par la page) ; à défaut, le premier. Le

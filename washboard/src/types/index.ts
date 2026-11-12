@@ -123,6 +123,8 @@ export type Service = {
   lieu_restreint?: 'domicile' | 'centre' | null
   /** Heures de début proposées (« HH:MM ») ; vide = toutes celles des horaires (absent avant le SQL). */
   heures_debut?: string[] | null
+  /** Identifiants des centres où la prestation se fait ; vide = tous (absent avant le SQL). */
+  centres_ids?: string[] | null
 }
 
 export type Availability = {

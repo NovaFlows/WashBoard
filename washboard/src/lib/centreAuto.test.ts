@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, centreParAdresse, centresDe, libelleAdresse, libelleCentre, lieuAccepte, lieuParDefaut, lieuRestreintValide, lieuxPossibles, normaliserReglages, resumeCentreAuto } from './centreAuto'
+import { centreRestreint, identifiantsCentresAcceptables, identifiantsCentresValides, ReglagesCentreAutoSchema, adresseAvecLieu, centreAutoPublic, centreParAdresse, centresDe, libelleAdresse, libelleCentre, lieuAccepte, lieuParDefaut, lieuRestreintValide, lieuxPossibles, normaliserReglages, resumeCentreAuto } from './centreAuto'
 
 const adresse = '12 rue des Lilas, 93100 Montreuil'
 
@@ -141,5 +141,51 @@ describe('laveur à plusieurs centres × prestation limitée à un lieu', () => 
     const seul = centreAutoPublic({ actif: true, adresse, lieux: 'centre', centres: pub.centres })!
     expect(lieuxPossibles(seul, null)).toEqual(['centre'])
     expect(lieuxPossibles(seul, 'domicile')).toEqual([])
+  })
+})
+
+describe('prestation rattachée à certains centres', () => {
+  const lyon = '8 avenue Foch, 69006 Lyon'
+  const marseille = '3 rue du Port, 13002 Marseille'
+  const centres = [{ id: 'a1', nom: 'Montreuil', adresse }, { id: 'b2', nom: 'Lyon', adresse: lyon }, { id: 'c3', nom: 'Marseille', adresse: marseille }]
+  const pub = centreAutoPublic({ actif: true, adresse, lieux: 'les_deux', centres })!
+
+  it('sans restriction : tous les centres', () => {
+    expect(centreRestreint(pub, null)).toBe(pub)
+    expect(centreRestreint(pub, [])).toBe(pub)
+    expect(centreRestreint(null, ['a1'])).toBeNull()
+  })
+  it('ne garde que les centres cochés, le premier devient celui par défaut', () => {
+    const r = centreRestreint(pub, ['b2', 'c3'])!
+    expect(centresDe(r).map(c => c.nom)).toEqual(['Lyon', 'Marseille'])
+    expect(r.adresse).toBe(lyon)
+    expect(r.domicile).toBe(true)
+  })
+  it('un seul centre coché : il garde son nom pour l’adresse enregistrée', () => {
+    const r = centreRestreint(pub, ['c3'])!
+    expect(libelleCentre(centreParAdresse(r, marseille))).toBe(`Marseille · ${marseille}`)
+  })
+  it('le client ne peut pas imposer un centre non coché : retombe sur le premier coché', () => {
+    const r = centreRestreint(pub, ['b2', 'c3'])!
+    expect(centreParAdresse(r, adresse).nom).toBe('Lyon')
+  })
+  it('identifiants périmés (centre supprimé) : aucune restriction, la prestation reste réservable', () => {
+    expect(centreRestreint(pub, ['zzz'])).toBe(pub)
+  })
+  it('validation des identifiants reçus', () => {
+    expect(identifiantsCentresAcceptables(undefined)).toBe(true)
+    expect(identifiantsCentresAcceptables(['a1'])).toBe(true)
+    expect(identifiantsCentresAcceptables('a1')).toBe(false)
+    expect(identifiantsCentresAcceptables([''])).toBe(false)
+    expect(identifiantsCentresAcceptables(Array(11).fill('a'))).toBe(false)
+    expect(identifiantsCentresValides(['a1', 'a1', 3])).toEqual(['a1'])
+    expect(identifiantsCentresValides([])).toBeNull()
+  })
+  it('à l’enregistrement, chaque centre reçoit un identifiant et le garde ensuite', () => {
+    const r = ReglagesCentreAutoSchema.parse({ actif: true, adresse, lieux: 'les_deux', centres: [{ nom: 'A', adresse }, { id: 'garde', nom: 'B', adresse: lyon }] })
+    const n = normaliserReglages(r)
+    expect(n.centres[0].id).toMatch(/^[0-9a-f]{8}$/)
+    expect(n.centres[1].id).toBe('garde')
+    expect(normaliserReglages(n).centres.map(c => c.id)).toEqual(n.centres.map(c => c.id))
   })
 })

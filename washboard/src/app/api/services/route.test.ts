@@ -272,3 +272,20 @@ describe('POST /api/services — heures de début (heures_debut)', () => {
     expect(inserts).toHaveLength(0)
   })
 })
+
+describe('POST /api/services — centres de la prestation (centres_ids)', () => {
+  it('enregistre les identifiants', async () => {
+    const res = await POST(requete({ ...COMPLETE, centres_ids: ['a1', 'b2'] }))
+    expect(res.status).toBe(200)
+    expect(inserts[0].centres_ids).toEqual(['a1', 'b2'])
+  })
+  it.each([undefined, null, []])('n’envoie pas la colonne pour %j (tous les centres)', async (valeur) => {
+    await POST(requete({ ...COMPLETE, centres_ids: valeur }))
+    expect(inserts[0]).not.toHaveProperty('centres_ids')
+  })
+  it.each(['a1', [1], ['']])('refuse %j', async (valeur) => {
+    const res = await POST(requete({ ...COMPLETE, centres_ids: valeur }))
+    expect(res.status).toBe(400)
+    expect(inserts).toHaveLength(0)
+  })
+})

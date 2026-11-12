@@ -5,7 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import PrestationsV2 from '@/components/dashboard/PrestationsV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { logger } from '@/lib/logger'
-import { centreAutoPublic } from '@/lib/centreAuto'
+import { centreAutoPublic, centresDe } from '@/lib/centreAuto'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { planEffectif, quotaPrestations } from '@/lib/plan'
 import { resumeHorairesCourt } from '@/lib/horaires'
@@ -61,7 +61,11 @@ export default async function PrestationsPage() {
   // de la fiche : sans la colonne `centre_auto`, l'écran reste comme avant.
   const { data: ficheCentre, error: errCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
   if (errCentre && !migrationEnAttente(errCentre)) logger.error('prestations.centre_auto.read_failed', { washerId: washer.id }, errCentre)
-  const lieuxMixtes = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)?.domicile === true
+  const centrePublic = centreAutoPublic((ficheCentre as { centre_auto?: unknown } | null)?.centre_auto)
+  const lieuxMixtes = centrePublic?.domicile === true
+  // Seuls les centres déjà dotés d'un identifiant (posé à l'enregistrement des centres) peuvent être cochés.
+  const centresProposes = (centrePublic ? centresDe(centrePublic) : [])
+    .flatMap(c => (c.id ? [{ id: c.id, nom: c.nom, adresse: c.adresse }] : []))
 
   // Une lecture en échec ne doit surtout pas se lire « aucune prestation » : cet
   // écran propose, à un compte vide, de créer sa première catégorie — un laveur
@@ -90,6 +94,7 @@ export default async function PrestationsPage() {
           silhouettesVehicules={washer.silhouettes_vehicules !== false}
           demanderTypeVehicule={washer.demander_type_vehicule !== false}
           lieuxMixtes={lieuxMixtes}
+          centresProposes={centresProposes}
           // Liste « Plus », pour la colonne de gauche sur grand écran : `servicesCount` et
           // `resumeHoraires` sont RECALCULÉS à partir de ce que cette page lit déjà pour son
           // propre contenu (`services`, `availabilities`) — aucune requête de plus.

@@ -22,7 +22,7 @@ export default function FeuilleCentreAutoV2({
 }) {
   const [actif, setActif] = useState(reglages?.actif ?? false)
   // Un ou plusieurs locaux ; `cle` ne sert qu'à garder les champs en place quand on en retire un.
-  const [centres, setCentres] = useState<{ cle: number; nom: string; adresse: string }[]>(() => {
+  const [centres, setCentres] = useState<{ cle: number; id?: string; nom: string; adresse: string }[]>(() => {
     const liste = reglages ? centresDeReglages(reglages) : []
     return (liste.length > 0 ? liste : [{ nom: '', adresse: '' }]).map((c, i) => ({ cle: i, ...c }))
   })
@@ -34,7 +34,7 @@ export default function FeuilleCentreAutoV2({
   async function soumettre(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const saisis = centres.map(c => ({ nom: c.nom, adresse: c.adresse }))
+    const saisis = centres.map(c => ({ id: c.id, nom: c.nom, adresse: c.adresse }))
     const saisie = ReglagesCentreAutoSchema.safeParse({ actif, adresse: saisis[0]?.adresse ?? '', lieux, centres: saisis })
     if (!saisie.success) { setErreur(saisie.error.issues[0]?.message ?? 'Réglages invalides.'); return }
     setErreur(null)

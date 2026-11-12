@@ -1,3 +1,4 @@
+import { identifiantsCentresAcceptables, identifiantsCentresValides } from '@/lib/centreAuto'
 import { heuresDebutAcceptables, heuresDebutValides } from '@/lib/heuresPrestation'
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse } from '@/lib/apiError'
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte, lieu_restreint, heures_debut } = await request.json()
+  const { name, description, price, duration_minutes, vehicle_types, vehicle_price_overrides, addons, category_id, lieu_adapte, lieu_restreint, heures_debut, centres_ids } = await request.json()
   if (!name?.trim() || price === undefined || !duration_minutes) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Lieu de la prestation invalide' }, { status: 400 })
   }
 
+  if (!identifiantsCentresAcceptables(centres_ids)) {
+    return NextResponse.json({ error: 'Centres invalides' }, { status: 400 })
+  }
   if (!heuresDebutAcceptables(heures_debut)) {
     return NextResponse.json({ error: 'Heures de début invalides' }, { status: 400 })
   }
@@ -91,6 +95,7 @@ export async function POST(request: NextRequest) {
       // Seulement quand il est posé : sans le SQL, la colonne n'existe pas encore.
       ...(lieu_restreint ? { lieu_restreint } : {}),
       // Seulement quand il y a des heures : sans le SQL, la colonne n'existe pas encore.
+      ...(identifiantsCentresValides(centres_ids) ? { centres_ids: identifiantsCentresValides(centres_ids) } : {}),
       ...(heuresDebutValides(heures_debut) ? { heures_debut: heuresDebutValides(heures_debut) } : {}),
     })
     .select()

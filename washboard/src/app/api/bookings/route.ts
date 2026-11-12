@@ -13,7 +13,7 @@ import { apparenceCarte, assurerCarte, reservationsDuClient, type ApparenceCarte
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { acompteActif, conditionsAcompte, echeanceAcompte, liensDePaiement, montantAcompte, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
-import { centreAutoPublic, centreParAdresse, lieuAccepte, lieuRestreintValide, lieuxPossibles, libelleCentre } from '@/lib/centreAuto'
+import { centreAutoPublic, centresDe, centreRestreint, centreParAdresse, identifiantsCentresValides, lieuAccepte, lieuRestreintValide, lieuxPossibles, libelleCentre } from '@/lib/centreAuto'
 import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
 import { lireBlocages } from '@/lib/blocagesServeur'
 import { heureAutorisee, heuresDebutValides } from '@/lib/heuresPrestation'
@@ -314,7 +314,19 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     }
   }
-  if (auCentre && centre) bookingData.address = libelleCentre(centreParAdresse(centre, bookingData.address))
+  if (auCentre && centre) {
+    // Plusieurs centres : la prestation peut n'être faite que dans certains (`services.centres_ids`,
+    // lu à part : sans la colonne, tous les centres). Le laveur qui saisit lui-même garde la main.
+    let centreService = centre
+    if (!isOwner && centresDe(centre).length > 1) {
+      const { data: ficheCentres, error: errCentres } = await supabase
+        .from('services').select('centres_ids').eq('id', bookingData.service_id).maybeSingle()
+      if (errCentres && !migrationEnAttente(errCentres)) logger.error('bookings.centres_ids.read_failed', { washerId: bookingData.washer_id }, errCentres)
+      const ids = errCentres ? null : identifiantsCentresValides((ficheCentres as { centres_ids?: unknown } | null)?.centres_ids)
+      centreService = centreRestreint(centre, ids) ?? centre
+    }
+    bookingData.address = libelleCentre(centreParAdresse(centreService, bookingData.address))
+  }
   const is_smart_slot = auCentre ? false : smartDemande
   const smart_discount = auCentre ? 0 : remiseSmartDemandee
   // La page publique exige toujours un email : c'est par lui que le client reçoit sa demande.

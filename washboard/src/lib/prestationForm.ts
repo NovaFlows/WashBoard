@@ -38,6 +38,8 @@ export type FormulairePrestation = {
   lieu_restreint?: 'domicile' | 'centre' | null
   /** Heures de début autorisées (« HH:MM ») ; vide ou null = toutes. Indéfini tant qu'on n'y touche pas. */
   heures_debut?: string[] | null
+  /** Identifiants des centres où la prestation se fait ; null = tous. Indéfini tant qu'on n'y touche pas. */
+  centres_ids?: string[] | null
 }
 
 export const FORMULAIRE_VIDE: FormulairePrestation = {
@@ -77,6 +79,7 @@ export function formulaireDepuisService(svc: Service): FormulairePrestation {
     lieu_adapte: svc.lieu_adapte,
     lieu_restreint: svc.lieu_restreint,
     heures_debut: svc.heures_debut,
+    centres_ids: svc.centres_ids,
   }
 }
 
@@ -172,6 +175,7 @@ export function corpsPrestation(form: FormulairePrestation) {
     ...(form.lieu_adapte === undefined ? {} : { lieu_adapte: form.lieu_adapte }),
     ...(form.lieu_restreint === undefined ? {} : { lieu_restreint: form.lieu_restreint }),
     ...(form.heures_debut === undefined ? {} : { heures_debut: form.heures_debut }),
+    ...(form.centres_ids === undefined ? {} : { centres_ids: form.centres_ids }),
   }
 }
 

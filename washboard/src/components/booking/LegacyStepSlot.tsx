@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, centreRestreint, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
 import { filtrerHeures } from '@/lib/heuresPrestation'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
@@ -42,6 +42,8 @@ type Props = {
   lieuPrestation?: LieuRestreint
   /** Heures de début autorisées pour la prestation choisie ; vide = toutes. */
   heuresPrestation?: string[] | null
+  /** Identifiants des centres où la prestation se fait ; vide = tous. */
+  centresPrestation?: string[] | null
   onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   onBack: () => void
   accent?: string
@@ -75,9 +77,11 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function LegacyStepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, lieuPrestation = null, heuresPrestation = null, onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre: centreComplet = null, lieuPrestation = null, heuresPrestation = null, centresPrestation = null, onNext, onBack, accent = '#2563eb',
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
+  // Plusieurs centres : seulement ceux où la prestation se fait.
+  const centre = useMemo(() => centreRestreint(centreComplet, centresPrestation), [centreComplet, centresPrestation])
   const [lieuChoisi,        setLieu]              = useState<Lieu>(() => lieuParDefaut(centre))
   // La prestation peut n'être faisable qu'à domicile ou qu'au centre : le lieu s'y plie.
   const lieuxOk = lieuxPossibles(centre, lieuPrestation)

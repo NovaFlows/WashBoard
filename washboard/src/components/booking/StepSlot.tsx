@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { BOOKING_HORIZON_DAYS } from '@/lib/bookingWindow'
 import type { Availability } from '@/types'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
@@ -9,7 +9,7 @@ import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiv
 import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import BookingAction from './BookingAction'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
-import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
+import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, centreRestreint, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -43,6 +43,8 @@ type Props = {
   lieuPrestation?: LieuRestreint
   /** Heures de début autorisées pour la prestation choisie ; vide = toutes. */
   heuresPrestation?: string[] | null
+  /** Identifiants des centres où la prestation se fait ; vide = tous. */
+  centresPrestation?: string[] | null
   initialLieu?: Lieu
   onNext: (data: { scheduled_at: string; address: string; lieu: Lieu; is_smart_slot?: boolean; smart_discount?: number; travel_fee?: number }) => void
   initialAddress?: string
@@ -79,10 +81,12 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre = null, lieuPrestation = null, heuresPrestation = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre: centreComplet = null, lieuPrestation = null, heuresPrestation = null, centresPrestation = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
 }: Props) {
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
+  // Plusieurs centres : seulement ceux où la prestation se fait.
+  const centre = useMemo(() => centreRestreint(centreComplet, centresPrestation), [centreComplet, centresPrestation])
   const [lieuChoisi,        setLieu]              = useState<Lieu>(() => (centre && initialLieu ? initialLieu : lieuParDefaut(centre)))
   // La prestation peut n'être faisable qu'à domicile ou qu'au centre : le lieu s'y plie.
   const lieuxOk = lieuxPossibles(centre, lieuPrestation)

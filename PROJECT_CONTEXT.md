@@ -43,6 +43,12 @@ L'utilisateur développe ce projet depuis plusieurs mois et alterne entre Claude
 - Logique : `lib/heuresPrestation.ts`. Filtre appliqué dans StepSlot/LegacyStepSlot (créneaux d'un jour + `journeeEcoulee`), contrôle 409 dans `POST /api/bookings` (sauf rendez-vous saisi par le laveur). Éditeur : section « Heures de début » de `FeuillePrestationV2` (liste déroulante par demi-heure 6 h à 21 h 30).
 - Même heures tous les jours de la semaine ; par jour = non fait. Éditeur v1 non fait.
 
+## Prestation rattachée à certains centres (2026-11-12, commit local, NON poussé)
+- `services.centres_ids` (text[] d'identifiants de centres, vide/null = tous). **SQL à appliquer** : `ALTER TABLE services ADD COLUMN centres_ids text[];`. Sans la colonne : tous les centres, rien ne casse.
+- Chaque centre de `washers.centre_auto.centres` a maintenant un `id` stable (posé par `normaliserReglages` à l'enregistrement ; les éditeurs le conservent). Les centres enregistrés AVANT n'en ont pas : ils ne peuvent pas être cochés tant que le laveur n'a pas ré-enregistré ses centres, et restent exclus d'une prestation restreinte.
+- `centreRestreint(centre, ids)` (lib/centreAuto.ts) filtre les centres vus par le client (StepSlot/LegacyStepSlot) et par le serveur (`POST /api/bookings`, adresse imposée parmi les centres cochés). Identifiants périmés (centre supprimé) = aucune restriction.
+- Éditeur : « Dans quels centres ? » (cases) dans `FeuillePrestationV2`, si 2 centres ou plus (ids présents) et prestation pas limitée au déplacement. Agenda manuel et éditeur v1 : non faits.
+
 ## Changer de numéro (2026-11-10)
 - Demande d'Alexandre : un laveur change son numéro depuis ses réglages, comme son e-mail ou son mot de passe (rien à voir avec l'espace équipe). Mon profil › « Ma connexion » › Téléphone (`FeuilleTelephoneV2`, PWA) et, sur le site, l'ancien formulaire (`ChangerTelephoneV1`). La ligne « Téléphone » de « Mon entreprise » a disparu.
 - Le numéro d'un compte est vérifié par SMS à l'inscription : un nouveau numéro l'est aussi. Mot de passe actuel + nouveau mobile (06/07, pas déjà pris, sauf `PHONE_UNIQUENESS_EXEMPT`) → code de 6 chiffres envoyé sur CE numéro → saisi → `washers.phone` change et `telephone_verifie_le` est daté. Route `POST /api/washer/telephone` (`etape: 'code' | 'confirmer'`), qui réutilise `codes_sms` et `lib/codeSms` (60 s entre deux envois, 5 par demande ; une demande restée sans suite depuis plus d'une heure est repartie de zéro). Le numéro changé est celui de la demande, jamais celui du navigateur.

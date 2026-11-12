@@ -7,6 +7,7 @@ import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } f
 import { Constat, Interrupteur, Repliable, TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { MESSAGE_LIEU_ADAPTE } from '@/lib/lieuAdapte'
 import { CHOIX_LIEU_PRESTATION, lieuRestreintValide } from '@/lib/centreAuto'
+import { identifiantsCentresValides } from '@/lib/centreAuto'
 import { HEURES_PROPOSEES, MAX_HEURES_DEBUT, heuresDebutValides, libelleHeure, resumeHeures } from '@/lib/heuresPrestation'
 import { champsManquants, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX, ERREUR_SANS_TYPE } from '@/lib/prestation'
 import {
@@ -59,6 +60,8 @@ type Props = {
   typeDemande?: boolean
   /** Le laveur propose déplacement ET centre auto : le choix « où se fait-elle » est montré. */
   lieuxMixtes?: boolean
+  /** Centres du laveur (avec identifiant) : « dans quels centres » est montré s'il y en a plusieurs. */
+  centresProposes?: { id: string; nom: string; adresse: string }[]
   onClose: () => void
 }
 
@@ -76,7 +79,7 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
 }
 
 export default function FeuillePrestationV2({
-  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, typeDemande = true, lieuxMixtes = false, onClose,
+  service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, typeDemande = true, lieuxMixtes = false, centresProposes = [], onClose,
 }: Props) {
   const [form, setForm] = useState(formulaireInitial)
   const [enCours, setEnCours] = useState(false)
@@ -531,6 +534,56 @@ export default function FeuillePrestationV2({
             )}
           </div>
         </Repliable>
+
+        {centresProposes.length > 1 && form.lieu_restreint !== 'domicile' && (() => {
+          const choisis = identifiantsCentresValides(form.centres_ids) ?? centresProposes.map(c => c.id)
+          return (
+            <div className="border-t border-[color:var(--v2-filet)] pt-3">
+              <Titre>Dans quels centres ?</Titre>
+              <div className="mt-2 flex flex-col gap-2" role="group" aria-label="Centres de la prestation">
+                {centresProposes.map(c => {
+                  const coche = choisis.includes(c.id)
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={coche}
+                      onClick={() => setForm(f => {
+                        const actuels = identifiantsCentresValides(f.centres_ids) ?? centresProposes.map(x => x.id)
+                        const suite = coche ? actuels.filter(i => i !== c.id) : [...actuels, c.id]
+                        // Au moins un centre ; tous cochés = pas de restriction.
+                        if (suite.length === 0) return f
+                        return { ...f, centres_ids: suite.length === centresProposes.length ? null : suite }
+                      })}
+                      className="flex items-start gap-3 rounded-[var(--v2-radius-surface)] border px-4 py-3 text-left"
+                      style={{
+                        borderColor: coche ? 'var(--v2-color-accent)' : 'var(--v2-filet-fort)',
+                        background: coche ? 'color-mix(in srgb, var(--v2-color-accent) 8%, transparent)' : 'transparent',
+                        ...PRESSION,
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-[3px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-2 text-[12px] leading-none"
+                        style={{ borderColor: coche ? 'var(--v2-color-accent)' : 'var(--v2-filet-fort)', color: 'var(--v2-color-accent)' }}
+                      >
+                        {coche ? '✓' : ''}
+                      </span>
+                      <span className="min-w-0">
+                        {c.nom && <span className={`block text-[15px] ${corpsFort}`}>{c.nom}</span>}
+                        <span className={`block text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{c.adresse}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
+                Le client ne peut réserver cette prestation que dans les centres cochés.
+              </p>
+            </div>
+          )
+        })()}
 
         {lieuxMixtes && (
           <div className="border-t border-[color:var(--v2-filet)] pt-3">

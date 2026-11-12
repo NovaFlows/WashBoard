@@ -395,6 +395,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 centre={washer.centre_auto ?? null}
                 lieuPrestation={selectedService?.lieu_restreint}
                 heuresPrestation={selectedService?.heures_debut}
+                centresPrestation={selectedService?.centres_ids}
                 initialLieu={form.lieu}
                 active={section === 2}
                 actionTarget={section === 2 ? actionTarget : null}
