@@ -86,7 +86,7 @@ export type WasherPublic = {
   reservation_jour_meme?: boolean
   /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
   silhouettes_vehicules?: boolean
-  /** La silhouette du véhicule prend la couleur de la page (sinon grisée). */
+  /** Le véhicule choisi apparaît dans ses vraies couleurs (sinon grisé). */
   silhouettes_couleur?: boolean
   /** Le client peut cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
   plusieurs_prestations?: boolean
@@ -355,7 +355,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             clientsProAutorises={washer.clients_pro !== false}
             vehicule3D={washer.silhouettes_vehicules !== false}
             plusieurs={washer.plusieurs_prestations === true}
-            couleurSilhouette={washer.silhouettes_couleur ? accent : null}
+            couleurSilhouette={washer.silhouettes_couleur === true}
             auCentre={estAuCentre(centreAuto, form.lieu)}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {

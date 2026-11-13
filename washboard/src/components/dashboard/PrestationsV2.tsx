@@ -88,8 +88,8 @@ type Props = {
   /** `washers.plusieurs_prestations` : le client peut cumuler plusieurs prestations dans une
    *  réservation (lib/plusieursPrestations.ts). Éteint par défaut (2026-11-13). */
   plusieursPrestations?: boolean
-  /** `washers.silhouettes_couleur` : la silhouette du véhicule prend la couleur de la page
-   *  plutôt que d'être grisée. Éteint par défaut (2026-11-13). */
+  /** `washers.silhouettes_couleur` : le véhicule choisi apparaît dans ses vraies couleurs
+   *  (photos d'Alexandre) plutôt que grisé. Éteint par défaut (2026-11-13). */
   silhouettesCouleur?: boolean
   /** Le laveur propose à la fois le déplacement et le centre auto : une prestation peut alors n'être faite qu'à l'un des deux. */
   lieuxMixtes?: boolean
@@ -704,8 +704,8 @@ export default function PrestationsV2({
                   <p className={`text-[15.5px] ${nom}`}>Silhouette en couleur</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {couleur
-                      ? 'La silhouette du véhicule prend la couleur de votre page de réservation.'
-                      : 'La silhouette du véhicule est grisée.'}
+                      ? 'Le véhicule choisi apparaît dans ses vraies couleurs (moto, camion et camping-car restent grisés).'
+                      : 'Le véhicule choisi apparaît en gris.'}
                   </p>
                 </div>
                 <Interrupteur

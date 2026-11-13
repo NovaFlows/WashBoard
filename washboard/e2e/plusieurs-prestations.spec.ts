@@ -173,19 +173,21 @@ test.describe('plusieurs prestations — page personnalisée', () => {
 })
 
 test.describe('silhouette du véhicule : grisée ou en couleur', () => {
-  test('grisée par défaut, sans teinte', async ({ page }) => {
+  test('grisée par défaut : l’image grise du véhicule', async ({ page }) => {
     await ouvrir(page, '/dev/booking-preview')
     await page.getByLabel('Type de véhicule').getByRole('button', { name: 'Citadine', exact: true }).click()
     await expect(page.locator('.wb-sv')).toBeVisible()
-    await expect(page.locator('.wb-sv-teinte')).toHaveCount(0)
+    await expect(page.locator('.wb-sv-dessin').first()).toHaveAttribute('src', /\/silhouettes\/citadine\.webp/)
   })
 
-  test('en couleur : la teinte de la page recouvre la voiture', async ({ page }, testInfo) => {
+  test('en couleur : la voiture dans ses couleurs d’origine', async ({ page }, testInfo) => {
     await ouvrir(page, '/dev/booking-preview?teinte=1')
     await page.getByLabel('Type de véhicule').getByRole('button', { name: 'Citadine', exact: true }).click()
     await expect(page.locator('.wb-sv')).toBeVisible()
-    await expect(page.locator('.wb-sv-teinte').first()).toBeAttached()
-    await page.waitForTimeout(2200)
+    await expect(page.locator('.wb-sv-dessin').first()).toHaveAttribute('src', /\/silhouettes\/couleur\/citadine\.webp/)
+    // L'animation ne démarre qu'une fois la voiture à l'écran.
+    await page.locator('.wb-sv').scrollIntoViewIfNeeded()
+    await page.waitForTimeout(2600)
     await page.locator('.wb-sv').screenshot({ path: testInfo.outputPath('silhouette-couleur.png') })
   })
 
@@ -194,6 +196,6 @@ test.describe('silhouette du véhicule : grisée ou en couleur', () => {
     await page.goto('/dev/booking-preview?mode=custom&teinte=1')
     await page.getByRole('button', { name: /^Extérieur/ }).click()
     await page.locator('[data-testid="vehicle-increment"][data-vehicle-type="citadine"]').click()
-    await expect(page.locator('.wb-sv-teinte').first()).toBeAttached()
+    await expect(page.locator('.wb-sv-dessin').first()).toHaveAttribute('src', /\/silhouettes\/couleur\/citadine\.webp/)
   })
 })

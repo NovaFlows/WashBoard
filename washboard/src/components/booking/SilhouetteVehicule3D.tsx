@@ -58,21 +58,19 @@ export function ApparitionVehicule({ children }: { children: React.ReactNode }) 
   )
 }
 
-function Face({ image, masque, cote, reflet, dos, couleur }: { image: string; masque: CSSProperties; cote: React.Ref<HTMLDivElement>; reflet: React.Ref<HTMLDivElement>; dos?: boolean; couleur?: string | null }) {
+function Face({ image, masque, cote, reflet, dos }: { image: string; masque: CSSProperties; cote: React.Ref<HTMLDivElement>; reflet: React.Ref<HTMLDivElement>; dos?: boolean }) {
   return (
     <div ref={cote} className="wb-sv-face" style={{ transform: `translateZ(${dos ? -EPAISSEUR / 2 : EPAISSEUR / 2}px)`, visibility: dos ? 'hidden' : 'visible' }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- image statique, mise en couches 3D */}
-      <img src={image} alt="" draggable={false} className="wb-sv-dessin" />
-      {/* En couleur (réglage du laveur) : la teinte de la page, découpée à la forme de la voiture, qui garde ses ombres. */}
-      {couleur && <div className="wb-sv-teinte" style={{ ...masque, background: couleur }} />}
+      <img src={image} alt="" draggable={false} className="wb-sv-dessin" data-couleur={image.includes('/couleur/') ? 'oui' : undefined} />
       <div ref={reflet} className="wb-sv-reflet" style={masque} />
     </div>
   )
 }
 
-/** `couleur` : teinte (hex) de la silhouette ; absente ou vide, elle reste grisée (par défaut). */
-export default function SilhouetteVehicule3D({ type, nom, couleur = null }: { type: string | null; nom?: string | null; couleur?: string | null }) {
-  const image = silhouettePour(type, nom)
+/** `couleur` : la voiture dans ses couleurs d'origine (réglage du laveur) ; sinon grisée, par défaut. */
+export default function SilhouetteVehicule3D({ type, nom, couleur = false }: { type: string | null; nom?: string | null; couleur?: boolean }) {
+  const image = silhouettePour(type, nom, couleur)
   const scene = useRef<HTMLDivElement>(null)
   const objet = useRef<HTMLDivElement>(null)
   const ombre = useRef<HTMLDivElement>(null)
@@ -173,10 +171,10 @@ export default function SilhouetteVehicule3D({ type, nom, couleur = null }: { ty
         <div ref={objet} className="wb-sv-objet" data-cache="oui" aria-hidden>
           {tranche.map((z, i) => (
             // eslint-disable-next-line @next/next/no-img-element -- image statique, mise en couches 3D
-            <img key={i} src={image} alt="" draggable={false} className="wb-sv-couche" style={{ transform: `translateZ(${z.toFixed(2)}px)` }} data-couleur={couleur ? 'oui' : undefined} />
+            <img key={i} src={image} alt="" draggable={false} className="wb-sv-couche" style={{ transform: `translateZ(${z.toFixed(2)}px)` }} data-couleur={image.includes('/couleur/') ? 'oui' : undefined} />
           ))}
-          <Face image={image} masque={masque} cote={faceAvant} reflet={refletAvant} couleur={couleur} />
-          <Face image={image} masque={masque} cote={faceArriere} reflet={refletArriere} dos couleur={couleur} />
+          <Face image={image} masque={masque} cote={faceAvant} reflet={refletAvant} />
+          <Face image={image} masque={masque} cote={faceArriere} reflet={refletArriere} dos />
         </div>
       </div>
       {nom && <p className="wb-sv-nom" data-visible={nomVisible ? 'oui' : 'non'}>{nom}</p>}

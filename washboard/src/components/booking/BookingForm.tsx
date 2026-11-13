@@ -99,7 +99,7 @@ export type WasherPublic = {
   reservation_jour_meme?: boolean
   /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
   silhouettes_vehicules?: boolean
-  /** La silhouette du véhicule prend la couleur de la page (sinon grisée). */
+  /** Le véhicule choisi apparaît dans ses vraies couleurs (sinon grisé). */
   silhouettes_couleur?: boolean
   /** Le client peut cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
   plusieurs_prestations?: boolean
@@ -343,7 +343,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
           >
             <StepPrestation services={services} categories={categories} category={categorie} onCategory={setCategorie} form={form} onChange={updatePrestation} promotion={promotion}
               vehicule3D={washer.silhouettes_vehicules !== false} auCentre={estAuCentre(washer.centre_auto, form.lieu)}
-              plusieurs={washer.plusieurs_prestations === true} couleurSilhouette={washer.silhouettes_couleur ? accent : null} />
+              plusieurs={washer.plusieurs_prestations === true} couleurSilhouette={washer.silhouettes_couleur === true} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
               {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}

@@ -20,28 +20,16 @@
 /* La tranche : la voiture un peu plus grise, empilée dans l'épaisseur. */
 .wb-sv-couche { position: absolute; inset: 0; width: 100%; height: 100%; filter: brightness(.9); user-select: none; }
 .dark .wb-sv-couche { filter: brightness(.13); }
-/* En couleur : la tranche aussi s'assombrit un peu, la face avant porte la teinte. */
+/* En couleur (vraies couleurs de la photo) : la tranche est un peu plus sombre, et la voiture
+   n'est pas éteinte en mode sombre comme le fantôme gris. */
 .wb-sv-couche[data-couleur="oui"] { filter: brightness(.7); }
-.dark .wb-sv-couche[data-couleur="oui"] { filter: brightness(.2); }
+.dark .wb-sv-couche[data-couleur="oui"] { filter: brightness(.45); }
+.dark .wb-sv-dessin[data-couleur="oui"] { filter: brightness(.92); }
 
 /* Les deux faces : une seule est visible à la fois, choisie par le script selon l'angle. */
 .wb-sv-face { position: absolute; inset: 0; }
 .wb-sv-dessin { display: block; width: 100%; height: 100%; user-select: none; }
 .dark .wb-sv-dessin { filter: brightness(.2); }
-/* La teinte du laveur : un aplat de sa couleur, découpé à la forme de la voiture, multiplié sur le
-   fantôme gris pour garder les ombres. Masque posé en ligne (même image que la face). */
-.wb-sv-teinte {
-  position: absolute;
-  inset: 0;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  opacity: .85;
-}
-.dark .wb-sv-teinte { mix-blend-mode: normal; opacity: .55; }
 .wb-sv-reflet {
   position: absolute;
   inset: 0;

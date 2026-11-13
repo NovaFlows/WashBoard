@@ -23,8 +23,14 @@ export const TYPES_AVEC_SILHOUETTE = [
 ] as const
 type TypeAvecImage = (typeof TYPES_AVEC_SILHOUETTE)[number]
 
+/** Types dont on a la photo d'origine : en couleur, ils prennent leurs vraies couleurs
+ *  (public/silhouettes/couleur/, scripts/silhouettes/decoupe.py --couleur, photos d'Alexandre du
+ *  2026-11-13). Les autres (moto, camion, camping-car) restent grisés même en couleur. */
+export const TYPES_AVEC_COULEUR = ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire'] as const
+
 /** À changer quand les fichiers changent : les navigateurs gardent les anciens en cache. */
 const VERSION = '2026-10-19b'
+const VERSION_COULEUR = '2026-11-13'
 
 /** « Van / Utilitaire » → « van utilitaire » : minuscules, sans accents ni ponctuation. */
 const normaliser = (nom: string) =>
@@ -47,11 +53,15 @@ const PAR_NOM = new Map<string, TypeAvecImage>([
   ['fourgon amenage', 'camping-car'], ['van amenage', 'camping-car'], ['campervan', 'camping-car'],
 ])
 
-/** L'image du véhicule d'un type, reconnu à son identifiant ou à son nom, ou `null`. */
-export function silhouettePour(type: string | null | undefined, nom?: string | null): string | null {
+/** L'image du véhicule d'un type, reconnu à son identifiant ou à son nom, ou `null`.
+ *  `couleur` : la voiture dans ses couleurs d'origine, quand on en a la photo (sinon le gris). */
+export function silhouettePour(type: string | null | undefined, nom?: string | null, couleur = false): string | null {
   const connu = type && (TYPES_AVEC_SILHOUETTE as readonly string[]).includes(type)
     ? type
     : nom ? PAR_NOM.get(normaliser(nom)) : undefined
   if (!connu) return null
+  if (couleur && (TYPES_AVEC_COULEUR as readonly string[]).includes(connu)) {
+    return `/silhouettes/couleur/${encodeURIComponent(connu)}.webp?v=${VERSION_COULEUR}`
+  }
   return `/silhouettes/${encodeURIComponent(connu)}.webp?v=${VERSION}`
 }

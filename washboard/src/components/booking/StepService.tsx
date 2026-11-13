@@ -31,8 +31,8 @@ type Props = {
   auCentre?: boolean
   /** Le laveur laisse cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
   plusieurs?: boolean
-  /** Couleur de la silhouette du véhicule ; `null` = grisée (par défaut). */
-  couleurSilhouette?: string | null
+  /** Le véhicule choisi apparaît dans ses couleurs d'origine ; sinon grisé (par défaut). */
+  couleurSilhouette?: boolean
 }
 
 // Images pour les types « voiture » historiques (résolus par id de type).
@@ -49,7 +49,7 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = null }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = false }: Props) {
   const [isPro,     setIsPro]     = useState(false)
   // Les prestations cochées : la première est celle de la réservation (une seule hors option « plusieurs »).
   const [serviceIds, setServiceIds] = useState<string[]>(() => selected.service_id ? [selected.service_id] : [])
@@ -60,7 +60,7 @@ export default function StepService({ services, categories, selected, factureApr
   const [models,    setModels]    = useState<Record<string, string[]>>({})
   // Le dernier véhicule ajouté au panier : son image 3D s'anime (2026-10-18).
   const [dernier,   setDernier]   = useState<string | null>(null)
-  const imagesProposees = !vehicule3D ? '' : [...new Set(services.flatMap(sv => sv.vehicle_types.map(t => silhouettePour(t, typeInfo(sv, t).name)))
+  const imagesProposees = !vehicule3D ? '' : [...new Set(services.flatMap(sv => sv.vehicle_types.map(t => silhouettePour(t, typeInfo(sv, t).name, couleurSilhouette)))
     .filter((u): u is string => !!u))].join('|')
   useEffect(() => { if (imagesProposees) prechargerSilhouettes(imagesProposees.split('|')) }, [imagesProposees])
 
@@ -358,7 +358,7 @@ export default function StepService({ services, categories, selected, factureApr
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">{sansChoixDeType(typesDispo)
             ? 'Indiquez le nombre de véhicules.'
             : 'Ajoutez un ou plusieurs éléments, de types différents si besoin.'}</p>
-          {vehicule3D && typesDispo.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
+          {vehicule3D && typesDispo.some(t => silhouettePour(t, typeInfo(selectedService, t).name, couleurSilhouette)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
             return affiche && (

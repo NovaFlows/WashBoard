@@ -23,7 +23,7 @@ function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
   )
 }
 
-export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = null }: {
+export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = false }: {
   services: Service[]
   categories: ServiceCategory[]
   /** Catégorie affichée — tenue par BookingForm, dont le « À partir de » en dépend. */
@@ -40,8 +40,8 @@ export default function StepPrestation({ services, categories, category, onCateg
   auCentre?: boolean
   /** Le laveur laisse cumuler plusieurs prestations (lib/plusieursPrestations.ts) : cases à cocher au lieu d'un choix unique. */
   plusieurs?: boolean
-  /** Couleur de la silhouette du véhicule ; `null` = grisée (par défaut). */
-  couleurSilhouette?: string | null
+  /** Le véhicule choisi apparaît dans ses couleurs d'origine ; sinon grisé (par défaut). */
+  couleurSilhouette?: boolean
 }) {
   const catalogue = services.filter(s => s.category_id === category)
   const types = [...new Set(catalogue.flatMap(s => s.vehicle_types))]
@@ -62,7 +62,7 @@ export default function StepPrestation({ services, categories, category, onCateg
   // La voiture affichée : le dernier type touché, sinon le dernier de la liste (types mélangés).
   const typeAffiche = dernier && activeTypes.includes(dernier) ? dernier : activeTypes[activeTypes.length - 1] ?? null
   // Un type a son image s'il est reconnu à son identifiant ou à son nom (lib/silhouettesVehicules).
-  const images = vehicule3D ? types.map(t => silhouettePour(t, label(t))).filter((u): u is string => !!u) : []
+  const images = vehicule3D ? types.map(t => silhouettePour(t, label(t), couleurSilhouette)).filter((u): u is string => !!u) : []
   const avecSilhouettes = images.length > 0
   // Les images des véhicules proposés se chargent en fond : le premier clic n'attend pas.
   const imagesCle = [...new Set(images)].join('|')

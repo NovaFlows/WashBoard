@@ -29,6 +29,10 @@ os.makedirs(APERCU, exist_ok=True)
 
 LARGEUR, HAUTEUR, SOL = 1040, 420, 390
 COULEUR = '--couleur' in sys.argv
+# Les voitures en couleur sortent dans public/silhouettes/couleur/ : les gris ne sont jamais écrasés.
+if COULEUR:
+    SORTIE = os.path.join(SORTIE, 'couleur')
+    os.makedirs(SORTIE, exist_ok=True)
 TYPES = [t for t in sys.argv[1:] if not t.startswith('--')]
 
 # photo → (type, réglages). Par défaut : photo de studio sur fond blanc, trous bouchés (vitres).
@@ -37,6 +41,7 @@ TYPES = [t for t in sys.argv[1:] if not t.startswith('--')]
 #   sol=y         la ligne du sol à la main, quand les roues ne se trouvent pas toutes seules
 #   rayon_min=r   roues plus petites que 6 % de la largeur de la photo (camion à grande caisse)
 #   sol='bas'     le sol au point le plus bas de la découpe (le bas des pneus)
+#   miroir=True   l'avant de la voiture regarde à gauche : on retourne la photo (avant à droite)
 #   pente=deg     redresse une photo prise un peu de biais (roues pas à la même hauteur)
 PHOTOS = {
     '26.jpg': ('citadine', {}),
@@ -52,6 +57,16 @@ PHOTOS = {
     '30.png': ('camion', {'fond_blanc': False, 'sol': 267}),
     # Ajouté le 2026-10-19 : camping-car photographié dehors, roue avant 19 px plus haute.
     '34.png': ('camping-car', {'fond_blanc': False, 'pente': -1.85, 'sol': 'bas'}),
+    # Photos d'origine fournies par Alexandre (2026-11-13, photos-silhouettes-vehicules.zip) pour la
+    # version en couleur. Pas de photo d'origine pour la moto, le camion ni le camping-car : ils
+    # restent gris, même en couleur.
+    '1-citadine-MG3.png': ('citadine', {}),
+    '2-SUV-4x4-Lexus.png': ('SUV', {'miroir': True}),
+    '3-7-places-Dacia-Jogger.png': ('7places', {'fond_blanc': False}),
+    '4-berline-Audi-A8.png': ('berline', {}),
+    '5-monospace-Grand-Scenic.png': ('monospace', {'miroir': True, 'sol': 279}),
+    '6-citadine-2-places-Aygo-X.png': ('citadine_2p', {'miroir': True}),
+    '7-van-utilitaire-Transit-Custom.png': ('utilitaire', {}),
 }
 
 
@@ -103,6 +118,8 @@ def fantome(gris):
 
 def traiter(fichier, nom, reglages, session):
     im = Image.open(os.path.join(IMAGES, fichier)).convert('RGB')
+    if reglages.get('miroir'):
+        im = im.transpose(Image.FLIP_LEFT_RIGHT)  # photo dont l'avant regarde à gauche
     if 'pente' in reglages:
         im = im.rotate(reglages['pente'], resample=Image.BICUBIC, fillcolor=(255, 255, 255))
     rgb = np.array(im).astype(np.float32)
@@ -156,12 +173,14 @@ def traiter(fichier, nom, reglages, session):
     cadre.alpha_composite(out, ((LARGEUR - out.width) // 2, SOL - out.height))
     chemin = os.path.join(SORTIE, f'{nom}.webp')
     cadre.save(chemin, 'WEBP', quality=84, alpha_quality=90, method=6)
-    cadre.save(os.path.join(APERCU, f'{nom}.png'))
+    cadre.save(os.path.join(APERCU, f'{nom}{"-couleur" if COULEUR else ""}.png'))
     print(nom, out.size, f'{os.path.getsize(chemin) / 1024:.0f} Ko')
 
 
 session = new_session('isnet-general-use')
 for fichier, (nom, reglages) in PHOTOS.items():
     if TYPES and nom not in TYPES:
+        continue
+    if not os.path.exists(os.path.join(IMAGES, fichier)):
         continue
     traiter(fichier, nom, reglages, session)
