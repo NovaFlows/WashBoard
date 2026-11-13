@@ -46,4 +46,23 @@ describe('détail d’un rendez-vous', () => {
     expect(detailUtile(lignesDetailPrix(seule))).toBe(false)
     expect(detailUtile(lignesDetailPrix(b))).toBe(true)
   })
+
+  it('réservation réelle enregistrée par le site : Lavage extérieur + Lavage complet, Sable, déplacement', () => {
+    const reelle = {
+      services: { name: 'Lavage extérieur' },
+      vehicles_detail: [{ type: 'citadine_2p', count: 1, unit_price: 40, label: 'Citadine 2p', models: ['208'], addons: [
+        { id: '24b4bcc2-878b-42fb-b153-5329692173e7', label: 'Sable', price: 15, category: 'Suppléments intérieur' },
+        { id: 'prestation:c033fac6-4dc3-4c7d-8cae-fd8876468bf3', label: 'Lavage complet', price: 65, category: 'prestation', duration_minutes: 90 },
+      ] }],
+      selected_addons: [
+        { id: '24b4bcc2-878b-42fb-b153-5329692173e7', label: 'Sable', price: 15, category: 'Suppléments intérieur' },
+        { id: 'prestation:c033fac6-4dc3-4c7d-8cae-fd8876468bf3', label: 'Lavage complet', price: 65, category: 'prestation', duration_minutes: 90 },
+      ],
+      travel_fee: 15,
+    }
+    expect(nomsPrestations(reelle).join(' + ')).toBe('Lavage extérieur + Lavage complet')
+    expect(lignesDetailPrix(reelle).map(l => [l.libelle, l.montant])).toEqual([
+      ['Lavage extérieur', 40], ['Lavage complet', 65], ['Sable', 15], ['Frais de déplacement', 15],
+    ])
+  })
 })

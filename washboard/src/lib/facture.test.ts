@@ -126,6 +126,14 @@ describe('lignesFacture', () => {
     ])
   })
 
+  it('une prestation ajoutée est facturée comme une prestation, pas comme une option', () => {
+    const lignes = lignesFacture(reservation({
+      selected_addons: [{ id: 'prestation:p2', label: 'Jantes', price: 15 }],
+    }))
+    expect(lignes.map(l => l.designation)).toContain('Jantes')
+    expect(lignes.map(l => l.designation)).not.toContain('Option : Jantes')
+  })
+
   it('sans détail par véhicule, déduit le prix unitaire du total', () => {
     const lignes = lignesFacture(reservation({ vehicles_detail: null, selected_addons: [], travel_fee: 0, booked_price: 90 }))
     expect(lignes).toEqual([{ designation: 'Lavage complet', quantite: 2, prixUnitaireTtc: 45, totalTtc: 90 }])

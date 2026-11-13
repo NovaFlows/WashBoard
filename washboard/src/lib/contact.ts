@@ -1,5 +1,7 @@
 import { formatHeure } from '@/lib/dateUtils'
 import { whatsappDigits } from '@/lib/phone'
+import { nomsPrestations } from '@/lib/detailRendezVous'
+import type { ServiceAddon, VehicleItem } from '@/types'
 type ContactBooking = {
   client_name: string
   client_email: string
@@ -7,14 +9,18 @@ type ContactBooking = {
   address: string
   scheduled_at: string
   services: { name: string } | null
+  /** Plusieurs prestations : elles sont toutes nommées (lib/detailRendezVous.ts). */
+  vehicles_detail?: VehicleItem[] | null
+  selected_addons?: ServiceAddon[] | null
 }
 
 export function openGmail(b: ContactBooking): void {
   const date    = new Date(b.scheduled_at)
   const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const timeStr = formatHeure(date)
-  const subject = `Votre réservation — ${b.services?.name ?? 'Lavage'} du ${date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-  const body    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, '', ''].join('\n')
+  const prestations = nomsPrestations(b).join(' + ')
+  const subject = `Votre réservation — ${prestations || 'Lavage'} du ${date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+  const body    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${prestations || '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, '', ''].join('\n')
   const url = new URL('https://mail.google.com/mail/')
   url.searchParams.set('view', 'cm')
   url.searchParams.set('to', b.client_email)
@@ -28,7 +34,8 @@ export function openWhatsapp(b: ContactBooking): void {
   const date    = new Date(b.scheduled_at)
   const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const timeStr = formatHeure(date)
-  const text    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${b.services?.name ?? '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, ''].join('\n')
+  const prestations = nomsPrestations(b).join(' + ')
+  const text    = [`Bonjour ${b.client_name},`, '', 'Je vous contacte au sujet de votre réservation :', `• Prestation : ${prestations || '—'}`, `• Date : ${dateStr} à ${timeStr}`, `• Adresse : ${b.address}`, ''].join('\n')
   const phone = whatsappDigits(b.client_phone)
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
 }

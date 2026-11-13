@@ -130,6 +130,7 @@ beforeEach(() => {
   notifierLaveur.mockClear()
   sendWasherNotification.mockClear()
   sendWasherBookingLocked.mockClear()
+  sendBookingRequest.mockClear()
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-09-09T09:00:00Z'))
   plan = {
@@ -1093,6 +1094,14 @@ describe('POST /api/bookings — plusieurs prestations', () => {
     expect(reserv.booked_price).toBe(60 + 55) // le prix « truqué » du navigateur est ignoré
     const detail = reserv.vehicles_detail as { addons: { label: string; price: number; duration_minutes: number }[] }[]
     expect(detail[0].addons[0]).toMatchObject({ label: 'Jantes', price: 55, duration_minutes: 30 })
+  })
+
+  it('nomme toutes les prestations dans l’e-mail du client et la notification du laveur', async () => {
+    const { res } = await poster({ vehicles_detail: [vehicule('SUV')] })
+    expect(res.status).toBe(201)
+    expect(sendBookingRequest).toHaveBeenCalledWith(expect.objectContaining({ serviceName: 'Lavage complet + Jantes' }))
+    expect(sendWasherNotification).toHaveBeenCalledWith(expect.objectContaining({ serviceName: 'Lavage complet + Jantes' }))
+    expect(JSON.stringify(notifierLaveur.mock.calls)).toContain('✨ Lavage complet + Jantes')
   })
 
   it('refuse quand le laveur n’a pas allumé le réglage', async () => {

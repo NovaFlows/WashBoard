@@ -17,6 +17,7 @@ import { centreAutoPublic, centresDe, centreRestreint, centreParAdresse, identif
 import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
 import { lireBlocages } from '@/lib/blocagesServeur'
 import { heureAutorisee, heuresDebutValides } from '@/lib/heuresPrestation'
+import { nomsPrestations } from '@/lib/detailRendezVous'
 import { estPrestationSupplementaire, idsPrestationsSupplementaires, limitesCombinees, normaliserPrestationsSupplementaires, type PrestationCatalogue } from '@/lib/plusieursPrestations'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
@@ -842,6 +843,8 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Réservation des tests de bout en bout (`[E2E]` sur un serveur de test, lib/e2e.ts) :
   // ni email ni notification — le compte de test est celui de l'équipe.
   if (washer && service && !estReservationDeTest(bookingData.client_name)) {
+    // Plusieurs prestations : toutes nommées, « Lavage extérieur + Lavage complet » (e-mails, notification).
+    const nomPrestations = nomsPrestations({ services: service, vehicles_detail, selected_addons }).join(' + ')
     const emailJobs: Promise<unknown>[] = []
     // Pas d'adresse (rendez-vous pris par téléphone) : rien à envoyer au client.
     if (bookingData.client_email) emailJobs.push(
@@ -849,7 +852,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         to: bookingData.client_email,
         clientName: bookingData.client_name,
         washerName: washer.name,
-        serviceName: service.name,
+        serviceName: nomPrestations,
         servicePrice: booked_price,
         isSmartSlot: is_smart_slot,
         smartDiscount: smart_discount,
@@ -890,7 +893,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           clientName: bookingData.client_name,
           clientEmail: bookingData.client_email,
           clientPhone: bookingData.client_phone,
-          serviceName: service.name,
+          serviceName: nomPrestations,
           vehicleType: vehicle_type ?? undefined,
           vehicleCount: vehicle_count ?? undefined,
           vehiclesDetail: vehicles_detail ?? undefined,
@@ -940,7 +943,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           // lignes du corps. C'est le prix réellement encaissé — options,
           // véhicules et frais de déplacement compris (`booked_price` est
           // calculé par le serveur), moins la remise d'un créneau groupé.
-          `✨ ${service.name} · ${formatPrice(finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0))}`,
+          `✨ ${nomPrestations} · ${formatPrice(finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0))}`,
           `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
         ].join('\n'),
         // Directement SUR la fiche, pas sur le mois en cours : le laveur qui

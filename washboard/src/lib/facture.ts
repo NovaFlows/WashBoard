@@ -1,5 +1,6 @@
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { estPrestationSupplementaire } from '@/lib/plusieursPrestations'
 
 /** Factures des laveurs à leurs clients.
  *
@@ -240,7 +241,7 @@ export type ReservationFacturable = {
   vehicle_count: number | null
   travel_fee: number | null
   vehicles_detail: { type: string; count: number; unit_price: number; label?: string }[] | null
-  selected_addons: { label?: string; price?: number }[] | null
+  selected_addons: { id?: string; label?: string; price?: number }[] | null
   services: { name: string } | null
 }
 
@@ -273,7 +274,8 @@ export function lignesFacture(r: ReservationFacturable): LigneFacture[] {
 
   const options = (r.selected_addons ?? [])
     .filter(a => Number(a.price) > 0)
-    .map(a => ligne(`Option : ${a.label ?? 'supplément'}`, 1, Number(a.price)))
+    // Une prestation ajoutée (lib/plusieursPrestations.ts) est une prestation, pas une option.
+    .map(a => ligne(estPrestationSupplementaire(a) ? String(a.label ?? 'Prestation') : `Option : ${a.label ?? 'supplément'}`, 1, Number(a.price)))
   const deplacement = Number(r.travel_fee ?? 0) > 0
     ? [ligne('Frais de déplacement', 1, Number(r.travel_fee))]
     : []
