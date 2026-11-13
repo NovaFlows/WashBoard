@@ -1,6 +1,6 @@
 import { isValidPhone, normalizePhone } from '@/lib/phone'
 import {
-  arrondi, nomLegalAffiche, normaliserNumeroTva, normaliserSiret, totauxFacture,
+  arrondi, nomLegalAffiche, normaliserNumeroTva, normaliserSiret, paysFacturation, tauxTvaNormal, totauxFacture,
   type FactureContenu, type LigneFacture, type RegimeTva, type StatutJuridique,
   type VendeurFacturable,
 } from '@/lib/facture'
@@ -359,7 +359,7 @@ export function construireDocument(saisie: SaisieDocument, v: VendeurFacturable)
   const brut = totalLignes(lignes)
   const remiseTtc = arrondi(Math.min(Math.max(0, saisie.remiseTtc), brut))
   const regime: RegimeTva = v.facture_regime_tva === 'assujetti' ? 'assujetti' : 'franchise'
-  const taux = regime === 'assujetti' ? Number(v.facture_taux_tva ?? 20) : 0
+  const taux = regime === 'assujetti' ? Number(v.facture_taux_tva ?? tauxTvaNormal(paysFacturation(v))) : 0
   const statut: StatutJuridique = v.facture_statut === 'societe' ? 'societe' : 'ei'
   const societe = statut === 'societe'
   const pro = saisie.professionnel

@@ -6,22 +6,32 @@
 // pourrait ouvrir trois comptes d'essai avec le même téléphone. On stocke donc
 // toujours la même forme : 10 chiffres commençant par 0.
 
-export type PaysTelephone = 'FR' | 'BE'
+export type PaysTelephone = 'FR' | 'BE' | 'CH'
 
 // Ouverture à la Belgique (2026-11-11). Un numéro français reste stocké en 10 chiffres (06…) ;
 // un numéro belge est stocké en forme internationale (+32470123456) : c'est la seule façon de ne
 // pas confondre un 0470… belge avec un fixe français (04 70 …). Un Belge qui tape son numéro à la
 // belge (0470 12 34 56) n'est reconnu comme tel que là où l'on sait qu'on est en Belgique
 // (inscription, page d'un laveur belge) : voir `pays`.
+//
+// Ouverture à la Suisse (2026-11-13), même principe : un numéro suisse est stocké en +41…
+// (+41791234567). Un mobile suisse saisi à la suisse (079 123 45 67) ressemble à s'y méprendre à
+// un 07 français : il n'est donc lu comme suisse que là où l'on sait qu'on est en Suisse (page
+// d'un laveur suisse). À l'inscription, où l'on ne sait rien, un Suisse écrit son numéro avec +41.
 
 /** Un numéro belge en forme internationale : +32 puis 8 ou 9 chiffres. */
 const BELGE = /^\+32[1-9]\d{7,8}$/
 /** Un mobile belge : +32 4 suivi de 5-9 puis 7 chiffres (0456, 046x, 047x, 048x, 049x). */
 const MOBILE_BELGE = /^\+324[5-9]\d{7}$/
+/** Un numéro suisse en forme internationale : +41 puis 9 chiffres (indicatif régional ou mobile compris). */
+const SUISSE = /^\+41[1-9]\d{8}$/
+/** Un mobile suisse : +41 7 suivi de 5 à 9, puis 7 chiffres (075, 076, 077, 078, 079). */
+const MOBILE_SUISSE = /^\+417[5-9]\d{7}$/
 
-/** Forme canonique d'un numéro : 10 chiffres pour un numéro français, +32… pour un numéro belge.
- *  Renvoie `null` si l'entrée n'est pas exploitable — l'appelant décide quoi en faire, on ne
- *  devine pas. `pays` ('BE') permet de lire un numéro belge saisi à la belge (0470 12 34 56). */
+/** Forme canonique d'un numéro : 10 chiffres pour un numéro français, +32… pour un numéro belge,
+ *  +41… pour un numéro suisse. Renvoie `null` si l'entrée n'est pas exploitable — l'appelant décide
+ *  quoi en faire, on ne devine pas. `pays` ('BE', 'CH') permet de lire un numéro saisi à la
+ *  belge (0470 12 34 56) ou à la suisse (079 123 45 67). */
 export function normalizePhone(brut: string | null | undefined, pays: PaysTelephone = 'FR'): string | null {
   if (!brut) return null
 
@@ -34,6 +44,13 @@ export function normalizePhone(brut: string | null | undefined, pays: PaysTeleph
   if (intl) return BELGE.test(intl) ? intl : null
   // Saisie à la belge, seulement quand on sait qu'on est en Belgique : 0470 12 34 56, 02 123 45 67.
   if (pays === 'BE' && /^0[1-9]\d{7,8}$/.test(n)) return '+32' + n.slice(1)
+
+  // Suisse : forme internationale (+41, 0041) — jamais ambiguë. Le « 41 » collé n'est PAS lu
+  // comme suisse : 41 est aussi un début de numéro français (04 1…) une fois le 0 tombé.
+  const intlCh = n.startsWith('+41') ? n : n.startsWith('0041') ? '+' + n.slice(2) : null
+  if (intlCh) return SUISSE.test(intlCh) ? intlCh : null
+  // Saisie à la suisse, seulement quand on sait qu'on est en Suisse : 079 123 45 67, 022 123 45 67.
+  if (pays === 'CH' && /^0[1-9]\d{8}$/.test(n)) return '+41' + n.slice(1)
 
   if (n.startsWith('+33')) n = '0' + n.slice(3)
   else if (n.startsWith('0033')) n = '0' + n.slice(4)
@@ -62,24 +79,30 @@ export function whatsappDigits(brut: string): string {
   return chiffres.startsWith('0') ? '33' + chiffres.slice(1) : chiffres
 }
 
-/** Est-ce un mobile (06 ou 07 en France, 04xx en Belgique) ? Utile quand un SMS doit pouvoir
- *  arriver — un fixe accepterait la saisie mais ne recevrait jamais le message. */
+/** Est-ce un mobile (06 ou 07 en France, 04xx en Belgique, 07x en Suisse) ? Utile quand un SMS doit
+ *  pouvoir arriver — un fixe accepterait la saisie mais ne recevrait jamais le message. */
 export function isMobilePhone(brut: string | null | undefined, pays: PaysTelephone = 'FR'): boolean {
   const n = normalizePhone(brut, pays)
-  return n !== null && (/^0[67]/.test(n) || MOBILE_BELGE.test(n))
+  return n !== null && (/^0[67]/.test(n) || MOBILE_BELGE.test(n) || MOBILE_SUISSE.test(n))
 }
 
-/** Le pays d'un numéro canonique : « +32… » est belge, le reste français. */
+/** Le pays d'un numéro canonique : « +32… » est belge, « +41… » suisse, le reste français. */
 export function paysDuTelephone(brut: string | null | undefined): PaysTelephone {
-  return String(brut ?? '').trim().replace(/[\s.\-()]/g, '').match(/^(\+32|0032)/) ? 'BE' : 'FR'
+  const n = String(brut ?? '').trim().replace(/[\s.\-()]/g, '')
+  if (/^(\+32|0032)/.test(n)) return 'BE'
+  if (/^(\+41|0041)/.test(n)) return 'CH'
+  return 'FR'
 }
 
-/** Mobile à qui envoyer un code par SMS : français (06, 07) ou belge (04xx). Renvoie la forme
- *  canonique (10 chiffres, ou +32…), ou `null`. Le numéro 04xx saisi à la belge est lu comme belge :
- *  à l'inscription, un fixe français (04 …) ne pourrait de toute façon pas recevoir de SMS. */
+/** Mobile à qui envoyer un code par SMS : français (06, 07), belge (04xx) ou suisse (+41 7x).
+ *  Renvoie la forme canonique (10 chiffres, +32… ou +41…), ou `null`. Le numéro 04xx saisi à la
+ *  belge est lu comme belge : à l'inscription, un fixe français (04 …) ne pourrait de toute façon
+ *  pas recevoir de SMS. Un mobile suisse, lui, doit être écrit avec +41 (ou 0041) : 079… serait
+ *  lu comme un 07 français. */
 export function normaliserMobile(brut: string | null | undefined): string | null {
   const fr = normalizePhone(brut)
   if (fr && /^0[67]\d{8}$/.test(fr)) return fr
+  if (fr && MOBILE_SUISSE.test(fr)) return fr
   const be = normalizePhone(brut, 'BE')
   return be && MOBILE_BELGE.test(be) ? be : null
 }
@@ -89,6 +112,11 @@ export function normaliserMobile(brut: string | null | undefined): string | null
 export function formatPhone(brut: string | null | undefined): string {
   const n = normalizePhone(brut)
   if (!n) return String(brut ?? '')
+  // Suisse : +41 79 123 45 67 (mobile ou fixe, indicatif sur deux chiffres).
+  if (n.startsWith('+41')) {
+    const reste = n.slice(3)
+    return `+41 ${reste.slice(0, 2)} ${reste.slice(2, 5)} ${reste.slice(5, 7)} ${reste.slice(7)}`
+  }
   // Belge : +32 470 12 34 56 (mobile) ou +32 2 123 45 67 (fixe).
   if (n.startsWith('+32')) {
     const reste = n.slice(3)

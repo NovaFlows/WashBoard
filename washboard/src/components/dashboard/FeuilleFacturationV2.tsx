@@ -5,7 +5,7 @@ import { Feuille, CHAMP, PRESSION, BOUTON, corps } from '@/components/dashboard/
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied, Puces } from '@/components/dashboard/ReglageAutomatismeV2'
 import { validerFacturation } from '@/lib/profil'
-import { paysFacturation, tauxTvaPour, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
+import { paysFacturation, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
 import type { ChampsProfil } from '@/lib/profilApi'
 
 // « Mon statut et mes factures » — feuille du bas de « Mon profil » (PWA). Ce sont les mentions
@@ -80,9 +80,9 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
   const [capital, setCapital] = useState(washer.facture_capital ?? '')
   const [immatriculation, setImmatriculation] = useState(washer.facture_immatriculation ?? '')
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
-  const [taux, setTaux] = useState<number>(washer.facture_taux_tva ?? 20)
+  const [taux, setTaux] = useState<number>(washer.facture_taux_tva ?? tauxTvaNormal(paysFacturation({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone })))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
-  // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6), plus celui déjà enregistré s'il est ailleurs.
+  // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6, Suisse 8,1/2,6/3,8), plus celui déjà enregistré s'il est ailleurs.
   const pays = paysFacturation({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })
   const tauxProposes = [...new Set([...tauxTvaPour(pays), ...(Number.isFinite(Number(taux)) && Number(taux) > 0 ? [Number(taux)] : [])])]
   const numeroActuel = washer.facture_prochain_numero ?? 1
@@ -122,7 +122,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
       facture_capital: societe ? capital : '',
       facture_immatriculation: societe ? immatriculation : '',
       facture_regime_tva: regime,
-      facture_taux_tva: pays === 'BE' && !tauxTvaPour('BE').includes(taux) ? 21 : taux,
+      facture_taux_tva: pays !== 'FR' && !tauxTvaPour(pays).includes(taux) ? tauxTvaNormal(pays) : taux,
       facture_numero_tva: assujetti ? numeroTva : '',
       // Envoyé seulement s'il a changé : le serveur refuse de revenir en arrière.
       ...(Number(prochainNumero) !== numeroActuel ? { facture_prochain_numero: Number(prochainNumero) } : {}),
@@ -169,10 +169,9 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
           </p>
         </Bloc>
 
-        <Bloc titre="SIRET ou n° BCE (Belgique)">
+        <Bloc titre="SIRET, n° BCE (Belgique) ou n° IDE (Suisse)">
           <input
             type="text"
-            inputMode="numeric"
             value={siret}
             onChange={e => { setSiret(e.target.value); setErreur(null) }}
             placeholder="123 456 789 00012"
@@ -234,12 +233,12 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
               />
             </Bloc>
 
-            <Bloc titre="Immatriculation (RCS en France, RPM en Belgique)">
+            <Bloc titre="Immatriculation (RCS en France, RPM en Belgique, RC en Suisse)">
               <input
                 type="text"
                 value={immatriculation}
                 onChange={e => setImmatriculation(e.target.value)}
-                placeholder="RCS Pontoise 123 456 789 ou RPM Bruxelles"
+                placeholder="RCS Pontoise 123 456 789, RPM Bruxelles ou RC Genève"
                 aria-label="Immatriculation"
                 className={CHAMP}
               />
@@ -275,7 +274,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
                   type="text"
                   value={numeroTva}
                   onChange={e => { setNumeroTva(e.target.value); setErreur(null) }}
-                  placeholder="FR12345678901"
+                  placeholder={pays === 'BE' ? 'BE0123456749' : pays === 'CH' ? 'CHE-109.322.551 TVA' : 'FR12345678901'}
                   aria-label="Numéro de TVA"
                   className={CHAMP}
                 />

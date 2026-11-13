@@ -31,8 +31,11 @@ const PLAFOND_24H = 30
  *  `normalizePhone`. Gardé sous ce nom : la Belgique s'est ajoutée le 2026-11-11, les autres pays
  *  restent refusés (fraude aux SMS surtaxés, voir plus haut). */
 export function estMobileFrancais(telephone: string | null | undefined): boolean {
-  return /^0[67]\d{8}$/.test(telephone ?? '') || /^\+324[5-9]\d{7}$/.test(telephone ?? '')
+  return /^0[67]\d{8}$/.test(telephone ?? '') || /^\+324[5-9]\d{7}$/.test(telephone ?? '') || /^\+417[5-9]\d{7}$/.test(telephone ?? '')
 }
+
+/** Ce qu'on dit à quelqu'un dont le numéro n'est pas un mobile accepté. */
+export const PHRASE_MOBILE_REQUIS = 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, +41 7x en Suisse) : le code arrive par SMS.'
 
 /** Numéro de TEST (2026-11-11) : pour essayer l'inscription avec un numéro qui n'existe pas (ex. un
  *  numéro belge fictif), sans envoyer de SMS. Deux variables d'environnement, toutes deux
@@ -51,6 +54,7 @@ export function codeDuNumeroTest(telephone: string, env: Record<string, string |
 /** « 06 •• •• •• 78 » : assez pour reconnaître son numéro, sans l'afficher. */
 export function telephoneMasque(telephone: string): string {
   if (telephone.startsWith('+32')) return `+32 ${telephone.slice(3, 4)}•• •• •• ${telephone.slice(-2)}`
+  if (telephone.startsWith('+41')) return `+41 ${telephone.slice(3, 5)} ••• •• ${telephone.slice(-2)}`
   return `${telephone.slice(0, 2)} •• •• •• ${telephone.slice(-2)}`
 }
 
@@ -163,7 +167,7 @@ export async function verifierCodeSms(
 export function phraseEnvoi(r: Exclude<EnvoiCode, { ok: true }>): string {
   switch (r.raison) {
     case 'attente': return `Un SMS vient de partir. Attends ${r.secondes} s avant d'en redemander un.`
-    case 'numero': return 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code arrive par SMS.'
+    case 'numero': return PHRASE_MOBILE_REQUIS
     case 'trop_d_envois': return 'Trop de codes demandés pour cette inscription. Recommence-la, ou écris-nous à contact@washboard.fr.'
     case 'plafond': return 'Trop d’inscriptions en ce moment. Réessaie dans quelques heures, ou écris-nous à contact@washboard.fr.'
     case 'panne': return 'Le SMS n’a pas pu partir. Réessaie dans un instant.'

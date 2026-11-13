@@ -52,8 +52,10 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   useEffect(() => { onCoordonnees?.(email, phone) }, [email, phone, onCoordonnees])
   const phoneError  = phoneTouched && !phoneValid
 
-  const siretDigits = siret.replace(/\D/g, '')
-  const siretValid  = [10, 14].includes(siretDigits.length)
+  // Numéro IDE suisse (CHE-123.456.789) : on garde « CHE » devant les 9 chiffres.
+  const estIde      = /^\s*CHE/i.test(siret)
+  const siretDigits = estIde ? `CHE${siret.replace(/\D/g, '')}` : siret.replace(/\D/g, '')
+  const siretValid  = estIde ? siretDigits.length === 12 : [10, 14].includes(siretDigits.length)
   const siretError  = siretTouched && !siretValid
 
   const proFieldsValid = !isProfessional || (companyName.trim().length >= 2 && siretValid)
@@ -108,14 +110,14 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           </div>
 
           <div>
-            <label className={labelClass}>Numéro SIRET <span className="text-red-500">*</span></label>
+            <label className={labelClass}>Numéro SIRET (ou BCE, IDE) <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={siret}
               onChange={e => setSiret(e.target.value)}
               onBlur={() => setSiretTouched(true)}
               placeholder="123 456 789 01234"
-              maxLength={17}
+              maxLength={18}
               className={`${inputClass} ${siretError ? 'border-red-400 dark:border-red-500 focus:ring-red-400' : ''}`}
               style={!siretError ? { '--tw-ring-color': accent } as React.CSSProperties : undefined}
             />
@@ -124,10 +126,12 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
                 </svg>
-                {siretDigits.length < 14 ? `Numéro incomplet (${siretDigits.length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)` : 'Numéro trop long — 14 chiffres attendus'}
+                {estIde
+                  ? 'Numéro IDE : CHE suivi de 9 chiffres (CHE-123.456.789)'
+                  : siretDigits.length < 14 ? `Numéro incomplet (${siretDigits.length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)` : 'Numéro trop long — 14 chiffres attendus'}
               </p>
             ) : (
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">14 chiffres sans espaces</p>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">14 chiffres sans espaces (Suisse : CHE-123.456.789)</p>
             )}
           </div>
 

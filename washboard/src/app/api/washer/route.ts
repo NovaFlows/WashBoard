@@ -340,7 +340,7 @@ export async function PATCH(request: NextRequest) {
     const siret = normaliserSiret(String(facture_siret ?? ''))
     if (siret && !siretValide(siret)) {
       return NextResponse.json(
-        { error: 'Numéro invalide : SIRET (14 chiffres, avis de situation Insee) ou numéro BCE belge (10 chiffres).' },
+        { error: 'Numéro invalide : SIRET (14 chiffres, avis de situation Insee), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE-123.456.789).' },
         { status: 400 },
       )
     }

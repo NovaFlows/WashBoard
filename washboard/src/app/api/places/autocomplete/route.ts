@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const url =
     `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
-    `?input=${encodeURIComponent(q.trim())}&language=fr&components=country:fr|country:be` +
+    `?input=${encodeURIComponent(q.trim())}&language=fr&components=country:fr|country:be|country:ch` +
     (session ? `&sessiontoken=${encodeURIComponent(session)}` : '')
 
   const data = await fetchGoogleMaps<Reponse>(url, 'places.autocomplete')

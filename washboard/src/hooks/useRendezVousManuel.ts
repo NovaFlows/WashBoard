@@ -176,8 +176,8 @@ export function useRendezVousManuel({
     const auCentre = lieu === 'centre'
     if (!auCentre && !address.trim()) { setManualErr('Adresse requise'); return }
     if (!manualModal.service_id) { setManualErr('Sélectionnez une prestation'); return }
-    if (manualModal.is_professional && manualModal.siret && !/^(\d{14}|[01]\d{9})$/.test(manualModal.siret)) {
-      setManualErr('SIRET (14 chiffres) ou numéro BCE belge (10 chiffres) invalide'); return
+    if (manualModal.is_professional && manualModal.siret && !/^(\d{14}|[01]\d{9}|CHE\d{9})$/.test(manualModal.siret)) {
+      setManualErr('SIRET (14 chiffres), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE + 9 chiffres) invalide'); return
     }
 
     // ── Vérification de disponibilité ──────────────────────────────────────

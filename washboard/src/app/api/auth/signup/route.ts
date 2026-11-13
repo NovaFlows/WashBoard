@@ -46,10 +46,11 @@ export async function POST(request: NextRequest) {
   // pour deux numéros distincts et la vérification d'unicité ne servirait à
   // rien.
   // France : 06 12 34 56 78. Belgique : 0470 12 34 56 ou +32 470 12 34 56 (stocké en +32…).
+  // Suisse : +41 79 123 45 67 (stocké en +41…) ; un 079… sans +41 serait lu comme un 07 français.
   const telephone = normaliserMobile(phone) ?? normalizePhone(phone)
   if (!telephone) {
     return NextResponse.json(
-      { error: 'Numéro de téléphone invalide (ex. 06 12 34 56 78, ou 0470 12 34 56 en Belgique)' },
+      { error: 'Numéro de téléphone invalide (ex. 06 12 34 56 78, 0470 12 34 56 en Belgique, +41 79 123 45 67 en Suisse)' },
       { status: 400 },
     )
   }
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
   // numéros étrangers sont la porte d'entrée de la fraude aux SMS (voir `lib/codeSms`).
   if (!estMobileFrancais(telephone)) {
     return NextResponse.json(
-      { error: 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code de confirmation arrive par SMS.' },
+      { error: 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, +41 7x en Suisse) : le code de confirmation arrive par SMS.' },
       { status: 400 },
     )
   }

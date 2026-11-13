@@ -11,6 +11,9 @@ export function normalizePhone(raw: string): string | null {
   // Belgique (+32…, forme canonique des numéros belges en base) : 8 ou 9 chiffres après 32.
   if (/^32[1-9]\d{7,8}$/.test(digits)) return `+${digits}`
   if (/^0032[1-9]\d{7,8}$/.test(digits)) return `+${digits.slice(2)}`
+  // Suisse (+41…, forme canonique des numéros suisses en base) : 9 chiffres après 41.
+  if (/^41[1-9]\d{8}$/.test(digits)) return `+${digits}`
+  if (/^0041[1-9]\d{8}$/.test(digits)) return `+${digits.slice(2)}`
   // Format local français (06, 07)
   if (digits.length === 10 && digits.startsWith('0')) return `+33${digits.slice(1)}`
   return null

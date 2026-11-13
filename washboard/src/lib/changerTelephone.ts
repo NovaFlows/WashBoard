@@ -1,4 +1,4 @@
-import { estMobileFrancais } from '@/lib/codeSms'
+import { estMobileFrancais, PHRASE_MOBILE_REQUIS } from '@/lib/codeSms'
 import { normalizePhone, normaliserMobile } from '@/lib/phone'
 
 // Changer de numéro depuis les réglages (2026-11-10), comme on change d'e-mail ou de mot de
@@ -9,18 +9,18 @@ import { normalizePhone, normaliserMobile } from '@/lib/phone'
 
 export type NouveauNumero = { erreur: string } | { telephone: string }
 
-/** Ce qu'on accepte comme nouveau numéro : un mobile français (06/07) ou belge (04xx), différent de l'actuel. */
+/** Ce qu'on accepte comme nouveau numéro : un mobile français (06/07), belge (04xx) ou suisse (+41 7x), différent de l'actuel. */
 export function verifierNouveauNumero(saisie: unknown, actuel: string | null | undefined): NouveauNumero {
   const brut = typeof saisie === 'string' ? saisie : null
   const telephone = normaliserMobile(brut)
   if (!telephone) {
     return {
-      erreur: normalizePhone(brut) || normalizePhone(brut, 'BE')
-        ? 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code arrive par SMS.'
-        : 'Numéro invalide : 06 12 34 56 78, 0470 12 34 56 ou format international (+33…, +32…).',
+      erreur: normalizePhone(brut) || normalizePhone(brut, 'BE') || normalizePhone(brut, 'CH')
+        ? PHRASE_MOBILE_REQUIS
+        : 'Numéro invalide : 06 12 34 56 78, 0470 12 34 56 ou format international (+33…, +32…, +41…).',
     }
   }
-  if (!estMobileFrancais(telephone)) return { erreur: 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code arrive par SMS.' }
+  if (!estMobileFrancais(telephone)) return { erreur: PHRASE_MOBILE_REQUIS }
   if (telephone === normalizePhone(actuel)) return { erreur: 'C’est déjà votre numéro.' }
   return { telephone }
 }

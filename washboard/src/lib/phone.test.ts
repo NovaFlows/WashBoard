@@ -204,3 +204,38 @@ describe('numéros belges (ouverture du 2026-11-11)', () => {
     expect(isMobilePhone('+3221234567')).toBe(false)
   })
 })
+
+describe('numéros suisses (ouverture du 2026-11-13)', () => {
+  it('garde un numéro suisse en forme internationale', () => {
+    expect(normalizePhone('+41 79 123 45 67')).toBe('+41791234567')
+    expect(normalizePhone('0041791234567')).toBe('+41791234567')
+    expect(normalizePhone('+41 22 123 45 67')).toBe('+41221234567') // fixe genevois
+  })
+  it('lit un 079… à la suisse seulement quand on est en Suisse', () => {
+    expect(normalizePhone('079 123 45 67', 'CH')).toBe('+41791234567')
+    expect(normalizePhone('022 123 45 67', 'CH')).toBe('+41221234567')
+    // sans le pays, c'est un numéro français : on ne devine pas
+    expect(normalizePhone('079 123 45 67')).toBe('0791234567')
+  })
+  it('refuse un numéro suisse trop court ou trop long', () => {
+    expect(normalizePhone('+41 79 123 45')).toBeNull()
+    expect(normalizePhone('+41 79 123 45 678')).toBeNull()
+  })
+  it('un 41… collé n’est pas lu comme suisse (c’est un début de numéro français)', () => {
+    expect(normalizePhone('0412345678')).toBe('0412345678')
+  })
+  it('normaliserMobile : un mobile suisse doit s’écrire avec +41', () => {
+    expect(normaliserMobile('+41 79 123 45 67')).toBe('+41791234567')
+    expect(normaliserMobile('0041 78 123 45 67')).toBe('+41781234567')
+    expect(normaliserMobile('+41 22 123 45 67')).toBeNull() // fixe
+    expect(normaliserMobile('079 123 45 67')).toBe('0791234567') // lu comme un 07 français
+  })
+  it('pays, WhatsApp, affichage, mobile', () => {
+    expect(paysDuTelephone('+41791234567')).toBe('CH')
+    expect(paysDuTelephone('0041791234567')).toBe('CH')
+    expect(whatsappDigits('+41791234567')).toBe('41791234567')
+    expect(formatPhone('+41791234567')).toBe('+41 79 123 45 67')
+    expect(isMobilePhone('+41791234567')).toBe(true)
+    expect(isMobilePhone('+41221234567')).toBe(false)
+  })
+})

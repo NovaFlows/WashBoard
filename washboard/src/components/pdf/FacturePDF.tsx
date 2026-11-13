@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
-import { mentionFranchiseTva, paysFacturation, prixHt, type FactureContenu } from '@/lib/facture'
+import { identifiantAffiche, libelleCourtIdentifiant, mentionFranchiseTva, paysFacturation, prixHt, type FactureContenu } from '@/lib/facture'
 import { FUSEAU } from '@/lib/dateUtils'
 
 // Facture d'un laveur à son client, rendue depuis le contenu figé à
@@ -101,8 +101,8 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
               {vendeur.nomLegal !== vendeur.nomCommercial ? <Text style={s.ligne}>{vendeur.nomLegal}</Text> : null}
               {mentionsSociete ? <Text style={s.ligne}>{mentionsSociete}</Text> : null}
               <Text style={s.ligne}>{vendeur.adresse}</Text>
-              <Text style={s.ligne}>{/^[01]\d{9}$/.test(String(vendeur.siret ?? '').replace(/[\s.-]/g, '')) ? 'N° BCE' : 'SIRET'} {vendeur.siret}</Text>
-              {vendeur.numeroTva ? <Text style={s.ligne}>TVA intracommunautaire {vendeur.numeroTva}</Text> : null}
+              <Text style={s.ligne}>{libelleCourtIdentifiant(vendeur.siret)} {identifiantAffiche(vendeur.siret)}</Text>
+              {vendeur.numeroTva ? <Text style={s.ligne}>{/^CHE/i.test(vendeur.numeroTva) ? 'N° de TVA' : 'TVA intracommunautaire'} {vendeur.numeroTva}</Text> : null}
               {vendeur.telephone ? <Text style={s.ligne}>{vendeur.telephone}</Text> : null}
             </View>
           </View>
@@ -200,7 +200,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
 
         {/* Mentions obligatoires */}
         <View style={s.mentions}>
-          {franchise ? <Text>{mentionFranchiseTva(paysFacturation({ facture_numero_tva: vendeur.numeroTva, facture_siret: vendeur.siret }))}</Text> : null}
+          {franchise ? <Text>{mentionFranchiseTva(paysFacturation({ facture_numero_tva: vendeur.numeroTva, facture_siret: vendeur.siret, phone: vendeur.telephone }))}</Text> : null}
           {devis ? (
             <>
               <Text>Devis gratuit et sans engagement. Prix garantis jusqu&apos;à la date de validité indiquée.</Text>
@@ -218,7 +218,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
         </View>
 
         <Text style={s.pied} fixed>
-          {vendeur.nomLegal} · {/^[01]\d{9}$/.test(String(vendeur.siret ?? '').replace(/[\s.-]/g, '')) ? 'N° BCE' : 'SIRET'} {vendeur.siret} · {vendeur.adresse}
+          {vendeur.nomLegal} · {libelleCourtIdentifiant(vendeur.siret)} {identifiantAffiche(vendeur.siret)} · {vendeur.adresse}
         </Text>
 
       </Page>

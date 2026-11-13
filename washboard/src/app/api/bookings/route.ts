@@ -65,9 +65,10 @@ const BookingSchema = z.object({
   smart_discount:  z.number().min(0).optional().default(0),
   is_professional: z.boolean().optional().default(false),
   company_name:    z.string().optional(),
-  // SIRET français (14 chiffres) ou numéro d'entreprise belge, BCE (10 chiffres) : un client
-  // professionnel belge n'a pas de SIRET (ouverture à la Belgique, 2026-11-11).
-  siret:           z.string().regex(/^(\d{14}|[01]\d{9})$/, 'SIRET (14 chiffres) ou numéro BCE (10 chiffres) invalide').optional(),
+  // SIRET français (14 chiffres), numéro d'entreprise belge, BCE (10 chiffres), ou numéro IDE
+  // suisse (CHE + 9 chiffres) : un client professionnel belge ou suisse n'a pas de SIRET
+  // (ouverture à la Belgique le 2026-11-11, à la Suisse le 2026-11-13).
+  siret:           z.string().regex(/^(\d{14}|[01]\d{9}|CHE\d{9})$/, 'SIRET (14 chiffres), numéro BCE (10 chiffres) ou numéro IDE (CHE + 9 chiffres) invalide').optional(),
   billing_address: z.string().optional(),
   // Le client a coché « j'accepte les conditions de l'acompte » (2026-10-19) : exigé quand
   // un acompte est demandé, voir plus bas.

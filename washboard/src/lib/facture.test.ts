@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   siretValide, numeroTvaValide, infosFacturationManquantes, phraseManques,
+  ideSuisseValide, normaliserNumeroTva, normaliserSiret, libelleCourtIdentifiant, identifiantAffiche, tauxTvaNormal,
   lignesFacture, totauxFacture, construireFacture, nomLegalAffiche,
   doitEnvoyerFactureAuClient, paysFacturation, tauxTvaPour, mentionFranchiseTva,
   type ReservationFacturable, type VendeurFacturable,
@@ -263,5 +264,58 @@ describe('Belgique (ouverture du 2026-11-11)', () => {
     expect(tauxTvaPour('FR')).toEqual([20, 10, 5.5])
     expect(mentionFranchiseTva('BE')).toContain('56bis')
     expect(mentionFranchiseTva('FR')).toContain('293 B')
+  })
+})
+
+describe('Suisse (ouverture du 2026-11-13)', () => {
+  it('valide un numéro IDE (clé modulo 11) et un numéro de TVA suisse', () => {
+    // CHE-109.322.551 : 5·1 + 4·0 + 3·9 + 2·3 + 7·2 + 6·2 + 5·5 + 4·5 = 109 → 11 − (109 mod 11) = 1
+    expect(ideSuisseValide('CHE-109.322.551')).toBe(true)
+    expect(siretValide('CHE-109.322.551')).toBe(true)
+    expect(siretValide('che109322551')).toBe(true)
+    expect(siretValide('CHE-109.322.552')).toBe(false) // mauvaise clé
+    expect(siretValide('CHE-123.456.788')).toBe(true)
+    expect(siretValide('CHE-12345678')).toBe(false) // trop court
+    expect(numeroTvaValide('CHE-109.322.551 TVA')).toBe(true)
+    expect(numeroTvaValide('CHE-109.322.551 MWST')).toBe(true)
+    expect(numeroTvaValide('CHE109322551')).toBe(true)
+    expect(numeroTvaValide('CHE-109.322.552 TVA')).toBe(false)
+  })
+  it('écrit le numéro de TVA suisse sous sa forme légale', () => {
+    expect(normaliserNumeroTva('che109322551')).toBe('CHE-109.322.551 TVA')
+    expect(normaliserNumeroTva('CHE-109.322.551 mwst')).toBe('CHE-109.322.551 MWST')
+    expect(normaliserNumeroTva('FR 40 123456789')).toBe('FR40123456789') // inchangé hors Suisse
+    expect(normaliserSiret('CHE-109.322.551')).toBe('CHE109322551')
+  })
+  it('déduit le pays et propose les bons taux et la bonne mention', () => {
+    expect(paysFacturation({ facture_numero_tva: 'CHE-109.322.551 TVA' })).toBe('CH')
+    expect(paysFacturation({ facture_siret: 'CHE109322551' })).toBe('CH')
+    expect(paysFacturation({ phone: '+41791234567' })).toBe('CH')
+    expect(tauxTvaPour('CH')).toEqual([8.1, 2.6, 3.8])
+    expect(tauxTvaNormal('CH')).toBe(8.1)
+    expect(tauxTvaNormal('FR')).toBe(20)
+    expect(mentionFranchiseTva('CH')).toContain('100 000 CHF')
+    expect(mentionFranchiseTva('CH')).toContain('LTVA')
+  })
+  it('libellés et affichage de l’identifiant', () => {
+    expect(libelleCourtIdentifiant('CHE109322551')).toBe('N° IDE')
+    expect(libelleCourtIdentifiant('0123456749')).toBe('N° BCE')
+    expect(libelleCourtIdentifiant('12345678901234')).toBe('SIRET')
+    expect(identifiantAffiche('CHE109322551')).toBe('CHE-109.322.551')
+    expect(identifiantAffiche('12345678901234')).toBe('12345678901234')
+  })
+  it('un laveur suisse sans IDE valide se voit demander son numéro IDE', () => {
+    const manques = infosFacturationManquantes({ facture_nom_legal: 'Lavage Léman', facture_siret: 'CHE-109.322.552', facture_adresse: 'Rue du Lac 1, 1204 Genève', facture_numero_tva: 'CHE-109.322.552 TVA' })
+    expect(manques).toContain('votre numéro IDE (CHE)')
+  })
+  it('un laveur suisse assujetti facture à 8,1 % par défaut', () => {
+    const f = construireFacture(reservation(), {
+      name: 'Lavage Léman', phone: '+41791234567', facture_statut: 'ei', facture_nom_legal: 'Jean Dupont',
+      facture_siret: 'CHE-109.322.551', facture_adresse: 'Rue du Lac 1, 1204 Genève',
+      facture_regime_tva: 'assujetti', facture_numero_tva: 'CHE-109.322.551 TVA',
+    })
+    expect(f.vendeur.tauxTva).toBe(8.1)
+    expect(f.vendeur.numeroTva).toBe('CHE-109.322.551 TVA')
+    expect(f.vendeur.siret).toBe('CHE109322551')
   })
 })

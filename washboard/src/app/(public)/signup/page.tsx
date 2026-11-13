@@ -25,9 +25,9 @@ export default function SignupPage() {
     setError(null)
     if (!name.trim()) { setError('Le nom de ton entreprise est requis'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
-    if (!normaliserMobile(phone) && !normalizePhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78, ou 0470 12 34 56 en Belgique)'); return }
+    if (!normaliserMobile(phone) && !normalizePhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78, 0470 12 34 56 en Belgique, +41 79 123 45 67 en Suisse)'); return }
     // Le code de confirmation arrive par SMS (2026-10-21) : un mobile, forcément.
-    if (!normaliserMobile(phone)) { setError('Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique) : le code de confirmation arrive par SMS.'); return }
+    if (!normaliserMobile(phone)) { setError('Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, +41 7x en Suisse) : le code de confirmation arrive par SMS.'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
     if (!cgvAcceptees) { setError('Merci d’accepter les CGV pour continuer'); return }
@@ -77,7 +77,7 @@ export default function SignupPage() {
             <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="toi@exemple.fr" autoComplete="email" className={SAISIE} />
           </Champ>
           <Champ id="phone" label="Téléphone" aide={<>Un code de confirmation t’arrive par SMS.<br />Il sert aussi à te joindre en cas de souci.</>}>
-            <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="06 12 34 56 78 (ou 0470 12 34 56)" autoComplete="tel" className={SAISIE} />
+            <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="06 12 34 56 78 (ou 0470 12 34 56, +41 79 123 45 67)" autoComplete="tel" className={SAISIE} />
           </Champ>
           <Champ id="password" label="Mot de passe">
             <PasswordInput id="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="6 caractères minimum" autoComplete="new-password" className={SAISIE} />

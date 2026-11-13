@@ -25,30 +25,63 @@ export type StatutJuridique = 'ei' | 'societe'
  *  et 5,5 %. Belgique (ouverture du 2026-11-11) : 21 % (taux normal), 12 % et 6 %. */
 export const TAUX_TVA_FR = [20, 10, 5.5] as const
 export const TAUX_TVA_BE = [21, 12, 6] as const
+/** Suisse (ouverture du 2026-11-13) : 8,1 % (taux normal depuis le 1er janvier 2024, le cas du
+ *  lavage), 2,6 % (taux réduit) et 3,8 % (taux spécial, hébergement). */
+export const TAUX_TVA_CH = [8.1, 2.6, 3.8] as const
 /** Tous les taux acceptés par le serveur ; l'écran n'en propose que ceux du pays du laveur. */
-export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6] as const
+export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6, 8.1, 2.6, 3.8] as const
 
-export type PaysFacturation = 'FR' | 'BE'
+export type PaysFacturation = 'FR' | 'BE' | 'CH'
 
-/** Le pays de facturation d'un laveur, déduit de ce qu'il a saisi : un numéro de TVA en « BE », un
- *  numéro d'entreprise à 10 chiffres (BCE) ou un téléphone en +32 disent la Belgique. Aucune
- *  colonne de plus en base : la donnée existe déjà. */
+/** Le pays de facturation d'un laveur, déduit de ce qu'il a saisi : un numéro de TVA en « BE » ou
+ *  « CHE », un numéro d'entreprise à 10 chiffres (BCE) ou un numéro IDE suisse (CHE-123.456.789),
+ *  ou un téléphone en +32 / +41 disent la Belgique ou la Suisse. Aucune colonne de plus en base :
+ *  la donnée existe déjà. */
 export function paysFacturation(w: { facture_numero_tva?: string | null; facture_siret?: string | null; phone?: string | null }): PaysFacturation {
-  if (/^BE/i.test((w.facture_numero_tva ?? '').replace(/\s/g, ''))) return 'BE'
-  if (/^0\d{9}$/.test(normaliserSiret(w.facture_siret ?? ''))) return 'BE'
-  if (/^(\+32|0032)/.test((w.phone ?? '').replace(/[\s.()-]/g, ''))) return 'BE'
+  const tva = (w.facture_numero_tva ?? '').replace(/\s/g, '')
+  if (/^BE/i.test(tva)) return 'BE'
+  if (/^CHE/i.test(tva)) return 'CH'
+  const identifiant = normaliserSiret(w.facture_siret ?? '')
+  if (/^0\d{9}$/.test(identifiant)) return 'BE'
+  if (/^CHE\d{9}$/.test(identifiant)) return 'CH'
+  const tel = (w.phone ?? '').replace(/[\s.()-]/g, '')
+  if (/^(\+32|0032)/.test(tel)) return 'BE'
+  if (/^(\+41|0041)/.test(tel)) return 'CH'
   return 'FR'
 }
 
-export const tauxTvaPour = (pays: PaysFacturation): readonly number[] => (pays === 'BE' ? TAUX_TVA_BE : TAUX_TVA_FR)
-export const libelleIdentifiant = (pays: PaysFacturation): string => (pays === 'BE' ? 'numéro d’entreprise (BCE)' : 'SIRET')
+export const tauxTvaPour = (pays: PaysFacturation): readonly number[] => (pays === 'BE' ? TAUX_TVA_BE : pays === 'CH' ? TAUX_TVA_CH : TAUX_TVA_FR)
+export const libelleIdentifiant = (pays: PaysFacturation): string =>
+  pays === 'BE' ? 'numéro d’entreprise (BCE)' : pays === 'CH' ? 'numéro IDE (CHE)' : 'SIRET'
+/** Le taux de TVA normal du pays : celui qu'on propose et qu'on applique par défaut. */
+export const tauxTvaNormal = (pays: PaysFacturation): number => tauxTvaPour(pays)[0]
+
+/** Court libellé de l'identifiant d'une entreprise, lu dans le numéro lui-même (sur les factures
+ *  et leurs pieds de page) : « N° IDE » pour un numéro suisse, « N° BCE » pour un numéro belge à
+ *  10 chiffres, « SIRET » sinon. */
+export function libelleCourtIdentifiant(identifiant: string | null | undefined): string {
+  const s = normaliserSiret(String(identifiant ?? ''))
+  if (/^CHE\d{9}$/.test(s)) return 'N° IDE'
+  if (/^[01]\d{9}$/.test(s)) return 'N° BCE'
+  return 'SIRET'
+}
+
+/** L'identifiant tel qu'on l'imprime : un numéro IDE suisse se lit « CHE-123.456.789 », le reste est
+ *  inchangé. */
+export function identifiantAffiche(identifiant: string | null | undefined): string {
+  const s = normaliserSiret(String(identifiant ?? ''))
+  const m = /^CHE(\d{3})(\d{3})(\d{3})$/.exec(s)
+  return m ? `CHE-${m[1]}.${m[2]}.${m[3]}` : String(identifiant ?? '')
+}
 
 /** Mention obligatoire d'une facture sans TVA. France : micro-entreprise (art. 293 B du CGI).
- *  Belgique : régime de franchise des petites entreprises (art. 56bis du Code de la TVA). */
+ *  Belgique : régime de franchise des petites entreprises (art. 56bis du Code de la TVA).
+ *  Suisse : entreprise non assujettie sous 100 000 francs de chiffre d'affaires (art. 10 al. 2
+ *  let. a LTVA). */
 export function mentionFranchiseTva(pays: PaysFacturation): string {
-  return pays === 'BE'
-    ? 'TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).'
-    : 'TVA non applicable, art. 293 B du CGI.'
+  if (pays === 'BE') return 'TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).'
+  if (pays === 'CH') return 'TVA non applicable — entreprise non assujettie, chiffre d’affaires inférieur à 100 000 CHF (art. 10 al. 2 LTVA).'
+  return 'TVA non applicable, art. 293 B du CGI.'
 }
 
 export type InfosFacturation = {
@@ -69,7 +102,22 @@ export const arrondi = (n: number) => Math.round((n + Number.EPSILON) * 100) / 1
 // ── Identifiants ───────────────────────────────────────────────────────────
 
 export function normaliserSiret(brut: string): string {
-  return brut.replace(/[\s.-]/g, '')
+  // Majuscules : un numéro IDE suisse s'écrit « CHE-123.456.789 » (ou « che123456789 »).
+  return brut.replace(/[\s.-]/g, '').toUpperCase()
+}
+
+/** Numéro IDE suisse (identification des entreprises) : « CHE » puis 9 chiffres, le dernier est une
+ *  clé de contrôle (modulo 11, pondérations 5-4-3-2-7-6-5-4 sur les 8 premiers chiffres). Un reste
+ *  qui donnerait une clé de 10 n'est jamais attribué : numéro invalide. */
+export function ideSuisseValide(brut: string): boolean {
+  const s = normaliserSiret(brut)
+  if (!/^CHE\d{9}$/.test(s)) return false
+  const chiffres = s.slice(3)
+  const poids = [5, 4, 3, 2, 7, 6, 5, 4]
+  const somme = poids.reduce((t, p, i) => t + p * Number(chiffres[i]), 0)
+  const cle = 11 - (somme % 11)
+  if (cle === 10) return false
+  return (cle === 11 ? 0 : cle) === Number(chiffres[8])
 }
 
 /** 14 chiffres dont la clé de Luhn est juste. Seule exception connue : La
@@ -77,6 +125,8 @@ export function normaliserSiret(brut: string): string {
  *  règle — la somme des chiffres est un multiple de 5. */
 export function siretValide(brut: string): boolean {
   const s = normaliserSiret(brut)
+  // Suisse : numéro IDE (CHE-123.456.789), clé modulo 11.
+  if (/^CHE/.test(s)) return ideSuisseValide(s)
   // Belgique : numéro d'entreprise (BCE), 10 chiffres commençant par 0 ou 1, dont les deux
   // derniers sont la clé : 97 − (les 8 premiers modulo 97).
   if (/^[01]\d{9}$/.test(s)) return 97 - (Number(s.slice(0, 8)) % 97) === Number(s.slice(8))
@@ -93,13 +143,20 @@ export function siretValide(brut: string): boolean {
   return somme % 10 === 0
 }
 
+/** Numéro de TVA suisse : le numéro IDE suivi de « TVA » (ou MWST, IVA, HTP selon la langue). */
+const TVA_SUISSE = /^CHE[-.]?(\d{3})[-.]?(\d{3})[-.]?(\d{3})\s*(TVA|MWST|IVA|HTP)?$/i
+
 export function normaliserNumeroTva(brut: string): string {
+  const suisse = TVA_SUISSE.exec(brut.trim())
+  // Suisse : forme légale « CHE-123.456.789 TVA » (« TVA » ajouté s'il manque).
+  if (suisse) return `CHE-${suisse[1]}.${suisse[2]}.${suisse[3]} ${(suisse[4] ?? 'TVA').toUpperCase()}`
   return brut.replace(/\s/g, '').toUpperCase()
 }
 
-/** Numéro de TVA intracommunautaire : français (FR, une clé de deux caractères, puis le SIREN) ou
- *  belge (BE, puis le numéro d'entreprise à 10 chiffres, clé comprise). */
+/** Numéro de TVA : français (FR, une clé de deux caractères, puis le SIREN), belge (BE, puis le
+ *  numéro d'entreprise à 10 chiffres, clé comprise) ou suisse (CHE-123.456.789 TVA, IDE valide). */
 export function numeroTvaValide(brut: string): boolean {
+  if (TVA_SUISSE.test(brut.trim())) return ideSuisseValide(brut.trim().replace(/\s*(TVA|MWST|IVA|HTP)$/i, ''))
   const n = normaliserNumeroTva(brut.replace(/\./g, ''))
   if (/^BE[01]\d{9}$/.test(n)) return siretValide(n.slice(2))
   return /^FR[0-9A-Z]{2}\d{9}$/.test(n)
@@ -126,7 +183,10 @@ export function infosFacturationManquantes(w: InfosFacturation): string[] {
   if (societe) {
     if (!w.facture_forme_juridique?.trim()) manques.push('votre forme juridique')
     if (!w.facture_capital?.trim()) manques.push('votre capital social')
-    if (!w.facture_immatriculation?.trim()) manques.push(paysFacturation(w) === 'BE' ? 'votre immatriculation (RPM)' : 'votre immatriculation (RCS)')
+    if (!w.facture_immatriculation?.trim()) {
+      const pays = paysFacturation(w)
+      manques.push(pays === 'BE' ? 'votre immatriculation (RPM)' : pays === 'CH' ? 'votre inscription au registre du commerce (RC)' : 'votre immatriculation (RCS)')
+    }
   }
   if (w.facture_regime_tva === 'assujetti'
       && (!w.facture_numero_tva || !numeroTvaValide(w.facture_numero_tva))) {
@@ -320,7 +380,7 @@ export function construireFacture(r: ReservationFacturable, v: VendeurFacturable
     ? arrondi(Math.min(Number(r.smart_discount), brut))
     : 0
   const regime: RegimeTva = v.facture_regime_tva === 'assujetti' ? 'assujetti' : 'franchise'
-  const taux = regime === 'assujetti' ? Number(v.facture_taux_tva ?? 20) : 0
+  const taux = regime === 'assujetti' ? Number(v.facture_taux_tva ?? tauxTvaNormal(paysFacturation(v))) : 0
   const statut: StatutJuridique = v.facture_statut === 'societe' ? 'societe' : 'ei'
   const societe = statut === 'societe'
   const pro = !!r.is_professional
