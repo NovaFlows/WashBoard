@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { CalendarX2, ChevronLeft, ChevronRight, Mail, Navigation, Phone, Plus, Users2, X } from 'lucide-react'
 import MoisV2 from '@/components/dashboard/MoisV2'
 import { effectiveDuration, addonsDuration, formatPrice } from '@/lib/pricing'
+import { detailUtile, lignesDetailPrix, nomsPrestations } from '@/lib/detailRendezVous'
 import { toDateStr } from '@/lib/dateUtils'
 import { estJourneeEntiere, journeeBloquee, minutesDepuisMinuit } from '@/lib/slots'
 import { plageBloquee } from '@/lib/horaires'
@@ -202,13 +203,32 @@ function modeleVehicule(b: Booking): string | null {
 
 function lignePrestation(b: Booking): string {
   if (!b.services) return 'Prestation'
+  // Plusieurs prestations réservées : toutes sont nommées, « Lavage extérieur + Lavage complet ».
+  const nom = nomsPrestations(b).join(' + ')
   // Avec un modèle, il remplace la catégorie : « Lavage complet · Tiguan » dit
   // plus au laveur que « Voiture · Lavage complet » (planche Agenda).
   const modele = modeleVehicule(b)
-  if (modele) return `${b.services.name} · ${modele}`
+  if (modele) return `${nom} · ${modele}`
   return b.services.service_categories?.name
-    ? `${b.services.service_categories.name} · ${b.services.name}`
-    : b.services.name
+    ? `${b.services.service_categories.name} · ${nom}`
+    : nom
+}
+
+/** Détail du prix d'un rendez-vous : la prestation, celles ajoutées, les options, le déplacement. */
+function DetailPrixV2({ b, className }: { b: Booking; className: string }) {
+  const lignes = lignesDetailPrix(b)
+  if (!detailUtile(lignes)) return null
+  return (
+    <div className={className}>
+      <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>Détail du prix</p>
+      {lignes.map(l => (
+        <div key={l.cle} className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
+          <span>{l.libelle}</span>
+          <span className="tabular-nums">{l.genre === 'principale' ? `${l.montant} €` : `+${l.montant} €`}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 /** D'où mesurer la distance des clients : le rendez-vous qui précède le trou, ou à défaut celui
@@ -1494,23 +1514,7 @@ function DetailRendezVous({
             </span>
           </div>
 
-          {((b.selected_addons && b.selected_addons.length > 0) || (b.travel_fee ?? 0) > 0) && (
-            <div className="mt-3 space-y-1.5 px-1">
-              <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>Détail du prix</p>
-              {b.selected_addons?.map(a => (
-                <div key={a.id} className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
-                  <span>{a.label}</span>
-                  <span className="tabular-nums">+{a.price} €</span>
-                </div>
-              ))}
-              {(b.travel_fee ?? 0) > 0 && (
-                <div className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
-                  <span>Frais de déplacement</span>
-                  <span className="tabular-nums">+{b.travel_fee} €</span>
-                </div>
-              )}
-            </div>
-          )}
+          <DetailPrixV2 b={b} className="mt-3 space-y-1.5 px-1" />
 
           <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
 
@@ -1994,23 +1998,7 @@ function FicheRdvBureauV2({
 
         {/* Même détail que la feuille du téléphone (`DetailRendezVous`) : sans lui, le laveur voyait
             un total sans savoir d'où venaient les options et les frais de déplacement. */}
-        {((b.selected_addons && b.selected_addons.length > 0) || (b.travel_fee ?? 0) > 0) && (
-          <div className="mt-4 space-y-1.5">
-            <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>Détail du prix</p>
-            {b.selected_addons?.map(a => (
-              <div key={a.id} className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
-                <span>{a.label}</span>
-                <span className="tabular-nums">+{a.price} €</span>
-              </div>
-            ))}
-            {(b.travel_fee ?? 0) > 0 && (
-              <div className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
-                <span>Frais de déplacement</span>
-                <span className="tabular-nums">+{b.travel_fee} €</span>
-              </div>
-            )}
-          </div>
-        )}
+        <DetailPrixV2 b={b} className="mt-4 space-y-1.5" />
 
         <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
 
