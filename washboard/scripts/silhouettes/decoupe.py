@@ -64,7 +64,9 @@ PHOTOS = {
     '2-SUV-4x4-Lexus.png': ('SUV', {'miroir': True}),
     '3-7-places-Dacia-Jogger.png': ('7places', {'fond_blanc': False}),
     '4-berline-Audi-A8.png': ('berline', {}),
-    '5-monospace-Grand-Scenic.png': ('monospace', {'miroir': True, 'sol': 279}),
+    # Grand Scénic : la photo du zip était petite (1080 × 305) et tournée vers la gauche ; Alexandre a
+    # donné la bonne (1024 × 765, avant à droite, ombre de studio sous la voiture).
+    '5-monospace-Grand-Scenic-HD.png': ('monospace', {}),
     '6-citadine-2-places-Aygo-X.png': ('citadine_2p', {'miroir': True}),
     '7-van-utilitaire-Transit-Custom.png': ('utilitaire', {}),
 }
