@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { TYPES_AVEC_SILHOUETTE, silhouettePour } from './silhouettesVehicules'
+import { TYPES_AVEC_COULEUR, TYPES_AVEC_SILHOUETTE, silhouettePour } from './silhouettesVehicules'
 import { VEHICLE_LABELS } from './vehicle-labels'
 
 const fichier = (url: string) => join(process.cwd(), 'public', decodeURIComponent(url.split('?')[0]))
@@ -41,5 +41,25 @@ describe('images des véhicules', () => {
       const entete = readFileSync(chemin).subarray(0, 12).toString('latin1')
       expect(entete.startsWith('RIFF') && entete.endsWith('WEBP'), chemin).toBe(true)
     }
+  })
+})
+
+describe('images des véhicules en couleur', () => {
+  it('chaque type en couleur a son fichier, dans le dossier couleur', () => {
+    for (const type of TYPES_AVEC_COULEUR) {
+      const url = silhouettePour(type, null, true)
+      expect(url, type).toContain('/silhouettes/couleur/')
+      expect(existsSync(fichier(url!)), `${type} : ${url}`).toBe(true)
+    }
+  })
+
+  it('par défaut, l’image grise ; le camping-car reste gris même en couleur', () => {
+    expect(silhouettePour('citadine')).toContain('/silhouettes/citadine.webp')
+    expect(silhouettePour('camping-car', null, true)).toContain('/silhouettes/camping-car.webp')
+  })
+
+  it('un type sans image n’en a pas davantage en couleur', () => {
+    expect(silhouettePour('velo', null, true)).toBeNull()
+    expect(silhouettePour(null, 'Canapé', true)).toBeNull()
   })
 })

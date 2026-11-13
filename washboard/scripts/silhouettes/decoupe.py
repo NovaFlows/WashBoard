@@ -58,8 +58,8 @@ PHOTOS = {
     # Ajouté le 2026-10-19 : camping-car photographié dehors, roue avant 19 px plus haute.
     '34.png': ('camping-car', {'fond_blanc': False, 'pente': -1.85, 'sol': 'bas'}),
     # Photos d'origine fournies par Alexandre (2026-11-13, photos-silhouettes-vehicules.zip) pour la
-    # version en couleur. Pas de photo d'origine pour la moto, le camion ni le camping-car : ils
-    # restent gris, même en couleur.
+    # version en couleur. Moto et camion : photos ajoutées ensuite. Pas de photo d'origine pour le
+    # camping-car : il reste gris, même en couleur.
     '1-citadine-MG3.png': ('citadine', {}),
     '2-SUV-4x4-Lexus.png': ('SUV', {'miroir': True}),
     '3-7-places-Dacia-Jogger.png': ('7places', {'fond_blanc': False}),
@@ -69,6 +69,9 @@ PHOTOS = {
     '5-monospace-Grand-Scenic-HD.png': ('monospace', {}),
     '6-citadine-2-places-Aygo-X.png': ('citadine_2p', {'miroir': True}),
     '7-van-utilitaire-Transit-Custom.png': ('utilitaire', {}),
+    # Moto et camion donnés le 2026-11-13 (le camion regarde à gauche, la moto à droite).
+    '8-moto-Suzuki.png': ('moto', {'trous': False}),
+    '9-camion.png': ('camion', {'miroir': True}),
 }
 
 

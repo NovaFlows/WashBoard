@@ -25,12 +25,12 @@ type TypeAvecImage = (typeof TYPES_AVEC_SILHOUETTE)[number]
 
 /** Types dont on a la photo d'origine : en couleur, ils prennent leurs vraies couleurs
  *  (public/silhouettes/couleur/, scripts/silhouettes/decoupe.py --couleur, photos d'Alexandre du
- *  2026-11-13). Les autres (moto, camion, camping-car) restent grisés même en couleur. */
-export const TYPES_AVEC_COULEUR = ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire'] as const
+ *  2026-11-13). Le camping-car reste grisé même en couleur. */
+export const TYPES_AVEC_COULEUR = ['citadine', 'citadine_2p', 'berline', 'SUV', 'monospace', '7places', 'utilitaire', 'moto', 'camion'] as const
 
 /** À changer quand les fichiers changent : les navigateurs gardent les anciens en cache. */
 const VERSION = '2026-10-19b'
-const VERSION_COULEUR = '2026-11-13'
+const VERSION_COULEUR = '2026-11-13b'
 
 /** « Van / Utilitaire » → « van utilitaire » : minuscules, sans accents ni ponctuation. */
 const normaliser = (nom: string) =>

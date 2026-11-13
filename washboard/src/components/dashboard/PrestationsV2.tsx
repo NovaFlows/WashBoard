@@ -704,7 +704,7 @@ export default function PrestationsV2({
                   <p className={`text-[15.5px] ${nom}`}>Silhouette en couleur</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {couleur
-                      ? 'Le véhicule choisi apparaît dans ses vraies couleurs (moto, camion et camping-car restent grisés).'
+                      ? 'Le véhicule choisi apparaît dans ses vraies couleurs (le camping-car reste grisé).'
                       : 'Le véhicule choisi apparaît en gris.'}
                   </p>
                 </div>
